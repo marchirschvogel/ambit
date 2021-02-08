@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# All rights reserved.
+
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import time, sys, copy
 import numpy as np
 from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
@@ -23,7 +29,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         
         self.comm = comm
         
-        self.problem_physics = 'ssss_flow0d'
+        self.problem_physics = 'solid_flow0d_multiscale_gandr'
         
         gandr_trigger_phase = multiscale_params['gandr_trigger_phase']
         
@@ -120,21 +126,23 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         start = time.time()
         
         # print header
-        #utilities.print_problem(self.pb.problem_physics, self.pb.pbs.ndof, self.pb.comm)
-
-        # TODO Finish implementation
-        #raise AttributeError("Multiscale G&R not yet fully implemented!")
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm)
         
         # multiscale growth and remodeling solid 0D flow main time loop
         for N in range(self.pb.N_cycles):
 
             wts = time.time()
             
+            # accumulate small scale times
             self.pb.pbsmall.t_prev += (self.pb.pbsmall.pbf.ti.cycle[0]-1) * self.pb.pbsmall.pbf.cardvasc0D.T_cycl
 
             # change output names
             self.pb.pbsmall.pbs.io.simname = self.pb.simname_small + str(N)
             self.pb.pblarge.io.simname = self.pb.simname_large + str(N)
+
+            if self.pb.comm.rank == 0:
+                print("Solving small scale 3D-0D coupled solid-flow0d problem:")
+                sys.stdout.flush()
 
             # solve small scale 3D-0D coupled solid-flow0d problem with fixed growth
             self.solversmall.solve_problem()
@@ -146,33 +154,42 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 self.pb.pblarge.p.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.p_set.vector)
                 self.pb.pblarge.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+            # constant large scale active tension
             self.pb.pblarge.tau_a.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.tau_a_set.vector)
             self.pb.pblarge.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             
+            # pressures from growth set point
             self.pb.pbsmall.pbf.cardvasc0D.set_pressure_fem(self.pb.pbsmall.pbf.s_set, self.pb.pbsmall.pbf.cardvasc0D.v_ids, self.pb.pbsmall.pr0D, self.pb.neumann_funcs)
 
+            # growth thresholds from set point
             self.pb.pblarge.growth_thres.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.vector)
             self.pb.pblarge.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+            if self.pb.comm.rank == 0:
+                print("Solving large scale solid growth and remodeling problem:")
+                sys.stdout.flush()
 
             # solve large scale static G&R solid problem with fixed loads
             self.solverlarge.solve_problem()
             
             u_delta = PETSc.Vec().createMPI(self.pb.pblarge.u.vector.getSize(), bsize=self.pb.pblarge.u.vector.getBlockSize(), comm=self.pb.comm)
             u_delta.waxpy(-1.0, self.pb.pbsmall.pbs.u_set.vector, self.pb.pblarge.u.vector)
-            
+            if self.pb.pbsmall.pbs.incompressible_2field:
+                p_delta = PETSc.Vec().createMPI(self.pb.pblarge.p.vector.getSize(), bsize=self.pb.pblarge.p.vector.getBlockSize(), comm=self.pb.comm)
+                p_delta.waxpy(-1.0, self.pb.pbsmall.pbs.p_set.vector, self.pb.pblarge.p.vector)
             
             # update small scale variables
             self.pb.pbsmall.pbs.u.vector.axpby(1.0, 0.0, u_delta)
             self.pb.pbsmall.pbs.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            if self.pb.pbsmall.pbs.incompressible_2field:
+                self.pb.pbsmall.pbs.p.vector.axpby(1.0, 0.0, p_delta)
+                self.pb.pbsmall.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             
             # 0D variables s and s_old are already correctly set from the previous small scale run (end values)
-            
-            
-            if self.pb.pbsmall.pbs.incompressible_2field:
-                self.pb.pbsmall.pbs.p.vector.axpby(1.0, 0.0, self.pb.pblarge.p.vector)
-                self.pb.pbsmall.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-
+            # set constant prescribed growth stretch for subsequent small scale
+            self.pb.pbsmall.pbs.theta.vector.axpby(1.0, 0.0, self.pb.pblarge.theta.vector)
+            self.pb.pbsmall.pbs.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)   
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Time for full multiscale computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))

@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# All rights reserved.
+
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import time, sys, copy
 import numpy as np
 from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
@@ -500,7 +506,7 @@ class SolidmechanicsSolver():
         start = time.time()
 
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.ndof, self.pb.comm)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
         if self.pb.prestress_initial:
@@ -554,7 +560,7 @@ class SolidmechanicsSolver():
 
         # solid main time loop
         for (N, dt) in enumerate(np.diff(interval)):
-
+            
             wts = time.time()
             
             t = interval[N+1]
@@ -581,7 +587,7 @@ class SolidmechanicsSolver():
 
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, wt=wt)
-            
+
             # maximum number of steps to perform
             try:
                 if N+1 == self.pb.numstep_stop:

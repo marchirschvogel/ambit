@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# All rights reserved.
+
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import time, sys
 import numpy as np
 from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
@@ -233,7 +239,7 @@ class FluidmechanicsSolver():
         start = time.time()
         
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.ndof, self.pb.comm)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
         
         if self.pb.timint != 'static':
             # weak form at initial state for consistent initial acceleration solve

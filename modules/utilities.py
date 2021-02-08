@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# All rights reserved.
+
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import sys
 import numpy as np
 from petsc4py import PETSc
@@ -8,7 +14,7 @@ from projection import project
 
 
 # print header at beginning of simulation
-def print_problem(ptype, numdof, comm):
+def print_problem(ptype, comm, numdof=0):
 
     if comm.rank == 0:
         print("#####################################   AMBIT   #######################################")
@@ -28,11 +34,12 @@ def print_problem(ptype, numdof, comm):
             print("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########")
             sys.stdout.flush()
             
-        elif ptype == 'solid_flow0d_multiscalegrowthremodeling':
+        elif ptype == 'solid_flow0d_multiscale_gandr':
             print("################# Welcome to multiscale growth and remodeling (G & R) #################")
             print("############## Small time scale: Monolithic 3D-0D coupled solid-flow0d ################")
-            print("####################### Large time scale: Static solid G & R ##########################")
+            print("####################### Large time scale: Static solid G & R ##########################\n")
             sys.stdout.flush()
+            return
 
         elif ptype == 'fluid_flow0d':
             print("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########")

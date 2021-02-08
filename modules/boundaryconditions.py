@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# All rights reserved.
+
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 import numpy as np
 from dolfinx import DirichletBC, Function
 from dolfinx.fem import locate_dofs_topological

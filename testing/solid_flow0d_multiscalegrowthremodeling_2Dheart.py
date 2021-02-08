@@ -26,7 +26,7 @@ def main():
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_2Dcoarse.txt',''+basepath+'/input/fib_sheet_coords_nodal_2Dcoarse.txt']},
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
-                            'results_to_write'      : ['displacement'],
+                            'results_to_write'      : ['displacement','theta','phi_remod'],
                             'simname'               : 'multiscale_gandr'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
@@ -38,7 +38,7 @@ def main():
 
     TIME_PARAMS_SOLID_SMALL = {'maxtime'            : 2.0,
                             'numstep'               : 100,
-                            'timint'                : 'static', # genalpha, ost, static
+                            'timint'                : 'genalpha', # genalpha, ost, static
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
 
@@ -55,7 +55,7 @@ def main():
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul',
                             'parameters'            : param(),
                             'chamber_models'        : {'lv' : '3D_fem', 'rv' : '3D_fem', 'la' : '0D_elast', 'ra' : '0D_elast'},
-                            'perturb_type'          : 'as',
+                            'perturb_type'          : 'mr',
                             'perturb_after_cylce'   : 1}
 
     FEM_PARAMS           = {'order_disp'            : 1,
@@ -68,37 +68,21 @@ def main():
                             'coupling_quantity'     : 'volume',
                             'coupling_type'         : 'monolithic_direct'}
     
-    MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_systole', # end_diastole, end_systole
+    MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 2}
-
-    #MATERIALS            = {'MAT1' : {'holzapfelogden_dev'    : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436},
-                                      #'sussmanbathe_vol'      : {'kappa' : 1.0e3},
-                                      #'active_fiber'          : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.0, 't_relax' : 0.53},
-                                      #'inertia'               : {'rho0' : 1.0e-6},
-                                      #'growth'           : {'growth_dir' : 'isotropic', # isotropic, fiber, crossfiber, radial
-                                                            #'growth_trig' : 'fibstretch', # fibstretch, volstress, prescribed
-                                                            #'thetamax' : 3.0,
-                                                            #'thetamin' : 1.0,
-                                                            #'stretch_crit' : 1.15,
-                                                            #'tau_gr' : 1.0,
-                                                            #'gamma_gr' : 1.72,
-                                                            #'tau_gr_rev' : 10000.0,
-                                                            #'gamma_gr_rev' : 1.0,
-                                                            #'remodeling_mat' : {'neohooke_dev' : {'mu' : 3.},
-                                                                                #'ogden_vol'    : {'kappa' : 3./(1.-2.*0.49)}}}}}
 
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'    : {'mu' : 10.},
                                       'sussmanbathe_vol'      : {'kappa' : 10./(1.-2.*0.49)},
                                       'active_fiber'          : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53},
                                       'inertia'               : {'rho0' : 1.0e-6},
-                                      'growth'           : {'growth_dir' : 'isotropic', # isotropic, fiber, crossfiber, radial
-                                                            'growth_trig' : 'volstress', # fibstretch, volstress, prescribed
+                                      'growth'           : {'growth_dir' : 'fiber', # isotropic, fiber, crossfiber, radial
+                                                            'growth_trig' : 'fibstretch', # fibstretch, volstress, prescribed
                                                             'growth_thres' : 1.15,
-                                                            'thetamax' : 3.0,
+                                                            'thetamax' : 1.5,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 100.0,
-                                                            'gamma_gr' : 1.72,
+                                                            'tau_gr' : 2000.0,
+                                                            'gamma_gr' : 2.0,
                                                             'tau_gr_rev' : 10000.0,
                                                             'gamma_gr_rev' : 1.0,
                                                             'remodeling_mat' : {'neohooke_dev' : {'mu' : 3.},
@@ -106,9 +90,18 @@ def main():
 
 
     #MATERIALS            = {'MAT1' : {'neohooke_dev'    : {'mu' : 10.},
-                                      #'sussmanbathe_vol'      : {'kappa' : 10./(1.-2.*0.49)},
                                       #'active_fiber'          : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53},
-                                      #'inertia'               : {'rho0' : 1.0e-6}}}
+                                      #'inertia'               : {'rho0' : 1.0e-6},
+                                      #'growth'           : {'growth_dir' : 'isotropic', # isotropic, fiber, crossfiber, radial
+                                                            #'growth_trig' : 'volstress', # fibstretch, volstress, prescribed
+                                                            #'growth_thres' : 1.15,
+                                                            #'thetamax' : 1.5,
+                                                            #'thetamin' : 1.0,
+                                                            #'tau_gr' : 2000.0,
+                                                            #'gamma_gr' : 2.0,
+                                                            #'tau_gr_rev' : 10000.0,
+                                                            #'gamma_gr_rev' : 1.0,
+                                                            #'remodeling_mat' : {'neohooke_dev' : {'mu' : 3.}}}}}
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
