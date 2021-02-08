@@ -81,7 +81,7 @@ def main():
                                                             'growth_thres' : 1.15,
                                                             'thetamax' : 1.5,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 2000.0,
+                                                            'tau_gr' : 1000.0,
                                                             'gamma_gr' : 2.0,
                                                             'tau_gr_rev' : 10000.0,
                                                             'gamma_gr_rev' : 1.0,
