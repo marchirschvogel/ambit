@@ -1,0 +1,418 @@
+#!/usr/bin/env python3
+import time
+import sys, os, subprocess, time
+import math
+
+import numpy as np
+from mpi4py import MPI
+from petsc4py import PETSc
+
+from dolfinx.fem import assemble_matrix, assemble_vector, set_bc, apply_lifting
+from ufl import constantvalue
+
+from projection import project
+import expression
+
+class timeintegration():
+    
+    def __init__(self, time_params, time_curves, comm):
+        
+        self.timint = time_params['timint']
+        
+        if 'numstep' in time_params.keys(): self.numstep = time_params['numstep']
+        if 'maxtime' in time_params.keys(): self.maxtime = time_params['maxtime'] 
+        
+        if 'maxtime' in time_params.keys(): self.dt = self.maxtime/self.numstep
+        
+        self.time_curves = time_curves
+
+        self.comm = comm
+        
+        # time-dependent functions to update
+        self.funcs_to_update, self.funcs_to_update_old, self.funcs_to_update_vec, self.funcs_to_update_vec_old = [], [], [], []
+
+
+    # print timestep info
+    def print_timestep(self, N, t, wt=0):
+
+        if self.comm.rank == 0:
+
+            print("### TIME STEP %i / %i successfully completed | TIME: %.4f | wt = %.2e" % (N+1,self.numstep,t,wt))
+            print("--------------------------------------------------------------------------------------------------------------------------------------------------")
+            sys.stdout.flush()
+
+
+    def set_time_funcs(self, funcs, funcs_vec, t):
+
+        for m in funcs_vec:
+            load = expression.template_vector()
+            load.val_x, load.val_y, load.val_z = list(m.values())[0][0](t), list(m.values())[0][1](t), list(m.values())[0][2](t)
+            list(m.keys())[0].interpolate(load.evaluate)
+            list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        for m in funcs:
+            load = expression.template()
+            load.val = list(m.values())[0](t)
+            list(m.keys())[0].interpolate(load.evaluate)
+            list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+    
+    def update_time_funcs(self, funcs, funcs_old, funcsvec, funcsvec_old):
+        
+        # update time-dependent functions
+        for m in range(len(funcs_old)):
+            list(funcs_old[m].keys())[0].vector.axpby(1.0, 0.0, list(funcs[m].keys())[0].vector)
+            list(funcs_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        for m in range(len(funcsvec_old)):
+            list(funcsvec_old[m].keys())[0].vector.axpby(1.0, 0.0, list(funcsvec[m].keys())[0].vector)
+            list(funcsvec_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    # zero
+    def zero(self, t):
+        return 0.0
+
+    def timecurves(self, cnum):
+        
+        if cnum==0: return self.zero
+        if cnum==1: return self.time_curves.tc1
+        if cnum==2: return self.time_curves.tc2
+        if cnum==3: return self.time_curves.tc3
+        if cnum==4: return self.time_curves.tc4
+        if cnum==5: return self.time_curves.tc5
+        if cnum==6: return self.time_curves.tc6
+        if cnum==7: return self.time_curves.tc7
+        if cnum==8: return self.time_curves.tc8
+        if cnum==9: return self.time_curves.tc9
+
+
+# Solid mechanics time integration class
+class timeintegration_solid(timeintegration):
+    
+    def __init__(self, time_params, fem_params, time_curves, comm):
+        timeintegration.__init__(self, time_params, time_curves, comm)
+        
+        if self.timint == 'genalpha': self.alpha_m, self.alpha_f, self.beta, self.gamma = self.compute_genalpha_params(time_params['rho_inf_genalpha'])
+        if self.timint == 'ost': self.theta_ost = time_params['theta_ost']
+        
+        self.incompressible_2field = fem_params['incompressible_2field']
+
+
+    def solve_consistent_ini_acc(self, solvetype, weakform_old, jac_a, a_old, dbcs):
+
+        # create solver
+        ksp = PETSc.KSP().create(self.comm)
+        
+        if solvetype=='direct':
+            ksp.setType("preonly")
+            ksp.getPC().setType("lu")
+            ksp.getPC().setFactorSolverType("superlu_dist")
+        elif solvetype=='iterative':
+            ksp.getPC().setType("hypre")
+            ksp.getPC().setMGLevels(3)
+            ksp.getPC().setHYPREType("boomeramg")
+        else:
+            raise NameError("Unknown solvetype!")
+            
+        
+        # solve for consistent initial acceleration a_old
+        M_a = assemble_matrix(jac_a, dbcs)
+        M_a.assemble()
+        
+        r_a = assemble_vector(weakform_old)
+        #apply_lifting(r_a, [jac_a], [dbcs], x0=[a_old.vector], scale=-1.0)
+        r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        #set_bc(r_a, dbcs, x0=a_old.vector, scale=-1.0)
+        
+        ksp.setOperators(M_a)
+        ksp.solve(-r_a, a_old.vector)
+        
+        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    def set_acc_vel(self, u, u_old, v_old, a_old):
+        
+        # set forms for acc and vel
+        if self.timint == 'genalpha':
+            acc = self.update_a_newmark(u, u_old, v_old, a_old, ufl=True)
+            vel = self.update_v_newmark(acc, u, u_old, v_old, a_old, ufl=True)
+        elif self.timint == 'ost':
+            acc = self.update_a_ost(u, u_old, v_old, a_old, ufl=True)
+            vel = self.update_v_ost(acc, u, u_old, v_old, a_old, ufl=True)
+        elif self.timint == 'static':
+            acc = constantvalue.zero(3)
+            vel = constantvalue.zero(3)
+        else:
+            raise NameError("Unknown time-integration algorithm for solid mechanics!")
+        
+        return acc, vel
+
+
+    def timefactors(self):
+        
+        if self.timint=='genalpha': timefac_m, timefac = 1.-self.alpha_m, 1.-self.alpha_f
+        if self.timint=='ost':      timefac_m, timefac = self.theta_ost, self.theta_ost
+        if self.timint=='static':   timefac_m, timefac = 1., 1.
+        
+        return timefac_m, timefac
+
+
+    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old, funcs, funcs_old, funcsvec, funcsvec_old):
+    
+        # update old fields with new quantities
+        if self.timint == 'genalpha':
+            self.update_fields_newmark(u, u_old, v_old, a_old)
+        if self.timint == 'ost':
+            self.update_fields_ost(u, u_old, v_old, a_old)
+        
+        # update pressure variable
+        if self.incompressible_2field:
+            p_old.vector.axpby(1.0, 0.0, p.vector)
+            p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update internal variables (e.g. active stress, growth stretch, plastic strains, ...)
+        for i in range(len(internalvars_old)):
+            list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
+            list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # update time dependent load curves
+        self.update_time_funcs(funcs, funcs_old, funcsvec, funcsvec_old)
+
+
+
+    def update_a_newmark(self, u, u_old, v_old, a_old, ufl=True):
+        # update formula for acceleration
+        if ufl:
+            dt_ = self.dt
+            beta_ = self.beta
+        else:
+            dt_ = float(self.dt)
+            beta_ = float(self.beta)
+        return 1./(beta_*dt_*dt_) * (u - u_old) - 1./(beta_*dt_) * v_old - (1.-2.*beta_)/(2.*beta_) * a_old
+
+
+    def update_a_ost(self, u, u_old, v_old, a_old, ufl=True):
+        # update formula for acceleration
+        if ufl:
+            dt_ = self.dt
+            theta_ = self.theta_ost
+        else:
+            dt_ = float(self.dt)
+            theta_ = float(self.theta_ost)
+        return 1./(theta_*theta_*dt_*dt_) * (u - u_old) - 1./(theta_*theta_*dt_) * v_old - (1.-theta_)/theta_ * a_old
+
+
+    def update_v_newmark(self, a, u, u_old, v_old, a_old, ufl=True):
+        # update formula for velocity
+        if ufl:
+            dt_ = self.dt
+            gamma_ = self.gamma
+            beta_ = self.beta
+        else:
+            dt_ = float(self.dt)
+            gamma_ = float(self.gamma)
+            beta_ = float(self.beta)
+        return gamma_/(beta_*dt_) * (u - u_old) - (gamma_ - beta_)/beta_ * v_old - (gamma_-2.*beta_)/(2.*beta_) * dt_*a_old
+
+
+    def update_v_ost(self, a, u, u_old, v_old, a_old, ufl=True):
+        # update formula for velocity
+        if ufl:
+            dt_ = self.dt
+            theta_ = self.theta_ost
+        else:
+            dt_ = float(self.dt)
+            theta_ = float(self.theta_ost)
+        return 1./(theta_*dt_) * (u - u_old) - (1. - theta_)/theta_ * v_old
+
+
+    def update_fields_newmark(self, u, u_old, v_old, a_old):
+        # update fields at the end of each time step 
+        # Get vectors (references)
+        u_vec, u0_vec  = u.vector, u_old.vector
+        v0_vec, a0_vec = v_old.vector, a_old.vector
+        u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
+        
+        # use update functions using vector arguments
+        a_vec = self.update_a_newmark(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        v_vec = self.update_v_newmark(a_vec, u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        
+        # update acceleration: a_old <- a
+        a_old.vector.axpby(1.0, 0.0, a_vec)
+        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update velocity: v_old <- v
+        v_old.vector.axpby(1.0, 0.0, v_vec)
+        v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update displacement: u_old <- u
+        u_old.vector.axpby(1.0, 0.0, u_vec)
+        u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    def update_fields_ost(self, u, u_old, v_old, a_old):
+        # update fields at the end of each time step 
+        # Get vectors (references)
+        u_vec, u0_vec  = u.vector, u_old.vector
+        v0_vec, a0_vec = v_old.vector, a_old.vector
+        u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
+        
+        # use update functions using vector arguments
+        a_vec = self.update_a_ost(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        v_vec = self.update_v_ost(a_vec, u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        
+        # update acceleration: a_old <- a
+        a_old.vector.axpby(1.0, 0.0, a_vec)
+        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update velocity: v_old <- v
+        v_old.vector.axpby(1.0, 0.0, v_vec)
+        v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update displacement: u_old <- u
+        u_old.vector.axpby(1.0, 0.0, u_vec)
+        u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    def compute_genalpha_params(self, rho_inf):
+        
+        alpha_m = (2.*rho_inf-1.)/(rho_inf+1.)
+        alpha_f = rho_inf/(rho_inf+1.)
+        beta    = 0.25*(1.-alpha_m+alpha_f)**2.
+        gamma   = 0.5-alpha_m+alpha_f
+        
+        return alpha_m, alpha_f, beta, gamma
+
+
+
+
+# Fluid mechanics time integration class
+class timeintegration_fluid(timeintegration):
+    
+    def __init__(self, time_params, fem_params, time_curves, comm):
+        timeintegration.__init__(self, time_params, time_curves, comm)
+        
+        self.theta_ost = time_params['theta_ost']
+
+
+    def solve_consistent_ini_acc(self, solvetype, weakform_old, jac_a, a_old, dbcs):
+
+        # create solver
+        ksp = PETSc.KSP().create(self.comm)
+        
+        if solvetype=='direct':
+            ksp.setType("preonly")
+            ksp.getPC().setType("lu")
+            ksp.getPC().setFactorSolverType("superlu_dist")
+        elif solvetype=='iterative':
+            ksp.getPC().setType("hypre")
+            ksp.getPC().setMGLevels(3)
+            ksp.getPC().setHYPREType("boomeramg")
+        else:
+            raise NameError("Unknown solvetype!")
+            
+        
+        # solve for consistent initial acceleration a_old
+        M_a = assemble_matrix(jac_a, dbcs)
+        M_a.assemble()
+        
+        r_a = assemble_vector(weakform_old)
+        #apply_lifting(r_a, [jac_a], [dbcs], x0=[a_old.vector], scale=-1.0)
+        r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        #set_bc(r_a, dbcs, x0=a_old.vector, scale=-1.0)
+        
+        ksp.setOperators(M_a)
+        ksp.solve(-r_a, a_old.vector)
+        
+        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+
+    def set_acc(self, v, v_old, a_old):
+        
+        # set forms for acc and vel
+        if self.timint == 'ost':
+            acc = self.update_a_ost(v, v_old, a_old, ufl=True)
+        elif self.timint == 'static':
+            acc = constantvalue.zero(3)
+        else:
+            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
+        
+        return acc
+
+
+    def timefactors(self):
+        
+        if self.timint=='ost':    timefac_m, timefac = self.theta_ost, self.theta_ost
+        if self.timint=='static': timefac_m, timefac = 1., 1.
+        
+        return timefac_m, timefac
+
+
+    def update_timestep(self, v, v_old, a_old, p, p_old, funcs, funcs_old, funcsvec, funcsvec_old):
+    
+        # update old fields with new quantities
+        self.update_fields_ost(v, v_old, a_old)
+        
+        # update pressure variable
+        p_old.vector.axpby(1.0, 0.0, p.vector)
+        p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update time dependent load curves
+        self.update_time_funcs(funcs, funcs_old, funcsvec, funcsvec_old)
+
+
+    def update_a_ost(self, v, v_old, a_old, ufl=True):
+        # update formula for acceleration
+        if ufl:
+            dt_ = self.dt
+            theta_ = self.theta_ost
+        else:
+            dt_ = float(self.dt)
+            theta_ = float(self.theta_ost)
+        return 1./(theta_*dt_) * (v - v_old) - (1.-theta_)/theta_ * a_old
+
+
+    def update_fields_ost(self, v, v_old, a_old):
+        # update fields at the end of each time step 
+        # Get vectors (references)
+        v_vec, v0_vec  = v.vector, v_old.vector
+        a0_vec = a_old.vector
+        v_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
+        
+        # use update functions using vector arguments
+        a_vec = self.update_a_ost(v_vec, v0_vec, a0_vec, ufl=False)
+        
+        # update acceleration: a_old <- a
+        a_old.vector.axpby(1.0, 0.0, a_vec)
+        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update velocity: v_old <- v
+        v_old.vector.axpby(1.0, 0.0, v_vec)
+        v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+
+# Cardiovascular0D flow time integration class
+class timeintegration_flow0d(timeintegration):
+    
+    # initialize base class
+    def __init__(self, time_params, time_curves, comm, cycle=[1], cycleerror=[1]):
+        timeintegration.__init__(self, time_params, time_curves, comm)
+    
+        self.cycle = cycle
+        self.cycleerror = cycleerror
+        
+
+    # print time step info
+    def print_timestep(self, N, t, Nmax, wt=0):
+
+        if self.comm.rank == 0:
+
+            if self.cycle[0]==1: # cycle error does not make sense in first cycle
+                print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: - | wt = %.2e" % (N+1,Nmax,t,self.cycle[0],wt))
+            else:
+                print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: %.4f | wt = %.2e" % (N+1,Nmax,t,self.cycle[0],self.cycleerror[0],wt))
+            print("--------------------------------------------------------------------------------------------------------------------------------------------------")
+            sys.stdout.flush()

@@ -1,0 +1,51 @@
+<Xdmf Version="3.0">
+  <Domain>
+    <Grid Name="Grid">
+      <Geometry GeometryType="XYZ">
+        <DataItem DataType="Float" Dimensions="9 3" Format="XML" Precision="8">
+          1.0000000000000000e+00 1.0000000000000000e+00 8.0000000000000000e+00
+          1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+01
+          -1.0000000000000000e+00 1.0000000000000000e+00 8.0000000000000000e+00
+          -5.2019042968749485e-02 -2.3971176147461470e-02 8.9236755943298327e+00
+          -1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+01
+          -1.0000000000000000e+00 -1.0000000000000000e+00 8.0000000000000000e+00
+          1.0000000000000000e+00 -1.0000000000000000e+00 1.0000000000000000e+01
+          -1.0000000000000000e+00 -1.0000000000000000e+00 1.0000000000000000e+01
+          1.0000000000000000e+00 -1.0000000000000000e+00 8.0000000000000000e+00
+        </DataItem>
+      </Geometry>
+      <Topology NodesPerElement="4" NumberOfElements="12" TopologyType="tetrahedron">
+        <DataItem DataType="Int" Dimensions="12 4" Format="XML" Precision="4">
+          0 1 2 3
+          4 3 5 2
+          0 6 1 3
+          3 6 1 4
+          3 7 8 6
+          0 6 3 8
+          0 8 3 5
+          3 8 7 5
+          5 2 3 0
+          3 1 2 4
+          5 7 3 4
+          6 3 7 4
+        </DataItem>
+      </Topology>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="materials">
+        <DataItem DataType="Int" Dimensions="12" Format="XML" Precision="4">
+          1
+          1
+          1
+          1
+          1
+          1
+          1
+          1
+          1
+          1
+          1
+          1
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

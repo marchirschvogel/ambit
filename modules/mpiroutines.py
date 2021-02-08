@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+
+import numpy as np
+
+
+# gather an entry of a parallel PETSc vector
+def allgather_vec_entry(var, Id, comm):
+    
+    # ownership range of parallel vector
+    vs, ve = var.getOwnershipRange()
+
+    var_tmp, var_all = 0., 0.
+    
+    if Id in range(vs,ve): var_tmp = var[Id]
+    
+    var_arr = comm.allgather(var_tmp)
+    
+    for i in range(len(var_arr)):
+        var_all += var_arr[i]
+        
+    return var_all
+
+
+# gather a parallel PETSc vector and store it to a numpy array known by all processes
+def allgather_vec(var, comm):
+    
+    # ownership range of parallel vector
+    vs, ve = var.getOwnershipRange()
+    
+    var_tmp, var_all = np.zeros(var.getSize()), np.zeros(var.getSize())
+        
+    for i in range(vs,ve):
+        var_tmp[i] = var[i]
+            
+    var_arr = comm.allgather(var_tmp)
+
+    for i in range(len(var_arr)):
+        var_all += var_arr[i]
+        
+    return var_all
+
+
+# gather a parallel PETSc matrix and store it to a numpy array known by all processes
+def allgather_mat(var, comm):
+    
+    # (row) ownership range of parallel matrix
+    mrs, mre = var.getOwnershipRange()
+    
+    var_tmp, var_all = np.zeros((var.getSize()[0],var.getSize()[1])), np.zeros((var.getSize()[0],var.getSize()[1]))
+        
+    for i in range(mrs,mre):
+        var_tmp[i,:] = var[i,:]
+            
+    var_arr = comm.allgather(var_tmp)
+
+    for i in range(len(var_arr)):
+        var_all += var_arr[i]
+        
+    return var_all

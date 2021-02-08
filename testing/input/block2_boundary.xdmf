@@ -1,0 +1,39 @@
+<Xdmf Version="3.0">
+  <Domain>
+    <Grid Name="Grid_surf">
+      <Geometry GeometryType="XYZ">
+        <DataItem DataType="Float" Dimensions="9 3" Format="XML" Precision="8">
+          1.0000000000000000e+00 1.0000000000000000e+00 8.0000000000000000e+00
+          1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+01
+          -1.0000000000000000e+00 1.0000000000000000e+00 8.0000000000000000e+00
+          -5.2019042968749485e-02 -2.3971176147461470e-02 8.9236755943298327e+00
+          -1.0000000000000000e+00 1.0000000000000000e+00 1.0000000000000000e+01
+          -1.0000000000000000e+00 -1.0000000000000000e+00 8.0000000000000000e+00
+          1.0000000000000000e+00 -1.0000000000000000e+00 1.0000000000000000e+01
+          -1.0000000000000000e+00 -1.0000000000000000e+00 1.0000000000000000e+01
+          1.0000000000000000e+00 -1.0000000000000000e+00 8.0000000000000000e+00
+        </DataItem>
+      </Geometry>
+      <Topology NodesPerElement="3" NumberOfElements="6" TopologyType="triangle">
+        <DataItem DataType="Int" Dimensions="6 3" Format="XML" Precision="4">
+          8 7 5
+          7 8 6
+          4 5 2
+          5 7 4
+          0 6 1
+          0 6 8
+        </DataItem>
+      </Topology>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="boundaries_surf">
+        <DataItem DataType="Int" Dimensions="6" Format="XML" Precision="4">
+          1
+          1
+          2
+          2
+          3
+          3
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

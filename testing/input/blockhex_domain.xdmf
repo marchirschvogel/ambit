@@ -1,0 +1,28 @@
+<Xdmf Version="3.0">
+  <Domain>
+    <Grid Name="Grid">
+      <Geometry GeometryType="XYZ">
+        <DataItem DataType="Float" Dimensions="8 3" Format="XML" Precision="8">
+          0.0 0.0 0.0
+          0.0 1.0 0.0
+          1.0 1.0 0.0
+          1.0 0.0 0.0
+          0.0 0.0 1.0
+          0.0 1.0 1.0
+          1.0 1.0 1.0
+          1.0 0.0 1.0
+        </DataItem>
+      </Geometry>
+      <Topology NodesPerElement="8" NumberOfElements="1" TopologyType="hexahedron">
+        <DataItem DataType="Int" Dimensions="1 8" Format="XML" Precision="4">
+          0 1 2 3 4 5 6 7
+        </DataItem>
+      </Topology>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="materials">
+        <DataItem DataType="Int" Dimensions="1" Format="XML" Precision="4">
+          1
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>
