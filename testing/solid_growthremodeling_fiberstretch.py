@@ -23,7 +23,7 @@ def main():
                             'mesh_domain'           : ''+basepath+'/input/blockhex_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/blockhex_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib1_blockhex.txt',''+basepath+'/input/fib2_blockhex.txt']},
-                            'write_results_every'   : 1,
+                            'write_results_every'   : -999,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','theta','fiberstretch','fiberstretch_e','phi_remod'],
                             'simname'               : 'solid_growthremodeling_fiberstretch'}

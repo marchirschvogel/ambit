@@ -61,17 +61,25 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
             except:
                 pass
 
-        fem_params_large = copy.deepcopy(fem_params)
-        # no prestress on the large scale
-        try: fem_params_large.pop('prestress_initial')
-        except: pass
             
         # we have to be quasi-static on the large scale!
         assert(time_params_solid_large['timint'] == 'static')
 
         # initialize problem instances
         self.pbsmall = SolidmechanicsFlow0DProblem(io_params, time_params_solid_small, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, comm=self.comm)
-        self.pblarge = SolidmechanicsProblem(io_params, time_params_solid_large, fem_params_large, constitutive_models_large, bc_dict, time_curves, comm=self.comm)
+        self.pblarge = SolidmechanicsProblem(io_params, time_params_solid_large, fem_params, constitutive_models_large, bc_dict, time_curves, comm=self.comm)
+
+        self.tol_small = multiscale_params['tol_small']
+        self.tol_large = multiscale_params['tol_large']
+
+        # override by tol_small
+        self.pbsmall.pbf.eps_periodic = self.tol_small
+        self.pblarge.tol_stop_large = self.tol_large
+
+        # store to ensure prestressed state is kept throughout the whole cycle (small scale prestress_initial gets set to False after initial prestress)
+        self.prestress_initial = self.pbsmall.pbs.prestress_initial
+        # set large scale prestress to False (only F_hist and u_pre are added on the large scale if we have prestress, but no extra prestressing phase is undergone)
+        self.pblarge.prestress_initial = False
 
         self.simname_small = self.pbsmall.pbs.io.simname + '_small'
         self.simname_large = self.pblarge.io.simname + '_large'
@@ -88,11 +96,6 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         
     # defines the solid and monolithic coupling forms for 0D flow and solid mechanics
     def set_variational_forms_and_jacobians(self):
-        
-        # all coupled 3D-0D forms for small timescale
-        self.pbsmall.set_variational_forms_and_jacobians()
-        # large timescale solid forms
-        self.pblarge.set_variational_forms_and_jacobians()
 
         # add constant Neumann terms for large scale problem (trigger pressures)
         self.neumann_funcs = []
@@ -146,6 +149,13 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
             # solve small scale 3D-0D coupled solid-flow0d problem with fixed growth
             self.solversmall.solve_problem()
+            
+            # only needed once - set prestressing history deformation gradient and spring offset from small scale
+            if self.pb.prestress_initial and N == 0:
+                self.pb.pblarge.F_hist.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.F_hist.vector)
+                self.pb.pblarge.F_hist.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                self.pb.pblarge.u_pre.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_pre.vector)
+                self.pb.pblarge.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             
             # update large scale variables
             self.pb.pblarge.u.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_set.vector)

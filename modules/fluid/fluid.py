@@ -59,8 +59,12 @@ class FluidmechanicsProblem(problem_base):
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
+            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 3:
+                raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
+            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 4:
+                raise ValueError("Use at least a quadrature degree of 4 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
 

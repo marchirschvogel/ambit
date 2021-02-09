@@ -223,7 +223,7 @@ class SolidmechanicsFlow0DSolver():
         for (N, dt) in enumerate(np.diff(interval)):
             
             wts = time.time()
-            
+
             t = interval[N+1] + self.pb.t_prev # t_prev for multiscale analysis (time from previous cycles)
             
             # offset time for multiple cardiac cycles
@@ -249,7 +249,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
             self.pb.pbf.cardvasc0D.update(self.pb.pbf.s, self.pb.pbf.df, self.pb.pbf.f, self.pb.pbf.s_old, self.pb.pbf.df_old, self.pb.pbf.f_old, self.pb.pbf.aux, self.pb.pbf.aux_old)
             
-            # update old structure pressures
+            # update old pressures on solid
             if self.pb.coupling_type == 'monolithic_direct':
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
             if self.pb.coupling_type == 'monolithic_lagrange':

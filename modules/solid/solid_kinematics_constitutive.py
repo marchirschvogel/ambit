@@ -482,7 +482,7 @@ class constitutive:
         dphi_dtheta_ = self.phi_remod(theta_,tang=True)
         dtheta_dp_ = self.dtheta_dp(u_, p_, ivar, theta_old_, thres, dt)
 
-        Cremod_p = 2.*dphi_dtheta_ * dtheta_dp_ * ( - self.stress_remod - self.stress_base)
+        Cremod_p = 2.*dphi_dtheta_ * dtheta_dp_ * (self.stress_remod - self.stress_base)
 
         return Cremod_p
 

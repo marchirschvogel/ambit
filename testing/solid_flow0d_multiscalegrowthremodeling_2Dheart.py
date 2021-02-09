@@ -26,7 +26,7 @@ def main():
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_2Dcoarse.txt',''+basepath+'/input/fib_sheet_coords_nodal_2Dcoarse.txt']},
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
-                            'results_to_write'      : ['displacement','theta','phi_remod'],
+                            'results_to_write'      : ['displacement','theta','phi_remod','trmandelstress'],
                             'simname'               : 'multiscale_gandr'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
@@ -36,21 +36,21 @@ def main():
     SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6,
                             'tol_inc'               : 1.0e-6}
 
-    TIME_PARAMS_SOLID_SMALL = {'maxtime'            : 2.0,
-                            'numstep'               : 100,
+    TIME_PARAMS_SOLID_SMALL = {'maxtime'            : 100.0,
+                            'numstep'               : 5000,
                             'timint'                : 'genalpha', # genalpha, ost, static
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
 
-    TIME_PARAMS_SOLID_LARGE = {'maxtime'            : 1.0,
-                            'numstep'               : 100,
+    TIME_PARAMS_SOLID_LARGE = {'maxtime'            : 100.0,
+                            'numstep'               : 1000,
                             'timint'                : 'static'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
                             'theta_ost'             : 0.5,
-                            'initial_conditions'    : init(),
                             'eps_periodic'          : 999,
-                            'periodic_checktype'    : 'pQvar'}
+                            'periodic_checktype'    : 'pQvar',
+                            'initial_file'          : ''+basepath+'/input/initial_syspul_multiscale.txt'}
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul',
                             'parameters'            : param(),
@@ -61,7 +61,8 @@ def main():
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 1,
-                            'incompressible_2field' : False}
+                            'incompressible_2field' : False,
+                            'prestress_initial'     : True}
     
     COUPLING_PARAMS      = {'surface_ids'           : [1,2],
                             'cq_factor'             : [80.,80.],
@@ -69,7 +70,10 @@ def main():
                             'coupling_type'         : 'monolithic_direct'}
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
-                            'numcycles'             : 2}
+                            'numcycles'             : 2,
+                            'tol_small'             : 999, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
+                            'tol_large'             : 1.0e-3, # growth rate tolerance
+                            'tol_outer'             : 1.0e-3}
 
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'    : {'mu' : 10.},
@@ -81,7 +85,7 @@ def main():
                                                             'growth_thres' : 1.15,
                                                             'thetamax' : 1.5,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 1000.0,
+                                                            'tau_gr' : 100.0,
                                                             'gamma_gr' : 2.0,
                                                             'tau_gr_rev' : 10000.0,
                                                             'gamma_gr_rev' : 1.0,
@@ -147,26 +151,6 @@ def main():
     
     #return success
 
-
-
-def init():
-    
-    return {'q_vin_l_0' : 1.1549454594333263E+04,
-            'p_at_l_0' : 3.8580961077622145E-01,
-            'q_vout_l_0' : -1.0552685263595845E+00,
-            'p_v_l_0' : 3.7426015618188813E-01,
-            'p_ar_sys_0' : 1.0926945419777734E+01,
-            'q_ar_sys_0' : 7.2237210814547114E+04,
-            'p_ven_sys_0' : 2.2875736545217800E+00,
-            'q_ven_sys_0' : 8.5022643486798144E+04,
-            'q_vin_r_0' : 4.1097788677528049E+04,
-            'p_at_r_0' : 2.4703021083862464E-01,
-            'q_vout_r_0' : -2.0242075369768467E-01,
-            'p_v_r_0' : 2.0593242216109664E-01,
-            'p_ar_pul_0' : 2.2301399591379436E+00,
-            'q_ar_pul_0' : 3.6242987765574515E+04,
-            'p_ven_pul_0' : 1.6864951426543255E+00,
-            'q_ven_pul_0' : 8.6712368791873596E+04}
 
 
 def param():

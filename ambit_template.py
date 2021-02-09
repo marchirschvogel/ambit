@@ -12,7 +12,7 @@ def main():
 
     # all possible input parameters
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
@@ -72,6 +72,12 @@ def main():
                             'cq_factor'             : [1.,1.], # if we want to scale the 3D volume or flux (e.g. for 2D solid models)
                             'coupling_quantity'     : 'volume', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange
+
+    MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
+                            'numcycles'             : 2,
+                            'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
+                            'tol_large'             : 1.0e-3, # growth rate tolerance
+                            'tol_outer'             : 1.0e-3}
 
                             # - MATn has to correspond to subdomain id n (set by the flags in Attribute section of *_domain.xdmf file - so if you have x mats, you need ids ranging from 1,...,x)
                             # - one MAT can be decomposed into submats, see examples below (additive stress contributions)

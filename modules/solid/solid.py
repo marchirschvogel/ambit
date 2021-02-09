@@ -9,6 +9,7 @@
 import time, sys, copy
 import numpy as np
 from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
+from dolfinx.fem import assemble_scalar
 from ufl import TrialFunction, TestFunction, FiniteElement, VectorElement, TensorElement, derivative, diff, det, inner, inv, dx, ds, as_vector, as_ufl, Identity, constantvalue
 from petsc4py import PETSc
 
@@ -74,8 +75,12 @@ class SolidmechanicsProblem(problem_base):
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
+            if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 3:
+                raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
+            if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 4:
+                raise ValueError("Use at least a quadrature degree of 4 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
         
@@ -227,6 +232,10 @@ class SolidmechanicsProblem(problem_base):
 
         else:
             self.fib_func = None
+
+        
+        # for multiscale G&R analysis
+        self.tol_stop_large = 0
 
         # initialize kinematics class
         self.ki = solid_kinematics_constitutive.kinematics(fib_funcs=self.fib_func, F_hist=self.F_hist)
@@ -470,7 +479,7 @@ class SolidmechanicsProblem(problem_base):
                 # fiber stretch (needed for Frank-Starling law)
                 if self.actstress[na].frankstarling:
                     if self.mat_growth[n]: lam_fib = self.ma[n].fibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
-                    else:                     lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
+                    else:                  lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
                 else:
                     lam_fib = as_ufl(1)
                 
@@ -487,6 +496,20 @@ class SolidmechanicsProblem(problem_base):
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
+
+    # computes and prints the growth rate of the whole body
+    def compute_body_growth_rate(self):
+        
+        dtheta_all = as_ufl(0)
+        for n in range(self.num_domains):
+            
+            dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx_[n]
+
+        self.growth_rate = assemble_scalar(dtheta_all)
+
+        if self.comm.rank == 0:
+            print('Body growth rate: %.4e' % (self.growth_rate))
+            sys.stdout.flush()
 
 
 
@@ -508,7 +531,7 @@ class SolidmechanicsSolver():
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
 
-        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
+        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
         if self.pb.prestress_initial:
             
             utilities.print_prestress('start', self.pb.comm)
@@ -537,6 +560,7 @@ class SolidmechanicsSolver():
             self.pb.prestress_initial = False
 
             utilities.print_prestress('end', self.pb.comm)
+
 
         # solve for consistent initial acceleration
         if self.pb.timint != 'static':
@@ -574,7 +598,11 @@ class SolidmechanicsSolver():
 
             # solve
             solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)
-            
+
+            # compute the volume increase due to growth (has to be called before update_timestep)
+            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr':
+                self.pb.compute_body_growth_rate()
+
             # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
             self.pb.ti.update_timestep(self.pb.u, self.pb.u_old, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.internalvars, self.pb.internalvars_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)
 
@@ -587,7 +615,10 @@ class SolidmechanicsSolver():
 
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, wt=wt)
-
+            
+            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
+                break
+            
             # maximum number of steps to perform
             try:
                 if N+1 == self.pb.numstep_stop:
