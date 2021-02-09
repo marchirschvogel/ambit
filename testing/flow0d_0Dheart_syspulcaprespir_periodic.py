@@ -56,7 +56,7 @@ def main():
 
     s_corr = np.zeros(problem.mp.cardvasc0D.numdof)
 
-    ## correct results - from former baci testcase (5 cycles with each 1.0 s, theta = 1.0)
+    ## correct results - from former testcase (5 cycles with each 1.0 s, theta = 1.0)
     ## currently CANNOT be reproduced with the prescribed elastance model here (even though we're not too far off...)
     ## TODO: Check why this is the case!
     #s_corr[0] = 7.71781462654294883e+04

@@ -97,6 +97,7 @@ def main():
                                       'growth'             : {'growth_dir' : 'isotropic', # isotropic, fiber, crossfiber, radial
                                                               'growth_trig' : 'volstress', # fibstretch, volstress, prescribed
                                                               'growth_thres' : 1.01, # critial value above which growth happens (i.e. a critial stretch, stress or whatever depending on the growth trigger)
+                                                              'thres_tol' : 1.0e-4, # tolerance for threshold (makes sense in multiscale approach, where threshold is set element-wise)
                                                               'thetamax' : 1.5, # maximum growth stretch
                                                               'thetamin' : 1.0, # minimum growth stretch
                                                               'tau_gr' : 1.0, # growth time constant

@@ -9,7 +9,7 @@
 import sys, os, subprocess, time
 import math
 from dolfinx import Function
-from ufl import tr, det, dot, grad, inv, dev, inner, Identity, variable, ln, sqrt, exp, diff, conditional, ge, outer, cross, as_tensor, indices, as_ufl, constantvalue
+from ufl import tr, det, dot, grad, inv, dev, inner, Identity, variable, ln, sqrt, exp, diff, conditional, ge, gt, outer, cross, as_tensor, indices, as_ufl, constantvalue
 
 from petsc4py import PETSc
 
@@ -300,13 +300,19 @@ class constitutive:
         
         grfnc = growthfunction(theta_,self.I)
 
+        try: omega = self.gandrparams['thres_tol']
+        except: omega = 0
+        
+        # threshold should not be lower than specified
+        threshold = conditional(gt(thres,self.gandrparams['growth_thres']), (1.+omega)*thres, self.gandrparams['growth_thres'])
+
         if self.growth_trig == 'volstress':
-            ktheta = grfnc.mandelstress(tr(self.M_e(u_,p_,self.kin.C(u_),ivar)), thres, self.gandrparams)
-            r_growth = theta_ - theta_old_ - ktheta * (tr(self.M_e(u_,p_,self.kin.C(u_),ivar)) - thres) * dt
+            ktheta = grfnc.mandelstress(tr(self.M_e(u_,p_,self.kin.C(u_),ivar)), threshold, self.gandrparams)
+            r_growth = theta_ - theta_old_ - ktheta * (tr(self.M_e(u_,p_,self.kin.C(u_),ivar)) - threshold) * dt
             
         elif self.growth_trig == 'fibstretch':
-            ktheta = grfnc.fiberstretch(self.fibstretch_e(self.kin.C(u_),theta_,self.kin.fib_funcs[0]), thres, self.gandrparams)
-            r_growth = theta_ - theta_old_ - ktheta * (self.fibstretch_e(self.kin.C(u_),theta_,self.kin.fib_funcs[0]) - thres) * dt
+            ktheta = grfnc.fiberstretch(self.fibstretch_e(self.kin.C(u_),theta_,self.kin.fib_funcs[0]), threshold, self.gandrparams)
+            r_growth = theta_ - theta_old_ - ktheta * (self.fibstretch_e(self.kin.C(u_),theta_,self.kin.fib_funcs[0]) - threshold) * dt
             
         else:
             raise NameError("Unknown growth_trig!")

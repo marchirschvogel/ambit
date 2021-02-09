@@ -106,7 +106,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
             
             ds_ = ds(subdomain_data=self.pblarge.io.mt_b1, subdomain_id=self.pbsmall.surface_p_ids[i], metadata={'quadrature_degree': self.pblarge.quad_degree})
             
-            w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u), self.pblarge.ki.F(self.pblarge.u), self.neumann_funcs[-1], ds_)
+            #w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u), self.pblarge.ki.F(self.pblarge.u), self.neumann_funcs[-1], ds_)
+            w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
+
 
         self.pblarge.weakform_u -= w_neumann
         self.pblarge.jac_uu -= derivative(w_neumann, self.pblarge.u, self.pblarge.du)
@@ -158,6 +160,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 self.pb.pblarge.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             
             # update large scale variables
+            self.pb.pblarge.u_set.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_set.vector)
+            self.pb.pblarge.u_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            
             self.pb.pblarge.u.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_set.vector)
             self.pb.pblarge.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             if self.pb.pblarge.incompressible_2field:

@@ -26,7 +26,7 @@ def main():
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_2Dcoarse.txt',''+basepath+'/input/fib_sheet_coords_nodal_2Dcoarse.txt']},
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
-                            'results_to_write'      : ['displacement','theta','phi_remod','trmandelstress'],
+                            'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e'],
                             'simname'               : 'multiscale_gandr'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
@@ -44,6 +44,7 @@ def main():
 
     TIME_PARAMS_SOLID_LARGE = {'maxtime'            : 100.0,
                             'numstep'               : 1000,
+                            'numstep_stop'          : 300,
                             'timint'                : 'static'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
@@ -72,7 +73,7 @@ def main():
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 2,
                             'tol_small'             : 999, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
-                            'tol_large'             : 1.0e-3, # growth rate tolerance
+                            'tol_large'             : -1.0, # growth rate tolerance [mm^3/s]
                             'tol_outer'             : 1.0e-3}
 
 
@@ -82,15 +83,16 @@ def main():
                                       'inertia'               : {'rho0' : 1.0e-6},
                                       'growth'           : {'growth_dir' : 'fiber', # isotropic, fiber, crossfiber, radial
                                                             'growth_trig' : 'fibstretch', # fibstretch, volstress, prescribed
-                                                            'growth_thres' : 1.15,
+                                                            'growth_thres' : 1.02,
+                                                            'thres_tol' : 1.0e-2,
                                                             'thetamax' : 1.5,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 100.0,
+                                                            'tau_gr' : 10.0,
                                                             'gamma_gr' : 2.0,
                                                             'tau_gr_rev' : 10000.0,
                                                             'gamma_gr_rev' : 1.0,
-                                                            'remodeling_mat' : {'neohooke_dev' : {'mu' : 3.},
-                                                                                'ogden_vol'    : {'kappa' : 3./(1.-2.*0.49)}}}}}
+                                                            'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
+                                                                                'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)}}}}}
 
 
     #MATERIALS            = {'MAT1' : {'neohooke_dev'    : {'mu' : 10.},
