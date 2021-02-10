@@ -34,11 +34,11 @@ class SolidmechanicsFlow0DProblem():
         self.coupling_params = coupling_params
         
         self.surface_vq_ids = self.coupling_params['surface_ids']
-        if 'surface_p_ids' in coupling_params.keys(): self.surface_p_ids = self.coupling_params['surface_p_ids']
-        else: self.surface_p_ids = self.surface_vq_ids
+        try: self.surface_p_ids = self.coupling_params['surface_p_ids']
+        except: self.surface_p_ids = self.surface_vq_ids
         
-        if 'coupling_type' in coupling_params.keys(): self.coupling_type = self.coupling_params['coupling_type']
-        else: self.coupling_type = 'monolithic_direct'
+        try: self.coupling_type = self.coupling_params['coupling_type']
+        except: self.coupling_type = 'monolithic_direct'
         
         # for multiscale G&R analysis
         self.t_prev = 0
@@ -346,4 +346,3 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.tau_a_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             self.pb.pbf.s_set.axpby(1.0, 0.0, self.pb.pbf.s)
-            self.pb.pbf.s_set.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

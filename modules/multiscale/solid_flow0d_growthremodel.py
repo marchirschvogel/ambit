@@ -121,7 +121,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
     
         self.pb = problem
         
-        # initialize problem instances
+        # initialize solver instances
         self.solversmall = SolidmechanicsFlow0DSolver(self.pb.pbsmall, solver_params_solid, solver_params_flow0d)
         self.solverlarge = SolidmechanicsSolver(self.pb.pblarge, solver_params_solid)
 

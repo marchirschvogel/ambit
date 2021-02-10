@@ -33,11 +33,11 @@ class FluidmechanicsFlow0DProblem():
         self.coupling_params = coupling_params
         
         self.surface_vq_ids = self.coupling_params['surface_ids']
-        if 'surface_p_ids' in coupling_params.keys(): self.surface_p_ids = self.coupling_params['surface_p_ids']
-        else: self.surface_p_ids = self.surface_vq_ids
+        try: self.surface_p_ids = self.coupling_params['surface_p_ids']
+        except: self.surface_p_ids = self.surface_vq_ids
         
-        if 'coupling_type' in coupling_params.keys(): self.coupling_type = self.coupling_params['coupling_type']
-        else: self.coupling_type = 'monolithic_direct'
+        try: self.coupling_type = self.coupling_params['coupling_type']
+        except: self.coupling_type = 'monolithic_direct'
         
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbs = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, comm=self.comm)

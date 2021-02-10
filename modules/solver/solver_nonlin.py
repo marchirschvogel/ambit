@@ -43,29 +43,29 @@ class solver_nonlinear:
         
         self.ptype = self.pb.problem_physics
 
-        if 'maxiter' in solver_params.keys(): self.maxiter = solver_params['maxiter']
-        else: self.maxiter = 25
+        try: self.maxiter = solver_params['maxiter']
+        except: self.maxiter = 25
 
-        if 'divergence_continue' in solver_params.keys(): self.divcont = solver_params['divergence_continue']
-        else: self.divcont = None
+        try: self.divcont = solver_params['divergence_continue']
+        except: self.divcont = None
         
-        if 'ptc' in solver_params.keys(): self.PTC = solver_params['ptc']
-        else: self.PTC = False
+        try: self.PTC = solver_params['ptc']
+        except: self.PTC = False
         
-        if 'k_ptc_initial' in solver_params.keys(): self.k_PTC_initial = solver_params['k_ptc_initial']
-        else: self.k_PTC_initial = 0.1
+        try: self.k_PTC_initial = solver_params['k_ptc_initial']
+        except: self.k_PTC_initial = 0.1
         
-        if 'adapt_linsolv_tol' in solver_params.keys(): self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
-        else: self.adapt_linsolv_tol = False
+        try: self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
+        except: self.adapt_linsolv_tol = False
         
-        if 'adapt_factor' in solver_params.keys(): self.adapt_factor = solver_params['adapt_factor']
-        else: self.adapt_factor = 0.1
+        try: self.adapt_factor = solver_params['adapt_factor']
+        except: self.adapt_factor = 0.1
         
-        if 'tol_lin' in solver_params.keys(): self.tollin = solver_params['tol_lin']
-        else: self.tollin = 1.0e-8
+        try: self.tollin = solver_params['tol_lin']
+        except: self.tollin = 1.0e-8
         
-        if 'print_liniter_every' in solver_params.keys(): self.print_liniter_every = solver_params['print_liniter_every']
-        else: self.print_liniter_every = 50
+        try: self.print_liniter_every = solver_params['print_liniter_every']
+        except: self.print_liniter_every = 50
 
         self.solvetype = solver_params['solve_type']
         self.tolres = solver_params['tol_res']
@@ -1150,8 +1150,8 @@ class solver_nonlinear_0D(solver_nonlinear):
         
         self.ptype = self.pb.problem_physics
 
-        if 'maxiter' in solver_params.keys(): self.maxiter = solver_params['maxiter']
-        else: self.maxiter = 25
+        try: self.maxiter = solver_params['maxiter']
+        except: self.maxiter = 25
 
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']

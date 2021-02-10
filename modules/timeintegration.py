@@ -128,9 +128,7 @@ class timeintegration_solid(timeintegration):
         M_a.assemble()
         
         r_a = assemble_vector(weakform_old)
-        #apply_lifting(r_a, [jac_a], [dbcs], x0=[a_old.vector], scale=-1.0)
         r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        #set_bc(r_a, dbcs, x0=a_old.vector, scale=-1.0)
         
         ksp.setOperators(M_a)
         ksp.solve(-r_a, a_old.vector)
@@ -325,9 +323,7 @@ class timeintegration_fluid(timeintegration):
         M_a.assemble()
         
         r_a = assemble_vector(weakform_old)
-        #apply_lifting(r_a, [jac_a], [dbcs], x0=[a_old.vector], scale=-1.0)
         r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        #set_bc(r_a, dbcs, x0=a_old.vector, scale=-1.0)
         
         ksp.setOperators(M_a)
         ksp.solve(-r_a, a_old.vector)

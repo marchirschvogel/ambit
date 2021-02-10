@@ -28,15 +28,15 @@ class IO:
         self.mesh_domain = io_params['mesh_domain']
         self.mesh_boundary = io_params['mesh_boundary']
         
-        if 'fiber_data' in io_params.keys(): self.fiber_data = io_params['fiber_data']
-        else: self.fiber_data = {}
+        try: self.fiber_data = io_params['fiber_data']
+        except: self.fiber_data = {}
         
-        if 'have_bd1_bcs' in io_params.keys(): self.have_b1_bcs = io_params['have_bd1_bcs']
-        else:                                  self.have_b1_bcs = True # most likely!
-        if 'have_bd2_bcs' in io_params.keys(): self.have_b2_bcs = io_params['have_bd2_bcs']
-        else:                                  self.have_b2_bcs = False
-        if 'have_bd3_bcs' in io_params.keys(): self.have_b3_bcs = io_params['have_bd3_bcs']
-        else:                                  self.have_b3_bcs = False
+        try: self.have_b1_bcs = io_params['have_bd1_bcs']
+        except: self.have_b1_bcs = True # most likely!
+        try: self.have_b2_bcs = io_params['have_bd2_bcs']
+        except: self.have_b2_bcs = False
+        try: self.have_b3_bcs = io_params['have_bd3_bcs']
+        except: self.have_b3_bcs = False
         
         self.comm = comm
 

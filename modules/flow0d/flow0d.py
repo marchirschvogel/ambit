@@ -27,52 +27,52 @@ class Flow0DProblem(problem_base):
         
         self.time_params = time_params
         
-        if 'T_cycl' in model_params['parameters'].keys(): self.T_cycl = model_params['parameters']['T_cycl']
-        else: self.T_cycl = 0
+        try: self.T_cycl = model_params['parameters']['T_cycl']
+        except: self.T_cycl = 0
         
-        if 'chamber_models' in model_params.keys(): chamber_models = model_params['chamber_models']
-        else: chamber_models = {'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}
+        try: chamber_models = model_params['chamber_models']
+        except: chamber_models = {'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}
         
-        if 'chamber_interfaces' in model_params.keys(): chamber_interfaces = model_params['chamber_interfaces']
-        else: chamber_interfaces = {'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}
+        try: chamber_interfaces = model_params['chamber_interfaces']
+        except: chamber_interfaces = {'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}
         
-        if 'prescribed_path' in io_params.keys(): prescribed_path = io_params['prescribed_path']
-        else: prescribed_path = None
+        try: prescribed_path = io_params['prescribed_path']
+        except: prescribed_path = None
 
-        if 'initial_file' in time_params.keys(): initial_file = time_params['initial_file']
-        else: initial_file = ''
+        try: initial_file = time_params['initial_file']
+        except: initial_file = ''
 
         # could use extra write frequency setting for 0D model (i.e. for coupled problem)
-        if 'write_results_every_0D' in io_params.keys(): self.write_results_every_0D = io_params['write_results_every_0D']
-        else: self.write_results_every_0D = io_params['write_results_every']
+        try: self.write_results_every_0D = io_params['write_results_every_0D']
+        except: self.write_results_every_0D = io_params['write_results_every']
 
         # could use extra output path setting for 0D model (i.e. for coupled problem)
-        if 'output_path_0D' in io_params.keys(): self.output_path_0D = io_params['output_path_0D']
-        else: self.output_path_0D = io_params['output_path']
+        try: self.output_path_0D = io_params['output_path_0D']
+        except: self.output_path_0D = io_params['output_path']
         
-        if 'have_elastance' in model_params.keys(): have_elastance = model_params['have_elastance']
-        else: have_elastance = False
+        try: have_elastance = model_params['have_elastance']
+        except: have_elastance = False
         
-        if 'valvelaw' in model_params.keys(): valvelaw = model_params['valvelaw']
-        else: valvelaw = 'pwlin_pres'
+        try: valvelaw = model_params['valvelaw']
+        except: valvelaw = 'pwlin_pres'
 
-        if 'coupling_quantity' in coupling_params.keys(): self.cq = coupling_params['coupling_quantity']
-        else: self.cq = 'volume'
+        try: self.cq = coupling_params['coupling_quantity']
+        except: self.cq = 'volume'
         
-        if 'eps_periodic' in time_params.keys(): self.eps_periodic = time_params['eps_periodic']
-        else: self.eps_periodic = 1.0e-20
+        try: self.eps_periodic = time_params['eps_periodic']
+        except: self.eps_periodic = 1.0e-20
         
-        if 'periodic_checktype' in time_params.keys(): self.periodic_checktype = time_params['periodic_checktype']
-        else: self.periodic_checktype = 'allvar'
+        try: self.periodic_checktype = time_params['periodic_checktype']
+        except: self.periodic_checktype = 'allvar'
         
-        if 'prescribed_variables' in model_params.keys(): self.prescribed_variables = model_params['prescribed_variables']
-        else: self.prescribed_variables = {}
+        try: self.prescribed_variables = model_params['prescribed_variables']
+        except: self.prescribed_variables = {}
         
-        if 'perturb_type' in model_params.keys(): self.perturb_type = model_params['perturb_type']
-        else: self.perturb_type = None
+        try: self.perturb_type = model_params['perturb_type']
+        except: self.perturb_type = None
         
-        if 'perturb_after_cylce' in model_params.keys(): self.perturb_after_cylce = model_params['perturb_after_cylce']
-        else: self.perturb_after_cylce = -1
+        try: self.perturb_after_cylce = model_params['perturb_after_cylce']
+        except: self.perturb_after_cylce = -1
         # definitely set to -1 if we don't have a perturb type
         if self.perturb_type is None: self.perturb_after_cylce = -1
 

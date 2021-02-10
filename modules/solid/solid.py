@@ -48,8 +48,8 @@ class SolidmechanicsProblem(problem_base):
         self.num_domains = len(constitutive_models)
 
         self.order_disp = fem_params['order_disp']
-        if 'order_pres' in fem_params.keys(): self.order_pres = fem_params['order_pres']
-        else: self.order_pres = 1
+        try: self.order_pres = fem_params['order_pres']
+        except: self.order_pres = 1
         self.quad_degree = fem_params['quad_degree']
         self.incompressible_2field = fem_params['incompressible_2field']
         
@@ -69,8 +69,8 @@ class SolidmechanicsProblem(problem_base):
                     self.eta_m.append(constitutive_models['MAT'+str(n+1)+'']['rayleigh_damping']['eta_m'])
                     self.eta_k.append(constitutive_models['MAT'+str(n+1)+'']['rayleigh_damping']['eta_k'])
 
-        if 'prestress_initial' in fem_params.keys(): self.prestress_initial = fem_params['prestress_initial']
-        else: self.prestress_initial = False
+        try: self.prestress_initial = fem_params['prestress_initial']
+        except: self.prestress_initial = False
 
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
@@ -337,15 +337,25 @@ class SolidmechanicsProblem(problem_base):
 
         ### full weakforms 
 
-        # kinetic plus internal (plus damping) minus external virtual work
-        self.weakform_u = self.timefac_m * self.deltaW_kin  + (1.-self.timefac_m) * self.deltaW_kin_old + \
-                          self.timefac   * self.deltaW_damp + (1.-self.timefac)   * self.deltaW_damp_old + \
-                          self.timefac   * self.deltaW_int  + (1.-self.timefac)   * self.deltaW_int_old - \
-                          self.timefac   * self.deltaW_ext  - (1.-self.timefac)   * self.deltaW_ext_old
-        
-        if self.incompressible_2field:
-            self.weakform_p = self.timefac   * self.deltaW_p   + (1.-self.timefac)   * self.deltaW_p_old  
-                
+        # quasi-static weak form: internal minus external virtual work
+        if self.timint == 'static':
+            
+            self.weakform_u = self.deltaW_int - self.deltaW_ext
+            
+            if self.incompressible_2field:
+                self.weakform_p = self.deltaW_p
+
+        # full dynamic weak form: kinetic plus internal (plus damping) minus external virtual work
+        else:
+            
+            self.weakform_u = self.timefac_m * self.deltaW_kin  + (1.-self.timefac_m) * self.deltaW_kin_old + \
+                              self.timefac   * self.deltaW_damp + (1.-self.timefac)   * self.deltaW_damp_old + \
+                              self.timefac   * self.deltaW_int  + (1.-self.timefac)   * self.deltaW_int_old - \
+                              self.timefac   * self.deltaW_ext  - (1.-self.timefac)   * self.deltaW_ext_old
+            
+            if self.incompressible_2field:
+                self.weakform_p = self.timefac * self.deltaW_p + (1.-self.timefac) * self.deltaW_p_old 
+
 
         ### local weak forms at Gauss points for inelastic materials
         self.r_growth, self.del_theta = [], []
@@ -497,19 +507,26 @@ class SolidmechanicsProblem(problem_base):
         self.tau_a.interpolate(tau_a_proj)
 
 
-    # computes and prints the growth rate of the whole body
-    def compute_body_growth_rate(self):
+    # computes and prints the growth rate of the whole solid
+    def compute_solid_growth_rate(self):
         
         dtheta_all = as_ufl(0)
         for n in range(self.num_domains):
             
             dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx_[n]
 
-        self.growth_rate = assemble_scalar(dtheta_all)
+        gr = assemble_scalar(dtheta_all)
+        gr = self.comm.allgather(gr)
+        self.growth_rate = sum(gr)
 
         if self.comm.rank == 0:
-            print('Body growth rate: %.4e' % (self.growth_rate))
+            print('Solid growth rate: %.4e' % (self.growth_rate))
             sys.stdout.flush()
+
+            #fname = self.io.output_path+'/growthrate.txt'
+            #f = open(fname, 'a')
+            #f.write('%.16E\n' % (t,self.growth_rate))
+            #f.close()
 
 
 
@@ -599,9 +616,9 @@ class SolidmechanicsSolver():
             # solve
             solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)
 
-            # compute the volume increase due to growth (has to be called before update_timestep)
-            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr':
-                self.pb.compute_body_growth_rate()
+            # compute the growth rate (has to be called before update_timestep)
+            if self.pb.have_growth:
+                self.pb.compute_solid_growth_rate()
 
             # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
             self.pb.ti.update_timestep(self.pb.u, self.pb.u_old, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.internalvars, self.pb.internalvars_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)

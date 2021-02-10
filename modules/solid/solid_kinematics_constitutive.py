@@ -303,22 +303,37 @@ class constitutive:
         try: omega = self.gandrparams['thres_tol']
         except: omega = 0
         
-        # threshold should not be lower than specified
+        try: reduc = self.gandrparams['trigger_reduction']
+        except: reduc = 1
+        
+        assert(reduc <= 1 and reduc > 0)
+        
+        # threshold should not be lower than specified (only relevant for multiscale analysis, where threshold is set element-wise)
         threshold = conditional(gt(thres,self.gandrparams['growth_thres']), (1.+omega)*thres, self.gandrparams['growth_thres'])
 
+        # trace of elastic Mandel stress
         if self.growth_trig == 'volstress':
-            ktheta = grfnc.mandelstress(tr(self.M_e(u_,p_,self.kin.C(u_),ivar)), threshold, self.gandrparams)
-            r_growth = theta_ - theta_old_ - ktheta * (tr(self.M_e(u_,p_,self.kin.C(u_),ivar)) - threshold) * dt
             
+            trigger = reduc * tr(self.M_e(u_,p_,self.kin.C(u_),ivar))
+            
+        # elastic fiber stretch
         elif self.growth_trig == 'fibstretch':
-            ktheta = grfnc.fiberstretch(self.fibstretch_e(self.kin.C(u_),theta_,self.kin.fib_funcs[0]), threshold, self.gandrparams)
-            r_growth = theta_ - theta_old_ - ktheta * (self.fibstretch_e(self.kin.C(u_),theta_,self.kin.fib_funcs[0]) - threshold) * dt
             
+            trigger = reduc * self.fibstretch_e(self.kin.C(u_),theta_,self.kin.fib_funcs[0])
+
         else:
             raise NameError("Unknown growth_trig!")
 
+        # growth function
+        ktheta = grfnc.grfnc1(trigger, threshold, self.gandrparams)
+        
+        # growth residual
+        r_growth = theta_ - theta_old_ - ktheta * (trigger - threshold) * dt
+
+        # tangent
         K_growth = diff(r_growth,theta_)
 
+        # increment
         del_theta = -r_growth / K_growth
 
         if rquant=='res_del':

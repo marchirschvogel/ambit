@@ -121,7 +121,7 @@ class cardiovascular0Dbase:
             aux_old[i] = aux[i]
             
             
-    # check for cardiac cycle periodcity 
+    # check for cardiac cycle periodicity 
     def cycle_check(self, var, varTc, varTc_old, t, cycle, cyclerr, eps_periodic, check='allvar', inioutpath=None, induce_pert_after_cycl=-1):
         
         if isinstance(varTc, np.ndarray): vs, ve = 0, len(varTc)
@@ -390,7 +390,7 @@ class cardiovascular0Dbase:
             numdata = len(tmp)
             
             data = np.loadtxt(''+self.prescrpath+'/out/data_integral.txt', usecols=1)
-            # cycle, no of steps per cycle and number of cycles (to reach periodcity) from data to be prescribed
+            # cycle, no of steps per cycle and number of cycles (to reach periodicity) from data to be prescribed
             T_cycl_from_prescr = int(data[0])
             nstep_from_prescr = int(data[1])
             n_cycl_from_prescr = int(numdata/nstep_from_prescr)
@@ -470,7 +470,7 @@ class cardiovascular0Dbase:
                 f.close()
 
 
-    # to write initial conditions (i.e. after a model has reached periodcity, so we may want to export these if we want to use
+    # to write initial conditions (i.e. after a model has reached periodicity, so we may want to export these if we want to use
     # them in a new simulation starting from a homeostatic state)
     def write_initial(self, path, varTc_old, varTc):
         

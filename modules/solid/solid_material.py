@@ -68,8 +68,8 @@ class materiallaw:
         a_s, b_s = params['a_s'], params['b_s']
         a_fs, b_fs = params['a_fs'], params['b_fs']
 
-        if 'fiber_comp' in params.keys(): fiber_comp = params['fiber_comp']
-        else: fiber_comp = False
+        try: fiber_comp = params['fiber_comp']
+        except: fiber_comp = False
 
         # conditional parameters: fibers are only active in tension if fiber_comp is False
         if not fiber_comp:
@@ -183,8 +183,9 @@ class growth:
 
 class growthfunction(growth):
     
+    # add possible variations / different growth functions here...
     
-    def fiberstretch(self, stretch, thres, params):
+    def grfnc1(self, trigger, thres, params):
         
         thetamax, thetamin = params['thetamax'], params['thetamin']
         tau_gr, tau_gr_rev = params['tau_gr'], params['tau_gr_rev']
@@ -193,24 +194,9 @@ class growthfunction(growth):
         k_plus = (1./tau_gr) * ((thetamax-self.theta)/(thetamax-thetamin))**(gamma_gr)
         k_minus = (1./tau_gr_rev) * ((self.theta-thetamin)/(thetamax-thetamin))**(gamma_gr_rev)
         
-        k = conditional(ge(stretch,thres), k_plus, k_minus)
+        k = conditional(ge(trigger,thres), k_plus, k_minus)
             
         return k
-    
-    
-    def mandelstress(self, stress, thres, params):
-        
-        thetamax, thetamin = params['thetamax'], params['thetamin']
-        tau_gr, tau_gr_rev = params['tau_gr'], params['tau_gr_rev']
-        gamma_gr, gamma_gr_rev = params['gamma_gr'], params['gamma_gr_rev']
-        
-        k_plus = (1./tau_gr) * ((thetamax-self.theta)/(thetamax-thetamin))**(gamma_gr)
-        k_minus = (1./tau_gr_rev) * ((self.theta-thetamin)/(thetamax-thetamin))**(gamma_gr_rev)
-        
-        k = conditional(ge(stress,thres), k_plus, k_minus)
-        
-        return k
-
 
 
 

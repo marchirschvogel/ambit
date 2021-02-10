@@ -21,6 +21,8 @@ import boundaryconditions
 
 from base import problem_base
 
+# NOTE: Fluid code is still experimental and NOT tested!!!
+
 # fluid mechanics, governed by incompressible Navier-Stokes equations:
 
 #\begin{align}

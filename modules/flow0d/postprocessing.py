@@ -125,7 +125,7 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
             os.system('tail -n '+str(nstep)+' '+path+'/pV_'+ch+'.txt > '+path+'/pV_'+ch+'_last.txt')
             # isolate healthy/baseline cycle
             if indpertaftercyl > 0:
-                os.system('sed -n "'+str((indpertaftercyl-1)*nstep)+','+str(indpertaftercyl*nstep)+'p" '+path+'/pV_'+ch+'.txt > '+path+'/pV_'+ch+'_baseline.txt')
+                os.system('sed -n "'+str((indpertaftercyl-1)*nstep+1)+','+str(indpertaftercyl*nstep)+'p" '+path+'/pV_'+ch+'.txt > '+path+'/pV_'+ch+'_baseline.txt')
             # clean-up
             subprocess.call(['rm', ''+path+'/p_'+ch+'_tmp.txt'])
             subprocess.call(['rm', ''+path+'/V_'+ch+'_tmp.txt'])
