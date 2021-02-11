@@ -106,36 +106,6 @@ class timeintegration_solid(timeintegration):
         self.incompressible_2field = fem_params['incompressible_2field']
 
 
-    def solve_consistent_ini_acc(self, solvetype, weakform_old, jac_a, a_old, dbcs):
-
-        # create solver
-        ksp = PETSc.KSP().create(self.comm)
-        
-        if solvetype=='direct':
-            ksp.setType("preonly")
-            ksp.getPC().setType("lu")
-            ksp.getPC().setFactorSolverType("superlu_dist")
-        elif solvetype=='iterative':
-            ksp.getPC().setType("hypre")
-            ksp.getPC().setMGLevels(3)
-            ksp.getPC().setHYPREType("boomeramg")
-        else:
-            raise NameError("Unknown solvetype!")
-            
-        
-        # solve for consistent initial acceleration a_old
-        M_a = assemble_matrix(jac_a, dbcs)
-        M_a.assemble()
-        
-        r_a = assemble_vector(weakform_old)
-        r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        
-        ksp.setOperators(M_a)
-        ksp.solve(-r_a, a_old.vector)
-        
-        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-
     def set_acc_vel(self, u, u_old, v_old, a_old):
         
         # set forms for acc and vel
@@ -299,37 +269,6 @@ class timeintegration_fluid(timeintegration):
         timeintegration.__init__(self, time_params, time_curves, comm)
         
         self.theta_ost = time_params['theta_ost']
-
-
-    def solve_consistent_ini_acc(self, solvetype, weakform_old, jac_a, a_old, dbcs):
-
-        # create solver
-        ksp = PETSc.KSP().create(self.comm)
-        
-        if solvetype=='direct':
-            ksp.setType("preonly")
-            ksp.getPC().setType("lu")
-            ksp.getPC().setFactorSolverType("superlu_dist")
-        elif solvetype=='iterative':
-            ksp.getPC().setType("hypre")
-            ksp.getPC().setMGLevels(3)
-            ksp.getPC().setHYPREType("boomeramg")
-        else:
-            raise NameError("Unknown solvetype!")
-            
-        
-        # solve for consistent initial acceleration a_old
-        M_a = assemble_matrix(jac_a, dbcs)
-        M_a.assemble()
-        
-        r_a = assemble_vector(weakform_old)
-        r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        
-        ksp.setOperators(M_a)
-        ksp.solve(-r_a, a_old.vector)
-        
-        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
 
 
     def set_acc(self, v, v_old, a_old):

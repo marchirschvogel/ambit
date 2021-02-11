@@ -35,7 +35,12 @@ class FluidmechanicsFlow0DProblem():
         self.surface_vq_ids = self.coupling_params['surface_ids']
         try: self.surface_p_ids = self.coupling_params['surface_p_ids']
         except: self.surface_p_ids = self.surface_vq_ids
+
+        self.num_coupling_surf = len(self.surface_vq_ids)
         
+        try: self.cq_factor = self.coupling_params['cq_factor']
+        except: self.cq_factor = [1.]*self.num_coupling_surf
+
         try: self.coupling_type = self.coupling_params['coupling_type']
         except: self.coupling_type = 'monolithic_direct'
         
@@ -48,8 +53,6 @@ class FluidmechanicsFlow0DProblem():
         
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms_and_jacobians(self):
-    
-        self.num_coupling_surf = len(self.surface_vq_ids)
 
         self.cq, self.dcq, self.dforce = [], [], []
         self.coupfuncs, self.coupfuncs_old = [], []
@@ -141,7 +144,7 @@ class FluidmechanicsFlow0DSolver():
             for i in range(self.pb.num_coupling_surf):
                 cq = assemble_scalar(self.pb.cq[i])
                 cq = self.pb.pbs.comm.allgather(cq)
-                self.pb.pbf.c.append(sum(cq)*self.pb.coupling_params['cq_factor'][i])
+                self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
         
         if self.pb.coupling_type == 'monolithic_lagrange':
             for i in range(self.pb.num_coupling_surf):
@@ -149,12 +152,15 @@ class FluidmechanicsFlow0DSolver():
                 self.pb.pbf.c.append(lm_sq[i])
                 fl = assemble_scalar(self.pb.cq[i])
                 fl = self.pb.pbs.comm.allgather(fl)
-                self.pb.flux3D.append(sum(fl)*self.pb.coupling_params['cq_factor'][i])
-                self.pb.flux3D_old.append(sum(fl)*self.pb.coupling_params['cq_factor'][i])
+                self.pb.flux3D.append(sum(fl)*self.pb.cq_factor[i])
+                self.pb.flux3D_old.append(sum(fl)*self.pb.cq_factor[i])
 
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, 0., 0., self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
-                
+               
+        # initialize nonlinear solver class
+        solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
+
         # solve for consistent initial acceleration
         if self.pb.pbs.timint != 'static':
             # weak form at initial state for consistent initial acceleration solve
@@ -162,12 +168,9 @@ class FluidmechanicsFlow0DSolver():
             
             jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.dv) # actually linear in a_old
 
-            # solve for consistent initial acceleration a_old and return forms for acc and vel
-            self.pb.pbs.ti.solve_consistent_ini_acc(self.solve_type, weakform_a, jac_a, self.pb.pbs.a_old, self.pb.pbs.bc.dbcs)
+            # solve for consistent initial acceleration a_old
+            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
         
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
-
         # write mesh output
         self.pb.pbs.io.write_output(writemesh=True)
 

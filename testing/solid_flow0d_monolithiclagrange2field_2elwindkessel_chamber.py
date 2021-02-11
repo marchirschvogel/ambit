@@ -49,7 +49,6 @@ def main():
                             'incompressible_2field' : True} # True, False
     
     COUPLING_PARAMS      = {'surface_ids'           : [3],
-                            'cq_factor'             : [1.],
                             'coupling_quantity'     : 'pressure',
                             'coupling_type'         : 'monolithic_lagrange'}
 

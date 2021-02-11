@@ -66,6 +66,15 @@ class solver_nonlinear:
         
         try: self.print_liniter_every = solver_params['print_liniter_every']
         except: self.print_liniter_every = 50
+        
+        try: self.print_local_iter = solver_params['print_local_iter']
+        except: self.print_local_iter = False
+        
+        try: self.tol_res_local = solver_params['tol_res_local']
+        except: self.tol_res_local = 1.0e-10
+        
+        try: self.tol_inc_local = solver_params['tol_inc_local']
+        except: self.tol_inc_local = 1.0e-10
 
         self.solvetype = solver_params['solve_type']
         self.tolres = solver_params['tol_res']
@@ -329,6 +338,36 @@ class solver_nonlinear:
 
             # adapt tolerance
             self.ksp.setTolerances(rtol=tollin_new)
+
+
+    # solve for consistent initial acceleration a_old
+    def solve_consistent_ini_acc(self, weakform_old, jac_a, a_old):
+
+        # create solver
+        ksp = PETSc.KSP().create(self.pb.comm)
+        
+        if self.solvetype=='direct':
+            ksp.setType("preonly")
+            ksp.getPC().setType("lu")
+            ksp.getPC().setFactorSolverType("superlu_dist")
+        elif self.solvetype=='iterative':
+            ksp.getPC().setType("hypre")
+            ksp.getPC().setMGLevels(3)
+            ksp.getPC().setHYPREType("boomeramg")
+        else:
+            raise NameError("Unknown solvetype!")
+            
+        # solve for consistent initial acceleration a_old
+        M_a = assemble_matrix(jac_a, [])
+        M_a.assemble()
+        
+        r_a = assemble_vector(weakform_old)
+        r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        
+        ksp.setOperators(M_a)
+        ksp.solve(-r_a, a_old.vector)
+        
+        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
 
@@ -601,12 +640,17 @@ class solver_nonlinear:
             res_norm = residual.vector.norm(norm_type=3)
             inc_norm = increment.vector.norm(norm_type=3)
             
+            if self.print_local_iter:
+                if self.pb.comm.rank == 0:
+                    print("      (it_local = %i, res: %.4e, inc: %.4e)" % (it_local,res_norm,inc_norm))
+                    sys.stdout.flush()
+            
             # increase iteration index
             it_local += 1
             
             # check if converged
-            if res_norm <= self.tolres and inc_norm <= self.tolinc:
-                #print("(it_local = %i)" % it_local)
+            if res_norm <= self.tol_res_local and inc_norm <= self.tol_inc_local:
+
                 break
             
         else:
@@ -847,7 +891,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                 for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
                     cq = assemble_scalar(self.pbc.cq[i])
                     cq = self.pbc.comm.allgather(cq)
-                    self.pbc.pbf.c[i] = sum(cq)*self.pbc.coupling_params['cq_factor'][i]
+                    self.pbc.pbf.c[i] = sum(cq)*self.pbc.cq_factor[i]
 
                 # evaluate 0D model with current p and return df, f, K_ss
                 self.pbc.pbf.cardvasc0D.evaluate(s, dt, t, self.pbc.pbf.df, self.pbc.pbf.f, self.K_ss, self.pbc.pbf.c, self.pbc.pbf.aux)
@@ -864,7 +908,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                 for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
                     cq = assemble_scalar(self.pbc.cq[i])
                     cq = self.pbc.comm.allgather(cq)
-                    self.pbc.flux3D[i] = sum(cq)*self.pbc.coupling_params['cq_factor'][i]
+                    self.pbc.flux3D[i] = sum(cq)*self.pbc.cq_factor[i]
 
                 # finite differencing for LM siffness matrix
                 eps = 1.0e-5
@@ -921,7 +965,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
             # offdiagonal s-u rows
             k_su_rows=[]
             for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
-                k_su_rows.append(assemble_vector((timefac*self.pbc.coupling_params['cq_factor'][i])*self.pbc.dcq[i]))
+                k_su_rows.append(assemble_vector((timefac*self.pbc.cq_factor[i])*self.pbc.dcq[i]))
 
             # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
             for i in range(len(self.pbc.pbf.cardvasc0D.v_ids)):

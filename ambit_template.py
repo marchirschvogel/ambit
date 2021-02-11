@@ -17,29 +17,34 @@ def main():
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
-                            'write_results_every_0D': 1, # OPTIONAL: for flow0d results, use write_results_every if not specified
+                            'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
                             'output_path'           : ''+basepath+'/tmp/', # where results are written to
-                            'output_path_0D'        : ''+basepath+'/tmp/', # OPTIONAL: for flow0d results, use output_path if not specified
+                            'output_path_0D'        : ''+basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
                             'simname'               : 'my_simulation_name'} # how to name the output (attention: there is no warning, results will be overwritten if existent)
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver
                             'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver
-                            'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, PTC ('ptc' can stay False)
-                            'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue)
-                            'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration
-                            'tol_lin'               : 5.0e-5, # for solve_type 'iterative': linear solver tolerance
-                            'print_liniter_every'   : 50, # OPTIONAL: for solve_type 'iterative': how often to print linear iterations
-                            'adapt_linsolv_tol'     : True, # OPTIONAL: for solve_type 'iterative': True, False - adapt linear tolerance throughout nonlinear iterations
-                            'adapt_factor'          : 0.1} # OPTIONAL: for solve_type 'iterative': adaptation factor for adapt_linsolv_tol (the larger, the more adaptation)
+                            'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, PTC ('ptc' can stay False) (default: None)
+                            'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
+                            'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
+                            # iterative linear solver settings (only apply for solve_type 'iterative')
+                            'tol_lin'               : 5.0e-5, # linear solver tolerance
+                            'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
+                            'adapt_linsolv_tol'     : False, # OPTIONAL: True, False - adapt linear tolerance throughout nonlinear iterations (default: False)
+                            'adapt_factor'          : 0.1, # OPTIONAL: fadaptation factor for adapt_linsolv_tol (the larger, the more adaptation) (default: 0.1)
+                            # for local Newton (only for inelastic nonlinear materials at Gauss points, i.e. deformation-dependent growth)
+                            'print_local_iter'      : False, # OPTIONAL: if we want to print iterations of local Newton (default: False)
+                            'tol_res_local'         : 1.0e-10, # OPTIONAL: if we want to specify the local Newton residual inf-norm tolerance (default: 1.0e-10)
+                            'tol_inc_local'         : 1.0e-10} # OPTIONAL: if we want to specify the local Newton increment inf-norm tolerance (default: 1.0e-10)
                                 
     SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6, # residual tolerance for nonlinear solver
                             'tol_inc'               : 1.0e-6} # increment tolerance for nonlinear solver
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0, # maximum simulation time
                             'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
-                            'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier
+                            'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
                             'timint'                : 'genalpha', # time-integration algorithm: genalpha, ost, static
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor 
                             'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
@@ -49,35 +54,35 @@ def main():
                             'theta_ost'             : 0.5, # One-Step-Theta time integration factor 
                             'initial_conditions'    : init(), # initial condition dictionary (here defined as function, see below)
                             'initial_file'          : None, # OPTIONAL: if we want to read initial conditions from a file (overwrites above specified dict)
-                            'eps_periodic'          : 1.0e-3, # OPTIONAL: cardiac cycle periodicity tolerance
-                            'periodic_checktype'    : None} # OPTIONAL: None, 'allvar', 'pQvar'
+                            'eps_periodic'          : 1.0e-3, # OPTIONAL: cardiac cycle periodicity tolerance (default: 1.0e-20)
+                            'periodic_checktype'    : None} # OPTIONAL: None, 'allvar', 'pQvar' (default: None)
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspulcap, syspulcap2
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
                             'chamber_models'        : {'lv' : '3D_fem', 'rv' : '3D_fem', 'la' : '0D_elast', 'ra' : '0D_elast'}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'chamber_interfaces'    : {'lv' : 1, 'rv' : 1, 'la' : 0, 'ra' : 0},
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
-                            'perturb_type'          : None, # OPTIONAL: mr, ms, ar, as
-                            'perturb_after_cylce'   : 2} # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change...
+                            'perturb_type'          : None, # OPTIONAL: mr, ms, ar, as (default: None)
+                            'perturb_after_cylce'   : 2} # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
 
     FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid mechanics)
                             'order_vel'             : 1, # order of velocity interpolation (fluid mechanics)
                             'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
                             'quad_degree'           : 1, # quadrature degree q (number of integration points: n(q) = ((q+2)//2)**dim) --> can be 1 for linear tets, should be >= 3 for linear hexes, should be >= 4 for quadratic tets/hexes
                             'incompressible_2field' : False, # if we want to use a 2-field functional for pressure dofs (always applies for fluid, optional for solid mechanics)
-                            'prestress_initial'     : False} # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!)
+                            'prestress_initial'     : False} # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
     
     COUPLING_PARAMS      = {'surface_ids'           : [1,2], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
-                            'surface_p_ids'         : [1,2], # optional, if pressure should be applied to different surface than that from which the volume/flux is measured from... if not specified, the same as surface_ids
-                            'cq_factor'             : [1.,1.], # if we want to scale the 3D volume or flux (e.g. for 2D solid models)
+                            'surface_p_ids'         : [1,2], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
+                            'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
                             'coupling_quantity'     : 'volume', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
-                            'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange
+                            'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 2,
                             'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-3, # growth rate tolerance
-                            'tol_outer'             : 1.0e-3}
+                            'tol_outer'             : 1.0e-3} # when to stop multiscale problem (TODO: Not yet implemented!)
 
                             # - MATn has to correspond to subdomain id n (set by the flags in Attribute section of *_domain.xdmf file - so if you have x mats, you need ids ranging from 1,...,x)
                             # - one MAT can be decomposed into submats, see examples below (additive stress contributions)
@@ -138,9 +143,12 @@ def main():
                             'robin'      : [{'type' : 'spring', 'id' : 3, 'dir' : 'normal', 'stiff' : 0.075},
                                             {'type' : 'dashpot', 'id' : 3, 'dir' : 'xyz', 'visc' : 0.005}] }
 
-    # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    # problem setup - exemplary for 3D-0D coupling of solid (fluid) to flow0d
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
     
+    # problem setup for solid (fluid) only: just pass parameters related to solid (fluid) instead of lists, so:
+    #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+
     # problem solve
     problem.solve_problem()
 

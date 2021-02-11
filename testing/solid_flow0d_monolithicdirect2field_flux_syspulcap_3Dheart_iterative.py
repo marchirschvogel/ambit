@@ -23,8 +23,8 @@ def main():
     # all possible input parameters
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
-                            'mesh_domain'           : ''+basepath+'/input/heart3D_domain.xdmf',
-                            'mesh_boundary'         : ''+basepath+'/input/heart3D_boundary.xdmf',
+                            'mesh_domain'           : ''+basepath+'/input/heart3Dcoarse_domain.xdmf',
+                            'mesh_boundary'         : ''+basepath+'/input/heart3Dcoarse_boundary.xdmf',
                             'write_results_every'   : -999,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','pressure'], # see io_routines.py for what to write
@@ -65,7 +65,6 @@ def main():
                             'incompressible_2field' : True} # if we want to use a 2-field functional for pressure dofs (always applies for fluid mechanics, optional for solid)
     
     COUPLING_PARAMS      = {'surface_ids'           : [1,2], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
-                            'cq_factor'             : [1.,1.], # if we want to scale the 3D volume or flux (e.g. for 2D solid models)
                             'coupling_quantity'     : 'flux', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange
 

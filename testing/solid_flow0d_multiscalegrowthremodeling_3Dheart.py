@@ -21,21 +21,21 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d_multiscale_gandr',
-                            'mesh_domain'           : ''+basepath+'/input/heart2D_domain.xdmf',
-                            'mesh_boundary'         : ''+basepath+'/input/heart2D_boundary.xdmf',
-                            'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_2D.txt',''+basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
+                            'mesh_domain'           : ''+basepath+'/input/heart3D_domain.xdmf',
+                            'mesh_boundary'         : ''+basepath+'/input/heart3D_boundary.xdmf',
+                            'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_3D.txt',''+basepath+'/input/fib_sheet_coords_nodal_3D.txt']},
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e','fiberstretch'],
-                            'simname'               : 'multiscale_gandrAS'}
+                            'simname'               : 'multiscale_3Dtest'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'divergence_continue'   : 'PTC',
-                            'print_local_iter'      : True,
-                            'tol_res_local' : 1.0e-3,
-                            'tol_inc_local' : 1.0e-5}
+                            'print_local_iter'      : False,
+                            'tol_res_local'         : 1.0e-10,
+                            'tol_inc_local'         : 1.0e-10}
     
     SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6,
                             'tol_inc'               : 1.0e-6}
@@ -55,7 +55,7 @@ def main():
                             'theta_ost'             : 0.5,
                             'eps_periodic'          : 999,
                             'periodic_checktype'    : 'pQvar',
-                            'initial_file'          : ''+basepath+'/input/initial_syspul_multiscale_2D.txt'}
+                            'initial_file'          : ''+basepath+'/input/initial_syspul_multiscale_3D.txt'}
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul',
                             'parameters'            : param(),
@@ -70,7 +70,6 @@ def main():
                             'prestress_initial'     : True}
     
     COUPLING_PARAMS      = {'surface_ids'           : [1,2],
-                            'cq_factor'             : [80.,80.],
                             'coupling_quantity'     : 'volume',
                             'coupling_type'         : 'monolithic_direct'}
     
@@ -83,7 +82,7 @@ def main():
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},
                                       'sussmanbathe_vol' : {'kappa' : 10./(1.-2.*0.49)},
-                                      'active_fiber'     : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53},
+                                      'active_fiber'     : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53},
                                       'inertia'          : {'rho0' : 1.0e-6},
                                       #'rayleigh_damping' : {'eta_m' : 0.0, 'eta_k' : 0.0001},
                                       'growth'           : {'growth_dir' : 'fiber', # isotropic, fiber, crossfiber, radial
@@ -99,7 +98,7 @@ def main():
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
                                                                                 'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},
-                                                                                'active_fiber' : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53}}}}}
+                                                                                'active_fiber' : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53}}}}}
 
 
     #MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},
@@ -130,10 +129,12 @@ def main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # None to be defined
 
-
-    BC_DICT              = { 'dirichlet' : [{'dir' : '2dim', 'val' : 0.}],
-                            'robin' : [{'type' : 'spring', 'id' : 3, 'dir' : 'normal', 'stiff' : 0.075},
-                                       {'type' : 'dashpot', 'id' : 3, 'dir' : 'normal', 'visc' : 0.005}] }
+    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : 3, 'dir' : 'normal', 'stiff' : 0.075},
+                                        {'type' : 'dashpot', 'id' : 3, 'dir' : 'normal', 'visc'  : 0.005},
+                                        {'type' : 'spring',  'id' : 4, 'dir' : 'normal', 'stiff' : 10.0}, # 2.5, 1.25
+                                        {'type' : 'dashpot', 'id' : 4, 'dir' : 'normal', 'visc'  : 0.0005},
+                                        {'type' : 'spring',  'id' : 4, 'dir' : 'xyz', 'stiff' : 0.25},
+                                        {'type' : 'dashpot', 'id' : 4, 'dir' : 'xyz', 'visc'  : 0.0005}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)

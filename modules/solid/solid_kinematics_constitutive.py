@@ -134,6 +134,10 @@ class constitutive:
         elif matlaw == 'holzapfelogden_dev':
 
             return self.mat.holzapfelogden_dev(mparams,self.kin.fib_funcs[0],self.kin.fib_funcs[1],C_)
+        
+        elif matlaw == 'guccione_dev':
+
+            return self.mat.guccione_dev(mparams,self.kin.fib_funcs[0],self.kin.fib_funcs[1],C_)
             
         elif matlaw == 'stvenantkirchhoff':
             

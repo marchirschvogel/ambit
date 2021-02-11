@@ -32,10 +32,15 @@ class SolidmechanicsFlow0DProblem():
         self.comm = comm
         
         self.coupling_params = coupling_params
-        
+
         self.surface_vq_ids = self.coupling_params['surface_ids']
         try: self.surface_p_ids = self.coupling_params['surface_p_ids']
         except: self.surface_p_ids = self.surface_vq_ids
+        
+        self.num_coupling_surf = len(self.surface_vq_ids)
+        
+        try: self.cq_factor = self.coupling_params['cq_factor']
+        except: self.cq_factor = [1.]*self.num_coupling_surf
         
         try: self.coupling_type = self.coupling_params['coupling_type']
         except: self.coupling_type = 'monolithic_direct'
@@ -54,8 +59,6 @@ class SolidmechanicsFlow0DProblem():
         
     # defines the monolithic coupling forms for 0D flow and solid mechanics
     def set_variational_forms_and_jacobians(self):
-    
-        self.num_coupling_surf = len(self.surface_vq_ids)
 
         self.cq, self.dcq, self.dforce = [], [], []
         self.coupfuncs, self.coupfuncs_old = [], []
@@ -168,7 +171,7 @@ class SolidmechanicsFlow0DSolver():
             solnln_prestress.k_PTC_initial = 0.1
 
             solnln_prestress.newton(self.pb.pbs.u, self.pb.pbs.p)
-            del solnln_prestress
+            
 
             # MULF update
             self.pb.pbs.ki.prestress_update(self.pb.pbs.u, self.pb.pbs.Vd_tensor, self.pb.pbs.dx_, self.pb.pbs.u_pre)
@@ -177,6 +180,8 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.prestress_initial = False
 
             utilities.print_prestress('end', self.pb.comm)
+            # delete class instance
+            del solnln_prestress
 
         if self.pb.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
@@ -184,7 +189,7 @@ class SolidmechanicsFlow0DSolver():
             for i in range(self.pb.num_coupling_surf):
                 cq = assemble_scalar(self.pb.cq[i])
                 cq = self.pb.pbs.comm.allgather(cq)
-                self.pb.pbf.c.append(sum(cq)*self.pb.coupling_params['cq_factor'][i])
+                self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
 
         if self.pb.coupling_type == 'monolithic_lagrange':
             self.pb.pbf.c, self.pb.flux3D, self.pb.flux3D_old = [], [], []
@@ -193,24 +198,24 @@ class SolidmechanicsFlow0DSolver():
                 self.pb.pbf.c.append(lm_sq[i])
                 fl = assemble_scalar(self.pb.cq[i])
                 fl = self.pb.pbs.comm.allgather(fl)
-                self.pb.flux3D.append(sum(fl)*self.pb.coupling_params['cq_factor'][i])
-                self.pb.flux3D_old.append(sum(fl)*self.pb.coupling_params['cq_factor'][i])
+                self.pb.flux3D.append(sum(fl)*self.pb.cq_factor[i])
+                self.pb.flux3D_old.append(sum(fl)*self.pb.cq_factor[i])
 
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, 0., 0., self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
+        
+        # initialize nonlinear solver class
+        solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
 
         # solve for consistent initial acceleration
         if self.pb.pbs.timint != 'static':
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
-            
+
             jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old and return forms for acc and vel
-            self.pb.pbs.ti.solve_consistent_ini_acc(self.solve_type, weakform_a, jac_a, self.pb.pbs.a_old, self.pb.pbs.bc.dbcs)
-        
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
+            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
         # write mesh output
         self.pb.pbs.io.write_output(writemesh=True)

@@ -27,9 +27,9 @@ class materiallaw:
         self.IIc_bar  = self.IIIc**(-2./3.) * self.IIc
         
         # Green-Lagrange strain and invariants (for convenience, used e.g. by St.-Venant-Kirchhoff material)
-        E = 0.5*(C - I)
-        self.trE  = tr(E)
-        self.trE2 = tr(E*E)
+        self.E = 0.5*(C - I)
+        self.trE  = tr(self.E)
+        self.trE2 = tr(self.E*self.E)
     
 
     def neohooke_dev(self, params, C):
@@ -87,7 +87,34 @@ class materiallaw:
         S = 2.*diff(psi_dev,C)
         
         return S
-    
+
+
+    def guccione_dev(self, params, f0, s0, C):
+
+        n0 = cross(f0,s0)
+
+        # anisotropic invariants - keep in mind that for growth, self.E is the elastic part of E
+        E_ff = dot(dot(self.E,f0), f0)
+        E_ss = dot(dot(self.E,s0), s0)
+        E_nn = dot(dot(self.E,n0), n0)
+        
+        E_fs = dot(dot(self.E,f0), s0)
+        E_fn = dot(dot(self.E,f0), n0)
+        E_sn = dot(dot(self.E,s0), n0)
+
+        c_0 = params['c_0']
+        b_f = params['b_f']
+        b_t = params['b_t']
+        b_fs = params['b_fs']
+
+        Q = b_f*E_ff**2. + b_t*(E_ss**2. + E_nn**2. + 2.*E_sn**2.) + b_fs*(2.*E_fs**2. + 2.*E_fn**2.)
+
+        psi_dev = 0.5*c_0*(exp(Q)-1.)
+        
+        S = 2.*diff(psi_dev,C)
+        
+        return S
+
     
     def stvenantkirchhoff(self, params, C):
     

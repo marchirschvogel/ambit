@@ -568,7 +568,6 @@ class SolidmechanicsSolver():
             solnln_prestress.k_PTC_initial = 0.1
 
             solnln_prestress.newton(self.pb.u, self.pb.p)
-            del solnln_prestress
 
             # MULF update
             self.pb.ki.prestress_update(self.pb.u, self.pb.Vd_tensor, self.pb.dx_, self.pb.u_pre)
@@ -577,7 +576,11 @@ class SolidmechanicsSolver():
             self.pb.prestress_initial = False
 
             utilities.print_prestress('end', self.pb.comm)
+            # delete class instance
+            del solnln_prestress
 
+        # initialize nonlinear solver class
+        solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
 
         # solve for consistent initial acceleration
         if self.pb.timint != 'static':
@@ -587,10 +590,8 @@ class SolidmechanicsSolver():
             jac_a = derivative(weakform_a, self.pb.a_old, self.pb.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.pb.ti.solve_consistent_ini_acc(self.solve_type, weakform_a, jac_a, self.pb.a_old, self.pb.bc.dbcs)
+            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
 
         # write mesh output
         self.pb.io.write_output(writemesh=True)

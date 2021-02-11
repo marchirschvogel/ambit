@@ -187,10 +187,10 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             # solve large scale static G&R solid problem with fixed loads
             self.solverlarge.solve_problem()
             
-            u_delta = PETSc.Vec().createMPI(self.pb.pblarge.u.vector.getSize(), bsize=self.pb.pblarge.u.vector.getBlockSize(), comm=self.pb.comm)
+            u_delta = PETSc.Vec().createMPI((self.pb.pblarge.u.vector.getLocalSize(),self.pb.pblarge.u.vector.getSize()), bsize=self.pb.pblarge.u.vector.getBlockSize(), comm=self.pb.comm)
             u_delta.waxpy(-1.0, self.pb.pbsmall.pbs.u_set.vector, self.pb.pblarge.u.vector)
             if self.pb.pbsmall.pbs.incompressible_2field:
-                p_delta = PETSc.Vec().createMPI(self.pb.pblarge.p.vector.getSize(), bsize=self.pb.pblarge.p.vector.getBlockSize(), comm=self.pb.comm)
+                p_delta = PETSc.Vec().createMPI((self.pb.pblarge.p.vector.getLocalSize(),self.pb.pblarge.p.vector.getSize()), bsize=self.pb.pblarge.p.vector.getBlockSize(), comm=self.pb.comm)
                 p_delta.waxpy(-1.0, self.pb.pbsmall.pbs.p_set.vector, self.pb.pblarge.p.vector)
             
             # update small scale variables

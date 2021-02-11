@@ -246,7 +246,10 @@ class FluidmechanicsSolver():
         
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
-        
+
+        # initialize nonlinear solver class
+        solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
+
         if self.pb.timint != 'static':
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaP_kin_old + self.pb.deltaP_int_old - self.pb.deltaP_ext_old
@@ -254,11 +257,8 @@ class FluidmechanicsSolver():
             jac_a = derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.pb.ti.solve_consistent_ini_acc(self.solve_type, weakform_a, jac_a, self.pb.a_old, self.pb.bc.dbcs)
+            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
-
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
 
         # write mesh output
         self.pb.io.write_output(writemesh=True)
