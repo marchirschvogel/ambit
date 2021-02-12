@@ -21,3 +21,8 @@ class problem_base():
         if 'numstep_stop' in time_params.keys(): self.numstep_stop = time_params['numstep_stop']
 
         if 'maxtime' in time_params.keys(): self.dt = self.maxtime/self.numstep
+        
+        try: self.restart_step = io_params['restart_step']
+        except: self.restart_step = 0
+        
+        self.t_init = self.restart_step * self.dt

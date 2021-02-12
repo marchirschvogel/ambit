@@ -98,7 +98,7 @@ class FluidmechanicsProblem(problem_base):
         self.ndof = self.v.vector.getSize() + self.p.vector.getSize()
 
         # initialize fluid time-integration class
-        self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves, self.comm)
+        self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves, self.t_init, self.comm)
 
         # initialize kinematics_constitutive class
         self.ki = fluid_kinematics_constitutive.kinematics()
@@ -150,7 +150,7 @@ class FluidmechanicsProblem(problem_base):
             # pressure virtual power
             self.deltaP_p       += self.vf.deltaP_int_pres(self.v, self.dx_[n])
             self.deltaP_p_old   += self.vf.deltaP_int_pres(self.v_old, self.dx_[n])
-        
+            
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old = as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0)
@@ -243,14 +243,18 @@ class FluidmechanicsSolver():
     def solve_problem(self):
         
         start = time.time()
-        
+
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
+
+        # read restart information
+        if self.pb.restart_step > 0:
+            self.pb.io.readcheckpoint(self.pb)
 
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
 
-        if self.pb.timint != 'static':
+        if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaP_kin_old + self.pb.deltaP_int_old - self.pb.deltaP_ext_old
             
@@ -263,16 +267,14 @@ class FluidmechanicsSolver():
         # write mesh output
         self.pb.io.write_output(writemesh=True)
 
-        # load/time stepping
-        interval = np.linspace(0, self.pb.maxtime, self.pb.numstep+1)
-
 
         # fluid main time loop
-        for (N, dt) in enumerate(np.diff(interval)):
+        for N in range(self.pb.restart_step+1, self.pb.numstep+1):
             
             wts = time.time()
             
-            t = interval[N+1]
+            # current time
+            t = N * self.pb.dt
             
             # set time-dependent functions
             self.pb.ti.set_time_funcs(self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_vec, t)
@@ -287,7 +289,7 @@ class FluidmechanicsSolver():
             wte = time.time()
             wt = wte - wts
             
-            # write output
+            # write output and restart info
             self.pb.io.write_output(pb=self.pb, N=N, t=t)
 
             # print time step info to screen
@@ -295,7 +297,7 @@ class FluidmechanicsSolver():
             
             # maximum number of steps to perform
             try:
-                if N+1 == self.pb.numstep_stop:
+                if N == self.pb.numstep_stop:
                     break
             except:
                 pass

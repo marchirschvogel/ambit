@@ -39,7 +39,7 @@ class boundary_cond():
             
             if 'curve' in d.keys():
                 load = expression.template()
-                load.val = self.ti.timecurves(d['curve'][0])(0.0)
+                load.val = self.ti.timecurves(d['curve'][0])(self.ti.t_init)
                 func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
                 self.ti.funcs_to_update.append({func : self.ti.timecurves(d['curve'][0])})
                 self.ti.funcs_to_update_old.append({func_old : self.ti.timecurves(d['curve'][0])})
@@ -89,7 +89,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     if 'curve' in n.keys():
                         load = expression.template_vector()
-                        load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(0.0), self.ti.timecurves(n['curve'][1])(0.0), self.ti.timecurves(n['curve'][2])(0.0)
+                        load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                         func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
                         self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                         self.ti.funcs_to_update_vec_old.append({func_old : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
@@ -105,7 +105,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     if 'curve' in n.keys():
                         load = expression.template()
-                        load.val = self.ti.timecurves(n['curve'])(0.0)
+                        load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                         func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
                         self.ti.funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                         self.ti.funcs_to_update_old.append({func_old : self.ti.timecurves(n['curve'])})
@@ -127,7 +127,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     if 'curve' in n.keys():
                         load = expression.template()
-                        load.val = self.ti.timecurves(n['curve'])(0.0)
+                        load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                         func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
                         self.ti.funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                         self.ti.funcs_to_update_old.append({func_old : self.ti.timecurves(n['curve'])})
@@ -216,7 +216,7 @@ class boundary_cond_fluid(boundary_cond):
                 
                 if 'curve' in n.keys():
                     load = expression.template_vector()
-                    load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(0.0), self.ti.timecurves(n['curve'][1])(0.0), self.ti.timecurves(n['curve'][2])(0.0)
+                    load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
                     self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                     self.ti.funcs_to_update_vec_old.append({func_old : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
@@ -233,7 +233,7 @@ class boundary_cond_fluid(boundary_cond):
                 
                 if 'curve' in n.keys():
                     load = expression.template()
-                    load.val = self.ti.timecurves(n['curve'])(0.0)
+                    load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                     func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
                     self.ti.funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                     self.ti.funcs_to_update_old.append({func_old : self.ti.timecurves(n['curve'])})

@@ -43,7 +43,11 @@ class FluidmechanicsFlow0DProblem():
 
         try: self.coupling_type = self.coupling_params['coupling_type']
         except: self.coupling_type = 'monolithic_direct'
-        
+
+        # assert that we do not have conflicting timings
+        time_params_flow0d['maxtime'] = time_params_fluid['maxtime']
+        time_params_flow0d['numstep'] = time_params_fluid['numstep']
+
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbs = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, comm=self.comm)
         self.pbf = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
@@ -131,6 +135,12 @@ class FluidmechanicsFlow0DSolver():
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.pbs.comm, self.pb.pbs.ndof)
 
+        # read restart information
+        if self.pb.pbs.restart_step > 0:
+            self.pb.pbs.io.readcheckpoint(self.pb.pbs)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, self.pb.pbs.restart_step, self.pb.pbf.s)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, self.pb.pbs.restart_step, self.pb.pbf.s_old)
+
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.pb.coupling_type == 'monolithic_direct':
             self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
@@ -162,7 +172,7 @@ class FluidmechanicsFlow0DSolver():
         solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
 
         # solve for consistent initial acceleration
-        if self.pb.pbs.timint != 'static':
+        if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaP_kin_old + self.pb.pbs.deltaP_int_old - self.pb.pbs.deltaP_ext_old - self.pb.power_coupling_old
             
@@ -173,17 +183,15 @@ class FluidmechanicsFlow0DSolver():
         
         # write mesh output
         self.pb.pbs.io.write_output(writemesh=True)
-
-        # load/time stepping
-        interval = np.linspace(0, self.pb.pbs.maxtime, self.pb.pbs.numstep+1)
         
 
         # fluid 0D flow main time loop
-        for (N, dt) in enumerate(np.diff(interval)):
+        for N in range(self.pb.restart_step+1, self.pb.numstep+1):
             
             wts = time.time()
             
-            t = interval[N+1]
+            # current time
+            t = N * self.pb.pbs.dt
             
             # offset time for multiple cardiac cycles
             t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.T_cycl # zero if T_cycl variable is not specified
@@ -192,7 +200,7 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
 
             # solve
-            solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off, dt)
+            solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off, self.pb.pbs.dt)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid)
@@ -215,11 +223,14 @@ class FluidmechanicsFlow0DSolver():
             wte = time.time()
             wt = wte - wts
             
-            # write output
+            # write output and restart info
             self.pb.pbs.io.write_output(pb=self.pb.pbf, N=N, t=t)
             # raw txt file output of 0D model quantities
-            if (N+1) % self.pb.pbf.write_results_every_0D == 0:
+            if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
                 self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid)
+            # write 0D restart info
+            if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
+                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, N, self.pb.pbf.s)
 
             # print to screen
             self.pb.pbf.cardvasc0D.print_to_screen(self.pb.pbf.s_mid,self.pb.pbf.aux_mid)
@@ -240,7 +251,7 @@ class FluidmechanicsFlow0DSolver():
             
             # maximum number of steps to perform
             try:
-                if N+1 == self.pb.pbs.numstep_stop:
+                if N == self.pb.pbs.numstep_stop:
                     break
             except:
                 pass

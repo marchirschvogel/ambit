@@ -45,6 +45,10 @@ class SolidmechanicsFlow0DProblem():
         try: self.coupling_type = self.coupling_params['coupling_type']
         except: self.coupling_type = 'monolithic_direct'
         
+        # assert that we do not have conflicting timings
+        time_params_flow0d['maxtime'] = time_params_solid['maxtime']
+        time_params_flow0d['numstep'] = time_params_solid['numstep']
+        
         # for multiscale G&R analysis
         self.t_prev = 0
         self.t_gandr_setpoint = 0
@@ -142,6 +146,12 @@ class SolidmechanicsFlow0DSolver():
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.pbs.comm, self.pb.pbs.ndof)
 
+        # read restart information
+        if self.pb.pbs.restart_step > 0:
+            self.pb.pbs.io.readcheckpoint(self.pb.pbs)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, self.pb.pbs.restart_step, self.pb.pbf.s)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, self.pb.pbs.restart_step, self.pb.pbf.s_old)
+
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.pb.coupling_type == 'monolithic_direct':
             self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
@@ -150,7 +160,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, self.pb.pbf.cardvasc0D.c_ids, self.pb.pr0D, self.pb.coupfuncs_old)
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
-        if self.pb.pbs.prestress_initial:
+        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             
             utilities.print_prestress('start', self.pb.comm)
 
@@ -172,7 +182,6 @@ class SolidmechanicsFlow0DSolver():
 
             solnln_prestress.newton(self.pb.pbs.u, self.pb.pbs.p)
             
-
             # MULF update
             self.pb.pbs.ki.prestress_update(self.pb.pbs.u, self.pb.pbs.Vd_tensor, self.pb.pbs.dx_, self.pb.pbs.u_pre)
 
@@ -182,6 +191,10 @@ class SolidmechanicsFlow0DSolver():
             utilities.print_prestress('end', self.pb.comm)
             # delete class instance
             del solnln_prestress
+
+        else:
+            # set flag definitely to False if we're restarting
+            self.pb.pbs.prestress_initial = False
 
         if self.pb.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
@@ -208,7 +221,7 @@ class SolidmechanicsFlow0DSolver():
         solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
 
         # solve for consistent initial acceleration
-        if self.pb.pbs.timint != 'static':
+        if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
 
@@ -219,17 +232,15 @@ class SolidmechanicsFlow0DSolver():
 
         # write mesh output
         self.pb.pbs.io.write_output(writemesh=True)
-
-        # load/time stepping
-        interval = np.linspace(0, self.pb.pbs.maxtime, self.pb.pbs.numstep+1)
-
+        
 
         # solid 0D flow main time loop
-        for (N, dt) in enumerate(np.diff(interval)):
-            
+        for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep+1):
+
             wts = time.time()
 
-            t = interval[N+1] + self.pb.t_prev # t_prev for multiscale analysis (time from previous cycles)
+            # current time
+            t = N * self.pb.pbs.dt + self.pb.t_prev # t_prev for multiscale analysis (time from previous cycles)
             
             # offset time for multiple cardiac cycles
             t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.T_cycl # zero if T_cycl variable is not specified
@@ -238,14 +249,14 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
 
             if self.pb.pbs.problem_type == 'solid_flow0d_multiscale_gandr':
-                self.set_homeostatic_threshold(t-t_off, dt), self.set_growth_trigger(t-t_off, dt)
+                self.set_homeostatic_threshold(t-t_off, self.pb.pbs.dt), self.set_growth_trigger(t-t_off, self.pb.pbs.dt)
 
             # take care of active stress
             if self.pb.pbs.have_active_stress and self.pb.pbs.active_stress_trig == 'ode':
-                self.pb.pbs.evaluate_active_stress_ode(t-t_off, dt)
+                self.pb.pbs.evaluate_active_stress_ode(t-t_off, self.pb.pbs.dt)
 
             # solve
-            solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, dt, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
+            solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, self.pb.pbs.dt, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid)
@@ -268,11 +279,14 @@ class SolidmechanicsFlow0DSolver():
             wte = time.time()
             wt = wte - wts
             
-            # write output
+            # write output and restart info
             self.pb.pbs.io.write_output(pb=self.pb.pbs, N=N, t=t)
             # raw txt file output of 0D model quantities
-            if (N+1) % self.pb.pbf.write_results_every_0D == 0:
+            if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
                 self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid)
+            # write 0D restart info
+            if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
+                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, N, self.pb.pbf.s)
 
             # print to screen
             self.pb.pbf.cardvasc0D.print_to_screen(self.pb.pbf.s_mid,self.pb.pbf.aux_mid)
@@ -293,7 +307,7 @@ class SolidmechanicsFlow0DSolver():
             
             # maximum number of steps to perform
             try:
-                if N+1 == self.pb.pbs.numstep_stop:
+                if N == self.pb.pbs.numstep_stop:
                     break
             except:
                 pass

@@ -118,7 +118,7 @@ class Flow0DProblem(problem_base):
         self.c = []
 
         # initialize flow0d time-integration class
-        self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.comm)
+        self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, self.comm)
 
         if initial_file:
             initialconditions = self.cardvasc0D.set_initial_from_file(initial_file)
@@ -156,22 +156,21 @@ class Flow0DSolver():
 
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear_0D(self.pb, self.solver_params)
-
-        # load/time stepping
-        interval = np.linspace(0, self.pb.maxtime, self.pb.numstep+1)
+        
 
         # flow 0d main time loop
-        for (N, dt) in enumerate(np.diff(interval)):
+        for N in range(self.pb.restart_step+1, self.pb.numstep+1):
             
             wts = time.time()
             
-            t = interval[N+1]
+            # current time
+            t = N * self.pb.dt
             
             # external volume/flux from time curve
             if self.pb.ti.time_curves is not None: self.pb.c[0] = self.pb.ti.timecurves(1)(t)
 
             # solve
-            solnln.newton(self.pb.s, t, dt)
+            solnln.newton(self.pb.s, t, self.pb.dt)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid)
@@ -187,7 +186,7 @@ class Flow0DSolver():
             wt = wte - wts
             
             # raw txt file output of 0D model quantities
-            if (N+1) % self.pb.write_results_every_0D == 0:
+            if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
                 self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid)
 
             # print time step info to screen
@@ -207,7 +206,7 @@ class Flow0DSolver():
             
             # maximum number of steps to perform
             try:
-                if N+1 == self.pb.pbs.numstep_stop:
+                if N == self.pb.pbs.numstep_stop:
                     break
             except:
                 pass

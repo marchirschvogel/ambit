@@ -150,7 +150,7 @@ class SolidmechanicsProblem(problem_base):
             self.ndof = self.u.vector.getSize()
 
         # initialize solid time-integration class
-        self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.comm)
+        self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         have_fiber1, have_fiber2 = False, False
@@ -228,7 +228,7 @@ class SolidmechanicsProblem(problem_base):
 
             # fiber function space - vector defined on quadrature points
             V_fib = self.Vd_vector
-            self.fib_func = self.io.readin_fibers(fibarray, V_fib, self.dx_, tol=1.0e-8)
+            self.fib_func = self.io.readin_fibers(fibarray, V_fib, self.dx_)
 
         else:
             self.fib_func = None
@@ -523,11 +523,6 @@ class SolidmechanicsProblem(problem_base):
             print('Solid growth rate: %.4e' % (self.growth_rate))
             sys.stdout.flush()
 
-            #fname = self.io.output_path+'/growthrate.txt'
-            #f = open(fname, 'a')
-            #f.write('%.16E\n' % (t,self.growth_rate))
-            #f.close()
-
 
 
 class SolidmechanicsSolver():
@@ -548,8 +543,12 @@ class SolidmechanicsSolver():
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
 
+        # read restart information
+        if self.pb.restart_step > 0:
+            self.pb.io.readcheckpoint(self.pb)
+
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
-        if self.pb.prestress_initial:
+        if self.pb.prestress_initial and self.pb.restart_step == 0:
             
             utilities.print_prestress('start', self.pb.comm)
 
@@ -579,11 +578,15 @@ class SolidmechanicsSolver():
             # delete class instance
             del solnln_prestress
 
+        else:
+            # set flag definitely to False if we're restarting
+            self.pb.prestress_initial = False
+
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
 
         # solve for consistent initial acceleration
-        if self.pb.timint != 'static':
+        if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
             
@@ -595,24 +598,22 @@ class SolidmechanicsSolver():
 
         # write mesh output
         self.pb.io.write_output(writemesh=True)
-
-        # load/time stepping
-        interval = np.linspace(0, self.pb.maxtime, self.pb.numstep+1)
-
-
+        
+        
         # solid main time loop
-        for (N, dt) in enumerate(np.diff(interval)):
-            
+        for N in range(self.pb.restart_step+1, self.pb.numstep+1):
+
             wts = time.time()
             
-            t = interval[N+1]
-        
+            # current time
+            t = N * self.pb.dt
+
             # set time-dependent functions
             self.pb.ti.set_time_funcs(self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_vec, t)
-
+            
             # take care of active stress
             if self.pb.have_active_stress and self.pb.active_stress_trig == 'ode':
-                self.pb.evaluate_active_stress_ode(t, dt)
+                self.pb.evaluate_active_stress_ode(t, self.pb.dt)
 
             # solve
             solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)
@@ -628,7 +629,7 @@ class SolidmechanicsSolver():
             wte = time.time()
             wt = wte - wts
             
-            # write output
+            # write output and restart info
             self.pb.io.write_output(pb=self.pb, N=N, t=t)
 
             # print time step info to screen
@@ -639,7 +640,7 @@ class SolidmechanicsSolver():
             
             # maximum number of steps to perform
             try:
-                if N+1 == self.pb.numstep_stop:
+                if N == self.pb.numstep_stop:
                     break
             except:
                 pass

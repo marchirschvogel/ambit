@@ -11,9 +11,10 @@ import numpy as np
 from petsc4py import PETSc
 from dolfinx import Function, VectorFunctionSpace
 from dolfinx.io import XDMFFile
+from ufl import FacetNormal, CellDiameter, dot, sqrt, tr
 
 from projection import project
-from ufl import FacetNormal, CellDiameter, dot, sqrt, tr
+from mpiroutines import allgather_vec
 
 
 class IO:
@@ -30,6 +31,12 @@ class IO:
         
         try: self.fiber_data = io_params['fiber_data']
         except: self.fiber_data = {}
+        
+        try: self.restart_step = io_params['restart_step']
+        except: self.restart_step = 0
+        
+        try: self.write_restart_every = io_params['write_restart_every']
+        except: self.write_restart_every = -1
         
         try: self.have_b1_bcs = io_params['have_bd1_bcs']
         except: self.have_b1_bcs = True # most likely!
@@ -109,7 +116,7 @@ class IO:
 class IO_solid(IO):
 
     # read in fibers defined at nodes (nodal fiber and coordiante files have to be present)
-    def readin_fibers(self, fibarray, V_fib, dx_, tol=1.0e-8):
+    def readin_fibers(self, fibarray, V_fib, dx_):
 
         # V_fib_input is function space the fiber vector is defined on (only CG1 or DG0 supported, add further depending on your input...)
         if list(self.fiber_data.keys())[0] == 'nodal':
@@ -127,43 +134,8 @@ class IO_solid(IO):
             
             fib_func_input.append(Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
             
-            # load fiber and node coordinates data - numnodes x 3 arrays
-            fib_data = np.loadtxt(list(self.fiber_data.values())[0][si],usecols=(0,1,2))
-            coords = np.loadtxt(list(self.fiber_data.values())[0][si],usecols=(3,4,5))
-            
-            # new node coordinates (nodes might be re-ordered in parallel)
-            # in case of elemental fibers, these are the element centroids
-            co = V_fib_input.tabulate_dof_coordinates()
+            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si])
 
-            # index map
-            im = V_fib_input.dofmap.index_map.global_indices()
-
-            tolerance = int(-np.log10(tol))
-
-            # since in parallel, the ordering of the node ids might change, so we have to find the
-            # mapping between original and new id via the coordinates
-            ci = 0
-            for i in im:
-                
-                ind = np.where((np.round(coords,tolerance) == np.round(co[ci],tolerance)).all(axis=1))[0]
-                
-                # only write if we've found the index - so, we don't need to specify fiber data for subdomains that don't need them
-                if len(ind):
-                    
-                    # normalize fiber vectors (in the case there are some that aren't...)
-                    norm_sq = 0.
-                    for j in range(3):
-                        norm_sq += fib_data[ind[0],j]**2.
-                    norm = np.sqrt(norm_sq)
-                    
-                    for j in range(3):
-                        fib_func_input[si].vector[3*i+j] = fib_data[ind[0],j] / norm
-                
-                ci+=1
-            
-            # update ghosts
-            fib_func_input[si].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            
             # project to output fiber function space
             ff = project(fib_func_input[si], V_fib, dx_, bcs=[], nm='fib_'+s+'')
             
@@ -181,24 +153,110 @@ class IO_solid(IO):
 
 
 
-
-    def write_output(self, pb=None, writemesh=False, N=0, t=0):
+    def readfunction(self, f, V, datafile):
         
-        if writemesh and self.write_results_every > 0:
+        # block size of vector
+        bs = f.vector.getBlockSize()
+        
+        # load data and coordinates
+        data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2)
+        coords = np.loadtxt(datafile,usecols=(-3,-2,-1)) # last three always are the coordinates
+        
+        # new node coordinates (dofs might be re-ordered in parallel)
+        # in case of DG fields, these are the Gauss point coordinates
+        co = V.tabulate_dof_coordinates()
+
+        # index map
+        im = V.dofmap.index_map.global_indices()
+
+        tol = 1.0e-8
+        tolerance = int(-np.log10(tol))
+
+        # since in parallel, the ordering of the dof ids might change, so we have to find the
+        # mapping between original and new id via the coordinates
+        ci = 0
+        for i in im:
             
-            self.resultsfiles = {}
-            for res in self.results_to_write:
-                outfile = XDMFFile(self.comm, self.output_path+'/results_'+self.simname+'_'+res+'.xdmf', 'w')
-                outfile.write_mesh(self.mesh)
-                self.resultsfiles[res] = outfile
+            ind = np.where((np.round(coords,tolerance) == np.round(co[ci],tolerance)).all(axis=1))[0]
+            
+            # only write if we've found the index
+            if len(ind):
+                
+                for j in range(bs):
+                    f.vector[bs*i+j] = data[ind[0],j]
+            
+            ci+=1
+
+        f.vector.assemble()
+        
+        # update ghosts
+        f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+
+    # TODO and FIXME: Currently only works in serial!!!
+    def writefunction(self, f, V, nm, N):
+
+        # block size of vector
+        bs = f.vector.getBlockSize()
+
+        co = V.tabulate_dof_coordinates()
+        
+        # index map
+        im = V.dofmap.index_map.global_indices()
+
+        f_sq = allgather_vec(f.vector, self.comm)
+
+        coords_tmp, coords_all = np.zeros((int(f.vector.getSize()/bs),3)), np.zeros((int(f.vector.getSize()/bs),3))
+
+        for i in range(len(co)):
+            coords_tmp[im[i],:] = co[i,:]
+
+        coords_arr = self.comm.allgather(coords_tmp)
+
+        for i in range(len(coords_arr)):
+            coords_all += coords_arr[i]
+        #coords_all = coords_arr[0]
+
+        #print(coords_arr)
+
+        if self.comm.rank == 0:
+        
+            filename = self.output_path+'/'+self.simname+'_checkpoint_'+nm+'_'+str(N)+'.txt' # conditions at beginning of cycle
+            fl = open(filename, 'wt')
+            
+            for i in range(int(len(f_sq)/bs)):
+                for j in range(bs):
+                    fl.write('%.16E ' % (f_sq[bs*i+j]))
+            
+                for k in range(3):
+                    fl.write('%.16E ' % (coords_all[i][k]))
+
+                fl.write('\n')
+                
+            fl.close()
+
+        
+
+
+    def write_output(self, pb=None, writemesh=False, N=1, t=0):
+        
+        if writemesh:
+            
+            if self.write_results_every > 0:
+            
+                self.resultsfiles = {}
+                for res in self.results_to_write:
+                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+self.simname+'_'+res+'.xdmf', 'w')
+                    outfile.write_mesh(self.mesh)
+                    self.resultsfiles[res] = outfile
                 
             return
         
         
         else:
-        
+
             # write results every write_results_every steps
-            if (N+1) % self.write_results_every == 0:
+            if self.write_results_every > 0 and N % self.write_results_every == 0:
                 
                 # save solution to XDMF format
                 for res in self.results_to_write:
@@ -288,27 +346,80 @@ class IO_solid(IO):
                         raise NameError("Unknown output to write for solid mechanics!")
 
 
+            if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+
+                self.writecheckpoint(pb, N)
+
+
+    def readcheckpoint(self, pb):
+
+        self.readfunction(pb.u, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_u_'+str(self.restart_step)+'.txt')
+        if pb.incompressible_2field:
+            self.readfunction(pb.p, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_'+str(self.restart_step)+'.txt')
+        if pb.have_growth:
+            self.readfunction(pb.theta, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_theta_'+str(self.restart_step)+'.txt')
+            self.readfunction(pb.theta_old, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_theta_old_'+str(self.restart_step)+'.txt')
+        if pb.have_active_stress:
+            self.readfunction(pb.tau_a, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_tau_a_'+str(self.restart_step)+'.txt')
+            self.readfunction(pb.tau_a_old, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_tau_a_old_'+str(self.restart_step)+'.txt')
+        if pb.F_hist is not None:
+            self.readfunction(pb.F_hist, pb.Vd_tensor, self.output_path+'/'+self.simname+'_checkpoint_F_hist_'+str(self.restart_step)+'.txt')
+            self.readfunction(pb.u_pre, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_u_pre_'+str(self.restart_step)+'.txt')
+
+        if pb.timint != 'static':
+            self.readfunction(pb.u_old, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_u_old_'+str(self.restart_step)+'.txt')
+            self.readfunction(pb.v_old, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_v_old_'+str(self.restart_step)+'.txt')
+            self.readfunction(pb.a_old, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_a_old_'+str(self.restart_step)+'.txt')
+            if pb.incompressible_2field:
+                self.readfunction(pb.p_old, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_old_'+str(self.restart_step)+'.txt')
+
+
+    # TODO: Currently only works in serial!!!
+    def writecheckpoint(self, pb, N):
+
+        self.writefunction(pb.u, pb.V_u, 'u', N)
+        if pb.incompressible_2field:
+            self.writefunction(pb.p, pb.V_p, 'p', N)
+        if pb.have_growth:
+            self.writefunction(pb.theta, pb.Vd_scalar, 'theta', N)
+            self.writefunction(pb.theta_old, pb.Vd_scalar, 'theta_old', N)
+        if pb.have_active_stress:
+            self.writefunction(pb.tau_a, pb.Vd_scalar, 'tau_a', N)
+            self.writefunction(pb.tau_a_old, pb.Vd_scalar, 'tau_a_old', N)
+        if pb.F_hist is not None:
+            self.writefunction(pb.F_hist, pb.Vd_tensor, 'F_hist', N)
+            self.writefunction(pb.u_pre, pb.V_u, 'u_pre', N)
+
+        if pb.timint != 'static':
+            self.writefunction(pb.u_old, pb.V_u, 'u_old', N)
+            self.writefunction(pb.v_old, pb.V_u, 'v_old', N)
+            self.writefunction(pb.a_old, pb.V_u, 'a_old', N)
+            if pb.incompressible_2field:
+                self.writefunction(pb.p_old, pb.V_p, 'p_old', N)
+
 
 class IO_fluid(IO):
     
     
-    def write_output(self, pb=None, writemesh=False, N=0, t=0):
+    def write_output(self, pb=None, writemesh=False, N=1, t=0):
         
-        if writemesh and self.write_results_every > 0:
+        if writemesh:
             
-            self.resultsfiles = {}
-            for res in self.results_to_write:
-                outfile = XDMFFile(self.comm, self.output_path+'/results_'+self.simname+'_'+res+'.xdmf', 'w')
-                outfile.write_mesh(self.mesh)
-                self.resultsfiles[res] = outfile
+            if self.write_results_every > 0:
+            
+                self.resultsfiles = {}
+                for res in self.results_to_write:
+                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+self.simname+'_'+res+'.xdmf', 'w')
+                    outfile.write_mesh(self.mesh)
+                    self.resultsfiles[res] = outfile
             
             return
         
         
         else:
-        
+            
             # write results every write_results_every steps
-            if (N+1) % self.write_results_every == 0:
+            if self.write_results_every > 0 and N % self.write_results_every == 0:
                 
                 # save solution to XDMF format
                 for res in self.results_to_write:
@@ -331,3 +442,24 @@ class IO_fluid(IO):
                         self.resultsfiles[res].write_function(reynolds, t)
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
+
+            if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+
+                self.writecheckpoint(pb, N)
+
+
+
+    def readcheckpoint(self, pb):
+
+        self.readfunction(pb.v, pb.V_v, self.output_path+'/'+self.simname+'_checkpoint_v_'+str(self.restart_step)+'.txt')
+        self.readfunction(pb.p, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_'+str(self.restart_step)+'.txt')
+        self.readfunction(pb.v_old, pb.V_v, self.output_path+'/'+self.simname+'_checkpoint_v_old_'+str(self.restart_step)+'.txt')
+        self.readfunction(pb.a_old, pb.V_v, self.output_path+'/'+self.simname+'_checkpoint_a_old_'+str(self.restart_step)+'.txt')
+        self.readfunction(pb.p_old, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_old_'+str(self.restart_step)+'.txt')
+
+
+    # TODO: Currently only works in serial!!!
+    def writecheckpoint(self, pb, N):
+
+        self.writefunction(pb.v, pb.V_v, 'v', N)
+        self.writefunction(pb.p, pb.V_p, 'p', N)

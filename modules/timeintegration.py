@@ -22,7 +22,7 @@ import expression
 
 class timeintegration():
     
-    def __init__(self, time_params, time_curves, comm):
+    def __init__(self, time_params, time_curves, t_init, comm):
         
         self.timint = time_params['timint']
         
@@ -32,6 +32,7 @@ class timeintegration():
         if 'maxtime' in time_params.keys(): self.dt = self.maxtime/self.numstep
         
         self.time_curves = time_curves
+        self.t_init = t_init
 
         self.comm = comm
         
@@ -44,7 +45,7 @@ class timeintegration():
 
         if self.comm.rank == 0:
 
-            print("### TIME STEP %i / %i successfully completed | TIME: %.4f | wt = %.2e" % (N+1,self.numstep,t,wt))
+            print("### TIME STEP %i / %i successfully completed | TIME: %.4f | wt = %.2e" % (N,self.numstep,t,wt))
             print("--------------------------------------------------------------------------------------------------------------------------------------------------")
             sys.stdout.flush()
 
@@ -97,8 +98,8 @@ class timeintegration():
 # Solid mechanics time integration class
 class timeintegration_solid(timeintegration):
     
-    def __init__(self, time_params, fem_params, time_curves, comm):
-        timeintegration.__init__(self, time_params, time_curves, comm)
+    def __init__(self, time_params, fem_params, time_curves, t_init, comm):
+        timeintegration.__init__(self, time_params, time_curves, t_init, comm)
         
         if self.timint == 'genalpha': self.alpha_m, self.alpha_f, self.beta, self.gamma = self.compute_genalpha_params(time_params['rho_inf_genalpha'])
         if self.timint == 'ost': self.theta_ost = time_params['theta_ost']
@@ -265,8 +266,8 @@ class timeintegration_solid(timeintegration):
 # Fluid mechanics time integration class
 class timeintegration_fluid(timeintegration):
     
-    def __init__(self, time_params, fem_params, time_curves, comm):
-        timeintegration.__init__(self, time_params, time_curves, comm)
+    def __init__(self, time_params, fem_params, time_curves, t_init, comm):
+        timeintegration.__init__(self, time_params, time_curves, t_init, comm)
         
         self.theta_ost = time_params['theta_ost']
 
@@ -340,8 +341,8 @@ class timeintegration_fluid(timeintegration):
 class timeintegration_flow0d(timeintegration):
     
     # initialize base class
-    def __init__(self, time_params, time_curves, comm, cycle=[1], cycleerror=[1]):
-        timeintegration.__init__(self, time_params, time_curves, comm)
+    def __init__(self, time_params, time_curves, t_init, comm, cycle=[1], cycleerror=[1]):
+        timeintegration.__init__(self, time_params, time_curves, t_init, comm)
     
         self.cycle = cycle
         self.cycleerror = cycleerror
@@ -353,8 +354,8 @@ class timeintegration_flow0d(timeintegration):
         if self.comm.rank == 0:
 
             if self.cycle[0]==1: # cycle error does not make sense in first cycle
-                print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: - | wt = %.2e" % (N+1,Nmax,t,self.cycle[0],wt))
+                print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: - | wt = %.2e" % (N,Nmax,t,self.cycle[0],wt))
             else:
-                print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: %.4f | wt = %.2e" % (N+1,Nmax,t,self.cycle[0],self.cycleerror[0],wt))
+                print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: %.4f | wt = %.2e" % (N,Nmax,t,self.cycle[0],self.cycleerror[0],wt))
             print("--------------------------------------------------------------------------------------------------------------------------------------------------")
             sys.stdout.flush()

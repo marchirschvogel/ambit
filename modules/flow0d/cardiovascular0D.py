@@ -470,6 +470,32 @@ class cardiovascular0Dbase:
                 f.close()
 
 
+    # write restart routine for 0D models
+    def write_restart(self, path, nm, N, var):
+        
+        if isinstance(var, np.ndarray): var_sq = var
+        else: var_sq = allgather_vec(var, self.comm)
+
+        if self.comm.rank == 0:
+        
+            filename = path+'/'+nm+'_checkpoint_s_'+str(N)+'.txt'
+            f = open(filename, 'wt')
+            
+            for i in range(len(self.varmap)):
+                
+                f.write('%.16E\n' % (var_sq[list(self.varmap.values())[i]]))
+                
+            f.close()
+
+
+    # read restart routine for 0D models
+    def read_restart(self, path, nm, rstep, var):
+
+        restart_data = np.loadtxt(path+'/'+nm+'_checkpoint_s_'+str(rstep)+'.txt')
+
+        var[:] = restart_data[:]
+
+
     # to write initial conditions (i.e. after a model has reached periodicity, so we may want to export these if we want to use
     # them in a new simulation starting from a homeostatic state)
     def write_initial(self, path, varTc_old, varTc):

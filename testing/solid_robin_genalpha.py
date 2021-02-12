@@ -19,7 +19,7 @@ def main():
                          'write_results_every'   : -999,
                          'output_path'           : ''+basepath+'/tmp/',
                          'results_to_write'      : [''],
-                         'simname'               : 'test'}
+                         'simname'               : 'solid_robin_genalpha'}
 
     SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct, iterative
                          'tol_res'               : 1.0e-8,

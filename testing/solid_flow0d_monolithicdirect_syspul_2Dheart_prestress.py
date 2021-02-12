@@ -27,7 +27,9 @@ def main():
                             'write_results_every'   : -999,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : [''],
-                            'simname'               : 'test'}
+                            'simname'               : 'testy',
+                            'write_restart_every'   : -1, # TODO: Check restarting!
+                            'restart_step'          : 0}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,

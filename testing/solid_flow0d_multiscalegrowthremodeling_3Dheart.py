@@ -87,9 +87,9 @@ def main():
                                       #'rayleigh_damping' : {'eta_m' : 0.0, 'eta_k' : 0.0001},
                                       'growth'           : {'growth_dir' : 'fiber', # isotropic, fiber, crossfiber, radial
                                                             'growth_trig' : 'fibstretch', # fibstretch, volstress, prescribed
-                                                            'trigger_reduction' : 0.85,
-                                                            'growth_thres' : 1.1,
-                                                            'thres_tol' : 1.0e-2,
+                                                            'trigger_reduction' : 0.99,
+                                                            'growth_thres' : 1.05,
+                                                            'thres_tol' : 1.0e-3,
                                                             'thetamax' : 3.0,
                                                             'thetamin' : 1.0,
                                                             'tau_gr' : 5.0e4,

@@ -18,10 +18,12 @@ def main():
                             'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
+                            'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (TODO: Only works in serial so far!) (default: -1)
                             'output_path'           : ''+basepath+'/tmp/', # where results are written to
                             'output_path_0D'        : ''+basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
-                            'simname'               : 'my_simulation_name'} # how to name the output (attention: there is no warning, results will be overwritten if existent)
+                            'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
+                            'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (default: 0)
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver
