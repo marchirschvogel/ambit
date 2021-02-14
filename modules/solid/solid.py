@@ -545,7 +545,8 @@ class SolidmechanicsSolver():
 
         # read restart information
         if self.pb.restart_step > 0:
-            self.pb.io.readcheckpoint(self.pb)
+            self.pb.io.readcheckpoint(self.pb, self.pb.restart_step)
+            self.pb.io.simname += '_r'+str(self.pb.restart_step)
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
         if self.pb.prestress_initial and self.pb.restart_step == 0:
@@ -595,7 +596,6 @@ class SolidmechanicsSolver():
             # solve for consistent initial acceleration a_old
             solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
-
         # write mesh output
         self.pb.io.write_output(writemesh=True)
         
@@ -635,7 +635,7 @@ class SolidmechanicsSolver():
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, wt=wt)
             
-            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
+            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr_stag' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
                 break
             
             # maximum number of steps to perform

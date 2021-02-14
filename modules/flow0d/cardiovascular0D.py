@@ -18,10 +18,10 @@ from mpiroutines import allgather_vec, allgather_vec_entry
 
 class cardiovascular0Dbase:
     
-    def __init__(self, theta, comm=None):
+    def __init__(self, theta, init=True, comm=None):
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
         self.theta = theta # time-integration factor ]0;1]
-        self.init = True # for output
+        self.init = init # for output
         self.have_induced_pert = False
         if comm is not None: self.comm = comm # MPI communicator
     
@@ -122,7 +122,7 @@ class cardiovascular0Dbase:
             
             
     # check for cardiac cycle periodicity 
-    def cycle_check(self, var, varTc, varTc_old, t, cycle, cyclerr, eps_periodic, check='allvar', inioutpath=None, induce_pert_after_cycl=-1):
+    def cycle_check(self, var, varTc, varTc_old, t, cycle, cyclerr, eps_periodic, check='allvar', inioutpath=None, nm='', induce_pert_after_cycl=-1):
         
         if isinstance(varTc, np.ndarray): vs, ve = 0, len(varTc)
         else: vs, ve = var.getOwnershipRange()
@@ -142,7 +142,7 @@ class cardiovascular0Dbase:
             
             # write "periodic" initial conditions in case we want to restart from this model in another simulation
             if is_periodic and inioutpath is not None:
-                self.write_initial(inioutpath, varTc_old, varTc)
+                self.write_initial(inioutpath, nm, varTc_old, varTc)
             
             for i in range(vs,ve):
                 varTc_old[i] = varTc[i]
@@ -438,8 +438,8 @@ class cardiovascular0Dbase:
 
 
     # output routine for 0D models
-    def write_output(self, path, t, var, aux):
-        
+    def write_output(self, path, nm, t, var, aux):
+
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
@@ -453,7 +453,7 @@ class cardiovascular0Dbase:
 
             for i in range(len(self.varmap)):
                 
-                filename = path+'/'+list(self.varmap.keys())[i]+'.txt'
+                filename = path+'/results_'+nm+'_'+list(self.varmap.keys())[i]+'.txt'
                 f = open(filename, mode)
                 
                 f.write('%.16E %.16E\n' % (t,var_sq[list(self.varmap.values())[i]]))
@@ -462,7 +462,7 @@ class cardiovascular0Dbase:
 
             for i in range(len(self.auxmap)):
                 
-                filename = path+'/'+list(self.auxmap.keys())[i]+'.txt'
+                filename = path+'/results_'+nm+'_'+list(self.auxmap.keys())[i]+'.txt'
                 f = open(filename, mode)
                 
                 f.write('%.16E %.16E\n' % (t,aux[list(self.auxmap.values())[i]]))
@@ -478,12 +478,12 @@ class cardiovascular0Dbase:
 
         if self.comm.rank == 0:
         
-            filename = path+'/'+nm+'_checkpoint_s_'+str(N)+'.txt'
+            filename = path+'/checkpoint_'+nm+'_'+str(N)+'.txt'
             f = open(filename, 'wt')
             
-            for i in range(len(self.varmap)):
+            for i in range(len(var_sq)):
                 
-                f.write('%.16E\n' % (var_sq[list(self.varmap.values())[i]]))
+                f.write('%.16E\n' % (var_sq[i]))
                 
             f.close()
 
@@ -491,23 +491,23 @@ class cardiovascular0Dbase:
     # read restart routine for 0D models
     def read_restart(self, path, nm, rstep, var):
 
-        restart_data = np.loadtxt(path+'/'+nm+'_checkpoint_s_'+str(rstep)+'.txt')
+        restart_data = np.loadtxt(path+'/checkpoint_'+nm+'_'+str(rstep)+'.txt')
 
         var[:] = restart_data[:]
 
 
     # to write initial conditions (i.e. after a model has reached periodicity, so we may want to export these if we want to use
     # them in a new simulation starting from a homeostatic state)
-    def write_initial(self, path, varTc_old, varTc):
+    def write_initial(self, path, nm, varTc_old, varTc):
         
         if isinstance(varTc_old, np.ndarray): varTc_old_sq, varTc_sq = varTc_old, varTc
         else: varTc_old_sq, varTc_sq = allgather_vec(varTc_old, self.comm), allgather_vec(varTc, self.comm)
         
         if self.comm.rank == 0:
         
-            filename1 = path+'/initial_data_Tstart.txt' # conditions at beginning of cycle
+            filename1 = path+'/initial_data_'+nm+'_Tstart.txt' # conditions at beginning of cycle
             f1 = open(filename1, 'wt')
-            filename2 = path+'/initial_data_Tend.txt' # conditions at end of cycle
+            filename2 = path+'/initial_data_'+nm+'_Tend.txt' # conditions at end of cycle
             f2 = open(filename2, 'wt')
             
             for i in range(len(self.varmap)):

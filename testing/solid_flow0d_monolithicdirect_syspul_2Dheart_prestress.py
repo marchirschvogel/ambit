@@ -20,16 +20,20 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
                             'mesh_domain'           : ''+basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_2D.txt',''+basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
-                            'write_results_every'   : -999,
+                            'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
-                            'results_to_write'      : [''],
-                            'simname'               : 'testy',
-                            'write_restart_every'   : -1, # TODO: Check restarting!
-                            'restart_step'          : 0}
+                            'results_to_write'      : ['displacement'],
+                            'simname'               : 'solid_flow0d_2Dheart',
+                            'write_restart_every'   : 1,
+                            'restart_step'          : restart_step}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,

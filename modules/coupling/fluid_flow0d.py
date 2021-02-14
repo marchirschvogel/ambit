@@ -137,9 +137,11 @@ class FluidmechanicsFlow0DSolver():
 
         # read restart information
         if self.pb.pbs.restart_step > 0:
-            self.pb.pbs.io.readcheckpoint(self.pb.pbs)
-            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, self.pb.pbs.restart_step, self.pb.pbf.s)
-            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, self.pb.pbs.restart_step, self.pb.pbf.s_old)
+            self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', self.pb.pbs.restart_step, self.pb.pbf.s)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s_old', self.pb.pbs.restart_step, self.pb.pbf.s_old)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_sTc_old', self.pb.pbs.restart_step, self.pb.pbf.sTc_old)
+            self.pb.pbs.io.simname += '_r'+str(self.pb.pbs.restart_step)
 
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.pb.coupling_type == 'monolithic_direct':
@@ -166,7 +168,7 @@ class FluidmechanicsFlow0DSolver():
                 self.pb.flux3D_old.append(sum(fl)*self.pb.cq_factor[i])
 
         # initially evaluate 0D model at old state
-        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, 0., 0., self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
+        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
                
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
@@ -227,10 +229,12 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbs.io.write_output(pb=self.pb.pbf, N=N, t=t)
             # raw txt file output of 0D model quantities
             if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
-                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid)
+                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid)
             # write 0D restart info
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
-                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, N, self.pb.pbf.s)
+                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', N, self.pb.pbf.s)
+                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s_old', N, self.pb.pbf.s_old)
+                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_sTc_old', N, self.pb.pbf.sTc_old)
 
             # print to screen
             self.pb.pbf.cardvasc0D.print_to_screen(self.pb.pbf.s_mid,self.pb.pbf.aux_mid)
@@ -238,7 +242,7 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbf.ti.print_timestep(N, t, self.pb.pbs.numstep, wt=wt)
 
             # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
+            is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.io.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.pbf.perturb_type is not None: self.pb.pbf.cardvasc0D.induce_perturbation(self.pb.pbf.perturb_type, self.pb.pbf.ti.cycle[0], self.pb.pbf.perturb_after_cylce)

@@ -12,13 +12,13 @@ def main():
 
     # all possible input parameters
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr_stag
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
-                            'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (TODO: Only works in serial so far!) (default: -1)
+                            'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (default: -1)
                             'output_path'           : ''+basepath+'/tmp/', # where results are written to
                             'output_path_0D'        : ''+basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
@@ -84,7 +84,8 @@ def main():
                             'numcycles'             : 2,
                             'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-3, # growth rate tolerance
-                            'tol_outer'             : 1.0e-3} # when to stop multiscale problem (TODO: Not yet implemented!)
+                            'tol_outer'             : 1.0e-3, # when to stop multiscale problem (TODO: Not yet implemented!)
+                            'restart_cycle'         : 0} # OPTIONAL: at which multiscale cycle to restart (default: 0)
 
                             # - MATn has to correspond to subdomain id n (set by the flags in Attribute section of *_domain.xdmf file - so if you have x mats, you need ids ranging from 1,...,x)
                             # - one MAT can be decomposed into submats, see examples below (additive stress contributions)

@@ -20,22 +20,22 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d_multiscale_gandr',
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d_multiscale_gandr_stag',
                             'mesh_domain'           : ''+basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_2D.txt',''+basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e','fiberstretch'],
-                            'simname'               : 'multiscale_gandrAS'}
+                            'simname'               : 'multiscale_gandrMR'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'divergence_continue'   : 'PTC',
                             'print_local_iter'      : True,
-                            'tol_res_local' : 1.0e-3,
-                            'tol_inc_local' : 1.0e-5}
+                            'tol_res_local'         : 1.0e-10,
+                            'tol_inc_local'         : 1.0e-10}
     
     SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6,
                             'tol_inc'               : 1.0e-6}
@@ -48,7 +48,7 @@ def main():
 
     TIME_PARAMS_SOLID_LARGE = {'maxtime'            : 2592000.0, # 1 month: 30*24*60*60 s
                             'numstep'               : 1000,
-                            #'numstep_stop'          : 1000,
+                            'numstep_stop'          : 10,
                             'timint'                : 'static'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
@@ -75,10 +75,12 @@ def main():
                             'coupling_type'         : 'monolithic_direct'}
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
-                            'numcycles'             : 1,
+                            'numcycles'             : 2,
                             'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-7, # growth rate tolerance [mm^3/s]
-                            'tol_outer'             : 1.0e-3}
+                            'tol_outer'             : 1.0e-3,
+                            'restart_cycle'         : 0,
+                            'restart_from_small'    : False}
 
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},

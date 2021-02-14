@@ -23,13 +23,13 @@ from solid import SolidmechanicsProblem, SolidmechanicsSolver
 from solid_flow0d import SolidmechanicsFlow0DProblem, SolidmechanicsFlow0DSolver
 
 
-class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
+class SolidmechanicsFlow0DMultiscaleGrowthRemodelingStagProblem():
 
     def __init__(self, io_params, time_params_solid_small, time_params_solid_large, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, multiscale_params, comm=None):
         
         self.comm = comm
         
-        self.problem_physics = 'solid_flow0d_multiscale_gandr'
+        self.problem_physics = 'solid_flow0d_multiscale_gandr_stag'
         
         gandr_trigger_phase = multiscale_params['gandr_trigger_phase']
         
@@ -121,7 +121,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
 
 
-class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
+class SolidmechanicsFlow0DMultiscaleGrowthRemodelingStagSolver():
 
     def __init__(self, problem, solver_params_solid, solver_params_flow0d):
     

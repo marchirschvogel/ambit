@@ -32,9 +32,6 @@ class IO:
         try: self.fiber_data = io_params['fiber_data']
         except: self.fiber_data = {}
         
-        try: self.restart_step = io_params['restart_step']
-        except: self.restart_step = 0
-        
         try: self.write_restart_every = io_params['write_restart_every']
         except: self.write_restart_every = -1
         
@@ -192,51 +189,7 @@ class IO_solid(IO):
         # update ghosts
         f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
-
-    # TODO and FIXME: Currently only works in serial!!!
-    def writefunction(self, f, V, nm, N):
-
-        # block size of vector
-        bs = f.vector.getBlockSize()
-
-        co = V.tabulate_dof_coordinates()
-        
-        # index map
-        im = V.dofmap.index_map.global_indices()
-
-        f_sq = allgather_vec(f.vector, self.comm)
-
-        coords_tmp, coords_all = np.zeros((int(f.vector.getSize()/bs),3)), np.zeros((int(f.vector.getSize()/bs),3))
-
-        for i in range(len(co)):
-            coords_tmp[im[i],:] = co[i,:]
-
-        coords_arr = self.comm.allgather(coords_tmp)
-
-        for i in range(len(coords_arr)):
-            coords_all += coords_arr[i]
-        #coords_all = coords_arr[0]
-
-        #print(coords_arr)
-
-        if self.comm.rank == 0:
-        
-            filename = self.output_path+'/'+self.simname+'_checkpoint_'+nm+'_'+str(N)+'.txt' # conditions at beginning of cycle
-            fl = open(filename, 'wt')
-            
-            for i in range(int(len(f_sq)/bs)):
-                for j in range(bs):
-                    fl.write('%.16E ' % (f_sq[bs*i+j]))
-            
-                for k in range(3):
-                    fl.write('%.16E ' % (coords_all[i][k]))
-
-                fl.write('\n')
-                
-            fl.close()
-
-        
-
+   
 
     def write_output(self, pb=None, writemesh=False, N=1, t=0):
         
@@ -351,51 +304,83 @@ class IO_solid(IO):
                 self.writecheckpoint(pb, N)
 
 
-    def readcheckpoint(self, pb):
+    def readcheckpoint(self, pb, N_rest):
 
-        self.readfunction(pb.u, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_u_'+str(self.restart_step)+'.txt')
+        vecs_to_read = {'u' : pb.u}
         if pb.incompressible_2field:
-            self.readfunction(pb.p, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_'+str(self.restart_step)+'.txt')
+            vecs_to_read['p'] = pb.p
         if pb.have_growth:
-            self.readfunction(pb.theta, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_theta_'+str(self.restart_step)+'.txt')
-            self.readfunction(pb.theta_old, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_theta_old_'+str(self.restart_step)+'.txt')
+            vecs_to_read['theta'] = pb.theta
+            vecs_to_read['theta_old'] = pb.theta_old
         if pb.have_active_stress:
-            self.readfunction(pb.tau_a, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_tau_a_'+str(self.restart_step)+'.txt')
-            self.readfunction(pb.tau_a_old, pb.Vd_scalar, self.output_path+'/'+self.simname+'_checkpoint_tau_a_old_'+str(self.restart_step)+'.txt')
+            vecs_to_read['tau_a'] = pb.tau_a
+            vecs_to_read['tau_a_old'] = pb.tau_a_old
         if pb.F_hist is not None:
-            self.readfunction(pb.F_hist, pb.Vd_tensor, self.output_path+'/'+self.simname+'_checkpoint_F_hist_'+str(self.restart_step)+'.txt')
-            self.readfunction(pb.u_pre, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_u_pre_'+str(self.restart_step)+'.txt')
-
+            vecs_to_read['F_hist'] = pb.F_hist
+            vecs_to_read['u_pre'] = pb.u_pre
+        
         if pb.timint != 'static':
-            self.readfunction(pb.u_old, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_u_old_'+str(self.restart_step)+'.txt')
-            self.readfunction(pb.v_old, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_v_old_'+str(self.restart_step)+'.txt')
-            self.readfunction(pb.a_old, pb.V_u, self.output_path+'/'+self.simname+'_checkpoint_a_old_'+str(self.restart_step)+'.txt')
+            vecs_to_read['u_old'] = pb.u_old
+            vecs_to_read['v_old'] = pb.v_old
+            vecs_to_read['a_old'] = pb.a_old
             if pb.incompressible_2field:
-                self.readfunction(pb.p_old, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_old_'+str(self.restart_step)+'.txt')
+                vecs_to_read['p_old'] = pb.p_old
+
+        if pb.problem_type == 'solid_flow0d_multiscale_gandr':
+            vecs_to_read['u_set'] = pb.u_set
+            vecs_to_read['growth_thres'] = pb.growth_thres
+            if pb.incompressible_2field:
+                vecs_to_read['p_set'] = pb.p_set
+            if pb.have_active_stress:
+                vecs_to_read['tau_a_set'] = pb.tau_a_set
+
+        for key in vecs_to_read:
+
+            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+            # and for safety reasons, include the number of cores in the dat file name
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            vecs_to_read[key].vector.load(viewer)
+            
+            vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-    # TODO: Currently only works in serial!!!
     def writecheckpoint(self, pb, N):
 
-        self.writefunction(pb.u, pb.V_u, 'u', N)
+        vecs_to_write = {'u' : pb.u}
         if pb.incompressible_2field:
-            self.writefunction(pb.p, pb.V_p, 'p', N)
+            vecs_to_write['p'] = pb.p
         if pb.have_growth:
-            self.writefunction(pb.theta, pb.Vd_scalar, 'theta', N)
-            self.writefunction(pb.theta_old, pb.Vd_scalar, 'theta_old', N)
+            vecs_to_write['theta'] = pb.theta
+            vecs_to_write['theta_old'] = pb.theta_old
         if pb.have_active_stress:
-            self.writefunction(pb.tau_a, pb.Vd_scalar, 'tau_a', N)
-            self.writefunction(pb.tau_a_old, pb.Vd_scalar, 'tau_a_old', N)
+            vecs_to_write['tau_a'] = pb.tau_a
+            vecs_to_write['tau_a_old'] = pb.tau_a_old
         if pb.F_hist is not None:
-            self.writefunction(pb.F_hist, pb.Vd_tensor, 'F_hist', N)
-            self.writefunction(pb.u_pre, pb.V_u, 'u_pre', N)
-
+            vecs_to_write['F_hist'] = pb.F_hist
+            vecs_to_write['u_pre'] = pb.u_pre
+        
         if pb.timint != 'static':
-            self.writefunction(pb.u_old, pb.V_u, 'u_old', N)
-            self.writefunction(pb.v_old, pb.V_u, 'v_old', N)
-            self.writefunction(pb.a_old, pb.V_u, 'a_old', N)
+            vecs_to_write['u_old'] = pb.u_old
+            vecs_to_write['v_old'] = pb.v_old
+            vecs_to_write['a_old'] = pb.a_old
             if pb.incompressible_2field:
-                self.writefunction(pb.p_old, pb.V_p, 'p_old', N)
+                vecs_to_write['p_old'] = pb.p_old
+
+        if pb.problem_type == 'solid_flow0d_multiscale_gandr':
+            vecs_to_write['u_set'] = pb.u_set
+            vecs_to_write['growth_thres'] = pb.growth_thres
+            if pb.incompressible_2field:
+                vecs_to_write['p_set'] = pb.p_set
+            if pb.have_active_stress:
+                vecs_to_write['tau_a_set'] = pb.tau_a_set
+
+        for key in vecs_to_write:
+            
+            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+            # and for safety reasons, include the number of cores in the dat file name
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            vecs_to_write[key].vector.view(viewer)
+
 
 
 class IO_fluid(IO):
@@ -451,15 +436,33 @@ class IO_fluid(IO):
 
     def readcheckpoint(self, pb):
 
-        self.readfunction(pb.v, pb.V_v, self.output_path+'/'+self.simname+'_checkpoint_v_'+str(self.restart_step)+'.txt')
-        self.readfunction(pb.p, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_'+str(self.restart_step)+'.txt')
-        self.readfunction(pb.v_old, pb.V_v, self.output_path+'/'+self.simname+'_checkpoint_v_old_'+str(self.restart_step)+'.txt')
-        self.readfunction(pb.a_old, pb.V_v, self.output_path+'/'+self.simname+'_checkpoint_a_old_'+str(self.restart_step)+'.txt')
-        self.readfunction(pb.p_old, pb.V_p, self.output_path+'/'+self.simname+'_checkpoint_p_old_'+str(self.restart_step)+'.txt')
+        vecs_to_read = {'v' : pb.v}
+        vecs_to_read = {'p' : pb.p}
+        vecs_to_read = {'v_old' : pb.v_old}
+        vecs_to_read = {'a_old' : pb.a_old}
+        vecs_to_read = {'p_old' : pb.p_old}
+        
+        for key in vecs_to_read:
+
+            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+            # and for safety reasons, include the number of cores in the dat file name
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            vecs_to_read[key].vector.load(viewer)
+            
+            vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-    # TODO: Currently only works in serial!!!
+
     def writecheckpoint(self, pb, N):
 
-        self.writefunction(pb.v, pb.V_v, 'v', N)
-        self.writefunction(pb.p, pb.V_p, 'p', N)
+        vecs_to_write = {'v' : pb.v}
+        vecs_to_write = {'p' : pb.p}
+        vecs_to_write = {'v_old' : pb.v_old}
+        vecs_to_write = {'a_old' : pb.a_old}
+        vecs_to_write = {'p_old' : pb.p_old}
+        
+        for key in vecs_to_write:
+
+            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+            # and for safety reasons, include the number of cores in the dat file name
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)

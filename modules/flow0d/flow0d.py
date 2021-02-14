@@ -27,6 +27,8 @@ class Flow0DProblem(problem_base):
         
         self.time_params = time_params
         
+        self.simname = io_params['simname']
+        
         try: self.T_cycl = model_params['parameters']['T_cycl']
         except: self.T_cycl = 0
         
@@ -45,6 +47,10 @@ class Flow0DProblem(problem_base):
         # could use extra write frequency setting for 0D model (i.e. for coupled problem)
         try: self.write_results_every_0D = io_params['write_results_every_0D']
         except: self.write_results_every_0D = io_params['write_results_every']
+
+        # for restart
+        try: self.write_restart_every = io_params['write_restart_every']
+        except: self.write_restart_every = -1
 
         # could use extra output path setting for 0D model (i.e. for coupled problem)
         try: self.output_path_0D = io_params['output_path_0D']
@@ -148,11 +154,18 @@ class Flow0DSolver():
         # print header
         utilities.print_problem(self.pb.problem_type, self.pb.comm, self.pb.cardvasc0D.numdof)
 
+        # read restart information
+        if self.pb.restart_step > 0:
+            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s', self.pb.restart_step, self.pb.s)
+            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s_old', self.pb.restart_step, self.pb.s_old)
+            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_sTc_old', self.pb.restart_step, self.pb.sTc_old)
+            self.pb.simname += '_r'+str(self.pb.restart_step)
+
         # evaluate old state
         if self.pb.ti.time_curves is not None:
-            self.pb.c.append(self.pb.ti.timecurves(1)(0.0))
+            self.pb.c.append(self.pb.ti.timecurves(1)(self.pb.t_init))
         
-        self.pb.cardvasc0D.evaluate(self.pb.s_old, 0., 0., self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.aux_old)
+        self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.dt, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.aux_old)
 
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear_0D(self.pb, self.solver_params)
@@ -184,16 +197,21 @@ class Flow0DSolver():
             # solve time for time step
             wte = time.time()
             wt = wte - wts
-            
+
             # raw txt file output of 0D model quantities
             if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
-                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid)
+                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, self.pb.simname, t, self.pb.s_mid, self.pb.aux_mid)
+            # write 0D restart info
+            if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
+                self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_s', N, self.pb.s)
+                self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_s_old', N, self.pb.s_old)
+                self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_sTc_old', N, self.pb.sTc_old)
 
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, self.pb.numstep, wt=wt)
             
             # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, t, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, induce_pert_after_cycl=self.pb.perturb_after_cylce)
+            is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, t, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.perturb_type is not None: self.pb.cardvasc0D.induce_perturbation(self.pb.perturb_type, self.pb.ti.cycle[0], self.pb.perturb_after_cylce)

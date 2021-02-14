@@ -249,7 +249,8 @@ class FluidmechanicsSolver():
 
         # read restart information
         if self.pb.restart_step > 0:
-            self.pb.io.readcheckpoint(self.pb)
+            self.pb.io.readcheckpoint(self.pb, self.pb.restart_step)
+            self.pb.io.simname += '_r'+str(self.pb.restart_step)
 
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
@@ -262,7 +263,6 @@ class FluidmechanicsSolver():
 
             # solve for consistent initial acceleration a_old
             solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
-
 
         # write mesh output
         self.pb.io.write_output(writemesh=True)

@@ -90,6 +90,7 @@ if solid_flow0d:
 
     errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py']) )
     errs.append( subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py']) )
+    errs.append( subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py', str(3)]) ) # tests restart from step 3
     
     errs.append( subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative.py']) )
 

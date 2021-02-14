@@ -20,7 +20,7 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d_multiscale_gandr',
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d_multiscale_gandr_stag',
                             'mesh_domain'           : ''+basepath+'/input/heart3D_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/heart3D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_3D.txt',''+basepath+'/input/fib_sheet_coords_nodal_3D.txt']},
