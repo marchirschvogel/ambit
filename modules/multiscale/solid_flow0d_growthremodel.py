@@ -77,6 +77,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
         self.tol_small = multiscale_params['tol_small']
         self.tol_large = multiscale_params['tol_large']
+        self.tol_outer = multiscale_params['tol_outer']
 
         # override by tol_small
         self.pbsmall.pbf.eps_periodic = self.tol_small
@@ -192,6 +193,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             
             # set large scale state
             self.set_state_large(N)
+            
+            # compute volume prior to G&R
+            vol_prior = self.compute_volume_large()
 
             if self.pb.comm.rank == 0:
                 print("Solving large scale solid growth and remodeling problem:")
@@ -200,9 +204,15 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             # solve large scale static G&R solid problem with fixed loads
             self.solverlarge.solve_problem()
 
+            # compute volume after G&R
+            vol_after = self.compute_volume_large()
+
             # write checkpoint for potential restarts
             self.pb.pblarge.io.writecheckpoint(self.pb.pblarge, N)
-             
+            
+            # check relative volume increase over large cycle - stop if below tolerance
+            if abs((vol_after - vol_prior)/vol_prior) <= self.tol_outer:
+                break
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Time for full multiscale computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
@@ -262,3 +272,22 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         # growth thresholds from set point
         self.pb.pblarge.growth_thres.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.vector)
         self.pb.pblarge.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+
+    def compute_volume_large(self):
+        
+        J_all = as_ufl(0)
+        for n in range(self.pb.pblarge.num_domains):
+            
+            J_all += self.pb.pblarge.ki.J(self.pb.pblarge.u) * self.pb.pblarge.dx_[n]
+
+        vol = assemble_scalar(J_all)
+        vol = self.pb.comm.allgather(vol)
+        volume_large = sum(vol)
+
+        if self.pb.comm.rank == 0:
+            print('Volume of myocardium: %.4e' % (volume_large))
+            sys.stdout.flush()
+            
+        return volume_large

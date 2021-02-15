@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys
+import time, sys, math
 import numpy as np
 
 from petsc4py import PETSc
@@ -160,6 +160,8 @@ class Flow0DSolver():
             self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s', self.pb.restart_step, self.pb.s_old)
             self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_sTc_old', self.pb.restart_step, self.pb.sTc_old)
             self.pb.simname += '_r'+str(self.pb.restart_step)
+            if self.pb.cardvasc0D.T_cycl > 0: # set cycle
+                self.pb.ti.cycle[0] = math.ceil(self.pb.restart_step / (self.pb.cardvasc0D.T_cycl / self.pb.dt))
 
         # evaluate old state
         if self.pb.ti.time_curves is not None:

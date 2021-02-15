@@ -74,10 +74,12 @@ def main():
                             'coupling_type'         : 'monolithic_direct'}
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
-                            'numcycles'             : 1,
+                            'numcycles'             : 2,
                             'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
-                            'tol_large'             : 1.0e-7, # growth rate tolerance [mm^3/s]
-                            'tol_outer'             : 1.0e-3}
+                            'tol_large'             : 1.0e-4, # growth rate tolerance [mm^3/s]
+                            'tol_outer'             : 1.0e-3,
+                            'restart_cycle'         : 0,
+                            'restart_from_small'    : True}
 
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},
@@ -92,9 +94,9 @@ def main():
                                                             'thres_tol' : 1.0e-3,
                                                             'thetamax' : 3.0,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 5.0e4,
+                                                            'tau_gr' : 1.0e4,
                                                             'gamma_gr' : 2.0,
-                                                            'tau_gr_rev' : 10.0e4,
+                                                            'tau_gr_rev' : 2.0e4,
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
                                                                                 'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},

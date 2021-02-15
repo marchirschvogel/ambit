@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys
+import time, sys, math
 import numpy as np
 from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
 from dolfinx.fem import assemble_scalar
@@ -156,6 +156,8 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', self.pb.pbs.restart_step, self.pb.pbf.s_old)
             self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_sTc_old', self.pb.pbs.restart_step, self.pb.pbf.sTc_old)
             self.pb.pbs.io.simname += '_r'+str(self.pb.pbs.restart_step)
+            if self.pb.pbf.cardvasc0D.T_cycl > 0: # set cycle
+                self.pb.pbf.ti.cycle[0] = math.ceil(self.pb.pbs.restart_step / (self.pb.pbf.cardvasc0D.T_cycl / self.pb.pbs.dt))
 
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.pb.coupling_type == 'monolithic_direct':
