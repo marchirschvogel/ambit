@@ -134,17 +134,17 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
         # read restart information
         if self.pb.restart_cycle > 0:
-            #self.pb.pbsmall.pbs.io.simname = self.pb.simname_small+str(self.pb.restart_cycle)
-            #self.pb.pblarge.io.simname = self.pb.simname_large+str(self.pb.restart_cycle)
+            self.pb.pbsmall.pbs.io.simname = self.pb.simname_small + str(self.pb.restart_cycle)
+            self.pb.pblarge.io.simname = self.pb.simname_large + str(self.pb.restart_cycle)
             self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle)
             self.pb.pblarge.io.readcheckpoint(self.pb.pblarge, self.pb.restart_cycle)
-            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.simname_small+str(self.pb.restart_cycle)+'_s', self.pb.restart_cycle, self.pb.pbsmall.pbf.s)
-            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.simname_small+str(self.pb.restart_cycle)+'_s', self.pb.restart_cycle, self.pb.pbsmall.pbf.s_old)
-            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.simname_small+str(self.pb.restart_cycle)+'_sTc_old', self.pb.restart_cycle, self.pb.pbsmall.pbf.sTc_old)
+            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s', self.pb.restart_cycle, self.pb.pbsmall.pbf.s)
+            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s', self.pb.restart_cycle, self.pb.pbsmall.pbf.s_old)
+            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_sTc_old', self.pb.restart_cycle, self.pb.pbsmall.pbf.sTc_old)
             # no need to do after restart
             self.pb.pbsmall.pbs.prestress_initial = False
             # read heart cycle info
-            self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.simname_small+str(self.pb.restart_cycle)+'_cycle_'+str(self.pb.restart_cycle)+'.txt')
+            self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(self.pb.restart_cycle)+'.txt')
             # set bool that indicate homeostatic set to True for restarts
             self.pb.pbsmall.have_set_homeostatic = True
             # induce the perturbation

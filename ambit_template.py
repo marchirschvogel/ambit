@@ -32,7 +32,7 @@ def main():
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
                             # iterative linear solver settings (only apply for solve_type 'iterative')
-                            'tol_lin'               : 5.0e-5, # linear solver tolerance
+                            'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
                             'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
                             'adapt_linsolv_tol'     : False, # OPTIONAL: True, False - adapt linear tolerance throughout nonlinear iterations (default: False)
                             'adapt_factor'          : 0.1, # OPTIONAL: fadaptation factor for adapt_linsolv_tol (the larger, the more adaptation) (default: 0.1)
@@ -81,12 +81,13 @@ def main():
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
-                            'numcycles'             : 2,
+                            'numcycles'             : 10, # max. number of multiscale cycles (one cycle means one small scale succeeded by a large scale run)
                             'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
-                            'tol_large'             : 1.0e-3, # growth rate tolerance
-                            'tol_outer'             : 1.0e-3, # when to stop multiscale problem (TODO: Not yet implemented!)
-                            'restart_cycle'         : 0} # OPTIONAL: at which multiscale cycle to restart (default: 0)
-
+                            'tol_large'             : 1.0e-4, # growth rate tolerance
+                            'tol_outer'             : 1.0e-3, # tolerance for volume increase during one growth cycle - stop sim if equal to or below this value
+                            'restart_cycle'         : 0, # OPTIONAL: at which multiscale cycle to restart (default: 0)
+                            'restart_from_small'    : False} # OPTIONAL: if the multiscale sim should be restarted from a previous small scale run (small scale of restart_cycle needs to be computed already) (default: False)
+                            
                             # - MATn has to correspond to subdomain id n (set by the flags in Attribute section of *_domain.xdmf file - so if you have x mats, you need ids ranging from 1,...,x)
                             # - one MAT can be decomposed into submats, see examples below (additive stress contributions)
                             # - for solid: if you use a deviatoric (_dev) mat, you should also use EITHER a volumetric (_vol) mat, too, OR set incompressible_2field in FEM_PARAMS to 'True' and then only use a _dev mat and MUST NOT use a _vol mat! (if incompressible_2field is 'True', then all materials have to be treated perfectly incompressible currently)

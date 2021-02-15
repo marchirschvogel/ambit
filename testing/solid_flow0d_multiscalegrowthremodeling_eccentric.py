@@ -78,7 +78,7 @@ def main():
                             'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-4, # growth rate tolerance [mm^3/s]
                             'tol_outer'             : 1.0e-3,
-                            'restart_cycle'         : 0,
+                            'restart_cycle'         : 1,
                             'restart_from_small'    : False}
 
 

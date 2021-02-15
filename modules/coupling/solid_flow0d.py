@@ -356,7 +356,7 @@ class SolidmechanicsFlow0DSolver():
     # for multiscale G&R analysis
     def set_growth_trigger(self, t, dt):
 
-        if t >= self.pb.t_gandr_setpoint and t < self.pb.t_gandr_setpoint + dt - 1e-6:
+        if self.pb.pbf.cardvasc0D.ModuloIsRelativeZero(t, self.pb.t_gandr_setpoint, t):
 
             if self.pb.comm.rank == 0:
                 print('Set growth triggers...')
