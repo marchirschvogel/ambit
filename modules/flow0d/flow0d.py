@@ -157,7 +157,7 @@ class Flow0DSolver():
         # read restart information
         if self.pb.restart_step > 0:
             self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s', self.pb.restart_step, self.pb.s)
-            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s_old', self.pb.restart_step, self.pb.s_old)
+            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s', self.pb.restart_step, self.pb.s_old)
             self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_sTc_old', self.pb.restart_step, self.pb.sTc_old)
             self.pb.simname += '_r'+str(self.pb.restart_step)
 
@@ -201,10 +201,9 @@ class Flow0DSolver():
             # raw txt file output of 0D model quantities
             if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
                 self.pb.cardvasc0D.write_output(self.pb.output_path_0D, self.pb.simname, t, self.pb.s_mid, self.pb.aux_mid)
-            # write 0D restart info
+            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
                 self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_s', N, self.pb.s)
-                self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_s_old', N, self.pb.s_old)
                 self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_sTc_old', N, self.pb.sTc_old)
 
             # print time step info to screen

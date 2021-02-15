@@ -58,7 +58,7 @@ class SolidmechanicsFlow0DProblem():
         self.t_gandr_setpoint = 0
         self.have_set_homeostatic = False
 
-        if self.pbs.problem_type == 'solid_flow0d_multiscale_gandr_stag': self.have_multiscale_gandr = True
+        if self.pbs.problem_type == 'solid_flow0d_multiscale_gandr': self.have_multiscale_gandr = True
         else: self.have_multiscale_gandr = False
 
         self.set_variational_forms_and_jacobians()
@@ -153,7 +153,7 @@ class SolidmechanicsFlow0DSolver():
         if self.pb.pbs.restart_step > 0:
             self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)
             self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', self.pb.pbs.restart_step, self.pb.pbf.s)
-            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s_old', self.pb.pbs.restart_step, self.pb.pbf.s_old)
+            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', self.pb.pbs.restart_step, self.pb.pbf.s_old)
             self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_sTc_old', self.pb.pbs.restart_step, self.pb.pbf.sTc_old)
             self.pb.pbs.io.simname += '_r'+str(self.pb.pbs.restart_step)
 
@@ -289,10 +289,9 @@ class SolidmechanicsFlow0DSolver():
             # raw txt file output of 0D model quantities
             if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
                 self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid)
-            # write 0D restart info
+            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
                 self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', N, self.pb.pbf.s)
-                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s_old', N, self.pb.pbf.s_old)
                 self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_sTc_old', N, self.pb.pbf.sTc_old)
 
             # print to screen

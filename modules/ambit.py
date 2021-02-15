@@ -42,10 +42,10 @@ class Ambit():
             self.mp = fluid_flow0d.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, comm=self.comm)
             self.ms = fluid_flow0d.FluidmechanicsFlow0DSolver(self.mp, solver_params[0], solver_params[1])
 
-        elif problem_type == 'solid_flow0d_multiscale_gandr_stag':
-            import solid_flow0d_growthremodel_staggered
-            self.mp = solid_flow0d_growthremodel_staggered.SolidmechanicsFlow0DMultiscaleGrowthRemodelingStagProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, comm=self.comm)
-            self.ms = solid_flow0d_growthremodel_staggered.SolidmechanicsFlow0DMultiscaleGrowthRemodelingStagSolver(self.mp, solver_params[0], solver_params[1])
+        elif problem_type == 'solid_flow0d_multiscale_gandr':
+            import solid_flow0d_growthremodel
+            self.mp = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, comm=self.comm)
+            self.ms = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params[0], solver_params[1])
 
         else:
             raise NameError("Unknown problem type!")

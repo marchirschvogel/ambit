@@ -34,7 +34,7 @@ def print_problem(ptype, comm, numdof=0):
             print("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########")
             sys.stdout.flush()
             
-        elif ptype == 'solid_flow0d_multiscale_gandr_stag':
+        elif ptype == 'solid_flow0d_multiscale_gandr':
             print("################# Welcome to multiscale growth and remodeling (G & R) #################")
             print("############## Small time scale: Monolithic 3D-0D coupled solid-flow0d ################")
             print("####################### Large time scale: Static solid G & R ##########################\n")

@@ -306,80 +306,76 @@ class IO_solid(IO):
 
     def readcheckpoint(self, pb, N_rest):
 
-        vecs_to_read = {'u' : pb.u}
+        vecs_to_read = {pb.u : 'u'}
         if pb.incompressible_2field:
-            vecs_to_read['p'] = pb.p
+            vecs_to_read[pb.p] = 'p'
         if pb.have_growth:
-            vecs_to_read['theta'] = pb.theta
-            vecs_to_read['theta_old'] = pb.theta_old
+            vecs_to_read[pb.theta] = 'theta'
+            vecs_to_read[pb.theta_old] = 'theta'
         if pb.have_active_stress:
-            vecs_to_read['tau_a'] = pb.tau_a
-            vecs_to_read['tau_a_old'] = pb.tau_a_old
+            vecs_to_read[pb.tau_a] = 'tau_a'
+            vecs_to_read[pb.tau_a_old] = 'tau_a'
         if pb.F_hist is not None:
-            vecs_to_read['F_hist'] = pb.F_hist
-            vecs_to_read['u_pre'] = pb.u_pre
+            vecs_to_read[pb.F_hist] = 'F_hist'
+            vecs_to_read[pb.u_pre] = 'u_pre'
         
         if pb.timint != 'static':
-            vecs_to_read['u_old'] = pb.u_old
-            vecs_to_read['v_old'] = pb.v_old
-            vecs_to_read['a_old'] = pb.a_old
+            vecs_to_read[pb.u_old] = 'u'
+            vecs_to_read[pb.v_old] = 'v_old'
+            vecs_to_read[pb.a_old] = 'a_old'
             if pb.incompressible_2field:
-                vecs_to_read['p_old'] = pb.p_old
+                vecs_to_read[pb.p_old] = 'p'
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
-            vecs_to_read['u_set'] = pb.u_set
-            vecs_to_read['growth_thres'] = pb.growth_thres
+            vecs_to_read[pb.u_set] = 'u_set'
+            vecs_to_read[pb.growth_thres] = 'growth_thres'
             if pb.incompressible_2field:
-                vecs_to_read['p_set'] = pb.p_set
+                vecs_to_read[pb.p_set] = 'p_set'
             if pb.have_active_stress:
-                vecs_to_read['tau_a_set'] = pb.tau_a_set
+                vecs_to_read[pb.tau_a_set] = 'tau_a_set'
+
 
         for key in vecs_to_read:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-            vecs_to_read[key].vector.load(viewer)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            key.vector.load(viewer)
             
-            vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def writecheckpoint(self, pb, N):
 
-        vecs_to_write = {'u' : pb.u}
+        vecs_to_write = {pb.u : 'u'}
         if pb.incompressible_2field:
-            vecs_to_write['p'] = pb.p
+            vecs_to_write[pb.p] = 'p'
         if pb.have_growth:
-            vecs_to_write['theta'] = pb.theta
-            vecs_to_write['theta_old'] = pb.theta_old
+            vecs_to_write[pb.theta] = 'theta'
         if pb.have_active_stress:
-            vecs_to_write['tau_a'] = pb.tau_a
-            vecs_to_write['tau_a_old'] = pb.tau_a_old
+            vecs_to_write[pb.tau_a] = 'tau_a'
         if pb.F_hist is not None:
-            vecs_to_write['F_hist'] = pb.F_hist
-            vecs_to_write['u_pre'] = pb.u_pre
+            vecs_to_write[pb.F_hist] = 'F_hist'
+            vecs_to_write[pb.u_pre] = 'u_pre'
         
         if pb.timint != 'static':
-            vecs_to_write['u_old'] = pb.u_old
-            vecs_to_write['v_old'] = pb.v_old
-            vecs_to_write['a_old'] = pb.a_old
-            if pb.incompressible_2field:
-                vecs_to_write['p_old'] = pb.p_old
+            vecs_to_write[pb.v_old] = 'v_old'
+            vecs_to_write[pb.a_old] = 'a_old'
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
-            vecs_to_write['u_set'] = pb.u_set
-            vecs_to_write['growth_thres'] = pb.growth_thres
+            vecs_to_write[pb.u_set] = 'u_set'
+            vecs_to_write[pb.growth_thres] = 'growth_thres'
             if pb.incompressible_2field:
-                vecs_to_write['p_set'] = pb.p_set
+                vecs_to_write[pb.p_set] = 'p_set'
             if pb.have_active_stress:
-                vecs_to_write['tau_a_set'] = pb.tau_a_set
+                vecs_to_write[pb.tau_a_set] = 'tau_a_set'
 
         for key in vecs_to_write:
             
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-            vecs_to_write[key].vector.view(viewer)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            key.vector.view(viewer)
 
 
 

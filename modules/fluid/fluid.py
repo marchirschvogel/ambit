@@ -289,7 +289,7 @@ class FluidmechanicsSolver():
             wte = time.time()
             wt = wte - wts
             
-            # write output and restart info
+            # write output and restart info (old and new quantities are the same at this stage)
             self.pb.io.write_output(pb=self.pb, N=N, t=t)
 
             # print time step info to screen

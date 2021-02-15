@@ -629,13 +629,13 @@ class SolidmechanicsSolver():
             wte = time.time()
             wt = wte - wts
             
-            # write output and restart info
+            # write output and restart info (old and new quantities are the same at this stage)
             self.pb.io.write_output(pb=self.pb, N=N, t=t)
 
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, wt=wt)
             
-            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr_stag' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
+            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
                 break
             
             # maximum number of steps to perform
