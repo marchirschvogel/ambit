@@ -27,7 +27,7 @@ def main():
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e','fiberstretch'],
-                            'simname'               : 'multiscale_3Dtest'}
+                            'simname'               : 'multiscaletest_eccentric'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,
@@ -79,7 +79,7 @@ def main():
                             'tol_large'             : 1.0e-4, # growth rate tolerance [mm^3/s]
                             'tol_outer'             : 1.0e-3,
                             'restart_cycle'         : 0,
-                            'restart_from_small'    : True}
+                            'restart_from_small'    : False}
 
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},

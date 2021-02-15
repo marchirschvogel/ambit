@@ -134,8 +134,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
         # read restart information
         if self.pb.restart_cycle > 0:
-            self.pb.pbsmall.pbs.io.simname = self.pb.simname_small + str(self.pb.restart_cycle)
-            self.pb.pblarge.io.simname = self.pb.simname_large + str(self.pb.restart_cycle)
+            #self.pb.pbsmall.pbs.io.simname = self.pb.simname_small+str(self.pb.restart_cycle)
+            #self.pb.pblarge.io.simname = self.pb.simname_large+str(self.pb.restart_cycle)
             self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle)
             self.pb.pblarge.io.readcheckpoint(self.pb.pblarge, self.pb.restart_cycle)
             self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.simname_small+str(self.pb.restart_cycle)+'_s', self.pb.restart_cycle, self.pb.pbsmall.pbf.s)
@@ -143,6 +143,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.simname_small+str(self.pb.restart_cycle)+'_sTc_old', self.pb.restart_cycle, self.pb.pbsmall.pbf.sTc_old)
             # no need to do after restart
             self.pb.pbsmall.pbs.prestress_initial = False
+            # read heart cycle info
+            self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.simname_small+str(self.pb.restart_cycle)+'_cycle_'+str(self.pb.restart_cycle)+'.txt')
             # set bool that indicate homeostatic set to True for restarts
             self.pb.pbsmall.have_set_homeostatic = True
             # induce the perturbation
@@ -184,12 +186,28 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 self.pb.pbsmall.pbf.cardvasc0D.write_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s', N, self.pb.pbsmall.pbf.s)
                 self.pb.pbsmall.pbf.cardvasc0D.write_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s_set', N, self.pb.pbsmall.pbf.s_set)
                 self.pb.pbsmall.pbf.cardvasc0D.write_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_sTc_old', N, self.pb.pbsmall.pbf.sTc_old)
+                if self.pb.comm.rank == 0: # write heart cycle info
+                    filename = self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(N)+'.txt'
+                    f = open(filename, 'wt')
+                    f.write('%i' % (self.pb.pbsmall.pbf.ti.cycle[0]))
+                    f.close()
                 
             else:
                 
                 # read small scale checkpoint if we restart from this scale
                 self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle+1)
                 self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s_set', self.pb.restart_cycle+1, self.pb.pbsmall.pbf.s_set)
+                self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(N)+'.txt')
+                # no need to do after restart
+                self.pb.pbsmall.pbs.prestress_initial = False
+                # read heart cycle info
+                self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(self.pb.restart_cycle+1)+'.txt')
+                # set bool that indicate homeostatic set to True for restarts
+                self.pb.pbsmall.have_set_homeostatic = True
+                # induce the perturbation
+                self.pb.pbsmall.pbf.cardvasc0D.induce_perturbation(self.pb.pbsmall.pbf.perturb_type, self.pb.pbsmall.pbf.ti.cycle[0], self.pb.pbsmall.pbf.perturb_after_cylce)
+                # set flag to False again
+                self.pb.restart_from_small = False
             
             # set large scale state
             self.set_state_large(N)
@@ -210,8 +228,14 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             # write checkpoint for potential restarts
             self.pb.pblarge.io.writecheckpoint(self.pb.pblarge, N)
             
-            # check relative volume increase over large cycle - stop if below tolerance
-            if abs((vol_after - vol_prior)/vol_prior) <= self.tol_outer:
+            # relative volume increase over large scale run
+            volchange = (vol_after - vol_prior)/vol_prior
+            if self.pb.comm.rank == 0:
+                print('Volume change due to growth: %.4e' % (volchange))
+                sys.stdout.flush()
+            
+            # check if below tolerance
+            if abs(volchange) <= self.pb.tol_outer:
                 break
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
@@ -272,7 +296,6 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         # growth thresholds from set point
         self.pb.pblarge.growth_thres.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.vector)
         self.pb.pblarge.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
 
 
     def compute_volume_large(self):
