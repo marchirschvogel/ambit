@@ -457,7 +457,7 @@ class SolidmechanicsProblem(problem_base):
 
 
     # active stress ODE evaluation
-    def evaluate_active_stress_ode(self, t, dt):
+    def evaluate_active_stress_ode(self, t):
     
         # take care of Frank-Starling law (fiber stretch-dependent contractility)
         if self.have_frank_starling:
@@ -471,7 +471,7 @@ class SolidmechanicsProblem(problem_base):
                     if self.mat_growth[n]: lam_fib_old = self.ma[n].fibstretch_e(self.ki.C(self.u_old), self.theta_old, self.fib_func[0])
                     else:                  lam_fib_old = self.ki.fibstretch(self.u_old, self.fib_func[0])
                     
-                    amp_old_.append(self.actstress[na].amp(t-dt, lam_fib_old, self.amp_old))
+                    amp_old_.append(self.actstress[na].amp(t-self.dt, lam_fib_old, self.amp_old))
 
                 else:
                     
@@ -493,7 +493,7 @@ class SolidmechanicsProblem(problem_base):
                 else:
                     lam_fib = as_ufl(1)
                 
-                tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, t, dt, lam_fib, self.amp_old))
+                tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, t, self.dt, lam_fib, self.amp_old))
                 
                 na+=1
                 
@@ -613,7 +613,7 @@ class SolidmechanicsSolver():
             
             # take care of active stress
             if self.pb.have_active_stress and self.pb.active_stress_trig == 'ode':
-                self.pb.evaluate_active_stress_ode(t, self.pb.dt)
+                self.pb.evaluate_active_stress_ode(t)
 
             # solve
             solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)

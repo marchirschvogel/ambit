@@ -256,11 +256,11 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
 
             if self.pb.have_multiscale_gandr:
-                self.set_homeostatic_threshold(t-t_off, self.pb.pbs.dt), self.set_growth_trigger(t-t_off, self.pb.pbs.dt)
+                self.set_homeostatic_threshold(t-t_off), self.set_growth_trigger(t-t_off)
 
             # take care of active stress
             if self.pb.pbs.have_active_stress and self.pb.pbs.active_stress_trig == 'ode':
-                self.pb.pbs.evaluate_active_stress_ode(t-t_off, self.pb.pbs.dt)
+                self.pb.pbs.evaluate_active_stress_ode(t-t_off)
 
             # solve
             solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, self.pb.pbs.dt, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
@@ -327,7 +327,7 @@ class SolidmechanicsFlow0DSolver():
 
 
     # for multiscale G&R analysis
-    def set_homeostatic_threshold(self, t, dt):
+    def set_homeostatic_threshold(self, t):
             
         if t >= self.pb.t_gandr_setpoint and not self.pb.have_set_homeostatic:
 
@@ -354,9 +354,9 @@ class SolidmechanicsFlow0DSolver():
 
         
     # for multiscale G&R analysis
-    def set_growth_trigger(self, t, dt):
+    def set_growth_trigger(self, t):
 
-        if self.pb.pbf.cardvasc0D.ModuloIsRelativeZero(t, self.pb.t_gandr_setpoint, t):
+        if t >= self.pb.t_gandr_setpoint - 1.0e-6 and t < self.pb.t_gandr_setpoint + self.pb.pbs.dt:
 
             if self.pb.comm.rank == 0:
                 print('Set growth triggers...')
