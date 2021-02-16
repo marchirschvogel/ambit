@@ -23,9 +23,9 @@ Still experimental / to-do:
 
 ### How do I get set up? ###
 
-* clone the repo as follows:
+clone the repo as follows:
 
-git clone https://github.com/marchirschvogel/ambit.git ambit
+``git clone https://github.com/marchirschvogel/ambit.git ambit``
 
 * RECOMMENDED: FEniCS should run in a Docker container unless one wants to run through installation from source (see below)
 

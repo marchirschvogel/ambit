@@ -11,10 +11,35 @@ import sys, os, subprocess, time
 import math
 from pathlib import Path
 import numpy as np
-#import modelparameters
 
 
-def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
+def main():
+    
+    try: # from command line
+        path = sys.argv[1]
+        sname = sys.argv[2]
+        nstep_cycl = int(sys.argv[3])
+        T_cycl = float(sys.argv[4])
+        t_ed = float(sys.argv[5])
+        t_es = float(sys.argv[6])
+        model = sys.argv[7]
+        indpertaftercyl = int(sys.argv[8])
+        theta = float(sys.argv[9])
+    except:
+        path = '/home/mh/work/ambit/testing/tmp/'
+        sname = 'multiscaletest_eccentric_small2'
+        nstep_cycl = 50
+        T_cycl = 1.0
+        t_ed = 0.2
+        t_es = 0.53
+        model = 'syspul'
+        indpertaftercyl = -1
+        theta = 0.5
+    
+    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, theta)
+
+
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, theta=0.5):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -72,29 +97,26 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
         raise NameError("Unknown 0D model!")
 
 
+    # make a directory for the plots
+    subprocess.call(['mkdir', '-p', ''+path+'/plot0d_'+sname+'/'])
+
     if iscirculation:
 
-        # get parameters
-        #params = modelparameters.cardiovascular0D_params(model)
-        # end-diastolic and end-systolic timings - needed for EDP and ESP evaluations
-        t_ed = 0.2#params['t_ed']
-        t_es = 0.53#params['t_es']
-
         # get the data and check its length
-        tmp = np.loadtxt(''+path+'/p_v_l.txt', usecols=0) # could be another file - all should have the same length!
+        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_v_l.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
         # number of heart cycles
-        n_cycl = int(numdata/nstep)
+        n_cycl = int(numdata/nstep_cycl)
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
         for ch in ['v_l','v_r','at_l','at_r']:
             # test if volume file exists
-            test_V = os.system('test -e '+path+'/V_'+ch+'.txt')
+            test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
             if test_V > 0:
                 # safety check - flux file should exist in case of missing volume file!
-                test_Q = os.system('test -e '+path+'/Q_'+ch+'.txt')
+                test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
                 if test_Q == 0:
-                    fluxes = np.loadtxt(''+path+'/Q_'+ch+'.txt', usecols=1)
+                    fluxes = np.loadtxt(''+path+'/results_'+sname+'_Q_'+ch+'.txt', usecols=1)
                     # integrate volume: Q_{n+theta} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{n+theta}*dt + V_{n}
                     # --> V_{n+theta} = theta * V_{n+1} + (1-theta) * V_{n}
                     filename_vol = path+'/V_'+ch+'.txt'
@@ -114,21 +136,21 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
         
         # for plotting of pressure-volume loops
         for ch in ['v_l','v_r','at_l','at_r']:
-            subprocess.call(['cp', ''+path+'/p_'+ch+'.txt', ''+path+'/p_'+ch+'_tmp.txt'])
-            subprocess.call(['cp', ''+path+'/V_'+ch+'.txt', ''+path+'/V_'+ch+'_tmp.txt'])
+            subprocess.call(['cp', ''+path+'/results_'+sname+'_p_'+ch+'.txt', ''+path+'/results_'+sname+'_p_'+ch+'_tmp.txt'])
+            subprocess.call(['cp', ''+path+'/results_'+sname+'_V_'+ch+'.txt', ''+path+'/results_'+sname+'_V_'+ch+'_tmp.txt'])
             # drop first (time) columns
-            subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/p_'+ch+'_tmp.txt'])
-            subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/V_'+ch+'_tmp.txt'])
+            subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/results_'+sname+'_p_'+ch+'_tmp.txt'])
+            subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/results_'+sname+'_V_'+ch+'_tmp.txt'])
             # paste files together
-            os.system('paste '+path+'/V_'+ch+'_tmp.txt '+path+'/p_'+ch+'_tmp.txt > '+path+'/pV_'+ch+'.txt')
+            os.system('paste '+path+'/results_'+sname+'_V_'+ch+'_tmp.txt '+path+'/results_'+sname+'_p_'+ch+'_tmp.txt > '+path+'/results_'+sname+'_pV_'+ch+'.txt')
             # isolate last cycle                
-            os.system('tail -n '+str(nstep)+' '+path+'/pV_'+ch+'.txt > '+path+'/pV_'+ch+'_last.txt')
+            os.system('tail -n '+str(nstep_cycl)+' '+path+'/results_'+sname+'_pV_'+ch+'.txt > '+path+'/results_'+sname+'_pV_'+ch+'_last.txt')
             # isolate healthy/baseline cycle
             if indpertaftercyl > 0:
-                os.system('sed -n "'+str((indpertaftercyl-1)*nstep+1)+','+str(indpertaftercyl*nstep)+'p" '+path+'/pV_'+ch+'.txt > '+path+'/pV_'+ch+'_baseline.txt')
+                os.system('sed -n "'+str((indpertaftercyl-1)*nstep_cycl+1)+','+str(indpertaftercyl*nstep_cycl)+'p" '+path+'/results_'+sname+'_pV_'+ch+'.txt > '+path+'/results_'+sname+'_pV_'+ch+'_baseline.txt')
             # clean-up
-            subprocess.call(['rm', ''+path+'/p_'+ch+'_tmp.txt'])
-            subprocess.call(['rm', ''+path+'/V_'+ch+'_tmp.txt'])
+            subprocess.call(['rm', ''+path+'/results_'+sname+'_p_'+ch+'_tmp.txt'])
+            subprocess.call(['rm', ''+path+'/results_'+sname+'_V_'+ch+'_tmp.txt'])
             
             
             
@@ -136,30 +158,30 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
         # Be worried if the total sum in V_all.txt changes over time (more than to a certain tolerance)!
         volall = np.zeros(numdata)
         for c in range(len(list(groups[5].values())[0])-1): # compartment volumes should be stored in group index 5
-            subprocess.call(['cp', ''+path+'/'+list(groups[5].values())[0][c]+'.txt', ''+path+'/'+list(groups[5].values())[0][c]+'_tmp.txt'])
+            subprocess.call(['cp', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'.txt', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt'])
             # drop first (time) column
-            subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/'+list(groups[5].values())[0][c]+'_tmp.txt'])
+            subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt'])
             # load volume data
-            vols = np.loadtxt(''+path+'/'+list(groups[5].values())[0][c]+'_tmp.txt')
+            vols = np.loadtxt(''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt')
             # add together
             for i in range(len(volall)):
                 volall[i] += vols[i]
             # clean-up
-            subprocess.call(['rm', ''+path+'/'+list(groups[5].values())[0][c]+'_tmp.txt'])
+            subprocess.call(['rm', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt'])
 
         # write time and vol value to file
-        file_vollall = path+'/V_all.txt'
+        file_vollall = path+'/results_'+sname+'_V_all.txt'
         fva = open(file_vollall, 'wt')
         for i in range(len(volall)):
             fva.write('%.16E %.16E\n' % (tmp[i], volall[i]))
         fva.close()
         
         # compute integral data
-        file_integral = path+'/../../data_integral.txt'
+        file_integral = path+'/results_'+sname+'_data_integral.txt'
         fi = open(file_integral, 'wt')
         
         fi.write('T_cycl ' +str(T_cycl) + '\n')
-        fi.write('N_step ' +str(nstep) + '\n\n')
+        fi.write('N_step ' +str(nstep_cycl) + '\n\n')
         
         
         # function parameters of left and right ventricle
@@ -169,7 +191,7 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
             for ch in ['v_l','v_r']:
                 
                 # stroke work
-                pv = np.loadtxt(''+path+'/pV_'+ch+'_last.txt') # this is already last (periodic) cycle pv data!
+                pv = np.loadtxt(''+path+'/results_'+sname+'_pV_'+ch+'_last.txt') # this is already last (periodic) cycle pv data!
                 val = 0.0
                 for k in range(len(pv)-1):
                     # we need the negative sign since we go counter-clockwise around the loop!
@@ -177,14 +199,14 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
                 sw.append(val)
                 
                 # stroke volume, cardiac output, end-diastolic and end-systolic volume, ejection fraction
-                vol = np.loadtxt(''+path+'/V_'+ch+'.txt', skiprows=numdata-nstep)
+                vol = np.loadtxt(''+path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=numdata-nstep_cycl)
                 sv.append(max(vol[:,1])-min(vol[:,1]))
                 co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
                 edv.append(max(vol[:,1]))
                 esv.append(min(vol[:,1]))
                 ef.append((max(vol[:,1])-min(vol[:,1]))/max(vol[:,1]))
                 
-                pres = np.loadtxt(''+path+'/p_'+ch+'.txt', skiprows=numdata-nstep)
+                pres = np.loadtxt(''+path+'/results_'+sname+'_p_'+ch+'.txt', skiprows=numdata-nstep_cycl)
 
                 # end-diastolic pressure
                 for k in range(len(pres)):
@@ -204,7 +226,7 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
             marp = []
             for pc in ['ar_sys','ar_pul']:
                 
-                pr = np.loadtxt(''+path+'/p_'+pc+'.txt', skiprows=numdata-nstep)
+                pr = np.loadtxt(''+path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=numdata-nstep_cycl)
                 
                 val = 0.0
                 for k in range(len(pr)-1):
@@ -245,9 +267,8 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
             print("More than 16 items to plot in one graph! Adjust plotfile template or consider if this is sane...")
             sys.exit()
         
-        #subprocess.call(['cp', ''+str(fpath)+'/../templates/plot_template.p', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['cp', '/home/mh/work/fem_scripts/templates/plot_template.p', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's#__OUTDIR__#'+path+'/../#', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+        subprocess.call(['cp', ''+str(fpath)+'/flow0d_gnuplot_template.p', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+        subprocess.call(['sed', '-i', 's#__OUTDIR__#'+path+'/plot0d_'+sname+'/#', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
         subprocess.call(['sed', '-i', 's#__FILEDIR__#'+path+'#', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
         
         subprocess.call(['sed', '-i', 's/__OUTNAME__/'+list(groups[g].keys())[0]+'/', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
@@ -349,22 +370,22 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
         for q in range(numitems):
             
             # get the data and check its length
-            tmp = np.loadtxt(''+path+'/'+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!
+            tmp = np.loadtxt(''+path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!
             numdata = len(tmp)
             
             # set quantity, title, and plotting line
-            subprocess.call(['sed', '-i', 's/__QTY'+str(q+1)+'__/'+list(groups[g].values())[0][q]+'/', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__QTY'+str(q+1)+'__/results_'+sname+'_'+list(groups[g].values())[0][q]+'/', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             subprocess.call(['sed', '-i', 's/__TIT'+str(q+1)+'__/'+list(groups[g].values())[1][q]+'/', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             subprocess.call(['sed', '-i', 's/__LIN'+str(q+1)+'__/'+str(list(groups[g].values())[2][q])+'/', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             
             # adjust the plotting command to include all the files to plot in one graph
             if q!=0: subprocess.call(['sed', '-i', 's/#__'+str(q+1)+'__//g', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             
-            if 'PERIODIC' in list(groups[g].keys())[0]: skip = numdata-nstep
+            if 'PERIODIC' in list(groups[g].keys())[0]: skip = numdata-nstep_cycl
             else: skip = 0
             
             # get the x,y range on which to plot
-            data.append(np.loadtxt(''+path+'/'+list(groups[g].values())[0][q]+'.txt', skiprows=skip))
+            data.append(np.loadtxt(''+path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt', skiprows=skip))
 
             # if time is our x-axis
             if 'time' in list(groups[g].keys())[0]:
@@ -421,12 +442,20 @@ def postprocess0D(path, T_cycl, nstep, model, indpertaftercyl=0, theta=0.5):
         # do the plotting
         subprocess.call(['gnuplot', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
         # convert to PDF
-        subprocess.call(['ps2pdf', '-dEPSCrop', ''+path+'/../'+list(groups[g].keys())[0]+'-inc.eps', ''+path+'/../'+list(groups[g].keys())[0]+'-inc.pdf'])
-        subprocess.call(['pdflatex', '-interaction=batchmode', '-output-directory='+path+'/../', ''+path+'/../'+list(groups[g].keys())[0]+'.tex'])
+        subprocess.call(['ps2pdf', '-dEPSCrop', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.pdf'])
+        subprocess.call(['pdflatex', '-interaction=batchmode', '-output-directory='+path+'/plot0d_'+sname+'/', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.tex'])
             
         # clean up
-        subprocess.call(['rm', ''+path+'/../'+list(groups[g].keys())[0]+'.aux', ''+path+'/../'+list(groups[g].keys())[0]+'.log'])
+        subprocess.call(['rm', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.aux', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.log'])
         # guess we do not need these files anymore since we have the final PDF...
-        subprocess.call(['rm', ''+path+'/../'+list(groups[g].keys())[0]+'.tex'])
-        subprocess.call(['rm', ''+path+'/../'+list(groups[g].keys())[0]+'-inc.pdf'])
-        subprocess.call(['rm', ''+path+'/../'+list(groups[g].keys())[0]+'-inc.eps'])
+        subprocess.call(['rm', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.tex'])
+        subprocess.call(['rm', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.pdf'])
+        subprocess.call(['rm', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps'])
+
+
+
+
+if __name__ == "__main__":
+    
+    main()
+

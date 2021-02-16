@@ -385,10 +385,10 @@ class SolidmechanicsProblem(problem_base):
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
-                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.internalvars, Cmat, self.theta_old, self.growth_thres, self.dt)
+                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
                 if self.mat_remodel[n]:
                     # remodeling tangent operator
-                    Cremod = self.ma[n].Cremod(self.u, self.p, self.internalvars, Cmat, self.theta_old, self.growth_thres, self.dt)
+                    Cremod = self.ma[n].Cremod(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
                     Ctang = Cmat + Cgrowth + Cremod
                 else:
                     Ctang = Cmat + Cgrowth
@@ -423,7 +423,7 @@ class SolidmechanicsProblem(problem_base):
                     Cmat = self.ma[n].S(self.u, self.p, ivar=self.internalvars, tang=True)
                     # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
                     # for stress-mediated growth, we get a contribution to the pressure material tangent operator
-                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.internalvars, self.theta_old, Cmat, self.growth_thres, self.dt)
+                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
                     if self.mat_remodel[n]:
                         # remodeling tangent operator
                         Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
@@ -431,7 +431,7 @@ class SolidmechanicsProblem(problem_base):
                     else:
                         Ctang_p = Cmat_p + Cgrowth_p
                     # for all types of deformation-dependent growth, we need to add the growth contributions to the Jacobian tangent operator
-                    Jgrowth = diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.internalvars, Cmat, self.theta_old, self.growth_thres, self.dt)
+                    Jgrowth = diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
                     Jtang = Jmat + Jgrowth
                     # ok... for stress-mediated growth, we actually get a non-zero right-bottom (11) block in our saddle-point system matrix,
                     # since Je = Je(C,theta(C,p)) ---> dJe/dp = dJe/dtheta * dtheta/dp

@@ -403,11 +403,11 @@ def postprocess_groups_syspul(groups, indpertaftercyl=0):
     if indpertaftercyl > 0: # for comparison of healthy/baseline and perturbed states
         # index 6
         groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_last', 'pV_v_r_last', 'pV_v_l_baseline', 'pV_v_r_baseline'],
-                    'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$\\\text{healthy}\\\;p_{\\\mathrm{v}}^{\\\ell}$', '$\\\text{healthy}\\\;p_{\\\mathrm{v}}^{r}$'],
+                    'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{ref}}$'],
                     'lines'                    : [2, 17, 97, 98]})
         # index 7
         groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last', 'pV_at_l_baseline', 'pV_at_r_baseline'],
-                    'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$\\\text{healthy}\\\;p_{\\\mathrm{at}}^{\\\ell}$', '$\\\text{healthy}\\\;p_{\\\mathrm{at}}^{r}$'],
+                    'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{ref}}$'],
                     'lines'                    : [1, 16, 97, 98]})
     else:
         # index 6

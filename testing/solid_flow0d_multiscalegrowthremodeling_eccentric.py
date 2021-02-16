@@ -33,6 +33,7 @@ def main():
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'divergence_continue'   : 'PTC',
+                            'k_ptc_initial'         : 1.0,
                             'print_local_iter'      : False,
                             'tol_res_local'         : 1.0e-10,
                             'tol_inc_local'         : 1.0e-10}
@@ -74,11 +75,11 @@ def main():
                             'coupling_type'         : 'monolithic_direct'}
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
-                            'numcycles'             : 2,
+                            'numcycles'             : 3,
                             'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-4, # growth rate tolerance [mm^3/s]
-                            'tol_outer'             : 1.0e-3,
-                            'restart_cycle'         : 1,
+                            'tol_outer'             : 1.0e-5,
+                            'restart_cycle'         : 0,
                             'restart_from_small'    : False}
 
 

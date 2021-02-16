@@ -79,10 +79,6 @@ class constitutive:
         
         m = 0
         for matlaw in self.matmodels:
-            
-            # sanity check
-            if self.incompr_2field and '_vol' in matlaw:
-                raise AttributeError("Do not use a volumetric material law when using a 2-field variational principle with pressure dofs!")
 
             stress += self.add_stress_mat(matlaw, self.matparams[m], ivar, C_)
 
@@ -122,6 +118,10 @@ class constitutive:
 
     # add stress contributions from materials
     def add_stress_mat(self, matlaw, mparams, ivar, C_):
+
+        # sanity check
+        if self.incompr_2field and '_vol' in matlaw:
+            raise AttributeError("Do not use a volumetric material law when using a 2-field variational principle with pressure dofs!")
 
         if matlaw == 'neohooke_dev':
             
@@ -351,7 +351,7 @@ class constitutive:
 
 
     
-    def dtheta_dC(self, u_, p_, ivar, Cmat, theta_old_, thres, dt):
+    def dtheta_dC(self, u_, p_, ivar, theta_old_, thres, dt):
         
         theta_ = ivar["theta"]
         
@@ -363,6 +363,8 @@ class constitutive:
         i, j, k, l = indices(4)
         
         if self.growth_trig == 'volstress':
+            
+            Cmat = self.S(u_,p_,ivar,tang=True)
             
             # TeX: \frac{\partial \vartheta}{\partial \boldsymbol{C}} = \frac{k(\vartheta) \Delta t}{\frac{\partial r}{\partial \vartheta}}\left(\boldsymbol{S} + \boldsymbol{C} : \frac{1}{2} \check{\mathbb{C}}\right)
 
@@ -387,9 +389,11 @@ class constitutive:
     # \mathbb{I}             = \boldsymbol{1}\,\overline{\otimes}\,\boldsymbol{1} = \delta_{ik}\delta_{jl} \; \hat{\boldsymbol{e}}_{i} \otimes \hat{\boldsymbol{e}}_{j} \otimes \hat{\boldsymbol{e}}_{k} \otimes \hat{\boldsymbol{e}}_{l}
     # \bar{\mathbb{I}}       = \boldsymbol{1}\,\underline{\otimes}\,\boldsymbol{1} = \delta_{il}\delta_{jk} \; \hat{\boldsymbol{e}}_{i} \otimes \hat{\boldsymbol{e}}_{j} \otimes \hat{\boldsymbol{e}}_{k} \otimes \hat{\boldsymbol{e}}_{l}
     # \bar{\bar{\mathbb{I}}} = \boldsymbol{1}\otimes\boldsymbol{1} = \delta_{ij}\delta_{kl} \; \hat{\boldsymbol{e}}_{i} \otimes \hat{\boldsymbol{e}}_{j} \otimes \hat{\boldsymbol{e}}_{k} \otimes \hat{\boldsymbol{e}}_{l}
-    def dS_dFg(self, u_, p_, ivar, Cmat, theta_old_, dt):
+    def dS_dFg(self, u_, p_, ivar, theta_old_, dt):
         
         theta_ = ivar["theta"]
+
+        Cmat = self.S(u_,p_,ivar,tang=True)
 
         i, j, k, l, m, n = indices(6)
         
@@ -413,7 +417,7 @@ class constitutive:
     # growth material tangent: Cgrowth = 2 (dS/dF_g : dF_g/dtheta) \otimes dtheta/dC
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cgrowth(self, u_, p_, ivar, Cmat, theta_old_, thres, dt):
+    def Cgrowth(self, u_, p_, ivar, theta_old_, thres, dt):
         
         theta_ = ivar["theta"]
         
@@ -421,9 +425,9 @@ class constitutive:
         
         i, j, k, l = indices(4)
         
-        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, Cmat, theta_old_, thres, dt)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, theta_old_, thres, dt)
         
-        dS_dFg_ = self.dS_dFg(u_, p_, ivar, Cmat, theta_old_, dt)
+        dS_dFg_ = self.dS_dFg(u_, p_, ivar, theta_old_, dt)
 
         dS_dFg_times_dFg_dtheta = as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
         
@@ -442,8 +446,6 @@ class constitutive:
         ktheta = self.res_dtheta_growth(u_, p_, ivar, theta_old_, thres, dt, 'ktheta')
         K_growth = self.res_dtheta_growth(u_, p_, ivar, theta_old_, thres, dt, 'tang')
         
-        i, j, k, l = indices(4)
-        
         if self.growth_trig == 'volstress':
             
             tangdp = (ktheta*dt/K_growth) * ( diff(tr(self.M_e(u_,p_,self.kin.C(u_),ivar)),p_) )
@@ -461,7 +463,7 @@ class constitutive:
     # growth material tangent for 2-field functional: Cgrowth_p = (dS/dF_g : dF_g/dtheta) * dtheta/dp
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cgrowth_p(self, u_, p_, ivar, theta_old_, Cmat, thres, dt):
+    def Cgrowth_p(self, u_, p_, ivar, theta_old_, thres, dt):
         
         theta_ = ivar["theta"]
         
@@ -471,7 +473,7 @@ class constitutive:
         
         dtheta_dp_ = self.dtheta_dp(u_, p_, ivar, theta_old_, thres, dt)
         
-        dS_dFg_ = self.dS_dFg(u_, p_, ivar, Cmat, theta_old_, dt)
+        dS_dFg_ = self.dS_dFg(u_, p_, ivar, theta_old_, dt)
 
         dS_dFg_times_dFg_dtheta = as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
         
@@ -483,14 +485,14 @@ class constitutive:
     # remodeling material tangent: Cremod = 2 dphi/dC * (S_remod - S_base) = 2 dphi/dtheta * dtheta/dC * (S_remod - S_base)
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cremod(self, u_, p_, ivar, Cmat, theta_old_, thres, dt):
+    def Cremod(self, u_, p_, ivar, theta_old_, thres, dt):
         
         theta_ = ivar["theta"]
         
         i, j, k, l = indices(4)
         
         dphi_dtheta_ = self.phi_remod(theta_,tang=True)
-        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, Cmat, theta_old_, thres, dt)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, theta_old_, thres, dt)
 
         Cremod = 2.*dphi_dtheta_ * as_tensor(dtheta_dC_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
 

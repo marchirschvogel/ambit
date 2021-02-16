@@ -79,7 +79,7 @@ def main():
                             'tol_large'             : 1.0e-4, # growth rate tolerance [mm^3/s]
                             'tol_outer'             : 1.0e-3,
                             'restart_cycle'         : 0,
-                            'restart_from_small'    : False}
+                            'restart_from_small'    : True}
 
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},
@@ -94,9 +94,9 @@ def main():
                                                             'thres_tol' : 1.0e-3,
                                                             'thetamax' : 3.0,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 1.0e4,
+                                                            'tau_gr' : 2.0e4,
                                                             'gamma_gr' : 2.0,
-                                                            'tau_gr_rev' : 2.0e4,
+                                                            'tau_gr_rev' : 4.0e4,
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
                                                                                 'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},
