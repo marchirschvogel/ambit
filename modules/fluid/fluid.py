@@ -88,7 +88,6 @@ class FluidmechanicsProblem(problem_base):
         self.dp    = TrialFunction(self.V_p)            # Incremental pressure
         self.var_p = TestFunction(self.V_p)             # Test function
         self.v     = Function(self.V_v, name="Velocity")
-        self.a     = Function(self.V_v, name="Acceleration")
         self.p     = Function(self.V_p, name="Pressure")
         # values of previous time step
         self.v_old = Function(self.V_v)

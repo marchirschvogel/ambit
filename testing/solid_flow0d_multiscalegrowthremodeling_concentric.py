@@ -67,7 +67,8 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 1,
                             'incompressible_2field' : False,
-                            'prestress_initial'     : True}
+                            'prestress_initial'     : True,
+                            'lin_remodeling_full'   : True}
     
     COUPLING_PARAMS      = {'surface_ids'           : [1,2],
                             'coupling_quantity'     : 'volume',

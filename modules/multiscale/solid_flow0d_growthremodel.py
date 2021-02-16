@@ -113,9 +113,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
             
             ds_ = ds(subdomain_data=self.pblarge.io.mt_b1, subdomain_id=self.pbsmall.surface_p_ids[i], metadata={'quadrature_degree': self.pblarge.quad_degree})
             
-            #w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u), self.pblarge.ki.F(self.pblarge.u), self.neumann_funcs[-1], ds_)
-            w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
-
+            w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u), self.pblarge.ki.F(self.pblarge.u), self.neumann_funcs[-1], ds_)
+            #w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
 
         self.pblarge.weakform_u -= w_neumann
         self.pblarge.jac_uu -= derivative(w_neumann, self.pblarge.u, self.pblarge.du)
@@ -163,8 +162,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
             wts = time.time()
             
-            # accumulate small scale times
-            self.pb.pbsmall.t_prev += (self.pb.pbsmall.pbf.ti.cycle[0]-1) * self.pb.pbsmall.pbf.cardvasc0D.T_cycl
+            # time offset from previous small scale times
+            self.pb.pbsmall.t_prev = (self.pb.pbsmall.pbf.ti.cycle[0]-1) * self.pb.pbsmall.pbf.cardvasc0D.T_cycl
 
             # change output names
             self.pb.pbsmall.pbs.io.simname = self.pb.simname_small + str(N)
@@ -197,15 +196,14 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 # read small scale checkpoint if we restart from this scale
                 self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle+1)
                 self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s_set', self.pb.restart_cycle+1, self.pb.pbsmall.pbf.s_set)
-                self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(N)+'.txt')
-                # no need to do after restart
-                self.pb.pbsmall.pbs.prestress_initial = False
                 # read heart cycle info
                 self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(self.pb.restart_cycle+1)+'.txt')
                 # set bool that indicate homeostatic set to True for restarts
                 self.pb.pbsmall.have_set_homeostatic = True
                 # induce the perturbation
                 self.pb.pbsmall.pbf.cardvasc0D.induce_perturbation(self.pb.pbsmall.pbf.perturb_type, self.pb.pbsmall.pbf.ti.cycle[0], self.pb.pbsmall.pbf.perturb_after_cylce)
+                # no need to do after restart
+                self.pb.pbsmall.pbs.prestress_initial = False
                 # set flag to False again
                 self.pb.restart_from_small = False
             
@@ -253,12 +251,12 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             p_delta = PETSc.Vec().createMPI((self.pb.pblarge.p.vector.getLocalSize(),self.pb.pblarge.p.vector.getSize()), bsize=self.pb.pblarge.p.vector.getBlockSize(), comm=self.pb.comm)
             p_delta.waxpy(-1.0, self.pb.pbsmall.pbs.p_set.vector, self.pb.pblarge.p.vector)
         
-        # set small scale variables
-        self.pb.pbsmall.pbs.u.vector.axpby(1.0, 0.0, u_delta)
+        # update small scale variables - add delta from growth to last small scale displacement
+        self.pb.pbsmall.pbs.u.vector.axpy(1.0, u_delta)
         self.pb.pbsmall.pbs.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         if self.pb.pbsmall.pbs.incompressible_2field:
-            self.pb.pbsmall.pbs.p.vector.axpby(1.0, 0.0, p_delta)
-            self.pb.pbsmall.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pbsmall.pbs.p.vector.axpy(1.0, p_delta)
+            self.pb.pbsmall.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)      
         
         # 0D variables s and s_old are already correctly set from the previous small scale run (end values)
 

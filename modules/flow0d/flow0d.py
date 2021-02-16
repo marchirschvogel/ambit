@@ -180,12 +180,15 @@ class Flow0DSolver():
             
             # current time
             t = N * self.pb.dt
-            
+
+            # offset time for multiple cardiac cycles
+            t_off = (self.pb.ti.cycle[0]-1) * self.pb.T_cycl # zero if T_cycl variable is not specified
+
             # external volume/flux from time curve
-            if self.pb.ti.time_curves is not None: self.pb.c[0] = self.pb.ti.timecurves(1)(t)
+            if self.pb.ti.time_curves is not None: self.pb.c[0] = self.pb.ti.timecurves(1)(t-t_off)
 
             # solve
-            solnln.newton(self.pb.s, t, self.pb.dt)
+            solnln.newton(self.pb.s, t-t_off, self.pb.dt)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid)
@@ -212,7 +215,7 @@ class Flow0DSolver():
             self.pb.ti.print_timestep(N, t, self.pb.numstep, wt=wt)
             
             # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, t, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
+            is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, t-t_off, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.perturb_type is not None: self.pb.cardvasc0D.induce_perturbation(self.pb.perturb_type, self.pb.ti.cycle[0], self.pb.perturb_after_cylce)

@@ -129,7 +129,7 @@ class cardiovascular0Dbase:
 
         is_periodic = False
         
-        if self.T_cycl > 0. and self.ModuloIsRelativeZero(t, self.T_cycl, t):
+        if self.T_cycl > 0. and np.isclose(t, self.T_cycl):
             
             for i in range(vs,ve):
                 varTc[i] = var[i]
@@ -174,18 +174,6 @@ class cardiovascular0Dbase:
                 self.equation_map(), self.set_stiffness(), self.lambdify_expressions()
                 
                 self.have_induced_pert = True
-
-                
-    # compare A to B
-    def IsRelativeEqualTo(self, A, B, Ref):
-
-        return (math.fabs(A-B)/Ref) < 1.0e-12
-
-
-    # check of modulo is near zero
-    def ModuloIsRelativeZero(self, value, modulo, Ref):
-
-        return self.IsRelativeEqualTo(math.fmod(value+modulo/2.,modulo)-modulo/2.,0.0,Ref);
 
     
     # set pressure function for 3D FEM model (FEniCS)

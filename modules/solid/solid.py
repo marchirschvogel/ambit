@@ -102,8 +102,6 @@ class SolidmechanicsProblem(problem_base):
         self.dp    = TrialFunction(self.V_p)            # Incremental pressure
         self.var_p = TestFunction(self.V_p)             # Test function
         self.u     = Function(self.V_u, name="Displacement")
-        self.v     = Function(self.V_u, name="Velocity")
-        self.a     = Function(self.V_u, name="Acceleration")
         self.p     = Function(self.V_p, name="Pressure")
         # values of previous time step
         self.u_old = Function(self.V_u)
@@ -213,7 +211,12 @@ class SolidmechanicsProblem(problem_base):
                     self.ti.funcs_to_update.append({self.theta : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['growth']['prescribed_curve'])})
                 if 'remodeling_mat' in self.constitutive_models['MAT'+str(n+1)+'']['growth'].keys():
                     self.mat_remodel[n] = True
-        
+
+        # full linearization of our remodeling law can lead to excessive compiler times for ffcx... :-/
+        # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
+        try: self.lin_remod_full = fem_params['lin_remodeling_full']
+        except: self.lin_remod_full = True
+
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
             growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx_)
@@ -386,7 +389,7 @@ class SolidmechanicsProblem(problem_base):
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
                 Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
-                if self.mat_remodel[n]:
+                if self.mat_remodel[n] and self.lin_remod_full:
                     # remodeling tangent operator
                     Cremod = self.ma[n].Cremod(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
                     Ctang = Cmat + Cgrowth + Cremod
@@ -424,7 +427,7 @@ class SolidmechanicsProblem(problem_base):
                     # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
                     # for stress-mediated growth, we get a contribution to the pressure material tangent operator
                     Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
-                    if self.mat_remodel[n]:
+                    if self.mat_remodel[n] and self.lin_remod_full:
                         # remodeling tangent operator
                         Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
                         Ctang_p = Cmat_p + Cgrowth_p + Cremod_p

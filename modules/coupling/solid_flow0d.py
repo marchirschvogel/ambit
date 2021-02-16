@@ -251,12 +251,9 @@ class SolidmechanicsFlow0DSolver():
             
             # offset time for multiple cardiac cycles
             t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.T_cycl # zero if T_cycl variable is not specified
-
+            
             # set time-dependent functions
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
-
-            if self.pb.have_multiscale_gandr:
-                self.set_homeostatic_threshold(t-t_off), self.set_growth_trigger(t-t_off)
 
             # take care of active stress
             if self.pb.pbs.have_active_stress and self.pb.pbs.active_stress_trig == 'ode':
@@ -271,7 +268,10 @@ class SolidmechanicsFlow0DSolver():
             # update time step - solid and 0D model
             self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
             self.pb.pbf.cardvasc0D.update(self.pb.pbf.s, self.pb.pbf.df, self.pb.pbf.f, self.pb.pbf.s_old, self.pb.pbf.df_old, self.pb.pbf.f_old, self.pb.pbf.aux, self.pb.pbf.aux_old)
-            
+
+            if self.pb.have_multiscale_gandr:
+                self.set_homeostatic_threshold(t-t_off), self.set_growth_trigger(t-t_off)
+
             # update old pressures on solid
             if self.pb.coupling_type == 'monolithic_direct':
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
@@ -302,7 +302,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.ti.print_timestep(N, t, self.pb.pbs.numstep, wt=wt)
             
             # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.io.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
+            is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t-t_off, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.io.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.pbf.perturb_type is not None: self.pb.pbf.cardvasc0D.induce_perturbation(self.pb.pbf.perturb_type, self.pb.pbf.ti.cycle[0], self.pb.pbf.perturb_after_cylce)
@@ -329,7 +329,7 @@ class SolidmechanicsFlow0DSolver():
     # for multiscale G&R analysis
     def set_homeostatic_threshold(self, t):
             
-        if t >= self.pb.t_gandr_setpoint and not self.pb.have_set_homeostatic:
+        if np.isclose(t, self.pb.t_gandr_setpoint) and not self.pb.have_set_homeostatic:
 
             if self.pb.comm.rank == 0:
                 print('Set homeostatic growth thresholds...')
@@ -356,7 +356,7 @@ class SolidmechanicsFlow0DSolver():
     # for multiscale G&R analysis
     def set_growth_trigger(self, t):
 
-        if t >= self.pb.t_gandr_setpoint - 1.0e-6 and t < self.pb.t_gandr_setpoint + self.pb.pbs.dt:
+        if np.isclose(t, self.pb.t_gandr_setpoint):
 
             if self.pb.comm.rank == 0:
                 print('Set growth triggers...')

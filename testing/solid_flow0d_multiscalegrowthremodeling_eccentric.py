@@ -27,7 +27,7 @@ def main():
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e','fiberstretch'],
-                            'simname'               : 'multiscaletest_eccentric'}
+                            'simname'               : 'multiscaletest_eccentric3true'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,
@@ -68,17 +68,18 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 1,
                             'incompressible_2field' : False,
-                            'prestress_initial'     : True}
+                            'prestress_initial'     : True,
+                            'lin_remodeling_full'   : True}
     
     COUPLING_PARAMS      = {'surface_ids'           : [1,2],
                             'coupling_quantity'     : 'volume',
                             'coupling_type'         : 'monolithic_direct'}
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
-                            'numcycles'             : 3,
+                            'numcycles'             : 10,
                             'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-4, # growth rate tolerance [mm^3/s]
-                            'tol_outer'             : 1.0e-5,
+                            'tol_outer'             : 1.0e-3,
                             'restart_cycle'         : 0,
                             'restart_from_small'    : False}
 
