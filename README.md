@@ -67,20 +67,20 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * in general, before installing other things, do an update:
 
-``sudo apt update``
+``sudo apt update``\
 ``sudo apt upgrade``
 
 * if not pre-installed, install Python3 stuff
 
-``sudo apt install python3``
-``sudo apt install python3-distutils``
-``sudo apt install python3-pip``
+``sudo apt install python3``\
+``sudo apt install python3-distutils``\
+``sudo apt install python3-pip``\
 ``sudo apt install python3-dev``
 
 * compiler stuff:
 
-``sudo apt install build-essential``
-``sudo apt install gfortran``
+``sudo apt install build-essential``\
+``sudo apt install gfortran``\
 ``sudo apt install libgfortran3``
 
 * an mpich compiler (i.e. mpich-3.3.2 from http://www.mpich.org/downloads)
@@ -89,8 +89,8 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * after install, need to set in ~/.bashrc:
 
-``export MPI_HOME=$HOME/mpich-3.3.2_install``
-``export MPI_ROOT=$MPI_HOME``
+``export MPI_HOME=$HOME/mpich-3.3.2_install``\
+``export MPI_ROOT=$MPI_HOME``\
 ``export PATH=$MPI_HOME/bin:$PATH``
 
 * Paraview's Python interface
@@ -99,10 +99,10 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * useful Python stuff
 
-``pip3 install numpy mpmath sympy``
-``pip3 install -v --no-deps --no-cache-dir mpi4py``
-``pip3 install -v --no-deps --no-cache-dir cffi``
-``pip3 install progress``
+``pip3 install numpy mpmath sympy``\
+``pip3 install -v --no-deps --no-cache-dir mpi4py``\
+``pip3 install -v --no-deps --no-cache-dir cffi``\
+``pip3 install progress``\
 
 * command to delete old / all docker images
 
@@ -118,31 +118,31 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * install Eigen3 and Boost stuff
 
-``sudo apt install libeigen3-dev``
+``sudo apt install libeigen3-dev``\
 ``sudo apt install libboost-all-dev libgmp-dev libmpfr-dev``
 
 * optional but useful tools
 
-``sudo apt install libblas-dev liblapack-dev``
-``sudo apt install libhdf5-mpich-dev``
-``sudo apt install libsuitesparse-dev``
+``sudo apt install libblas-dev liblapack-dev``\
+``sudo apt install libhdf5-mpich-dev``\
+``sudo apt install libsuitesparse-dev``\
 ``sudo apt install hdf5-tools``
 
 * install PETSc first (latest release version)
 
-``git clone -b release https://gitlab.com/petsc/petsc.git petsc``
+``git clone -b release https://gitlab.com/petsc/petsc.git petsc``\
 ``./configure --with-mpi-dir=$MPI_HOME --download-mumps --download-scalapack --download-parmetis --download-metis --download-ptscotch --download-scotch --download-blacs --download-fblaslapack --download-hypre --download-suitsparse --download-superlu --download-superlu_dist``
 
 * install mpi4py and petsc4py
 
-``pip3 install -v --no-deps --no-cache-dir mpi4py``
+``pip3 install -v --no-deps --no-cache-dir mpi4py``\
 ``pip3 install -v --no-deps --no-cache-dir petsc4py``
 
 * install Pybind
 
-``PYBIND11_VERSION=2.5.0``
-``wget -nc --quiet https://github.com/pybind/pybind11/archive/v${PYBIND11_VERSION}.tar.gz``
-``tar -xf v${PYBIND11_VERSION}.tar.gz && cd pybind11-${PYBIND11_VERSION}``
+``PYBIND11_VERSION=2.5.0``\
+``wget -nc --quiet https://github.com/pybind/pybind11/archive/v${PYBIND11_VERSION}.tar.gz``\
+``tar -xf v${PYBIND11_VERSION}.tar.gz && cd pybind11-${PYBIND11_VERSION}``\
 ``mkdir build && mkdir -p ../pybind_install && cd build && cmake -DPYBIND11_TEST=off -DCMAKE_INSTALL_PREFIX=$HOME/pybind_install .. && sudo make install && cd ../.. && rm v${PYBIND11_VERSION}.tar.gz``
 
 * get all the FEniCS stuff
@@ -153,20 +153,20 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * in there, do the following:
 
-``git clone https://github.com/FEniCS/fiat.git``
-``git clone https://bitbucket.org/fenics-project/dijitso``
-``git clone https://github.com/FEniCS/ufl.git``
-``git clone https://github.com/FEniCS/ffcx.git``
-``git clone https://github.com/fenics/dolfinx.git``
-``cd fiat    && pip3 -v install --no-deps --no-cache-dir . && cd ..``
-``cd dijitso && pip3 -v install --no-deps --no-cache-dir . && cd ..``
-``cd ufl     && pip3 -v install --no-deps --no-cache-dir . && cd ..``
-``cd ffcx    && pip3 -v install --no-deps --no-cache-dir . && cd ..``
-``mkdir -p dolfinx/build && mkdir -p dolfinx_install && cd dolfinx/build && cmake -DCMAKE_INSTALL_PREFIX=dolfinx_install ../cpp && sudo make install -j 6 && cd ../..``
-``source dolfinx_install/share/dolfinx/dolfinx.conf``
+``git clone https://github.com/FEniCS/fiat.git``\
+``git clone https://bitbucket.org/fenics-project/dijitso``\
+``git clone https://github.com/FEniCS/ufl.git``\
+``git clone https://github.com/FEniCS/ffcx.git``\
+``git clone https://github.com/fenics/dolfinx.git``\
+``cd fiat    && pip3 -v install --no-deps --no-cache-dir . && cd ..``\
+``cd dijitso && pip3 -v install --no-deps --no-cache-dir . && cd ..``\
+``cd ufl     && pip3 -v install --no-deps --no-cache-dir . && cd ..``\
+``cd ffcx    && pip3 -v install --no-deps --no-cache-dir . && cd ..``\
+``mkdir -p dolfinx/build && mkdir -p dolfinx_install && cd dolfinx/build && cmake -DCMAKE_INSTALL_PREFIX=dolfinx_install ../cpp && sudo make install -j 6 && cd ../..``\
+``source dolfinx_install/share/dolfinx/dolfinx.conf``\
 ``cd dolfinx/python && pip3 -v install --no-deps --no-cache-dir . && cd ../..``
 
 * for update of already installed dolfin-x, do the following inside the fenics folder:
 
-``cd ffcx && git pull && pip3 -v install --no-deps --no-cache-dir . && cd ..``
+``cd ffcx && git pull && pip3 -v install --no-deps --no-cache-dir . && cd ..``\
 ``cd dolfinx && git pull && cd build && cmake -DCMAKE_INSTALL_PREFIX=dolfinx_install ../cpp && sudo make install -j 6 && source dolfinx_install/share/dolfinx/dolfinx.conf && cd ../python && pip3 -v install --no-deps . && cd ../..``

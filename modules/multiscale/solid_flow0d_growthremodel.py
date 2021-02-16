@@ -113,11 +113,13 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
             
             ds_ = ds(subdomain_data=self.pblarge.io.mt_b1, subdomain_id=self.pbsmall.surface_p_ids[i], metadata={'quadrature_degree': self.pblarge.quad_degree})
             
-            w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u), self.pblarge.ki.F(self.pblarge.u), self.neumann_funcs[-1], ds_)
-            #w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
+            # we apply the pressure onto a fixed configuration of the G&R trigger point, determined by the displacement field u_set
+            # in the last G&R cycle, we assure that growth falls below a tolerance and hence the current and the set configuration coincide
+            w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
 
         self.pblarge.weakform_u -= w_neumann
-        self.pblarge.jac_uu -= derivative(w_neumann, self.pblarge.u, self.pblarge.du)
+        # linearization not needed (only if we applied the trigger load on the current state)
+        #self.pblarge.jac_uu -= derivative(w_neumann, self.pblarge.u, self.pblarge.du)
 
 
 
