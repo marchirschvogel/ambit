@@ -56,7 +56,6 @@ class SolidmechanicsFlow0DProblem():
         # for multiscale G&R analysis
         self.t_prev = 0
         self.t_gandr_setpoint = 0
-        self.have_set_homeostatic = False
 
         if self.pbs.problem_type == 'solid_flow0d_multiscale_gandr': self.have_multiscale_gandr = True
         else: self.have_multiscale_gandr = False
@@ -270,7 +269,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.cardvasc0D.update(self.pb.pbf.s, self.pb.pbf.df, self.pb.pbf.f, self.pb.pbf.s_old, self.pb.pbf.df_old, self.pb.pbf.f_old, self.pb.pbf.aux, self.pb.pbf.aux_old)
 
             if self.pb.have_multiscale_gandr:
-                self.set_homeostatic_threshold(t-t_off), self.set_growth_trigger(t-t_off)
+                self.set_homeostatic_threshold(t), self.set_growth_trigger(t-t_off)
 
             # update old pressures on solid
             if self.pb.coupling_type == 'monolithic_direct':
@@ -328,8 +327,10 @@ class SolidmechanicsFlow0DSolver():
 
     # for multiscale G&R analysis
     def set_homeostatic_threshold(self, t):
-            
-        if np.isclose(t, self.pb.t_gandr_setpoint) and not self.pb.have_set_homeostatic:
+        
+        # time is absolute time (should only be set in first cycle)
+        eps = 1.0e-14
+        if t >= self.pb.t_gandr_setpoint-eps and t < self.pb.t_gandr_setpoint+self.pb.pbs.dt-eps:
 
             if self.pb.comm.rank == 0:
                 print('Set homeostatic growth thresholds...')
@@ -350,13 +351,13 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.pb.pbs.growth_thres.interpolate(growth_thres_proj)
 
-            self.pb.have_set_homeostatic = True
 
-        
     # for multiscale G&R analysis
     def set_growth_trigger(self, t):
 
-        if np.isclose(t, self.pb.t_gandr_setpoint):
+        # time is relative time (w.r.t. heart cycle)
+        eps = 1.0e-14
+        if t >= self.pb.t_gandr_setpoint-eps and t < self.pb.t_gandr_setpoint+self.pb.pbs.dt-eps:
 
             if self.pb.comm.rank == 0:
                 print('Set growth triggers...')

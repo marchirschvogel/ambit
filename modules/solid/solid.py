@@ -511,7 +511,7 @@ class SolidmechanicsProblem(problem_base):
 
 
     # computes and prints the growth rate of the whole solid
-    def compute_solid_growth_rate(self):
+    def compute_solid_growth_rate(self, N, t):
         
         dtheta_all = as_ufl(0)
         for n in range(self.num_domains):
@@ -525,6 +525,14 @@ class SolidmechanicsProblem(problem_base):
         if self.comm.rank == 0:
             print('Solid growth rate: %.4e' % (self.growth_rate))
             sys.stdout.flush()
+            
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t,self.dt): mode='wt'
+                else: mode='a'
+                fl = self.io.output_path+'/results_'+self.io.simname+'_growthrate.txt'
+                f = open(fl, mode)
+                f.write('%.16E %.16E\n' % (t,self.growth_rate))
+                f.close()
 
 
 
@@ -623,7 +631,7 @@ class SolidmechanicsSolver():
 
             # compute the growth rate (has to be called before update_timestep)
             if self.pb.have_growth:
-                self.pb.compute_solid_growth_rate()
+                self.pb.compute_solid_growth_rate(N, t)
 
             # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
             self.pb.ti.update_timestep(self.pb.u, self.pb.u_old, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.internalvars, self.pb.internalvars_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)

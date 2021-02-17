@@ -7,9 +7,10 @@
 - Hyperelastic isotropic and anisotropic materials
 - Inelastic constitutive laws (growth & remodeling, G&R)
 - Dynamics
-- 0D lumped systemic and pulmonary circulation, Windkessel models
+- Incompressibility in solid mechanics (2-field functional with displacement and pressure dofs)
+- 0D lumped systemic and pulmonary circulation flow, Windkessel models
 - Monolithic coupling of 3D solid (and fluid) mechanics with lumped 0D flow models
-- Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid and solid G&R problem)
+- Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid-flow0d and G&R solid problem)
 
 - author: Dr.-Ing. Marc Hirschvogel, marc.hirschvogel@deepambit.com
 

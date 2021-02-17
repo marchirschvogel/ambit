@@ -27,7 +27,7 @@ def main():
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e','fiberstretch'],
-                            'simname'               : 'multiscaletest_eccentric3true'}
+                            'simname'               : 'multiscaletest_eccentricII'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,
@@ -96,35 +96,13 @@ def main():
                                                             'thres_tol' : 1.0e-3,
                                                             'thetamax' : 3.0,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 1.0e4,
+                                                            'tau_gr' : 2.0e4,
                                                             'gamma_gr' : 2.0,
-                                                            'tau_gr_rev' : 2.0e4,
+                                                            'tau_gr_rev' : 4.0e4,
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
                                                                                 'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},
                                                                                 'active_fiber' : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53}}}}}
-
-
-    #MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},
-                                      #'sussmanbathe_vol' : {'kappa' : 10./(1.-2.*0.49)},
-                                      #'active_fiber'     : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53},
-                                      #'inertia'          : {'rho0' : 1.0e-6},
-                                      ##'rayleigh_damping' : {'eta_m' : 0.0, 'eta_k' : 0.0001},
-                                      #'growth'           : {'growth_dir' : 'radial', # isotropic, fiber, crossfiber, radial
-                                                            #'growth_trig' : 'volstress', # fibstretch, volstress, prescribed
-                                                            #'trigger_reduction' : 0.85,
-                                                            #'growth_thres' : 1.1,
-                                                            #'thres_tol' : 1.0e-2,
-                                                            #'thetamax' : 3.0,
-                                                            #'thetamin' : 1.0,
-                                                            #'tau_gr' : 5.0e4,
-                                                            #'gamma_gr' : 2.0,
-                                                            #'tau_gr_rev' : 10.0e4,
-                                                            #'gamma_gr_rev' : 2.0,
-                                                            #'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
-                                                                                #'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},
-                                                                                #'active_fiber' : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53}}}}}
-
 
 
 
