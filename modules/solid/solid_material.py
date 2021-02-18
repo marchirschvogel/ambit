@@ -63,6 +63,9 @@ class materiallaw:
         I6 = dot(dot(self.C,s0), s0)
         I8 = dot(dot(self.C,s0), f0)
 
+        # to guarantee initial configuration is stress-free (in case of initially non-orthogonal fibers f0 and s0)
+        I8 -= dot(f0,s0)
+
         a_0, b_0 = params['a_0'], params['b_0']
         a_f, b_f = params['a_f'], params['b_f']
         a_s, b_s = params['a_s'], params['b_s']

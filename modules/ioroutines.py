@@ -131,7 +131,7 @@ class IO_solid(IO):
             
             fib_func_input.append(Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
             
-            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si])
+            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si], normalize=True)
 
             # project to output fiber function space
             ff = project(fib_func_input[si], V_fib, dx_, bcs=[], nm='fib_'+s+'')
@@ -150,7 +150,7 @@ class IO_solid(IO):
 
 
 
-    def readfunction(self, f, V, datafile):
+    def readfunction(self, f, V, datafile, normalize=False):
         
         # block size of vector
         bs = f.vector.getBlockSize()
@@ -179,8 +179,16 @@ class IO_solid(IO):
             # only write if we've found the index
             if len(ind):
                 
+                if normalize:
+                    norm_sq = 0.
+                    for j in range(bs):
+                        norm_sq += data[ind[0],j]**2.
+                    norm = np.sqrt(norm_sq)
+                else:
+                    norm = 1.
+                
                 for j in range(bs):
-                    f.vector[bs*i+j] = data[ind[0],j]
+                    f.vector[bs*i+j] = data[ind[0],j] / norm
             
             ci+=1
 

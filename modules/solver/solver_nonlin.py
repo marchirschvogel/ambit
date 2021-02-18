@@ -566,11 +566,8 @@ class solver_nonlinear:
         
         else:
 
-            if self.pb.comm.rank == 0:
-                print("Newton did not converge after %i iterations!" % (it))
-                sys.stdout.flush()
-            
-            sys.exit() 
+            raise RuntimeError("Newton did not converge after %i iterations!" % (it))
+
 
 
     def catch_solver_errors(self, resnorm, incnorm=0, maxval=1.0e16):
@@ -655,11 +652,8 @@ class solver_nonlinear:
             
         else:
 
-            if self.pb.comm.rank == 0:
-                print("Local Newton did not converge after %i iterations!" % (it_local))
-                sys.stdout.flush()
-            
-            sys.exit()
+            raise RuntimeError("Local Newton did not converge after %i iterations!" % (it_local))
+
 
 
 
@@ -1178,11 +1172,8 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
 
         else:
 
-            if self.pbc.comm.rank == 0:
-                print("Monolithic 3D-0D Newton did not converge after %i iterations!" % (it))
-                sys.stdout.flush()
-            
-            sys.exit()
+            raise RuntimeError("Monolithic 3D-0D Newton did not converge after %i iterations!" % (it))
+
 
 
 # solver for pure 0D problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)
@@ -1276,10 +1267,7 @@ class solver_nonlinear_0D(solver_nonlinear):
                 break
 
         else:
-            
-            if self.pb.comm.rank == 0:
-                print("Newton for ODE system did not converge after %i iterations!" % (it))
-                sys.stdout.flush()
-            
-            sys.exit()
+
+            raise RuntimeError("Newton for ODE system did not converge after %i iterations!" % (it))
+
 
