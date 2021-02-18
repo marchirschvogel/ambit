@@ -204,7 +204,7 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
 
             # solve
-            solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off, self.pb.pbs.dt)
+            solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid)

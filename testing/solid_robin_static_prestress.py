@@ -26,8 +26,7 @@ def main():
                          'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 10,
-                         'numstep_stop'          : 10,
+                         'numstep'               : 1,
                          'timint'                : 'static'}
     
     FEM_PARAMS        = {'order_disp'            : 1,

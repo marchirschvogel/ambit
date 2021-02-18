@@ -188,7 +188,7 @@ class Flow0DSolver():
             if self.pb.ti.time_curves is not None: self.pb.c[0] = self.pb.ti.timecurves(1)(t-t_off)
 
             # solve
-            solnln.newton(self.pb.s, t-t_off, self.pb.dt)
+            solnln.newton(self.pb.s, t-t_off)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid)

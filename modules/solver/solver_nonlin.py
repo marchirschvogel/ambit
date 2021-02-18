@@ -804,7 +804,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
         
 
 
-    def newton(self, u, p, s, t, dt, locvar=None, locresform=None, locincrform=None):
+    def newton(self, u, p, s, t, locvar=None, locresform=None, locincrform=None):
         
         # 3D displacement increment
         del_u = Function(self.V_u)
@@ -844,7 +844,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                 # Lagrange multipliers (pressures) to be passed to 0D model
                 for i in range(ls,le):
                     self.pbc.pbf.c[i] = self.pbc.lm[i]
-                self.snln0D.newton(s, t, dt, print_iter=False)
+                self.snln0D.newton(s, t, print_iter=False)
                 
             if self.pbc.pbs.localsolve:
                 self.newton_local(locvar,locresform,locincrform)
@@ -894,7 +894,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                     self.pbc.pbf.c[i] = sum(cq)*self.pbc.cq_factor[i]
 
                 # evaluate 0D model with current p and return df, f, K_ss
-                self.pbc.pbf.cardvasc0D.evaluate(s, dt, t, self.pbc.pbf.df, self.pbc.pbf.f, self.K_ss, self.pbc.pbf.c, self.pbc.pbf.aux)
+                self.pbc.pbf.cardvasc0D.evaluate(s, self.pb.dt, t, self.pbc.pbf.df, self.pbc.pbf.f, self.K_ss, self.pbc.pbf.c, self.pbc.pbf.aux)
 
                 # assemble 0D rhs contributions
                 self.pbc.pbf.df_old.assemble()
@@ -921,7 +921,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                 for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
                     for j in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
                         self.pbc.pbf.c[j] = lm_sq[j] + eps # perturbed LM
-                        self.snln0D.newton(s_pert, t, dt, print_iter=False)
+                        self.snln0D.newton(s_pert, t, print_iter=False)
                         s_pert_sq = allgather_vec(s_pert, self.pbc.comm)
                         self.K_ss[i,j] = -self.pbc.pbs.timefac * (s_pert_sq[self.pbc.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pbc.pbf.cardvasc0D.v_ids[i]])/eps
                         self.pbc.pbf.c[j] = lm_sq[j] # restore LM
@@ -933,7 +933,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
             if self.pbc.coupling_type == 'monolithic_direct':
             
                 for i in range(ss,se):
-                    r_s[i] = (self.pbc.pbf.df[i]-self.pbc.pbf.df_old[i])/dt + self.pbc.pbf.theta_ost*self.pbc.pbf.f[i] + (1.-self.pbc.pbf.theta_ost)*self.pbc.pbf.f_old[i]
+                    r_s[i] = (self.pbc.pbf.df[i]-self.pbc.pbf.df_old[i])/self.pb.dt + self.pbc.pbf.theta_ost*self.pbc.pbf.f[i] + (1.-self.pbc.pbf.theta_ost)*self.pbc.pbf.f_old[i]
 
                 # if we have prescribed variable values over time
                 if bool(self.pbc.pbf.prescribed_variables):
@@ -958,7 +958,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                 k_us_cols.append(assemble_vector(self.pbc.dforce[i])) # already multiplied by time-integration factor
         
             # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
-            if self.pbc.pbf.cq == 'volume':   timefac = 1./dt
+            if self.pbc.pbf.cq == 'volume':   timefac = 1./self.pb.dt
             if self.pbc.pbf.cq == 'flux':     timefac = -self.pbc.pbf.theta_ost # 0D model time-integration factor
             if self.pbc.pbf.cq == 'pressure': timefac = self.pbc.pbs.timefac # 3D solid/fluid time-integration factor
 
@@ -1215,7 +1215,7 @@ class solver_nonlinear_0D(solver_nonlinear):
         self.ksp.getPC().setFactorSolverType("superlu_dist")
 
 
-    def newton(self, s, t, dt, print_iter=True):
+    def newton(self, s, t, print_iter=True):
 
         # Newton iteration index
         it = 0
@@ -1229,13 +1229,13 @@ class solver_nonlinear_0D(solver_nonlinear):
             
             tes = time.time()
 
-            self.pb.cardvasc0D.evaluate(s, dt, t, self.pb.df, self.pb.f, self.pb.K, self.pb.c, self.pb.aux)
+            self.pb.cardvasc0D.evaluate(s, self.pb.dt, t, self.pb.df, self.pb.f, self.pb.K, self.pb.c, self.pb.aux)
             
             # 0D rhs vector
             r = self.pb.K.createVecLeft()
             
             for i in range(ss,se):
-                r[i] = (self.pb.df[i]-self.pb.df_old[i])/dt + self.pb.theta_ost*self.pb.f[i] + (1.-self.pb.theta_ost)*self.pb.f_old[i]
+                r[i] = (self.pb.df[i]-self.pb.df_old[i])/self.pb.dt + self.pb.theta_ost*self.pb.f[i] + (1.-self.pb.theta_ost)*self.pb.f_old[i]
 
             # if we have prescribed variable values over time
             if bool(self.pb.prescribed_variables):
