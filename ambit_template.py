@@ -74,8 +74,8 @@ def main():
                             'incompressible_2field' : False, # if we want to use a 2-field functional for pressure dofs (always applies for fluid, optional for solid mechanics)
                             'prestress_initial'     : False} # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
     
-    COUPLING_PARAMS      = {'surface_ids'           : [1,2], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
-                            'surface_p_ids'         : [1,2], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
+    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
+                            'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
                             'coupling_quantity'     : 'volume', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
@@ -135,17 +135,17 @@ def main():
         #...
 
     # bc syntax examples
-    BC_DICT              = { 'dirichlet' : [{'id' : 1, 'dir' : 'all', 'val' : 0.}, # either curve or val
-                                            {'id' : 2, 'dir' : 'y', 'val' : 0.}, # either curve or val
-                                            {'id' : 3, 'dir' : 'z', 'curve' : 1}], # either curve or val
+    BC_DICT              = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}, # either curve or val
+                                            {'id' : [2,4,5], 'dir' : 'y', 'val' : 0.}, # either curve or val
+                                            {'id' : [3], 'dir' : 'z', 'curve' : 1}], # either curve or val
                             # Neumann can be - pk1 with dir xyz (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero),
                             #                - pk1 with dir normal (then use 'curve' : curve-num with 0 meaning zero)
-                            'neumann'    : [{'type' : 'pk1', 'id' : 3, 'dir' : 'xyz', 'curve' : [1,0,0]},
-                                            {'type' : 'pk1', 'id' : 2, 'dir' : 'normal', 'curve' : 1}
-                                            {'type' : 'true', 'id' : 2, 'dir' : 'normal', 'curve' : 1}],
+                            'neumann'    : [{'type' : 'pk1', 'id' : [3], 'dir' : 'xyz', 'curve' : [1,0,0]},
+                                            {'type' : 'pk1', 'id' : [2], 'dir' : 'normal', 'curve' : 1}
+                                            {'type' : 'true', 'id' : [2], 'dir' : 'normal', 'curve' : 1}],
                             # Robib BC can be either spring or dashpot, both either in xyz or normal direction
-                            'robin'      : [{'type' : 'spring', 'id' : 3, 'dir' : 'normal', 'stiff' : 0.075},
-                                            {'type' : 'dashpot', 'id' : 3, 'dir' : 'xyz', 'visc' : 0.005}] }
+                            'robin'      : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
+                                            {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz', 'visc' : 0.005}] }
 
     # problem setup - exemplary for 3D-0D coupling of solid (fluid) to flow0d
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
