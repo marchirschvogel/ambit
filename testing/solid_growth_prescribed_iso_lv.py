@@ -53,7 +53,7 @@ def main():
             return 1.0 + gr*t/TIME_PARAMS_SOLID['maxtime']
 
 
-    BC_DICT              = { 'dirichlet' : [{'id' : 2, 'dir' : 'all', 'val' : 0.}]}
+    BC_DICT              = { 'dirichlet' : [{'id' : [2], 'dir' : 'all', 'val' : 0.}]}
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())

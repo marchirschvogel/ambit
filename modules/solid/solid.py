@@ -409,7 +409,7 @@ class SolidmechanicsProblem(problem_base):
         # pressure contributions
         if self.incompressible_2field:
             
-            self.jac_up, self.jac_pu, self.a_p11, self.pgrowth = as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0)
+            self.jac_up, self.jac_pu, self.a_p11, self.p11 = as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0)
             
             for n in range(self.num_domains):
                 # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
@@ -442,7 +442,7 @@ class SolidmechanicsProblem(problem_base):
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
                     dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
                     if not isinstance(dthetadp, constantvalue.Zero):
-                        self.pgrowth += diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx_[n]
+                        self.p11 += diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx_[n]
                 else:
                     Ctang_p = Cmat_p
                     Jtang = Jmat

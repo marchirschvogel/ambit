@@ -34,7 +34,7 @@ Still experimental / to-do:
 * best, use rootless Docker (https://docs.docker.com/engine/security/rootless)
 if not present, install: (seems that uidmap needs to be installed, which requires to be root... :-/)
 
-``sudo apt install uidmap``
+``sudo apt install uidmap``\
 ``curl -fsSL https://get.docker.com/rootless | sh``
 
 * Get latest tested Ambit-compatible digest (18 Feb 2021) of dolfinx Docker image (the experimental FEniCS version, https://hub.docker.com/u/dolfinx):

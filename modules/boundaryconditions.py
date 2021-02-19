@@ -47,26 +47,44 @@ class boundary_cond():
                 func.vector.set(d['val'])
 
             if d['dir'] == 'all':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological(V, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id']])) )
+                for i in range(len(d['id'])):
+                    self.dbcs.append( DirichletBC(func, locate_dofs_topological(V, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id'][i]])) )
             
             elif d['dir'] == 'x':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id']]), V.sub(0)) )
+                for i in range(len(d['id'])):
+                    self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id'][i]]), V.sub(0)) )
 
             elif d['dir'] == 'y':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id']]), V.sub(1)) )
+                for i in range(len(d['id'])):
+                    self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id'][i]]), V.sub(1)) )
 
             elif d['dir'] == 'z':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id']]), V.sub(2)) )
+                for i in range(len(d['id'])):
+                    self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == d['id'][i]]), V.sub(2)) )
 
-            elif d['dir'] == '2dim':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-1, locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-1, self.twodim)), V.sub(2)) )
+            elif d['dir'] == '2dimX':
+                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-1, locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-1, self.twodimX)), V.sub(0)) )
+
+            elif d['dir'] == '2dimY':
+                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-1, locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-1, self.twodimY)), V.sub(1)) )
+                
+            elif d['dir'] == '2dimZ':
+                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-1, locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-1, self.twodimZ)), V.sub(2)) )
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
     
     
+    # function to mark x=0
+    def twodimX(self, x):
+        return np.isclose(x[0], 0.0)
+
+    # function to mark y=0
+    def twodimY(self, x):
+        return np.isclose(x[1], 0.0)
+
     # function to mark z=0
-    def twodim(self, x):
+    def twodimZ(self, x):
         return np.isclose(x[2], 0.0)
 
 
@@ -78,8 +96,6 @@ class boundary_cond_solid(boundary_cond):
         w, w_old = as_ufl(0), as_ufl(0)
         
         for n in self.bc_dict['neumann']:
-            
-            ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=n['id'], metadata={'quadrature_degree': self.quad_degree})
             
             if n['type'] == 'pk1':
                 
@@ -96,8 +112,12 @@ class boundary_cond_solid(boundary_cond):
                     else:
                         func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
                     
-                    w     += self.vf.deltaW_ext_neumann_ref(func, ds_)
-                    w_old += self.vf.deltaW_ext_neumann_ref(func_old, ds_)
+                    for i in range(len(n['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    
+                        w     += self.vf.deltaW_ext_neumann_ref(func, ds_)
+                        w_old += self.vf.deltaW_ext_neumann_ref(func_old, ds_)
                     
                 elif n['dir'] == 'normal': # reference normal
                     
@@ -112,8 +132,12 @@ class boundary_cond_solid(boundary_cond):
                     else:
                         func.vector.set(n['val'])
                     
-                    w     += self.vf.deltaW_ext_neumann_refnormal(func, ds_)
-                    w_old += self.vf.deltaW_ext_neumann_refnormal(func_old, ds_)
+                    for i in range(len(n['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    
+                        w     += self.vf.deltaW_ext_neumann_refnormal(func, ds_)
+                        w_old += self.vf.deltaW_ext_neumann_refnormal(func_old, ds_)
                     
                 else:
                     raise NameError("Unknown dir option for Neumann BC!")
@@ -134,8 +158,12 @@ class boundary_cond_solid(boundary_cond):
                     else:
                         func.vector.set(n['val'])
 
-                    w     += self.vf.deltaW_ext_neumann_true(self.ki.J(u), self.ki.F(u), func, ds_)
-                    w_old += self.vf.deltaW_ext_neumann_true(self.ki.J(u_old), self.ki.F(u_old), func_old, ds_)
+                    for i in range(len(n['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+
+                        w     += self.vf.deltaW_ext_neumann_true(self.ki.J(u), self.ki.F(u), func, ds_)
+                        w_old += self.vf.deltaW_ext_neumann_true(self.ki.J(u_old), self.ki.F(u_old), func_old, ds_)
                     
                 else:
                     raise NameError("Unknown dir option for Neumann BC!")
@@ -153,20 +181,26 @@ class boundary_cond_solid(boundary_cond):
         
         for r in self.bc_dict['robin']:
             
-            ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'], metadata={'quadrature_degree': self.quad_degree})
-            
             if r['type'] == 'spring':
                 
                 if r['dir'] == 'xyz':
                     
-                    w     += self.vf.deltaW_ext_robin_spring(u, r['stiff'], ds_, u_pre)
-                    w_old += self.vf.deltaW_ext_robin_spring(u_old, r['stiff'], ds_, u_pre) 
+                    for i in range(len(r['id'])):
+                    
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        
+                        w     += self.vf.deltaW_ext_robin_spring(u, r['stiff'], ds_, u_pre)
+                        w_old += self.vf.deltaW_ext_robin_spring(u_old, r['stiff'], ds_, u_pre)
                     
                     
                 elif r['dir'] == 'normal': # reference normal
+                    
+                    for i in range(len(r['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                    w     += self.vf.deltaW_ext_robin_spring_normal(u, r['stiff'], ds_, u_pre)
-                    w_old += self.vf.deltaW_ext_robin_spring_normal(u_old, r['stiff'], ds_, u_pre) 
+                        w     += self.vf.deltaW_ext_robin_spring_normal(u, r['stiff'], ds_, u_pre)
+                        w_old += self.vf.deltaW_ext_robin_spring_normal(u_old, r['stiff'], ds_, u_pre) 
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -176,14 +210,22 @@ class boundary_cond_solid(boundary_cond):
                 
                 if r['dir'] == 'xyz':
                     
-                    w     += self.vf.deltaW_ext_robin_dashpot(vel, r['visc'], ds_)
-                    w_old += self.vf.deltaW_ext_robin_dashpot(v_old, r['visc'], ds_) 
+                    for i in range(len(r['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    
+                        w     += self.vf.deltaW_ext_robin_dashpot(vel, r['visc'], ds_)
+                        w_old += self.vf.deltaW_ext_robin_dashpot(v_old, r['visc'], ds_) 
                     
 
                 elif r['dir'] == 'normal': # reference normal
+                    
+                    for i in range(len(r['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                    w     += self.vf.deltaW_ext_robin_dashpot_normal(vel, r['visc'], ds_)
-                    w_old += self.vf.deltaW_ext_robin_dashpot_normal(v_old, r['visc'], ds_) 
+                        w     += self.vf.deltaW_ext_robin_dashpot_normal(vel, r['visc'], ds_)
+                        w_old += self.vf.deltaW_ext_robin_dashpot_normal(v_old, r['visc'], ds_) 
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -208,8 +250,6 @@ class boundary_cond_fluid(boundary_cond):
         
         for n in self.bc_dict['neumann']:
             
-            ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=n['id'], metadata={'quadrature_degree': self.quad_degree})
-            
             if n['dir'] == 'xyz':
             
                 func, func_old = Function(V), Function(V)
@@ -223,8 +263,12 @@ class boundary_cond_fluid(boundary_cond):
                 else:
                     func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
                 
-                w     += self.vf.deltaP_ext_neumann(func, ds_)
-                w_old += self.vf.deltaP_ext_neumann(func_old, ds_)
+                for i in range(len(n['id'])):
+                    
+                    ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                    w     += self.vf.deltaP_ext_neumann(func, ds_)
+                    w_old += self.vf.deltaP_ext_neumann(func_old, ds_)
                 
                 
             elif n['dir'] == 'normal': # reference normal
@@ -240,8 +284,12 @@ class boundary_cond_fluid(boundary_cond):
                 else:
                     func.vector.set(n['val'])
                 
-                w     += self.vf.deltaP_ext_neumann_normal(func, ds_)
-                w_old += self.vf.deltaP_ext_neumann_normal(func_old, ds_)
+                for i in range(len(n['id'])):
+                    
+                    ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                    w     += self.vf.deltaP_ext_neumann_normal(func, ds_)
+                    w_old += self.vf.deltaP_ext_neumann_normal(func_old, ds_)
                 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
@@ -255,21 +303,27 @@ class boundary_cond_fluid(boundary_cond):
         w, w_old = as_ufl(0), as_ufl(0)
         
         for r in self.bc_dict['robin']:
-            
-            ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'], metadata={'quadrature_degree': self.quad_degree})
 
             if r['type'] == 'dashpot':
                 
                 if r['dir'] == 'xyz':
                     
-                    w     += self.vf.deltaP_ext_robin_dashpot(v, r['visc'], ds_)
-                    w_old += self.vf.deltaP_ext_robin_dashpot(v_old, r['visc'], ds_) 
+                    for i in range(len(r['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    
+                        w     += self.vf.deltaP_ext_robin_dashpot(v, r['visc'], ds_)
+                        w_old += self.vf.deltaP_ext_robin_dashpot(v_old, r['visc'], ds_) 
                     
                     
                 elif r['dir'] == 'normal': # reference normal
                 
-                    w     += self.vf.deltaP_ext_robin_dashpot_normal(v, r['visc'], ds_)
-                    w_old += self.vf.deltaP_ext_robin_dashpot_normal(v_old, r['visc'], ds_) 
+                    for i in range(len(r['id'])):
+                        
+                        ds_ = ds(subdomain_data=self.io.mt_b1, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                        w     += self.vf.deltaP_ext_robin_dashpot_normal(v, r['visc'], ds_)
+                        w_old += self.vf.deltaP_ext_robin_dashpot_normal(v_old, r['visc'], ds_) 
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")

@@ -57,7 +57,9 @@ class FluidmechanicsProblem(problem_base):
         
         self.incompressible_2field = True # always true!
         self.localsolve = False # no idea what might have to be solved locally...
-
+        self.prestress_initial = False # guess prestressing in fluid is somehow senseless...
+        self.p11 = as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
+    
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"

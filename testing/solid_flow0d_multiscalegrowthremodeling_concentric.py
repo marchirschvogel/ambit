@@ -70,7 +70,7 @@ def main():
                             'prestress_initial'     : True,
                             'lin_remodeling_full'   : False}
     
-    COUPLING_PARAMS      = {'surface_ids'           : [1,2],
+    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'coupling_quantity'     : 'volume',
                             'coupling_type'         : 'monolithic_direct'}
     
@@ -111,12 +111,12 @@ def main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # None to be defined
 
-    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : 3, 'dir' : 'normal', 'stiff' : 0.075},
-                                        {'type' : 'dashpot', 'id' : 3, 'dir' : 'normal', 'visc'  : 0.005},
-                                        {'type' : 'spring',  'id' : 4, 'dir' : 'normal', 'stiff' : 10.0}, # 2.5, 1.25
-                                        {'type' : 'dashpot', 'id' : 4, 'dir' : 'normal', 'visc'  : 0.0005},
-                                        {'type' : 'spring',  'id' : 4, 'dir' : 'xyz', 'stiff' : 0.25},
-                                        {'type' : 'dashpot', 'id' : 4, 'dir' : 'xyz', 'visc'  : 0.0005}] }
+    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
+                                        {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},
+                                        {'type' : 'spring',  'id' : [4], 'dir' : 'normal', 'stiff' : 10.0}, # 2.5, 1.25
+                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'normal', 'visc'  : 0.0005},
+                                        {'type' : 'spring',  'id' : [4], 'dir' : 'xyz', 'stiff' : 0.25},
+                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)

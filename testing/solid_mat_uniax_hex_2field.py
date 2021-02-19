@@ -111,21 +111,21 @@ def main():
 
 
 
-    BC_DICT           = { 'dirichlet' : [{'id' : 1, 'dir' : 'x', 'val' : 0.},
-                                         {'id' : 2, 'dir' : 'y', 'val' : 0.},
-                                         {'id' : 3, 'dir' : 'z', 'val' : 0.},
-                                         #{'id' : 4, 'dir' : 'x', 'curve' : [1]},
-                                         {'id' : 7, 'dir' : 'x', 'val' : 0.},
-                                         {'id' : 8, 'dir' : 'y', 'val' : 0.},
-                                         {'id' : 9, 'dir' : 'z', 'val' : 0.},
-                                         #{'id' : 10, 'dir' : 'x', 'curve' : [2]},
-                                         {'id' : 13, 'dir' : 'x', 'val' : 0.},
-                                         {'id' : 14, 'dir' : 'y', 'val' : 0.},
-                                         {'id' : 15, 'dir' : 'z', 'val' : 0.}],
-                                         #{'id' : 16, 'dir' : 'x', 'curve' : [3]}]}
-                            'neumann' : [{'type' : 'pk1', 'id' : 4, 'dir' : 'xyz', 'curve' : [4,0,0]},
-                                         {'type' : 'pk1', 'id' : 10, 'dir' : 'xyz', 'curve' : [5,0,0]},
-                                         {'type' : 'pk1', 'id' : 16, 'dir' : 'xyz', 'curve' : [6,0,0]}] }
+    BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'x', 'val' : 0.},
+                                         {'id' : [2], 'dir' : 'y', 'val' : 0.},
+                                         {'id' : [3], 'dir' : 'z', 'val' : 0.},
+                                         #{'id' : [4], 'dir' : 'x', 'curve' : [1]},
+                                         {'id' : [7], 'dir' : 'x', 'val' : 0.},
+                                         {'id' : [8], 'dir' : 'y', 'val' : 0.},
+                                         {'id' : [9], 'dir' : 'z', 'val' : 0.},
+                                         #{'id' : [10], 'dir' : 'x', 'curve' : [2]},
+                                         {'id' : [13], 'dir' : 'x', 'val' : 0.},
+                                         {'id' : [14], 'dir' : 'y', 'val' : 0.},
+                                         {'id' : [15], 'dir' : 'z', 'val' : 0.}],
+                                         #{'id' : [16], 'dir' : 'x', 'curve' : [3]}]}
+                            'neumann' : [{'type' : 'pk1', 'id' : [4], 'dir' : 'xyz', 'curve' : [4,0,0]},
+                                         {'type' : 'pk1', 'id' : [10], 'dir' : 'xyz', 'curve' : [5,0,0]},
+                                         {'type' : 'pk1', 'id' : [16], 'dir' : 'xyz', 'curve' : [6,0,0]}] }
 
 
     # problem setup

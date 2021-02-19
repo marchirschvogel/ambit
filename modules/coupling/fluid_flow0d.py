@@ -76,31 +76,43 @@ class FluidmechanicsFlow0DProblem():
         self.power_coupling, self.power_coupling_old = as_ufl(0), as_ufl(0)
     
         # coupling variational forms and Jacobian contributions
-        for i in range(self.num_coupling_surf):
+        for n in range(self.num_coupling_surf):
             
             self.pr0D = expression.template()
             
             self.coupfuncs.append(Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
-            
-            ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[i], metadata={'quadrature_degree': self.pbs.quad_degree})
-            ds_p = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[i], metadata={'quadrature_degree': self.pbs.quad_degree})
+
+            cq_ = as_ufl(0)
+            for i in range(len(self.surface_vq_ids[n])):
+
+                ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
           
-            if self.coupling_params['coupling_quantity'] == 'flux':
-                assert(self.coupling_type == 'monolithic_direct')
-                self.cq.append(self.pbs.vf.flux(self.pbs.v, ds_vq))
-            elif self.coupling_params['coupling_quantity'] == 'pressure':
-                assert(self.coupling_type == 'monolithic_lagrange')
-                self.cq.append(self.pbs.vf.flux(self.pbs.v, ds_vq))
-            else:
-                raise NameError("Unknown coupling quantity! Choose flux or pressure!")
+                if self.coupling_params['coupling_quantity'] == 'flux':
+                    assert(self.coupling_type == 'monolithic_direct')
+                    cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
+                elif self.coupling_params['coupling_quantity'] == 'pressure':
+                    assert(self.coupling_type == 'monolithic_lagrange')
+                    cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
+                else:
+                    raise NameError("Unknown coupling quantity! Choose flux or pressure!")
             
+            self.cq.append(cq_)
             self.dcq.append(derivative(self.cq[-1], self.pbs.v, self.pbs.dv))
-            self.dforce.append(self.pbs.timefac*self.pbs.vf.surface(ds_p))
+
+            df_ = as_ufl(0)
+            for i in range(len(self.surface_p_ids[n])):
+                
+                ds_p = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                df_ += self.pbs.timefac*self.pbs.vf.surface(ds_p)
+            
+            self.dforce.append(df_)
 
             # add to fluid rhs contributions
             self.power_coupling += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p)
             self.power_coupling_old += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p)
+        
+        
         
         # minus sign, since contribution to external power!
         self.pbs.weakform_u += -self.pbs.timefac * self.power_coupling - (1.-self.pbs.timefac) * self.power_coupling_old

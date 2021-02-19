@@ -48,7 +48,7 @@ def main():
                             'quad_degree'           : 1,
                             'incompressible_2field' : True} # True, False
     
-    COUPLING_PARAMS      = {'surface_ids'           : [3],
+    COUPLING_PARAMS      = {'surface_ids'           : [[3]],
                             'coupling_quantity'     : 'pressure',
                             'coupling_type'         : 'monolithic_lagrange'}
 
@@ -62,10 +62,10 @@ def main():
             return tmax*np.sin(2.*np.pi*t/TIME_PARAMS_SOLID['maxtime'])
 
 
-    BC_DICT           = { 'dirichlet' : [{'id' : 1, 'dir' : 'x', 'val' : 0.},
-                                         {'id' : 3, 'dir' : 'y', 'val' : 0.},
-                                         {'id' : 3, 'dir' : 'z', 'val' : 0.}],
-                            'neumann' : [{'type' : 'pk1', 'id' : 2, 'dir' : 'xyz', 'curve' : [1,0,0]}]}
+    BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'x', 'val' : 0.},
+                                         {'id' : [3], 'dir' : 'y', 'val' : 0.},
+                                         {'id' : [3], 'dir' : 'z', 'val' : 0.}],
+                            'neumann' : [{'type' : 'pk1', 'id' : [2], 'dir' : 'xyz', 'curve' : [1,0,0]}]}
 
 
     # problem setup

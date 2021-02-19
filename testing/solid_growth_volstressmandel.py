@@ -56,16 +56,11 @@ def main():
             return pmax*t/TIME_PARAMS['maxtime']
 
 
-    BC_DICT           = { 'dirichlet' : [{'id' : 1, 'dir' : 'x', 'val' : 0.},
-                                         {'id' : 2, 'dir' : 'y', 'val' : 0.},
-                                         {'id' : 3, 'dir' : 'z', 'val' : 0.}],
+    BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'x', 'val' : 0.},
+                                         {'id' : [2], 'dir' : 'y', 'val' : 0.},
+                                         {'id' : [3], 'dir' : 'z', 'val' : 0.}],
                             # hydrostatic Neumann on all faces
-                            'neumann' : [{'type' : 'true', 'id' : 1, 'dir' : 'normal', 'curve' : 1},
-                                         {'type' : 'true', 'id' : 2, 'dir' : 'normal', 'curve' : 1},
-                                         {'type' : 'true', 'id' : 3, 'dir' : 'normal', 'curve' : 1},
-                                         {'type' : 'true', 'id' : 4, 'dir' : 'normal', 'curve' : 1},
-                                         {'type' : 'true', 'id' : 5, 'dir' : 'normal', 'curve' : 1},
-                                         {'type' : 'true', 'id' : 6, 'dir' : 'normal', 'curve' : 1}] }
+                            'neumann' : [{'type' : 'true', 'id' : [1,2,3,4,5,6], 'dir' : 'normal', 'curve' : 1}] }
 
 
     # problem setup

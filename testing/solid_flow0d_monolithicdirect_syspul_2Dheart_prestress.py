@@ -64,7 +64,7 @@ def main():
                             'incompressible_2field' : False,
                             'prestress_initial'     : True}
     
-    COUPLING_PARAMS      = {'surface_ids'           : [1,2],
+    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'cq_factor'             : [80.,80.],
                             'coupling_quantity'     : 'volume',
                             'coupling_type'         : 'monolithic_direct'}
@@ -80,9 +80,9 @@ def main():
     # None to be defined
 
 
-    BC_DICT              = { 'dirichlet' : [{'dir' : '2dim', 'val' : 0.}],
-                            'robin' : [{'type' : 'spring', 'id' : 3, 'dir' : 'normal', 'stiff' : 0.075},
-                                       {'type' : 'dashpot', 'id' : 3, 'dir' : 'normal', 'visc' : 0.005}] }
+    BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],
+                            'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
+                                       {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc' : 0.005}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS)

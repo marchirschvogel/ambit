@@ -64,7 +64,8 @@ def main():
                             'quad_degree'           : 4, # quadrature degree
                             'incompressible_2field' : True} # if we want to use a 2-field functional for pressure dofs (always applies for fluid mechanics, optional for solid)
     
-    COUPLING_PARAMS      = {'surface_ids'           : [1,2], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
+    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
+                            'surface_p_ids'         : [[1],[2]],
                             'coupling_quantity'     : 'flux', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange
 
@@ -81,12 +82,12 @@ def main():
         
         pass
 
-    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : 3, 'dir' : 'normal', 'stiff' : 0.075},
-                                        {'type' : 'dashpot', 'id' : 3, 'dir' : 'normal', 'visc'  : 0.005},
-                                        {'type' : 'spring',  'id' : 4, 'dir' : 'normal', 'stiff' : 2.5},
-                                        {'type' : 'dashpot', 'id' : 4, 'dir' : 'normal', 'visc'  : 0.0005},
-                                        {'type' : 'spring',  'id' : 4, 'dir' : 'xyz', 'stiff' : 0.25},
-                                        {'type' : 'dashpot', 'id' : 4, 'dir' : 'xyz', 'visc'  : 0.0005}] }
+    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
+                                        {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},
+                                        {'type' : 'spring',  'id' : [4], 'dir' : 'normal', 'stiff' : 2.5},
+                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'normal', 'visc'  : 0.0005},
+                                        {'type' : 'spring',  'id' : [4], 'dir' : 'xyz', 'stiff' : 0.25},
+                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)

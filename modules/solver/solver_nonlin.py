@@ -429,8 +429,8 @@ class solver_nonlinear:
                 K_pu.assemble()
                 
                 # for stress-mediated volumetric growth, K_pp is not zero!
-                if not isinstance(self.pb.pgrowth, constantvalue.Zero):
-                    K_pp = assemble_matrix(self.pb.pgrowth, [])
+                if not isinstance(self.pb.p11, constantvalue.Zero):
+                    K_pp = assemble_matrix(self.pb.p11, [])
                     K_pp.assemble()
                 else:
                     K_pp = None
@@ -873,8 +873,8 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                 K_pu.assemble()
                 
                 # for stress-mediated volumetric growth, K_pp is not zero!
-                if not isinstance(self.pb.pgrowth, constantvalue.Zero):
-                    K_pp = assemble_matrix(self.pb.pgrowth, [])
+                if not isinstance(self.pb.p11, constantvalue.Zero):
+                    K_pp = assemble_matrix(self.pb.p11, [])
                     K_pp.assemble()
                 else:
                     K_pp = None

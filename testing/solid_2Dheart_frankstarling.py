@@ -72,10 +72,10 @@ def main():
                 return pmax
 
 
-    BC_DICT              = { 'dirichlet' : [{'dir' : '2dim', 'val' : 0.}],
-                            'neumann' : [{'type' : 'true', 'id' : 1, 'dir' : 'normal', 'curve' : 1},
-                                         {'type' : 'true', 'id' : 2, 'dir' : 'normal', 'curve' : 2}],
-                            'robin' : [{'type' : 'spring', 'id' : 3, 'dir' : 'normal', 'stiff' : 0.075}] }
+    BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],
+                            'neumann' : [{'type' : 'true', 'id' : [1], 'dir' : 'normal', 'curve' : 1},
+                                         {'type' : 'true', 'id' : [2], 'dir' : 'normal', 'curve' : 2}],
+                            'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal', 'stiff' : 0.075}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())

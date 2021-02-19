@@ -44,12 +44,9 @@ def main():
         def tc1(self, t):
             return 3.
 
-    BC_DICT           = { 'dirichlet' : [{'id' : 1, 'dir' : 'z', 'val' : 0.},
-                                         {'id' : 2, 'dir' : 'z', 'val' : 0.},
-                                         {'id' : 3, 'dir' : 'z', 'val' : 0.}],
-                            'neumann' : [{'type' : 'pk1', 'id' : 3, 'dir' : 'xyz', 'curve' : [1,0,0]}],
-                            'robin' : [{'type' : 'spring', 'id' : 1, 'dir' : 'normal', 'stiff' : 5.0},
-                                       {'type' : 'spring', 'id' : 2, 'dir' : 'normal', 'stiff' : 5.0}] }
+    BC_DICT           = { 'dirichlet' : [{'id' : [1,2,3], 'dir' : 'z', 'val' : 0.}],
+                            'neumann' : [{'type' : 'pk1', 'id' : [3], 'dir' : 'xyz', 'curve' : [1,0,0]}],
+                            'robin' : [{'type' : 'spring', 'id' : [1,2], 'dir' : 'normal', 'stiff' : 5.0}] }
 
 
     # problem setup
