@@ -86,7 +86,7 @@ def main():
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},
                                       'sussmanbathe_vol' : {'kappa' : 10./(1.-2.*0.49)},
-                                      'active_fiber'     : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53},
+                                      'active_fiber'     : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 1},
                                       'inertia'          : {'rho0' : 1.0e-6},
                                       #'rayleigh_damping' : {'eta_m' : 0.0, 'eta_k' : 0.0001},
                                       'growth'           : {'growth_dir' : 'fiber', # isotropic, fiber, crossfiber, radial
@@ -102,14 +102,29 @@ def main():
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
                                                                                 'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},
-                                                                                'active_fiber' : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 0.53}}}}}
+                                                                                'active_fiber' : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 1}}}}}
 
 
 
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    # None to be defined
+    class time_curves():
+        
+        def tc1(self, t):
+            
+            slp = 5.
+            t_contr, t_relax = 0.0, 0.53
+            
+            alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
+            alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
+            
+            c1 = t_contr + alpha_max/(slp*(alpha_max-alpha_min))
+            c2 = t_relax - alpha_max/(slp*(alpha_max-alpha_min))
+            
+            # Diss Hirschvogel eq. 2.101
+            return (slp*(t-c1)+1.)*((slp*(t-c1)+1.)>0.) - slp*(t-c1)*((slp*(t-c1))>0.) - slp*(t-c2)*((slp*(t-c2))>0.) + (slp*(t-c2)-1.)*((slp*(t-c2)-1.)>0.)
+
 
     BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
                                         {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},
@@ -119,7 +134,7 @@ def main():
                                         {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
     
     # solve time-dependent problem
     problem.solve_problem()

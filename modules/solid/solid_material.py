@@ -234,37 +234,26 @@ class growthfunction(growth):
 # expression for time-dependent active stress activation function
 class activestress_activation:
     
-    def __init__(self, params):
+    def __init__(self, params, act_curve):
         
         self.params = params
         
+        self.sigma0 = self.params['sigma0']
         self.alpha_max = self.params['alpha_max']
         self.alpha_min = self.params['alpha_min']
-        self.t_contr = self.params['t_contr']
-        self.t_relax = self.params['t_relax']
         
-        self.sigma0 = self.params['sigma0']
+        self.act_curve = act_curve
         
         if 'frankstarling' in self.params.keys(): self.frankstarling = self.params['frankstarling']
         else: self.frankstarling = False
-        
-        self.slp = 5. # slp -> infinity: fhat degenerates to Heaviside function
 
-    # indicator function for active stress
-    def fhat(self, t):
-        
-        c1 = self.t_contr + self.alpha_max/(self.slp*(self.alpha_max-self.alpha_min))
-        c2 = self.t_relax - self.alpha_max/(self.slp*(self.alpha_max-self.alpha_min))
-        
-        # Diss Hirschvogel eq. 2.101
-        return (self.slp*(t-c1)+1.)*((self.slp*(t-c1)+1.)>0.) - self.slp*(t-c1)*((self.slp*(t-c1))>0.) - \
-            self.slp*(t-c2)*((self.slp*(t-c2))>0.) + (self.slp*(t-c2)-1.)*((self.slp*(t-c2)-1.)>0.)
-    
+
     # activation function for active stress
     def ua(self, t):
         
         # Diss Hirschvogel eq. 2.100
-        return self.fhat(t)*self.alpha_max + (1.-self.fhat(t))*self.alpha_min
+        return self.act_curve(t)*self.alpha_max + (1.-self.act_curve(t))*self.alpha_min
+    
     
     # Frank-Staring function
     def g(self, lam):

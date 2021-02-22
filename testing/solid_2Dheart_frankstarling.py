@@ -48,7 +48,7 @@ def main():
                             'incompressible_2field' : True}
 
     MATERIALS            = {'MAT1' : {'mooneyrivlin_dev'  : {'c1' : 60., 'c2' : -20.},
-                                      'active_fiber'      : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.2, 't_relax' : 1000., 'frankstarling' : True, 'amp_min' : 1., 'amp_max' : 1.7, 'lam_threslo' : 1.01, 'lam_maxlo' : 1.15, 'lam_threshi' : 999., 'lam_maxhi' : 9999.},
+                                      'active_fiber'      : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 3, 'frankstarling' : True, 'amp_min' : 1., 'amp_max' : 1.7, 'lam_threslo' : 1.01, 'lam_maxlo' : 1.15, 'lam_threshi' : 999., 'lam_maxhi' : 9999.},
                                       'inertia'           : {'rho0' : 1.0e-5},
                                       'rayleigh_damping'  : {'eta_m' : 0.001, 'eta_k' : 0.0001}}}
 
@@ -70,6 +70,20 @@ def main():
                 return pmax*t/0.2
             else:
                 return pmax
+
+        def tc3(self, t):
+            
+            slp = 5.
+            t_contr, t_relax = 0.2, 1000.
+            
+            alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
+            alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
+            
+            c1 = t_contr + alpha_max/(slp*(alpha_max-alpha_min))
+            c2 = t_relax - alpha_max/(slp*(alpha_max-alpha_min))
+            
+            # Diss Hirschvogel eq. 2.101
+            return (slp*(t-c1)+1.)*((slp*(t-c1)+1.)>0.) - slp*(t-c1)*((slp*(t-c1))>0.) - slp*(t-c2)*((slp*(t-c2))>0.) + (slp*(t-c2)-1.)*((slp*(t-c2)-1.)>0.)
 
 
     BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],

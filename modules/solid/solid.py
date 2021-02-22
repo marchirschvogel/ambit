@@ -171,7 +171,8 @@ class SolidmechanicsProblem(problem_base):
                 if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']))
+                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']['activation_curve'])
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)+'']['active_fiber'], act_curve))
                     if self.actstress[-1].frankstarling: self.have_frank_starling = True
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']['prescribed_curve'])})
@@ -184,7 +185,8 @@ class SolidmechanicsProblem(problem_base):
                 if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)+'']['active_iso']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)+'']['active_iso']))
+                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_iso']['activation_curve'])
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)+'']['active_iso'], act_curve))
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_iso']['prescribed_curve'])})
 

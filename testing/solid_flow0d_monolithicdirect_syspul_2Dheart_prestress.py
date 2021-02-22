@@ -71,13 +71,27 @@ def main():
 
     MATERIALS            = {'MAT1' : {'holzapfelogden_dev'    : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436},
                                       'sussmanbathe_vol'      : {'kappa' : 1.0e3},
-                                      'active_fiber'          : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.0, 't_relax' : 0.53},
+                                      'active_fiber'          : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 1},
                                       'inertia'               : {'rho0' : 1.0e-6}}}
 
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    # None to be defined
+    class time_curves():
+        
+        def tc1(self, t):
+            
+            slp = 5.
+            t_contr, t_relax = 0.0, 0.53
+            
+            alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
+            alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
+            
+            c1 = t_contr + alpha_max/(slp*(alpha_max-alpha_min))
+            c2 = t_relax - alpha_max/(slp*(alpha_max-alpha_min))
+            
+            # Diss Hirschvogel eq. 2.101
+            return (slp*(t-c1)+1.)*((slp*(t-c1)+1.)>0.) - slp*(t-c1)*((slp*(t-c1))>0.) - slp*(t-c2)*((slp*(t-c2))>0.) + (slp*(t-c2)-1.)*((slp*(t-c2)-1.)>0.)
 
 
     BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],
@@ -85,7 +99,7 @@ def main():
                                        {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc' : 0.005}] }
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
     
     # solve time-dependent problem
     problem.solve_problem()
