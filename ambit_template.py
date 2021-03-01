@@ -49,8 +49,7 @@ def main():
                             'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
                             'timint'                : 'genalpha', # time-integration algorithm: genalpha, ost, static
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor 
-                            'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
-                            'avg_genalpga'          : 'trlike'} # OPTIONAL, AND NOT (YET) IMPLEMENTED!!! how to evaluate nonlinear terms in time integrator - trlike: time_factor * f(a_{n+1}) + (1-time_factor) * f(a_{n}), midlike: f(time_factor*a_{n+1}+(1-time_factor)*a_{n}) (currently, only trlike is supported)
+                            'rho_inf_genalpha'      : 0.8} # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
     
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: ost
                             'theta_ost'             : 0.5, # One-Step-Theta time integration factor 
@@ -74,7 +73,7 @@ def main():
                             'incompressible_2field' : False, # if we want to use a 2-field functional for pressure dofs (always applies for fluid, optional for solid mechanics)
                             'prestress_initial'     : False} # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
     
-    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
+    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
                             'coupling_quantity'     : 'volume', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
@@ -97,7 +96,7 @@ def main():
                             # - see solid_material.py or fluid_material.py for material laws available (and their parameters), and feel free to implement/add new strain energy functions or laws fairly quickly
     MATERIALS            = {'MAT1' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436, 'fiber_comp' : False},
                                       'sussmanbathe_vol'   : {'kappa' : 1.0e3},
-                                      'active_fiber'       : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 't_contr' : 0.0, 't_relax' : 0.53},
+                                      'active_fiber'       : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 4, 'frankstarling' : True, 'amp_min' : 1., 'amp_max' : 1.7, 'lam_threslo' : 1.01, 'lam_maxlo' : 1.15, 'lam_threshi' : 999., 'lam_maxhi' : 9999.},
                                       'inertia'            : {'rho0' : 1.0e-6},
                                       'rayleigh_damping'   : {'eta_m' : 0.0, 'eta_k' : 0.0001}},
                             'MAT2' : {'neohooke_dev'       : {'mu' : 10.},
@@ -131,7 +130,22 @@ def main():
 
         def tc3(self, t): # can be a constant but formally needs t as input
             return 5.
-        
+
+        def tc4(self, t): # for active stress activation
+            
+            K = 5.
+            t_contr, t_relax = 0.2, 0.53
+            
+            alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
+            alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
+            
+            c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
+            c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
+            
+            # Diss Hirschvogel eq. 2.101
+            return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
+
+
         #...
 
     # bc syntax examples

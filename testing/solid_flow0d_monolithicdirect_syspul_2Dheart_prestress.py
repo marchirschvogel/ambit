@@ -81,17 +81,17 @@ def main():
         
         def tc1(self, t):
             
-            slp = 5.
+            K = 5.
             t_contr, t_relax = 0.0, 0.53
             
             alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
             alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
             
-            c1 = t_contr + alpha_max/(slp*(alpha_max-alpha_min))
-            c2 = t_relax - alpha_max/(slp*(alpha_max-alpha_min))
+            c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
+            c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
             
             # Diss Hirschvogel eq. 2.101
-            return (slp*(t-c1)+1.)*((slp*(t-c1)+1.)>0.) - slp*(t-c1)*((slp*(t-c1))>0.) - slp*(t-c2)*((slp*(t-c2))>0.) + (slp*(t-c2)-1.)*((slp*(t-c2)-1.)>0.)
+            return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
 
     BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],

@@ -256,6 +256,7 @@ class FluidmechanicsSolver():
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
 
+        # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaP_kin_old + self.pb.deltaP_int_old - self.pb.deltaP_ext_old

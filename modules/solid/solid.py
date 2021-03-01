@@ -159,7 +159,7 @@ class SolidmechanicsProblem(problem_base):
         self.actstress = []
         for n in range(self.num_domains):
             
-            if 'holzapfelogden_dev' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+            if 'holzapfelogden_dev' in self.constitutive_models['MAT'+str(n+1)+''].keys() or 'guccione_dev' in self.constitutive_models['MAT'+str(n+1)+''].keys():
                 have_fiber1, have_fiber2 = True, True
             
             if 'active_fiber' in self.constitutive_models['MAT'+str(n+1)+''].keys():
@@ -599,7 +599,7 @@ class SolidmechanicsSolver():
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
 
-        # solve for consistent initial acceleration
+        # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old

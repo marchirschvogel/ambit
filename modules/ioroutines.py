@@ -82,7 +82,7 @@ class IO:
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b3 = infile.read_meshtags(self.mesh, name="Grid_point")
 
-        # edge BCs
+
         elif self.mesh.topology.dim == 2:
             
             if self.have_b1_bcs:
@@ -140,9 +140,10 @@ class IO_solid(IO):
             fib_func.append(ff / sqrt(dot(ff,ff)))
 
             ## write input fiber field for checking...
-            #outfile = XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_input.xdmf', 'w')
+            #outfile = XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputzzzzNEW.xdmf', 'w')
             #outfile.write_mesh(self.mesh)
             #outfile.write_function(fib_func_input[si])
+            #sys.exit()
 
             si+=1
 

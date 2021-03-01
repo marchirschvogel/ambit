@@ -187,7 +187,7 @@ class FluidmechanicsFlow0DSolver():
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
 
-        # solve for consistent initial acceleration
+        # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaP_kin_old + self.pb.pbs.deltaP_int_old - self.pb.pbs.deltaP_ext_old - self.pb.power_coupling_old

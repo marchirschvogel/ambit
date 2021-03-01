@@ -97,9 +97,9 @@ class materiallaw:
         n0 = cross(f0,s0)
 
         # anisotropic invariants - keep in mind that for growth, self.E is the elastic part of E
-        E_ff = dot(dot(self.E,f0), f0)
-        E_ss = dot(dot(self.E,s0), s0)
-        E_nn = dot(dot(self.E,n0), n0)
+        E_ff = dot(dot(self.E,f0), f0) # fiber GL strain
+        E_ss = dot(dot(self.E,s0), s0) # cross-fiber GL strain
+        E_nn = dot(dot(self.E,n0), n0) # radial GL strain
         
         E_fs = dot(dot(self.E,f0), s0)
         E_fn = dot(dot(self.E,f0), n0)

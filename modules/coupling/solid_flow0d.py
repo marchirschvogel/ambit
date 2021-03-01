@@ -198,6 +198,10 @@ class SolidmechanicsFlow0DSolver():
 
             solnln_prestress.newton(self.pb.pbs.u, self.pb.pbs.p)
             
+            #x_ref_updt = self.pb.pbs.x_ref - self.pb.pbs.u
+            #x_ref_updt_proj = project(x_ref_updt, self.pb.pbs.V_u, self.pb.pbs.dx_)
+            #self.pb.pbs.x_ref.interpolate(x_ref_updt_proj)
+            
             # MULF update
             self.pb.pbs.ki.prestress_update(self.pb.pbs.u, self.pb.pbs.Vd_tensor, self.pb.pbs.dx_, self.pb.pbs.u_pre)
 
@@ -219,6 +223,8 @@ class SolidmechanicsFlow0DSolver():
                 cq = assemble_scalar(self.pb.cq[i])
                 cq = self.pb.pbs.comm.allgather(cq)
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
+            #print(self.pb.pbf.c)
+            #sys.exit()
 
         if self.pb.coupling_type == 'monolithic_lagrange':
             self.pb.pbf.c, self.pb.flux3D, self.pb.flux3D_old = [], [], []
@@ -236,14 +242,14 @@ class SolidmechanicsFlow0DSolver():
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
 
-        # solve for consistent initial acceleration
+        # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
 
             jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
-            # solve for consistent initial acceleration a_old and return forms for acc and vel
+            # solve for consistent initial acceleration a_old
             solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
         # write mesh output
