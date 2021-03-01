@@ -198,10 +198,6 @@ class SolidmechanicsFlow0DSolver():
 
             solnln_prestress.newton(self.pb.pbs.u, self.pb.pbs.p)
             
-            #x_ref_updt = self.pb.pbs.x_ref - self.pb.pbs.u
-            #x_ref_updt_proj = project(x_ref_updt, self.pb.pbs.V_u, self.pb.pbs.dx_)
-            #self.pb.pbs.x_ref.interpolate(x_ref_updt_proj)
-            
             # MULF update
             self.pb.pbs.ki.prestress_update(self.pb.pbs.u, self.pb.pbs.Vd_tensor, self.pb.pbs.dx_, self.pb.pbs.u_pre)
 
@@ -223,8 +219,6 @@ class SolidmechanicsFlow0DSolver():
                 cq = assemble_scalar(self.pb.cq[i])
                 cq = self.pb.pbs.comm.allgather(cq)
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
-            #print(self.pb.pbf.c)
-            #sys.exit()
 
         if self.pb.coupling_type == 'monolithic_lagrange':
             self.pb.pbf.c, self.pb.flux3D, self.pb.flux3D_old = [], [], []

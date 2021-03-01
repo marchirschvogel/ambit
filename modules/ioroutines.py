@@ -140,10 +140,9 @@ class IO_solid(IO):
             fib_func.append(ff / sqrt(dot(ff,ff)))
 
             ## write input fiber field for checking...
-            #outfile = XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputzzzzNEW.xdmf', 'w')
+            #outfile = XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_input.xdmf', 'w')
             #outfile.write_mesh(self.mesh)
             #outfile.write_function(fib_func_input[si])
-            #sys.exit()
 
             si+=1
 
