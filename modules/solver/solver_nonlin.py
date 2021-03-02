@@ -54,6 +54,9 @@ class solver_nonlinear:
         
         try: self.k_PTC_initial = solver_params['k_ptc_initial']
         except: self.k_PTC_initial = 0.1
+
+        try: self.PTC_randadapt_range = solver_params['ptc_randadapt_range']
+        except: self.PTC_randadapt_range = [0.85, 1.35]
         
         try: self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
         except: self.adapt_linsolv_tol = False
@@ -538,7 +541,7 @@ class solver_nonlinear:
             it += 1
             
             # for PTC
-            if self.PTC and it > 1: k_PTC *= struct_res_u_norm/struct_res_u_norm_last
+            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= struct_res_u_norm/struct_res_u_norm_last
             struct_res_u_norm_last = struct_res_u_norm
             
             # adaptive PTC
@@ -551,7 +554,7 @@ class solver_nonlinear:
                     self.PTC = True
                     # reset Newton step
                     it, k_PTC = 0, self.k_PTC_initial
-                    if counter_adapt > 0: k_PTC *= np.random.uniform(0.85, 1.35)
+                    k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
                     solver_nonlinear.reset_step(self,u.vector,u_start,True)
                     if self.pb.incompressible_2field: solver_nonlinear.reset_step(self,p.vector,p_start,True)
                     counter_adapt += 1
@@ -1176,7 +1179,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             it += 1
             
             # for PTC
-            if self.PTC and it > 1: k_PTC *= struct_res_u_norm/struct_res_u_norm_last
+            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= struct_res_u_norm/struct_res_u_norm_last
             struct_res_u_norm_last = struct_res_u_norm
             
             # adaptive PTC (for 3D block K_uu only!)
@@ -1189,7 +1192,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     self.PTC = True
                     # reset Newton step
                     it, k_PTC = 0, self.k_PTC_initial
-                    if counter_adapt > 0: k_PTC *= np.random.uniform(0.85, 1.35)
+                    k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
                     solver_nonlinear.reset_step(self,u.vector,u_start,True), solver_nonlinear.reset_step(self,s,s_start,False)
                     if self.pbc.pbs.incompressible_2field: solver_nonlinear.reset_step(self,p.vector,p_start,True)
                     counter_adapt += 1

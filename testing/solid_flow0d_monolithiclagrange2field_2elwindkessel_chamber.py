@@ -51,7 +51,7 @@ def main():
                             'coupling_quantity'     : 'pressure',
                             'coupling_type'         : 'monolithic_lagrange'}
 
-    MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100., 'rho0' : 1.0e-6}, 'inertia' : {'rho0' : 1.0e-6}}}
+    MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100.}, 'inertia' : {'rho0' : 1.0e-6}}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():

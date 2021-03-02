@@ -13,8 +13,8 @@ def main():
     # all possible input parameters
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr_stag, solid_constraint
-                            'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf',
-                            'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf',
+                            'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf', # domain mesh file
+                            'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
@@ -29,9 +29,10 @@ def main():
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver
                             'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver
-                            'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, PTC ('ptc' can stay False) (default: None)
+                            'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, 'PTC' ('ptc' can stay False) (default: None)
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
+                            'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence occurred (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
                             # iterative linear solver settings (only apply for solve_type 'iterative')
                             'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
                             'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
@@ -87,7 +88,7 @@ def main():
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
     # for solid_constraint problem type
-    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surface for volume or flux constraint
+    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'constraint_quantity'   : 'volume', # volume, flux
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met

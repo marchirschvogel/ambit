@@ -42,7 +42,7 @@ def print_problem(ptype, comm, numdof=0):
             return
 
         elif ptype == 'solid_constraint':
-            print("########## Welcome to Lagrange multiplier constraint solid mechanics ###########")
+            print("############# Welcome to Lagrange multiplier constraint solid mechanics ###############")
             sys.stdout.flush()
 
         elif ptype == 'fluid_flow0d':
