@@ -19,7 +19,7 @@ import expression
 from projection import project
 from mpiroutines import allgather_vec
 
-from solid import SolidmechanicsProblem
+from solid import SolidmechanicsProblem, SolidmechanicsSolver
 from flow0d import Flow0DProblem
 
 
@@ -79,7 +79,7 @@ class SolidmechanicsFlow0DProblem():
             self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
             
             # 3D fluxes
-            self.flux3D, self.flux3D_old = [], []
+            self.constr, self.constr_old = [], []
         
         self.work_coupling, self.work_coupling_old, self.work_coupling_prestr = as_ufl(0), as_ufl(0), as_ufl(0)
         
@@ -178,35 +178,11 @@ class SolidmechanicsFlow0DSolver():
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             
-            utilities.print_prestress('start', self.pb.comm)
-
-            # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
-            self.pb.pbs.weakform_prestress_u = self.pb.pbs.deltaW_int - self.pb.pbs.deltaW_prestr_ext - self.pb.work_coupling_prestr
-            self.pb.pbs.jac_prestress_uu = derivative(self.pb.pbs.weakform_prestress_u, self.pb.pbs.u, self.pb.pbs.du)
-            if self.pb.pbs.incompressible_2field:
-                self.pb.pbs.weakform_prestress_p = self.pb.pbs.deltaW_p
-                self.pb.pbs.jac_prestress_up = derivative(self.pb.pbs.weakform_prestress_u, self.pb.pbs.p, self.pb.pbs.dp)
-                self.pb.pbs.jac_prestress_pu = derivative(self.pb.pbs.weakform_prestress_p, self.pb.pbs.u, self.pb.pbs.du)
-
-            solnln_prestress = solver_nonlin.solver_nonlinear(self.pb.pbs, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid)
-            # pure solid problem during prestress
-            solnln_prestress.ptype = 'solid'
-
-            # solve in 1 load step using PTC!
-            solnln_prestress.PTC = True
-            solnln_prestress.k_PTC_initial = 0.1
-
-            solnln_prestress.newton(self.pb.pbs.u, self.pb.pbs.p)
+            # add coupling work to prestress weak form
+            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr
             
-            # MULF update
-            self.pb.pbs.ki.prestress_update(self.pb.pbs.u, self.pb.pbs.Vd_tensor, self.pb.pbs.dx_, self.pb.pbs.u_pre)
-
-            # set flag to false again
-            self.pb.pbs.prestress_initial = False
-
-            utilities.print_prestress('end', self.pb.comm)
-            # delete class instance
-            del solnln_prestress
+            solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
+            solverprestr.solve_initial_prestress()
 
         else:
             # set flag definitely to False if we're restarting
@@ -221,20 +197,20 @@ class SolidmechanicsFlow0DSolver():
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
 
         if self.pb.coupling_type == 'monolithic_lagrange':
-            self.pb.pbf.c, self.pb.flux3D, self.pb.flux3D_old = [], [], []
+            self.pb.pbf.c, self.pb.constr, self.pb.constr_old = [], [], []
             for i in range(self.pb.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
                 self.pb.pbf.c.append(lm_sq[i])
-                fl = assemble_scalar(self.pb.cq[i])
-                fl = self.pb.pbs.comm.allgather(fl)
-                self.pb.flux3D.append(sum(fl)*self.pb.cq_factor[i])
-                self.pb.flux3D_old.append(sum(fl)*self.pb.cq_factor[i])
+                con = assemble_scalar(self.pb.cq[i])
+                con = self.pb.pbs.comm.allgather(con)
+                self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
+                self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
         
         # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
+        solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
@@ -289,7 +265,7 @@ class SolidmechanicsFlow0DSolver():
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, self.pb.pbf.cardvasc0D.c_ids, self.pb.pr0D, self.pb.coupfuncs_old)
                 # update old 3D fluxes
                 for i in range(self.pb.num_coupling_surf):
-                    self.pb.flux3D_old[i] = self.pb.flux3D[i]
+                    self.pb.constr_old[i] = self.pb.constr[i]
 
             # solve time for time step
             wte = time.time()

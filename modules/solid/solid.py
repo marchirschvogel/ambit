@@ -455,6 +455,16 @@ class SolidmechanicsProblem(problem_base):
                 # for saddle-point block-diagonal preconditioner
                 self.a_p11 += inner(self.dp, self.var_p) * self.dx_[n]
 
+        if self.prestress_initial:
+            # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
+            self.weakform_prestress_u = self.deltaW_int - self.deltaW_prestr_ext
+            self.jac_prestress_uu = derivative(self.weakform_prestress_u, self.u, self.du)
+            if self.incompressible_2field:
+                self.weakform_prestress_p = self.deltaW_p
+                self.jac_prestress_up = derivative(self.weakform_prestress_u, self.p, self.dp)
+                self.jac_prestress_pu = derivative(self.weakform_prestress_p, self.u, self.du)
+
+
         
     # reference coordinates
     def x_ref_expr(self, x):
@@ -538,6 +548,7 @@ class SolidmechanicsProblem(problem_base):
 
 
 
+    
 class SolidmechanicsSolver():
 
     def __init__(self, problem, solver_params):
@@ -563,34 +574,8 @@ class SolidmechanicsSolver():
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
         if self.pb.prestress_initial and self.pb.restart_step == 0:
-            
-            utilities.print_prestress('start', self.pb.comm)
 
-            # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
-            self.pb.weakform_prestress_u = self.pb.deltaW_int - self.pb.deltaW_prestr_ext
-            self.pb.jac_prestress_uu = derivative(self.pb.weakform_prestress_u, self.pb.u, self.pb.du)
-            if self.pb.incompressible_2field:
-                self.pb.weakform_prestress_p = self.pb.deltaW_p
-                self.pb.jac_prestress_up = derivative(self.pb.weakform_prestress_u, self.pb.p, self.pb.dp)
-                self.pb.jac_prestress_pu = derivative(self.pb.weakform_prestress_p, self.pb.u, self.pb.du)
-
-            solnln_prestress = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
-
-            # solve in 1 load step using PTC!
-            solnln_prestress.PTC = True
-            solnln_prestress.k_PTC_initial = 0.1
-
-            solnln_prestress.newton(self.pb.u, self.pb.p)
-
-            # MULF update
-            self.pb.ki.prestress_update(self.pb.u, self.pb.Vd_tensor, self.pb.dx_, self.pb.u_pre)
-            
-            # set flag to false again
-            self.pb.prestress_initial = False
-
-            utilities.print_prestress('end', self.pb.comm)
-            # delete class instance
-            del solnln_prestress
+            self.solve_initial_prestress()
 
         else:
             # set flag definitely to False if we're restarting
@@ -664,5 +649,24 @@ class SolidmechanicsSolver():
             sys.stdout.flush()
 
 
+    def solve_initial_prestress(self):
+        
+        utilities.print_prestress('start', self.pb.comm)
 
+        solnln_prestress = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
+
+        # solve in 1 load step using PTC!
+        solnln_prestress.PTC = True
+
+        solnln_prestress.newton(self.pb.u, self.pb.p)
+
+        # MULF update
+        self.pb.ki.prestress_update(self.pb.u, self.pb.Vd_tensor, self.pb.dx_, self.pb.u_pre)
+        
+        # set flag to false again
+        self.pb.prestress_initial = False
+
+        utilities.print_prestress('end', self.pb.comm)
+        # delete class instance
+        del solnln_prestress
 

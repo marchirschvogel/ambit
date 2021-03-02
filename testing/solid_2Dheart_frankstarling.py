@@ -38,8 +38,7 @@ def main():
                             'numstep_stop'          : 5,
                             'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
-                            'rho_inf_genalpha'      : 0.8,
-                            'avg_genalpga'          : 'trlike'} # trlike, midlike
+                            'rho_inf_genalpha'      : 0.8}
 
 
     FEM_PARAMS           = {'order_disp'            : 2,

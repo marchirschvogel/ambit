@@ -41,6 +41,10 @@ def print_problem(ptype, comm, numdof=0):
             sys.stdout.flush()
             return
 
+        elif ptype == 'solid_constraint':
+            print("########## Welcome to Lagrange multiplier constraint solid mechanics ###########")
+            sys.stdout.flush()
+
         elif ptype == 'fluid_flow0d':
             print("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########")
             sys.stdout.flush()
@@ -48,7 +52,7 @@ def print_problem(ptype, comm, numdof=0):
         elif ptype == 'flow0d':
             print("######################### Welcome to lumped-parameter 0D flow #########################")
             sys.stdout.flush()
-        
+
         else:
             raise NameError("Unknown problem type!")
 

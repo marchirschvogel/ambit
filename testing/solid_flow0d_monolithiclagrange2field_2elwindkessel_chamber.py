@@ -33,8 +33,7 @@ def main():
                             'numstep_stop'          : 10,
                             'timint'                : 'ost', # genalpha, ost, static
                             'theta_ost'             : 1.0,
-                            'rho_inf_genalpha'      : 0.8,
-                            'avg_genalpga'          : 'trlike'} # trlike, midlike
+                            'rho_inf_genalpha'      : 0.8}
     
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
                             'theta_ost'             : 1.0,

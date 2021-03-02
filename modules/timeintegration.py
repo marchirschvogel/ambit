@@ -42,7 +42,7 @@ class timeintegration():
 
     # print timestep info
     def print_timestep(self, N, t, wt=0):
-
+        
         if self.comm.rank == 0:
 
             print("### TIME STEP %i / %i successfully completed | TIME: %.4f | wt = %.2e" % (N,self.numstep,t,wt))

@@ -19,13 +19,15 @@ except:
 
 # TODO: Add fluid and fluid_flow0d testcases!
 if category=='all':
-    solid, flow0d, solid_flow0d = True, True, True
+    solid, flow0d, solid_flow0d, solid_constraint = True, True, True, True
 elif category=='solid':
-    solid, flow0d, solid_flow0d = True, False, False
+    solid, flow0d, solid_flow0d, solid_constraint = True, False, False, False
 elif category=='flow0d':
-    solid, flow0d, solid_flow0d = False, True, False
+    solid, flow0d, solid_flow0d, solid_constraint = False, True, False, False
 elif category=='solid_flow0d':
-    solid, flow0d, solid_flow0d = False, False, True
+    solid, flow0d, solid_flow0d, solid_constraint = False, False, True, False
+elif category=='solid_constraint':
+    solid, flow0d, solid_flow0d, solid_constraint = False, False, False, True
 else:
     raise NameError("Unknown test category!")
 
@@ -94,6 +96,10 @@ if solid_flow0d:
     
     errs.append( subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative.py']) )
 
+if solid_constraint:
+    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_constraint_volume_chamber.py']) )
+    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_constraint_volume_chamber.py']) )
+    
 
 err = 0
 for e in range(len(errs)):

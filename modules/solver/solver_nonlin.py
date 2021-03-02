@@ -199,13 +199,13 @@ class solver_nonlinear:
                 elif self.ptype=='flow0d':
                     print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='solid_flow0d' and not self.pb.incompressible_2field:
+                elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
                     if self.pbc.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
                     if self.pbc.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='solid_flow0d' and self.pb.incompressible_2field:
+                elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
                     if self.pbc.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
                     if self.pbc.coupling_type == 'monolithic_lagrange':
@@ -235,10 +235,10 @@ class solver_nonlinear:
             elif self.ptype=='flow0d':
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='solid_flow0d' and not self.pb.incompressible_2field:
+            elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='solid_flow0d' and self.pb.incompressible_2field:
+            elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_p'],' ',incnorms['inc_p'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif self.ptype=='fluid_flow0d':
@@ -296,11 +296,11 @@ class solver_nonlinear:
             if resnorms['res_0d'] <= self.tolerances['res_0d'] and incnorms['inc_0d'] <= self.tolerances['inc_0d']:
                 converged = True
                 
-        elif ptype=='solid_flow0d' and not self.pb.incompressible_2field:
+        elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
             if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u'] and resnorms['res_0d'] <= self.tolerances['res_0d'] and incnorms['inc_0d'] <= self.tolerances['inc_0d']:
                 converged = True
                 
-        elif ptype=='solid_flow0d' and self.pb.incompressible_2field:
+        elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
             if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u'] and resnorms['res_p'] <= self.tolerances['res_p'] and incnorms['inc_p'] <= self.tolerances['inc_p'] and resnorms['res_0d'] <= self.tolerances['res_0d'] and incnorms['inc_0d'] <= self.tolerances['inc_0d']:
                 converged = True
                 
@@ -657,13 +657,13 @@ class solver_nonlinear:
 
 
 
-# nonlinear solver for 3D-0D coupled monolithic formulations
-class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
+# nonlinear solver for Lagrange multiplier constraints and 3D-0D coupled monolithic formulations
+class solver_nonlinear_constraint_monolithic(solver_nonlinear):
     
-    def __init__(self, pbc, V_u, V_p, solver_params_3D, solver_params_flow0d):
+    def __init__(self, pbc, V_u, V_p, solver_params_3D, solver_params_constr):
 
         self.solver_params_3D = solver_params_3D
-        self.solver_params_flow0d = solver_params_flow0d
+        self.solver_params_constr = solver_params_constr
 
         # coupled problem
         self.pbc = pbc
@@ -672,8 +672,8 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
         
         self.ptype = self.pbc.problem_physics
 
-        self.tolres0D = solver_params_flow0d['tol_res']
-        self.tolinc0D = solver_params_flow0d['tol_inc']
+        self.tolres0D = solver_params_constr['tol_res']
+        self.tolinc0D = solver_params_constr['tol_inc']
 
         
         if self.pbc.pbs.incompressible_2field:
@@ -689,9 +689,10 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
             self.V3D_map_u = V_u.dofmap.index_map
             self.offset0D = self.V3D_map_u.size_local * V_u.dofmap.index_map_bs
         
+        
         # initialize 0D solver class for monolithic Lagrange multiplier coupling
-        if self.pbc.coupling_type == 'monolithic_lagrange':
-            self.snln0D = solver_nonlinear_0D(self.pbc.pbf, self.solver_params_flow0d)
+        if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
+            self.snln0D = solver_nonlinear_0D(self.pbc.pbf, self.solver_params_constr)
 
         self.initialize_petsc_solver()
         
@@ -833,7 +834,9 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
             
             tes = time.time()
             
-            if self.pbc.coupling_type == 'monolithic_lagrange':
+            if self.ptype == 'solid_constraint': ls, le = self.pbc.lm.getOwnershipRange()
+            
+            if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
                 ls, le = self.pbc.lm.getOwnershipRange()
                 # Lagrange multipliers (pressures) to be passed to 0D model
                 for i in range(ls,le):
@@ -846,9 +849,11 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pbc.coupling_type == 'monolithic_direct':
                 self.pbc.pbf.cardvasc0D.set_pressure_fem(s, self.pbc.pbf.cardvasc0D.v_ids, self.pbc.pr0D, self.pbc.coupfuncs)
-            if self.pbc.coupling_type == 'monolithic_lagrange':
+            if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
                 self.pbc.pbf.cardvasc0D.set_pressure_fem(self.pbc.lm, self.pbc.pbf.cardvasc0D.c_ids, self.pbc.pr0D, self.pbc.coupfuncs)
-            
+            if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
+                self.pbc.set_pressure_fem(self.pbc.lm, self.pbc.coupfuncs)
+
             r_u = assemble_vector(self.pb.weakform_u)
             apply_lifting(r_u, [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=-1.0)
             r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
@@ -897,12 +902,12 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                 self.pbc.pbf.f.assemble()
 
             
-            if self.pbc.coupling_type == 'monolithic_lagrange':
+            if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
                 for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
                     cq = assemble_scalar(self.pbc.cq[i])
                     cq = self.pbc.comm.allgather(cq)
-                    self.pbc.flux3D[i] = sum(cq)*self.pbc.cq_factor[i]
+                    self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
 
                 # finite differencing for LM siffness matrix
                 eps = 1.0e-5
@@ -919,6 +924,13 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                         s_pert_sq = allgather_vec(s_pert, self.pbc.comm)
                         self.K_ss[i,j] = -self.pbc.pbs.timefac * (s_pert_sq[self.pbc.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pbc.pbf.cardvasc0D.v_ids[i]])/eps
                         self.pbc.pbf.c[j] = lm_sq[j] # restore LM
+            
+            if self.ptype == 'solid_constraint':
+                for i in range(len(self.pbc.surface_p_ids)):
+                    cq = assemble_scalar(self.pbc.cq[i])
+                    cq = self.pbc.comm.allgather(cq)
+                    self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
+
             
             # 0D / Lagrange multiplier coupling rhs vector
             r_s = self.K_ss.createVecLeft()
@@ -937,38 +949,62 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
                         val = self.pbc.pbs.ti.timecurves(curvenumber)(t)
                         self.pbc.pbf.cardvasc0D.set_prescribed_variables(s, r_s, self.K_ss, val, varindex)
 
-            if self.pbc.coupling_type == 'monolithic_lagrange':
+            if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
                 # Lagrange multiplier coupling residual
                 for i in range(ls,le):
-                    r_s[i] = self.pbc.pbs.timefac * (self.pbc.flux3D[i] - s[self.pbc.pbf.cardvasc0D.v_ids[i]]) + (1.-self.pbc.pbs.timefac) * (self.pbc.flux3D_old[i] - self.pbc.pbf.s_old[self.pbc.pbf.cardvasc0D.v_ids[i]])
+                    r_s[i] = self.pbc.pbs.timefac * (self.pbc.constr[i] - s[self.pbc.pbf.cardvasc0D.v_ids[i]]) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[i] - self.pbc.pbf.s_old[self.pbc.pbf.cardvasc0D.v_ids[i]])
 
-            # 0D system matrix
+            if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
+
+                curvenumber = self.pbc.prescribed_curve
+                val, val_old = self.pbc.pbs.ti.timecurves(curvenumber)(t), self.pbc.pbs.ti.timecurves(curvenumber)(t-self.pb.dt)
+    
+                # Lagrange multiplier coupling residual
+                for i in range(ls,le):
+                    r_s[i] = self.pbc.pbs.timefac * (self.pbc.constr[i] - val) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[i] - val_old)
+
+            # 0D / Lagrange multiplier system matrix
             self.K_ss.assemble()
+
+            if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d': 
+                if self.pbc.coupling_type == 'monolithic_direct':
+                    row_ids = self.pbc.pbf.cardvasc0D.c_ids
+                    col_ids = self.pbc.pbf.cardvasc0D.v_ids
+                if self.pbc.coupling_type == 'monolithic_lagrange':
+                    row_ids = self.pbc.pbf.cardvasc0D.c_ids
+                    col_ids = row_ids
+
+            if self.ptype == 'solid_constraint':
+                row_ids = [0]
+                col_ids = [0]
 
             # offdiagonal u-s columns
             k_us_cols=[]
-            for i in range(len(self.pbc.pbf.cardvasc0D.v_ids)):
+            for i in range(len(col_ids)):
                 k_us_cols.append(assemble_vector(self.pbc.dforce[i])) # already multiplied by time-integration factor
         
-            # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
-            if self.pbc.pbf.cq == 'volume':   timefac = 1./self.pb.dt
-            if self.pbc.pbf.cq == 'flux':     timefac = -self.pbc.pbf.theta_ost # 0D model time-integration factor
-            if self.pbc.pbf.cq == 'pressure': timefac = self.pbc.pbs.timefac # 3D solid/fluid time-integration factor
+            if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
+                # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
+                if self.pbc.pbf.cq == 'volume':   timefac = 1./self.pb.dt
+                if self.pbc.pbf.cq == 'flux':     timefac = -self.pbc.pbf.theta_ost # 0D model time-integration factor
+                if self.pbc.pbf.cq == 'pressure': timefac = self.pbc.pbs.timefac # 3D solid/fluid time-integration factor
+
+            if self.ptype == 'solid_constraint': timefac = self.pbc.pbs.timefac # 3D solid time-integration factor
 
             # offdiagonal s-u rows
             k_su_rows=[]
-            for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
+            for i in range(len(row_ids)):
                 k_su_rows.append(assemble_vector((timefac*self.pbc.cq_factor[i])*self.pbc.dcq[i]))
 
             # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
-            for i in range(len(self.pbc.pbf.cardvasc0D.v_ids)):
+            for i in range(len(col_ids)):
                 
                 apply_lifting(k_us_cols[i], [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=0.0)
                 k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 set_bc(k_us_cols[i], self.pb.bc.dbcs, x0=u.vector, scale=0.0)
             
-            for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
+            for i in range(len(row_ids)):
             
                 apply_lifting(k_su_rows[i], [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=0.0)
                 k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
@@ -984,29 +1020,24 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
 
             Kusrow_s, Kusrow_e = K_us.getOwnershipRange()
 
-            if self.pbc.coupling_type == 'monolithic_direct':   row_ids = self.pbc.pbf.cardvasc0D.v_ids
-            if self.pbc.coupling_type == 'monolithic_lagrange': row_ids = self.pbc.pbf.cardvasc0D.c_ids
-
-            for i in range(len(row_ids)):
+            for i in range(len(col_ids)):
 
                 for row in range(Kusrow_s, Kusrow_e):
-                    K_us.setValue(row,row_ids[i], k_us_cols[i][row])
+                    K_us.setValue(row,col_ids[i], k_us_cols[i][row])
             
             K_us.assemble()
             
             # derivative of 0D residual w.r.t. solid displacements/fluid velocities
             K_su = PETSc.Mat().createAIJ(size=((self.K_ss.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.pbc.comm)
             K_su.setUp()
-            
+
             Ksucol_s, Ksucol_e = K_su.getOwnershipRangeColumn()
             
-            col_ids = self.pbc.pbf.cardvasc0D.c_ids
-            
-            for i in range(len(col_ids)):   
+            for i in range(len(row_ids)):   
                 
                 for col in range(Ksucol_s, Ksucol_e):
-                    K_su.setValue(col_ids[i],col, k_su_rows[i][col])
-            
+                    K_su.setValue(row_ids[i],col, k_su_rows[i][col])
+
             K_su.assemble()
 
             if self.pbc.pbs.incompressible_2field:
@@ -1018,7 +1049,7 @@ class solver_nonlinear_3D0Dmonolithic(solver_nonlinear):
 
             # 0D rhs vector
             r_s.assemble()
-            
+
             # nested 3D-0D vector
             if self.pbc.pbs.incompressible_2field:
                 r_3D0D_nest = PETSc.Vec().createNest([r_u, r_p, r_s])

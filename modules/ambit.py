@@ -47,6 +47,11 @@ class Ambit():
             self.mp = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, comm=self.comm)
             self.ms = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params[0], solver_params[1])
 
+        elif problem_type == 'solid_constraint':
+            import solid_constraint
+            self.mp = solid_constraint.SolidmechanicsConstraintProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, coupling_params, comm=self.comm)
+            self.ms = solid_constraint.SolidmechanicsConstraintSolver(self.mp, solver_params[0], solver_params[1])
+
         else:
             raise NameError("Unknown problem type!")
 

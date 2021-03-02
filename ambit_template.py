@@ -12,7 +12,7 @@ def main():
 
     # all possible input parameters
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr_stag
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr_stag, solid_constraint
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
@@ -25,6 +25,7 @@ def main():
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
                             'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (default: 0)
 
+    # for solid*, fluid* problem types
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver
                             'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver
@@ -40,10 +41,12 @@ def main():
                             'print_local_iter'      : False, # OPTIONAL: if we want to print iterations of local Newton (default: False)
                             'tol_res_local'         : 1.0e-10, # OPTIONAL: if we want to specify the local Newton residual inf-norm tolerance (default: 1.0e-10)
                             'tol_inc_local'         : 1.0e-10} # OPTIONAL: if we want to specify the local Newton increment inf-norm tolerance (default: 1.0e-10)
-                                
+    
+    # for flow0d, solid_flow0d, or fluid_flow0d problem types
     SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6, # residual tolerance for nonlinear solver
                             'tol_inc'               : 1.0e-6} # increment tolerance for nonlinear solver
 
+    # for solid*, fluid* problem types
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0, # maximum simulation time
                             'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
                             'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
@@ -51,6 +54,7 @@ def main():
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor 
                             'rho_inf_genalpha'      : 0.8} # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
     
+    # for flow0d, solid_flow0d, or fluid_flow0d problem types
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: ost
                             'theta_ost'             : 0.5, # One-Step-Theta time integration factor 
                             'initial_conditions'    : init(), # initial condition dictionary (here defined as function, see below)
@@ -58,6 +62,7 @@ def main():
                             'eps_periodic'          : 1.0e-3, # OPTIONAL: cardiac cycle periodicity tolerance (default: 1.0e-20)
                             'periodic_checktype'    : None} # OPTIONAL: None, 'allvar', 'pQvar' (default: None)
 
+    # for flow0d, solid_flow0d, or fluid_flow0d problem types
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspulcap, syspulcap2
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
                             'chamber_models'        : {'lv' : '3D_fem', 'rv' : '3D_fem', 'la' : '0D_elast', 'ra' : '0D_elast'}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
@@ -66,6 +71,7 @@ def main():
                             'perturb_type'          : None, # OPTIONAL: mr, ms, ar, as (default: None)
                             'perturb_after_cylce'   : 2} # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
 
+    # for solid*, fluid* problem types
     FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid mechanics)
                             'order_vel'             : 1, # order of velocity interpolation (fluid mechanics)
                             'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
@@ -73,12 +79,20 @@ def main():
                             'incompressible_2field' : False, # if we want to use a 2-field functional for pressure dofs (always applies for fluid, optional for solid mechanics)
                             'prestress_initial'     : False} # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
     
+    # for solid_flow0d or fluid_flow0d problem type
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
                             'coupling_quantity'     : 'volume', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
+    # for solid_constraint problem type (currently only 1 surface supported!)
+    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1]], # coupling surface for volume or flux constraint
+                            'surface_p_ids'         : [[1]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
+                            'constraint_quantity'   : 'volume', # volume, flux
+                            'prescribed_curve'      : 5} # time curve that sets the volume/flux that shall be met
+
+    # for solid_flow0d_multiscale_gandr_stag problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 10, # max. number of multiscale cycles (one cycle means one small scale succeeded by a large scale run)
                             'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D

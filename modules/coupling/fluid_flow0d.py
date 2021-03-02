@@ -71,7 +71,7 @@ class FluidmechanicsFlow0DProblem():
             self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
             
             # 3D fluxes
-            self.flux3D, self.flux3D_old = [], []
+            self.constr, self.constr_old = [], []
 
         self.power_coupling, self.power_coupling_old = as_ufl(0), as_ufl(0)
     
@@ -176,16 +176,16 @@ class FluidmechanicsFlow0DSolver():
             for i in range(self.pb.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
                 self.pb.pbf.c.append(lm_sq[i])
-                fl = assemble_scalar(self.pb.cq[i])
-                fl = self.pb.pbs.comm.allgather(fl)
-                self.pb.flux3D.append(sum(fl)*self.pb.cq_factor[i])
-                self.pb.flux3D_old.append(sum(fl)*self.pb.cq_factor[i])
+                con = assemble_scalar(self.pb.cq[i])
+                con = self.pb.pbs.comm.allgather(con)
+                self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
+                self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
                
         # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_3D0Dmonolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
+        solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
@@ -233,7 +233,7 @@ class FluidmechanicsFlow0DSolver():
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, self.pb.pbf.cardvasc0D.c_ids, self.pb.pr0D, self.pb.coupfuncs_old)
                 # update old 3D fluxes
                 for i in range(self.pb.num_coupling_surf):
-                    self.pb.flux3D_old[i] = self.pb.flux3D[i]
+                    self.pb.constr_old[i] = self.pb.constr[i]
 
             # solve time for time step
             wte = time.time()
