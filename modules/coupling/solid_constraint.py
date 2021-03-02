@@ -170,7 +170,7 @@ class SolidmechanicsConstraintSolver():
             con = self.pb.pbs.comm.allgather(con)
             self.pb.constr.append(sum(con))
             self.pb.constr_old.append(sum(con))
-            
+                 
         # initialize nonlinear solver class
         solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_constr)
 
@@ -215,7 +215,7 @@ class SolidmechanicsConstraintSolver():
             # update old 3D fluxes
             for i in range(self.pb.num_coupling_surf):
                 self.pb.constr_old[i] = self.pb.constr[i]
-            
+
             # solve time for time step
             wte = time.time()
             wt = wte - wts

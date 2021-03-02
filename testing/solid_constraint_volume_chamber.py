@@ -16,7 +16,7 @@ def main():
     IO_PARAMS            = {'problem_type'          : 'solid_constraint', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
                             'mesh_domain'           : ''+basepath+'/input/chamber_domain.xdmf',
                             'mesh_boundary'         : ''+basepath+'/input/chamber_boundary.xdmf',
-                            'write_results_every'   : 1,#-999,
+                            'write_results_every'   : -999,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement','pressure'],
                             'simname'               : 'solid_constraint_volume_chamber'}
@@ -41,7 +41,7 @@ def main():
     
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[3]],
                             'constraint_quantity'   : 'volume',
-                            'prescribed_curve'      : 1}
+                            'prescribed_curve'      : [1]}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100., 'rho0' : 1.0e-6}, 'inertia' : {'rho0' : 1.0e-6}}}
 

@@ -957,12 +957,14 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
 
-                curvenumber = self.pbc.prescribed_curve
-                val, val_old = self.pbc.pbs.ti.timecurves(curvenumber)(t), self.pbc.pbs.ti.timecurves(curvenumber)(t-self.pb.dt)
+                val, val_old = [], []
+                for n in range(self.pbc.num_coupling_surf):
+                    curvenumber = self.pbc.prescribed_curve[n]
+                    val.append(self.pbc.pbs.ti.timecurves(curvenumber)(t)), val_old.append(self.pbc.pbs.ti.timecurves(curvenumber)(t-self.pb.dt))
     
                 # Lagrange multiplier coupling residual
                 for i in range(ls,le):
-                    r_s[i] = self.pbc.pbs.timefac * (self.pbc.constr[i] - val) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[i] - val_old)
+                    r_s[i] = self.pbc.pbs.timefac * (self.pbc.constr[i] - val[i]) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[i] - val_old[i])
 
             # 0D / Lagrange multiplier system matrix
             self.K_ss.assemble()
@@ -975,9 +977,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     row_ids = self.pbc.pbf.cardvasc0D.c_ids
                     col_ids = row_ids
 
-            if self.ptype == 'solid_constraint':
-                row_ids = [0]
-                col_ids = [0]
+            if self.ptype == 'solid_constraint':    
+                row_ids = list(range(self.pbc.num_coupling_surf))
+                col_ids = list(range(self.pbc.num_coupling_surf))
 
             # offdiagonal u-s columns
             k_us_cols=[]

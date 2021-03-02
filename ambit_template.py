@@ -86,11 +86,11 @@ def main():
                             'coupling_quantity'     : 'volume', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
-    # for solid_constraint problem type (currently only 1 surface supported!)
-    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1]], # coupling surface for volume or flux constraint
-                            'surface_p_ids'         : [[1]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
+    # for solid_constraint problem type
+    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surface for volume or flux constraint
+                            'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'constraint_quantity'   : 'volume', # volume, flux
-                            'prescribed_curve'      : 5} # time curve that sets the volume/flux that shall be met
+                            'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
     # for solid_flow0d_multiscale_gandr_stag problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
