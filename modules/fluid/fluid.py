@@ -240,6 +240,9 @@ class FluidmechanicsSolver():
 
         self.solve_type = self.solver_params['solve_type']
 
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
+
 
     def solve_problem(self):
         
@@ -253,9 +256,6 @@ class FluidmechanicsSolver():
             self.pb.io.readcheckpoint(self.pb, self.pb.restart_step)
             self.pb.io.simname += '_r'+str(self.pb.restart_step)
 
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
-
         # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
@@ -264,7 +264,7 @@ class FluidmechanicsSolver():
             jac_a = derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
         # write mesh output
         self.pb.io.write_output(writemesh=True)
@@ -282,7 +282,7 @@ class FluidmechanicsSolver():
             self.pb.ti.set_time_funcs(self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_vec, t)
             
             # solve
-            solnln.newton(self.pb.v, self.pb.p)
+            self.solnln.newton(self.pb.v, self.pb.p)
 
             # update
             self.pb.ti.update_timestep(self.pb.v, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)

@@ -142,14 +142,23 @@ class SolidmechanicsFlow0DProblem():
 class SolidmechanicsFlow0DSolver():
 
     def __init__(self, problem, solver_params_solid, solver_params_flow0d):
-    
+        
         self.pb = problem
         
         self.solver_params_solid = solver_params_solid
         self.solver_params_flow0d = solver_params_flow0d
 
         self.solve_type = self.solver_params_solid['solve_type']
+
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
         
+        if self.pb.pbs.prestress_initial:
+            # add coupling work to prestress weak form
+            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            
+            # initialize solid mechanics solver
+            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
+
 
     def solve_problem(self):
         
@@ -177,13 +186,8 @@ class SolidmechanicsFlow0DSolver():
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
-            
-            # add coupling work to prestress weak form
-            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr
-            
-            solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
-            solverprestr.solve_initial_prestress()
-
+            # solve solid prestress problem
+            self.solverprestr.solve_initial_prestress()
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
@@ -209,9 +213,6 @@ class SolidmechanicsFlow0DSolver():
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
         
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
-
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
@@ -220,7 +221,7 @@ class SolidmechanicsFlow0DSolver():
             jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
         # write mesh output
         self.pb.pbs.io.write_output(writemesh=True)
@@ -245,7 +246,7 @@ class SolidmechanicsFlow0DSolver():
                 self.pb.pbs.evaluate_active_stress_ode(t-t_off)
 
             # solve
-            solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
+            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid)
@@ -275,7 +276,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.io.write_output(pb=self.pb.pbs, N=N, t=t)
             # raw txt file output of 0D model quantities
             if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
-                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid)
+                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.io.simname)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
                 self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', N, self.pb.pbf.s)

@@ -205,7 +205,7 @@ class Flow0DSolver():
 
             # raw txt file output of 0D model quantities
             if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
-                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, self.pb.simname, t, self.pb.s_mid, self.pb.aux_mid)
+                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
                 self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_s', N, self.pb.s)

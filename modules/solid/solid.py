@@ -559,6 +559,9 @@ class SolidmechanicsSolver():
 
         self.solve_type = self.solver_params['solve_type']
 
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
+
 
     def solve_problem(self):
         
@@ -581,9 +584,6 @@ class SolidmechanicsSolver():
             # set flag definitely to False if we're restarting
             self.pb.prestress_initial = False
 
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
-
         # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
@@ -592,7 +592,7 @@ class SolidmechanicsSolver():
             jac_a = derivative(weakform_a, self.pb.a_old, self.pb.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
         # write mesh output
         self.pb.io.write_output(writemesh=True)
@@ -614,7 +614,7 @@ class SolidmechanicsSolver():
                 self.pb.evaluate_active_stress_ode(t)
 
             # solve
-            solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)
+            self.solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)
 
             # compute the growth rate (has to be called before update_timestep)
             if self.pb.have_growth:
@@ -653,12 +653,10 @@ class SolidmechanicsSolver():
         
         utilities.print_prestress('start', self.pb.comm)
 
-        solnln_prestress = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
-
         # solve in 1 load step using PTC!
-        solnln_prestress.PTC = True
+        self.solnln.PTC = True
 
-        solnln_prestress.newton(self.pb.u, self.pb.p)
+        self.solnln.newton(self.pb.u, self.pb.p)
 
         # MULF update
         self.pb.ki.prestress_update(self.pb.u, self.pb.Vd_tensor, self.pb.dx_, self.pb.u_pre)
@@ -666,7 +664,8 @@ class SolidmechanicsSolver():
         # set flag to false again
         self.pb.prestress_initial = False
 
-        utilities.print_prestress('end', self.pb.comm)
-        # delete class instance
-        del solnln_prestress
+        # reset PTC flag to what it was
+        try: self.solnln.PTC = self.solver_params['ptc']
+        except: self.solnln.PTC = False
 
+        utilities.print_prestress('end', self.pb.comm)

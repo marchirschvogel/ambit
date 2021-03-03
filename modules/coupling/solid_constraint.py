@@ -134,7 +134,16 @@ class SolidmechanicsConstraintSolver():
         self.solver_params_constr = solver_params_constr
 
         self.solve_type = self.solver_params_solid['solve_type']
+
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_constr)
         
+        if self.pb.pbs.prestress_initial:
+            # add coupling work to prestress weak form
+            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            
+            # initialize solid mechanics solver
+            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
+
 
     def solve_problem(self):
         
@@ -152,13 +161,8 @@ class SolidmechanicsConstraintSolver():
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
-            
-            # add coupling work to prestress weak form
-            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr
-            
-            solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
-            solverprestr.solve_initial_prestress()
-
+            # solve solid prestress problem
+            self.solverprestr.solve_initial_prestress()
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
@@ -171,9 +175,6 @@ class SolidmechanicsConstraintSolver():
             self.pb.constr.append(sum(con))
             self.pb.constr_old.append(sum(con))
                  
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_constr)
-
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
@@ -182,7 +183,7 @@ class SolidmechanicsConstraintSolver():
             jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
         # write mesh output
         self.pb.pbs.io.write_output(writemesh=True)
@@ -204,7 +205,7 @@ class SolidmechanicsConstraintSolver():
                 self.pb.pbs.evaluate_active_stress_ode(t)
 
             # solve
-            solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
+            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
 
             # update time step - solid and 0D model
             self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)

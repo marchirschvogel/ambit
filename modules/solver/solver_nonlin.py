@@ -136,9 +136,15 @@ class solver_nonlinear:
                 #self.ksp.getPC().setFieldSplitSchurFactType(0)
 
                 # build "dummy" nested matrix in order to get the nested ISs (index sets)
-                K_uu = assemble_matrix(self.pb.jac_uu, self.pb.bc.dbcs)
-                K_up = assemble_matrix(self.pb.jac_up, self.pb.bc.dbcs)
-                K_pu = assemble_matrix(self.pb.jac_pu, self.pb.bc.dbcs)
+                locmatsize_u, locmatsize_p = self.V_u.dofmap.index_map.size_local * self.V_u.dofmap.index_map_bs, self.V_p.dofmap.index_map.size_local * self.V_p.dofmap.index_map_bs
+                matsize_u, matsize_p = self.V_u.dofmap.index_map.size_global * self.V_u.dofmap.index_map_bs, self.V_p.dofmap.index_map.size_global * self.V_p.dofmap.index_map_bs
+                K_uu = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
+                K_uu.setUp()
+                K_up = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_p,matsize_p)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
+                K_up.setUp()                
+                K_pu = PETSc.Mat().createAIJ(size=((locmatsize_p,matsize_p),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
+                K_pu.setUp()  
+                
                 K_nest = PETSc.Mat().createNest([[K_uu, K_up], [K_pu, None]], isrows=None, iscols=None, comm=self.pb.comm)
                 
                 nested_IS = K_nest.getNestISs()
@@ -178,9 +184,6 @@ class solver_nonlinear:
             raise NameError("Unknown solvetype!")
         
         
-
-
-    
     def print_nonlinear_iter(self,it=0,resnorms=0,incnorms=0,k_PTC=0,header=False,ts=0,te=0):
         
         if self.PTC:
@@ -664,13 +667,13 @@ class solver_nonlinear:
 class solver_nonlinear_constraint_monolithic(solver_nonlinear):
     
     def __init__(self, pbc, V_u, V_p, solver_params_3D, solver_params_constr):
-
+        
         self.solver_params_3D = solver_params_3D
         self.solver_params_constr = solver_params_constr
 
         # coupled problem
         self.pbc = pbc
-        # initialize base class
+        # initialize base class - also calls derived initialize_petsc_solver function!
         solver_nonlinear.__init__(self, pbc.pbs, V_u, V_p, solver_params_3D)
         
         self.ptype = self.pbc.problem_physics
@@ -678,7 +681,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         self.tolres0D = solver_params_constr['tol_res']
         self.tolinc0D = solver_params_constr['tol_inc']
 
-        
         if self.pbc.pbs.incompressible_2field:
             self.tolerances = {'res_u' : self.tolres, 'inc_u' : self.tolinc, 'res_p' : self.tolres, 'inc_p' : self.tolinc, 'res_0d' : self.tolres0D, 'inc_0d' : self.tolinc0D}
             # dof offset for pressure block and 0D model
@@ -692,13 +694,10 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             self.V3D_map_u = V_u.dofmap.index_map
             self.offset0D = self.V3D_map_u.size_local * V_u.dofmap.index_map_bs
         
-        
         # initialize 0D solver class for monolithic Lagrange multiplier coupling
         if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
             self.snln0D = solver_nonlinear_0D(self.pbc.pbf, self.solver_params_constr)
 
-        self.initialize_petsc_solver()
-        
         
     def initialize_petsc_solver(self):
         
@@ -728,9 +727,15 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 #self.ksp.getPC().setFieldSplitSchurFactType(0)
 
                 # build "dummy" nested matrix in order to get the nested ISs (index sets)
-                K_uu = assemble_matrix(self.pb.jac_uu, self.pb.bc.dbcs)
-                K_up = assemble_matrix(self.pb.jac_up, self.pb.bc.dbcs)
-                K_pu = assemble_matrix(self.pb.jac_pu, self.pb.bc.dbcs)
+                locmatsize_u, locmatsize_p = self.V_u.dofmap.index_map.size_local * self.V_u.dofmap.index_map_bs, self.V_p.dofmap.index_map.size_local * self.V_p.dofmap.index_map_bs
+                matsize_u, matsize_p = self.V_u.dofmap.index_map.size_global * self.V_u.dofmap.index_map_bs, self.V_p.dofmap.index_map.size_global * self.V_p.dofmap.index_map_bs
+                K_uu = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
+                K_uu.setUp()
+                K_up = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_p,matsize_p)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
+                K_up.setUp()                
+                K_pu = PETSc.Mat().createAIJ(size=((locmatsize_p,matsize_p),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
+                K_pu.setUp()                   
+                
                 K_nest = PETSc.Mat().createNest([[K_uu, K_up, None], [K_pu, None, None], [None, None, self.K_ss]], isrows=None, iscols=None, comm=self.pbc.comm)
                 
                 nested_IS = K_nest.getNestISs()
@@ -767,9 +772,13 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.ADDITIVE)
                 #self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.SCHUR)
                 #self.ksp.getPC().setFieldSplitSchurFactType(0)
-
+                
                 # build "dummy" nested matrix in order to get the nested ISs (index sets)
-                K_uu = assemble_matrix(self.pb.jac_uu, self.pb.bc.dbcs)
+                locmatsize = self.V_u.dofmap.index_map.size_local * self.V_u.dofmap.index_map_bs
+                matsize = self.V_u.dofmap.index_map.size_global * self.V_u.dofmap.index_map_bs
+                K_uu = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
+                K_uu.setUp()
+                
                 K_nest = PETSc.Mat().createNest([[K_uu, None], [None, self.K_ss]], isrows=None, iscols=None, comm=self.pb.comm)
                 
                 nested_IS = K_nest.getNestISs()
@@ -789,7 +798,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 # direct solve for 0D block
                 ksp_s.setType("preonly")
                 ksp_s.getPC().setType("lu")
-                
+
                 
             self.ksp.setTolerances(rtol=self.tollin, divtol=None, max_it=None)
             self.ksp.setMonitor(lambda ksp, its, rnorm: self.print_linear_iter(its,rnorm))

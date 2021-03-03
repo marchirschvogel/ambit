@@ -139,6 +139,9 @@ class FluidmechanicsFlow0DSolver():
 
         self.solve_type = self.solver_params_fluid['solve_type']
 
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
+
 
     def solve_problem(self):
         
@@ -184,9 +187,6 @@ class FluidmechanicsFlow0DSolver():
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
                
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
-
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
@@ -195,7 +195,7 @@ class FluidmechanicsFlow0DSolver():
             jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
         
         # write mesh output
         self.pb.pbs.io.write_output(writemesh=True)
@@ -216,7 +216,7 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
 
             # solve
-            solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off)
+            self.solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid)
@@ -243,7 +243,7 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbs.io.write_output(pb=self.pb.pbf, N=N, t=t)
             # raw txt file output of 0D model quantities
             if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
-                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid)
+                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.io.simname)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
                 self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', N, self.pb.pbf.s)

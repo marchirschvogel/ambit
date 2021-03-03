@@ -426,7 +426,7 @@ class cardiovascular0Dbase:
 
 
     # output routine for 0D models
-    def write_output(self, path, nm, t, var, aux):
+    def write_output(self, path, t, var, aux, nm=''):
 
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
