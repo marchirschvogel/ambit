@@ -51,28 +51,28 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         import cardiovascular0D_syspul
         cardiovascular0D_syspul.postprocess_groups_syspul(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = False # True, False
+        calculate_function_params = True
 
     elif model == 'syspulcap':
         
         import cardiovascular0D_syspulcap
         cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = True # True, False
+        calculate_function_params = True
         
     elif model == 'syspulcap2':
         
         import cardiovascular0D_syspulcap
         cardiovascular0D_syspulcap.postprocess_groups_syspulcap2(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = True # True, False
+        calculate_function_params = True
         
     elif model == 'syspulcaprespir':
         
         import cardiovascular0D_syspulcaprespir
         cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = True # True, False
+        calculate_function_params = True
     
     elif model == '4elwindkesselLsZ':
     
@@ -119,7 +119,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                     fluxes = np.loadtxt(''+path+'/results_'+sname+'_Q_'+ch+'.txt', usecols=1)
                     # integrate volume: Q_{n+theta} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{n+theta}*dt + V_{n}
                     # --> V_{n+theta} = theta * V_{n+1} + (1-theta) * V_{n}
-                    filename_vol = path+'/V_'+ch+'.txt'
+                    filename_vol = path+'/results_'+sname+'_V_'+ch+'.txt'
                     file_vol = open(filename_vol, 'wt')
                     vol_n = 0.0 # we do not have the initial volume...
                     file_vol.write('%.16E %.16E\n' % (tmp[0], vol_n))
