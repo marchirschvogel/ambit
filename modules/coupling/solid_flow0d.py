@@ -360,4 +360,8 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.tau_a_set.vector.axpby(1.0, 0.0, self.pb.pbs.tau_a.vector)
             self.pb.pbs.tau_a_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+            if self.pb.pbs.have_frank_starling:
+                self.pb.pbs.amp_old_set.vector.axpby(1.0, 0.0, self.pb.pbs.amp_old.vector)
+                self.pb.pbs.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
             self.pb.pbf.s_set.axpby(1.0, 0.0, self.pb.pbf.s)

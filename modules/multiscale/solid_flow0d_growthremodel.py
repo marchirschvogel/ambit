@@ -285,6 +285,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         # constant large scale active tension
         self.pb.pblarge.tau_a.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.tau_a_set.vector)
         self.pb.pblarge.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.pb.pblarge.have_frank_starling:
+            self.pb.pblarge.amp_old.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.amp_old_set.vector)
+            self.pb.pblarge.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
         # pressures from growth set point
         self.pb.pbsmall.pbf.cardvasc0D.set_pressure_fem(self.pb.pbsmall.pbf.s_set, self.pb.pbsmall.pbf.cardvasc0D.v_ids, self.pb.pbsmall.pr0D, self.pb.neumann_funcs)

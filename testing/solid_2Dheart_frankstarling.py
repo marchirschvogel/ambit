@@ -32,14 +32,12 @@ def main():
                             'tol_inc'               : 1.0e-8,
                             'ptc'                   : False}
 
-
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 10,
                             'numstep_stop'          : 5,
                             'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
-
 
     FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,

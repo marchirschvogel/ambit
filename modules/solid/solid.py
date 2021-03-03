@@ -115,17 +115,20 @@ class SolidmechanicsProblem(problem_base):
         # initial (zero) functions for initial stiffness evaluation (e.g. for Rayleigh damping)
         self.u_ini, self.p_ini, self.theta_ini, self.tau_a_ini = Function(self.V_u), Function(self.V_p), Function(self.Vd_scalar), Function(self.Vd_scalar)
         self.theta_ini.vector.set(1.0)
+        self.theta_ini.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # growth stretch
         self.theta = Function(self.Vd_scalar, name="theta")
         self.theta_old = Function(self.Vd_scalar)
         self.growth_thres = Function(self.Vd_scalar)
         # initialize to one (theta = 1 means no growth)
         self.theta.vector.set(1.0), self.theta_old.vector.set(1.0)
+        self.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # active stress
         self.tau_a = Function(self.Vd_scalar, name="tau_a")
         self.tau_a_old = Function(self.Vd_scalar)
-        self.amp_old = Function(self.Vd_scalar)
-        self.amp_old.vector.set(1.0)
+        self.amp_old, self.amp_old_set = Function(self.Vd_scalar), Function(self.Vd_scalar)
+        self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
+        self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # prestressing history defgrad and spring prestress
         if self.prestress_initial:
             self.F_hist = Function(self.Vd_tensor, name="Defgrad_hist")
