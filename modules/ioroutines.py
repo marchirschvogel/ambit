@@ -35,20 +35,21 @@ class IO:
         try: self.write_restart_every = io_params['write_restart_every']
         except: self.write_restart_every = -1
         
-        try: self.have_b1_bcs = io_params['have_bd1_bcs']
-        except: self.have_b1_bcs = True # most likely!
-        try: self.have_b2_bcs = io_params['have_bd2_bcs']
-        except: self.have_b2_bcs = False
-        try: self.have_b3_bcs = io_params['have_bd3_bcs']
-        except: self.have_b3_bcs = False
+        try: self.meshfile_type = io_params['meshfile_type']
+        except: self.meshfile_type = 'ASCII'
         
         self.comm = comm
 
 
     def readin_mesh(self):
-        
-        encoding = XDMFFile.Encoding.ASCII
 
+        if self.meshfile_type=='ASCII':
+            encoding = XDMFFile.Encoding.ASCII
+        elif self.meshfile_type=='HDF5':
+            encoding = XDMFFile.Encoding.HDF5
+        else:
+            raise NameError('Coose either ASCII or HDF5 as meshfile_type, or add a different encoding!')
+            
         # read in xdmf mesh - domain
         with XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
             self.mesh = infile.read_mesh(name="Grid")
@@ -56,7 +57,7 @@ class IO:
         
         # read in xdmf mesh - boundary
         
-        # here, we define b1 BCs as BCs associated to a topology one dimension less than the problem,
+        # here, we define b1 BCs as BCs associated to a topology one dimension less than the problem (most common),
         # b2 BCs two dimensions less, and b3 BCs three dimensions less
         # for a 3D problem - b1: surface BCs, b2: edge BCs, b3: point BCs
         # for a 2D problem - b1: edge BCs, b2: point BCs
@@ -64,42 +65,45 @@ class IO:
         
         if self.mesh.topology.dim == 3:
             
-            if self.have_b1_bcs:
-        
+            try:
                 self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b1 = infile.read_meshtags(self.mesh, name="Grid_surf")
-                    
-            if self.have_b2_bcs:
-                
+                    self.mt_b1 = infile.read_meshtags(self.mesh, name="Grid")
+            except:
+                pass
+            
+            try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name="Grid_edge")
-                    
-            if self.have_b3_bcs:
-                
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name="Grid_b2")
+            except:
+                pass
+
+            try:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b3 = infile.read_meshtags(self.mesh, name="Grid_point")
-
+                    self.mt_b3 = infile.read_meshtags(self.mesh, name="Grid_b3")
+            except:
+                pass
 
         elif self.mesh.topology.dim == 2:
             
-            if self.have_b1_bcs:
-
+            try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b1 = infile.read_meshtags(self.mesh, name="Grid_edge")
-                    
-            if self.have_b2_bcs:
-                
+                    self.mt_b1 = infile.read_meshtags(self.mesh, name="Grid")
+            except:
+                pass
+            
+            try:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name="Grid_point")
-                
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name="Grid_b2")
+            except:
+                pass
+
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
-
 
         # useful fields:
         

@@ -1,6 +1,6 @@
 <Xdmf Version="3.0">
   <Domain>
-    <Grid Name="Grid_surf">
+    <Grid Name="Grid">
       <Geometry GeometryType="XYZ">
         <DataItem DataType="Float" Dimensions="530 3" Format="XML" Precision="8">
           15.24059581756592 30.09340667724609 20.0
@@ -2032,7 +2032,7 @@
         </DataItem>
       </Attribute>
     </Grid>
-    <Grid Name="Grid_point">
+    <Grid Name="Grid_b3">
       <Topology NodesPerElement="1" NumberOfElements="1" TopologyType="Polyvertex">
         <DataItem DataType="Int" Dimensions="1 1" Format="XML" Precision="4">
           262

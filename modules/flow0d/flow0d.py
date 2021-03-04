@@ -29,9 +29,6 @@ class Flow0DProblem(problem_base):
         
         self.simname = io_params['simname']
         
-        try: self.T_cycl = model_params['parameters']['T_cycl']
-        except: self.T_cycl = 0
-        
         try: chamber_models = model_params['chamber_models']
         except: chamber_models = {'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}
         
@@ -138,6 +135,41 @@ class Flow0DProblem(problem_base):
         self.theta_ost = time_params['theta_ost']
 
 
+    def writerestart(self, sname, N, ms=False):
+        
+        self.cardvasc0D.write_restart(self.output_path_0D, sname+'_s', N, self.s)
+        self.cardvasc0D.write_restart(self.output_path_0D, sname+'_aux', N, self.aux)
+        self.cardvasc0D.write_restart(self.output_path_0D, sname+'_sTc_old', N, self.sTc_old)
+        if ms: self.cardvasc0D.write_restart(self.output_path_0D, sname+'_s_set', N, self.s_set)
+        
+        if self.cardvasc0D.T_cycl > 0: # write heart cycle info
+            if self.comm.rank == 0:
+                filename = self.output_path_0D+'/checkpoint_'+sname+'_cycle_'+str(N)+'.txt'
+                f = open(filename, 'wt')
+                f.write('%i' % (self.ti.cycle[0]))
+                f.close()
+                filename = self.output_path_0D+'/checkpoint_'+sname+'_cycleerror_'+str(N)+'.txt'
+                f = open(filename, 'wt')
+                f.write('%.8f' % (self.ti.cycleerror[0]))
+                f.close()
+
+
+    def readrestart(self, sname, rst, ms=False):
+        
+        self.cardvasc0D.read_restart(self.output_path_0D, sname+'_s', rst, self.s)
+        self.cardvasc0D.read_restart(self.output_path_0D, sname+'_s', rst, self.s_old)
+        self.cardvasc0D.read_restart(self.output_path_0D, sname+'_aux', rst, self.aux)
+        self.cardvasc0D.read_restart(self.output_path_0D, sname+'_aux', rst, self.aux_old)
+        self.cardvasc0D.read_restart(self.output_path_0D, sname+'_sTc_old', rst, self.sTc_old)
+        if ms: self.cardvasc0D.read_restart(self.output_path_0D, sname+'_s_set', rst, self.s_set)
+
+        # read heart cycle info
+        if self.cardvasc0D.T_cycl > 0: # set cycle
+            self.ti.cycle[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycle_'+str(rst)+'.txt', dtype=int)
+            self.ti.cycleerror[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycleerror_'+str(rst)+'.txt', dtype=float)
+            self.t_init -= (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl
+
+
 class Flow0DSolver():
 
     def __init__(self, problem, solver_params):
@@ -145,6 +177,9 @@ class Flow0DSolver():
         self.pb = problem
 
         self.solver_params = solver_params
+
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear_0D(self.pb, self.solver_params)
         
 
     def solve_problem(self):
@@ -156,12 +191,8 @@ class Flow0DSolver():
 
         # read restart information
         if self.pb.restart_step > 0:
-            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s', self.pb.restart_step, self.pb.s)
-            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_s', self.pb.restart_step, self.pb.s_old)
-            self.pb.cardvasc0D.read_restart(self.pb.output_path_0D, self.pb.simname+'_sTc_old', self.pb.restart_step, self.pb.sTc_old)
+            self.pb.readrestart(self.pb.simname, self.pb.restart_step)
             self.pb.simname += '_r'+str(self.pb.restart_step)
-            if self.pb.cardvasc0D.T_cycl > 0: # set cycle
-                self.pb.ti.cycle[0] = math.ceil(self.pb.restart_step / (self.pb.cardvasc0D.T_cycl / self.pb.dt))
 
         # evaluate old state
         if self.pb.ti.time_curves is not None:
@@ -169,9 +200,6 @@ class Flow0DSolver():
         
         self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.dt, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.aux_old)
 
-        # initialize nonlinear solver class
-        solnln = solver_nonlin.solver_nonlinear_0D(self.pb, self.solver_params)
-        
 
         # flow 0d main time loop
         for N in range(self.pb.restart_step+1, self.pb.numstep+1):
@@ -182,13 +210,13 @@ class Flow0DSolver():
             t = N * self.pb.dt
 
             # offset time for multiple cardiac cycles
-            t_off = (self.pb.ti.cycle[0]-1) * self.pb.T_cycl # zero if T_cycl variable is not specified
+            t_off = (self.pb.ti.cycle[0]-1) * self.pb.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
 
             # external volume/flux from time curve
             if self.pb.ti.time_curves is not None: self.pb.c[0] = self.pb.ti.timecurves(1)(t-t_off)
 
             # solve
-            solnln.newton(self.pb.s, t-t_off)
+            self.solnln.newton(self.pb.s, t-t_off)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid)
@@ -208,8 +236,7 @@ class Flow0DSolver():
                 self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
-                self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_s', N, self.pb.s)
-                self.pb.cardvasc0D.write_restart(self.pb.output_path_0D, self.pb.simname+'_sTc_old', N, self.pb.sTc_old)
+                self.pb.writerestart(self.pb.simname, N)
 
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, self.pb.numstep, wt=wt)

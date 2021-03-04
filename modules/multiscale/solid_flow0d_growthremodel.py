@@ -139,13 +139,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pblarge.io.simname = self.pb.simname_large + str(self.pb.restart_cycle)
             self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle)
             self.pb.pblarge.io.readcheckpoint(self.pb.pblarge, self.pb.restart_cycle)
-            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s', self.pb.restart_cycle, self.pb.pbsmall.pbf.s)
-            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s', self.pb.restart_cycle, self.pb.pbsmall.pbf.s_old)
-            self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_sTc_old', self.pb.restart_cycle, self.pb.pbsmall.pbf.sTc_old)
+            self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.io.simname, self.pb.restart_cycle)
             # no need to do after restart
             self.pb.pbsmall.pbs.prestress_initial = False
-            # read heart cycle info
-            self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(self.pb.restart_cycle)+'.txt')
             # induce the perturbation
             self.pb.pbsmall.pbf.cardvasc0D.induce_perturbation(self.pb.pbsmall.pbf.perturb_type, self.pb.pbsmall.pbf.ti.cycle[0], self.pb.pbsmall.pbf.perturb_after_cylce)
 
@@ -182,22 +178,13 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 
                 # write checkpoint for potential restarts
                 self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
-                self.pb.pbsmall.pbf.cardvasc0D.write_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s', N, self.pb.pbsmall.pbf.s)
-                self.pb.pbsmall.pbf.cardvasc0D.write_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s_set', N, self.pb.pbsmall.pbf.s_set)
-                self.pb.pbsmall.pbf.cardvasc0D.write_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_sTc_old', N, self.pb.pbsmall.pbf.sTc_old)
-                if self.pb.comm.rank == 0: # write heart cycle info
-                    filename = self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(N)+'.txt'
-                    f = open(filename, 'wt')
-                    f.write('%i' % (self.pb.pbsmall.pbf.ti.cycle[0]))
-                    f.close()
+                self.pb.pbsmall.pbf.writerestart(self.pb.pbsmall.pbs.io.simname, N, ms=True)
                 
             else:
                 
                 # read small scale checkpoint if we restart from this scale
                 self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle+1)
-                self.pb.pbsmall.pbf.cardvasc0D.read_restart(self.pb.pbsmall.pbf.output_path_0D, self.pb.pbsmall.pbs.io.simname+'_s_set', self.pb.restart_cycle+1, self.pb.pbsmall.pbf.s_set)
-                # read heart cycle info
-                self.pb.pbsmall.pbf.ti.cycle[0] = np.loadtxt(self.pb.pbsmall.pbf.output_path_0D+'/checkpoint_'+self.pb.pbsmall.pbs.io.simname+'_cycle_'+str(self.pb.restart_cycle+1)+'.txt')
+                self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.io.simname, self.pb.restart_cycle+1, ms=True)
                 # induce the perturbation
                 self.pb.pbsmall.pbf.cardvasc0D.induce_perturbation(self.pb.pbsmall.pbf.perturb_type, self.pb.pbsmall.pbf.ti.cycle[0], self.pb.pbsmall.pbf.perturb_after_cylce)
                 # no need to do after restart

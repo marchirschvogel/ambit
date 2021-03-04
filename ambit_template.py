@@ -15,6 +15,7 @@ def main():
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr_stag, solid_constraint
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
+                            'meshfile_type'         : 'ASCII', # OPTIONAL: what type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
                             'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)

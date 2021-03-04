@@ -170,13 +170,9 @@ class SolidmechanicsFlow0DSolver():
         # read restart information
         if self.pb.pbs.restart_step > 0:
             self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)
-            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', self.pb.pbs.restart_step, self.pb.pbf.s)
-            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', self.pb.pbs.restart_step, self.pb.pbf.s_old)
-            self.pb.pbf.cardvasc0D.read_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_sTc_old', self.pb.pbs.restart_step, self.pb.pbf.sTc_old)
+            self.pb.pbf.readrestart(self.pb.pbs.io.simname, self.pb.pbs.restart_step)
             self.pb.pbs.io.simname += '_r'+str(self.pb.pbs.restart_step)
-            if self.pb.pbf.cardvasc0D.T_cycl > 0: # set cycle
-                self.pb.pbf.ti.cycle[0] = math.ceil(self.pb.pbs.restart_step / (self.pb.pbf.cardvasc0D.T_cycl / self.pb.pbs.dt))
-
+            
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.pb.coupling_type == 'monolithic_direct':
             self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
@@ -236,7 +232,7 @@ class SolidmechanicsFlow0DSolver():
             t = N * self.pb.pbs.dt + self.pb.t_prev # t_prev for multiscale analysis (time from previous cycles)
             
             # offset time for multiple cardiac cycles
-            t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.T_cycl # zero if T_cycl variable is not specified
+            t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
             
             # set time-dependent functions
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
@@ -279,8 +275,7 @@ class SolidmechanicsFlow0DSolver():
                 self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.io.simname)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
-                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_s', N, self.pb.pbf.s)
-                self.pb.pbf.cardvasc0D.write_restart(self.pb.pbf.output_path_0D, self.pb.pbs.io.simname+'_sTc_old', N, self.pb.pbf.sTc_old)
+                self.pb.pbf.writerestart(self.pb.pbs.io.simname, N)
 
             # print to screen
             self.pb.pbf.cardvasc0D.print_to_screen(self.pb.pbf.s_mid,self.pb.pbf.aux_mid)

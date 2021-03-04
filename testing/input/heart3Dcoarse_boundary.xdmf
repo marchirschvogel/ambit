@@ -1,6 +1,6 @@
 <Xdmf Version="3.0">
   <Domain>
-    <Grid Name="Grid_surf">
+    <Grid Name="Grid">
       <Geometry GeometryType="XYZ">
         <DataItem DataType="Float" Dimensions="624 3" Format="XML" Precision="8">
           28.039449924847 32.148580346415805 13.017223958647817

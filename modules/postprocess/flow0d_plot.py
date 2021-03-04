@@ -39,7 +39,7 @@ def main():
     postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, theta)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, theta=0.5):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, theta=0.5, calc_func_params=False):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -51,28 +51,28 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         import cardiovascular0D_syspul
         cardiovascular0D_syspul.postprocess_groups_syspul(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = True
+        calculate_function_params = calc_func_params
 
     elif model == 'syspulcap':
         
         import cardiovascular0D_syspulcap
         cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = True
+        calculate_function_params = calc_func_params
         
     elif model == 'syspulcap2':
         
         import cardiovascular0D_syspulcap
         cardiovascular0D_syspulcap.postprocess_groups_syspulcap2(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = True
+        calculate_function_params = calc_func_params
         
     elif model == 'syspulcaprespir':
         
         import cardiovascular0D_syspulcaprespir
         cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,indpertaftercyl)
         iscirculation = True
-        calculate_function_params = True
+        calculate_function_params = calc_func_params
     
     elif model == '4elwindkesselLsZ':
     
