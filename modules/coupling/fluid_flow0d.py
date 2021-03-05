@@ -233,15 +233,6 @@ class FluidmechanicsFlow0DSolver():
             # solve time for time step
             wte = time.time()
             wt = wte - wts
-            
-            # write output and restart info
-            self.pb.pbs.io.write_output(pb=self.pb.pbf, N=N, t=t)
-            # raw txt file output of 0D model quantities
-            if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
-                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.io.simname)
-            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
-            if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
-                self.pb.pbf.writerestart(self.pb.pbs.io.simname, N)
 
             # print to screen
             self.pb.pbf.cardvasc0D.print_to_screen(self.pb.pbf.s_mid,self.pb.pbf.aux_mid)
@@ -253,6 +244,15 @@ class FluidmechanicsFlow0DSolver():
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.pbf.perturb_type is not None: self.pb.pbf.cardvasc0D.induce_perturbation(self.pb.pbf.perturb_type, self.pb.pbf.ti.cycle[0], self.pb.pbf.perturb_after_cylce)
+
+            # write output and restart info
+            self.pb.pbs.io.write_output(pb=self.pb.pbf, N=N, t=t)
+            # raw txt file output of 0D model quantities
+            if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
+                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.io.simname)
+            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
+            if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
+                self.pb.pbf.writerestart(self.pb.pbs.io.simname, N)
 
             if is_periodic:
                 if self.pb.comm.rank == 0:

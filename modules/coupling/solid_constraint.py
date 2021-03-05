@@ -207,13 +207,13 @@ class SolidmechanicsConstraintSolver():
             # solve
             self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
 
-            # update time step - solid and 0D model
+            # update time step
             self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
 
             # update old pressures on solid
             self.pb.lm.assemble(), self.pb.lm_old.axpby(1.0, 0.0, self.pb.lm)
             self.pb.set_pressure_fem(self.pb.lm_old, self.pb.coupfuncs_old)
-            # update old 3D fluxes
+            # update old 3D constraint variable
             for i in range(self.pb.num_coupling_surf):
                 self.pb.constr_old[i] = self.pb.constr[i]
 
@@ -221,11 +221,11 @@ class SolidmechanicsConstraintSolver():
             wte = time.time()
             wt = wte - wts
 
-            # write output and restart info
-            self.pb.pbs.io.write_output(pb=self.pb.pbs, N=N, t=t)
-
             # print time step info to screen
             self.pb.pbs.ti.print_timestep(N, t, wt=wt)
+
+            # write output and restart info
+            self.pb.pbs.io.write_output(pb=self.pb.pbs, N=N, t=t)
             
             # maximum number of steps to perform
             try:

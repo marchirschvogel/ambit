@@ -227,13 +227,6 @@ class Flow0DSolver():
             wte = time.time()
             wt = wte - wts
 
-            # raw txt file output of 0D model quantities
-            if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
-                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
-            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
-            if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
-                self.pb.writerestart(self.pb.simname, N)
-
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, self.pb.numstep, wt=wt)
             
@@ -242,6 +235,13 @@ class Flow0DSolver():
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.perturb_type is not None: self.pb.cardvasc0D.induce_perturbation(self.pb.perturb_type, self.pb.ti.cycle[0], self.pb.perturb_after_cylce)
+
+            # raw txt file output of 0D model quantities
+            if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
+                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
+            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
+            if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
+                self.pb.writerestart(self.pb.simname, N)
 
             if is_periodic:
                 if self.pb.comm.rank == 0:
