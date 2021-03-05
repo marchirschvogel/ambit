@@ -117,6 +117,9 @@ class cardiovascular0Dbase:
             var_old[i] = var[i]
             df_old[i]  = df[i]
             f_old[i]   = f[i]
+
+        # aux vector is always a numpy array
+        for i in range(len(aux)):
             
             aux_old[i] = aux[i]
             

@@ -36,6 +36,7 @@ def main():
                             'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence occurred (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
                             # iterative linear solver settings (only apply for solve_type 'iterative')
                             'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
+                            'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
                             'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
                             'adapt_linsolv_tol'     : False, # OPTIONAL: True, False - adapt linear tolerance throughout nonlinear iterations (default: False)
                             'adapt_factor'          : 0.1, # OPTIONAL: fadaptation factor for adapt_linsolv_tol (the larger, the more adaptation) (default: 0.1)

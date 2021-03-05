@@ -127,7 +127,6 @@ class FluidmechanicsFlow0DProblem():
         
 
 
-
 class FluidmechanicsFlow0DSolver():
 
     def __init__(self, problem, solver_params_fluid, solver_params_flow0d):

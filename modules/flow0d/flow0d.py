@@ -144,13 +144,9 @@ class Flow0DProblem(problem_base):
         
         if self.cardvasc0D.T_cycl > 0: # write heart cycle info
             if self.comm.rank == 0:
-                filename = self.output_path_0D+'/checkpoint_'+sname+'_cycle_'+str(N)+'.txt'
+                filename = self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(N)+'.txt'
                 f = open(filename, 'wt')
-                f.write('%i' % (self.ti.cycle[0]))
-                f.close()
-                filename = self.output_path_0D+'/checkpoint_'+sname+'_cycleerror_'+str(N)+'.txt'
-                f = open(filename, 'wt')
-                f.write('%.8f' % (self.ti.cycleerror[0]))
+                f.write('%i %.8f' % (self.ti.cycle[0],self.ti.cycleerror[0]))
                 f.close()
 
 
@@ -163,11 +159,11 @@ class Flow0DProblem(problem_base):
         self.cardvasc0D.read_restart(self.output_path_0D, sname+'_sTc_old', rst, self.sTc_old)
         if ms: self.cardvasc0D.read_restart(self.output_path_0D, sname+'_s_set', rst, self.s_set)
 
-        # read heart cycle info
-        if self.cardvasc0D.T_cycl > 0: # set cycle
-            self.ti.cycle[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycle_'+str(rst)+'.txt', dtype=int)
-            self.ti.cycleerror[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycleerror_'+str(rst)+'.txt', dtype=float)
+        if self.cardvasc0D.T_cycl > 0: # read heart cycle info
+            self.ti.cycle[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(0), dtype=int)
+            self.ti.cycleerror[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(1), dtype=float)
             self.t_init -= (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl
+
 
 
 class Flow0DSolver():

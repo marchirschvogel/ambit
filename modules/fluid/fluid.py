@@ -227,9 +227,6 @@ class FluidmechanicsProblem(problem_base):
 
 
 
-
-
-
 class FluidmechanicsSolver():
 
     def __init__(self, problem, solver_params):

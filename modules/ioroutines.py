@@ -48,7 +48,7 @@ class IO:
         elif self.meshfile_type=='HDF5':
             encoding = XDMFFile.Encoding.HDF5
         else:
-            raise NameError('Coose either ASCII or HDF5 as meshfile_type, or add a different encoding!')
+            raise NameError('Choose either ASCII or HDF5 as meshfile_type, or add a different encoding!')
             
         # read in xdmf mesh - domain
         with XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:

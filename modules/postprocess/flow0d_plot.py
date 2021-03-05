@@ -26,8 +26,8 @@ def main():
         indpertaftercyl = int(sys.argv[8])
         theta = float(sys.argv[9])
     except:
-        path = '/home/mh/work/ambit/testing/tmp/'
-        sname = 'multiscaletest_eccentric_small2'
+        path = '/home/mh/work/sim/heart3Df/p0/01/syspul_test_prestr_reinit/out/plot/raw'#'/home/mh/Downloads/marc_input/tmp/0D'#'/home/mh/work/ambit/testing/tmp/'
+        sname = 'test'#'multiscaletest_eccentric_small2'
         nstep_cycl = 50
         T_cycl = 1.0
         t_ed = 0.2
@@ -151,7 +151,6 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             # clean-up
             subprocess.call(['rm', ''+path+'/results_'+sname+'_p_'+ch+'_tmp.txt'])
             subprocess.call(['rm', ''+path+'/results_'+sname+'_V_'+ch+'_tmp.txt'])
-            
             
             
         # for plotting of compartment volumes: gather all volumes and add them in order to check if volume conservation is fulfilled!
@@ -451,6 +450,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         subprocess.call(['rm', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.tex'])
         subprocess.call(['rm', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.pdf'])
         subprocess.call(['rm', ''+path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps'])
+        # delete gnuplot file
+        subprocess.call(['rm', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
 
 
 

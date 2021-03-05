@@ -139,6 +139,7 @@ class SolidmechanicsFlow0DProblem():
             self.pbf.cardvasc0D.initialize_lm(self.lm_old, self.pbf.time_params['initial_conditions'])
 
 
+
 class SolidmechanicsFlow0DSolver():
 
     def __init__(self, problem, solver_params_solid, solver_params_flow0d):

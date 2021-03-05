@@ -226,7 +226,6 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             sys.stdout.flush()
 
 
-
     def set_state_small(self):
         
         # set delta small to large

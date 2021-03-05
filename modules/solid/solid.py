@@ -550,7 +550,6 @@ class SolidmechanicsProblem(problem_base):
                 f.close()
 
 
-
     
 class SolidmechanicsSolver():
 

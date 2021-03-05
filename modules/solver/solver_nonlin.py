@@ -66,7 +66,10 @@ class solver_nonlinear:
         
         try: self.tollin = solver_params['tol_lin']
         except: self.tollin = 1.0e-8
-        
+
+        try: self.maxliniter = solver_params['max_liniter']
+        except: self.maxliniter = 1200
+
         try: self.print_liniter_every = solver_params['print_liniter_every']
         except: self.print_liniter_every = 50
         
@@ -175,10 +178,9 @@ class solver_nonlinear:
                 self.ksp.getPC().setHYPREType("boomeramg")
             
             # set tolerances and print routine
-            self.ksp.setTolerances(rtol=self.tollin, divtol=None, max_it=None)
+            self.ksp.setTolerances(rtol=self.tollin, atol=None, divtol=None, max_it=self.maxliniter)
             self.ksp.setMonitor(lambda ksp, its, rnorm: self.print_linear_iter(its,rnorm))
 
-            
         else:
             
             raise NameError("Unknown solvetype!")
@@ -799,10 +801,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 ksp_s.setType("preonly")
                 ksp_s.getPC().setType("lu")
 
-                
-            self.ksp.setTolerances(rtol=self.tollin, divtol=None, max_it=None)
+            # set tolerances and print routine
+            self.ksp.setTolerances(rtol=self.tollin, atol=None, divtol=None, max_it=self.maxliniter)
             self.ksp.setMonitor(lambda ksp, its, rnorm: self.print_linear_iter(its,rnorm))
-
 
         else:
             
