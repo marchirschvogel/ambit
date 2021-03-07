@@ -24,7 +24,7 @@ from flow0d import Flow0DProblem
 
 class FluidmechanicsFlow0DProblem():
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, comm=None):
+    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, comm=None):
         
         self.problem_physics = 'fluid_flow0d'
         
@@ -49,7 +49,7 @@ class FluidmechanicsFlow0DProblem():
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pbs = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, comm=self.comm)
+        self.pbs = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, comm=self.comm)
         self.pbf = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
         self.set_variational_forms_and_jacobians()
@@ -106,13 +106,11 @@ class FluidmechanicsFlow0DProblem():
                 ds_p = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 df_ += self.pbs.timefac*self.pbs.vf.surface(ds_p)
             
+                # add to fluid rhs contributions
+                self.power_coupling += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p)
+                self.power_coupling_old += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p)
+        
             self.dforce.append(df_)
-
-            # add to fluid rhs contributions
-            self.power_coupling += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p)
-            self.power_coupling_old += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p)
-        
-        
         
         # minus sign, since contribution to external power!
         self.pbs.weakform_u += -self.pbs.timefac * self.power_coupling - (1.-self.pbs.timefac) * self.power_coupling_old

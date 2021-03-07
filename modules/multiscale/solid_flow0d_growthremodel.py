@@ -25,7 +25,7 @@ from solid_flow0d import SolidmechanicsFlow0DProblem, SolidmechanicsFlow0DSolver
 
 class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
-    def __init__(self, io_params, time_params_solid_small, time_params_solid_large, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, multiscale_params, comm=None):
+    def __init__(self, io_params, time_params_solid_small, time_params_solid_large, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, multiscale_params, io, comm=None):
         
         self.comm = comm
         
@@ -45,9 +45,12 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
         # set growth for small dynamic scale
         for n in range(len(constitutive_models)):
-            growth_trig = constitutive_models['MAT'+str(n+1)+'']['growth']['growth_trig']
-            constitutive_models['MAT'+str(n+1)+'']['growth']['growth_trig'] = 'prescribed_multiscale'
-            constitutive_models['MAT'+str(n+1)+'']['growth']['growth_settrig'] = growth_trig
+            try:
+                growth_trig = constitutive_models['MAT'+str(n+1)+'']['growth']['growth_trig']
+                constitutive_models['MAT'+str(n+1)+'']['growth']['growth_trig'] = 'prescribed_multiscale'
+                constitutive_models['MAT'+str(n+1)+'']['growth']['growth_settrig'] = growth_trig
+            except:
+                pass
 
         # remove any dynamics from large scale constitutive models dict
         for n in range(len(constitutive_models_large)):
@@ -56,9 +59,6 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
                 constitutive_models_large['MAT'+str(n+1)+''].pop('rayleigh_damping')
             except:
                 pass
-            
-            # we must have a growth law in each material
-            assert('growth' in constitutive_models_large['MAT'+str(n+1)+''].keys())
 
             # set active stress to prescribed on large scale
             try:
@@ -67,13 +67,16 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
             except:
                 pass
 
-            
         # we have to be quasi-static on the large scale!
         assert(time_params_solid_large['timint'] == 'static')
 
         # initialize problem instances
-        self.pbsmall = SolidmechanicsFlow0DProblem(io_params, time_params_solid_small, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, comm=self.comm)
-        self.pblarge = SolidmechanicsProblem(io_params, time_params_solid_large, fem_params, constitutive_models_large, bc_dict, time_curves, comm=self.comm)
+        self.pbsmall = SolidmechanicsFlow0DProblem(io_params, time_params_solid_small, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, comm=self.comm)
+        self.pblarge = SolidmechanicsProblem(io_params, time_params_solid_large, fem_params, constitutive_models_large, bc_dict, time_curves, io, comm=self.comm)
+    
+        # we must have a growth law in at least one material
+        assert(self.pbsmall.pbs.have_growth)
+        assert(self.pblarge.have_growth)
 
         self.tol_small = multiscale_params['tol_small']
         self.tol_large = multiscale_params['tol_large']
@@ -107,15 +110,17 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         # add constant Neumann terms for large scale problem (trigger pressures)
         self.neumann_funcs = []
         w_neumann = as_ufl(0)
-        for i in range(len(self.pbsmall.surface_p_ids)):
+        for n in range(len(self.pbsmall.surface_p_ids)):
             
             self.neumann_funcs.append(Function(self.pblarge.Vd_scalar))
             
-            ds_ = ds(subdomain_data=self.pblarge.io.mt_b1, subdomain_id=self.pbsmall.surface_p_ids[i], metadata={'quadrature_degree': self.pblarge.quad_degree})
+            for i in range(len(self.pbsmall.surface_p_ids[n])):
             
-            # we apply the pressure onto a fixed configuration of the G&R trigger point, determined by the displacement field u_set
-            # in the last G&R cycle, we assure that growth falls below a tolerance and hence the current and the set configuration coincide
-            w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
+                ds_ = ds(subdomain_data=self.pblarge.io.mt_b1, subdomain_id=self.pbsmall.surface_p_ids[n][i], metadata={'quadrature_degree': self.pblarge.quad_degree})
+            
+                # we apply the pressure onto a fixed configuration of the G&R trigger point, determined by the displacement field u_set
+                # in the last G&R cycle, we assure that growth falls below a tolerance and hence the current and the set configuration coincide
+                w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
 
         self.pblarge.weakform_u -= w_neumann
         # linearization not needed (only if we applied the trigger load on the current state)
@@ -227,7 +232,10 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
 
     def set_state_small(self):
-        
+
+        #print(self.pb.pblarge.u.vector.getLocalSize())
+        #print(self.pb.pbsmall.pbs.u.vector.getLocalSize())
+        #sys.exit()
         # set delta small to large
         u_delta = PETSc.Vec().createMPI((self.pb.pblarge.u.vector.getLocalSize(),self.pb.pblarge.u.vector.getSize()), bsize=self.pb.pblarge.u.vector.getBlockSize(), comm=self.pb.comm)
         u_delta.waxpy(-1.0, self.pb.pbsmall.pbs.u_set.vector, self.pb.pblarge.u.vector)

@@ -32,13 +32,12 @@ from base import problem_base
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, comm=None):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, comm=None):
         problem_base.__init__(self, io_params, time_params, comm)
         
         self.problem_physics = 'fluid'
         
-        self.io = ioroutines.IO_fluid(io_params, self.comm)
-        self.io.readin_mesh()
+        self.io = io
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)

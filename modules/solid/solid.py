@@ -36,13 +36,12 @@ from base import problem_base
 
 class SolidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, comm=None):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, comm=None):
         problem_base.__init__(self, io_params, time_params, comm)
 
         self.problem_physics = 'solid'
 
-        self.io = ioroutines.IO_solid(io_params, self.comm)
-        self.io.readin_mesh()
+        self.io = io
         
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
@@ -216,7 +215,9 @@ class SolidmechanicsProblem(problem_base):
                     self.ti.funcs_to_update.append({self.theta : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['growth']['prescribed_curve'])})
                 if 'remodeling_mat' in self.constitutive_models['MAT'+str(n+1)+'']['growth'].keys():
                     self.mat_remodel[n] = True
-
+            else:
+                self.mat_growth_thres.append(as_ufl(0))
+                
         # full linearization of our remodeling law can lead to excessive compiler times for ffcx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
         try: self.lin_remod_full = fem_params['lin_remodeling_full']

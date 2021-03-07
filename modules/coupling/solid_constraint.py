@@ -24,7 +24,7 @@ from solid import SolidmechanicsProblem, SolidmechanicsSolver
 
 class SolidmechanicsConstraintProblem():
 
-    def __init__(self, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, coupling_params, comm=None):
+    def __init__(self, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, coupling_params, io, comm=None):
         
         self.problem_physics = 'solid_constraint'
         
@@ -45,7 +45,7 @@ class SolidmechanicsConstraintProblem():
         self.prescribed_curve = self.coupling_params['prescribed_curve']
 
         # initialize problem instances (also sets the variational forms for the solid problem)
-        self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, comm=self.comm)
+        self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, comm=self.comm)
 
         self.set_variational_forms_and_jacobians()
 
@@ -98,16 +98,16 @@ class SolidmechanicsConstraintProblem():
                 ds_p = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 df_ += self.pbs.timefac*self.pbs.vf.surface(self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_p)
             
+                # add to solid rhs contributions
+                self.work_coupling += self.pbs.vf.deltaW_ext_neumann_true(self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), self.coupfuncs[-1], ds_p)
+                self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_true(self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), self.coupfuncs_old[-1], ds_p)
+                
+                # for prestressing, true loads should act on the reference, not the current configuration
+                if self.pbs.prestress_initial:
+                    self.work_coupling_prestr += self.pbs.vf.deltaW_ext_neumann_refnormal(self.coupfuncs_old[-1], ds_p)
+
             self.dforce.append(df_)
 
-            # add to solid rhs contributions
-            self.work_coupling += self.pbs.vf.deltaW_ext_neumann_true(self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), self.coupfuncs[-1], ds_p)
-            self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_true(self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), self.coupfuncs_old[-1], ds_p)
-            
-            # for prestressing, true loads should act on the reference, not the current configuration
-            if self.pbs.prestress_initial:
-                self.work_coupling_prestr += self.pbs.vf.deltaW_ext_neumann_refnormal(self.coupfuncs_old[-1], ds_p)
-        
         # minus sign, since contribution to external work!
         self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
         
