@@ -233,9 +233,6 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
     def set_state_small(self):
 
-        #print(self.pb.pblarge.u.vector.getLocalSize())
-        #print(self.pb.pbsmall.pbs.u.vector.getLocalSize())
-        #sys.exit()
         # set delta small to large
         u_delta = PETSc.Vec().createMPI((self.pb.pblarge.u.vector.getLocalSize(),self.pb.pblarge.u.vector.getSize()), bsize=self.pb.pblarge.u.vector.getBlockSize(), comm=self.pb.comm)
         u_delta.waxpy(-1.0, self.pb.pbsmall.pbs.u_set.vector, self.pb.pblarge.u.vector)
