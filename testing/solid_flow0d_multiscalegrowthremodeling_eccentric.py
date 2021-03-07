@@ -99,10 +99,10 @@ def main():
                                                             'tau_gr' : 2.0e4,
                                                             'gamma_gr' : 2.0,
                                                             'tau_gr_rev' : 4.0e4,
-                                                            'gamma_gr_rev' : 2.0,
-                                                            'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
-                                                                                'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},
-                                                                                'active_fiber' : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 1}}}}}
+                                                            'gamma_gr_rev' : 2.0}}}#,
+                                                            #'remodeling_mat' : {'neohooke_dev' : {'mu' : 10.},
+                                                                                #'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},
+                                                                                #'active_fiber' : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 1}}}}}
 
 
 

@@ -6,12 +6,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
-import sys, os, subprocess, time
-import math
-
-import numpy as np
-from mpi4py import MPI
 from petsc4py import PETSc
 
 # check out

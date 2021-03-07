@@ -11,7 +11,6 @@ import sys, os, subprocess, time
 import math
 
 import numpy as np
-from mpi4py import MPI
 from petsc4py import PETSc
 
 from dolfinx.fem import assemble_matrix, assemble_vector, set_bc, apply_lifting

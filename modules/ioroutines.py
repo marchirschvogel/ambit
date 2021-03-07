@@ -11,7 +11,7 @@ import numpy as np
 from petsc4py import PETSc
 from dolfinx import Function, VectorFunctionSpace
 from dolfinx.io import XDMFFile
-from ufl import FacetNormal, CellDiameter, dot, sqrt, tr
+from ufl import FacetNormal, CellDiameter, dot, sqrt, tr, as_ufl
 
 from projection import project
 from mpiroutines import allgather_vec
@@ -251,7 +251,8 @@ class IO_solid(IO):
                     elif res=='trmandelstress_e':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.ki.C(pb.u),ivar=pb.internalvars)))
+                            if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.ki.C(pb.u),ivar=pb.internalvars)))
+                            else: stressfuncs.append(as_ufl(0))
                         trmandelstress_e = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress_e")
                         self.resultsfiles[res].write_function(trmandelstress_e, t)
                     elif res=='vonmises_cauchystress':
@@ -287,7 +288,8 @@ class IO_solid(IO):
                     elif res=='fiberstretch_e':
                         stretchfuncs=[]
                         for n in range(pb.num_domains):
-                            stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(pb.u),pb.theta,pb.fib_func[0]))
+                            if pb.mat_growth[n]: stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(pb.u),pb.theta,pb.fib_func[0]))
+                            else: stretchfuncs.append(as_ufl(0))
                         fiberstretch_e = project(stretchfuncs, pb.Vd_scalar, pb.dx_, nm="FiberStretch_e")
                         self.resultsfiles[res].write_function(fiberstretch_e, t)
                     elif res=='theta':
@@ -295,14 +297,14 @@ class IO_solid(IO):
                     elif res=='phi_remod':
                         phifuncs=[]
                         for n in range(pb.num_domains):
-                            phifuncs.append(pb.ma[n].phi_remod(pb.theta))
+                            if pb.mat_remodel[n]: phifuncs.append(pb.ma[n].phi_remod(pb.theta))
+                            else: phifuncs.append(as_ufl(0))
                         phiremod = project(phifuncs, pb.Vd_scalar, pb.dx_, nm="phiRemodel")
                         self.resultsfiles[res].write_function(phiremod, t)
                     elif res=='tau_a':
                         self.resultsfiles[res].write_function(pb.tau_a, t)
                     elif res=='fiber1':
                         fiber1 = project(pb.fib_func[0], pb.Vd_vector, pb.dx_, nm="Fiber1")
-                        #print(fiber1.vector[:])
                         self.resultsfiles[res].write_function(fiber1, t)
                     elif res=='fiber2':
                         fiber2 = project(pb.fib_func[1], pb.Vd_vector, pb.dx_, nm="Fiber2")
