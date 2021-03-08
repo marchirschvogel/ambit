@@ -322,13 +322,21 @@ class SolidmechanicsFlow0DSolver():
             
             growth_thresolds = []
             for n in range(self.pb.pbs.num_domains):
-                growth_settrig = self.pb.pbs.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_settrig']
-                if growth_settrig == 'fibstretch':
-                    growth_thresolds.append(self.pb.pbs.ma[n].fibstretch_e(self.pb.pbs.ki.C(self.pb.pbs.u), self.pb.pbs.theta, self.pb.pbs.fib_func[0]))
-                elif growth_settrig == 'volstress':
-                    growth_thresolds.append(tr(self.pb.pbs.ma[n].M_e(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbs.ki.C(self.pb.pbs.u), ivar=self.pb.pbs.internalvars)))
+                
+                if self.pb.pbs.mat_growth[n]:
+                    
+                    growth_settrig = self.pb.pbs.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_settrig']
+                    
+                    if growth_settrig == 'fibstretch':
+                        growth_thresolds.append(self.pb.pbs.ma[n].fibstretch_e(self.pb.pbs.ki.C(self.pb.pbs.u), self.pb.pbs.theta, self.pb.pbs.fib_func[0]))
+                    elif growth_settrig == 'volstress':
+                        growth_thresolds.append(tr(self.pb.pbs.ma[n].M_e(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbs.ki.C(self.pb.pbs.u), ivar=self.pb.pbs.internalvars)))
+                    else:
+                        raise NameError("Unknown growth trigger to be set as homeostatic threshold!")
+                
                 else:
-                    raise NameError("Unknown growth trigger to be set as homeostatic threshold!")
+                    
+                    growth_thresolds.append(as_ufl(0))
                 
             growth_thres_proj = project(growth_thresolds, self.pb.pbs.Vd_scalar, self.pb.pbs.dx_)
             self.pb.pbs.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
