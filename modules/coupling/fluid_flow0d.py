@@ -150,8 +150,8 @@ class FluidmechanicsFlow0DSolver():
         # read restart information
         if self.pb.pbs.restart_step > 0:
             self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)
-            self.pb.pbf.readrestart(self.pb.pbs.io.simname, self.pb.pbs.restart_step)
-            self.pb.pbs.io.simname += '_r'+str(self.pb.pbs.restart_step)
+            self.pb.pbf.readrestart(self.pb.pbs.simname, self.pb.pbs.restart_step)
+            self.pb.pbs.simname += '_r'+str(self.pb.pbs.restart_step)
 
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.pb.coupling_type == 'monolithic_direct':
@@ -191,7 +191,7 @@ class FluidmechanicsFlow0DSolver():
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
         
         # write mesh output
-        self.pb.pbs.io.write_output(writemesh=True)
+        self.pb.pbs.io.write_output(self.pb.pbs, writemesh=True)
         
 
         # fluid 0D flow main time loop
@@ -238,19 +238,19 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbf.ti.print_timestep(N, t, self.pb.pbs.numstep, wt=wt)
 
             # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t-t_off, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.io.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
+            is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t-t_off, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.pbf.perturb_type is not None: self.pb.pbf.cardvasc0D.induce_perturbation(self.pb.pbf.perturb_type, self.pb.pbf.ti.cycle[0], self.pb.pbf.perturb_after_cylce)
 
             # write output and restart info
-            self.pb.pbs.io.write_output(pb=self.pb.pbf, N=N, t=t)
+            self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
             # raw txt file output of 0D model quantities
             if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
-                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.io.simname)
+                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.simname)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
-                self.pb.pbf.writerestart(self.pb.pbs.io.simname, N)
+                self.pb.pbf.writerestart(self.pb.pbs.simname, N)
 
             if is_periodic:
                 if self.pb.comm.rank == 0:

@@ -24,7 +24,6 @@ class IO:
         self.write_results_every = io_params['write_results_every']
         self.output_path = io_params['output_path']
         self.results_to_write = io_params['results_to_write']
-        self.simname = io_params['simname']
         
         self.mesh_domain = io_params['mesh_domain']
         self.mesh_boundary = io_params['mesh_boundary']
@@ -203,7 +202,7 @@ class IO_solid(IO):
         
    
 
-    def write_output(self, pb=None, writemesh=False, N=1, t=0):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
         
         if writemesh:
             
@@ -211,7 +210,7 @@ class IO_solid(IO):
             
                 self.resultsfiles = {}
                 for res in self.results_to_write:
-                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+self.simname+'_'+res+'.xdmf', 'w')
+                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
                 
@@ -356,7 +355,7 @@ class IO_solid(IO):
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
             key.vector.load(viewer)
             
             key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -395,7 +394,7 @@ class IO_solid(IO):
             
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
             key.vector.view(viewer)
 
 
@@ -411,7 +410,7 @@ class IO_fluid(IO):
             
                 self.resultsfiles = {}
                 for res in self.results_to_write:
-                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+self.simname+'_'+res+'.xdmf', 'w')
+                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
             
@@ -463,7 +462,7 @@ class IO_fluid(IO):
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
             vecs_to_read[key].vector.load(viewer)
             
             vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -482,4 +481,4 @@ class IO_fluid(IO):
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+self.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)

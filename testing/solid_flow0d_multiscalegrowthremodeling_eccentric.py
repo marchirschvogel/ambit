@@ -25,9 +25,9 @@ def main():
                             'mesh_boundary'         : ''+basepath+'/input/heart3D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_3D.txt',''+basepath+'/input/fib_sheet_coords_nodal_3D.txt']},
                             'write_results_every'   : 1,
-                            'output_path'           : ''+basepath+'/tmp/',
+                            'output_path'           : ''+basepath+'/tmp/tmp',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e','fiberstretch'],
-                            'simname'               : 'multiscaletest_eccentricII'}
+                            'simname'               : 'multiscaletest_eccentricIITMPPPPiiii'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,
@@ -43,6 +43,7 @@ def main():
 
     TIME_PARAMS_SOLID_SMALL = {'maxtime'            : 100.0,
                             'numstep'               : 5000,
+                            'numstep_stop' : 1,
                             'timint'                : 'genalpha', # genalpha, ost, static
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
@@ -77,7 +78,7 @@ def main():
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 10,
-                            'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
+                            'tol_small'             : 990.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-4, # growth rate tolerance [mm^3/s]
                             'tol_outer'             : 1.0e-3,
                             'restart_cycle'         : 0,

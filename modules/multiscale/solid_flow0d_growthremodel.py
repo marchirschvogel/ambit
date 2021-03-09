@@ -91,8 +91,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         # set large scale prestress to False (only F_hist and u_pre are added on the large scale if we have prestress, but no extra prestressing phase is undergone)
         self.pblarge.prestress_initial = False
 
-        self.simname_small = self.pbsmall.pbs.io.simname + '_small'
-        self.simname_large = self.pblarge.io.simname + '_large'
+        self.simname_small = self.pbsmall.pbs.simname + '_small'
+        self.simname_large = self.pblarge.simname + '_large'
 
         if gandr_trigger_phase == 'end_diastole':
             self.pbsmall.t_gandr_setpoint = self.pbsmall.pbf.cardvasc0D.t_ed
@@ -140,11 +140,11 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
         # read restart information
         if self.pb.restart_cycle > 0:
-            self.pb.pbsmall.pbs.io.simname = self.pb.simname_small + str(self.pb.restart_cycle)
-            self.pb.pblarge.io.simname = self.pb.simname_large + str(self.pb.restart_cycle)
+            self.pb.pbsmall.pbs.simname = self.pb.simname_small + str(self.pb.restart_cycle)
+            self.pb.pblarge.simname = self.pb.simname_large + str(self.pb.restart_cycle)
             self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle)
             self.pb.pblarge.io.readcheckpoint(self.pb.pblarge, self.pb.restart_cycle)
-            self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.io.simname, self.pb.restart_cycle)
+            self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle)
             # no need to do after restart
             self.pb.pbsmall.pbs.prestress_initial = False
             # induce the perturbation
@@ -167,8 +167,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pbsmall.t_prev = (self.pb.pbsmall.pbf.ti.cycle[0]-1) * self.pb.pbsmall.pbf.cardvasc0D.T_cycl
 
             # change output names
-            self.pb.pbsmall.pbs.io.simname = self.pb.simname_small + str(N)
-            self.pb.pblarge.io.simname = self.pb.simname_large + str(N)
+            self.pb.pbsmall.pbs.simname = self.pb.simname_small + str(N)
+            self.pb.pblarge.simname = self.pb.simname_large + str(N)
 
             self.set_state_small()
 
@@ -183,13 +183,13 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 
                 # write checkpoint for potential restarts
                 self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
-                self.pb.pbsmall.pbf.writerestart(self.pb.pbsmall.pbs.io.simname, N, ms=True)
+                self.pb.pbsmall.pbf.writerestart(self.pb.pbsmall.pbs.simname, N, ms=True)
                 
             else:
                 
                 # read small scale checkpoint if we restart from this scale
                 self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle+1)
-                self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.io.simname, self.pb.restart_cycle+1, ms=True)
+                self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle+1, ms=True)
                 # induce the perturbation
                 self.pb.pbsmall.pbf.cardvasc0D.induce_perturbation(self.pb.pbsmall.pbf.perturb_type, self.pb.pbsmall.pbf.ti.cycle[0], self.pb.pbsmall.pbf.perturb_after_cylce)
                 # no need to do after restart

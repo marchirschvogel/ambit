@@ -155,7 +155,7 @@ class SolidmechanicsConstraintSolver():
         # read restart information
         if self.pb.pbs.restart_step > 0:
             self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)
-            self.pb.pbs.io.simname += '_r'+str(self.pb.pbs.restart_step)
+            self.pb.pbs.simname += '_r'+str(self.pb.pbs.restart_step)
 
         self.pb.set_pressure_fem(self.pb.lm_old, self.pb.coupfuncs_old)
 
@@ -163,6 +163,7 @@ class SolidmechanicsConstraintSolver():
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
+            del self.solverprestr
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
@@ -186,7 +187,7 @@ class SolidmechanicsConstraintSolver():
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
         # write mesh output
-        self.pb.pbs.io.write_output(writemesh=True)
+        self.pb.pbs.io.write_output(self.pb.pbs, writemesh=True)
         
 
         # solid constraint main time loop
@@ -225,7 +226,7 @@ class SolidmechanicsConstraintSolver():
             self.pb.pbs.ti.print_timestep(N, t, wt=wt)
 
             # write output and restart info
-            self.pb.pbs.io.write_output(pb=self.pb.pbs, N=N, t=t)
+            self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
             
             # maximum number of steps to perform
             try:

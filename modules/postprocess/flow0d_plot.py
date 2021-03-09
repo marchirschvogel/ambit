@@ -25,18 +25,20 @@ def main():
         model = sys.argv[7]
         indpertaftercyl = int(sys.argv[8])
         theta = float(sys.argv[9])
+        calc_func_params = str_to_bool(sys.argv[10])
     except:
-        path = '/home/mh/work/sim/heart3Df/p0/01/syspul_test_prestr_reinit/out/plot/raw'#'/home/mh/Downloads/marc_input/tmp/0D'#'/home/mh/work/ambit/testing/tmp/'
-        sname = 'test'#'multiscaletest_eccentric_small2'
-        nstep_cycl = 50
+        path = '/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc/0D'#'/home/mh/Downloads/marc_input/tmp/0D'#'/home/mh/work/ambit/testing/tmp/'
+        sname = 'multiscale_eccentric_mr1_small1'
+        nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
         t_es = 0.53
-        model = 'syspul'
-        indpertaftercyl = -1
+        model = 'syspulcap'
+        indpertaftercyl = 1
         theta = 0.5
+        calc_func_params = True
     
-    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, theta)
+    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, theta, calc_func_params)
 
 
 def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, theta=0.5, calc_func_params=False):
@@ -453,6 +455,15 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         # delete gnuplot file
         subprocess.call(['rm', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
 
+
+
+def str_to_bool(s):
+    if s == 'True':
+         return True
+    elif s == 'False':
+         return False
+    else:
+         raise RuntimeError("str_to_bool failed!")
 
 
 

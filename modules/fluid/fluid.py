@@ -37,6 +37,8 @@ class FluidmechanicsProblem(problem_base):
         
         self.problem_physics = 'fluid'
         
+        self.simname = io_params['simname']
+        
         self.io = io
 
         # number of distinct domains (each one has to be assigned a own material model)
@@ -250,7 +252,7 @@ class FluidmechanicsSolver():
         # read restart information
         if self.pb.restart_step > 0:
             self.pb.io.readcheckpoint(self.pb, self.pb.restart_step)
-            self.pb.io.simname += '_r'+str(self.pb.restart_step)
+            self.pb.simname += '_r'+str(self.pb.restart_step)
 
         # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
@@ -263,7 +265,7 @@ class FluidmechanicsSolver():
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
         # write mesh output
-        self.pb.io.write_output(writemesh=True)
+        self.pb.io.write_output(self.pb, writemesh=True)
 
 
         # fluid main time loop
@@ -291,7 +293,7 @@ class FluidmechanicsSolver():
             self.pb.ti.print_timestep(N, t, wt=wt)
 
             # write output and restart info (old and new quantities are the same at this stage)
-            self.pb.io.write_output(pb=self.pb, N=N, t=t)
+            self.pb.io.write_output(self.pb, N=N, t=t)
             
             # maximum number of steps to perform
             try:

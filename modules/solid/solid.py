@@ -41,6 +41,8 @@ class SolidmechanicsProblem(problem_base):
 
         self.problem_physics = 'solid'
 
+        self.simname = io_params['simname']
+
         self.io = io
         
         # number of distinct domains (each one has to be assigned a own material model)
@@ -545,7 +547,7 @@ class SolidmechanicsProblem(problem_base):
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
                 if np.isclose(t,self.dt): mode='wt'
                 else: mode='a'
-                fl = self.io.output_path+'/results_'+self.io.simname+'_growthrate.txt'
+                fl = self.io.output_path+'/results_'+self.simname+'_growthrate.txt'
                 f = open(fl, mode)
                 f.write('%.16E %.16E\n' % (t,self.growth_rate))
                 f.close()
@@ -576,7 +578,7 @@ class SolidmechanicsSolver():
         # read restart information
         if self.pb.restart_step > 0:
             self.pb.io.readcheckpoint(self.pb, self.pb.restart_step)
-            self.pb.io.simname += '_r'+str(self.pb.restart_step)
+            self.pb.simname += '_r'+str(self.pb.restart_step)
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
         if self.pb.prestress_initial and self.pb.restart_step == 0:
@@ -598,7 +600,7 @@ class SolidmechanicsSolver():
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
         # write mesh output
-        self.pb.io.write_output(writemesh=True)
+        self.pb.io.write_output(self.pb, writemesh=True)
         
         
         # solid main time loop
@@ -634,7 +636,7 @@ class SolidmechanicsSolver():
             self.pb.ti.print_timestep(N, t, wt=wt)
 
             # write output and restart info (old and new quantities are the same at this stage)
-            self.pb.io.write_output(pb=self.pb, N=N, t=t)
+            self.pb.io.write_output(self.pb, N=N, t=t)
 
             if self.pb.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
                 break

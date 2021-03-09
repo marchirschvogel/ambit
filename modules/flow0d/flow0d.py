@@ -25,9 +25,9 @@ class Flow0DProblem(problem_base):
         
         self.problem_physics = 'flow0d'
         
-        self.time_params = time_params
-        
         self.simname = io_params['simname']
+        
+        self.time_params = time_params
         
         try: chamber_models = model_params['chamber_models']
         except: chamber_models = {'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}
