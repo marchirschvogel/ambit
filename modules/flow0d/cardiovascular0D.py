@@ -28,7 +28,7 @@ class cardiovascular0Dbase:
     
     # evaluate model at current nonlinear iteration
     def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], a=None, fnc=[]):
-
+        
         if isinstance(x, np.ndarray): x_sq = x
         else: x_sq = allgather_vec(x, self.comm)
 
@@ -167,10 +167,10 @@ class cardiovascular0Dbase:
                     print(">>> Induced cardiovascular disease type: %s" % (perturb_type))
                     sys.stdout.flush()
                 
-                if perturb_type=='mr': self.R_vin_l_max = 1.0e-5
-                if perturb_type=='ms': self.R_vin_l_min = 2.5e-5
-                if perturb_type=='ar': self.R_vout_l_max = 5.0e-5
-                if perturb_type=='as': self.R_vout_l_min = 5.0e-5
+                if perturb_type=='mr': self.R_vin_l_max *= 1.0e-6
+                if perturb_type=='ms': self.R_vin_l_min *= 25.
+                if perturb_type=='ar': self.R_vout_l_max *= 5.0e-6
+                if perturb_type=='as': self.R_vout_l_min *= 50.
 
                 # arrays need re-initialization, expressions have to be re-set
                 self.setup_arrays(), self.set_chamber_interfaces()

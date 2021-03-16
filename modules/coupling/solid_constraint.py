@@ -191,7 +191,7 @@ class SolidmechanicsConstraintSolver():
         
 
         # solid constraint main time loop
-        for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep+1):
+        for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep_stop+1):
 
             wts = time.time()
             
@@ -227,13 +227,6 @@ class SolidmechanicsConstraintSolver():
 
             # write output and restart info
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
-            
-            # maximum number of steps to perform
-            try:
-                if N == self.pb.pbs.numstep_stop:
-                    break
-            except:
-                pass
             
 
         if self.pb.comm.rank == 0: # only proc 0 should print this

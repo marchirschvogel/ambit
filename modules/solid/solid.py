@@ -604,7 +604,7 @@ class SolidmechanicsSolver():
         
         
         # solid main time loop
-        for N in range(self.pb.restart_step+1, self.pb.numstep+1):
+        for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
 
             wts = time.time()
             
@@ -640,13 +640,6 @@ class SolidmechanicsSolver():
 
             if self.pb.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
                 break
-            
-            # maximum number of steps to perform
-            try:
-                if N == self.pb.numstep_stop:
-                    break
-            except:
-                pass
             
             
         if self.pb.comm.rank == 0: # only proc 0 should print this

@@ -269,7 +269,7 @@ class FluidmechanicsSolver():
 
 
         # fluid main time loop
-        for N in range(self.pb.restart_step+1, self.pb.numstep+1):
+        for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
             
             wts = time.time()
             
@@ -294,13 +294,6 @@ class FluidmechanicsSolver():
 
             # write output and restart info (old and new quantities are the same at this stage)
             self.pb.io.write_output(self.pb, N=N, t=t)
-            
-            # maximum number of steps to perform
-            try:
-                if N == self.pb.numstep_stop:
-                    break
-            except:
-                pass
 
 
         if self.pb.comm.rank == 0: # only proc 0 should print this

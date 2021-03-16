@@ -101,6 +101,7 @@ def main():
                             'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-4, # growth rate tolerance
                             'tol_outer'             : 1.0e-3, # tolerance for volume increase during one growth cycle - stop sim if equal to or below this value
+                            'write_checkpoints'     : False, # OPTIONAL: to write checkpoints after each small or large scale run to restart from there (default: False)
                             'restart_cycle'         : 0, # OPTIONAL: at which multiscale cycle to restart (default: 0)
                             'restart_from_small'    : False} # OPTIONAL: if the multiscale sim should be restarted from a previous small scale run (small scale of restart_cycle needs to be computed already) (default: False)
                             

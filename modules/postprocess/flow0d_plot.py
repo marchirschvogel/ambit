@@ -27,14 +27,14 @@ def main():
         theta = float(sys.argv[9])
         calc_func_params = str_to_bool(sys.argv[10])
     except:
-        path = '/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc/0D'#'/home/mh/Downloads/marc_input/tmp/0D'#'/home/mh/work/ambit/testing/tmp/'
-        sname = 'multiscale_eccentric_mr1_small1'
+        path = '/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc/0D'
+        sname = 'multiscale_eccentric_mr1_small2'
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
         t_es = 0.53
         model = 'syspulcap'
-        indpertaftercyl = 1
+        indpertaftercyl = -1
         theta = 0.5
         calc_func_params = True
     
@@ -109,6 +109,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         numdata = len(tmp)
         # number of heart cycles
         n_cycl = int(numdata/nstep_cycl)
+        t_off = tmp[0]-T_cycl/nstep_cycl
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
         for ch in ['v_l','v_r','at_l','at_r']:
@@ -211,14 +212,14 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
 
                 # end-diastolic pressure
                 for k in range(len(pres)):
-                    if round(pres[k,0],2) == round(t_ed+(n_cycl-1)*T_cycl,2):
+                    if round(pres[k,0],2) == round(t_ed+(n_cycl-1)*T_cycl+t_off,2):
                         edp_index = k
                         break
                 edp.append(pres[edp_index,1])
 
                 # end-systolic pressure
                 for k in range(len(pres)):
-                    if round(pres[k,0],2) == round(t_es+(n_cycl-1)*T_cycl,2):
+                    if round(pres[k,0],2) == round(t_es+(n_cycl-1)*T_cycl+t_off,2):
                         esp_index = k
                         break
                 esp.append(pres[esp_index,1])

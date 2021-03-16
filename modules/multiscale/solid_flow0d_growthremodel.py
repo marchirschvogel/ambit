@@ -34,7 +34,10 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         gandr_trigger_phase = multiscale_params['gandr_trigger_phase']
         
         self.N_cycles = multiscale_params['numcycles']
-        
+
+        try: self.write_checkpoints = multiscale_params['write_checkpoints']
+        except: self.write_checkpoints = False
+
         try: self.restart_cycle = multiscale_params['restart_cycle']
         except: self.restart_cycle = 0
         
@@ -181,9 +184,10 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 # solve small scale 3D-0D coupled solid-flow0d problem with fixed growth
                 self.solversmall.solve_problem()
                 
-                # write checkpoint for potential restarts
-                self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
-                self.pb.pbsmall.pbf.writerestart(self.pb.pbsmall.pbs.simname, N, ms=True)
+                if self.pb.write_checkpoints:
+                    # write checkpoint for potential restarts
+                    self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
+                    self.pb.pbsmall.pbf.writerestart(self.pb.pbsmall.pbs.simname, N, ms=True)
                 
             else:
                 
@@ -213,8 +217,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             # compute volume after G&R
             vol_after = self.compute_volume_large()
 
-            # write checkpoint for potential restarts
-            self.pb.pblarge.io.writecheckpoint(self.pb.pblarge, N)
+            if self.pb.write_checkpoints:
+                # write checkpoint for potential restarts
+                self.pb.pblarge.io.writecheckpoint(self.pb.pblarge, N)
             
             # relative volume increase over large scale run
             volchange = (vol_after - vol_prior)/vol_prior

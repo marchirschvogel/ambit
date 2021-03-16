@@ -226,7 +226,7 @@ class SolidmechanicsFlow0DSolver():
         
 
         # solid 0D flow main time loop
-        for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep+1):
+        for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep_stop+1):
 
             wts = time.time()
             
@@ -295,13 +295,6 @@ class SolidmechanicsFlow0DSolver():
                     print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]))
                     sys.stdout.flush()
                 break
-            
-            # maximum number of steps to perform
-            try:
-                if N == self.pb.pbs.numstep_stop:
-                    break
-            except:
-                pass
             
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
