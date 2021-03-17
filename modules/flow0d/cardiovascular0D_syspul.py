@@ -46,7 +46,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
-    def __init__(self, theta, params, chmodels={'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}, chinterf={'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}, prescrpath=None, have_elast=False, cq='volume', valvelaw='pwlin_pres', comm=None):
+    def __init__(self, theta, params, chmodels={'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}, chinterf={'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}, prescrpath=None, have_elast=False, cq='volume', valvelaw=['pwlin_pres',0], comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, theta, comm=comm)
 
@@ -106,7 +106,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         
         self.chmodels = chmodels
         self.chinterf = chinterf
-        self.valvelaw = valvelaw
+        self.valvelaw = valvelaw[0]
+        self.epsvalve = valvelaw[1]
         
         self.prescrpath = prescrpath
         self.have_elast = have_elast
@@ -228,6 +229,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_r_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
             R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_l_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
             R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_r_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+        elif self.valvelaw=='smooth_pres':
+            R_vin_l_  = 0.5*(self.R_vin_l_max - self.R_vin_l_min)*(sp.tanh((p_v_l_-p_at_l_d_)/self.epsvalve) + 1.) + self.R_vin_l_min
+            R_vin_r_  = 0.5*(self.R_vin_r_max - self.R_vin_r_min)*(sp.tanh((p_v_r_-p_at_r_d_)/self.epsvalve) + 1.) + self.R_vin_r_min
+            R_vout_l_ = 0.5*(self.R_vout_l_max - self.R_vout_l_min)*(sp.tanh((p_ar_sys_-p_v_l_d_)/self.epsvalve) + 1.) + self.R_vout_l_min
+            R_vout_r_ = 0.5*(self.R_vout_r_max - self.R_vout_r_min)*(sp.tanh((p_ar_pul_-p_v_r_d_)/self.epsvalve) + 1.) + self.R_vout_r_min
         else: 
             raise NameError("Unknown valve law!")
 

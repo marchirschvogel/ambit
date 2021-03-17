@@ -57,7 +57,7 @@ class Flow0DProblem(problem_base):
         except: have_elastance = False
         
         try: valvelaw = model_params['valvelaw']
-        except: valvelaw = 'pwlin_pres'
+        except: valvelaw = ['pwlin_pres',0]
 
         try: self.cq = coupling_params['coupling_quantity']
         except: self.cq = 'volume'

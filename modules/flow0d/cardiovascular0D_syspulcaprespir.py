@@ -19,7 +19,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
     
-    def __init__(self, theta, params, chmodels={'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}, chinterf={'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}, prescrpath=None, have_elast=False, cq='volume', valvelaw='pwlin_pres', comm=None):
+    def __init__(self, theta, params, chmodels={'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}, chinterf={'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}, prescrpath=None, have_elast=False, cq='volume', valvelaw=['pwlin_pres',0], comm=None):
 
         self.R_airw = params['R_airw']
         self.L_alv = params['L_alv']

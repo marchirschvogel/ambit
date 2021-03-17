@@ -72,7 +72,8 @@ def main():
                             'chamber_interfaces'    : {'lv' : 1, 'rv' : 1, 'la' : 0, 'ra' : 0},
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
                             'perturb_type'          : None, # OPTIONAL: mr, ms, ar, as (default: None)
-                            'perturb_after_cylce'   : 2} # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
+                            'perturb_after_cylce'   : 2, # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
+                            'valvelaw'              : ['pwlin_pres',0]} # OPTIONAL: valve law (pwlin_pres: piecewise-linear pressure-governed, pwlin_time: piecewise-linear time-governed, smooth_pres: smooth pressure-governed with number being amount of smoothness) (default: ['pwlin_pres',0])
 
     # for solid*, fluid* problem types
     FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid mechanics)
