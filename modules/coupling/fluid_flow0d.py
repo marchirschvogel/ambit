@@ -178,7 +178,7 @@ class FluidmechanicsFlow0DSolver():
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
         # initially evaluate 0D model at old state
-        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
+        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux_old)
                
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
@@ -207,6 +207,9 @@ class FluidmechanicsFlow0DSolver():
 
             # set time-dependent functions
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
+
+            # activation curves for 0D chambers (if present)
+            self.pb.pbf.evaluate_activation(t-t_off)
 
             # solve
             self.solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off)

@@ -52,7 +52,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
     
-    def __init__(self, theta, params, chmodels={'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}, chinterf={'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}, prescrpath=None, have_elast=False, cq='volume', valvelaw=['pwlin_pres',0], comm=None):
+    def __init__(self, theta, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaw=['pwlin_pres',0], comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, theta, comm=comm)
         
@@ -150,7 +150,6 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.V_ven_pul_u = params['V_ven_pul_u']
         
         self.chmodels = chmodels
-        self.chinterf = chinterf
         self.valvelaw = valvelaw[0]
         self.epsvalve = valvelaw[1]
         
@@ -195,11 +194,11 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.set_solve_arrays()
 
 
-    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], a=None):
+    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], y=[], a=None):
         
-        fnc = self.evaluate_chamber_state(t)
+        fnc = self.evaluate_chamber_state(y, t)
 
-        cardiovascular0Dbase.evaluate(self, x, dt, t, df, f, K, c, a, fnc)
+        cardiovascular0Dbase.evaluate(self, x, dt, t, df, f, K, c, y, a, fnc)
 
     
     def equation_map(self):
@@ -207,12 +206,12 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.varmap={'q_vin_l' : 0+self.si[2], ''+self.vname_prfx[2]+'_at_l' : 1-self.si[2], 'q_vout_l' : 2+self.si[0], ''+self.vname_prfx[0]+'_v_l' : 3-self.si[0], 'p_ar_sys' : 4, 'q_ar_sys' : 5, 'p_arperi_sys' : 6, 'q_arspl_sys' : 7, 'q_arespl_sys' : 8, 'q_armsc_sys' : 9, 'q_arcer_sys' : 10, 'q_arcor_sys' : 11, 'p_venspl_sys' : 12, 'q_venspl_sys' : 13, 'p_venespl_sys' : 14, 'q_venespl_sys' : 15, 'p_venmsc_sys' : 16, 'q_venmsc_sys' : 17, 'p_vencer_sys' : 18, 'q_vencer_sys' : 19, 'p_vencor_sys' : 20, 'q_vencor_sys' : 21, 'p_ven_sys' : 22, 'q_ven_sys' : 23, 'q_vin_r' : 24+self.si[3], ''+self.vname_prfx[3]+'_at_r' : 25-self.si[3], 'q_vout_r' : 26+self.si[1], ''+self.vname_prfx[1]+'_v_r' : 27-self.si[1], 'p_ar_pul' : 28, 'q_ar_pul' : 29, 'p_cap_pul' : 30,'q_cap_pul' : 31, 'p_ven_pul' : 32, 'q_ven_pul' : 33}
         self.auxmap={''+self.cname_prfx[2]+'_at_l' : 0, ''+self.cname_prfx[0]+'_v_l' : 2, 'V_ar_sys' : 4, 'V_arperi_sys' : 6, 'V_venspl_sys' : 12, 'V_venespl_sys' : 14, 'V_venmsc_sys' : 16, 'V_vencer_sys' : 18, 'V_vencor_sys' : 20, 'V_ven_sys' : 22, ''+self.cname_prfx[3]+'_at_r' : 24, ''+self.cname_prfx[1]+'_v_r' : 26, 'V_ar_pul' : 28, 'V_cap_pul' : 30, 'V_ven_pul' : 32}
 
-        if self.chinterf['lv'] > 1: self.auxmap['p_v_l_d'] = 3
-        if self.chinterf['rv'] > 1: self.auxmap['p_v_r_d'] = 27
-        if self.chinterf['la'] > 1: self.auxmap['p_at_l_d'] = 1
-        if self.chinterf['ra'] > 1: self.auxmap['p_at_r_d'] = 25
-        
-        
+        if self.chmodels['lv']['type']=='3D_fem' and self.chmodels['lv']['interfaces'] > 1: self.auxmap['p_v_l_d'] = 3
+        if self.chmodels['rv']['type']=='3D_fem' and self.chmodels['rv']['interfaces'] > 1: self.auxmap['p_v_r_d'] = 27
+        if self.chmodels['la']['type']=='3D_fem' and self.chmodels['la']['interfaces'] > 1: self.auxmap['p_at_l_d'] = 1
+        if self.chmodels['ra']['type']=='3D_fem' and self.chmodels['ra']['interfaces'] > 1: self.auxmap['p_at_r_d'] = 25
+
+
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')
         p_at_l_, p_at_l_d_ = sp.Symbol('p_at_l_'), sp.Symbol('p_at_l_d_')
@@ -629,10 +628,11 @@ class cardiovascular0Dsyspulcap2(cardiovascular0Dsyspulcap):
         self.varmap={'q_vin_l' : 0+self.si[2], ''+self.vname_prfx[2]+'_at_l' : 1-self.si[2], 'q_vout_l' : 2+self.si[0], ''+self.vname_prfx[0]+'_v_l' : 3-self.si[0], 'p_ar_sys' : 4, 'q_arcor_sys' : 5, 'q_ar_sys' : 6, 'p_arperi_sys' : 7, 'q_arspl_sys' : 8, 'q_arespl_sys' : 9, 'q_armsc_sys' : 10, 'q_arcer_sys' : 11, 'p_venspl_sys' : 12, 'q_venspl_sys' : 13, 'p_venespl_sys' : 14, 'q_venespl_sys' : 15, 'p_venmsc_sys' : 16, 'q_venmsc_sys' : 17, 'p_vencer_sys' : 18, 'q_vencer_sys' : 19, 'p_vencor_sys' : 20, 'q_vencor_sys' : 21, 'p_ven_sys' : 22, 'q_ven_sys' : 23, 'q_vin_r' : 24+self.si[3], ''+self.vname_prfx[3]+'_at_r' : 25-self.si[3], 'q_vout_r' : 26+self.si[1], ''+self.vname_prfx[1]+'_v_r' : 27-self.si[1], 'p_ar_pul' : 28, 'q_ar_pul' : 29, 'p_cap_pul' : 30,'q_cap_pul' : 31, 'p_ven_pul' : 32, 'q_ven_pul' : 33}
         self.auxmap={''+self.cname_prfx[2]+'_at_l' : 0, ''+self.cname_prfx[0]+'_v_l' : 2, 'V_ar_arcor_sys' : 4, 'V_arperi_sys' : 7, 'V_venspl_sys' : 12, 'V_venespl_sys' : 14, 'V_venmsc_sys' : 16, 'V_vencer_sys' : 18, 'V_vencor_sys' : 20, 'V_ven_sys' : 22, ''+self.cname_prfx[3]+'_at_r' : 24, ''+self.cname_prfx[1]+'_v_r' : 26, 'V_ar_pul' : 28, 'V_cap_pul' : 30, 'V_ven_pul' : 32}
 
-        if self.chinterf[2] > 1: self.auxmap['p_at_l_d'] = 1
-        if self.chinterf[0] > 1: self.auxmap['p_v_l_d'] = 3
-        if self.chinterf[3] > 1: self.auxmap['p_at_r_d'] = 25
-        if self.chinterf[1] > 1: self.auxmap['p_v_r_d'] = 27
+        if self.chmodels['lv']['type']=='3D_fem' and self.chmodels['lv']['interfaces'] > 1: self.auxmap['p_v_l_d'] = 3
+        if self.chmodels['rv']['type']=='3D_fem' and self.chmodels['rv']['interfaces'] > 1: self.auxmap['p_v_r_d'] = 27
+        if self.chmodels['la']['type']=='3D_fem' and self.chmodels['la']['interfaces'] > 1: self.auxmap['p_at_l_d'] = 1
+        if self.chmodels['ra']['type']=='3D_fem' and self.chmodels['ra']['interfaces'] > 1: self.auxmap['p_at_r_d'] = 25
+        
 
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')

@@ -56,8 +56,7 @@ def main():
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspulcap, syspulcap2
                             'parameters'            : param(),
-                            'chamber_models'        : {'lv' : '3D_fem', 'rv' : '3D_fem', 'la' : '0D_elast', 'ra' : '0D_elast'}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
-                            'chamber_interfaces'    : {'lv' : 1, 'rv' : 1, 'la' : 0, 'ra' : 0}} # only for syspul* models (can be > 1 for 3D fluid models, has to be 1 for 3D solid models)
+                            'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
 
     FEM_PARAMS           = {'order_disp'            : 2, # order of displacement interpolation (solid mechanics)
                             'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
@@ -80,7 +79,16 @@ def main():
     # some examples... up to 9 possible (tc1 until tc9 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves():
         
-        pass
+        def tc1(self, t): # atrial activation
+            
+            act_dur = 2.*param()['t_ed']
+            t0 = 0.
+            
+            if t >= t0 and t <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            else:
+                return 0.0
+        
 
     BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
                                         {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},

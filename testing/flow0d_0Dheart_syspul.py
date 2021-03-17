@@ -29,15 +29,36 @@ def main():
                          'initial_conditions'    : init()}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspul',
-                         'parameters'            : param()}
+                         'parameters'            : param(),
+                         'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
     
 
     # define your time curves here (syntax: tcX refers to curve X)
-    # None to be defined
+    class time_curves():
+        
+        def tc1(self, t): # atrial activation
+            
+            act_dur = 2.*param()['t_ed']
+            t0 = 0.
+            
+            if t >= t0 and t <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            else:
+                return 0.0
+
+        def tc2(self, t): # ventricular activation
+            
+            act_dur = param()['t_es'] - param()['t_ed']
+            t0 = 2.*param()['t_ed']
+            
+            if t >= t0 and t <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            else:
+                return 0.0
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
     
     # solve time-dependent problem
     problem.solve_problem()

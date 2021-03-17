@@ -68,8 +68,7 @@ def main():
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspulcap, syspulcap2
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
-                            'chamber_models'        : {'lv' : '3D_fem', 'rv' : '3D_fem', 'la' : '0D_elast', 'ra' : '0D_elast'}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
-                            'chamber_interfaces'    : {'lv' : 1, 'rv' : 1, 'la' : 0, 'ra' : 0},
+                            'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 5}}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
                             'perturb_type'          : None, # OPTIONAL: mr, ms, ar, as (default: None)
                             'perturb_after_cylce'   : 2, # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
@@ -164,6 +163,15 @@ def main():
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
+        def tc5(self, t): # 0D elastance activation function
+            
+            act_dur = 0.4
+            t0 = 0.
+            
+            if t >= t0 and t <= t0 + act_dur:
+                y = 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            else:
+                y = 0.0
 
         #...
 

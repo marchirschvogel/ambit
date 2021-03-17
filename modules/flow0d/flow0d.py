@@ -29,11 +29,12 @@ class Flow0DProblem(problem_base):
         
         self.time_params = time_params
         
-        try: chamber_models = model_params['chamber_models']
-        except: chamber_models = {'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}
+        # only relevant to syspul* models
+        try: self.chamber_models = model_params['chamber_models']
+        except: self.chamber_models = {}
         
-        try: chamber_interfaces = model_params['chamber_interfaces']
-        except: chamber_interfaces = {'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}
+        try: self.excitation_curve = model_params['excitation_curve']
+        except: self.excitation_curve = None
         
         try: prescribed_path = io_params['prescribed_path']
         except: prescribed_path = None
@@ -91,16 +92,16 @@ class Flow0DProblem(problem_base):
             self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(time_params['theta_ost'], model_params['parameters'], cq=self.cq, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
-            self.cardvasc0D = cardiovascular0Dsyspul(time_params['theta_ost'], model_params['parameters'], chmodels=chamber_models, chinterf=chamber_interfaces, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-            self.cardvasc0D = cardiovascular0Dsyspulcap(time_params['theta_ost'], model_params['parameters'], chmodels=chamber_models, chinterf=chamber_interfaces, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap2':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap2
-            self.cardvasc0D = cardiovascular0Dsyspulcap2(time_params['theta_ost'], model_params['parameters'], chmodels=chamber_models, chinterf=chamber_interfaces, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap2(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
-            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(time_params['theta_ost'], model_params['parameters'], chmodels=chamber_models, chinterf=chamber_interfaces, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
         else:
             raise NameError("Unknown 0D modeltype!")
 
@@ -118,7 +119,7 @@ class Flow0DProblem(problem_base):
         
         self.s_set = self.K.createVecLeft() # set point for multisale analysis
         
-        self.c = []
+        self.c, self.y = [], []
 
         # initialize flow0d time-integration class
         self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, self.comm)
@@ -165,6 +166,18 @@ class Flow0DProblem(problem_base):
             self.t_init -= (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl
 
 
+    def evaluate_activation(self, t):
+        
+        # activation curves
+        if bool(self.chamber_models):
+            ci=0
+            for ch in self.chamber_models:
+                try:
+                    self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(t)
+                    ci+=1
+                except:
+                    pass
+
 
 class Flow0DSolver():
 
@@ -189,12 +202,16 @@ class Flow0DSolver():
         if self.pb.restart_step > 0:
             self.pb.readrestart(self.pb.simname, self.pb.restart_step)
             self.pb.simname += '_r'+str(self.pb.restart_step)
-
-        # evaluate old state
-        if self.pb.ti.time_curves is not None:
-            self.pb.c.append(self.pb.ti.timecurves(1)(self.pb.t_init))
         
-        self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.dt, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.aux_old)
+        # evaluate old state
+        if self.pb.excitation_curve is not None:
+            self.pb.c.append(self.pb.ti.timecurves(self.pb.excitation_curve)(self.pb.t_init))
+        if bool(self.pb.chamber_models):
+            for ch in self.pb.chamber_models:
+                try: self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
+                except: pass
+
+        self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.dt, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.y, self.pb.aux_old)
 
 
         # flow 0d main time loop
@@ -209,7 +226,10 @@ class Flow0DSolver():
             t_off = (self.pb.ti.cycle[0]-1) * self.pb.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
 
             # external volume/flux from time curve
-            if self.pb.ti.time_curves is not None: self.pb.c[0] = self.pb.ti.timecurves(1)(t-t_off)
+            if self.pb.excitation_curve is not None:
+                self.pb.c[0] = self.pb.ti.timecurves(self.pb.excitation_curve)(t-t_off)
+            # activation curves
+            self.pb.evaluate_activation(t-t_off)
 
             # solve
             self.solnln.newton(self.pb.s, t-t_off)

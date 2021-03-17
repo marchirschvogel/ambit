@@ -36,7 +36,7 @@ def main():
     
     MODEL_PARAMS      = {'modeltype'             : 'syspulcaprespir',
                          'parameters'            : param(),
-                         'chamber_models'        : {'lv' : 'prescr_elast', 'rv' : 'prescr_elast', 'la' : 'prescr_elast', 'ra' : 'prescr_elast'},
+                         'chamber_models'        : {'lv' : {'type' : 'prescr_elast'}, 'rv' : {'type' : 'prescr_elast'}, 'la' : {'type' : 'prescr_elast'}, 'ra' : {'type' : 'prescr_elast'}},
                          'have_elastance'        : True}
     
 

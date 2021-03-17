@@ -27,7 +27,7 @@ class cardiovascular0Dbase:
     
     
     # evaluate model at current nonlinear iteration
-    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], a=None, fnc=[]):
+    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], y=[], a=None, fnc=[]):
         
         if isinstance(x, np.ndarray): x_sq = x
         else: x_sq = allgather_vec(x, self.comm)
@@ -209,17 +209,6 @@ class cardiovascular0Dbase:
         self.Kdf__, self.Kf__ = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
 
 
-    # time-varying elastance
-    def E_t(self, E_A, E_min, t, t0, act_dur):
-        
-        if t >= t0 and t <= t0 + act_dur:
-            y = 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
-        else:
-            y = 0.0
-        
-        return E_A * y + E_min
-
-
     # prescribed elastance model 
     def E_p(self, erray, tarray, t):
 
@@ -230,17 +219,16 @@ class cardiovascular0Dbase:
     def set_chamber_interfaces(self):
         
         # loop over chambers
-        i=0
-        for ch in ['lv', 'rv', 'la', 'ra']:
+        for i, ch in enumerate(self.chmodels):
             
-            if self.chmodels[ch]=='prescr_elast':
+            if self.chmodels[ch]['type']=='prescr_elast':
                 self.switch_V[i], self.switch_p[i] = 1, 0
                 self.elastarrays[i], self.eqtimearray = self.set_prescribed_elastance(ch)
             
-            elif self.chmodels[ch]=='0D_elast':
+            elif self.chmodels[ch]['type']=='0D_elast':
                 self.switch_V[i], self.switch_p[i] = 1, 0
             
-            elif self.chmodels[ch]=='3D_fem':
+            elif self.chmodels[ch]['type']=='3D_fem':
                 if self.cq == 'volume':
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
@@ -262,8 +250,6 @@ class cardiovascular0Dbase:
                 
             else:
                 raise NameError("Unknown chamber model for chamber %s!" % (ch))
-            
-            i+=1
 
 
     # set coupling state (populate x and c vectors with Sympy symbols) according to case and coupling quantity (can be volume, flux, or pressure)
@@ -275,15 +261,15 @@ class cardiovascular0Dbase:
         if ch == 'ra': V_unstressed, i = self.V_at_r_u, 3
    
         # time-varying elastances
-        if self.chmodels[ch]=='0D_elast' or self.chmodels[ch]=='prescr_elast':
+        if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='prescr_elast':
             chvars[0] = chvars[1]/chfncs[0] + V_unstressed # V = p/E(t) + V_u
             chvars[2] = chvars[1] # downstream p is equal to p
             self.fnc_.append(chfncs[0])
 
         # 3D FEM model
-        elif self.chmodels[ch]=='3D_fem': # also for 2D FEM models
+        elif self.chmodels[ch]['type']=='3D_fem': # also for 2D FEM models
 
-            if self.chinterf[ch] == 1:
+            if self.chmodels[ch]['interfaces'] == 1:
                 
                 chvars[2] = chvars[1] # downstream p is equal to p
 
@@ -293,7 +279,7 @@ class cardiovascular0Dbase:
                     self.x_[self.vindex_ch[i]-self.si[i]] = chvars[0] # Q
                     self.c_.append(chvars[1]) # p
                         
-            elif self.chinterf[ch] == 2:
+            elif self.chmodels[ch]['interfaces'] == 2:
                 
                 if self.cq == 'volume' or self.cq == 'flux':
                     raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
@@ -313,26 +299,28 @@ class cardiovascular0Dbase:
 
 
     # evaluate time-dependent state of chamber (for 0D elastance models)
-    def evaluate_chamber_state(self, t):
+    def evaluate_chamber_state(self, y, t):
         
         chamber_funcs=[]
 
-        i=0
-        for ch in self.chmodels:
+        ci=0
+        for i, ch in enumerate(self.chmodels):
 
-            if self.chmodels[ch]=='0D_elast': # pay attention to different timings for atrial and ventricular activation!
+            if self.chmodels[ch]['type']=='0D_elast':
                 
                 if ch == 'lv': E_max, E_min = self.E_v_max_l,  self.E_v_min_l
                 if ch == 'rv': E_max, E_min = self.E_v_max_r,  self.E_v_min_r
                 if ch == 'la': E_max, E_min = self.E_at_max_l, self.E_at_min_l
                 if ch == 'ra': E_max, E_min = self.E_at_max_r, self.E_at_min_r
-                
-                if 'v' in ch: E_ch_t = self.E_t(E_max-E_min, E_min, t, 2.*(self.t_ed-0.), self.t_es-self.t_ed)
-                if 'a' in ch: E_ch_t = self.E_t(E_max-E_min, E_min, t, 0., 2.*(self.t_ed-0.))
+
+                # time-varying elastance model (y should be normalized activation function provided by user)
+                E_ch_t = (E_max - E_min) * y[ci] + E_min
                 
                 chamber_funcs.append(E_ch_t)
+                
+                ci+=1
 
-            elif self.chmodels[ch]=='prescr_elast':
+            elif self.chmodels[ch]['type']=='prescr_elast':
                 
                 E_ch_t = self.E_p(self.elastarrays[i], self.eqtimearray, t)
                 
@@ -341,8 +329,6 @@ class cardiovascular0Dbase:
             else:
                 
                 pass
-
-            i+=1
             
         return chamber_funcs
 
@@ -350,11 +336,11 @@ class cardiovascular0Dbase:
     # initialize Lagrange multipliers for monolithic Lagrange-type coupling (FEniCS)
     def initialize_lm(self, var, iniparam):
         
-        i = 0
-        for ch in ['lv', 'rv', 'la', 'ra']:
-            if self.chmodels[ch]=='3D_fem':
+        for i, ch in enumerate(self.chmodels):
+            
+            if self.chmodels[ch]['type']=='3D_fem':
                 
-                if self.chinterf[ch] == 1: 
+                if self.chmodels[ch]['interfaces'] == 1: 
                 
                     if ch=='lv':
                         if 'p_v_l_0' in iniparam.keys(): var[i] = iniparam['p_v_l_0']
@@ -364,7 +350,6 @@ class cardiovascular0Dbase:
                         if 'p_at_l_0' in iniparam.keys(): var[i] = iniparam['p_at_l_0']
                     if ch=='ra':
                         if 'p_at_r_0' in iniparam.keys(): var[i] = iniparam['p_at_r_0']
-                    i+=1
                 
                 # TODO: Check for multiple interfaces!
                 else:

@@ -905,7 +905,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     self.pbc.pbf.c[i] = sum(cq)*self.pbc.cq_factor[i]
 
                 # evaluate 0D model with current p and return df, f, K_ss
-                self.pbc.pbf.cardvasc0D.evaluate(s, self.pb.dt, t, self.pbc.pbf.df, self.pbc.pbf.f, self.K_ss, self.pbc.pbf.c, self.pbc.pbf.aux)
+                self.pbc.pbf.cardvasc0D.evaluate(s, self.pb.dt, t, self.pbc.pbf.df, self.pbc.pbf.f, self.K_ss, self.pbc.pbf.c, self.pbc.pbf.y, self.pbc.pbf.aux)
 
                 # assemble 0D rhs contributions
                 self.pbc.pbf.df_old.assemble()
@@ -1265,7 +1265,7 @@ class solver_nonlinear_0D(solver_nonlinear):
             
             tes = time.time()
 
-            self.pb.cardvasc0D.evaluate(s, self.pb.dt, t, self.pb.df, self.pb.f, self.pb.K, self.pb.c, self.pb.aux)
+            self.pb.cardvasc0D.evaluate(s, self.pb.dt, t, self.pb.df, self.pb.f, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
             
             # 0D rhs vector
             r = self.pb.K.createVecLeft()

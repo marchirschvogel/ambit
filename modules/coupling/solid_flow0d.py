@@ -208,8 +208,13 @@ class SolidmechanicsFlow0DSolver():
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
+        if bool(self.pb.pbf.chamber_models):
+            for ch in self.pb.pbf.chamber_models:
+                try: self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
+                except: pass
+
         # initially evaluate 0D model at old state
-        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.aux_old)
+        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux_old)
         
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
@@ -243,6 +248,9 @@ class SolidmechanicsFlow0DSolver():
             if self.pb.pbs.have_active_stress and self.pb.pbs.active_stress_trig == 'ode':
                 self.pb.pbs.evaluate_active_stress_ode(t-t_off)
 
+            # activation curves for 0D chambers (if present)
+            self.pb.pbf.evaluate_activation(t-t_off)
+            
             # solve
             self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
 

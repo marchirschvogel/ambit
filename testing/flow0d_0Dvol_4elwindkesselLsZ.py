@@ -30,7 +30,8 @@ def main():
                          'initial_conditions'    : init()}
     
     MODEL_PARAMS      = {'modeltype'             : '4elwindkesselLsZ',
-                         'parameters'            : param()}
+                         'parameters'            : param(),
+                         'excitation_curve'      : 1}
     
 
     # define your time curves here (syntax: tcX refers to curve X)

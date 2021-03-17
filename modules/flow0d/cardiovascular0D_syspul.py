@@ -46,7 +46,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
-    def __init__(self, theta, params, chmodels={'lv' : '0D_elast', 'rv' : '0D_elast', 'la' : '0D_elast', 'ra' : '0D_elast'}, chinterf={'lv' : 1, 'rv' : 1, 'la' : 1, 'ra' : 1}, prescrpath=None, have_elast=False, cq='volume', valvelaw=['pwlin_pres',0], comm=None):
+    def __init__(self, theta, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaw=['pwlin_pres',0], comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, theta, comm=comm)
 
@@ -105,7 +105,6 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.V_ven_pul_u = params['V_ven_pul_u']
         
         self.chmodels = chmodels
-        self.chinterf = chinterf
         self.valvelaw = valvelaw[0]
         self.epsvalve = valvelaw[1]
         
@@ -149,11 +148,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.set_solve_arrays()
 
 
-    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], a=None):
+    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], y=[], a=None):
         
-        fnc = self.evaluate_chamber_state(t)
+        fnc = self.evaluate_chamber_state(y, t)
 
-        cardiovascular0Dbase.evaluate(self, x, dt, t, df, f, K, c, a, fnc)
+        cardiovascular0Dbase.evaluate(self, x, dt, t, df, f, K, c, y, a, fnc)
 
 
     def equation_map(self):
@@ -161,11 +160,12 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.varmap={'q_vin_l' : 0+self.si[2], ''+self.vname_prfx[2]+'_at_l' : 1-self.si[2], 'q_vout_l' : 2+self.si[0], ''+self.vname_prfx[0]+'_v_l' : 3-self.si[0], 'p_ar_sys' : 4, 'q_ar_sys' : 5, 'p_ven_sys' : 6, 'q_ven_sys' : 7, 'q_vin_r' : 8+self.si[3], ''+self.vname_prfx[3]+'_at_r' : 9-self.si[3], 'q_vout_r' : 10+self.si[1], ''+self.vname_prfx[1]+'_v_r' : 11-self.si[1], 'p_ar_pul' : 12, 'q_ar_pul' : 13, 'p_ven_pul' : 14, 'q_ven_pul' : 15}
         self.auxmap={''+self.cname_prfx[2]+'_at_l' : 0, ''+self.cname_prfx[0]+'_v_l' : 2, 'V_ar_sys' : 4, 'V_ven_sys' : 6, ''+self.cname_prfx[3]+'_at_r' : 8, ''+self.cname_prfx[1]+'_v_r' : 10, 'V_ar_pul' : 12, 'V_ven_pul' : 14}
 
-        if self.chinterf['lv'] > 1: self.auxmap['p_v_l_d'] = 3
-        if self.chinterf['rv'] > 1: self.auxmap['p_at_r_d'] = 9
-        if self.chinterf['la'] > 1: self.auxmap['p_at_l_d'] = 1
-        if self.chinterf['rv'] > 1: self.auxmap['p_v_r_d'] = 11
-        
+        if self.chmodels['lv']['type']=='3D_fem' and self.chmodels['lv']['interfaces'] > 1: self.auxmap['p_v_l_d'] = 3
+        if self.chmodels['rv']['type']=='3D_fem' and self.chmodels['rv']['interfaces'] > 1: self.auxmap['p_v_r_d'] = 11
+        if self.chmodels['la']['type']=='3D_fem' and self.chmodels['la']['interfaces'] > 1: self.auxmap['p_at_l_d'] = 1
+        if self.chmodels['ra']['type']=='3D_fem' and self.chmodels['ra']['interfaces'] > 1: self.auxmap['p_at_r_d'] = 9
+
+
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')
         p_at_l_, p_at_l_d_ = sp.Symbol('p_at_l_'), sp.Symbol('p_at_l_d_')
