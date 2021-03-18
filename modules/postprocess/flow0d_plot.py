@@ -62,10 +62,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         iscirculation = True
         calculate_function_params = calc_func_params
         
-    elif model == 'syspulcap2':
+    elif model == 'syspulcapveins':
         
         import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcap2(groups,indpertaftercyl)
+        cardiovascular0D_syspulcap.postprocess_groups_syspulcapveins(groups,indpertaftercyl)
         iscirculation = True
         calculate_function_params = calc_func_params
         
@@ -286,7 +286,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.0, 1.1
             maxrows, maxcols, sl = 1, 5, 20
-            if (model == 'syspulcap' or model == 'syspulcap2' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
+            if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.2
                 maxrows, maxcols, sl = 2, 5, 19
         if 'flux_time' in list(groups[g].keys())[0]:
@@ -298,7 +298,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.1
             maxrows, maxcols, sl = 1, 5, 20
-            if (model == 'syspulcap' or model == 'syspulcap2' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
+            if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl = 3, 5, 20
         if 'vol_time' in list(groups[g].keys())[0]:
@@ -337,7 +337,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.2
             maxrows, maxcols, sl = 2, 5, 20
-            if (model == 'syspulcap' or model == 'syspulcap2' or model == 'syspulcaprespir'):
+            if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir'):
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl = 3, 5, 10
         if 'ppO2_time' in list(groups[g].keys())[0]:

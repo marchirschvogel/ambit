@@ -862,7 +862,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.pbc.coupling_type == 'monolithic_direct':
                 self.pbc.pbf.cardvasc0D.set_pressure_fem(s, self.pbc.pbf.cardvasc0D.v_ids, self.pbc.pr0D, self.pbc.coupfuncs)
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-                self.pbc.pbf.cardvasc0D.set_pressure_fem(self.pbc.lm, self.pbc.pbf.cardvasc0D.c_ids, self.pbc.pr0D, self.pbc.coupfuncs)
+                self.pbc.pbf.cardvasc0D.set_pressure_fem(self.pbc.lm, list(range(self.pbc.num_coupling_surf)), self.pbc.pr0D, self.pbc.coupfuncs)
             if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
                 self.pbc.set_pressure_fem(self.pbc.lm, self.pbc.coupfuncs)
 
@@ -916,7 +916,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
-                for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
+                for i in range(self.pbc.num_coupling_surf):
                     cq = assemble_scalar(self.pbc.cq[i])
                     cq = self.pbc.comm.allgather(cq)
                     self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
@@ -929,8 +929,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 s_pert = self.pbc.pbf.K.createVecLeft()
                 s_pert.axpby(1.0, 0.0, s)
                 
-                for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
-                    for j in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
+                for i in range(self.pbc.num_coupling_surf):
+                    for j in range(self.pbc.num_coupling_surf):
                         self.pbc.pbf.c[j] = lm_sq[j] + eps # perturbed LM
                         self.snln0D.newton(s_pert, t, print_iter=False)
                         s_pert_sq = allgather_vec(s_pert, self.pbc.comm)
@@ -986,8 +986,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     row_ids = self.pbc.pbf.cardvasc0D.c_ids
                     col_ids = self.pbc.pbf.cardvasc0D.v_ids
                 if self.pbc.coupling_type == 'monolithic_lagrange':
-                    row_ids = self.pbc.pbf.cardvasc0D.c_ids
-                    col_ids = row_ids
+                    row_ids = list(range(self.pbc.num_coupling_surf))
+                    col_ids = list(range(self.pbc.num_coupling_surf))
 
             if self.ptype == 'solid_constraint':    
                 row_ids = list(range(self.pbc.num_coupling_surf))

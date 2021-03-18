@@ -677,15 +677,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         dcbO2_dppCO2_val = 0.
 
         return dcbO2_dppCO2_val
-
-
-    def d2cbO2_dppCO22(self, ppCO2, ppO2):
-
-        d2cbO2_dppCO22_val = 0.
-
-        return d2cbO2_dppCO22_val
-
-
+    
 
     # cbCO2 and its derivatives
     def cbCO2(self, ppCO2, ppO2):
@@ -711,14 +703,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         return dcbCO2_dppO2_val
 
 
-    def d2cbCO2_dppO22(self, ppCO2, ppO2):
-
-        d2cbCO2_dppO22_val = 0.
-
-        return d2cbCO2_dppO22_val
-
-
-
     def ctO2(self, ppO2):
 
         ctO2_val = self.alpha_O2 * ppO2
@@ -733,8 +717,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         return dctO2_dppO2_val
 
 
-
-
     def ctCO2(self, ppCO2):
 
         ctCO2_val = self.alpha_CO2 * ppCO2
@@ -747,7 +729,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         dctCO2_dppCO2_val = self.alpha_CO2
 
         return dctCO2_dppCO2_val
-
 
 
 

@@ -214,6 +214,30 @@ class cardiovascular0Dbase:
 
         return np.interp(t, tarray, erray)
 
+    
+    # set valve resistances
+    def set_valve_resistances(self, p_v_l_,p_v_l_d_,p_v_r_,p_v_r_d_,p_at_l_d_,p_at_r_d_,p_ar_sys_,p_ar_pul_):
+        
+        if self.valvelaw=='pwlin_pres':
+            R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, p_v_l_ < p_at_l_d_), (self.R_vin_l_max, p_v_l_ >= p_at_l_d_) )
+            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, p_v_r_ < p_at_r_d_), (self.R_vin_r_max, p_v_r_ >= p_at_r_d_) )
+            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, p_v_l_d_ < p_ar_sys_), (self.R_vout_l_min, p_v_l_d_ >= p_ar_sys_) )
+            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, p_v_r_d_ < p_ar_pul_), (self.R_vout_r_min, p_v_r_d_ >= p_ar_pul_) )
+        elif self.valvelaw=='pwlin_time':
+            R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_l_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_r_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_l_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_r_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+        elif self.valvelaw=='smooth_pres':
+            R_vin_l_  = 0.5*(self.R_vin_l_max - self.R_vin_l_min)*(sp.tanh((p_v_l_-p_at_l_d_)/self.epsvalve) + 1.) + self.R_vin_l_min
+            R_vin_r_  = 0.5*(self.R_vin_r_max - self.R_vin_r_min)*(sp.tanh((p_v_r_-p_at_r_d_)/self.epsvalve) + 1.) + self.R_vin_r_min
+            R_vout_l_ = 0.5*(self.R_vout_l_max - self.R_vout_l_min)*(sp.tanh((p_ar_sys_-p_v_l_d_)/self.epsvalve) + 1.) + self.R_vout_l_min
+            R_vout_r_ = 0.5*(self.R_vout_r_max - self.R_vout_r_min)*(sp.tanh((p_ar_pul_-p_v_r_d_)/self.epsvalve) + 1.) + self.R_vout_r_min
+        else: 
+            raise NameError("Unknown valve law!")
+
+        return R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_
+
 
     # set chamber interfaces according to case and coupling quantity (can be volume, flux, or pressure)
     def set_chamber_interfaces(self):
@@ -244,7 +268,6 @@ class cardiovascular0Dbase:
                     self.vname_prfx[i] = 'Q'
                     self.si[i] = 1 # switch indices of pressure / outflux
                     self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
-                    self.c_ids.append(i) # LMs: coupling quantity indices for coupling
                 else:
                     raise NameError("Unknown coupling quantity!")
                 
@@ -260,24 +283,38 @@ class cardiovascular0Dbase:
         if ch == 'la': V_unstressed, i = self.V_at_l_u, 2
         if ch == 'ra': V_unstressed, i = self.V_at_r_u, 3
    
+        # "distributed" p variables
+        num_pdist = len(chvars)-1
+
         # time-varying elastances
         if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='prescr_elast':
-            chvars[0] = chvars[1]/chfncs[0] + V_unstressed # V = p/E(t) + V_u
-            chvars[2] = chvars[1] # downstream p is equal to p
+            chvars['vq'] = chvars['p']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
             self.fnc_.append(chfncs[0])
+            
+            # all "distributed" p are equal to "main" p of chamber
+            chvars['pdown'] = chvars['p']
+            if 'p1' in chvars.keys(): chvars['p1'] = chvars['p']
+            if 'p2' in chvars.keys(): chvars['p2'] = chvars['p']
+            if 'p3' in chvars.keys(): chvars['p3'] = chvars['p']
+            if 'p4' in chvars.keys(): chvars['p4'] = chvars['p']
 
         # 3D FEM model
         elif self.chmodels[ch]['type']=='3D_fem': # also for 2D FEM models
 
             if self.chmodels[ch]['interfaces'] == 1:
                 
-                chvars[2] = chvars[1] # downstream p is equal to p
+                # all "distributed" p are equal to "main" p of chamber
+                chvars['pdown'] = chvars['p']
+                if 'p1' in chvars.keys(): chvars['p1'] = chvars['p']
+                if 'p2' in chvars.keys(): chvars['p2'] = chvars['p']
+                if 'p3' in chvars.keys(): chvars['p3'] = chvars['p']
+                if 'p4' in chvars.keys(): chvars['p4'] = chvars['p']
 
                 if self.cq == 'volume' or self.cq == 'flux':
-                    self.c_.append(chvars[0]) # V or Q
+                    self.c_.append(chvars['vq']) # V or Q
                 if self.cq == 'pressure':
-                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars[0] # Q
-                    self.c_.append(chvars[1]) # p
+                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
+                    self.c_.append(chvars['p']) # p
                         
             elif self.chmodels[ch]['interfaces'] == 2:
                 
@@ -285,17 +322,57 @@ class cardiovascular0Dbase:
                     raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
 
                 if self.cq == 'pressure':
-                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars[0] # Q
-                    self.c_.append(chvars[1]) # p
-                    self.c_.append(chvars[2]) # downstream p
+                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
+                    if num_pdist == 2:
+                        self.c_.append(chvars['p']) # p
+                        self.c_.append(chvars['pdown']) # downstream p
+                    if num_pdist > 2:
+                        self.c_.append(chvars['p']) # p
+                        self.c_.append(chvars['p2']) # p2
+
+            elif self.chmodels[ch]['interfaces'] == 3:
+                
+                if self.cq == 'volume' or self.cq == 'flux':
+                    raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
+
+                if self.cq == 'pressure':
+                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
+                    self.c_.append(chvars['p']) # p1
+                    self.c_.append(chvars['p2']) # p2
+                    self.c_.append(chvars['pdown']) # downstream p
+
+            elif self.chmodels[ch]['interfaces'] == 4:
+                
+                if self.cq == 'volume' or self.cq == 'flux':
+                    raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
+
+                if self.cq == 'pressure':
+                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
+                    self.c_.append(chvars['p']) # p1
+                    self.c_.append(chvars['p2']) # p2
+                    self.c_.append(chvars['p3']) # p3
+                    self.c_.append(chvars['p4']) # p4
+            
+            elif self.chmodels[ch]['interfaces'] == 5:
+                
+                if self.cq == 'volume' or self.cq == 'flux':
+                    raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
+
+                if self.cq == 'pressure':
+                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
+                    self.c_.append(chvars['p']) # p1
+                    self.c_.append(chvars['p2']) # p2
+                    self.c_.append(chvars['p3']) # p3
+                    self.c_.append(chvars['p4']) # p4
+                    self.c_.append(chvars['pdown']) # downstream p
 
             else:
-                raise AttributeError("More than two 3D interfaces for chamber %s. Think of how to handle this!" % (ch))
+                raise AttributeError("More than five 3D interfaces for chamber %s. Think of how to handle this!" % (ch))
 
         else:
             raise NameError("Unknown chamber model for chamber %s!" % (ch))
 
-        return chvars
+        return list(chvars.values())
 
 
     # evaluate time-dependent state of chamber (for 0D elastance models)

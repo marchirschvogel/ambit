@@ -54,7 +54,7 @@ def main():
                             'eps_periodic'          : 1.0e-3, # cardiac cycle periodicity tolerance
                             'periodic_checktype'    : None} # None, 'allvar', 'pQvar'
 
-    MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspulcap, syspulcap2
+    MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',
                             'parameters'            : param(),
                             'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
 

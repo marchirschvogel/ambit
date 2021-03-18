@@ -211,31 +211,14 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.x_[14] = p_ven_pul_
         self.x_[15] = q_ven_pul_
 
-
         # set chamber states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
-        VQ_v_l_, p_v_l_, p_v_l_d_ = self.set_coupling_state('lv', [VQ_v_l_, p_v_l_, p_v_l_d_], [E_v_l_])
-        VQ_v_r_, p_v_r_, p_v_r_d_ = self.set_coupling_state('rv', [VQ_v_r_, p_v_r_, p_v_r_d_], [E_v_r_])
-        VQ_at_l_, p_at_l_, p_at_l_d_ = self.set_coupling_state('la', [VQ_at_l_, p_at_l_, p_at_l_d_], [E_at_l_])
-        VQ_at_r_, p_at_r_, p_at_r_d_ = self.set_coupling_state('ra', [VQ_at_r_, p_at_r_, p_at_r_d_], [E_at_r_])
+        VQ_v_l_, p_v_l_, p_v_l_d_ = self.set_coupling_state('lv', {'vq' : VQ_v_l_, 'p' : p_v_l_, 'pdown' : p_v_l_d_}, [E_v_l_])
+        VQ_v_r_, p_v_r_, p_v_r_d_ = self.set_coupling_state('rv', {'vq' : VQ_v_r_, 'p' : p_v_r_, 'pdown' : p_v_r_d_}, [E_v_r_])
+        VQ_at_l_, p_at_l_, p_at_l_d_ = self.set_coupling_state('la', {'vq' : VQ_at_l_, 'p' : p_at_l_, 'pdown' : p_at_l_d_}, [E_at_l_])
+        VQ_at_r_, p_at_r_, p_at_r_d_ = self.set_coupling_state('ra', {'vq' : VQ_at_r_, 'p' : p_at_r_, 'pdown' : p_at_r_d_}, [E_at_r_])
 
         # set valve resistances
-        if self.valvelaw=='pwlin_pres':
-            R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, p_v_l_ < p_at_l_d_), (self.R_vin_l_max, p_v_l_ >= p_at_l_d_) )
-            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, p_v_r_ < p_at_r_d_), (self.R_vin_r_max, p_v_r_ >= p_at_r_d_) )
-            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, p_v_l_d_ < p_ar_sys_), (self.R_vout_l_min, p_v_l_d_ >= p_ar_sys_) )
-            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, p_v_r_d_ < p_ar_pul_), (self.R_vout_r_min, p_v_r_d_ >= p_ar_pul_) )
-        elif self.valvelaw=='pwlin_time':
-            R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_l_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_r_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_l_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_r_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-        elif self.valvelaw=='smooth_pres':
-            R_vin_l_  = 0.5*(self.R_vin_l_max - self.R_vin_l_min)*(sp.tanh((p_v_l_-p_at_l_d_)/self.epsvalve) + 1.) + self.R_vin_l_min
-            R_vin_r_  = 0.5*(self.R_vin_r_max - self.R_vin_r_min)*(sp.tanh((p_v_r_-p_at_r_d_)/self.epsvalve) + 1.) + self.R_vin_r_min
-            R_vout_l_ = 0.5*(self.R_vout_l_max - self.R_vout_l_min)*(sp.tanh((p_ar_sys_-p_v_l_d_)/self.epsvalve) + 1.) + self.R_vout_l_min
-            R_vout_r_ = 0.5*(self.R_vout_r_max - self.R_vout_r_min)*(sp.tanh((p_ar_pul_-p_v_r_d_)/self.epsvalve) + 1.) + self.R_vout_r_min
-        else: 
-            raise NameError("Unknown valve law!")
+        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_v_l_,p_v_l_d_,p_v_r_,p_v_r_d_,p_at_l_d_,p_at_r_d_,p_ar_sys_,p_ar_pul_)
 
 
         # df part of rhs contribution (df - df_old)/dt
@@ -389,7 +372,7 @@ def postprocess_groups_syspul(groups, indpertaftercyl=0):
                 'lines'            : [16, 17, 18, 20]})
     # index 2
     groups.append({'flux_time_sys_l'  : ['q_vin_l', 'q_vout_l', 'q_ar_sys', 'q_ven_sys'],
-                'tex'              : ['$q_{\\\mathrm{v,in}}^{\\\ell}$', '$q_{\\\mathrm{vout}}^{\\\ell}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                'tex'              : ['$q_{\\\mathrm{v,in}}^{\\\ell}$', '$q_{\\\mathrm{v,out}}^{\\\ell}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
                 'lines'            : [1, 2, 3, 15]})
     # index 3
     groups.append({'flux_time_pul_r'  : ['q_vin_r', 'q_vout_r', 'q_ar_pul', 'q_ven_pul'],

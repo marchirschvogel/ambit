@@ -179,7 +179,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
 
         if self.pb.coupling_type == 'monolithic_lagrange':
-            self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, self.pb.pbf.cardvasc0D.c_ids, self.pb.pr0D, self.pb.coupfuncs_old)
+            self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs_old)
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
@@ -269,7 +269,7 @@ class SolidmechanicsFlow0DSolver():
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
             if self.pb.coupling_type == 'monolithic_lagrange':
                 self.pb.lm.assemble(), self.pb.lm_old.axpby(1.0, 0.0, self.pb.lm)
-                self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, self.pb.pbf.cardvasc0D.c_ids, self.pb.pr0D, self.pb.coupfuncs_old)
+                self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs_old)
                 # update old 3D fluxes
                 for i in range(self.pb.num_coupling_surf):
                     self.pb.constr_old[i] = self.pb.constr[i]

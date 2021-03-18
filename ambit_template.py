@@ -12,11 +12,11 @@ def main():
 
     # all possible input parameters
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr_stag, solid_constraint
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr, solid_constraint
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
-                            'meshfile_type'         : 'ASCII', # OPTIONAL: what type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
-                            'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
+                            'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
+                            'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # OPTIONAL: only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
                             'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (default: -1)
@@ -24,7 +24,7 @@ def main():
                             'output_path_0D'        : ''+basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
-                            'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (default: 0)
+                            'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
 
     # for solid*, fluid* problem types
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
@@ -33,17 +33,17 @@ def main():
                             'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, 'PTC' ('ptc' can stay False) (default: None)
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
-                            'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence occurred (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
+                            'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence continues to occur (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
                             # iterative linear solver settings (only apply for solve_type 'iterative')
                             'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
                             'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
                             'adapt_linsolv_tol'     : False, # OPTIONAL: True, False - adapt linear tolerance throughout nonlinear iterations (default: False)
-                            'adapt_factor'          : 0.1, # OPTIONAL: fadaptation factor for adapt_linsolv_tol (the larger, the more adaptation) (default: 0.1)
+                            'adapt_factor'          : 0.1, # OPTIONAL: adaptation factor for adapt_linsolv_tol (the larger, the more adaptation) (default: 0.1)
                             # for local Newton (only for inelastic nonlinear materials at Gauss points, i.e. deformation-dependent growth)
                             'print_local_iter'      : False, # OPTIONAL: if we want to print iterations of local Newton (default: False)
-                            'tol_res_local'         : 1.0e-10, # OPTIONAL: if we want to specify the local Newton residual inf-norm tolerance (default: 1.0e-10)
-                            'tol_inc_local'         : 1.0e-10} # OPTIONAL: if we want to specify the local Newton increment inf-norm tolerance (default: 1.0e-10)
+                            'tol_res_local'         : 1.0e-10, # OPTIONAL: local Newton residual inf-norm tolerance (default: 1.0e-10)
+                            'tol_inc_local'         : 1.0e-10} # OPTIONAL: local Newton increment inf-norm tolerance (default: 1.0e-10)
     
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6, # residual tolerance for nonlinear solver
@@ -66,7 +66,7 @@ def main():
                             'periodic_checktype'    : None} # OPTIONAL: None, 'allvar', 'pQvar' (default: None)
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
-    MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspulcap, syspulcap2
+    MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspulcap, syspulcapveins
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
                             'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 5}}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
@@ -95,7 +95,7 @@ def main():
                             'constraint_quantity'   : 'volume', # volume, flux
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
-    # for solid_flow0d_multiscale_gandr_stag problem type
+    # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 10, # max. number of multiscale cycles (one cycle means one small scale succeeded by a large scale run)
                             'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
@@ -181,8 +181,9 @@ def main():
                                             {'id' : [3], 'dir' : 'z', 'curve' : 1}], # either curve or val
                             # Neumann can be - pk1 with dir xyz (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero),
                             #                - pk1 with dir normal (then use 'curve' : curve-num with 0 meaning zero)
+                            #                - true with dir normal (then use 'curve' : curve-num with 0 meaning zero) = follower load in current normal direction
                             'neumann'    : [{'type' : 'pk1', 'id' : [3], 'dir' : 'xyz', 'curve' : [1,0,0]},
-                                            {'type' : 'pk1', 'id' : [2], 'dir' : 'normal', 'curve' : 1}
+                                            {'type' : 'pk1', 'id' : [2], 'dir' : 'normal', 'curve' : 1},
                                             {'type' : 'true', 'id' : [2], 'dir' : 'normal', 'curve' : 1}],
                             # Robib BC can be either spring or dashpot, both either in xyz or normal direction
                             'robin'      : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
