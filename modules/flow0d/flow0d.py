@@ -172,11 +172,9 @@ class Flow0DProblem(problem_base):
         if bool(self.chamber_models):
             ci=0
             for ch in self.chamber_models:
-                try:
+                if self.chamber_models[ch]['type']=='0D_elast': 
                     self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(t)
                     ci+=1
-                except:
-                    pass
 
 
 class Flow0DSolver():
@@ -208,8 +206,7 @@ class Flow0DSolver():
             self.pb.c.append(self.pb.ti.timecurves(self.pb.excitation_curve)(self.pb.t_init))
         if bool(self.pb.chamber_models):
             for ch in self.pb.chamber_models:
-                try: self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
-                except: pass
+                if self.pb.chamber_models[ch]['type']=='0D_elast': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
 
         self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.dt, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.y, self.pb.aux_old)
 

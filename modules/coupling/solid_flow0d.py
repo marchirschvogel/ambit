@@ -210,8 +210,7 @@ class SolidmechanicsFlow0DSolver():
 
         if bool(self.pb.pbf.chamber_models):
             for ch in self.pb.pbf.chamber_models:
-                try: self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
-                except: pass
+                if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
 
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux_old)
@@ -287,7 +286,12 @@ class SolidmechanicsFlow0DSolver():
             is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t-t_off, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
-            if self.pb.pbf.perturb_type is not None: self.pb.pbf.cardvasc0D.induce_perturbation(self.pb.pbf.perturb_type, self.pb.pbf.ti.cycle[0], self.pb.pbf.perturb_after_cylce)
+            if self.pb.pbf.perturb_type is not None:
+                self.pb.pbf.cardvasc0D.induce_perturbation(self.pb.pbf.perturb_type, self.pb.pbf.ti.cycle[0], self.pb.pbf.perturb_after_cylce)
+                
+                if self.pb.pbf.perturb_after_cylce > 0 and not self.pb.pbf.cardvasc0D.have_induced_pert: # at least run through one healthy cycle
+                    if self.pb.pbf.ti.cycle[0] > self.pb.pbf.perturb_after_cylce:
+                        if self.pb.pbf.perturb_type=='mi': self.pb.pbs.actstress[6].sigma0 = 0.
 
             # write output and restart info
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)

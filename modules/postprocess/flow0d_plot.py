@@ -27,8 +27,8 @@ def main():
         theta = float(sys.argv[9])
         calc_func_params = str_to_bool(sys.argv[10])
     except:
-        path = '/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc/0D'
-        sname = 'multiscale_eccentric_mr1_small2'
+        path = '/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc_remod1/0D'
+        sname = 'multiscale_eccentric_mr1_remod1_small2'
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2

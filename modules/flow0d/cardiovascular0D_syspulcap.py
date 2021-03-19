@@ -735,7 +735,7 @@ class cardiovascular0Dsyspulcapveins(cardiovascular0Dsyspulcap):
         R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_v_l_,p_v_l_d_,p_v_r_,p_v_r_d_,p_at_l_d_,p_at_r_d_,p_ar_sys_,p_ar_pul_)
 
         # parallel venous resistances and inertances:
-        # asume that the total venous resistance/inertance distributes equally over all two systemic / four pulmonary veins that enter the right / left atrium
+        # assume that the total venous resistance/inertance distributes equally over all two systemic / four pulmonary veins that enter the right / left atrium
         # resistance/inertance in parallel: 1/R_total = 1/R_1 + 1/R_2 + ... + 1/R_n, 1/L_total = 1/L_1 + 1/L_2 + ... + 1/L_n
         # let's say: R_1 = R_2 = ... = R_n, L_1 = L_2 = ... = L_n
         R_ven1_sys, R_ven2_sys = 2.*self.R_ven_sys, 2.*self.R_ven_sys

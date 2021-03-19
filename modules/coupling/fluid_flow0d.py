@@ -177,6 +177,10 @@ class FluidmechanicsFlow0DSolver():
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
+        if bool(self.pb.pbf.chamber_models):
+            for ch in self.pb.pbf.chamber_models:
+                if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
+
         # initially evaluate 0D model at old state
         self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux_old)
                
