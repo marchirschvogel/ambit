@@ -72,13 +72,21 @@ class Flow0DProblem(problem_base):
         try: self.prescribed_variables = model_params['prescribed_variables']
         except: self.prescribed_variables = {}
         
-        try: self.perturb_type = model_params['perturb_type']
+        try: self.perturb_type = model_params['perturb_type'][0]
         except: self.perturb_type = None
+
+        try: self.perturb_factor = model_params['perturb_type'][1]
+        except: self.perturb_factor = 1.
+
+        try: self.perturb_id = model_params['perturb_type'][2]
+        except: self.perturb_id = -1
         
         try: self.perturb_after_cylce = model_params['perturb_after_cylce']
         except: self.perturb_after_cylce = -1
         # definitely set to -1 if we don't have a perturb type
         if self.perturb_type is None: self.perturb_after_cylce = -1
+        
+        self.have_induced_pert = False
 
         # initialite 0D model class
         if model_params['modeltype'] == '2elwindkessel':

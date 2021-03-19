@@ -60,7 +60,7 @@ def main():
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',
                             'parameters'            : param(),
-                            'chamber_models'        : {'lv' : '3D_fem', 'rv' : '3D_fem', 'la' : '0D_elast', 'ra' : '0D_elast'},
+                            'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 2}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 2}},
                             'perturb_type'          : 'as',
                             'perturb_after_cylce'   : 1}
 
@@ -121,6 +121,16 @@ def main():
             
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
+
+        def tc2(self, t): # atrial activation
+            
+            act_dur = 2.*param()['t_ed']
+            t0 = 0.
+            
+            if t >= t0 and t <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            else:
+                return 0.0
 
 
     BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},

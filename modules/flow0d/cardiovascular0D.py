@@ -22,7 +22,6 @@ class cardiovascular0Dbase:
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
         self.theta = theta # time-integration factor ]0;1]
         self.init = init # for output
-        self.have_induced_pert = False
         if comm is not None: self.comm = comm # MPI communicator
     
     
@@ -157,26 +156,16 @@ class cardiovascular0Dbase:
 
 
     # some perturbations/diseases we want to simulate (mr: mitral regurgitation, ms: mitral stenosis, ar: aortic regurgitation, as: aortic stenosis)
-    def induce_perturbation(self, perturb_type, cycle, induce_pert_after_cycl):
-        
-        if induce_pert_after_cycl > 0 and not self.have_induced_pert: # at least run through one healthy cycle
-            
-            if cycle > induce_pert_after_cycl:
-                
-                if self.comm.rank == 0:
-                    print(">>> Induced cardiovascular disease type: %s" % (perturb_type))
-                    sys.stdout.flush()
-                
-                if perturb_type=='mr': self.R_vin_l_max *= 1.0e-6
-                if perturb_type=='ms': self.R_vin_l_min *= 25.
-                if perturb_type=='ar': self.R_vout_l_max *= 5.0e-6
-                if perturb_type=='as': self.R_vout_l_min *= 50.
+    def induce_perturbation(self, perturb_type, perturb_factor):
 
-                # arrays need re-initialization, expressions have to be re-set
-                self.setup_arrays(), self.set_chamber_interfaces()
-                self.equation_map(), self.set_stiffness(), self.lambdify_expressions()
-                
-                self.have_induced_pert = True
+        if perturb_type=='mr': self.R_vin_l_max *= perturb_factor
+        if perturb_type=='ms': self.R_vin_l_min *= perturb_factor
+        if perturb_type=='ar': self.R_vout_l_max *= perturb_factor
+        if perturb_type=='as': self.R_vout_l_min *= perturb_factor
+
+        # arrays need re-initialization, expressions have to be re-set
+        self.setup_arrays(), self.set_chamber_interfaces()
+        self.equation_map(), self.set_stiffness(), self.lambdify_expressions()
 
     
     # set pressure function for 3D FEM model (FEniCS)

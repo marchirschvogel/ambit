@@ -70,7 +70,7 @@ def main():
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
                             'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 5}}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
-                            'perturb_type'          : None, # OPTIONAL: mr, ms, ar, as (default: None)
+                            'perturb_type'          : None, # OPTIONAL: [mr,1.0e-6], [ms,25.], [ar,5.0e-6], [as,50.], [mi,0.,4] (default: None)
                             'perturb_after_cylce'   : 2, # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
                             'valvelaw'              : ['pwlin_pres',0]} # OPTIONAL: valve law (pwlin_pres: piecewise-linear pressure-governed, pwlin_time: piecewise-linear time-governed, smooth_pres: smooth pressure-governed with number being amount of smoothness) (default: ['pwlin_pres',0])
 

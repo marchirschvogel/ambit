@@ -122,7 +122,22 @@ class FluidmechanicsFlow0DProblem():
             # old Lagrange multipliers - initialize with initial pressures
             self.pbf.cardvasc0D.initialize_lm(self.lm, self.pbf.time_params['initial_conditions'])
             self.pbf.cardvasc0D.initialize_lm(self.lm_old, self.pbf.time_params['initial_conditions'])
+
+
+    def induce_perturbation(self):
         
+        if self.pbf.perturb_after_cylce > 0: # at least run through one healthy cycle
+            
+            if self.pbf.ti.cycle[0] > self.pbf.perturb_after_cylce:
+
+                if self.comm.rank == 0:
+                    print(">>> Induced cardiovascular disease type: %s" % (self.pbf.perturb_type))
+                    sys.stdout.flush()
+        
+                self.pbf.cardvasc0D.induce_perturbation(self.pbf.perturb_type, self.pbf.perturb_factor)
+                        
+                self.pbf.have_induced_pert = True
+
 
 
 class FluidmechanicsFlow0DSolver():
@@ -248,7 +263,7 @@ class FluidmechanicsFlow0DSolver():
             is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t-t_off, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
-            if self.pb.pbf.perturb_type is not None: self.pb.pbf.cardvasc0D.induce_perturbation(self.pb.pbf.perturb_type, self.pb.pbf.ti.cycle[0], self.pb.pbf.perturb_after_cylce)
+            if self.pb.pbf.perturb_type is not None and not self.pb.pbf.have_induced_pert: self.pb.induce_perturbation()
 
             # write output and restart info
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
