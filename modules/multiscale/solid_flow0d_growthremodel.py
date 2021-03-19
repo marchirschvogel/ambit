@@ -151,7 +151,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             # no need to do after restart
             self.pb.pbsmall.pbs.prestress_initial = False
             # induce the perturbation
-            self.pb.pbsmall.pbf.cardvasc0D.induce_perturbation(self.pb.pbsmall.pbf.perturb_type, self.pb.pbsmall.pbf.ti.cycle[0], self.pb.pbsmall.pbf.perturb_after_cylce)
+            self.pb.pbsmall.induce_perturbation()
 
 
     def solve_problem(self):
@@ -195,7 +195,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle+1)
                 self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle+1, ms=True)
                 # induce the perturbation
-                self.pb.pbsmall.pbf.cardvasc0D.induce_perturbation(self.pb.pbsmall.pbf.perturb_type, self.pb.pbsmall.pbf.ti.cycle[0], self.pb.pbsmall.pbf.perturb_after_cylce)
+                self.pb.pbsmall.induce_perturbation()
                 # no need to do after restart
                 self.pb.pbsmall.pbs.prestress_initial = False
                 # set flag to False again
@@ -252,7 +252,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pbsmall.pbs.p.vector.axpy(1.0, p_delta)
             self.pb.pbsmall.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)      
 
-        # no initial velocities on small scale
+        # no initial displacements/velocities on small scale (continuation of a quasi-static simulation)
+        self.pb.pbsmall.pbs.u_old.vector.scale(0.0)
+        self.pb.pbsmall.pbs.u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self.pb.pbsmall.pbs.v_old.vector.scale(0.0)
         self.pb.pbsmall.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
