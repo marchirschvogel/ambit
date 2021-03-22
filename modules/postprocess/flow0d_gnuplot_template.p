@@ -37,16 +37,26 @@ set style line 18 dashtype 6 linecolor rgb '#191970' linewidth 4 # midnight-blue
 set style line 19 dashtype 5 linecolor rgb '#9400d3' linewidth 3 # midnight-blue - cap_pul
 set style line 20 dashtype 10 linecolor rgb '#8b008b' linewidth 3 # dark-magenta - ven_pul
 
+set style line 21 dashtype 1 linecolor rgb '#006400' linewidth 4 # dark-green
+set style line 22 dashtype 1 linecolor rgb '#a020f0' linewidth 4 # purple
+
+set style line 23 dashtype 1 linecolor rgb '#ee82ee' linewidth 4 # violet
+set style line 24 dashtype 1 linecolor rgb '#7fffd4' linewidth 4 # aquamarine
+
 set style line 97 dashtype 2 linecolor rgb 'black' linewidth 4
 set style line 98 dashtype 3 linecolor rgb 'black' linewidth 4
 
 set style line 99 dashtype 1 linecolor rgb 'black' linewidth 4
 
+set style line 102 dashtype (25,3,1,3) linecolor rgb '#ff0000' linewidth 4 # red - v_l
+set style line 117 dashtype 3 linecolor rgb '#0000ff' linewidth 4 # blue - v_r
 
+set style line 101 dashtype 5 linecolor rgb '#ff0000' linewidth 4 # light-red - at_l
+set style line 116 dashtype 6 linecolor rgb '#0000ff' linewidth 4 # dark-turquoise - at_r
 
 #set terminal unknown
 
-set key samplen __SAMPLEN__ width 50 font '2,2' right top spacing 3.5 maxcolumns __MAXCOLS__ maxrows __MAXROWS__
+set key samplen __SAMPLEN__ width __SAMPWID__ font '2,2' right top spacing 3.5 maxcolumns __MAXCOLS__ maxrows __MAXROWS__
 
 #set ytics nomirror
 #__HAVEY2__set y2tics nomirror offset -0.5

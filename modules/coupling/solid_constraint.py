@@ -53,7 +53,7 @@ class SolidmechanicsConstraintProblem():
     # defines the monolithic coupling forms for constraints and solid mechanics
     def set_variational_forms_and_jacobians(self):
 
-        self.cq, self.dcq, self.dforce = [], [], []
+        self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old = [], []
         
         # Lagrange multiplier stiffness matrix (most likely to be zero!)
@@ -76,7 +76,7 @@ class SolidmechanicsConstraintProblem():
             self.coupfuncs.append(Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
             
-            cq_ = as_ufl(0)
+            cq_, cq_old_ = as_ufl(0), as_ufl(0)
             for i in range(len(self.surface_c_ids[n])):
                 
                 ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_c_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
@@ -84,12 +84,14 @@ class SolidmechanicsConstraintProblem():
                 # currently, only volume or flux constraints are supported
                 if self.coupling_params['constraint_quantity'] == 'volume':
                     cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_vq)
+                    cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
                 elif self.coupling_params['constraint_quantity'] == 'flux':
                     cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_vq)
+                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
                 else:
                     raise NameError("Unknown constraint quantity! Choose either volume or flux!")
             
-            self.cq.append(cq_)
+            self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(derivative(self.cq[-1], self.pbs.u, self.pbs.du))
             
             df_ = as_ufl(0)

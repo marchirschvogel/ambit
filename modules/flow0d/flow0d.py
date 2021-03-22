@@ -88,7 +88,7 @@ class Flow0DProblem(problem_base):
         
         self.have_induced_pert = False
 
-        # initialite 0D model class
+        # initialize 0D model class
         if model_params['modeltype'] == '2elwindkessel':
             from cardiovascular0D_2elwindkessel import cardiovascular0D2elwindkessel
             self.cardvasc0D = cardiovascular0D2elwindkessel(time_params['theta_ost'], model_params['parameters'], cq=self.cq, comm=self.comm)
@@ -185,6 +185,21 @@ class Flow0DProblem(problem_base):
                     ci+=1
 
 
+    def induce_perturbation(self):
+        
+        if self.perturb_after_cylce > 0: # at least run through one healthy cycle
+            
+            if self.ti.cycle[0] > self.perturb_after_cylce:
+
+                if self.comm.rank == 0:
+                    print(">>> Induced cardiovascular disease type: %s" % (self.perturb_type))
+                    sys.stdout.flush()
+        
+                self.cardvasc0D.induce_perturbation(self.perturb_type, self.perturb_factor)
+                self.have_induced_pert = True
+
+
+
 class Flow0DSolver():
 
     def __init__(self, problem, solver_params):
@@ -211,8 +226,10 @@ class Flow0DSolver():
         
         # evaluate old state
         if self.pb.excitation_curve is not None:
+            self.pb.c = []
             self.pb.c.append(self.pb.ti.timecurves(self.pb.excitation_curve)(self.pb.t_init))
         if bool(self.pb.chamber_models):
+            self.pb.y = []
             for ch in self.pb.chamber_models:
                 if self.pb.chamber_models[ch]['type']=='0D_elast': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
 
@@ -259,7 +276,7 @@ class Flow0DSolver():
             is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, t-t_off, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
-            if self.pb.perturb_type is not None: self.pb.cardvasc0D.induce_perturbation(self.pb.perturb_type, self.pb.ti.cycle[0], self.pb.perturb_after_cylce)
+            if self.pb.perturb_type is not None: self.pb.induce_perturbation()
 
             # raw txt file output of 0D model quantities
             if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:

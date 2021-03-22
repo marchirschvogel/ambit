@@ -14,7 +14,6 @@ from ufl import TrialFunction, TestFunction, FiniteElement, derivative, diff, dx
 from petsc4py import PETSc
 
 import utilities
-import solver_nonlin
 import expression
 from projection import project
 from mpiroutines import allgather_vec
@@ -152,6 +151,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pbsmall.pbs.prestress_initial = False
             # induce the perturbation
             self.pb.pbsmall.induce_perturbation()
+            # next small scale run is a resumption of a previous one
+            self.pb.pbsmall.restart_multiscale = True
 
 
     def solve_problem(self):
@@ -184,6 +185,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 # solve small scale 3D-0D coupled solid-flow0d problem with fixed growth
                 self.solversmall.solve_problem()
                 
+                # next small scale run is a resumption of a previous one
+                self.pb.pbsmall.restart_multiscale = True
+                
                 if self.pb.write_checkpoints:
                     # write checkpoint for potential restarts
                     self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
@@ -195,11 +199,13 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle+1)
                 self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle+1, ms=True)
                 # induce the perturbation
-                self.pb.pbsmall.induce_perturbation()
+                if not self.pb.pbsmall.pbf.have_induced_pert: self.pb.pbsmall.induce_perturbation()
                 # no need to do after restart
                 self.pb.pbsmall.pbs.prestress_initial = False
                 # set flag to False again
                 self.pb.restart_from_small = False
+                # next small scale run is a resumption of a previous one
+                self.pb.pbsmall.restart_multiscale = True
             
             # set large scale state
             self.set_state_large(N)
@@ -248,21 +254,21 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         # update small scale variables - add delta from growth to last small scale displacement
         self.pb.pbsmall.pbs.u.vector.axpy(1.0, u_delta)
         self.pb.pbsmall.pbs.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.u_old.vector.axpy(1.0, u_delta)
+        self.pb.pbsmall.pbs.u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         if self.pb.pbsmall.pbs.incompressible_2field:
             self.pb.pbsmall.pbs.p.vector.axpy(1.0, p_delta)
             self.pb.pbsmall.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)      
-
-        # no initial displacements/velocities on small scale (continuation of a quasi-static simulation)
-        self.pb.pbsmall.pbs.u_old.vector.scale(0.0)
-        self.pb.pbsmall.pbs.u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.pbsmall.pbs.v_old.vector.scale(0.0)
-        self.pb.pbsmall.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pbsmall.pbs.p_old.vector.axpy(1.0, p_delta)
+            self.pb.pbsmall.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # 0D variables s and s_old are already correctly set from the previous small scale run (end values)
 
         # set constant prescribed growth stretch for subsequent small scale
         self.pb.pbsmall.pbs.theta.vector.axpby(1.0, 0.0, self.pb.pblarge.theta.vector)
         self.pb.pbsmall.pbs.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.theta_old.vector.axpby(1.0, 0.0, self.pb.pblarge.theta.vector)
+        self.pb.pbsmall.pbs.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
 
     def set_state_large(self, N):

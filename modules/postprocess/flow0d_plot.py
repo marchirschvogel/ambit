@@ -26,22 +26,27 @@ def main():
         indpertaftercyl = int(sys.argv[8])
         theta = float(sys.argv[9])
         calc_func_params = str_to_bool(sys.argv[10])
+        multiscalegandr = str_to_bool(sys.argv[11])
+        lastgandrcycl = int(sys.argv[12])
     except:
         path = '/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc_remod1/0D'
-        sname = 'multiscale_eccentric_mr1_remod1_small2'
+        sname = 'multiscale_eccentric_mr1_remod1_small1'
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
         t_es = 0.53
         model = 'syspulcap'
-        indpertaftercyl = -1
+        indpertaftercyl = 1
         theta = 0.5
         calc_func_params = True
+        multiscalegandr = True
+        lastgandrcycl = 2
+        
     
-    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, theta, calc_func_params)
+    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, theta, calc_func_params, multiscalegandr, lastgandrcycl)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, theta=0.5, calc_func_params=False):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, theta=0.5, calc_func_params=False, multiscalegandr=False, lastgandrcycl=1):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -51,28 +56,28 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
     if model == 'syspul':
         
         import cardiovascular0D_syspul
-        cardiovascular0D_syspul.postprocess_groups_syspul(groups,indpertaftercyl)
+        cardiovascular0D_syspul.postprocess_groups_syspul(groups,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcap':
         
         import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl)
+        cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
         
     elif model == 'syspulcapveins':
         
         import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcapveins(groups,indpertaftercyl)
+        cardiovascular0D_syspulcap.postprocess_groups_syspulcapveins(groups,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
         
     elif model == 'syspulcaprespir':
         
         import cardiovascular0D_syspulcaprespir
-        cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,indpertaftercyl)
+        cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
     
@@ -135,7 +140,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                     file_vol.close()
                 else:
                     raise AttributeError("No flux file avaialble for chamber %s!" % (ch))
-        
+
         
         # for plotting of pressure-volume loops
         for ch in ['v_l','v_r','at_l','at_r']:
@@ -148,6 +153,16 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             os.system('paste '+path+'/results_'+sname+'_V_'+ch+'_tmp.txt '+path+'/results_'+sname+'_p_'+ch+'_tmp.txt > '+path+'/results_'+sname+'_pV_'+ch+'.txt')
             # isolate last cycle                
             os.system('tail -n '+str(nstep_cycl)+' '+path+'/results_'+sname+'_pV_'+ch+'.txt > '+path+'/results_'+sname+'_pV_'+ch+'_last.txt')
+            if multiscalegandr and indpertaftercyl > 0:
+                subprocess.call(['cp', ''+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_p_'+ch+'.txt', ''+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_p_'+ch+'_tmp.txt'])
+                subprocess.call(['cp', ''+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_V_'+ch+'.txt', ''+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_V_'+ch+'_tmp.txt'])
+                # drop first (time) columns
+                subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_p_'+ch+'_tmp.txt'])
+                subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_V_'+ch+'_tmp.txt'])
+                # paste files together
+                os.system('paste '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_V_'+ch+'_tmp.txt '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_p_'+ch+'_tmp.txt > '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_pV_'+ch+'.txt')
+                # isolate last cycle                
+                os.system('tail -n '+str(nstep_cycl)+' '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_pV_'+ch+'.txt > '+path+'/results_'+sname+'_pV_'+ch+'_gandr.txt')
             # isolate healthy/baseline cycle
             if indpertaftercyl > 0:
                 os.system('sed -n "'+str((indpertaftercyl-1)*nstep_cycl+1)+','+str(indpertaftercyl*nstep_cycl)+'p" '+path+'/results_'+sname+'_pV_'+ch+'.txt > '+path+'/results_'+sname+'_pV_'+ch+'_baseline.txt')
@@ -285,10 +300,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0, 1.0
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.0, 1.1
-            maxrows, maxcols, sl = 1, 5, 20
+            maxrows, maxcols, sl, swd = 1, 5, 20, 50
             if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.2
-                maxrows, maxcols, sl = 2, 5, 19
+                maxrows, maxcols, sl, swd = 2, 5, 19, 50
         if 'flux_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''
@@ -297,10 +312,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0, 1.0e-3
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.1
-            maxrows, maxcols, sl = 1, 5, 20
+            maxrows, maxcols, sl, swd = 1, 5, 20, 50
             if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl = 3, 5, 20
+                maxrows, maxcols, sl, swd = 3, 5, 20, 50
         if 'vol_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''
@@ -309,7 +324,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0, 1.0e-3
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.1
-            maxrows, maxcols, sl = 1, 5, 20
+            maxrows, maxcols, sl, swd = 1, 5, 20, 50
         if 'pres_vol_v' in list(groups[g].keys())[0]:
             x1value, x2value     = 'V_{\\\mathrm{v}}', ''
             x1unit, x2unit       = 'ml', ''
@@ -318,7 +333,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0e-3, 1.0
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.1, 1.1
-            maxrows, maxcols, sl = 1, 5, 20
+            maxrows, maxcols, sl, swd = 1, 5, 20, 50
+            if multiscalegandr: sl, swd = 19, 33
         if 'pres_vol_at' in list(groups[g].keys())[0]:
             x1value, x2value     = 'V_{\\\mathrm{at}}', ''
             x1unit, x2unit       = 'ml', ''
@@ -327,7 +343,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0e-3, 1.0
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.1, 1.1
-            maxrows, maxcols, sl = 1, 5, 20
+            maxrows, maxcols, sl, swd = 1, 5, 20, 50
+            if multiscalegandr: sl, swd = 19, 33
         if 'vol_time_compart' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''
@@ -336,10 +353,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0, 1.0e-3
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.2
-            maxrows, maxcols, sl = 2, 5, 20
+            maxrows, maxcols, sl, swd = 2, 5, 20, 50
             if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir'):
                 xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl = 3, 5, 10
+                maxrows, maxcols, sl, swd = 3, 5, 10, 50
         if 'ppO2_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''
@@ -348,10 +365,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0, 1.0
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.0, 1.2
-            maxrows, maxcols, sl = 1, 5, 20
+            maxrows, maxcols, sl, swd = 1, 5, 20, 50
             if 'sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl = 3, 5, 10
+                maxrows, maxcols, sl, swd = 3, 5, 10, 50
         if 'ppCO2_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''
@@ -360,10 +377,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             xscale, yscale       = 1.0, 1.0
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.0, 1.2
-            maxrows, maxcols, sl = 1, 5, 20
+            maxrows, maxcols, sl, swd = 1, 5, 20, 50
             if 'sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl = 3, 5, 10
+                maxrows, maxcols, sl, swd = 3, 5, 10, 50
         
         data = []
         x_s_all, x_e_all = [], []
@@ -440,6 +457,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         subprocess.call(['sed', '-i', 's/__MAXROWS__/'+str(maxrows)+'/g', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
         subprocess.call(['sed', '-i', 's/__MAXCOLS__/'+str(maxcols)+'/g', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
         subprocess.call(['sed', '-i', 's/__SAMPLEN__/'+str(sl)+'/g', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+        subprocess.call(['sed', '-i', 's/__SAMPWID__/'+str(swd)+'/g', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
 
         # do the plotting
         subprocess.call(['gnuplot', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])

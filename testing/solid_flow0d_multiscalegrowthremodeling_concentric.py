@@ -42,14 +42,12 @@ def main():
 
     TIME_PARAMS_SOLID_SMALL = {'maxtime'            : 1.0*100,
                             'numstep'               : 50*100,
-                            #'numstep_stop' : 1,
-                            'timint'                : 'genalpha', # genalpha, ost, static
+                            'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
 
     TIME_PARAMS_SOLID_LARGE = {'maxtime'            : 2592000.0, # 1 month: 30*24*60*60 s
                             'numstep'               : 1000,
-                            #'numstep_stop'          : 1000,
                             'timint'                : 'static'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
@@ -61,7 +59,7 @@ def main():
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',
                             'parameters'            : param(),
                             'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 2}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 2}},
-                            'perturb_type'          : 'as',
+                            'perturb_type'          : ['as',50.],
                             'perturb_after_cylce'   : 1}
 
     FEM_PARAMS           = {'order_disp'            : 1,
@@ -77,12 +75,12 @@ def main():
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_systole', # end_diastole, end_systole
                             'numcycles'             : 10,
-                            'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
-                            'tol_large'             : 3.0e-3, # growth rate tolerance [mm^3/s]
+                            'tol_small'             : 0.08, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
+                            'tol_large'             : 5.0e-3, # growth rate tolerance [mm^3/s]
                             'tol_outer'             : 3.0e-3,
                             'write_checkpoints'     : True,
                             'restart_cycle'         : 0,
-                            'restart_from_small'    : True}
+                            'restart_from_small'    : False}
 
     MATERIALS            = {'MAT1' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                       'sussmanbathe_vol' : {'kappa' : 1.0e3},
@@ -95,9 +93,9 @@ def main():
                                                             'thres_tol' : 1.0e-3,
                                                             'thetamax' : 3.0,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 16.0e4,
+                                                            'tau_gr' : 32.0e4,
                                                             'gamma_gr' : 2.0,
-                                                            'tau_gr_rev' : 32.0e4,
+                                                            'tau_gr_rev' : 64.0e4,
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'guccione_dev'     : {'c_0' : 10*1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                                                                 'sussmanbathe_vol' : {'kappa' : 1.0e3},

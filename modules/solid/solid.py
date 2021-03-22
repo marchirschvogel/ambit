@@ -19,6 +19,7 @@ import solid_variationalform
 import timeintegration
 import utilities
 import solver_nonlin
+#import solver_nonlin_ as solver_nonlin
 import boundaryconditions
 import expression
 from projection import project

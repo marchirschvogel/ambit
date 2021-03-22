@@ -42,14 +42,12 @@ def main():
 
     TIME_PARAMS_SOLID_SMALL = {'maxtime'            : 1.0*100,
                             'numstep'               : 50*100,
-                            'numstep_stop'  : 1,
-                            'timint'                : 'genalpha', # genalpha, ost, static
+                            'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
 
     TIME_PARAMS_SOLID_LARGE = {'maxtime'            : 2592000.0, # 1 month: 30*24*60*60 s
                             'numstep'               : 1000,
-                            'numstep_stop'  : 1,
                             'timint'                : 'static'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
@@ -61,7 +59,7 @@ def main():
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',
                             'parameters'            : param(),
                             'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 2}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 2}},
-                            'perturb_type'          : 'mr',
+                            'perturb_type'          : ['mr',1.0e-6],
                             'perturb_after_cylce'   : 1}
 
     FEM_PARAMS           = {'order_disp'            : 1,
@@ -77,9 +75,9 @@ def main():
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 10,
-                            'tol_small'             : 0.05, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
-                            'tol_large'             : 3.0e-3, # growth rate tolerance [mm^3/s]
-                            'tol_outer'             : 1.0e-20,#3.0e-3,
+                            'tol_small'             : 0.08, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
+                            'tol_large'             : 5.0e-3, # growth rate tolerance [mm^3/s]
+                            'tol_outer'             : 3.0e-3,
                             'write_checkpoints'     : True,
                             'restart_cycle'         : 0,
                             'restart_from_small'    : False}
@@ -152,40 +150,40 @@ def main():
     s_corr = np.zeros(problem.mp.pbsmall.pbf.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 1.5095864743040130E+06
-    s_corr[1] = 1.2844204058649662E+00
-    s_corr[2] = -2.2965082274795714E+00
-    s_corr[3] = -2.2516606843904677E-01
-    s_corr[4] = 1.2035047944220826E+01
-    s_corr[5] = 7.9266376779754364E+03
-    s_corr[6] = 1.0920576465746846E+01
-    s_corr[7] = 4.8757248185773104E+04
-    s_corr[8] = 4.5874998121783552E+04
-    s_corr[9] = 3.5972406593836102E+04
-    s_corr[10] = 2.4558826877860327E+04
-    s_corr[11] = 8.1860969826562832E+03
-    s_corr[12] = 2.2677989771675335E+00
-    s_corr[13] = 8.3769499009227275E+02
-    s_corr[14] = 2.2702566758390823E+00
-    s_corr[15] = 9.5189334925959599E+02
-    s_corr[16] = 2.2702868360248418E+00
-    s_corr[17] = 7.5312458499319700E+02
-    s_corr[18] = 2.2701207039868367E+00
-    s_corr[19] = 5.0027868673701960E+02
-    s_corr[20] = 2.2705227157170751E+00
-    s_corr[21] = 1.7138025576859900E+02
-    s_corr[22] = 2.2541277949292278E+00
-    s_corr[23] = 2.0733856020336604E+05
-    s_corr[24] = 9.9000307744360238E+04
-    s_corr[25] = 2.7306345247149444E-01
-    s_corr[26] = -4.3686268354670260E-01
-    s_corr[27] = 1.7406314472713416E-01
-    s_corr[28] = 2.4017163277669913E+00
-    s_corr[29] = 1.1803816043509409E+04
-    s_corr[30] = 2.3131877074406706E+00
-    s_corr[31] = 2.0066530960234333E+05
-    s_corr[32] = 1.6159475288856615E+00
-    s_corr[33] = 3.9878128320907672E+04
+    s_corr[0]    = 9.8218127134072438E+03
+    s_corr[1]    = 1.6830389591312851E+00
+    s_corr[2]    = 6.9122581694220819E-01
+    s_corr[3]    = 1.6732171464178778E+00
+    s_corr[4]    = 6.1991003628749271E+00
+    s_corr[5]    = 3.4679811145201791E+04
+    s_corr[6]    = 5.9629754596187894E+00
+    s_corr[7]    = -1.5127985585647235E+04
+    s_corr[8]    = -1.4071745452471156E+04
+    s_corr[9]    = -1.1030984515776136E+04
+    s_corr[10]    = -7.5370923441673440E+03
+    s_corr[11]    = -2.5111069127516153E+03
+    s_corr[12]    = 1.9079271968625631E+00
+    s_corr[13]    = 1.8611601990631785E+04
+    s_corr[14]    = 1.8421266816160995E+00
+    s_corr[15]    = 1.4042777929688003E+04
+    s_corr[16]    = 1.8404635461013050E+00
+    s_corr[17]    = 1.1012196762017255E+04
+    s_corr[18]    = 1.8450877129650409E+00
+    s_corr[19]    = 7.5357188622862641E+03
+    s_corr[20]    = 1.8422585559378539E+00
+    s_corr[21]    = 2.4886342151947470E+03
+    s_corr[22]    = 1.6041858523754655E+00
+    s_corr[23]    = -5.3410330934638907E+04
+    s_corr[24]    = 1.4955139915285741E+04
+    s_corr[25]    = 4.8317355188752570E-01
+    s_corr[26]    = -4.2450391200662768E-02
+    s_corr[27]    = 4.6821841197224007E-01
+    s_corr[28]    = 3.1803505880679763E+00
+    s_corr[29]    = 1.4570153064883158E+04
+    s_corr[30]    = 3.0710744400813530E+00
+    s_corr[31]    = -8.0065756622318950E+04
+    s_corr[32]    = 2.8638179712861844E+00
+    s_corr[33]    = 1.2057400362096410E+04
 
     check1 = results_check.results_check_vec(problem.mp.pbsmall.pbf.s, s_corr, problem.mp.comm, tol=tol)
     success = results_check.success_check([check1], problem.mp.comm)

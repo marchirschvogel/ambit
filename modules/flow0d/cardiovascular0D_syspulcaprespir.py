@@ -794,11 +794,11 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
 
 
-def postprocess_groups_syspulcaprespir(groups, indpertaftercyl=0):
+def postprocess_groups_syspulcaprespir(groups, indpertaftercyl=0,multiscalegandr=False):
     
     import cardiovascular0D_syspulcap
     
-    cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl)
+    cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl,multiscalegandr)
     
     # index 14
     groups.append({'ppO2_time_sys_l'  : ['ppO2_at_l', 'ppO2_v_l', 'ppO2_ar_sys', 'ppO2_arspl_sys', 'ppO2_arespl_sys', 'ppO2_armsc_sys', 'ppO2_arcer_sys', 'ppO2_arcor_sys', 'ppO2_venspl_sys', 'ppO2_venespl_sys', 'ppO2_venmsc_sys', 'ppO2_vencer_sys', 'ppO2_vencor_sys', 'ppO2_ven_sys'],

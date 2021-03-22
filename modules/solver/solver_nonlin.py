@@ -552,15 +552,15 @@ class solver_nonlinear:
             if self.divcont=='PTC':
                 
                 self.maxiter = 250
-                err = solver_nonlinear.catch_solver_errors(self, struct_res_u_norm, incnorm=struct_inc_u_norm, maxval=maxresval)
+                err = self.catch_solver_errors(struct_res_u_norm, incnorm=struct_inc_u_norm, maxval=maxresval)
                 
                 if err:
                     self.PTC = True
                     # reset Newton step
                     it, k_PTC = 0, self.k_PTC_initial
                     k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
-                    solver_nonlinear.reset_step(self,u.vector,u_start,True)
-                    if self.pb.incompressible_2field: solver_nonlinear.reset_step(self,p.vector,p_start,True)
+                    self.reset_step(u.vector,u_start,True)
+                    if self.pb.incompressible_2field: self.reset_step(p.vector,p_start,True)
                     counter_adapt += 1
             
             # check if converged
@@ -675,7 +675,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         # coupled problem
         self.pbc = pbc
         # initialize base class - also calls derived initialize_petsc_solver function!
-        solver_nonlinear.__init__(self, pbc.pbs, V_u, V_p, solver_params_3D)
+        super().__init__(pbc.pbs, V_u, V_p, solver_params_3D)
         
         self.ptype = self.pbc.problem_physics
 
@@ -1195,15 +1195,15 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.divcont=='PTC':
                 
                 self.maxiter = 250
-                err = solver_nonlinear.catch_solver_errors(self, struct_res_u_norm, incnorm=struct_inc_u_norm, maxval=maxresval)
+                err = self.catch_solver_errors(struct_res_u_norm, incnorm=struct_inc_u_norm, maxval=maxresval)
                 
                 if err:
                     self.PTC = True
                     # reset Newton step
                     it, k_PTC = 0, self.k_PTC_initial
                     k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
-                    solver_nonlinear.reset_step(self,u.vector,u_start,True), solver_nonlinear.reset_step(self,s,s_start,False)
-                    if self.pbc.pbs.incompressible_2field: solver_nonlinear.reset_step(self,p.vector,p_start,True)
+                    self.reset_step(u.vector,u_start,True), self.reset_step(s,s_start,False)
+                    if self.pbc.pbs.incompressible_2field: self.reset_step(p.vector,p_start,True)
                     counter_adapt += 1
             
             

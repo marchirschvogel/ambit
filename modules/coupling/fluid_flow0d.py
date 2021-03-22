@@ -58,7 +58,7 @@ class FluidmechanicsFlow0DProblem():
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms_and_jacobians(self):
 
-        self.cq, self.dcq, self.dforce = [], [], []
+        self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old = [], []
 
         if self.coupling_type == 'monolithic_lagrange':
@@ -83,7 +83,7 @@ class FluidmechanicsFlow0DProblem():
             self.coupfuncs.append(Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
 
-            cq_ = as_ufl(0)
+            cq_, cq_old_ = as_ufl(0), as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
                 ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
@@ -97,7 +97,7 @@ class FluidmechanicsFlow0DProblem():
                 else:
                     raise NameError("Unknown coupling quantity! Choose flux or pressure!")
             
-            self.cq.append(cq_)
+            self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(derivative(self.cq[-1], self.pbs.v, self.pbs.dv))
 
             df_ = as_ufl(0)
@@ -179,7 +179,7 @@ class FluidmechanicsFlow0DSolver():
         if self.pb.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
             for i in range(self.pb.num_coupling_surf):
-                cq = assemble_scalar(self.pb.cq[i])
+                cq = assemble_scalar(self.pb.cq_old[i])
                 cq = self.pb.pbs.comm.allgather(cq)
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
         
@@ -187,12 +187,13 @@ class FluidmechanicsFlow0DSolver():
             for i in range(self.pb.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
                 self.pb.pbf.c.append(lm_sq[i])
-                con = assemble_scalar(self.pb.cq[i])
+                con = assemble_scalar(self.pb.cq_old[i])
                 con = self.pb.pbs.comm.allgather(con)
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
         if bool(self.pb.pbf.chamber_models):
+            self.pb.pbf.y = []
             for ch in self.pb.pbf.chamber_models:
                 if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
 
