@@ -29,17 +29,17 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc_remod1/0D'
-        sname = 'multiscale_eccentric_mr1_remod1_small1'
+        path = '/home/mh/work/ambit/testing/tmp/0D'#'/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc_remod1/0D'
+        sname = 'testzz'#'multiscale_eccentric_mr1_remod1_small1'
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
         t_es = 0.53
-        model = 'syspulcap'
-        indpertaftercyl = 1
+        model = 'syspulcap' # syspul, syspul_veins, syspulcap, syspulcapcor_veins
+        indpertaftercyl = -1
         theta = 0.5
         calc_func_params = True
-        multiscalegandr = True
+        multiscalegandr = False
         lastgandrcycl = 2
         
     
@@ -60,6 +60,13 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         iscirculation = True
         calculate_function_params = calc_func_params
 
+    elif model == 'syspul_veins':
+        
+        import cardiovascular0D_syspul
+        cardiovascular0D_syspul.postprocess_groups_syspul_veins(groups,indpertaftercyl,multiscalegandr)
+        iscirculation = True
+        calculate_function_params = calc_func_params
+
     elif model == 'syspulcap':
         
         import cardiovascular0D_syspulcap
@@ -67,10 +74,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         iscirculation = True
         calculate_function_params = calc_func_params
         
-    elif model == 'syspulcapveins':
+    elif model == 'syspulcapcor_veins':
         
         import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcapveins(groups,indpertaftercyl,multiscalegandr)
+        cardiovascular0D_syspulcap.postprocess_groups_syspulcapcor_veins(groups,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
         

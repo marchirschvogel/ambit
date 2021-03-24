@@ -101,12 +101,15 @@ class Flow0DProblem(problem_base):
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
             self.cardvasc0D = cardiovascular0Dsyspul(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+        elif model_params['modeltype'] == 'syspul_veins':
+            from cardiovascular0D_syspul import cardiovascular0Dsyspul_veins
+            self.cardvasc0D = cardiovascular0Dsyspul_veins(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
             self.cardvasc0D = cardiovascular0Dsyspulcap(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
-        elif model_params['modeltype'] == 'syspulcapveins':
-            from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapveins
-            self.cardvasc0D = cardiovascular0Dsyspulcapveins(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+        elif model_params['modeltype'] == 'syspulcapcor_veins':
+            from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapcor_veins
+            self.cardvasc0D = cardiovascular0Dsyspulcapcor_veins(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
             self.cardvasc0D = cardiovascular0Dsyspulcaprespir(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)

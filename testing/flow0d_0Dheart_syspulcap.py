@@ -14,19 +14,20 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
-                         'write_results_every'   : -999,
-                         'output_path'           : ''+basepath+'/tmp/',
-                         'simname'               : 'test'}
+                         'write_results_every'   : 1,#-999,
+                         'output_path'           : ''+basepath+'/tmp/0D',
+                         'simname'               : 'testzz'}
 
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS       = {'maxtime'               : 0.9,
-                         'numstep'               : 100,
-                         'numstep_stop'          : 100,
+    TIME_PARAMS       = {'maxtime'               : 10*1.0,
+                         'numstep'               : 10*100,
                          'timint'                : 'ost', # ost
-                         'theta_ost'             : 1.0,
-                         'initial_conditions'    : init()}
+                         'theta_ost'             : 0.5,
+                         'initial_conditions'    : init(),
+                         'eps_periodic'          : 0.03,
+                         'periodic_checktype'    : 'pQvar'}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspulcap',
                          'parameters'            : param(),
@@ -48,8 +49,8 @@ def main():
 
         def tc2(self, t): # ventricular activation
             
-            act_dur = param()['t_es'] - param()['t_ed']
-            t0 = 2.*param()['t_ed']
+            act_dur = 1.8*(param()['t_es'] - param()['t_ed'])
+            t0 = param()['t_ed']
             
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
@@ -70,40 +71,40 @@ def main():
     s_corr = np.zeros(problem.mp.cardvasc0D.numdof)
 
     # correct results
-    s_corr[0] = -3.7244991251652940E-02
-    s_corr[1] = 6.6932639528479176E-01
-    s_corr[2] = -5.3199695659967428E-01
-    s_corr[3] = 1.0417763078013211E+00
-    s_corr[4] = 6.3617458737980632E+00
-    s_corr[5] = 3.3148701758947478E+04
-    s_corr[6] = 6.1437149389400618E+00
-    s_corr[7] = 1.0306522240464310E+04
-    s_corr[8] = 9.8150703828566602E+03
-    s_corr[9] = 7.7006963200721384E+03
-    s_corr[10] = 5.2481858030111980E+03
-    s_corr[11] = 1.7526240131038198E+03
-    s_corr[12] = 2.2490863147134084E+00
-    s_corr[13] = 2.2004427877058428E+04
-    s_corr[14] = 2.2022967554370783E+00
-    s_corr[15] = 1.8432643040442843E+04
-    s_corr[16] = 2.2000959450752791E+00
-    s_corr[17] = 1.4453854088155496E+04
-    s_corr[18] = 2.2069458043853021E+00
-    s_corr[19] = 9.9152825520985734E+03
-    s_corr[20] = 2.1996799648117502E+00
-    s_corr[21] = 3.2374342809409527E+03
-    s_corr[22] = 1.8899740517598149E+00
-    s_corr[23] = 7.3629848521746753E+04
-    s_corr[24] = 3.9459581085763479E+04
-    s_corr[25] = 4.7628096014227705E-01
-    s_corr[26] = -8.5948020913014109E-02
-    s_corr[27] = 4.3682137905651353E-01
-    s_corr[28] = 1.2963015881866546E+00
-    s_corr[29] = 6.1365402399054792E+03
-    s_corr[30] = 1.2502775363873637E+00
-    s_corr[31] = 1.1628170250848936E+04
-    s_corr[32] = 1.1630662595059966E+00
-    s_corr[33] = 3.2915990948080318E+04
+    s_corr[0] = 2.9433926104934122E+04
+    s_corr[1] = 7.0386144010472729E-01
+    s_corr[2] = 4.2678334743198088E-01
+    s_corr[3] = 6.7442751399979128E-01
+    s_corr[4] = 7.8447355051941843E+00
+    s_corr[5] = 4.6065595569000950E+04
+    s_corr[6] = 7.5426962510972304E+00
+    s_corr[7] = -1.1478898357265389E+04
+    s_corr[8] = -1.0718237002034781E+04
+    s_corr[9] = -8.4007390955961782E+03
+    s_corr[10] = -5.7419312828933507E+03
+    s_corr[11] = -1.9132875426215376E+03
+    s_corr[12] = 2.1087309064812008E+00
+    s_corr[13] = 1.9898868996888057E+04
+    s_corr[14] = 2.0751857916695799E+00
+    s_corr[15] = 1.7186285836733463E+04
+    s_corr[16] = 2.0732040949606132E+00
+    s_corr[17] = 1.3479806604615822E+04
+    s_corr[18] = 2.0782222891608901E+00
+    s_corr[19] = 9.2042331302840139E+03
+    s_corr[20] = 2.0766705496498501E+00
+    s_corr[21] = 3.0595541185596117E+03
+    s_corr[22] = 1.7839813644519802E+00
+    s_corr[23] = -4.6650427627891768E+04
+    s_corr[24] = 3.4387975523172128E+04
+    s_corr[25] = 5.3317892047428794E-01
+    s_corr[26] = 8.9862420216417258E-02
+    s_corr[27] = 4.9879094495111614E-01
+    s_corr[28] = 1.8877949970498080E+00
+    s_corr[29] = 1.2785936834889279E+04
+    s_corr[30] = 1.7919004707881436E+00
+    s_corr[31] = -8.4133350499779073E+04
+    s_corr[32] = 1.6151509560740245E+00
+    s_corr[33] = -5.9085660502758556E+03
     
     check1 = results_check.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = results_check.success_check([check1], problem.mp.comm)
@@ -112,46 +113,44 @@ def main():
 
 
 
-def init():
+def init(): 
     
-    factor_kPa_mmHg = 7.500615
-    
-    return {'q_vin_l_0' : 0.0,
-            'p_at_l_0' : 4.5/factor_kPa_mmHg,
-            'q_vout_l_0' : 0.0,
-            'p_v_l_0' : 4.5/factor_kPa_mmHg,
-            'p_ar_sys_0' : 90.29309546/factor_kPa_mmHg,
-            'q_ar_sys_0' : 0.0,
+    return {'q_vin_l_0' : 2.9122879355134799E+04,
+            'p_at_l_0' : 6.8885657594702698E-01,
+            'q_vout_l_0' : 4.4126414250284074E-01,
+            'p_v_l_0' : 6.5973369659189085E-01,
+            'p_ar_sys_0' : 7.6852336907652035E+00,
+            'q_ar_sys_0' : 4.4646253096693101E+04,
 
-            'p_arperi_sys_0' : 90.29309546/factor_kPa_mmHg,
-            'q_arspl_sys_0' : 0.0,
-            'q_arespl_sys_0' : 0.0,
-            'q_armsc_sys_0' : 0.0,
-            'q_arcer_sys_0' : 0.0,
-            'q_arcor_sys_0' : 0.0,
-            'p_venspl_sys_0' : 17.0/factor_kPa_mmHg,
-            'q_venspl_sys_0' : 0.0,
-            'p_venespl_sys_0' : 17.0/factor_kPa_mmHg,
-            'q_venespl_sys_0' : 0.0,
-            'p_venmsc_sys_0' : 17.0/factor_kPa_mmHg,
-            'q_venmsc_sys_0' : 0.0,
-            'p_vencer_sys_0' : 17.0/factor_kPa_mmHg,
-            'q_vencer_sys_0' : 0.0,
-            'p_vencor_sys_0' : 17.0/factor_kPa_mmHg,
-            'q_vencor_sys_0' : 0.0,
+            'p_arperi_sys_0' : 7.3924415864114579E+00,
+            'q_arspl_sys_0' : -1.1942736655945399E+04,
+            'q_arespl_sys_0' : -1.1129301639510835E+04,
+            'q_armsc_sys_0' : -8.7229603630348920E+03,
+            'q_arcer_sys_0' : -5.9623606948858287E+03,
+            'q_arcor_sys_0' : -1.9864253416510032E+03,
+            'p_venspl_sys_0' : 2.1337514581004355E+00,
+            'q_venspl_sys_0' : 2.0406124240978173E+04,
+            'p_venespl_sys_0' : 2.0900015313258282E+00,
+            'q_venespl_sys_0' : 1.7072593297814688E+04,
+            'p_venmsc_sys_0' : 2.0879628079853534E+00,
+            'q_venmsc_sys_0' : 1.3387364723046561E+04,
+            'p_vencer_sys_0' : 2.0933161349988683E+00,
+            'q_vencer_sys_0' : 9.1526721881635949E+03,
+            'p_vencor_sys_0' : 2.0910022623881237E+00,
+            'q_vencor_sys_0' : 3.0343572493359602E+03,
 
-            'p_ven_sys_0' : 17.0/factor_kPa_mmHg,
-            'q_ven_sys_0' : 0.0,
-            'q_vin_r_0' : 0.0,
-            'p_at_r_0' : 4.5/(5.*factor_kPa_mmHg),
-            'q_vout_r_0' : 0.0,
-            'p_v_r_0' : 4.5/(5.*factor_kPa_mmHg),
-            'p_ar_pul_0' : 90.29309546/(5.*factor_kPa_mmHg),
-            'q_ar_pul_0' : 0.0,
-            'p_cap_pul_0' : 90.29309546/(5.*factor_kPa_mmHg),
-            'q_cap_pul_0' : 0.0,
-            'p_ven_pul_0' : 12.0/factor_kPa_mmHg,
-            'q_ven_pul_0' : 0.0}
+            'p_ven_sys_0' : 1.8007235104876642E+00,
+            'q_ven_sys_0' : -4.5989218100751634E+04,
+            'q_vin_r_0' : 3.4747706215569546E+04,
+            'p_at_r_0' : 5.3722584358891634E-01,
+            'q_vout_r_0' : 9.2788006831497391E-02,
+            'p_v_r_0' : 5.0247813737334734E-01,
+            'p_ar_pul_0' : 1.8622263176170106E+00,
+            'q_ar_pul_0' : 1.2706171472263239E+04,
+            'p_cap_pul_0' : 1.7669300315750378E+00,
+            'q_cap_pul_0' : -8.4296230468394206E+04,
+            'p_ven_pul_0' : 1.5914021166255159E+00,
+            'q_ven_pul_0' : -6.4914977363299859E+03}
 
 
 def param():
@@ -179,9 +178,20 @@ def param():
     L_ven_pul = 0.
     
     # timings
-    t_ed = 0.18
-    t_es = 0.58
+    t_ed = 0.2
+    t_es = 0.53
+    T_cycl = 1.0
     
+    # atrial elastances
+    E_at_max_l = 2.9e-5
+    E_at_min_l = 9.0e-6
+    E_at_max_r = 1.8e-5
+    E_at_min_r = 8.0e-6
+    # ventricular elastances
+    E_v_max_l = 30.0e-5
+    E_v_min_l = 12.0e-6
+    E_v_max_r = 20.0e-5
+    E_v_min_r = 10.0e-6
     
 
     ## systemic arterial
@@ -309,15 +319,15 @@ def param():
             'C_ven_pul' : C_ven_pul,
             'L_ven_pul' : L_ven_pul,
             # atrial elastances
-            'E_at_max_l' : 2.9e-5,
-            'E_at_min_l' : 9.0e-6,
-            'E_at_max_r' : 1.8e-5,
-            'E_at_min_r' : 8.0e-6,
+            'E_at_max_l' : E_at_max_l,
+            'E_at_min_l' : E_at_min_l,
+            'E_at_max_r' : E_at_max_r,
+            'E_at_min_r' : E_at_min_r,
             # ventricular elastances
-            'E_v_max_l' : 7.0e-5,
-            'E_v_min_l' : 12.0e-6,
-            'E_v_max_r' : 3.0e-5,
-            'E_v_min_r' : 10.0e-6,
+            'E_v_max_l' : E_v_max_l,
+            'E_v_min_l' : E_v_min_l,
+            'E_v_max_r' : E_v_max_r,
+            'E_v_min_r' : E_v_min_r,
             # valve resistances
             'R_vin_l_min' : 1.0e-6,
             'R_vin_l_max' : 1.0e1,
@@ -330,7 +340,7 @@ def param():
             # timings
             't_ed' : t_ed,
             't_es' : t_es,
-            'T_cycl' : 0.9,
+            'T_cycl' : T_cycl,
             # unstressed compartment volumes (for post-processing)
             'V_at_l_u' : V_at_l_u,
             'V_at_r_u' : V_at_r_u,

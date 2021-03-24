@@ -14,19 +14,20 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
-                         'write_results_every'   : -999,
-                         'output_path'           : ''+basepath+'/tmp/',
-                         'simname'               : 'test'}
+                         'write_results_every'   : 1,#-999,
+                         'output_path'           : ''+basepath+'/tmp/0D',
+                         'simname'               : 'testyy'}
 
-    SOLVER_PARAMS     = {'tol_res'               : 1.0e-6,
-                         'tol_inc'               : 1.0e-6}
+    SOLVER_PARAMS     = {'tol_res'               : 1.0e-8,
+                         'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS       = {'maxtime'               : 0.9,
-                         'numstep'               : 100,
-                         'numstep_stop'          : 100,
+    TIME_PARAMS       = {'maxtime'               : 10*1.0,
+                         'numstep'               : 10*100,
                          'timint'                : 'ost', # ost
-                         'theta_ost'             : 1.0,
-                         'initial_conditions'    : init()}
+                         'theta_ost'             : 0.5,
+                         'initial_conditions'    : init(),
+                         'eps_periodic'          : 0.03,
+                         'periodic_checktype'    : 'pQvar'}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspul',
                          'parameters'            : param(),
@@ -48,8 +49,8 @@ def main():
 
         def tc2(self, t): # ventricular activation
             
-            act_dur = param()['t_es'] - param()['t_ed']
-            t0 = 2.*param()['t_ed']
+            act_dur = 1.8*(param()['t_es'] - param()['t_ed'])
+            t0 = param()['t_ed']
             
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
@@ -70,22 +71,22 @@ def main():
     s_corr = np.zeros(problem.mp.cardvasc0D.numdof)
 
     # correct results
-    s_corr[0] = -3.3332274374530700e-02
-    s_corr[1] = 7.1273201174680567e-01
-    s_corr[2] = -4.2212343057960694e-01
-    s_corr[3] = 1.0460547554921127e+00
-    s_corr[4] = 5.2672890612881815e+00
-    s_corr[5] = 2.7199350742243074e+04
-    s_corr[6] = 2.0201935597893912e+00
-    s_corr[7] = 6.7199687489435382e+04
-    s_corr[8] = 3.5962423510257089e+04
-    s_corr[9] = 4.0740106004294180e-01
-    s_corr[10] = -1.1518064932704578e-01
-    s_corr[11] = 3.7143863653268472e-01
-    s_corr[12] = 1.5232451298031424e+00
-    s_corr[13] = 1.5708616653606650e+04
-    s_corr[14] = 1.2876158799990427e+00
-    s_corr[15] = 3.8325591216815810e+04
+    s_corr[0] = 2.7156831671111686E+04
+    s_corr[1] = 6.5014832315152615E-01
+    s_corr[2] = 2.3863884814303105E-01
+    s_corr[3] = 6.2299149148041377E-01
+    s_corr[4] = 7.3204325568836603E+00
+    s_corr[5] = 4.4855244723865435E+04
+    s_corr[6] = 1.9666233818994407E+00
+    s_corr[7] = -2.3737219188883661E+04
+    s_corr[8] = 3.2279121521802968E+04
+    s_corr[9] = 4.9648390872022957E-01
+    s_corr[10] = 1.6997499381247427E-01
+    s_corr[11] = 4.6420478719842723E-01
+    s_corr[12] = 1.8990559860434069E+00
+    s_corr[13] = -8.1705347914691476E+04
+    s_corr[14] = 1.4965782216339247E+00
+    s_corr[15] = -1.0232540549572852E+04
     
     check1 = results_check.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = results_check.success_check([check1], problem.mp.comm)
@@ -138,8 +139,20 @@ def param():
     L_ven_pul = 0.
     
     # timings
-    t_ed = 0.18
-    t_es = 0.58
+    t_ed = 0.2
+    t_es = 0.53
+    T_cycl = 1.0
+    
+    # atrial elastances
+    E_at_max_l = 2.9e-5
+    E_at_min_l = 9.0e-6
+    E_at_max_r = 1.8e-5
+    E_at_min_r = 8.0e-6
+    # ventricular elastances
+    E_v_max_l = 30.0e-5
+    E_v_min_l = 12.0e-6
+    E_v_max_r = 20.0e-5
+    E_v_min_r = 10.0e-6
     
     
     return {'R_ar_sys' : R_ar_sys,
@@ -157,15 +170,15 @@ def param():
             'C_ven_pul' : C_ven_pul,
             'L_ven_pul' : L_ven_pul,
             # atrial elastances
-            'E_at_max_l' : 2.9e-5,
-            'E_at_min_l' : 9.0e-6,
-            'E_at_max_r' : 1.8e-5,
-            'E_at_min_r' : 8.0e-6,
+            'E_at_max_l' : E_at_max_l,
+            'E_at_min_l' : E_at_min_l,
+            'E_at_max_r' : E_at_max_r,
+            'E_at_min_r' : E_at_min_r,
             # ventricular elastances
-            'E_v_max_l' : 7.0e-5,
-            'E_v_min_l' : 12.0e-6,
-            'E_v_max_r' : 3.0e-5,
-            'E_v_min_r' : 10.0e-6,
+            'E_v_max_l' : E_v_max_l,
+            'E_v_min_l' : E_v_min_l,
+            'E_v_max_r' : E_v_max_r,
+            'E_v_min_r' : E_v_min_r,
             # valve resistances
             'R_vin_l_min' : 1.0e-6,
             'R_vin_l_max' : 1.0e1,
@@ -178,7 +191,7 @@ def param():
             # timings
             't_ed' : t_ed,
             't_es' : t_es,
-            'T_cycl' : 0.9,
+            'T_cycl' : T_cycl,
             # unstressed compartment volumes (for post-processing)
             'V_at_l_u' : 0.0,
             'V_at_r_u' : 0.0,

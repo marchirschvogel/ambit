@@ -262,6 +262,11 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pbsmall.pbs.p_old.vector.axpy(1.0, p_delta)
             self.pb.pbsmall.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        #self.pb.pbsmall.pbs.v_old.vector.set(0.0)
+        #self.pb.pbsmall.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        #self.pb.pbsmall.pbs.a_old.vector.set(0.0)
+        #self.pb.pbsmall.pbs.a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
         # 0D variables s and s_old are already correctly set from the previous small scale run (end values)
 
         # set constant prescribed growth stretch for subsequent small scale

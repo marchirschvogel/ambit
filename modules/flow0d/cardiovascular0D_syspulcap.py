@@ -614,7 +614,7 @@ def postprocess_groups_syspulcap(groups, indpertaftercyl=0, multiscalegandr=Fals
 # similar to syspulcap model, however with the coronaries branching off after the aortic valve
 # and directly feeding back into the right atrium
 
-class cardiovascular0Dsyspulcapveins(cardiovascular0Dsyspulcap):
+class cardiovascular0Dsyspulcapcor_veins(cardiovascular0Dsyspulcap):
     
     def setup_arrays(self):
         
@@ -778,7 +778,6 @@ class cardiovascular0Dsyspulcapveins(cardiovascular0Dsyspulcap):
         self.df_[20] = self.C_vencor_sys * p_vencor_sys_
         self.df_[21] = 0.
         self.df_[22] = self.C_ven_sys * p_ven_sys_
-        #self.df_[23] = (self.L_ven_sys/self.R_ven_sys) * q_ven_sys_
         self.df_[23] = (L_ven1_sys/R_ven1_sys) * q_ven1_sys_
         self.df_[24] = (L_ven2_sys/R_ven2_sys) * q_ven2_sys_
                 # -----------------------------------------------------------
@@ -791,7 +790,6 @@ class cardiovascular0Dsyspulcapveins(cardiovascular0Dsyspulcap):
         self.df_[31] = self.C_cap_pul * p_cap_pul_
         self.df_[32] = 0.
         self.df_[33] = self.C_ven_pul * p_ven_pul_
-        #self.df_[34] = (self.L_ven_pul/self.R_ven_pul) * q_ven_pul_
         self.df_[34] = (L_ven1_pul/R_ven1_pul) * q_ven1_pul_
         self.df_[35] = (L_ven2_pul/R_ven2_pul) * q_ven2_pul_
         self.df_[36] = (L_ven3_pul/R_ven3_pul) * q_ven3_pul_
@@ -969,7 +967,7 @@ class cardiovascular0Dsyspulcapveins(cardiovascular0Dsyspulcap):
 
         if self.comm.rank == 0:
             
-            print("Output of 0D vascular model (syspulcapveins):")
+            print("Output of 0D vascular model (syspulcapcor_veins):")
             
             print('{:<12s}{:<3s}{:<10.1f}{:<3s}{:<9s}{:<3s}{:<10.1f}'.format(''+self.cname_prfx[2]+'_at_l',' = ',aux[0],'   ',''+self.cname_prfx[3]+'_at_r',' = ',aux[25]))
             print('{:<12s}{:<3s}{:<10.1f}{:<3s}{:<9s}{:<3s}{:<10.1f}'.format(''+self.cname_prfx[0]+'_v_l',' = ',aux[2],'   ',''+self.cname_prfx[1]+'_v_r',' = ',aux[27]))
@@ -986,7 +984,7 @@ class cardiovascular0Dsyspulcapveins(cardiovascular0Dsyspulcap):
 
 
 
-def postprocess_groups_syspulcapveins(groups, indpertaftercyl=0, multiscalegandr=False):
+def postprocess_groups_syspulcapcor_veins(groups, indpertaftercyl=0, multiscalegandr=False):
     
     # index 0
     groups.append({'pres_time_sys_l'  : ['p_at_l', 'p_v_l', 'p_ar_sys', 'p_arperi_sys', 'p_venspl_sys', 'p_venespl_sys', 'p_venmsc_sys', 'p_vencer_sys', 'p_vencor_sys', 'p_ven_sys'],

@@ -318,6 +318,7 @@ class cardiovascular0Dbase:
                     if num_pdist > 2:
                         self.c_.append(chvars['p']) # p
                         self.c_.append(chvars['p2']) # p2
+                        chvars['pdown'] = chvars['p'] # downstream p is equal to "main" p
 
             elif self.chmodels[ch]['interfaces'] == 3:
                 
@@ -341,6 +342,7 @@ class cardiovascular0Dbase:
                     self.c_.append(chvars['p2']) # p2
                     self.c_.append(chvars['p3']) # p3
                     self.c_.append(chvars['p4']) # p4
+                    chvars['pdown'] = chvars['p'] # downstream p is equal to "main" p
             
             elif self.chmodels[ch]['interfaces'] == 5:
                 
