@@ -68,11 +68,11 @@ def main():
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspul_veins, syspulcap, syspulcapcor_veins
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
-                            'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 5}}, # only for syspul* models - 3D_fem: chamber is 3D, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
+                            'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_fluid', 'num_inflows' : 1, , 'num_outflows' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 5}}, # only for syspul* models - 3D_solid, 3D_fluid: chamber is 3D solid or fluid mechanics model, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
                             'perturb_type'          : None, # OPTIONAL: ['mr',1.0e-6], ['ms',25.], ['ar',5.0e-6], ['as',50.], ['mi',0.,4] (default: None)
-                            'perturb_after_cylce'   : 2, # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
-                            'valvelaw'              : ['pwlin_pres',0]} # OPTIONAL: valve law (pwlin_pres: piecewise-linear pressure-governed, pwlin_time: piecewise-linear time-governed, smooth_pres: smooth pressure-governed with number being amount of smoothness) (default: ['pwlin_pres',0])
+                            'perturb_after_cylce'   : 1, # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
+                            'valvelaws'             : {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}} # OPTIONAL: valve laws for aortic (av), mitral (mv), pulmonary (pv), and tricuspid valve (tv) (pwlin_pres: piecewise-linear pressure-governed, pwlin_time: piecewise-linear time-governed, smooth_pres: smooth pressure-governed with number being amount of smoothness) (default: {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]})
 
     # for solid*, fluid* problem types
     FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid mechanics)

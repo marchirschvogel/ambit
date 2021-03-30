@@ -57,8 +57,8 @@ class Flow0DProblem(problem_base):
         try: have_elastance = model_params['have_elastance']
         except: have_elastance = False
         
-        try: valvelaw = model_params['valvelaw']
-        except: valvelaw = ['pwlin_pres',0]
+        try: valvelaws = model_params['valvelaws']
+        except: valvelaws = {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}
 
         try: self.cq = coupling_params['coupling_quantity']
         except: self.cq = 'volume'
@@ -100,19 +100,19 @@ class Flow0DProblem(problem_base):
             self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(time_params['theta_ost'], model_params['parameters'], cq=self.cq, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
-            self.cardvasc0D = cardiovascular0Dsyspul(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspul_veins':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul_veins
-            self.cardvasc0D = cardiovascular0Dsyspul_veins(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul_veins(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-            self.cardvasc0D = cardiovascular0Dsyspulcap(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcapcor_veins':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapcor_veins
-            self.cardvasc0D = cardiovascular0Dsyspulcapcor_veins(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcapcor_veins(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
-            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaw=valvelaw, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         else:
             raise NameError("Unknown 0D modeltype!")
 
@@ -279,8 +279,8 @@ class Flow0DSolver():
             is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, t-t_off, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
-            if self.pb.perturb_type is not None: self.pb.induce_perturbation()
-
+            if self.pb.perturb_type is not None and not self.pb.have_induced_pert: self.pb.induce_perturbation()
+            
             # raw txt file output of 0D model quantities
             if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
                 self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)

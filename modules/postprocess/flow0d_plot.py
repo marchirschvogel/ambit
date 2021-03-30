@@ -24,29 +24,27 @@ def main():
         t_es = float(sys.argv[6])
         model = sys.argv[7]
         indpertaftercyl = int(sys.argv[8])
-        theta = float(sys.argv[9])
-        calc_func_params = str_to_bool(sys.argv[10])
-        multiscalegandr = str_to_bool(sys.argv[11])
-        lastgandrcycl = int(sys.argv[12])
+        calc_func_params = str_to_bool(sys.argv[9])
+        multiscalegandr = str_to_bool(sys.argv[10])
+        lastgandrcycl = int(sys.argv[11])
     except:
-        path = '/home/mh/work/ambit/testing/tmp/0D'#'/home/mh/work/sim/heart3D4ch/p0/01/growthremodeling_ecc_remod1/0D'
-        sname = 'testzz'#'multiscale_eccentric_mr1_remod1_small1'
+        path = '/home/mh/work/sim/heart0D/'
+        sname = 'mr1'
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
         t_es = 0.53
-        model = 'syspulcap' # syspul, syspul_veins, syspulcap, syspulcapcor_veins
-        indpertaftercyl = -1
-        theta = 0.5
+        model = 'syspul' # syspul, syspul_veins, syspulcap, syspulcapcor_veins
+        indpertaftercyl = 1
         calc_func_params = True
         multiscalegandr = False
         lastgandrcycl = 2
         
     
-    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, theta, calc_func_params, multiscalegandr, lastgandrcycl)
+    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, calc_func_params, multiscalegandr, lastgandrcycl)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, theta=0.5, calc_func_params=False, multiscalegandr=False, lastgandrcycl=1):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, calc_func_params=False, multiscalegandr=False, lastgandrcycl=1):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -132,8 +130,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                 test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
                 if test_Q == 0:
                     fluxes = np.loadtxt(''+path+'/results_'+sname+'_Q_'+ch+'.txt', usecols=1)
-                    # integrate volume: Q_{n+theta} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{n+theta}*dt + V_{n}
-                    # --> V_{n+theta} = theta * V_{n+1} + (1-theta) * V_{n}
+                    # integrate volume (mid-point rule): Q_{mid} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{mid}*dt + V_{n}
+                    # --> V_{mid} = 0.5 * V_{n+1} + 0.5 * V_{n}
                     filename_vol = path+'/results_'+sname+'_V_'+ch+'.txt'
                     file_vol = open(filename_vol, 'wt')
                     vol_n = 0.0 # we do not have the initial volume...
@@ -141,8 +139,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                     for i in range(len(fluxes)-1):
                         dt = tmp[i+1] - tmp[i]
                         vol_np = -fluxes[i+1]*dt + vol_n
-                        vol_ntheta = theta*vol_np + (1.-theta)*vol_n
-                        file_vol.write('%.16E %.16E\n' % (tmp[i+1], vol_ntheta))
+                        vol_mid = 0.5*vol_np + 0.5*vol_n
+                        file_vol.write('%.16E %.16E\n' % (tmp[i+1], vol_mid))
                         vol_n = vol_np
                     file_vol.close()
                 else:
@@ -211,7 +209,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         # function parameters of left and right ventricle
         if calculate_function_params:
         
-            sw, sv, co, ef, edv, esv, edp, esp = [], [], [], [], [], [], [], []
+            sw, sv, co, ef, edv, esv, edp, esp, sv_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], []
             for ch in ['v_l','v_r']:
                 
                 # stroke work
@@ -223,13 +221,13 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                 sw.append(val)
                 
                 # stroke volume, cardiac output, end-diastolic and end-systolic volume, ejection fraction
-                vol = np.loadtxt(''+path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=numdata-nstep_cycl)
-                sv.append(max(vol[:,1])-min(vol[:,1]))
-                co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
-                edv.append(max(vol[:,1]))
-                esv.append(min(vol[:,1]))
-                ef.append((max(vol[:,1])-min(vol[:,1]))/max(vol[:,1]))
-                
+                vol = np.loadtxt(''+path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=numdata-nstep_cycl, usecols=1)
+                sv.append(max(vol)-min(vol))
+                co.append((max(vol)-min(vol))/T_cycl)
+                edv.append(max(vol))
+                esv.append(min(vol))
+                ef.append((max(vol)-min(vol))/max(vol))
+
                 pres = np.loadtxt(''+path+'/results_'+sname+'_p_'+ch+'.txt', skiprows=numdata-nstep_cycl)
 
                 # end-diastolic pressure
@@ -245,6 +243,36 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                         esp_index = k
                         break
                 esp.append(pres[esp_index,1])
+                
+                # net values (in case of regurgitation of valves, for example), computed by integrating in- and out-fluxes
+                if ch=='v_l':
+                    fluxout = np.loadtxt(''+path+'/results_'+sname+'_q_vout_l.txt', skiprows=numdata-nstep_cycl)
+                    fluxin = np.loadtxt(''+path+'/results_'+sname+'_q_vin_l.txt', skiprows=numdata-nstep_cycl)
+                if ch=='v_r':
+                    fluxout = np.loadtxt(''+path+'/results_'+sname+'_q_vout_r.txt', skiprows=numdata-nstep_cycl)
+                    fluxin = np.loadtxt(''+path+'/results_'+sname+'_q_vin_r.txt', skiprows=numdata-nstep_cycl)
+
+                # true (net) stroke volume
+                val = 0.0
+                for i in range(len(fluxout)-1):
+                    # mid-point rule
+                    val += 0.5*(fluxout[i+1,1]+fluxout[i,1]) * (fluxout[i+1,0]-fluxout[i,0])  
+                sv_net.append(val)
+                
+                # true (net) ejection fraction
+                ef_net.append(sv_net[-1]/edv[-1])
+                
+                # regurgitant volume
+                val = 0.0
+                for i in range(len(fluxin)-1):
+                    # mid-point rule
+                    if fluxin[i+1,1] < 0.:
+                        val += 0.5*(fluxin[i+1,1]+fluxin[i,1]) * (fluxin[i+1,0]-fluxin[i,0]) 
+                v_reg.append(abs(val))
+                
+                # regurgitant fraction
+                f_reg.append(v_reg[-1]/sv[-1])
+                
                 
             # mean arterial pressure
             marp = []
@@ -278,6 +306,14 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             fi.write('esp_r %.4f [kPa]\n' % (esp[1]))
             fi.write('map_sys %.4f [kPa]\n' % (marp[0]))
             fi.write('map_pul %.4f [kPa]\n' % (marp[1]))
+            fi.write('sv_net_l %.4f [ml]\n' % (sv_net[0]))
+            fi.write('sv_net_r %.4f [ml]\n' % (sv_net[1]))
+            fi.write('ef_net_l %.4f [%%]\n' % (ef_net[0]*100.))
+            fi.write('ef_net_r %.4f [%%]\n' % (ef_net[1]*100.))
+            fi.write('v_reg_l %.4f [ml]\n' % (v_reg[0]))
+            fi.write('v_reg_r %.4f [ml]\n' % (v_reg[1]))
+            fi.write('f_reg_l %.4f [%%]\n' % (f_reg[0]*100.))
+            fi.write('f_reg_r %.4f [%%]\n' % (f_reg[1]*100.)) 
             fi.close()
 
 
@@ -308,7 +344,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.0, 1.1
             maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
+            if (model == 'syspulcap' or model == 'syspulcapcor_veins' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.2
                 maxrows, maxcols, sl, swd = 2, 5, 19, 50
         if 'flux_time' in list(groups[g].keys())[0]:
@@ -320,9 +356,11 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.1
             maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
+            if (model == 'syspulcap' or model == 'syspulcapcor_veins' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl, swd = 3, 5, 20, 50
+            if model == 'syspul_veins' and 'flux_time_pul_r' in list(groups[g].keys())[0]:
+                maxrows, maxcols, sl, swd = 1, 7, 16, 34
         if 'vol_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''
@@ -361,7 +399,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.2
             maxrows, maxcols, sl, swd = 2, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapveins' or model == 'syspulcaprespir'):
+            if (model == 'syspulcap' or model == 'syspulcapcor_veins' or model == 'syspulcaprespir'):
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl, swd = 3, 5, 10, 50
         if 'ppO2_time' in list(groups[g].keys())[0]:

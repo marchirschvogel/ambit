@@ -29,13 +29,17 @@ set style line 13 dashtype 14 linecolor rgb '#00ffff' linewidth 4 # cyan - vence
 set style line 14 dashtype 15 linecolor rgb '#008b8b' linewidth 4 # dark-cyan - vencor_sys
 
 set style line 15 dashtype 10 linecolor rgb '#4169e1' linewidth 3 # royal-blue - ven_sys
+set style line 151 dashtype 11 linecolor rgb '#0000cd' linewidth 3 # medium-blue - ven2_sys
 
 set style line 16 dashtype 3 linecolor rgb '#00ced1' linewidth 4 # dark-turquoise - at_r
 set style line 17 dashtype 1 linecolor rgb '#0000ff' linewidth 3 # blue - v_r
 set style line 18 dashtype 6 linecolor rgb '#191970' linewidth 4 # midnight-blue - ar_pul
 
-set style line 19 dashtype 5 linecolor rgb '#9400d3' linewidth 3 # midnight-blue - cap_pul
+set style line 19 dashtype 5 linecolor rgb '#9400d3' linewidth 3 # dark-violet - cap_pul
 set style line 20 dashtype 10 linecolor rgb '#8b008b' linewidth 3 # dark-magenta - ven_pul
+set style line 201 dashtype 10 linecolor rgb '#f055f0' linewidth 3 # light-magenta - ven2_pul
+set style line 202 dashtype 11 linecolor rgb '#ff00ff' linewidth 3 # magenta - ven3_pul
+set style line 203 dashtype 12 linecolor rgb '#ff1493' linewidth 3 # dark-pink - ven4_pul
 
 set style line 21 dashtype 1 linecolor rgb '#006400' linewidth 4 # dark-green
 set style line 22 dashtype 1 linecolor rgb '#a020f0' linewidth 4 # purple

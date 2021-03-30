@@ -207,24 +207,42 @@ class cardiovascular0Dbase:
     # set valve resistances
     def set_valve_resistances(self, p_v_l_,p_v_l_d_,p_v_r_,p_v_r_d_,p_at_l_d_,p_at_r_d_,p_ar_sys_,p_ar_pul_):
         
-        if self.valvelaw=='pwlin_pres':
+        if self.valvelaws['mv'][0]=='pwlin_pres':
             R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, p_v_l_ < p_at_l_d_), (self.R_vin_l_max, p_v_l_ >= p_at_l_d_) )
-            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, p_v_r_ < p_at_r_d_), (self.R_vin_r_max, p_v_r_ >= p_at_r_d_) )
-            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, p_v_l_d_ < p_ar_sys_), (self.R_vout_l_min, p_v_l_d_ >= p_ar_sys_) )
-            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, p_v_r_d_ < p_ar_pul_), (self.R_vout_r_min, p_v_r_d_ >= p_ar_pul_) )
-        elif self.valvelaw=='pwlin_time':
+        elif self.valvelaws['mv'][0]=='pwlin_time':
             R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_l_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_r_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_l_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_r_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-        elif self.valvelaw=='smooth_pres':
-            R_vin_l_  = 0.5*(self.R_vin_l_max - self.R_vin_l_min)*(sp.tanh((p_v_l_-p_at_l_d_)/self.epsvalve) + 1.) + self.R_vin_l_min
-            R_vin_r_  = 0.5*(self.R_vin_r_max - self.R_vin_r_min)*(sp.tanh((p_v_r_-p_at_r_d_)/self.epsvalve) + 1.) + self.R_vin_r_min
-            R_vout_l_ = 0.5*(self.R_vout_l_max - self.R_vout_l_min)*(sp.tanh((p_ar_sys_-p_v_l_d_)/self.epsvalve) + 1.) + self.R_vout_l_min
-            R_vout_r_ = 0.5*(self.R_vout_r_max - self.R_vout_r_min)*(sp.tanh((p_ar_pul_-p_v_r_d_)/self.epsvalve) + 1.) + self.R_vout_r_min
+        elif self.valvelaws['mv'][0]=='smooth_pres':
+            R_vin_l_  = 0.5*(self.R_vin_l_max - self.R_vin_l_min)*(sp.tanh((p_v_l_-p_at_l_d_)/self.valvelaws['mv'][1]) + 1.) + self.R_vin_l_min
         else: 
-            raise NameError("Unknown valve law!")
+            raise NameError("Unknown valve law for mv!")
 
+        if self.valvelaws['tv'][0]=='pwlin_pres':
+            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, p_v_r_ < p_at_r_d_), (self.R_vin_r_max, p_v_r_ >= p_at_r_d_) )
+        elif self.valvelaws['tv'][0]=='pwlin_time':
+            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_r_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+        elif self.valvelaws['tv'][0]=='smooth_pres':
+            R_vin_r_  = 0.5*(self.R_vin_r_max - self.R_vin_r_min)*(sp.tanh((p_v_r_-p_at_r_d_)/self.valvelaws['tv'][1]) + 1.) + self.R_vin_r_min
+        else: 
+            raise NameError("Unknown valve law for tv!")
+
+        if self.valvelaws['av'][0]=='pwlin_pres':
+            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, p_v_l_d_ < p_ar_sys_), (self.R_vout_l_min, p_v_l_d_ >= p_ar_sys_) )
+        elif self.valvelaws['av'][0]=='pwlin_time':
+            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_l_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+        elif self.valvelaws['av'][0]=='smooth_pres':
+            R_vout_l_ = 0.5*(self.R_vout_l_max - self.R_vout_l_min)*(sp.tanh((p_ar_sys_-p_v_l_d_)/self.valvelaws['av'][1]) + 1.) + self.R_vout_l_min
+        else: 
+            raise NameError("Unknown valve law for av!")
+
+        if self.valvelaws['pv'][0]=='pwlin_pres':
+            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, p_v_r_d_ < p_ar_pul_), (self.R_vout_r_min, p_v_r_d_ >= p_ar_pul_) )
+        elif self.valvelaws['pv'][0]=='pwlin_time':
+            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_r_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
+        elif self.valvelaws['pv'][0]=='smooth_pres':
+            R_vout_r_ = 0.5*(self.R_vout_r_max - self.R_vout_r_min)*(sp.tanh((p_ar_pul_-p_v_r_d_)/self.valvelaws['pv'][1]) + 1.) + self.R_vout_r_min
+        else: 
+            raise NameError("Unknown valve law for pv!")
+        
         return R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_
 
 
@@ -241,7 +259,7 @@ class cardiovascular0Dbase:
             elif self.chmodels[ch]['type']=='0D_elast':
                 self.switch_V[i], self.switch_p[i] = 1, 0
             
-            elif self.chmodels[ch]['type']=='3D_fem':
+            elif self.chmodels[ch]['type']=='3D_solid':
                 if self.cq == 'volume':
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
@@ -259,7 +277,16 @@ class cardiovascular0Dbase:
                     self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
                 else:
                     raise NameError("Unknown coupling quantity!")
-                
+            
+            # Heart models and 3D fluid currently only working with Cheart!
+            elif self.chmodels[ch]['type']=='3D_fluid':
+                assert(self.cq == 'pressure')
+                self.switch_V[i], self.switch_p[i] = 0, 1
+                self.cname_prfx[i] = 'p'
+                self.vname_prfx[i] = 'Q'
+                self.si[i] = 1 # switch indices of pressure / outflux
+                #self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
+            
             else:
                 raise NameError("Unknown chamber model for chamber %s!" % (ch))
 
@@ -277,88 +304,59 @@ class cardiovascular0Dbase:
 
         # time-varying elastances
         if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='prescr_elast':
-            chvars['vq'] = chvars['p']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
+            chvars['vq'] = chvars['pi1']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
             self.fnc_.append(chfncs[0])
             
-            # all "distributed" p are equal to "main" p of chamber
-            chvars['pdown'] = chvars['p']
-            if 'p1' in chvars.keys(): chvars['p1'] = chvars['p']
-            if 'p2' in chvars.keys(): chvars['p2'] = chvars['p']
-            if 'p3' in chvars.keys(): chvars['p3'] = chvars['p']
-            if 'p4' in chvars.keys(): chvars['p4'] = chvars['p']
+            # all "distributed" p are equal to "main" p of chamber (= pI1)
+            for k in range(10): # no more than 10 distributed p's allowed
+                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
+                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
 
-        # 3D FEM model
-        elif self.chmodels[ch]['type']=='3D_fem': # also for 2D FEM models
 
-            if self.chmodels[ch]['interfaces'] == 1:
-                
-                # all "distributed" p are equal to "main" p of chamber
-                chvars['pdown'] = chvars['p']
-                if 'p1' in chvars.keys(): chvars['p1'] = chvars['p']
-                if 'p2' in chvars.keys(): chvars['p2'] = chvars['p']
-                if 'p3' in chvars.keys(): chvars['p3'] = chvars['p']
-                if 'p4' in chvars.keys(): chvars['p4'] = chvars['p']
+        # 3D solid mechanics model
+        elif self.chmodels[ch]['type']=='3D_solid': # also for 2D FEM models
 
-                if self.cq == 'volume' or self.cq == 'flux':
-                    self.c_.append(chvars['vq']) # V or Q
-                if self.cq == 'pressure':
-                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
-                    self.c_.append(chvars['p']) # p
-                        
-            elif self.chmodels[ch]['interfaces'] == 2:
-                
-                if self.cq == 'volume' or self.cq == 'flux':
-                    raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
+            # all "distributed" p are equal to "main" p of chamber (= pI1)
+            for k in range(10): # no more than 10 distributed p's allowed
+                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
+                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
 
-                if self.cq == 'pressure':
-                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
-                    if num_pdist == 2:
-                        self.c_.append(chvars['p']) # p
-                        self.c_.append(chvars['pdown']) # downstream p
-                    if num_pdist > 2:
-                        self.c_.append(chvars['p']) # p
-                        self.c_.append(chvars['p2']) # p2
-                        chvars['pdown'] = chvars['p'] # downstream p is equal to "main" p
+            if self.cq == 'volume' or self.cq == 'flux':
+                self.c_.append(chvars['vq']) # V or Q
+            if self.cq == 'pressure':
+                self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
+                self.c_.append(chvars['pi1'])
 
-            elif self.chmodels[ch]['interfaces'] == 3:
-                
-                if self.cq == 'volume' or self.cq == 'flux':
-                    raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
 
-                if self.cq == 'pressure':
-                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
-                    self.c_.append(chvars['p']) # p1
-                    self.c_.append(chvars['p2']) # p2
-                    self.c_.append(chvars['pdown']) # downstream p
+        # 3D fluid mechanics model
+        elif self.chmodels[ch]['type']=='3D_fluid': # also for 2D FEM models
 
-            elif self.chmodels[ch]['interfaces'] == 4:
-                
-                if self.cq == 'volume' or self.cq == 'flux':
-                    raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
+            assert(self.cq == 'pressure')
 
-                if self.cq == 'pressure':
-                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
-                    self.c_.append(chvars['p']) # p1
-                    self.c_.append(chvars['p2']) # p2
-                    self.c_.append(chvars['p3']) # p3
-                    self.c_.append(chvars['p4']) # p4
-                    chvars['pdown'] = chvars['p'] # downstream p is equal to "main" p
+            self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q of chamber is now variable
+
+            # all "distributed" p that are not coupled are set to first inflow p
+            for k in range(self.chmodels[ch]['num_inflows'],10):
+                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
+
+            # if no inflow is present, set to outflow pressure (formally, this quantity is not needed then)
+            if self.chmodels[ch]['num_inflows']==0: chvars['pi1'] = chvars['po1']
+
+            # now add inflow pressures to coupling array
+            for m in range(self.chmodels[ch]['num_inflows']):
+                self.c_.append(chvars['pi'+str(m+1)+''])
             
-            elif self.chmodels[ch]['interfaces'] == 5:
-                
-                if self.cq == 'volume' or self.cq == 'flux':
-                    raise AttributeError("Chamber %s has more than 1 interface! Cannot use volume or flux coupling for this case!" % (ch))
 
-                if self.cq == 'pressure':
-                    self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
-                    self.c_.append(chvars['p']) # p1
-                    self.c_.append(chvars['p2']) # p2
-                    self.c_.append(chvars['p3']) # p3
-                    self.c_.append(chvars['p4']) # p4
-                    self.c_.append(chvars['pdown']) # downstream p
+            # all "distributed" p that are not coupled are set to first outflow p
+            for k in range(self.chmodels[ch]['num_outflows'],10):
+                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['po1']
+            
+            # if no outflow is present, set to inflow pressure (formally, this quantity is not needed then)
+            if self.chmodels[ch]['num_outflows']==0: chvars['po1'] = chvars['pi1']
 
-            else:
-                raise AttributeError("More than five 3D interfaces for chamber %s. Think of how to handle this!" % (ch))
+            # now add outflow pressures to coupling array
+            for m in range(self.chmodels[ch]['num_outflows']):
+                self.c_.append(chvars['po'+str(m+1)+''])
 
         else:
             raise NameError("Unknown chamber model for chamber %s!" % (ch))
@@ -406,7 +404,7 @@ class cardiovascular0Dbase:
         
         for i, ch in enumerate(self.chmodels):
             
-            if self.chmodels[ch]['type']=='3D_fem':
+            if self.chmodels[ch]['type']=='3D_solid':
                 
                 if self.chmodels[ch]['interfaces'] == 1: 
                 

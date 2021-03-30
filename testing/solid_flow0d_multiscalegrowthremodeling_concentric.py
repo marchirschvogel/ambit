@@ -58,7 +58,7 @@ def main():
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',
                             'parameters'            : param(),
-                            'chamber_models'        : {'lv' : {'type' : '3D_fem', 'interfaces' : 1}, 'rv' : {'type' : '3D_fem', 'interfaces' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 2}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 2}},
+                            'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_solid'}, 'la' : {'type' : '0D_elast', 'activation_curve' : 2}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 2}},
                             'perturb_type'          : ['as',50.],
                             'perturb_after_cylce'   : 1}
 
