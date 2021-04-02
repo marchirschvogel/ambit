@@ -28,14 +28,14 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[10])
         lastgandrcycl = int(sys.argv[11])
     except:
-        path = '/home/mh/work/sim/heart0D/'
-        sname = 'mr1'
+        path = '/home/mh/work/sim/lalv-flow/rastered10-new/00a/syspulveins_MR8/out/plot/raw'#'/home/mh/work/sim/heart0D/'
+        sname = ''#'mr1'
         nstep_cycl = 100
-        T_cycl = 1.0
-        t_ed = 0.2
-        t_es = 0.53
-        model = 'syspul' # syspul, syspul_veins, syspulcap, syspulcapcor_veins
-        indpertaftercyl = 1
+        T_cycl = 0.8#1.0
+        t_ed = 0.37#0.2
+        t_es = 0.8#0.53
+        model = 'syspul' # syspul, syspulcap, syspulcapcor
+        indpertaftercyl = -1
         calc_func_params = True
         multiscalegandr = False
         lastgandrcycl = 2
@@ -58,13 +58,6 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         iscirculation = True
         calculate_function_params = calc_func_params
 
-    elif model == 'syspul_veins':
-        
-        import cardiovascular0D_syspul
-        cardiovascular0D_syspul.postprocess_groups_syspul_veins(groups,indpertaftercyl,multiscalegandr)
-        iscirculation = True
-        calculate_function_params = calc_func_params
-
     elif model == 'syspulcap':
         
         import cardiovascular0D_syspulcap
@@ -72,10 +65,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         iscirculation = True
         calculate_function_params = calc_func_params
         
-    elif model == 'syspulcapcor_veins':
+    elif model == 'syspulcapcor':
         
         import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcapcor_veins(groups,indpertaftercyl,multiscalegandr)
+        cardiovascular0D_syspulcap.postprocess_groups_syspulcapcor(groups,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
         
@@ -134,7 +127,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                     # --> V_{mid} = 0.5 * V_{n+1} + 0.5 * V_{n}
                     filename_vol = path+'/results_'+sname+'_V_'+ch+'.txt'
                     file_vol = open(filename_vol, 'wt')
-                    vol_n = 0.0 # we do not have the initial volume...
+                    vol_n = 100.0e3 # mm^3, we do not have the initial volume, so rough estimate
                     file_vol.write('%.16E %.16E\n' % (tmp[0], vol_n))
                     for i in range(len(fluxes)-1):
                         dt = tmp[i+1] - tmp[i]
@@ -209,7 +202,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         # function parameters of left and right ventricle
         if calculate_function_params:
         
-            sw, sv, co, ef, edv, esv, edp, esp, sv_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], []
+            sw, sv, co, ef, edv, esv, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], []
             for ch in ['v_l','v_r']:
                 
                 # stroke work
@@ -231,18 +224,26 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                 pres = np.loadtxt(''+path+'/results_'+sname+'_p_'+ch+'.txt', skiprows=numdata-nstep_cycl)
 
                 # end-diastolic pressure
+                edp_index = -1
                 for k in range(len(pres)):
                     if round(pres[k,0],2) == round(t_ed+(n_cycl-1)*T_cycl+t_off,2):
                         edp_index = k
                         break
-                edp.append(pres[edp_index,1])
+                if edp_index >= 0:
+                    edp.append(pres[edp_index,1])
+                else:
+                    edp.append(np.nan)
 
                 # end-systolic pressure
+                esp_index = -1
                 for k in range(len(pres)):
                     if round(pres[k,0],2) == round(t_es+(n_cycl-1)*T_cycl+t_off,2):
                         esp_index = k
                         break
-                esp.append(pres[esp_index,1])
+                if esp_index >= 0:
+                    esp.append(pres[esp_index,1])
+                else:
+                    esp.append(np.nan)
                 
                 # net values (in case of regurgitation of valves, for example), computed by integrating in- and out-fluxes
                 if ch=='v_l':
@@ -258,6 +259,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                     # mid-point rule
                     val += 0.5*(fluxout[i+1,1]+fluxout[i,1]) * (fluxout[i+1,0]-fluxout[i,0])  
                 sv_net.append(val)
+                co_net.append(val/T_cycl)
                 
                 # true (net) ejection fraction
                 ef_net.append(sv_net[-1]/edv[-1])
@@ -308,6 +310,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             fi.write('map_pul %.4f [kPa]\n' % (marp[1]))
             fi.write('sv_net_l %.4f [ml]\n' % (sv_net[0]))
             fi.write('sv_net_r %.4f [ml]\n' % (sv_net[1]))
+            fi.write('co_net_l %.4f [l/min]\n' % (co_net[0]*60./1.0e6))
+            fi.write('co_net_r %.4f [l/min]\n' % (co_net[1]*60./1.0e6))
             fi.write('ef_net_l %.4f [%%]\n' % (ef_net[0]*100.))
             fi.write('ef_net_r %.4f [%%]\n' % (ef_net[1]*100.))
             fi.write('v_reg_l %.4f [ml]\n' % (v_reg[0]))
@@ -344,7 +348,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, factor_kPa_mmHg
             xextend, yextend     = 1.0, 1.1
             maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapcor_veins' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
+            if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.2
                 maxrows, maxcols, sl, swd = 2, 5, 19, 50
         if 'flux_time' in list(groups[g].keys())[0]:
@@ -356,11 +360,12 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.1
             maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapcor_veins' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
+            if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl, swd = 3, 5, 20, 50
-            if model == 'syspul_veins' and 'flux_time_pul_r' in list(groups[g].keys())[0]:
-                maxrows, maxcols, sl, swd = 1, 7, 16, 34
+            #TODO: How to check for more than one vein?
+            #if model == 'syspul_veins' and 'flux_time_pul_r' in list(groups[g].keys())[0]:
+                #maxrows, maxcols, sl, swd = 1, 7, 16, 34
         if 'vol_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''
@@ -399,7 +404,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             x2rescale, y2rescale = 1.0, 1.0
             xextend, yextend     = 1.0, 1.2
             maxrows, maxcols, sl, swd = 2, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapcor_veins' or model == 'syspulcaprespir'):
+            if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir'):
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl, swd = 3, 5, 10, 50
         if 'ppO2_time' in list(groups[g].keys())[0]:

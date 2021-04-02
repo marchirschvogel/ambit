@@ -12,7 +12,7 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
     
-    model0d = 'syspul_veins' # syspul, syspul_veins, syspulcap, syspulcapcor_veins
+    model0d = 'syspulcapcor' # syspul, syspulcap, syspulcapcor
     params_cap = 'var1' # var1, var2
     
     IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
@@ -33,7 +33,7 @@ def main():
     
     MODEL_PARAMS      = {'modeltype'             : model0d,
                          'parameters'            : param(model0d,params_cap),
-                         'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
+                         'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1, 'num_inflows' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1, 'num_inflows' : 1}}}
     
 
     # define your time curves here (syntax: tcX refers to curve X)
@@ -126,7 +126,7 @@ def init(model0d):
     
     factor_kPa_mmHg = 7.500615
     
-    if model0d == 'syspul' or model0d == 'syspul_veins':
+    if model0d == 'syspul':
     
         return {'q_vin_l_0' : 0.0,
                 'p_at_l_0' : 4.5/factor_kPa_mmHg,
@@ -136,49 +136,6 @@ def init(model0d):
                 'q_ar_sys_0' : 0.0,
                 'p_ven_sys_0' : 17.0/factor_kPa_mmHg,
                 'q_ven_sys_0' : 0.0,
-                'q_ven1_sys_0' : 0.0,
-                'q_ven2_sys_0' : 0.0,
-                'q_vin_r_0' : 0.0,
-                'p_at_r_0' : 4.5/(5.*factor_kPa_mmHg),
-                'q_vout_r_0' : 0.0,
-                'p_v_r_0' : 4.5/(5.*factor_kPa_mmHg),
-                'p_ar_pul_0' : 90.29309546/(5.*factor_kPa_mmHg),
-                'q_ar_pul_0' : 0.0,
-                'p_ven_pul_0' : 12.0/factor_kPa_mmHg,
-                'q_ven_pul_0' : 0.0,
-                'q_ven1_pul_0' : 0.0,
-                'q_ven2_pul_0' : 0.0,
-                'q_ven3_pul_0' : 0.0,
-                'q_ven4_pul_0' : 0.0}
-    
-    
-    elif model0d == 'syspulcap':
-    
-        return {'q_vin_l_0' : 0.0,
-                'p_at_l_0' : 4.5/factor_kPa_mmHg,
-                'q_vout_l_0' : 0.0,
-                'p_v_l_0' : 4.5/factor_kPa_mmHg,
-                'p_ar_sys_0' : 90.29309546/factor_kPa_mmHg,
-                'q_ar_sys_0' : 0.0,
-
-                'p_arperi_sys_0' : 90.29309546/factor_kPa_mmHg,
-                'q_arspl_sys_0' : 0.0,
-                'q_arespl_sys_0' : 0.0,
-                'q_armsc_sys_0' : 0.0,
-                'q_arcer_sys_0' : 0.0,
-                'q_arcor_sys_0' : 0.0,
-                'p_venspl_sys_0' : 17.0/factor_kPa_mmHg,
-                'q_venspl_sys_0' : 0.0,
-                'p_venespl_sys_0' : 17.0/factor_kPa_mmHg,
-                'q_venespl_sys_0' : 0.0,
-                'p_venmsc_sys_0' : 17.0/factor_kPa_mmHg,
-                'q_venmsc_sys_0' : 0.0,
-                'p_vencer_sys_0' : 17.0/factor_kPa_mmHg,
-                'q_vencer_sys_0' : 0.0,
-                'p_vencor_sys_0' : 17.0/factor_kPa_mmHg,
-                'q_vencor_sys_0' : 0.0,
-
-                'p_ven_sys_0' : 17.0/factor_kPa_mmHg,
                 'q_ven_sys_0' : 0.0,
                 'q_vin_r_0' : 0.0,
                 'p_at_r_0' : 4.5/(5.*factor_kPa_mmHg),
@@ -186,15 +143,13 @@ def init(model0d):
                 'p_v_r_0' : 4.5/(5.*factor_kPa_mmHg),
                 'p_ar_pul_0' : 90.29309546/(5.*factor_kPa_mmHg),
                 'q_ar_pul_0' : 0.0,
-                'p_cap_pul_0' : 90.29309546/(5.*factor_kPa_mmHg),
-                'q_cap_pul_0' : 0.0,
                 'p_ven_pul_0' : 12.0/factor_kPa_mmHg,
                 'q_ven_pul_0' : 0.0,
                 'q_ven_pul_0' : 0.0}
     
     
-    elif model0d == 'syspulcapcor_veins':
-        
+    elif model0d == 'syspulcap' or model0d == 'syspulcapcor':
+    
         return {'q_vin_l_0' : 0.0,
                 'p_at_l_0' : 4.5/factor_kPa_mmHg,
                 'q_vout_l_0' : 0.0,
@@ -220,8 +175,7 @@ def init(model0d):
                 'q_vencor_sys_0' : 0.0,
 
                 'p_ven_sys_0' : 17.0/factor_kPa_mmHg,
-                'q_ven1_sys_0' : 0.0,
-                'q_ven2_sys_0' : 0.0,
+                'q_ven_sys_0' : 0.0,
                 'q_vin_r_0' : 0.0,
                 'p_at_r_0' : 4.5/(5.*factor_kPa_mmHg),
                 'q_vout_r_0' : 0.0,
@@ -231,10 +185,8 @@ def init(model0d):
                 'p_cap_pul_0' : 90.29309546/(5.*factor_kPa_mmHg),
                 'q_cap_pul_0' : 0.0,
                 'p_ven_pul_0' : 12.0/factor_kPa_mmHg,
-                'q_ven1_pul_0' : 0.0,
-                'q_ven2_pul_0' : 0.0,
-                'q_ven3_pul_0' : 0.0,
-                'q_ven4_pul_0' : 0.0}
+                'q_ven_pul_0' : 0.0}
+    
 
     else:
         raise NameError("Unknown 0D model!")
@@ -282,7 +234,7 @@ def param(model0d,params_cap):
     E_v_min_r = 10.0e-6
     
     
-    if model0d == 'syspulcap' or model0d == 'syspulcapcor_veins':
+    if model0d == 'syspulcap' or model0d == 'syspulcapcor':
 
         if params_cap=='var1':
         
@@ -478,7 +430,7 @@ def param(model0d,params_cap):
     V_cap_pul_u = 123.0e3 # Ursino and Magosso 2000a Am J Physiol Heart Circ Physiol (2000), mm^3
 
 
-    if model0d == 'syspul' or model0d == 'syspul_veins':
+    if model0d == 'syspul':
 
         return {'R_ar_sys' : R_ar_sys,
                 'C_ar_sys' : C_ar_sys,
@@ -528,7 +480,7 @@ def param(model0d,params_cap):
                 'V_ven_pul_u' : 0.0}
 
 
-    elif model0d == 'syspulcap' or model0d == 'syspulcapcor_veins':
+    elif model0d == 'syspulcap' or model0d == 'syspulcapcor':
 
         return {'R_ar_sys' : R_ar_sys,
                 'C_ar_sys' : C_ar_sys,

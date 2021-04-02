@@ -292,7 +292,7 @@ class cardiovascular0Dbase:
 
 
     # set coupling state (populate x and c vectors with Sympy symbols) according to case and coupling quantity (can be volume, flux, or pressure)
-    def set_coupling_state(self, ch, chvars, chfncs=[]):
+    def set_chamber_state(self, ch, chvars, chfncs=[]):
         
         if ch == 'lv': V_unstressed, i = self.V_v_l_u,  0
         if ch == 'rv': V_unstressed, i = self.V_v_r_u,  1
@@ -312,7 +312,6 @@ class cardiovascular0Dbase:
                 if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
 
-
         # 3D solid mechanics model
         elif self.chmodels[ch]['type']=='3D_solid': # also for 2D FEM models
 
@@ -326,7 +325,6 @@ class cardiovascular0Dbase:
             if self.cq == 'pressure':
                 self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
                 self.c_.append(chvars['pi1'])
-
 
         # 3D fluid mechanics model
         elif self.chmodels[ch]['type']=='3D_fluid': # also for 2D FEM models
@@ -346,7 +344,6 @@ class cardiovascular0Dbase:
             for m in range(self.chmodels[ch]['num_inflows']):
                 self.c_.append(chvars['pi'+str(m+1)+''])
             
-
             # all "distributed" p that are not coupled are set to first outflow p
             for k in range(self.chmodels[ch]['num_outflows'],10):
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['po1']
@@ -360,8 +357,6 @@ class cardiovascular0Dbase:
 
         else:
             raise NameError("Unknown chamber model for chamber %s!" % (ch))
-
-        return list(chvars.values())
 
 
     # evaluate time-dependent state of chamber (for 0D elastance models)
@@ -406,21 +401,15 @@ class cardiovascular0Dbase:
             
             if self.chmodels[ch]['type']=='3D_solid':
                 
-                if self.chmodels[ch]['interfaces'] == 1: 
+                if ch=='lv':
+                    if 'p_v_l_0' in iniparam.keys(): var[i] = iniparam['p_v_l_0']
+                if ch=='rv':
+                    if 'p_v_r_0' in iniparam.keys(): var[i] = iniparam['p_v_r_0']
+                if ch=='la':
+                    if 'p_at_l_0' in iniparam.keys(): var[i] = iniparam['p_at_l_0']
+                if ch=='ra':
+                    if 'p_at_r_0' in iniparam.keys(): var[i] = iniparam['p_at_r_0']
                 
-                    if ch=='lv':
-                        if 'p_v_l_0' in iniparam.keys(): var[i] = iniparam['p_v_l_0']
-                    if ch=='rv':
-                        if 'p_v_r_0' in iniparam.keys(): var[i] = iniparam['p_v_r_0']
-                    if ch=='la':
-                        if 'p_at_l_0' in iniparam.keys(): var[i] = iniparam['p_at_l_0']
-                    if ch=='ra':
-                        if 'p_at_r_0' in iniparam.keys(): var[i] = iniparam['p_at_r_0']
-                
-                # TODO: Check for multiple interfaces!
-                else:
-                    raise AttributeError("Check multiple interface LM initialization!")
-
 
     # set prescribed elastances (if we have p and V of a chamber over time i.e. from another simulation or measurements,
     # we set p_hat = p, V_hat = V and define the chamber's elastance as E = p_hat/V_hat)
