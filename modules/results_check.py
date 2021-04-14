@@ -8,7 +8,6 @@
 
 import sys
 import numpy as np
-from petsc4py import PETSc
 from mpiroutines import allgather_vec
 
 

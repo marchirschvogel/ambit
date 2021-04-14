@@ -503,8 +503,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         var[30+self.vs] = iniparam['q_cap_pul_0']
         var[31+self.vs] = iniparam['p_ven_pul_0']
         for n in range(self.vp):
-            try: var[32+self.vs] = iniparam['q_ven'+str(n+1)+'_pul_0']
-            except: var[32+self.vs] = iniparam['q_ven_pul_0']
+            try: var[32+self.vs+n] = iniparam['q_ven'+str(n+1)+'_pul_0']
+            except: var[32+self.vs+n] = iniparam['q_ven_pul_0']
 
 
     def check_periodic(self, varTc, varTc_old, eps, check, cyclerr):
@@ -959,8 +959,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         var[30+self.vs] = iniparam['q_cap_pul_0']
         var[31+self.vs] = iniparam['p_ven_pul_0']
         for n in range(self.vp):
-            try: var[32+self.vs] = iniparam['q_ven'+str(n+1)+'_pul_0']
-            except: var[32+self.vs] = iniparam['q_ven_pul_0']
+            try: var[32+self.vs+n] = iniparam['q_ven'+str(n+1)+'_pul_0']
+            except: var[32+self.vs+n] = iniparam['q_ven_pul_0']
 
 
 

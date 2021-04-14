@@ -232,7 +232,7 @@ class SolidmechanicsFlow0DSolver():
 
         if bool(self.pb.pbf.chamber_models):
             self.pb.pbf.y = []
-            for ch in self.pb.pbf.chamber_models:
+            for ch in ['lv','rv','la','ra']:
                 if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
 
         # initially evaluate 0D model at old state
@@ -269,7 +269,7 @@ class SolidmechanicsFlow0DSolver():
             # take care of active stress
             if self.pb.pbs.have_active_stress and self.pb.pbs.active_stress_trig == 'ode':
                 self.pb.pbs.evaluate_active_stress_ode(t-t_off)
-
+            
             # activation curves for 0D chambers (if present)
             self.pb.pbf.evaluate_activation(t-t_off)
             
@@ -278,6 +278,12 @@ class SolidmechanicsFlow0DSolver():
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid)
+
+            # write output
+            self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
+            # raw txt file output of 0D model quantities
+            if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
+                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.simname)
 
             # update time step - solid and 0D model
             self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
@@ -311,11 +317,8 @@ class SolidmechanicsFlow0DSolver():
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.pbf.perturb_type is not None and not self.pb.pbf.have_induced_pert: self.pb.induce_perturbation()
 
-            # write output and restart info
-            self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
-            # raw txt file output of 0D model quantities
-            if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
-                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.simname)
+            # write restart info - old and new quantities are the same at this stage
+            self.pb.pbs.io.write_restart(self.pb.pbs, N)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
                 self.pb.pbf.writerestart(self.pb.pbs.simname, N)

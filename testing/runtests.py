@@ -72,6 +72,7 @@ if flow0d:
 
     errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspul.py']) )
     errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py']) )
+    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py', str(450)]) ) # tests restart from step 450
 
     errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcap.py']) )
 

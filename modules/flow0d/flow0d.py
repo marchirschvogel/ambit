@@ -179,7 +179,7 @@ class Flow0DProblem(problem_base):
         # activation curves
         if bool(self.chamber_models):
             ci=0
-            for ch in self.chamber_models:
+            for ch in ['lv','rv','la','ra']:
                 if self.chamber_models[ch]['type']=='0D_elast': 
                     self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(t)
                     ci+=1
@@ -230,7 +230,7 @@ class Flow0DSolver():
             self.pb.c.append(self.pb.ti.timecurves(self.pb.excitation_curve)(self.pb.t_init))
         if bool(self.pb.chamber_models):
             self.pb.y = []
-            for ch in self.pb.chamber_models:
+            for ch in ['lv','rv','la','ra']:
                 if self.pb.chamber_models[ch]['type']=='0D_elast': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
 
         self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.dt, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.y, self.pb.aux_old)
@@ -259,6 +259,10 @@ class Flow0DSolver():
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid)
 
+            # raw txt file output of 0D model quantities
+            if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
+                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
+
             # update timestep
             self.pb.cardvasc0D.update(self.pb.s, self.pb.df, self.pb.f, self.pb.s_old, self.pb.df_old, self.pb.f_old, self.pb.aux, self.pb.aux_old)
             
@@ -278,9 +282,6 @@ class Flow0DSolver():
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.perturb_type is not None and not self.pb.have_induced_pert: self.pb.induce_perturbation()
             
-            # raw txt file output of 0D model quantities
-            if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
-                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
             # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
             if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
                 self.pb.writerestart(self.pb.simname, N)

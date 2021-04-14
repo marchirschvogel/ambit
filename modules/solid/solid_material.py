@@ -6,8 +6,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys, os, subprocess, time
-import math
 from ufl import tr, det, dot, ln, sqrt, exp, diff, cos, pi, conditional, ge, le, gt, inner, outer, cross, Max, Min, And, as_ufl
 
 # returns the 2nd Piola-Kirchhoff stress S for different material laws

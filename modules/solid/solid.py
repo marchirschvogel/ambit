@@ -626,6 +626,9 @@ class SolidmechanicsSolver():
             if self.pb.have_growth:
                 self.pb.compute_solid_growth_rate(N, t)
 
+            # write output
+            self.pb.io.write_output(self.pb, N=N, t=t)
+            
             # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
             self.pb.ti.update_timestep(self.pb.u, self.pb.u_old, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.internalvars, self.pb.internalvars_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)
 
@@ -636,8 +639,8 @@ class SolidmechanicsSolver():
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, wt=wt)
 
-            # write output and restart info (old and new quantities are the same at this stage)
-            self.pb.io.write_output(self.pb, N=N, t=t)
+            # write restart info - old and new quantities are the same at this stage
+            self.pb.io.write_restart(self.pb, N)
 
             if self.pb.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
                 break

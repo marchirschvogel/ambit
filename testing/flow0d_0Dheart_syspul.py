@@ -13,10 +13,16 @@ def main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
                          'write_results_every'   : -999,
                          'output_path'           : ''+basepath+'/tmp',
-                         'simname'               : 'test'}
+                         'simname'               : 'test',
+                         'write_restart_every'   : 50,
+                         'restart_step'          : restart_step}
 
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}

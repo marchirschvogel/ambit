@@ -7,10 +7,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import sys
-import numpy as np
-from petsc4py import PETSc
-from dolfinx import Function, VectorFunctionSpace
-from projection import project
 
 
 # print header at beginning of simulation

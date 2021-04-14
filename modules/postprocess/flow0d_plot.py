@@ -28,12 +28,12 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[10])
         lastgandrcycl = int(sys.argv[11])
     except:
-        path = '/home/mh/work/sim/lalv-flow/rastered10-new/00a/syspulveins_MR8/out/plot/raw'#'/home/mh/work/sim/heart0D/'
-        sname = ''#'mr1'
+        path = '/home/mh/work/fem_scripts/tests/tmp/3d0dcomp'#'/home/mh/work/sim/heart0D/'
+        sname = ''#'ambittest_mlpres'
         nstep_cycl = 100
-        T_cycl = 0.8#1.0
-        t_ed = 0.37#0.2
-        t_es = 0.8#0.53
+        T_cycl = 1.0
+        t_ed = 0.2
+        t_es = 0.53
         model = 'syspul' # syspul, syspulcap, syspulcapcor
         indpertaftercyl = -1
         calc_func_params = True
@@ -139,6 +139,20 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                 else:
                     raise AttributeError("No flux file avaialble for chamber %s!" % (ch))
 
+        # check number of veins
+        sysveins, pulveins = 0, 0
+        for i in range(10):
+            if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_sys.txt')==0: sysveins += 1
+        for i in range(10):
+            if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_pul.txt')==0: pulveins += 1
+        
+        # remove veins that are not present out of flux group
+        for i in range(sysveins,10):
+            try: groups[2]['flux_time_sys_l'].remove('q_ven'+str(i+1)+'_sys')
+            except: pass
+        for i in range(pulveins,10):
+            try: groups[3]['flux_time_pul_r'].remove('q_ven'+str(i+1)+'_pul')
+            except: pass
         
         # for plotting of pressure-volume loops
         for ch in ['v_l','v_r','at_l','at_r']:
@@ -363,9 +377,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl, swd = 3, 5, 20, 50
-            #TODO: How to check for more than one vein?
-            #if model == 'syspul_veins' and 'flux_time_pul_r' in list(groups[g].keys())[0]:
-                #maxrows, maxcols, sl, swd = 1, 7, 16, 34
+            if 'flux_time_pul_r' in list(groups[g].keys())[0] and pulveins > 2:
+                maxrows, maxcols, sl, swd = 1, 7, 16, 34
         if 'vol_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''

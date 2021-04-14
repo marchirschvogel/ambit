@@ -6,14 +6,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys, os, subprocess, time
-import math
 from ufl import tr, det, dot, grad, inv, dev, inner, Identity, variable, ln, sqrt, exp, diff, conditional, ge, outer, cross, as_tensor, indices
 
-from petsc4py import PETSc
-
 from fluid_material import materiallaw
-from projection import project
 
 # fluid kinematics and constitutive class
 

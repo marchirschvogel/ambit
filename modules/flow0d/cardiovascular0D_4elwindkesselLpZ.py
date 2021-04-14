@@ -97,7 +97,7 @@ class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
         self.x_[3] = s_
         # coupling variables
         self.c_.append(VQ_)
-
+        
         # df part of rhs contribution (df - df_old)/dt
         self.df_[0] = self.L*self.C/self.Z * g_ + self.L*self.C * s_
         self.df_[1] = p_

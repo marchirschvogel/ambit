@@ -282,6 +282,9 @@ class FluidmechanicsSolver():
             # solve
             self.solnln.newton(self.pb.v, self.pb.p)
 
+            # write output
+            self.pb.io.write_output(self.pb, N=N, t=t)
+
             # update
             self.pb.ti.update_timestep(self.pb.v, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)
 
@@ -292,8 +295,8 @@ class FluidmechanicsSolver():
             # print time step info to screen
             self.pb.ti.print_timestep(N, t, wt=wt)
 
-            # write output and restart info (old and new quantities are the same at this stage)
-            self.pb.io.write_output(self.pb, N=N, t=t)
+            # write restart info - old and new quantities are the same at this stage
+            self.pb.io.write_restart(self.pb, N)
 
 
         if self.pb.comm.rank == 0: # only proc 0 should print this

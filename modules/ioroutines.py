@@ -152,7 +152,6 @@ class IO_solid(IO):
         return fib_func
 
 
-
     def readfunction(self, f, V, datafile, normalize=False):
         
         # block size of vector
@@ -200,7 +199,6 @@ class IO_solid(IO):
         # update ghosts
         f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
-   
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
         
@@ -215,7 +213,6 @@ class IO_solid(IO):
                     self.resultsfiles[res] = outfile
                 
             return
-        
         
         else:
 
@@ -312,9 +309,11 @@ class IO_solid(IO):
                         raise NameError("Unknown output to write for solid mechanics!")
 
 
-            if self.write_restart_every > 0 and N % self.write_restart_every == 0:
-
-                self.writecheckpoint(pb, N)
+    def write_restart(self, pb, N):
+        
+        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+            
+            self.writecheckpoint(pb, N)
 
 
     def readcheckpoint(self, pb, N_rest):
@@ -401,7 +400,6 @@ class IO_solid(IO):
 
 class IO_fluid(IO):
     
-    
     def write_output(self, pb=None, writemesh=False, N=1, t=0):
         
         if writemesh:
@@ -415,7 +413,6 @@ class IO_fluid(IO):
                     self.resultsfiles[res] = outfile
             
             return
-        
         
         else:
             
@@ -444,10 +441,12 @@ class IO_fluid(IO):
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
 
-            if self.write_restart_every > 0 and N % self.write_restart_every == 0:
 
-                self.writecheckpoint(pb, N)
-
+    def write_restart(self, pb, N):
+        
+        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+            
+            self.writecheckpoint(pb, N)
 
 
     def readcheckpoint(self, pb):
@@ -466,7 +465,6 @@ class IO_fluid(IO):
             vecs_to_read[key].vector.load(viewer)
             
             vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
 
 
     def writecheckpoint(self, pb, N):

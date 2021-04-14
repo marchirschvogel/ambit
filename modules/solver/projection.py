@@ -9,7 +9,6 @@
 from dolfinx import Function
 from dolfinx.fem import LinearProblem
 from ufl import TrialFunction, TestFunction, inner, as_ufl, constantvalue
-from petsc4py import PETSc
 
 def project(v, V, dx_, bcs=[], nm=None):
 

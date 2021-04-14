@@ -235,7 +235,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.set_chamber_state('rv', chdict_rv, [E_v_r_])
         self.set_chamber_state('la', chdict_la, [E_at_l_])
         self.set_chamber_state('ra', chdict_ra, [E_at_r_])
-        
+
         # feed back modified dicts to chamber variables
         VQ_v_l_, p_vi1_l_, p_vo1_l_ = chdict_lv['vq'], chdict_lv['pi1'], chdict_lv['po1']
         VQ_v_r_, p_vi1_r_, p_vo1_r_ = chdict_rv['vq'], chdict_rv['pi1'], chdict_rv['po1']
@@ -348,8 +348,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         var[12+self.vs] = iniparam['q_ar_pul_0']
         var[13+self.vs] = iniparam['p_ven_pul_0']
         for n in range(self.vp):
-            try: var[14+self.vs] = iniparam['q_ven'+str(n+1)+'_pul_0']
-            except: var[14+self.vs] = iniparam['q_ven_pul_0']
+            try: var[14+self.vs+n] = iniparam['q_ven'+str(n+1)+'_pul_0']
+            except: var[14+self.vs+n] = iniparam['q_ven_pul_0']
                 
 
 

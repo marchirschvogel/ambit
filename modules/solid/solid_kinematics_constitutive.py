@@ -6,9 +6,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys, os, subprocess, time
-import math
-from dolfinx import Function
 from ufl import tr, det, dot, grad, inv, dev, inner, Identity, variable, ln, sqrt, exp, diff, conditional, ge, gt, outer, cross, as_tensor, indices, as_ufl, constantvalue
 
 from petsc4py import PETSc

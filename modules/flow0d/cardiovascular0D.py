@@ -136,7 +136,7 @@ class cardiovascular0Dbase:
             for i in range(vs,ve):
                 varTc[i] = var[i]
             
-            is_periodic = self.check_periodic(varTc, varTc_old, eps_periodic, check, cyclerr)
+            if check is not None: is_periodic = self.check_periodic(varTc, varTc_old, eps_periodic, check, cyclerr)
             
             # definitely should not be True if we've not yet surpassed the "disease induction" cycle
             if cycle[0] <= induce_pert_after_cycl:
@@ -250,7 +250,7 @@ class cardiovascular0Dbase:
     def set_chamber_interfaces(self):
         
         # loop over chambers
-        for i, ch in enumerate(self.chmodels):
+        for i, ch in enumerate(['lv','rv','la','ra']):
             
             if self.chmodels[ch]['type']=='prescr_elast':
                 self.switch_V[i], self.switch_p[i] = 1, 0
@@ -365,7 +365,7 @@ class cardiovascular0Dbase:
         chamber_funcs=[]
 
         ci=0
-        for i, ch in enumerate(self.chmodels):
+        for i, ch in enumerate(['lv','rv','la','ra']):
 
             if self.chmodels[ch]['type']=='0D_elast':
                 
@@ -397,7 +397,7 @@ class cardiovascular0Dbase:
     # initialize Lagrange multipliers for monolithic Lagrange-type coupling (FEniCS)
     def initialize_lm(self, var, iniparam):
         
-        for i, ch in enumerate(self.chmodels):
+        for i, ch in enumerate(['lv','rv','la','ra']):
             
             if self.chmodels[ch]['type']=='3D_solid':
                 
