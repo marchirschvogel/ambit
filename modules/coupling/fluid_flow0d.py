@@ -192,9 +192,9 @@ class FluidmechanicsFlow0DSolver():
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
-        # set 0D chamber activation functions
         if bool(self.pb.pbf.chamber_models):
-            for ch in self.pb.pbf.chamber_models:
+            self.pb.pbf.y = []
+            for ch in ['lv','rv','la','ra']:
                 if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
 
         # initially evaluate 0D model at old state
