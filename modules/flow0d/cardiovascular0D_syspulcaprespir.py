@@ -84,7 +84,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.si, self.switch_V, self.switch_p = [0]*4, [1]*4, [0]*4 # default values
 
         self.varindex_ch = [3,27,1,25] # coupling variable indices (decreased by 1 for pressure coupling!)
-        self.vname_prfx, self.cname_prfx = ['p']*4, ['V']*4 # default values
+        self.vname_prfx, self.cname_prfx = ['p']*4, []
         
         self.set_solve_arrays()
 

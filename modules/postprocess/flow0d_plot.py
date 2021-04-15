@@ -29,7 +29,7 @@ def main():
         lastgandrcycl = int(sys.argv[11])
     except:
         path = '/home/mh/work/fem_scripts/tests/tmp/3d0dcomp'#'/home/mh/work/sim/heart0D/'
-        sname = ''#'ambittest_mlpres'
+        sname = 'ambittest_mdvol_Lvalve'
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
@@ -108,7 +108,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
     if iscirculation:
 
         # get the data and check its length
-        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_v_l.txt', usecols=0) # could be another file - all should have the same length!
+        tmp = np.loadtxt(''+path+'/results_'+sname+'_q_ar_sys.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
         # number of heart cycles
         n_cycl = int(numdata/nstep_cycl)
@@ -153,6 +153,22 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         for i in range(pulveins,10):
             try: groups[3]['flux_time_pul_r'].remove('q_ven'+str(i+1)+'_pul')
             except: pass
+        
+        #groups[0]['pres_time_sys_l'].remove('p_v_l')
+        
+        #print(groups[0]['pres_time_sys_l'])
+        #sys.exit()
+        # TODO: Finish!
+        ## check presence of default chamber pressure variable
+        #for ch in ['v_l','v_r','at_l','at_r']:
+            #err = os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'.txt')
+            #if err==0: # nothing to do if present
+                #pass
+            #else:
+                ## now check chamber inflow pressures
+                #for i in range(10):
+                    #if os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'_i'+str(i+1)+'.txt')==0:
+                        #groups[0]['pres_time_sys_l']
         
         # for plotting of pressure-volume loops
         for ch in ['v_l','v_r','at_l','at_r']:

@@ -252,6 +252,11 @@ class cardiovascular0Dbase:
         # loop over chambers
         for i, ch in enumerate(['lv','rv','la','ra']):
             
+            if ch == 'lv': chn = 'v_l'
+            if ch == 'rv': chn = 'v_r'
+            if ch == 'la': chn = 'at_l'
+            if ch == 'ra': chn = 'at_r'
+            
             if self.chmodels[ch]['type']=='prescr_elast':
                 self.switch_V[i], self.switch_p[i] = 1, 0
                 self.elastarrays[i], self.eqtimearray = self.set_prescribed_elastance(ch)
@@ -263,15 +268,16 @@ class cardiovascular0Dbase:
                 if self.cq == 'volume':
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
+                    self.cname.append('V_'+chn+'')
                 elif self.cq == 'flux':
                     self.switch_V[i], self.switch_p[i] = 0, 0
-                    self.cname_prfx[i] = 'Q'
+                    self.cname.append('Q_'+chn+'')
                     self.vname_prfx[i] = 'p'
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
                 elif self.cq == 'pressure':
                     self.switch_V[i], self.switch_p[i] = 0, 1
-                    self.cname_prfx[i] = 'p'
+                    self.cname.append('p_'+chn+'')
                     self.vname_prfx[i] = 'Q'
                     self.si[i] = 1 # switch indices of pressure / outflux
                     self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
@@ -282,11 +288,15 @@ class cardiovascular0Dbase:
             elif self.chmodels[ch]['type']=='3D_fluid':
                 assert(self.cq == 'pressure')
                 self.switch_V[i], self.switch_p[i] = 0, 1
-                self.cname_prfx[i] = 'p'
                 self.vname_prfx[i] = 'Q'
                 self.si[i] = 1 # switch indices of pressure / outflux
                 #self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
-            
+                # add inflow pressures to coupling name prefixes
+                for m in range(self.chmodels[ch]['num_inflows']):
+                    self.cname.append('p_'+chn+'_i'+str(m+1)+'')
+                # add outflow pressures to coupling name prefixes
+                for m in range(self.chmodels[ch]['num_outflows']):
+                    self.cname.append('p_'+chn+'_o'+str(m+1)+'')
             else:
                 raise NameError("Unknown chamber model for chamber %s!" % (ch))
 

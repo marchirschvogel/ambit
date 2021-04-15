@@ -853,7 +853,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 # Lagrange multipliers (pressures) to be passed to 0D model
                 for i in range(ls,le):
                     self.pbc.pbf.c[i] = self.pbc.lm[i]
-                self.snln0D.newton(s, t, print_iter=True)
+                self.snln0D.newton(s, t, print_iter=False)
                 
             if self.pbc.pbs.localsolve:
                 self.newton_local(locvar,locresform,locincrform)

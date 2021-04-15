@@ -123,6 +123,16 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.R_vout_r_min = params['R_vout_r_min']
         self.R_vout_r_max = params['R_vout_r_max']
         
+        # valve inertances
+        try: self.L_vin_l = params['L_vin_l']
+        except: self.L_vin_l = 0
+        try: self.L_vin_r = params['L_vin_r']
+        except: self.L_vin_r = 0
+        try: self.L_vout_l = params['L_vout_l']
+        except: self.L_vout_l = 0
+        try: self.L_vout_r = params['L_vout_r']
+        except: self.L_vout_r = 0
+        
         # end-diastolic and end-systolic timings
         self.t_ed = params['t_ed']
         self.t_es = params['t_es']
@@ -192,7 +202,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.si, self.switch_V, self.switch_p = [0]*4, [1]*4, [0]*4 # default values
 
         self.vindex_ch = [3,26+self.vs,1,24+self.vs] # coupling variable indices (decreased by 1 for pressure coupling!)
-        self.vname_prfx, self.cname_prfx = ['p']*4, ['V']*4 # default values
+        self.vname_prfx, self.cname = ['p']*4, []
     
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
@@ -211,20 +221,19 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
     def equation_map(self):
         
         self.varmap={'q_vin_l' : 0+self.si[2], ''+self.vname_prfx[2]+'_at_l' : 1-self.si[2], 'q_vout_l' : 2+self.si[0], ''+self.vname_prfx[0]+'_v_l' : 3-self.si[0], 'p_ar_sys' : 4, 'q_ar_sys' : 5, 'p_arperi_sys' : 6, 'q_arspl_sys' : 7, 'q_arespl_sys' : 8, 'q_armsc_sys' : 9, 'q_arcer_sys' : 10, 'q_arcor_sys' : 11, 'p_venspl_sys' : 12, 'q_venspl_sys' : 13, 'p_venespl_sys' : 14, 'q_venespl_sys' : 15, 'p_venmsc_sys' : 16, 'q_venmsc_sys' : 17, 'p_vencer_sys' : 18, 'q_vencer_sys' : 19, 'p_vencor_sys' : 20, 'q_vencor_sys' : 21, 'p_ven_sys' : 22, 'q_vin_r' : 23+self.vs+self.si[3], ''+self.vname_prfx[3]+'_at_r' : 24+self.vs-self.si[3], 'q_vout_r' : 25+self.vs+self.si[1], ''+self.vname_prfx[1]+'_v_r' : 26+self.vs-self.si[1], 'p_ar_pul' : 27+self.vs, 'q_ar_pul' : 28+self.vs, 'p_cap_pul' : 29+self.vs,'q_cap_pul' : 30+self.vs, 'p_ven_pul' : 31+self.vs}
-        self.auxmap={''+self.cname_prfx[2]+'_at_l' : 0, ''+self.cname_prfx[0]+'_v_l' : 2, 'V_ar_sys' : 4, 'V_arperi_sys' : 6, 'V_venspl_sys' : 12, 'V_venespl_sys' : 14, 'V_venmsc_sys' : 16, 'V_vencer_sys' : 18, 'V_vencor_sys' : 20, 'V_ven_sys' : 22, ''+self.cname_prfx[3]+'_at_r' : 24, ''+self.cname_prfx[1]+'_v_r' : 26, 'V_ar_pul' : 28, 'V_cap_pul' : 30, 'V_ven_pul' : 32}
 
         for n in range(self.vs): self.varmap['q_ven'+str(n+1)+'_sys'] = 23+n
         for n in range(self.vp): self.varmap['q_ven'+str(n+1)+'_pul'] = 32+self.vs+n
 
         q_ven_sys_, q_ven_pul_ = [], []
-        p_ati_l_, p_ati_r_ = [], []
+        p_at_l_i_, p_at_r_i_ = [], []
 
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')
-        for n in range(self.vp): p_ati_l_.append(sp.Symbol('p_ati'+str(n+1)+'_l_'))
-        p_ato1_l_          = sp.Symbol('p_ato1_l_')
+        for n in range(self.vp): p_at_l_i_.append(sp.Symbol('p_at_l_i'+str(n+1)+'_'))
+        p_at_l_o1_          = sp.Symbol('p_at_l_o1_')
         q_vout_l_          = sp.Symbol('q_vout_l_')
-        p_vi1_l_, p_vo1_l_ = sp.Symbol('p_vi1_l_'), sp.Symbol('p_vo1_l_')
+        p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
         q_ar_sys_          = sp.Symbol('q_ar_sys_')
         p_arperi_sys_      = sp.Symbol('p_arperi_sys_')
@@ -246,10 +255,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         p_ven_sys_         = sp.Symbol('p_ven_sys_')
         for n in range(self.vs): q_ven_sys_.append(sp.Symbol('q_ven'+str(n+1)+'_sys_'))
         q_vin_r_           = sp.Symbol('q_vin_r_')
-        for n in range(self.vs): p_ati_r_.append(sp.Symbol('p_ati'+str(n+1)+'_r_'))
-        p_ato1_r_          = sp.Symbol('p_ato1_r_')
+        for n in range(self.vs): p_at_r_i_.append(sp.Symbol('p_at_r_i'+str(n+1)+'_'))
+        p_at_r_o1_          = sp.Symbol('p_at_r_o1_')
         q_vout_r_          = sp.Symbol('q_vout_r_')
-        p_vi1_r_, p_vo1_r_ = sp.Symbol('p_vi1_r_'), sp.Symbol('p_vo1_r_')
+        p_v_r_i1_, p_v_r_o1_ = sp.Symbol('p_v_r_i1_'), sp.Symbol('p_v_r_o1_')
         p_ar_pul_          = sp.Symbol('p_ar_pul_')
         q_ar_pul_          = sp.Symbol('q_ar_pul_')
         p_cap_pul_         = sp.Symbol('p_cap_pul_')
@@ -268,9 +277,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         
         # dofs to differentiate w.r.t.
         self.x_[0+self.si[2]] = q_vin_l_
-        self.x_[1-self.si[2]] = p_ati_l_[0]
+        self.x_[1-self.si[2]] = p_at_l_i_[0]
         self.x_[2+self.si[0]] = q_vout_l_
-        self.x_[3-self.si[0]] = p_vi1_l_
+        self.x_[3-self.si[0]] = p_v_l_i1_
         self.x_[4] = p_ar_sys_
         self.x_[5] = q_ar_sys_
         self.x_[6] = p_arperi_sys_
@@ -293,9 +302,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         for n in range(self.vs):
             self.x_[23+n] = q_ven_sys_[n]
         self.x_[23+self.vs+self.si[3]] = q_vin_r_
-        self.x_[24+self.vs-self.si[3]] = p_ati_r_[0]
+        self.x_[24+self.vs-self.si[3]] = p_at_r_i_[0]
         self.x_[25+self.vs+self.si[1]] = q_vout_r_
-        self.x_[26+self.vs-self.si[1]] = p_vi1_r_
+        self.x_[26+self.vs-self.si[1]] = p_v_r_i1_
         self.x_[27+self.vs] = p_ar_pul_
         self.x_[28+self.vs] = q_ar_pul_
         self.x_[29+self.vs] = p_cap_pul_
@@ -305,12 +314,12 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
             self.x_[32+self.vs+n] = q_ven_pul_[n]
         
         # set chamber dicts
-        chdict_lv = {'vq' : VQ_v_l_, 'pi1' : p_vi1_l_, 'po1' : p_vo1_l_}
-        chdict_rv = {'vq' : VQ_v_r_, 'pi1' : p_vi1_r_, 'po1' : p_vo1_r_}
-        chdict_la = {'vq' : VQ_at_l_, 'po1' : p_ato1_l_}
-        for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_ati_l_[n]
-        chdict_ra = {'vq' : VQ_at_r_, 'po1' : p_ato1_r_}
-        for n in range(self.vs): chdict_ra['pi'+str(n+1)+''] = p_ati_r_[n]
+        chdict_lv = {'vq' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
+        chdict_rv = {'vq' : VQ_v_r_, 'pi1' : p_v_r_i1_, 'po1' : p_v_r_o1_}
+        chdict_la = {'vq' : VQ_at_l_, 'po1' : p_at_l_o1_}
+        for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_at_l_i_[n]
+        chdict_ra = {'vq' : VQ_at_r_, 'po1' : p_at_r_o1_}
+        for n in range(self.vs): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
 
         # set chamber states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
         self.set_chamber_state('lv', chdict_lv, [E_v_l_])
@@ -319,16 +328,16 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.set_chamber_state('ra', chdict_ra, [E_at_r_])
         
         # feed back modified dicts to chamber variables
-        VQ_v_l_, p_vi1_l_, p_vo1_l_ = chdict_lv['vq'], chdict_lv['pi1'], chdict_lv['po1']
-        VQ_v_r_, p_vi1_r_, p_vo1_r_ = chdict_rv['vq'], chdict_rv['pi1'], chdict_rv['po1']
-        VQ_at_l_, p_ati1_l_, p_ato1_l_ = chdict_la['vq'], chdict_la['pi1'], chdict_la['po1']
-        for n in range(self.vp): p_ati_l_[n] = chdict_la['pi'+str(n+1)+'']
-        VQ_at_r_, p_ati1_r_, p_ato1_r_ = chdict_ra['vq'], chdict_ra['pi1'], chdict_ra['po1']
-        for n in range(self.vs): p_ati_r_[n] = chdict_ra['pi'+str(n+1)+'']
+        VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['vq'], chdict_lv['pi1'], chdict_lv['po1']
+        VQ_v_r_, p_v_r_i1_, p_v_r_o1_ = chdict_rv['vq'], chdict_rv['pi1'], chdict_rv['po1']
+        VQ_at_l_, p_ati1_l_, p_at_l_o1_ = chdict_la['vq'], chdict_la['pi1'], chdict_la['po1']
+        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)+'']
+        VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['vq'], chdict_ra['pi1'], chdict_ra['po1']
+        for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
 
 
         # set valve resistances
-        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_vi1_l_,p_vo1_l_,p_vi1_r_,p_vo1_r_,p_ato1_l_,p_ato1_r_,p_ar_sys_,p_ar_pul_)
+        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_v_l_i1_,p_v_l_o1_,p_v_r_i1_,p_v_r_o1_,p_at_l_o1_,p_at_r_o1_,p_ar_sys_,p_ar_pul_)
 
         # parallel venous resistances and inertances:
         # assume that the total venous resistance/inertance distributes equally over all systemic / pulmonary veins that enter the right / left atrium
@@ -346,9 +355,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         
         # df part of rhs contribution (df - df_old)/dt
         self.df_[0]  = VQ_at_l_ * self.switch_V[2]
-        self.df_[1]  = 0.
+        self.df_[1]  = (self.L_vin_l/R_vin_l_) * q_vin_l_
         self.df_[2]  = VQ_v_l_ * self.switch_V[0]
-        self.df_[3]  = 0.
+        self.df_[3]  = (self.L_vout_l/R_vout_l_) * q_vout_l_
         self.df_[4]  = self.C_ar_sys * (p_ar_sys_ - self.Z_ar_sys * q_vout_l_)
         self.df_[5]  = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_
         self.df_[6]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys+self.C_arcor_sys) * p_arperi_sys_
@@ -372,9 +381,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
             self.df_[23+n] = (L_ven_sys[n]/R_ven_sys[n]) * q_ven_sys_[n]
                 # -----------------------------------------------------------
         self.df_[23+self.vs] = VQ_at_r_ * self.switch_V[3]
-        self.df_[24+self.vs] = 0.
+        self.df_[24+self.vs] = (self.L_vin_r/R_vin_r_) * q_vin_r_
         self.df_[25+self.vs] = VQ_v_r_ * self.switch_V[1]
-        self.df_[26+self.vs] = 0.
+        self.df_[26+self.vs] = (self.L_vout_r/R_vout_r_) * q_vout_r_
         self.df_[27+self.vs] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_)
         self.df_[28+self.vs] = (self.L_ar_pul/self.R_ar_pul) * q_ar_pul_
         self.df_[29+self.vs] = self.C_cap_pul * p_cap_pul_
@@ -385,9 +394,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
 
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0]  = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_
-        self.f_[1]  = (p_ato1_l_-p_vi1_l_)/R_vin_l_ - q_vin_l_
+        self.f_[1]  = (p_v_l_i1_-p_at_l_o1_)/R_vin_l_ + q_vin_l_
         self.f_[2]  = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_
-        self.f_[3]  = (p_vo1_l_-p_ar_sys_)/R_vout_l_ - q_vout_l_
+        self.f_[3]  = (p_ar_sys_-p_v_l_o1_)/R_vout_l_ + q_vout_l_
         self.f_[4]  = -q_vout_l_ + q_ar_sys_
         self.f_[5]  = (p_arperi_sys_ - p_ar_sys_ + self.Z_ar_sys * q_vout_l_)/self.R_ar_sys + q_ar_sys_
         self.f_[6]  = -q_ar_sys_ + (q_arspl_sys_ + q_arespl_sys_ + q_armsc_sys_ + q_arcer_sys_ + q_arcor_sys_)
@@ -408,58 +417,59 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.f_[21] = (p_ven_sys_ - p_vencor_sys_)/self.R_vencor_sys + q_vencor_sys_
         self.f_[22] = sum(q_ven_sys_) - (q_venspl_sys_ + q_venespl_sys_ + q_venmsc_sys_ + q_vencer_sys_ + q_vencor_sys_)
         for n in range(self.vs):
-            self.f_[23+n] = (p_ati_r_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
+            self.f_[23+n] = (p_at_r_i_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
                 # -----------------------------------------------------------
         self.f_[23+self.vs] = -sum(q_ven_sys_) + q_vin_r_ - (1-self.switch_V[3]) * VQ_at_r_
-        self.f_[24+self.vs] = (p_ato1_r_-p_vi1_r_)/R_vin_r_ - q_vin_r_
+        self.f_[24+self.vs] = (p_v_r_i1_-p_at_r_o1_)/R_vin_r_ + q_vin_r_
         self.f_[25+self.vs] = -q_vin_r_ + q_vout_r_ - (1-self.switch_V[1]) * VQ_v_r_
-        self.f_[26+self.vs] = (p_vo1_r_-p_ar_pul_)/R_vout_r_ - q_vout_r_
+        self.f_[26+self.vs] = (p_ar_pul_-p_v_r_o1_)/R_vout_r_ + q_vout_r_
         self.f_[27+self.vs] = -q_vout_r_ + q_ar_pul_
         self.f_[28+self.vs] = (p_cap_pul_ - p_ar_pul_ + self.Z_ar_pul * q_vout_r_)/self.R_ar_pul + q_ar_pul_
         self.f_[29+self.vs] = -q_ar_pul_ + q_cap_pul_
         self.f_[30+self.vs] = (p_ven_pul_ - p_cap_pul_)/self.R_cap_pul + q_cap_pul_
         self.f_[31+self.vs] = -q_cap_pul_ + sum(q_ven_pul_)
         for n in range(self.vp):
-            self.f_[32+self.vs+n] = (p_ati_l_[n]-p_ven_pul_)/R_ven_pul[n] + q_ven_pul_[n] 
+            self.f_[32+self.vs+n] = (p_at_l_i_[n]-p_ven_pul_)/R_ven_pul[n] + q_ven_pul_[n] 
 
+        
+        # setup auxiliary variable map
+        # coupling variables, 0D chamber volumes, compartment volumes, other shady quantities...
+        nc = len(self.c_)
+        self.auxmap={}
+        for i in range(nc): self.auxmap[self.cname[i]] = i
+        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='prescr_elast': self.auxmap['V_v_l'] = nc+0
+        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='prescr_elast': self.auxmap['V_v_r'] = nc+1
+        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='prescr_elast': self.auxmap['V_at_l'] = nc+2
+        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='prescr_elast': self.auxmap['V_at_r'] = nc+3
+        self.auxmap['V_ar_sys'] = nc+4
+        self.auxmap['V_arperi_sys'] = nc+5
+        self.auxmap['V_venspl_sys'] = nc+6
+        self.auxmap['V_venespl_sys'] = nc+7
+        self.auxmap['V_venmsc_sys'] = nc+8
+        self.auxmap['V_vencer_sys'] = nc+9
+        self.auxmap['V_vencor_sys'] = nc+10
+        self.auxmap['V_ven_sys'] = nc+11
+        self.auxmap['V_ar_pul'] = nc+12
+        self.auxmap['V_cap_pul'] = nc+13
+        self.auxmap['V_ven_pul'] = nc+14
 
-        # auxiliary variable vector (mainly in order to store quantities for post-processing)
-        self.a_[0]  = VQ_at_l_ * (1-self.switch_p[2]) + p_ati_l_[0] * self.switch_p[2]
-        self.a_[1]  = p_ato1_l_ * self.switch_p[2]
-        self.a_[2]  = VQ_v_l_ * (1-self.switch_p[0]) + p_vi1_l_ * self.switch_p[0]
-        self.a_[3]  = p_vo1_l_ * self.switch_p[0]
-        self.a_[4]  = self.C_ar_sys * (p_ar_sys_ - self.Z_ar_sys * q_vout_l_) + self.V_ar_sys_u
-        self.a_[5]  = 0.
-        self.a_[6]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys+self.C_arcor_sys) * p_arperi_sys_ + self.V_arspl_sys_u+self.V_arespl_sys_u+self.V_armsc_sys_u+self.V_arcer_sys_u+self.V_arcor_sys_u
-        self.a_[7]  = 0.
-        self.a_[8]  = 0.
-        self.a_[9]  = 0.
-        self.a_[10] = 0.
-        self.a_[11] = 0.
-        self.a_[12] = self.C_venspl_sys * p_venspl_sys_ + self.V_venspl_sys_u
-        self.a_[13] = 0.
-        self.a_[14] = self.C_venespl_sys * p_venespl_sys_ + self.V_venespl_sys_u
-        self.a_[15] = 0.
-        self.a_[16] = self.C_venmsc_sys * p_venmsc_sys_ + self.V_venmsc_sys_u
-        self.a_[17] = 0.
-        self.a_[18] = self.C_vencer_sys * p_vencer_sys_ + self.V_vencer_sys_u
-        self.a_[19] = 0.
-        self.a_[20] = self.C_vencor_sys * p_vencor_sys_ + self.V_vencor_sys_u
-        self.a_[21] = 0.
-        self.a_[22] = self.C_ven_sys * p_ven_sys_ + self.V_ven_sys_u
-        self.a_[23] = 0.
-                # -----------------------------------------------------------
-        self.a_[24] = VQ_at_r_ * (1-self.switch_p[3]) + p_ati1_r_ * self.switch_p[3]
-        self.a_[25] = p_ato1_r_ * self.switch_p[3]
-        self.a_[26] = VQ_v_r_ * (1-self.switch_p[1]) + p_vi1_r_ * self.switch_p[1]
-        self.a_[27] = p_vo1_r_ * self.switch_p[1]
-        self.a_[28] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_) + self.V_ar_pul_u
-        self.a_[29] = 0.
-        self.a_[30] = self.C_cap_pul * p_cap_pul_ + self.V_cap_pul_u
-        self.a_[31] = 0.
-        self.a_[32] = self.C_ven_pul * p_ven_pul_ + self.V_ven_pul_u
-        self.a_[33] = 0.
-
+        # populate auxiliary variable vector
+        for i in range(nc): self.a_[i] = self.c_[i]
+        self.a_[nc+0]  = VQ_v_l_ * self.switch_V[0]
+        self.a_[nc+1]  = VQ_v_r_ * self.switch_V[1]
+        self.a_[nc+2]  = VQ_at_l_ * self.switch_V[2]
+        self.a_[nc+3]  = VQ_at_r_ * self.switch_V[3]
+        self.a_[nc+4]  = self.C_ar_sys * (p_ar_sys_ - self.Z_ar_sys * q_vout_l_) + self.V_ar_sys_u
+        self.a_[nc+5]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys+self.C_arcor_sys) * p_arperi_sys_ + self.V_arspl_sys_u+self.V_arespl_sys_u+self.V_armsc_sys_u+self.V_arcer_sys_u+self.V_arcor_sys_u
+        self.a_[nc+6]  = self.C_venspl_sys * p_venspl_sys_ + self.V_venspl_sys_u
+        self.a_[nc+7]  = self.C_venespl_sys * p_venespl_sys_ + self.V_venespl_sys_u
+        self.a_[nc+8]  = self.C_venmsc_sys * p_venmsc_sys_ + self.V_venmsc_sys_u
+        self.a_[nc+9]  = self.C_vencer_sys * p_vencer_sys_ + self.V_vencer_sys_u
+        self.a_[nc+10] = self.C_vencor_sys * p_vencor_sys_ + self.V_vencor_sys_u
+        self.a_[nc+11] = self.C_ven_sys * p_ven_sys_ + self.V_ven_sys_u
+        self.a_[nc+12] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_) + self.V_ar_pul_u
+        self.a_[nc+13] = self.C_cap_pul * p_cap_pul_ + self.V_cap_pul_u
+        self.a_[nc+14] = self.C_ven_pul * p_ven_pul_ + self.V_ven_pul_u
 
 
 
@@ -546,12 +556,14 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
+        nc = len(self.c_)
+
         if self.comm.rank == 0:
             
             print("Output of 0D vascular model (syspulcap):")
-            
-            print('{:<12s}{:<3s}{:<10.1f}{:<3s}{:<9s}{:<3s}{:<10.1f}'.format(''+self.cname_prfx[2]+'_at_l',' = ',aux[self.auxmap[''+self.cname_prfx[2]+'_at_l']],'   ',''+self.cname_prfx[3]+'_at_r',' = ',aux[self.auxmap[''+self.cname_prfx[3]+'_at_r']]))
-            print('{:<12s}{:<3s}{:<10.1f}{:<3s}{:<9s}{:<3s}{:<10.1f}'.format(''+self.cname_prfx[0]+'_v_l',' = ',aux[self.auxmap[''+self.cname_prfx[0]+'_v_l']],'   ',''+self.cname_prfx[1]+'_v_r',' = ',aux[self.auxmap[''+self.cname_prfx[1]+'_v_r']]))
+
+            for i in range(nc):
+                print('{:<12s}{:<3s}{:<10.3f}'.format(list(self.auxmap.keys())[i],' = ',aux[list(self.auxmap.values())[i]]))
             
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[2]+'_at_l',' = ',var_sq[self.varmap[''+self.vname_prfx[2]+'_at_l']],'   ',''+self.vname_prfx[3]+'_at_r',' = ',var_sq[self.varmap[''+self.vname_prfx[3]+'_at_r']]))
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[0]+'_v_l',' = ',var_sq[self.varmap[''+self.vname_prfx[0]+'_v_l']],'   ',''+self.vname_prfx[1]+'_v_r',' = ',var_sq[self.varmap[''+self.vname_prfx[1]+'_v_r']]))
@@ -667,20 +679,19 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
     def equation_map(self):
         
         self.varmap={'q_vin_l' : 0+self.si[2], ''+self.vname_prfx[2]+'_at_l' : 1-self.si[2], 'q_vout_l' : 2+self.si[0], ''+self.vname_prfx[0]+'_v_l' : 3-self.si[0], 'p_ar_sys' : 4, 'q_arcor_sys' : 5, 'q_ar_sys' : 6, 'p_arperi_sys' : 7, 'q_arspl_sys' : 8, 'q_arespl_sys' : 9, 'q_armsc_sys' : 10, 'q_arcer_sys' : 11, 'p_venspl_sys' : 12, 'q_venspl_sys' : 13, 'p_venespl_sys' : 14, 'q_venespl_sys' : 15, 'p_venmsc_sys' : 16, 'q_venmsc_sys' : 17, 'p_vencer_sys' : 18, 'q_vencer_sys' : 19, 'p_vencor_sys' : 20, 'q_vencor_sys' : 21, 'p_ven_sys' : 22, 'q_vin_r' : 23+self.vs+self.si[3], ''+self.vname_prfx[3]+'_at_r' : 24+self.vs-self.si[3], 'q_vout_r' : 25+self.vs+self.si[1], ''+self.vname_prfx[1]+'_v_r' : 26+self.vs-self.si[1], 'p_ar_pul' : 27+self.vs, 'q_ar_pul' : 28+self.vs, 'p_cap_pul' : 29+self.vs,'q_cap_pul' : 30+self.vs, 'p_ven_pul' : 31+self.vs}
-        self.auxmap={''+self.cname_prfx[2]+'_at_l' : 0, ''+self.cname_prfx[0]+'_v_l' : 2, 'V_ar_arcor_sys' : 4, 'V_arperi_sys' : 7, 'V_venspl_sys' : 12, 'V_venespl_sys' : 14, 'V_venmsc_sys' : 16, 'V_vencer_sys' : 18, 'V_vencor_sys' : 20, 'V_ven_sys' : 22, ''+self.cname_prfx[3]+'_at_r' : 25, ''+self.cname_prfx[1]+'_v_r' : 27, 'V_ar_pul' : 29, 'V_cap_pul' : 31, 'V_ven_pul' : 33}
 
         for n in range(self.vs): self.varmap['q_ven'+str(n+1)+'_sys'] = 23+n
         for n in range(self.vp): self.varmap['q_ven'+str(n+1)+'_pul'] = 32+self.vs+n
 
         q_ven_sys_, q_ven_pul_ = [], []
-        p_ati_l_, p_ati_r_ = [], []
+        p_at_l_i_, p_at_r_i_ = [], []
         
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')
-        for n in range(self.vp): p_ati_l_.append(sp.Symbol('p_ati'+str(n+1)+'_l_'))
-        p_ato1_l_          = sp.Symbol('p_ato1_l_')
+        for n in range(self.vp): p_at_l_i_.append(sp.Symbol('p_at_l_i'+str(n+1)+'_'))
+        p_at_l_o1_          = sp.Symbol('p_at_l_o1_')
         q_vout_l_          = sp.Symbol('q_vout_l_')
-        p_vi1_l_, p_vo1_l_ = sp.Symbol('p_vi1_l_'), sp.Symbol('p_vo1_l_')
+        p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
         q_arcor_sys_       = sp.Symbol('q_arcor_sys_')
         q_ar_sys_          = sp.Symbol('q_ar_sys_')
@@ -702,10 +713,10 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         p_ven_sys_         = sp.Symbol('p_ven_sys_')
         for n in range(self.vs): q_ven_sys_.append(sp.Symbol('q_ven'+str(n+1)+'_sys_'))
         q_vin_r_           = sp.Symbol('q_vin_r_')
-        for n in range(self.vs): p_ati_r_.append(sp.Symbol('p_ati'+str(n+1)+'_r_'))
-        p_ato1_r_          = sp.Symbol('p_ato1_r_')
+        for n in range(self.vs): p_at_r_i_.append(sp.Symbol('p_at_r_i'+str(n+1)+'_'))
+        p_at_r_o1_          = sp.Symbol('p_at_r_o1_')
         q_vout_r_          = sp.Symbol('q_vout_r_')
-        p_vi1_r_, p_vo1_r_ = sp.Symbol('p_vi1_r_'), sp.Symbol('p_vo1_r_')
+        p_v_r_i1_, p_v_r_o1_ = sp.Symbol('p_v_r_i1_'), sp.Symbol('p_v_r_o1_')
         p_ar_pul_          = sp.Symbol('p_ar_pul_')
         q_ar_pul_          = sp.Symbol('q_ar_pul_')
         p_cap_pul_         = sp.Symbol('p_cap_pul_')
@@ -724,9 +735,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         
         # dofs to differentiate w.r.t.
         self.x_[0+self.si[2]] = q_vin_l_
-        self.x_[1-self.si[2]] = p_ati_l_[0]
+        self.x_[1-self.si[2]] = p_at_l_i_[0]
         self.x_[2+self.si[0]] = q_vout_l_
-        self.x_[3-self.si[0]] = p_vi1_l_
+        self.x_[3-self.si[0]] = p_v_l_i1_
         self.x_[4] = p_ar_sys_
         self.x_[5] = q_arcor_sys_
         self.x_[6] = q_ar_sys_
@@ -749,9 +760,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         for n in range(self.vs):
             self.x_[23+n] = q_ven_sys_[n]
         self.x_[23+self.vs+self.si[3]] = q_vin_r_
-        self.x_[24+self.vs-self.si[3]] = p_ati_r_[0]
+        self.x_[24+self.vs-self.si[3]] = p_at_r_i_[0]
         self.x_[25+self.vs+self.si[1]] = q_vout_r_
-        self.x_[26+self.vs-self.si[1]] = p_vi1_r_
+        self.x_[26+self.vs-self.si[1]] = p_v_r_i1_
         self.x_[27+self.vs] = p_ar_pul_
         self.x_[28+self.vs] = q_ar_pul_
         self.x_[29+self.vs] = p_cap_pul_
@@ -761,12 +772,12 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
             self.x_[32+self.vs+n] = q_ven_pul_[n]
         
         # set chamber dicts
-        chdict_lv = {'vq' : VQ_v_l_, 'pi1' : p_vi1_l_, 'po1' : p_vo1_l_}
-        chdict_rv = {'vq' : VQ_v_r_, 'pi1' : p_vi1_r_, 'po1' : p_vo1_r_}
-        chdict_la = {'vq' : VQ_at_l_, 'po1' : p_ato1_l_}
-        for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_ati_l_[n]
-        chdict_ra = {'vq' : VQ_at_r_, 'po1' : p_ato1_r_}
-        for n in range(self.vs): chdict_ra['pi'+str(n+1)+''] = p_ati_r_[n]
+        chdict_lv = {'vq' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
+        chdict_rv = {'vq' : VQ_v_r_, 'pi1' : p_v_r_i1_, 'po1' : p_v_r_o1_}
+        chdict_la = {'vq' : VQ_at_l_, 'po1' : p_at_l_o1_}
+        for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_at_l_i_[n]
+        chdict_ra = {'vq' : VQ_at_r_, 'po1' : p_at_r_o1_}
+        for n in range(self.vs): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
 
         # set chamber states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
         self.set_chamber_state('lv', chdict_lv, [E_v_l_])
@@ -775,16 +786,16 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.set_chamber_state('ra', chdict_ra, [E_at_r_])
         
         # feed back modified dicts to chamber variables
-        VQ_v_l_, p_vi1_l_, p_vo1_l_ = chdict_lv['vq'], chdict_lv['pi1'], chdict_lv['po1']
-        VQ_v_r_, p_vi1_r_, p_vo1_r_ = chdict_rv['vq'], chdict_rv['pi1'], chdict_rv['po1']
-        VQ_at_l_, p_ati1_l_, p_ato1_l_ = chdict_la['vq'], chdict_la['pi1'], chdict_la['po1']
-        for n in range(self.vp): p_ati_l_[n] = chdict_la['pi'+str(n+1)+'']
-        VQ_at_r_, p_ati1_r_, p_ato1_r_ = chdict_ra['vq'], chdict_ra['pi1'], chdict_ra['po1']
-        for n in range(self.vs): p_ati_r_[n] = chdict_ra['pi'+str(n+1)+'']
+        VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['vq'], chdict_lv['pi1'], chdict_lv['po1']
+        VQ_v_r_, p_v_r_i1_, p_v_r_o1_ = chdict_rv['vq'], chdict_rv['pi1'], chdict_rv['po1']
+        VQ_at_l_, p_ati1_l_, p_at_l_o1_ = chdict_la['vq'], chdict_la['pi1'], chdict_la['po1']
+        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)+'']
+        VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['vq'], chdict_ra['pi1'], chdict_ra['po1']
+        for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
 
 
         # set valve resistances
-        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_vi1_l_,p_vo1_l_,p_vi1_r_,p_vo1_r_,p_ato1_l_,p_ato1_r_,p_ar_sys_,p_ar_pul_)
+        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_v_l_i1_,p_v_l_o1_,p_v_r_i1_,p_v_r_o1_,p_at_l_o1_,p_at_r_o1_,p_ar_sys_,p_ar_pul_)
 
         # parallel venous resistances and inertances:
         # assume that the total venous resistance/inertance distributes equally over all systemic / pulmonary veins that enter the right / left atrium
@@ -842,9 +853,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
 
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0]  = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_
-        self.f_[1]  = (p_ato1_l_-p_vi1_l_)/R_vin_l_ - q_vin_l_
+        self.f_[1]  = (p_v_l_i1_-p_at_l_o1_)/R_vin_l_ + q_vin_l_
         self.f_[2]  = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_
-        self.f_[3]  = (p_vo1_l_-p_ar_sys_)/R_vout_l_ - q_vout_l_
+        self.f_[3]  = (p_ar_sys_-p_v_l_o1_)/R_vout_l_ + q_vout_l_
         self.f_[4]  = -q_vout_l_ + q_ar_sys_ + q_arcor_sys_
         self.f_[5]  = (p_vencor_sys_ - p_ar_sys_)/self.R_arcor_sys + q_arcor_sys_
         self.f_[6]  = (p_arperi_sys_ - p_ar_sys_ + self.Z_ar_sys * (q_vout_l_-q_arcor_sys_))/self.R_ar_sys + q_ar_sys_
@@ -862,60 +873,62 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.f_[18] = q_vencer_sys_ - q_arcer_sys_
         self.f_[19] = (p_ven_sys_ - p_vencer_sys_)/self.R_vencer_sys + q_vencer_sys_
         self.f_[20] = q_vencor_sys_ - q_arcor_sys_
-        self.f_[21] = (p_ati_r_[0] - p_vencor_sys_)/self.R_vencor_sys + q_vencor_sys_ # TODO: Should the coronaries feed into all systemic veins equally?
+        self.f_[21] = (p_at_r_i_[0] - p_vencor_sys_)/self.R_vencor_sys + q_vencor_sys_ # TODO: Should the coronaries feed into all systemic veins equally?
         self.f_[22] = sum(q_ven_sys_) - (q_venspl_sys_ + q_venespl_sys_ + q_venmsc_sys_ + q_vencer_sys_)
         for n in range(self.vs):
-            self.f_[23+n] = (p_ati_r_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
+            self.f_[23+n] = (p_at_r_i_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
                 # -----------------------------------------------------------
         self.f_[23+self.vs] = -sum(q_ven_sys_) - q_vencor_sys_ + q_vin_r_ - (1-self.switch_V[3]) * VQ_at_r_
-        self.f_[24+self.vs] = (p_ato1_r_-p_vi1_r_)/R_vin_r_ - q_vin_r_
+        self.f_[24+self.vs] = (p_v_r_i1_-p_at_r_o1_)/R_vin_r_ + q_vin_r_
         self.f_[25+self.vs] = -q_vin_r_ + q_vout_r_ - (1-self.switch_V[1]) * VQ_v_r_
-        self.f_[26+self.vs] = (p_vo1_r_-p_ar_pul_)/R_vout_r_ - q_vout_r_
+        self.f_[26+self.vs] = (p_ar_pul_-p_v_r_o1_)/R_vout_r_ + q_vout_r_
         self.f_[27+self.vs] = -q_vout_r_ + q_ar_pul_
         self.f_[28+self.vs] = (p_cap_pul_ - p_ar_pul_ + self.Z_ar_pul * q_vout_r_)/self.R_ar_pul + q_ar_pul_
         self.f_[29+self.vs] = -q_ar_pul_ + q_cap_pul_
         self.f_[30+self.vs] = (p_ven_pul_ - p_cap_pul_)/self.R_cap_pul + q_cap_pul_
         self.f_[31+self.vs] = -q_cap_pul_ + sum(q_ven_pul_)
         for n in range(self.vp):
-            self.f_[32+self.vs+n] = (p_ati_l_[n]-p_ven_pul_)/R_ven_pul[n] + q_ven_pul_[n] 
-    
-    
-        # auxiliary variable vector (mainly in order to store quantities for post-processing)
-        self.a_[0]  = VQ_at_l_ * (1-self.switch_p[2]) + p_ati_l_[0] * self.switch_p[2]
-        self.a_[1]  = p_ato1_l_ * self.switch_p[2]
-        self.a_[2]  = VQ_v_l_ * (1-self.switch_p[0]) + p_vi1_l_ * self.switch_p[0]
-        self.a_[3]  = p_vo1_l_ * self.switch_p[0]
-        self.a_[4]  = (self.C_ar_sys + self.C_arcor_sys) * p_ar_sys_ - self.C_ar_sys*self.Z_ar_sys * (q_vout_l_ - q_arcor_sys_) + self.V_ar_sys_u + self.V_arcor_sys_u
-        self.a_[5]  = 0.
-        self.a_[6]  = 0.
-        self.a_[7]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys) * p_arperi_sys_ + self.V_arspl_sys_u+self.V_arespl_sys_u+self.V_armsc_sys_u+self.V_arcer_sys_u
-        self.a_[8]  = 0.
-        self.a_[9]  = 0.
-        self.a_[10] = 0.
-        self.a_[11] = 0.
-        self.a_[12] = self.C_venspl_sys * p_venspl_sys_ + self.V_venspl_sys_u
-        self.a_[13] = 0.
-        self.a_[14] = self.C_venespl_sys * p_venespl_sys_ + self.V_venespl_sys_u
-        self.a_[15] = 0.
-        self.a_[16] = self.C_venmsc_sys * p_venmsc_sys_ + self.V_venmsc_sys_u
-        self.a_[17] = 0.
-        self.a_[18] = self.C_vencer_sys * p_vencer_sys_ + self.V_vencer_sys_u
-        self.a_[19] = 0.
-        self.a_[20] = self.C_vencor_sys * p_vencor_sys_ + self.V_vencor_sys_u
-        self.a_[21] = 0.
-        self.a_[22] = self.C_ven_sys * p_ven_sys_ + self.V_ven_sys_u
-        self.a_[23] = 0.
-                # -----------------------------------------------------------
-        self.a_[24] = VQ_at_r_ * (1-self.switch_p[3]) + p_ati_r_[0] * self.switch_p[3]
-        self.a_[25] = p_ato1_r_ * self.switch_p[3]
-        self.a_[26] = VQ_v_r_ * (1-self.switch_p[1]) + p_vi1_r_ * self.switch_p[1]
-        self.a_[27] = p_vo1_r_ * self.switch_p[1]
-        self.a_[28] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_) + self.V_ar_pul_u
-        self.a_[29] = 0.
-        self.a_[30] = self.C_cap_pul * p_cap_pul_ + self.V_cap_pul_u
-        self.a_[31] = 0.
-        self.a_[32] = self.C_ven_pul * p_ven_pul_ + self.V_ven_pul_u
-        self.a_[33] = 0.
+            self.f_[32+self.vs+n] = (p_at_l_i_[n]-p_ven_pul_)/R_ven_pul[n] + q_ven_pul_[n] 
+
+
+        # setup auxiliary variable map
+        # coupling variables, 0D chamber volumes, compartment volumes, other shady quantities...
+        nc = len(self.c_)
+        self.auxmap={}
+        for i in range(nc): self.auxmap[self.cname[i]] = i
+        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='prescr_elast': self.auxmap['V_v_l'] = nc+0
+        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='prescr_elast': self.auxmap['V_v_r'] = nc+1
+        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='prescr_elast': self.auxmap['V_at_l'] = nc+2
+        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='prescr_elast': self.auxmap['V_at_r'] = nc+3
+        self.auxmap['V_ar_arcor_sys'] = nc+4
+        self.auxmap['V_arperi_sys'] = nc+5
+        self.auxmap['V_venspl_sys'] = nc+6
+        self.auxmap['V_venespl_sys'] = nc+7
+        self.auxmap['V_venmsc_sys'] = nc+8
+        self.auxmap['V_vencer_sys'] = nc+9
+        self.auxmap['V_vencor_sys'] = nc+10
+        self.auxmap['V_ven_sys'] = nc+11
+        self.auxmap['V_ar_pul'] = nc+12
+        self.auxmap['V_cap_pul'] = nc+13
+        self.auxmap['V_ven_pul'] = nc+14
+
+        # populate auxiliary variable vector
+        for i in range(nc): self.a_[i] = self.c_[i]
+        self.a_[nc+0]  = VQ_v_l_ * self.switch_V[0]
+        self.a_[nc+1]  = VQ_v_r_ * self.switch_V[1]
+        self.a_[nc+2]  = VQ_at_l_ * self.switch_V[2]
+        self.a_[nc+3]  = VQ_at_r_ * self.switch_V[3]
+        self.a_[nc+4]  = (self.C_ar_sys + self.C_arcor_sys) * p_ar_sys_ - self.C_ar_sys*self.Z_ar_sys * (q_vout_l_ - q_arcor_sys_) + self.V_ar_sys_u + self.V_arcor_sys_u
+        self.a_[nc+5]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys) * p_arperi_sys_ + self.V_arspl_sys_u+self.V_arespl_sys_u+self.V_armsc_sys_u+self.V_arcer_sys_u
+        self.a_[nc+6]  = self.C_venspl_sys * p_venspl_sys_ + self.V_venspl_sys_u
+        self.a_[nc+7]  = self.C_venespl_sys * p_venespl_sys_ + self.V_venespl_sys_u
+        self.a_[nc+8]  = self.C_venmsc_sys * p_venmsc_sys_ + self.V_venmsc_sys_u
+        self.a_[nc+9]  = self.C_vencer_sys * p_vencer_sys_ + self.V_vencer_sys_u
+        self.a_[nc+10] = self.C_vencor_sys * p_vencor_sys_ + self.V_vencor_sys_u
+        self.a_[nc+11] = self.C_ven_sys * p_ven_sys_ + self.V_ven_sys_u
+        self.a_[nc+12] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_) + self.V_ar_pul_u
+        self.a_[nc+13] = self.C_cap_pul * p_cap_pul_ + self.V_cap_pul_u
+        self.a_[nc+14] = self.C_ven_pul * p_ven_pul_ + self.V_ven_pul_u
 
 
 
@@ -1003,12 +1016,14 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
+        nc = len(self.c_)
+
         if self.comm.rank == 0:
             
             print("Output of 0D vascular model (syspulcapcor):")
             
-            print('{:<12s}{:<3s}{:<10.1f}{:<3s}{:<9s}{:<3s}{:<10.1f}'.format(''+self.cname_prfx[2]+'_at_l',' = ',aux[self.auxmap[''+self.cname_prfx[2]+'_at_l']],'   ',''+self.cname_prfx[3]+'_at_r',' = ',aux[self.auxmap[''+self.cname_prfx[3]+'_at_r']]))
-            print('{:<12s}{:<3s}{:<10.1f}{:<3s}{:<9s}{:<3s}{:<10.1f}'.format(''+self.cname_prfx[0]+'_v_l',' = ',aux[self.auxmap[''+self.cname_prfx[0]+'_v_l']],'   ',''+self.cname_prfx[1]+'_v_r',' = ',aux[self.auxmap[''+self.cname_prfx[1]+'_v_r']]))
+            for i in range(nc):
+                print('{:<12s}{:<3s}{:<10.3f}'.format(list(self.auxmap.keys())[i],' = ',aux[list(self.auxmap.values())[i]]))
             
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[2]+'_at_l',' = ',var_sq[self.varmap[''+self.vname_prfx[2]+'_at_l']],'   ',''+self.vname_prfx[3]+'_at_r',' = ',var_sq[self.varmap[''+self.vname_prfx[3]+'_at_r']]))
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[0]+'_v_l',' = ',var_sq[self.varmap[''+self.vname_prfx[0]+'_v_l']],'   ',''+self.vname_prfx[1]+'_v_r',' = ',var_sq[self.varmap[''+self.vname_prfx[1]+'_v_r']]))
