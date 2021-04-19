@@ -336,8 +336,11 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
 
 
-        # set valve resistances
-        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_v_l_i1_,p_v_l_o1_,p_v_r_i1_,p_v_r_o1_,p_at_l_o1_,p_at_r_o1_,p_ar_sys_,p_ar_pul_)
+        # set valve laws - resistive part of q(p) relationship of momentum equation
+        vl_mv_, R_vin_l_  = self.valvelaw(p_at_l_o1_,p_v_l_i1_,self.R_vin_l_min,self.R_vin_l_max,self.valvelaws['mv'][0],self.t_es,self.t_ed,self.valvelaws['mv'][1])
+        vl_av_, R_vout_l_ = self.valvelaw(p_v_l_o1_,p_ar_sys_,self.R_vout_l_min,self.R_vout_l_max,self.valvelaws['av'][0],self.t_ed,self.t_es,self.valvelaws['av'][1])
+        vl_tv_, R_vin_r_  = self.valvelaw(p_at_r_o1_,p_v_r_i1_,self.R_vin_r_min,self.R_vin_r_max,self.valvelaws['tv'][0],self.t_es,self.t_ed,self.valvelaws['tv'][1])
+        vl_pv_, R_vout_r_ = self.valvelaw(p_v_r_o1_,p_ar_pul_,self.R_vout_r_min,self.R_vout_r_max,self.valvelaws['pv'][0],self.t_ed,self.t_es,self.valvelaws['pv'][1])
 
         # parallel venous resistances and inertances:
         # assume that the total venous resistance/inertance distributes equally over all systemic / pulmonary veins that enter the right / left atrium
@@ -394,9 +397,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
 
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0]  = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_
-        self.f_[1]  = (p_v_l_i1_-p_at_l_o1_)/R_vin_l_ + q_vin_l_
+        self.f_[1]  = vl_mv_ + q_vin_l_
         self.f_[2]  = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_
-        self.f_[3]  = (p_ar_sys_-p_v_l_o1_)/R_vout_l_ + q_vout_l_
+        self.f_[3]  = vl_av_ + q_vout_l_
         self.f_[4]  = -q_vout_l_ + q_ar_sys_
         self.f_[5]  = (p_arperi_sys_ - p_ar_sys_ + self.Z_ar_sys * q_vout_l_)/self.R_ar_sys + q_ar_sys_
         self.f_[6]  = -q_ar_sys_ + (q_arspl_sys_ + q_arespl_sys_ + q_armsc_sys_ + q_arcer_sys_ + q_arcor_sys_)
@@ -420,9 +423,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
             self.f_[23+n] = (p_at_r_i_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
                 # -----------------------------------------------------------
         self.f_[23+self.vs] = -sum(q_ven_sys_) + q_vin_r_ - (1-self.switch_V[3]) * VQ_at_r_
-        self.f_[24+self.vs] = (p_v_r_i1_-p_at_r_o1_)/R_vin_r_ + q_vin_r_
+        self.f_[24+self.vs] = vl_tv_ + q_vin_r_
         self.f_[25+self.vs] = -q_vin_r_ + q_vout_r_ - (1-self.switch_V[1]) * VQ_v_r_
-        self.f_[26+self.vs] = (p_ar_pul_-p_v_r_o1_)/R_vout_r_ + q_vout_r_
+        self.f_[26+self.vs] = vl_pv_ + q_vout_r_
         self.f_[27+self.vs] = -q_vout_r_ + q_ar_pul_
         self.f_[28+self.vs] = (p_cap_pul_ - p_ar_pul_ + self.Z_ar_pul * q_vout_r_)/self.R_ar_pul + q_ar_pul_
         self.f_[29+self.vs] = -q_ar_pul_ + q_cap_pul_
@@ -794,8 +797,11 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
 
 
-        # set valve resistances
-        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_v_l_i1_,p_v_l_o1_,p_v_r_i1_,p_v_r_o1_,p_at_l_o1_,p_at_r_o1_,p_ar_sys_,p_ar_pul_)
+        # set valve laws - resistive part of q(p) relationship of momentum equation
+        vl_mv_, R_vin_l_  = self.valvelaw(p_at_l_o1_,p_v_l_i1_,self.R_vin_l_min,self.R_vin_l_max,self.valvelaws['mv'][0],self.t_es,self.t_ed,self.valvelaws['mv'][1])
+        vl_av_, R_vout_l_ = self.valvelaw(p_v_l_o1_,p_ar_sys_,self.R_vout_l_min,self.R_vout_l_max,self.valvelaws['av'][0],self.t_ed,self.t_es,self.valvelaws['av'][1])
+        vl_tv_, R_vin_r_  = self.valvelaw(p_at_r_o1_,p_v_r_i1_,self.R_vin_r_min,self.R_vin_r_max,self.valvelaws['tv'][0],self.t_es,self.t_ed,self.valvelaws['tv'][1])
+        vl_pv_, R_vout_r_ = self.valvelaw(p_v_r_o1_,p_ar_pul_,self.R_vout_r_min,self.R_vout_r_max,self.valvelaws['pv'][0],self.t_ed,self.t_es,self.valvelaws['pv'][1])
 
         # parallel venous resistances and inertances:
         # assume that the total venous resistance/inertance distributes equally over all systemic / pulmonary veins that enter the right / left atrium
@@ -813,9 +819,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
 
         # df part of rhs contribution (df - df_old)/dt
         self.df_[0]  = VQ_at_l_ * self.switch_V[2]
-        self.df_[1]  = 0.
+        self.df_[1]  = (self.L_vin_l/R_vin_l_) * q_vin_l_
         self.df_[2]  = VQ_v_l_ * self.switch_V[0]
-        self.df_[3]  = 0.
+        self.df_[3]  = (self.L_vout_l/R_vout_l_) * q_vout_l_
         self.df_[4]  = (self.C_ar_sys + self.C_arcor_sys) * p_ar_sys_ - self.C_ar_sys*self.Z_ar_sys * (q_vout_l_ - q_arcor_sys_)
         self.df_[5]  = 0.
         self.df_[6]  = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_
@@ -839,9 +845,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
             self.df_[23+n] = (L_ven_sys[n]/R_ven_sys[n]) * q_ven_sys_[n]
                 # -----------------------------------------------------------
         self.df_[23+self.vs] = VQ_at_r_ * self.switch_V[3]
-        self.df_[24+self.vs] = 0.
+        self.df_[24+self.vs] = (self.L_vin_r/R_vin_r_) * q_vin_r_
         self.df_[25+self.vs] = VQ_v_r_ * self.switch_V[1]
-        self.df_[26+self.vs] = 0.
+        self.df_[26+self.vs] = (self.L_vout_r/R_vout_r_) * q_vout_r_
         self.df_[27+self.vs] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_)
         self.df_[28+self.vs] = (self.L_ar_pul/self.R_ar_pul) * q_ar_pul_
         self.df_[29+self.vs] = self.C_cap_pul * p_cap_pul_
@@ -853,9 +859,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
 
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0]  = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_
-        self.f_[1]  = (p_v_l_i1_-p_at_l_o1_)/R_vin_l_ + q_vin_l_
+        self.f_[1]  = vl_mv_ + q_vin_l_
         self.f_[2]  = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_
-        self.f_[3]  = (p_ar_sys_-p_v_l_o1_)/R_vout_l_ + q_vout_l_
+        self.f_[3]  = vl_av_ + q_vout_l_
         self.f_[4]  = -q_vout_l_ + q_ar_sys_ + q_arcor_sys_
         self.f_[5]  = (p_vencor_sys_ - p_ar_sys_)/self.R_arcor_sys + q_arcor_sys_
         self.f_[6]  = (p_arperi_sys_ - p_ar_sys_ + self.Z_ar_sys * (q_vout_l_-q_arcor_sys_))/self.R_ar_sys + q_ar_sys_
@@ -879,9 +885,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
             self.f_[23+n] = (p_at_r_i_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
                 # -----------------------------------------------------------
         self.f_[23+self.vs] = -sum(q_ven_sys_) - q_vencor_sys_ + q_vin_r_ - (1-self.switch_V[3]) * VQ_at_r_
-        self.f_[24+self.vs] = (p_v_r_i1_-p_at_r_o1_)/R_vin_r_ + q_vin_r_
+        self.f_[24+self.vs] = vl_tv_ + q_vin_r_
         self.f_[25+self.vs] = -q_vin_r_ + q_vout_r_ - (1-self.switch_V[1]) * VQ_v_r_
-        self.f_[26+self.vs] = (p_ar_pul_-p_v_r_o1_)/R_vout_r_ + q_vout_r_
+        self.f_[26+self.vs] = vl_pv_ + q_vout_r_
         self.f_[27+self.vs] = -q_vout_r_ + q_ar_pul_
         self.f_[28+self.vs] = (p_cap_pul_ - p_ar_pul_ + self.Z_ar_pul * q_vout_r_)/self.R_ar_pul + q_ar_pul_
         self.f_[29+self.vs] = -q_ar_pul_ + q_cap_pul_

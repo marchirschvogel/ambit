@@ -29,7 +29,7 @@ def main():
         lastgandrcycl = int(sys.argv[11])
     except:
         path = '/home/mh/work/fem_scripts/tests/tmp/3d0dcomp'#'/home/mh/work/sim/heart0D/'
-        sname = 'ambittest_mdvol_Lvalve'
+        sname = 'ambittest_mdvol'
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
@@ -39,12 +39,14 @@ def main():
         calc_func_params = True
         multiscalegandr = False
         lastgandrcycl = 2
-        
     
-    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, calc_func_params, multiscalegandr, lastgandrcycl)
+    # initial chamber volumes (in ml!) in case we only have chamber fluxes Q available and want to integrate V (default are common EDPs - order is lv, rv, la, ra)
+    V0=[130.,150.,60.,50.]    
+    
+    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, calc_func_params=False, multiscalegandr=False, lastgandrcycl=1):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, calc_func_params=False, V0=[130.,150.,60.,50.], multiscalegandr=False, lastgandrcycl=1):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -115,7 +117,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         t_off = tmp[0]-T_cycl/nstep_cycl
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
-        for ch in ['v_l','v_r','at_l','at_r']:
+        for i, ch in enumerate(['v_l','v_r','at_l','at_r']):
             # test if volume file exists
             test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
             if test_V > 0:
@@ -127,13 +129,13 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                     # --> V_{mid} = 0.5 * V_{n+1} + 0.5 * V_{n}
                     filename_vol = path+'/results_'+sname+'_V_'+ch+'.txt'
                     file_vol = open(filename_vol, 'wt')
-                    vol_n = 100.0e3 # mm^3, we do not have the initial volume, so rough estimate
+                    vol_n = V0[i]*1.0e3 # mm^3, initial volume (from V0 list, which is in ml)
                     file_vol.write('%.16E %.16E\n' % (tmp[0], vol_n))
-                    for i in range(len(fluxes)-1):
-                        dt = tmp[i+1] - tmp[i]
-                        vol_np = -fluxes[i+1]*dt + vol_n
+                    for n in range(len(fluxes)-1):
+                        dt = tmp[n+1] - tmp[n]
+                        vol_np = -fluxes[n+1]*dt + vol_n
                         vol_mid = 0.5*vol_np + 0.5*vol_n
-                        file_vol.write('%.16E %.16E\n' % (tmp[i+1], vol_mid))
+                        file_vol.write('%.16E %.16E\n' % (tmp[n+1], vol_mid))
                         vol_n = vol_np
                     file_vol.close()
                 else:
@@ -143,33 +145,40 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         sysveins, pulveins = 0, 0
         for i in range(10):
             if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_sys.txt')==0: sysveins += 1
-        for i in range(10):
             if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_pul.txt')==0: pulveins += 1
-        
-        # remove veins that are not present out of flux group
-        for i in range(sysveins,10):
-            try: groups[2]['flux_time_sys_l'].remove('q_ven'+str(i+1)+'_sys')
-            except: pass
-        for i in range(pulveins,10):
-            try: groups[3]['flux_time_pul_r'].remove('q_ven'+str(i+1)+'_pul')
-            except: pass
-        
-        #groups[0]['pres_time_sys_l'].remove('p_v_l')
-        
-        #print(groups[0]['pres_time_sys_l'])
-        #sys.exit()
-        # TODO: Finish!
-        ## check presence of default chamber pressure variable
-        #for ch in ['v_l','v_r','at_l','at_r']:
-            #err = os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'.txt')
-            #if err==0: # nothing to do if present
-                #pass
-            #else:
-                ## now check chamber inflow pressures
-                #for i in range(10):
-                    #if os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'_i'+str(i+1)+'.txt')==0:
-                        #groups[0]['pres_time_sys_l']
-        
+
+    
+        # in 3D fluid dynamics, we may have "distributed" 0D in-/outflow pressures, so here we check presence of these
+        # and then average them for visualization
+        # check presence of default chamber pressure variable
+        for ch in ['v_l','v_r','at_l','at_r']:
+            err = os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'.txt')
+            if err==0: # nothing to do if present
+                pass
+            else:
+                numpi, numpo = 0, 0
+                # now check chamber inflow/outflow distributed pressures
+                pall = np.zeros(numdata)
+                for i in range(10):
+                    if os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'_i'+str(i+1)+'.txt')==0: numpi += 1
+                    if os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'_o'+str(i+1)+'.txt')==0: numpo += 1
+                for i in range(numpi):
+                    pi = np.loadtxt(''+path+'/results_'+sname+'_p_'+ch+'_i'+str(i+1)+'.txt', usecols=1)
+                    for j in range(len(pall)):
+                        pall[j] += pi[j]/numpi
+                for i in range(numpo):
+                    po = np.loadtxt(''+path+'/results_'+sname+'_p_'+ch+'_o'+str(i+1)+'.txt', usecols=1)
+                    for j in range(len(pall)):
+                        pall[j] += po[j]/numpo
+
+                # write averaged pressure file
+                file_pavg = path+'/results_'+sname+'_p_'+ch+'.txt'
+                fpa = open(file_pavg, 'wt')
+                for i in range(len(pall)):
+                    fpa.write('%.16E %.16E\n' % (tmp[i], pall[i]))
+                fpa.close()
+
+
         # for plotting of pressure-volume loops
         for ch in ['v_l','v_r','at_l','at_r']:
             subprocess.call(['cp', ''+path+'/results_'+sname+'_p_'+ch+'.txt', ''+path+'/results_'+sname+'_p_'+ch+'_tmp.txt'])
@@ -203,16 +212,11 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         # Be worried if the total sum in V_all.txt changes over time (more than to a certain tolerance)!
         volall = np.zeros(numdata)
         for c in range(len(list(groups[5].values())[0])-1): # compartment volumes should be stored in group index 5
-            subprocess.call(['cp', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'.txt', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt'])
-            # drop first (time) column
-            subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt'])
             # load volume data
-            vols = np.loadtxt(''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt')
+            vols = np.loadtxt(''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'.txt', usecols=1)
             # add together
             for i in range(len(volall)):
                 volall[i] += vols[i]
-            # clean-up
-            subprocess.call(['rm', ''+path+'/results_'+sname+'_'+list(groups[5].values())[0][c]+'_tmp.txt'])
 
         # write time and vol value to file
         file_vollall = path+'/results_'+sname+'_V_all.txt'
@@ -466,6 +470,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         y_s_all, y_e_all = [], []
         
         for q in range(numitems):
+            
+            # continue if file does not exist
+            if os.system('test -e '+path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') > 0:
+                continue
             
             # get the data and check its length
             tmp = np.loadtxt(''+path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!

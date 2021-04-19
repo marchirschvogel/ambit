@@ -145,9 +145,9 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.varmap['ppO2_ven_sys'] = 81
 
         # add to auxmap
+        self.auxmap['SO2_ar_pul'] = 49
         self.auxmap['SO2_ar_sys'] = 59
-        self.auxmap['SO2_ar_sys'] = 4
-
+        
         
         # variables from the mechanics model
         q_vin_l_       = self.x_[0]
@@ -181,21 +181,21 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         V_arcer_sys_   = self.C_arcer_sys * p_arperi_sys_ + self.V_arcer_sys_u
         V_arcor_sys_   = self.C_arcor_sys * p_arperi_sys_ + self.V_arcor_sys_u
 
-        V_at_l_        = self.a_[0]
-        V_v_l_         = self.a_[2]
-        V_ar_sys_      = self.a_[4]
-        V_arperi_sys_  = self.a_[6]
-        V_venspl_sys_  = self.a_[12]
-        V_venespl_sys_ = self.a_[14]
-        V_venmsc_sys_  = self.a_[16]
-        V_vencer_sys_  = self.a_[18]
-        V_vencor_sys_  = self.a_[20]
-        V_ven_sys_     = self.a_[22]
-        V_at_r_        = self.a_[24]
-        V_v_r_         = self.a_[26]
-        V_ar_pul_      = self.a_[28]
-        V_cap_pul_     = self.a_[30]
-        V_ven_pul_     = self.a_[32]
+        V_at_l_        = self.a_[self.auxmap['V_at_l']]
+        V_v_l_         = self.a_[self.auxmap['V_v_l']]
+        V_ar_sys_      = self.a_[self.auxmap['V_ar_sys']]
+        V_arperi_sys_  = self.a_[self.auxmap['V_arperi_sys']]
+        V_venspl_sys_  = self.a_[self.auxmap['V_venspl_sys']]
+        V_venespl_sys_ = self.a_[self.auxmap['V_venespl_sys']]
+        V_venmsc_sys_  = self.a_[self.auxmap['V_venmsc_sys']]
+        V_vencer_sys_  = self.a_[self.auxmap['V_vencer_sys']]
+        V_vencor_sys_  = self.a_[self.auxmap['V_vencor_sys']]
+        V_ven_sys_     = self.a_[self.auxmap['V_ven_sys']]
+        V_at_r_        = self.a_[self.auxmap['V_at_r']]
+        V_v_r_         = self.a_[self.auxmap['V_v_r']]
+        V_ar_pul_      = self.a_[self.auxmap['V_ar_pul']]
+        V_cap_pul_     = self.a_[self.auxmap['V_cap_pul']]
+        V_ven_pul_     = self.a_[self.auxmap['V_ven_pul']]
 
     
         # respiratory model variables
@@ -565,7 +565,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
         
         # add to auxiliary variable vector (mainly in order to store quantities for post-processing)
-        self.a_[34] = V_alv_
         self.a_[49] = self.SO2(ppCO2_ar_pul_,ppO2_ar_pul_)
         self.a_[59] = self.SO2(ppCO2_ar_sys_,ppO2_ar_sys_)
 
@@ -783,10 +782,10 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             
             print("Output of 0D respiratory model (syspulcaprespir):")
             
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('SO2_ar_sys',' = ',aux[59],'   ','SO2_ar_pul',' = ',aux[49]))
+            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('SO2_ar_sys',' = ',aux[self.auxmap['SO2_ar_sys']],'   ','SO2_ar_pul',' = ',aux[self.auxmap['SO2_ar_pul']]))
             
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppO2_ar_sys',' = ',var_sq[59],'   ','ppO2_ar_pul',' = ',var_sq[49]))
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_sq[58],'   ','ppCO2_ar_pul',' = ',var_sq[48]))
+            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppO2_ar_sys',' = ',var_sq[self.varmap['ppO2_ar_sys']],'   ','ppO2_ar_pul',' = ',var_sq[self.varmap['ppO2_ar_pul']]))
+            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_sq[self.varmap['ppCO2_ar_sys']],'   ','ppCO2_ar_pul',' = ',var_sq[self.varmap['ppCO2_ar_pul']]))
 
             sys.stdout.flush()
 

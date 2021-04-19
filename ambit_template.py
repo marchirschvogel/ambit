@@ -72,7 +72,7 @@ def main():
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
                             'perturb_type'          : None, # OPTIONAL: ['mr',1.0e-6], ['ms',25.], ['ar',5.0e-6], ['as',50.], ['mi',0.,4] (default: None)
                             'perturb_after_cylce'   : 1, # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
-                            'valvelaws'             : {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}} # OPTIONAL: valve laws for aortic (av), mitral (mv), pulmonary (pv), and tricuspid valve (tv) (pwlin_pres: piecewise-linear pressure-governed, pwlin_time: piecewise-linear time-governed, smooth_pres: smooth pressure-governed with number being amount of smoothness) (default: {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]})
+                            'valvelaws'             : {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}} # OPTIONAL: valve laws for aortic (av), mitral (mv), pulmonary (pv), and tricuspid valve (tv) (pwlin_pres: piecewise-linear pressure-governed, pwlin_time: piecewise-linear time-governed, smooth_pres_momentum: , smooth p-q relationship, smooth_pres_resistance: smooth resistance pressure-governed with number being amount of smoothness) (default: {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]})
 
     # for solid*, fluid* problem types
     FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid mechanics)
@@ -284,6 +284,11 @@ def param():
             'R_vin_r_max' : 1.0e1,
             'R_vout_r_min' : 1.0e-6,
             'R_vout_r_max' : 1.0e1,
+            # valve inertances
+            'L_vin_l' : 0,
+            'L_vin_r' : 0,
+            'L_vout_l' : 0,
+            'L_vout_r' : 0,
             # timings
             't_ed' : t_ed,
             't_es' : t_es,

@@ -203,47 +203,40 @@ class cardiovascular0Dbase:
 
         return np.interp(t, tarray, erray)
 
-    
-    # set valve resistances
-    def set_valve_resistances(self, p_v_l_,p_v_l_d_,p_v_r_,p_v_r_d_,p_at_l_d_,p_at_r_d_,p_ar_sys_,p_ar_pul_):
+
+    # set valve q(p) relationship
+    def valvelaw(self, p, popen, Rmin, Rmax, vtype, topen, tclose, epsilon):
+
+        if vtype=='pwlin_pres': # piecewise linear with resistance depending on pressure difference
+            R = sp.Piecewise( (Rmax, p < popen), (Rmin, p >= popen) )
+            vl = (popen - p) / R
+        elif vtype=='pwlin_time': # piecewise linear with resistance depending on timing
+            if topen > tclose: R = sp.Piecewise( (Rmax, sp.And(self.t_ < topen, self.t_ >= tclose)), (Rmin, sp.Or(self.t_ >= topen, self.t_ < tclose)) )
+            else:              R = sp.Piecewise( (Rmax, sp.Or(self.t_ < topen, self.t_ >= tclose)), (Rmin, sp.And(self.t_ >= topen, self.t_ < tclose)) )
+            vl = (popen - p) / R
+        elif vtype=='smooth_pres_resistance': # smooth resistance value
+            R = sp.Piecewise( (Rmax, p < popen), (Rmin, p >= popen) )
+            R = 0.5*(Rmax - Rmin)*(sp.tanh((popen - p)/epsilon) + 1.) + Rmin
+            vl = (popen - p) / R            
+        elif vtype=='smooth_pres_momentum': # smooth q(p) relationship
+            # interpolation by cubic spline in epsilon interval
+            p0 = (popen-epsilon/2. - popen)/Rmax
+            p1 = (popen+epsilon/2. - popen)/Rmin
+            m0 = 1./Rmax
+            m1 = 1./Rmin
+            t = (p - (popen-epsilon/2.))/epsilon
+            # spline ansatz functions
+            h00 = 2.*t**3. - 3*t**2. + 1.
+            h01 = -2.*t**3. + 3*t**2.
+            h10 = t**3. - 2.*t**2. + t
+            h11 = t**3. - t**2.
+            # spline
+            c = h00*p0 + h10*m0*epsilon + h01*p1 + h11*m1*epsilon
+            vl = sp.Piecewise( ((popen - p)/Rmax, p < popen-epsilon/2), (-c, sp.And(p >= popen-epsilon/2., p < popen+epsilon/2.)), ((popen - p)/Rmin, p >= popen+epsilon/2.) )
+        else:
+            raise NameError("Unknown valve law %s!" % (vtype))
         
-        if self.valvelaws['mv'][0]=='pwlin_pres':
-            R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, p_v_l_ < p_at_l_d_), (self.R_vin_l_max, p_v_l_ >= p_at_l_d_) )
-        elif self.valvelaws['mv'][0]=='pwlin_time':
-            R_vin_l_  = sp.Piecewise( (self.R_vin_l_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_l_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-        elif self.valvelaws['mv'][0]=='smooth_pres':
-            R_vin_l_  = 0.5*(self.R_vin_l_max - self.R_vin_l_min)*(sp.tanh((p_v_l_-p_at_l_d_)/self.valvelaws['mv'][1]) + 1.) + self.R_vin_l_min
-        else: 
-            raise NameError("Unknown valve law for mv!")
-
-        if self.valvelaws['tv'][0]=='pwlin_pres':
-            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, p_v_r_ < p_at_r_d_), (self.R_vin_r_max, p_v_r_ >= p_at_r_d_) )
-        elif self.valvelaws['tv'][0]=='pwlin_time':
-            R_vin_r_  = sp.Piecewise( (self.R_vin_r_min, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vin_r_max, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-        elif self.valvelaws['tv'][0]=='smooth_pres':
-            R_vin_r_  = 0.5*(self.R_vin_r_max - self.R_vin_r_min)*(sp.tanh((p_v_r_-p_at_r_d_)/self.valvelaws['tv'][1]) + 1.) + self.R_vin_r_min
-        else: 
-            raise NameError("Unknown valve law for tv!")
-
-        if self.valvelaws['av'][0]=='pwlin_pres':
-            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, p_v_l_d_ < p_ar_sys_), (self.R_vout_l_min, p_v_l_d_ >= p_ar_sys_) )
-        elif self.valvelaws['av'][0]=='pwlin_time':
-            R_vout_l_ = sp.Piecewise( (self.R_vout_l_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_l_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-        elif self.valvelaws['av'][0]=='smooth_pres':
-            R_vout_l_ = 0.5*(self.R_vout_l_max - self.R_vout_l_min)*(sp.tanh((p_ar_sys_-p_v_l_d_)/self.valvelaws['av'][1]) + 1.) + self.R_vout_l_min
-        else: 
-            raise NameError("Unknown valve law for av!")
-
-        if self.valvelaws['pv'][0]=='pwlin_pres':
-            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, p_v_r_d_ < p_ar_pul_), (self.R_vout_r_min, p_v_r_d_ >= p_ar_pul_) )
-        elif self.valvelaws['pv'][0]=='pwlin_time':
-            R_vout_r_ = sp.Piecewise( (self.R_vout_r_max, sp.Or(self.t_ < self.t_ed, self.t_ >= self.t_es)), (self.R_vout_r_min, sp.And(self.t_ >= self.t_ed, self.t_ < self.t_es)) )
-        elif self.valvelaws['pv'][0]=='smooth_pres':
-            R_vout_r_ = 0.5*(self.R_vout_r_max - self.R_vout_r_min)*(sp.tanh((p_ar_pul_-p_v_r_d_)/self.valvelaws['pv'][1]) + 1.) + self.R_vout_r_min
-        else: 
-            raise NameError("Unknown valve law for pv!")
-        
-        return R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_
+        return vl, 1./sp.diff(vl,popen)
 
 
     # set chamber interfaces according to case and coupling quantity (can be volume, flux, or pressure)

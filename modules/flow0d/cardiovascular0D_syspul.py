@@ -254,8 +254,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
 
        
-        # set valve resistances
-        R_vin_l_, R_vin_r_, R_vout_l_, R_vout_r_ = self.set_valve_resistances(p_v_l_i1_,p_v_l_o1_,p_v_r_i1_,p_v_r_o1_,p_at_l_o1_,p_at_r_o1_,p_ar_sys_,p_ar_pul_)
+        # set valve laws - resistive part of q(p) relationship of momentum equation
+        vl_mv_, R_vin_l_  = self.valvelaw(p_at_l_o1_,p_v_l_i1_,self.R_vin_l_min,self.R_vin_l_max,self.valvelaws['mv'][0],self.t_es,self.t_ed,self.valvelaws['mv'][1])
+        vl_av_, R_vout_l_ = self.valvelaw(p_v_l_o1_,p_ar_sys_,self.R_vout_l_min,self.R_vout_l_max,self.valvelaws['av'][0],self.t_ed,self.t_es,self.valvelaws['av'][1])
+        vl_tv_, R_vin_r_  = self.valvelaw(p_at_r_o1_,p_v_r_i1_,self.R_vin_r_min,self.R_vin_r_max,self.valvelaws['tv'][0],self.t_es,self.t_ed,self.valvelaws['tv'][1])
+        vl_pv_, R_vout_r_ = self.valvelaw(p_v_r_o1_,p_ar_pul_,self.R_vout_r_min,self.R_vout_r_max,self.valvelaws['pv'][0],self.t_ed,self.t_es,self.valvelaws['pv'][1])
 
         # parallel venous resistances and inertances:
         # assume that the total venous resistance/inertance distributes equally over all systemic / pulmonary veins that enter the right / left atrium
@@ -295,9 +298,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0] = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_
-        self.f_[1] = (p_v_l_i1_-p_at_l_o1_)/R_vin_l_ + q_vin_l_
+        self.f_[1] = vl_mv_ + q_vin_l_
         self.f_[2] = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_
-        self.f_[3] = (p_ar_sys_-p_v_l_o1_)/R_vout_l_ + q_vout_l_
+        self.f_[3] = vl_av_ + q_vout_l_
         self.f_[4] = -q_vout_l_ + q_ar_sys_
         self.f_[5] = (p_ven_sys_ - p_ar_sys_ + self.Z_ar_sys * q_vout_l_)/self.R_ar_sys + q_ar_sys_
         self.f_[6] = -q_ar_sys_ + sum(q_ven_sys_)
@@ -305,9 +308,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             self.f_[7+n] = (p_at_r_i_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
                 # -----------------------------------------------------------
         self.f_[7+self.vs] = -sum(q_ven_sys_) + q_vin_r_ - (1-self.switch_V[3]) * VQ_at_r_
-        self.f_[8+self.vs] = (p_v_r_i1_-p_at_r_o1_)/R_vin_r_ + q_vin_r_
+        self.f_[8+self.vs] = vl_tv_ + q_vin_r_
         self.f_[9+self.vs] = -q_vin_r_ + q_vout_r_ - (1-self.switch_V[1]) * VQ_v_r_
-        self.f_[10+self.vs] = (p_ar_pul_-p_v_r_o1_)/R_vout_r_ + q_vout_r_
+        self.f_[10+self.vs] = vl_pv_ + q_vout_r_
         self.f_[11+self.vs] = -q_vout_r_ + q_ar_pul_
         self.f_[12+self.vs] = (p_ven_pul_ - p_ar_pul_ + self.Z_ar_pul * q_vout_r_)/self.R_ar_pul + q_ar_pul_
         self.f_[13+self.vs] = -q_ar_pul_ + sum(q_ven_pul_)

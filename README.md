@@ -37,14 +37,14 @@ if not present, install: (seems that uidmap needs to be installed, which require
 ``sudo apt install uidmap``\
 ``curl -fsSL https://get.docker.com/rootless | sh``
 
-* Get latest tested Ambit-compatible digest (9 Apr 2021) of dolfinx Docker image (the experimental FEniCS version, https://hub.docker.com/u/dolfinx):
+* Get latest tested Ambit-compatible digest (19 Apr 2021) of dolfinx Docker image (the experimental FEniCS version, https://hub.docker.com/u/dolfinx):
 (latest nightly image can be pulled without @..., but may or may not work with current Ambit code):
 
-``docker pull dolfinx/dolfinx@sha256:cea5322b1d638f797692939a7788152fdcd6d061a5409a6c6881e8ffd61d8f35``
+``docker pull dolfinx/dolfinx@sha256:23df7cda68cf72cbf4082ed2519fcddd005c066090c81bcc2d275824a0cbbb51``
 
 * put the following shortcut in .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
 
-``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:cea5322b1d638f797692939a7788152fdcd6d061a5409a6c6881e8ffd61d8f35'``
+``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:23df7cda68cf72cbf4082ed2519fcddd005c066090c81bcc2d275824a0cbbb51'``
 
 * if 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
 
