@@ -165,11 +165,11 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
                 for i in range(numpi):
                     pi = np.loadtxt(''+path+'/results_'+sname+'_p_'+ch+'_i'+str(i+1)+'.txt', usecols=1)
                     for j in range(len(pall)):
-                        pall[j] += pi[j]/numpi
+                        pall[j] += pi[j]/(numpi+numpo)
                 for i in range(numpo):
                     po = np.loadtxt(''+path+'/results_'+sname+'_p_'+ch+'_o'+str(i+1)+'.txt', usecols=1)
                     for j in range(len(pall)):
-                        pall[j] += po[j]/numpo
+                        pall[j] += po[j]/(numpi+numpo)
 
                 # write averaged pressure file
                 file_pavg = path+'/results_'+sname+'_p_'+ch+'.txt'

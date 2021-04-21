@@ -215,7 +215,6 @@ class cardiovascular0Dbase:
             else:              R = sp.Piecewise( (Rmax, sp.Or(self.t_ < topen, self.t_ >= tclose)), (Rmin, sp.And(self.t_ >= topen, self.t_ < tclose)) )
             vl = (popen - p) / R
         elif vtype=='smooth_pres_resistance': # smooth resistance value
-            R = sp.Piecewise( (Rmax, p < popen), (Rmin, p >= popen) )
             R = 0.5*(Rmax - Rmin)*(sp.tanh((popen - p)/epsilon) + 1.) + Rmin
             vl = (popen - p) / R            
         elif vtype=='smooth_pres_momentum': # smooth q(p) relationship
