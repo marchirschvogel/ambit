@@ -223,12 +223,12 @@ class cardiovascular0Dbase:
             p1 = (popen+epsilon/2. - popen)/Rmin
             m0 = 1./Rmax
             m1 = 1./Rmin
-            t = (p - (popen-epsilon/2.))/epsilon
+            s = (p - (popen-epsilon/2.))/epsilon
             # spline ansatz functions
-            h00 = 2.*t**3. - 3*t**2. + 1.
-            h01 = -2.*t**3. + 3*t**2.
-            h10 = t**3. - 2.*t**2. + t
-            h11 = t**3. - t**2.
+            h00 = 2.*s**3. - 3*s**2. + 1.
+            h01 = -2.*s**3. + 3*s**2.
+            h10 = s**3. - 2.*s**2. + s
+            h11 = s**3. - s**2.
             # spline
             c = h00*p0 + h10*m0*epsilon + h01*p1 + h11*m1*epsilon
             vl = sp.Piecewise( ((popen - p)/Rmax, p < popen-epsilon/2), (-c, sp.And(p >= popen-epsilon/2., p < popen+epsilon/2.)), ((popen - p)/Rmin, p >= popen+epsilon/2.) )
@@ -255,6 +255,21 @@ class cardiovascular0Dbase:
             
             elif self.chmodels[ch]['type']=='0D_elast':
                 self.switch_V[i], self.switch_p[i] = 1, 0
+            
+            elif self.chmodels[ch]['type']=='0D_prescr':
+                if self.cq == 'volume':
+                    self.switch_V[i], self.switch_p[i] = 1, 0
+                    self.cname.append('V_'+chn+'')
+                elif self.cq == 'flux':
+                    self.switch_V[i], self.switch_p[i] = 0, 0
+                    self.cname.append('Q_'+chn+'')
+                elif self.cq == 'pressure':
+                    self.switch_V[i], self.switch_p[i] = 0, 1
+                    self.cname.append('p_'+chn+'')
+                    self.vname_prfx[i] = 'Q'
+                    self.si[i] = 1 # switch indices of pressure / outflux
+                else:
+                    raise NameError("Unknown coupling quantity!")
             
             elif self.chmodels[ch]['type']=='3D_solid':
                 if self.cq == 'volume':
@@ -314,8 +329,8 @@ class cardiovascular0Dbase:
                 if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
 
-        # 3D solid mechanics model
-        elif self.chmodels[ch]['type']=='3D_solid': # also for 2D FEM models
+        # 3D solid mechanics model, or 0D prescribed volume/flux/pressure (non-primary variables!)
+        elif self.chmodels[ch]['type']=='3D_solid' or self.chmodels[ch]['type']=='0D_prescr':
 
             # all "distributed" p are equal to "main" p of chamber (= pI1)
             for k in range(10): # no more than 10 distributed p's allowed
@@ -359,7 +374,7 @@ class cardiovascular0Dbase:
 
         else:
             raise NameError("Unknown chamber model for chamber %s!" % (ch))
-
+        
 
     # evaluate time-dependent state of chamber (for 0D elastance models)
     def evaluate_chamber_state(self, y, t):

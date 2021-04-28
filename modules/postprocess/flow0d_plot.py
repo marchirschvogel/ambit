@@ -28,8 +28,8 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[10])
         lastgandrcycl = int(sys.argv[11])
     except:
-        path = '/home/mh/work/fem_scripts/tests/tmp/3d0dcomp'#'/home/mh/work/sim/heart0D/'
-        sname = 'ambittest_mdvol'
+        path = '/home/mh/work/sim/lv-flow-wa/std/00/test_alelagrange/out/plot/raw_new_2'#'/home/mh/work/sim/heart0D/'
+        sname = ''
         nstep_cycl = 100
         T_cycl = 1.0
         t_ed = 0.2
