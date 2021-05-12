@@ -60,7 +60,7 @@ def main():
 
     FEM_PARAMS           = {'order_disp'            : 2, # order of displacement interpolation (solid mechanics)
                             'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
-                            'quad_degree'           : 4, # quadrature degree
+                            'quad_degree'           : 5, # quadrature degree
                             'incompressible_2field' : True} # if we want to use a 2-field functional for pressure dofs (always applies for fluid mechanics, optional for solid)
     
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)

@@ -27,9 +27,9 @@ from mpiroutines import allgather_vec
 #&-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell}\nonumber\\
 #&\tilde{R}_{\mathrm{v,out}}^{\ell} q_{\mathrm{v,out}}^{\ell} = p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
 #&C_{\mathrm{ar}}^{\mathrm{sys}} \left(\frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} - Z_{\mathrm{ar}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{v,out}}^{\ell}}{\mathrm{d}t}\right) = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
-#&L_{\mathrm{ar}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}} - Z_{\mathrm{ar}}^{\mathrm{sys}}q_{\mathrm{v,out}}^{\ell}-p_{\mathrm{ven}}^{\mathrm{sys}}\nonumber\\
+#&L_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}} - Z_{\mathrm{ar}}^{\mathrm{sys}}q_{\mathrm{v,out}}^{\ell}-p_{\mathrm{ven}}^{\mathrm{sys}}\nonumber\\
 #&C_{\mathrm{ven}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{sys}}-q_{\mathrm{ven}}^{\mathrm{sys}}\nonumber\\
-#&L_{\mathrm{ven}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{sys}} q_{\mathrm{ven}}^{\mathrm{sys}} = p_{\mathrm{ven}}^{\mathrm{sys}} - p_{\mathrm{at}}^{r}\nonumber
+#&L_{\mathrm{ven}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{sys}} q_{\mathrm{ven}}^{\mathrm{sys}} = p_{\mathrm{ven}}^{\mathrm{sys}} - p_{\mathrm{at}}^{r}\nonumber
 #\end{align}
 
 ## right heart and pulmonary circulation:
@@ -39,16 +39,16 @@ from mpiroutines import allgather_vec
 #&-Q_{\mathrm{v}}^{r} = q_{\mathrm{v,in}}^{r} - q_{\mathrm{v,out}}^{r}\nonumber\\
 #&\tilde{R}_{\mathrm{v,out}}^{r} q_{\mathrm{v,out}}^{r} = p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}\nonumber\\
 #&C_{\mathrm{ar}}^{\mathrm{pul}} \left(\frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} - Z_{\mathrm{ar}}^{\mathrm{pul}}\frac{\mathrm{d}q_{\mathrm{v,out}}^{r}}{\mathrm{d}t}\right) = q_{\mathrm{v,out}}^{r} - q_{\mathrm{ar}}^{\mathrm{pul}}\nonumber\\
-#&L_{\mathrm{ar}}^{\mathrm{pul}}\frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{pul}} q_{\mathrm{ar}}^{\mathrm{pul}}=p_{\mathrm{ar}}^{\mathrm{pul}} - Z_{\mathrm{ar}}^{\mathrm{pul}}q_{\mathrm{v,out}}^{r}-p_{\mathrm{ven}}^{\mathrm{pul}}\nonumber\\
+#&L_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{pul}} q_{\mathrm{ar}}^{\mathrm{pul}}=p_{\mathrm{ar}}^{\mathrm{pul}} - Z_{\mathrm{ar}}^{\mathrm{pul}}q_{\mathrm{v,out}}^{r}-p_{\mathrm{ven}}^{\mathrm{pul}}\nonumber\\
 #&C_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{pul}} - q_{\mathrm{ven}}^{\mathrm{pul}}\nonumber\\
-#&L_{\mathrm{ven}}^{\mathrm{pul}}\frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{pul}} q_{\mathrm{ven}}^{\mathrm{pul}}=p_{\mathrm{ven}}^{\mathrm{pul}}-p_{\mathrm{at}}^{\ell}\nonumber
+#&L_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{pul}} q_{\mathrm{ven}}^{\mathrm{pul}}=p_{\mathrm{ven}}^{\mathrm{pul}}-p_{\mathrm{at}}^{\ell}\nonumber
 #\end{align}
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
-    def __init__(self, theta, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
         # initialize base class
-        cardiovascular0Dbase.__init__(self, theta, comm=comm)
+        cardiovascular0Dbase.__init__(self, comm=comm)
 
         # parameters
         # circulatory system parameters: resistances (R), compliances (C), inertances (L), impedances (Z)
@@ -165,11 +165,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.set_solve_arrays()
 
 
-    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], y=[], a=None):
+    def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None):
         
         fnc = self.evaluate_chamber_state(y, t)
 
-        cardiovascular0Dbase.evaluate(self, x, dt, t, df, f, K, c, y, a, fnc)
+        cardiovascular0Dbase.evaluate(self, x, t, df, f, dK, K, c, y, a, fnc)
 
 
     def equation_map(self):
@@ -185,7 +185,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')
         for n in range(self.vp): p_at_l_i_.append(sp.Symbol('p_at_l_i'+str(n+1)+'_'))
-        p_at_l_o1_          = sp.Symbol('p_at_l_o1_')
+        p_at_l_o1_         = sp.Symbol('p_at_l_o1_')
         q_vout_l_          = sp.Symbol('q_vout_l_')
         p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
@@ -194,7 +194,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         for n in range(self.vs): q_ven_sys_.append(sp.Symbol('q_ven'+str(n+1)+'_sys_'))
         q_vin_r_           = sp.Symbol('q_vin_r_')
         for n in range(self.vs): p_at_r_i_.append(sp.Symbol('p_at_r_i'+str(n+1)+'_'))
-        p_at_r_o1_          = sp.Symbol('p_at_r_o1_')
+        p_at_r_o1_         = sp.Symbol('p_at_r_o1_')
         q_vout_r_          = sp.Symbol('q_vout_r_')
         p_v_r_i1_, p_v_r_o1_ = sp.Symbol('p_v_r_i1_'), sp.Symbol('p_v_r_o1_')
         p_ar_pul_          = sp.Symbol('p_ar_pul_')
@@ -275,13 +275,13 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             L_ven_pul.append(self.vp*self.L_ven_pul)
         
         # df part of rhs contribution (df - df_old)/dt
-        self.df_[0]  = VQ_at_l_ * self.switch_V[2]
-        self.df_[1]  = (self.L_vin_l/R_vin_l_) * q_vin_l_
-        self.df_[2]  = VQ_v_l_ * self.switch_V[0]
-        self.df_[3]  = (self.L_vout_l/R_vout_l_) * q_vout_l_
-        self.df_[4]  = self.C_ar_sys * (p_ar_sys_ - self.Z_ar_sys * q_vout_l_)
-        self.df_[5]  = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_
-        self.df_[6]  = self.C_ven_sys * p_ven_sys_
+        self.df_[0] = VQ_at_l_ * self.switch_V[2]
+        self.df_[1] = (self.L_vin_l/R_vin_l_) * q_vin_l_
+        self.df_[2] = VQ_v_l_ * self.switch_V[0]
+        self.df_[3] = (self.L_vout_l/R_vout_l_) * q_vout_l_
+        self.df_[4] = self.C_ar_sys * (p_ar_sys_ - self.Z_ar_sys * q_vout_l_)
+        self.df_[5] = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_
+        self.df_[6] = self.C_ven_sys * p_ven_sys_
         for n in range(self.vs):
             self.df_[7+n] = (L_ven_sys[n]/R_ven_sys[n]) * q_ven_sys_[n]
                 # -----------------------------------------------------------

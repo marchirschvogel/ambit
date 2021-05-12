@@ -44,7 +44,7 @@ def main():
 
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
-                            'quad_degree'           : 1,
+                            'quad_degree'           : 2,
                             'incompressible_2field' : True} # True, False
     
     COUPLING_PARAMS      = {'surface_ids'           : [[3]],

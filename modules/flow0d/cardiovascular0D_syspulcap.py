@@ -52,9 +52,9 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
     
-    def __init__(self, theta, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
         # initialize base class
-        cardiovascular0Dbase.__init__(self, theta, comm=comm)
+        cardiovascular0Dbase.__init__(self, comm=comm)
         
         # parameters
         # circulatory system parameters: resistances (R), compliances (C), inertances (L), impedances (Z)
@@ -211,11 +211,11 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.set_solve_arrays()
 
 
-    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], y=[], a=None):
+    def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None):
         
         fnc = self.evaluate_chamber_state(y, t)
 
-        cardiovascular0Dbase.evaluate(self, x, dt, t, df, f, K, c, y, a, fnc)
+        cardiovascular0Dbase.evaluate(self, x, t, df, f, dK, K, c, y, a, fnc)
 
     
     def equation_map(self):
@@ -231,7 +231,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')
         for n in range(self.vp): p_at_l_i_.append(sp.Symbol('p_at_l_i'+str(n+1)+'_'))
-        p_at_l_o1_          = sp.Symbol('p_at_l_o1_')
+        p_at_l_o1_         = sp.Symbol('p_at_l_o1_')
         q_vout_l_          = sp.Symbol('q_vout_l_')
         p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
@@ -256,7 +256,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         for n in range(self.vs): q_ven_sys_.append(sp.Symbol('q_ven'+str(n+1)+'_sys_'))
         q_vin_r_           = sp.Symbol('q_vin_r_')
         for n in range(self.vs): p_at_r_i_.append(sp.Symbol('p_at_r_i'+str(n+1)+'_'))
-        p_at_r_o1_          = sp.Symbol('p_at_r_o1_')
+        p_at_r_o1_         = sp.Symbol('p_at_r_o1_')
         q_vout_r_          = sp.Symbol('q_vout_r_')
         p_v_r_i1_, p_v_r_o1_ = sp.Symbol('p_v_r_i1_'), sp.Symbol('p_v_r_o1_')
         p_ar_pul_          = sp.Symbol('p_ar_pul_')
@@ -692,7 +692,7 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.t_            = sp.Symbol('t_')
         q_vin_l_           = sp.Symbol('q_vin_l_')
         for n in range(self.vp): p_at_l_i_.append(sp.Symbol('p_at_l_i'+str(n+1)+'_'))
-        p_at_l_o1_          = sp.Symbol('p_at_l_o1_')
+        p_at_l_o1_         = sp.Symbol('p_at_l_o1_')
         q_vout_l_          = sp.Symbol('q_vout_l_')
         p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
@@ -717,7 +717,7 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         for n in range(self.vs): q_ven_sys_.append(sp.Symbol('q_ven'+str(n+1)+'_sys_'))
         q_vin_r_           = sp.Symbol('q_vin_r_')
         for n in range(self.vs): p_at_r_i_.append(sp.Symbol('p_at_r_i'+str(n+1)+'_'))
-        p_at_r_o1_          = sp.Symbol('p_at_r_o1_')
+        p_at_r_o1_         = sp.Symbol('p_at_r_o1_')
         q_vout_r_          = sp.Symbol('q_vout_r_')
         p_v_r_i1_, p_v_r_o1_ = sp.Symbol('p_v_r_i1_'), sp.Symbol('p_v_r_o1_')
         p_ar_pul_          = sp.Symbol('p_ar_pul_')

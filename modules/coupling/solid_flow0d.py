@@ -171,8 +171,6 @@ class SolidmechanicsFlow0DSolver():
         self.solver_params_solid = solver_params_solid
         self.solver_params_flow0d = solver_params_flow0d
 
-        self.solve_type = self.solver_params_solid['solve_type']
-
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
         
@@ -234,9 +232,10 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.y = []
             for ch in ['lv','rv','la','ra']:
                 if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
+                if self.pb.pbf.chamber_models[ch]['type']=='0D_prescr': self.pb.pbf.c.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['prescribed_curve'])(self.pb.pbs.t_init))
 
         # initially evaluate 0D model at old state
-        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.dt, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux_old)
+        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, None, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux_old)
         
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
@@ -277,7 +276,7 @@ class SolidmechanicsFlow0DSolver():
             self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
 
             # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid)
+            self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid, self.pb.pbf.theta_ost), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid, self.pb.pbf.theta_ost)
 
             # write output
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)

@@ -905,7 +905,10 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     self.pbc.pbf.c[i] = sum(cq)*self.pbc.cq_factor[i]
 
                 # evaluate 0D model with current p and return df, f, K_ss
-                self.pbc.pbf.cardvasc0D.evaluate(s, self.pb.dt, t, self.pbc.pbf.df, self.pbc.pbf.f, self.K_ss, self.pbc.pbf.c, self.pbc.pbf.y, self.pbc.pbf.aux)
+                self.pbc.pbf.cardvasc0D.evaluate(s, t, self.pbc.pbf.df, self.pbc.pbf.f, self.pbc.pbf.dK, self.pbc.pbf.K, self.pbc.pbf.c, self.pbc.pbf.y, self.pbc.pbf.aux)
+
+                # 0D rhs vector and stiffness
+                r_s, self.K_ss = self.pbc.pbf.assemble_residual_stiffness()
 
                 # assemble 0D rhs contributions
                 self.pbc.pbf.df_old.assemble()
@@ -944,15 +947,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
 
             
-            # 0D / Lagrange multiplier coupling rhs vector
-            r_s = self.K_ss.createVecLeft()
-            
-            
             if self.pbc.coupling_type == 'monolithic_direct':
             
-                for i in range(ss,se):
-                    r_s[i] = (self.pbc.pbf.df[i]-self.pbc.pbf.df_old[i])/self.pb.dt + self.pbc.pbf.theta_ost*self.pbc.pbf.f[i] + (1.-self.pbc.pbf.theta_ost)*self.pbc.pbf.f_old[i]
-
                 # if we have prescribed variable values over time
                 if bool(self.pbc.pbf.prescribed_variables):
                     for a in self.pbc.pbf.prescribed_variables:
@@ -963,11 +959,15 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
+                r_s = self.K_ss.createVecLeft()
+
                 # Lagrange multiplier coupling residual
                 for i in range(ls,le):
                     r_s[i] = self.pbc.pbs.timefac * (self.pbc.constr[i] - s[self.pbc.pbf.cardvasc0D.v_ids[i]]) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[i] - self.pbc.pbf.s_old[self.pbc.pbf.cardvasc0D.v_ids[i]])
 
             if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
+
+                r_s = self.K_ss.createVecLeft()
 
                 val, val_old = [], []
                 for n in range(self.pbc.num_coupling_surf):
@@ -1256,22 +1256,18 @@ class solver_nonlinear_0D(solver_nonlinear):
         # Newton iteration index
         it = 0
         
-        # ownership range of dof vector
-        ss, se = s.getOwnershipRange() # same for df, df_old, f, f_old
-        
         if print_iter: self.print_nonlinear_iter(header=True)
         
         while it < self.maxiter:
             
             tes = time.time()
 
-            self.pb.cardvasc0D.evaluate(s, self.pb.dt, t, self.pb.df, self.pb.f, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
+            self.pb.cardvasc0D.evaluate(s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
             
             # 0D rhs vector
             r = self.pb.K.createVecLeft()
             
-            for i in range(ss,se):
-                r[i] = (self.pb.df[i]-self.pb.df_old[i])/self.pb.dt + self.pb.theta_ost*self.pb.f[i] + (1.-self.pb.theta_ost)*self.pb.f_old[i]
+            r, K = self.pb.assemble_residual_stiffness()
 
             # if we have prescribed variable values over time
             if bool(self.pb.prescribed_variables):
@@ -1279,15 +1275,12 @@ class solver_nonlinear_0D(solver_nonlinear):
                     varindex = self.pb.cardvasc0D.varmap[a]
                     curvenumber = self.pb.prescribed_variables[a]
                     val = self.pb.ti.timecurves(curvenumber)(t)
-                    self.pb.cardvasc0D.set_prescribed_variables(s, r, self.pb.K, val, varindex)
-
-            r.assemble()
-            self.pb.K.assemble()
+                    self.pb.cardvasc0D.set_prescribed_variables(s, r, K, val, varindex)
             
-            ds = self.pb.K.createVecLeft()
+            ds = K.createVecLeft()
             
             # solve linear system
-            self.ksp.setOperators(self.pb.K)
+            self.ksp.setOperators(K)
             
             te = time.time() - tes
             

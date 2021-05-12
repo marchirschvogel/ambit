@@ -41,7 +41,7 @@ def main():
 
     FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,
-                            'quad_degree'           : 4,
+                            'quad_degree'           : 5,
                             'incompressible_2field' : True}
 
     MATERIALS            = {'MAT1' : {'mooneyrivlin_dev'  : {'c1' : 60., 'c2' : -20.},

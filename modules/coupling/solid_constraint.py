@@ -135,8 +135,6 @@ class SolidmechanicsConstraintSolver():
         self.solver_params_solid = solver_params_solid
         self.solver_params_constr = solver_params_constr
 
-        self.solve_type = self.solver_params_solid['solve_type']
-
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_constr)
         

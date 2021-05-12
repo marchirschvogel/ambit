@@ -28,10 +28,10 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[10])
         lastgandrcycl = int(sys.argv[11])
     except:
-        path = '/home/mh/work/sim/lv-flow-wa/std/00/test_alelagrange/out/plot/raw_new_2'#'/home/mh/work/sim/heart0D/'
+        path = '/home/mh/work/mia_sim/out0d_lalv'
         sname = ''
-        nstep_cycl = 100
-        T_cycl = 1.0
+        nstep_cycl = 1000
+        T_cycl = 0.7
         t_ed = 0.2
         t_es = 0.53
         model = 'syspul' # syspul, syspulcap, syspulcapcor

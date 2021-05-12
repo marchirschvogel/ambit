@@ -68,8 +68,8 @@ class FluidmechanicsProblem(problem_base):
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
-            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 4:
-                raise ValueError("Use at least a quadrature degree of 4 or more for higher-order meshes!")
+            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 5:
+                raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
 
@@ -235,8 +235,6 @@ class FluidmechanicsSolver():
         self.pb = problem
         
         self.solver_params = solver_params
-
-        self.solve_type = self.solver_params['solve_type']
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)

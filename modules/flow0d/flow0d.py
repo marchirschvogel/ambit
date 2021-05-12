@@ -91,32 +91,35 @@ class Flow0DProblem(problem_base):
         # initialize 0D model class
         if model_params['modeltype'] == '2elwindkessel':
             from cardiovascular0D_2elwindkessel import cardiovascular0D2elwindkessel
-            self.cardvasc0D = cardiovascular0D2elwindkessel(time_params['theta_ost'], model_params['parameters'], cq=self.cq, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D2elwindkessel(model_params['parameters'], cq=self.cq, comm=self.comm)
         elif model_params['modeltype'] == '4elwindkesselLsZ':
             from cardiovascular0D_4elwindkesselLsZ import cardiovascular0D4elwindkesselLsZ
-            self.cardvasc0D = cardiovascular0D4elwindkesselLsZ(time_params['theta_ost'], model_params['parameters'], cq=self.cq, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D4elwindkesselLsZ(model_params['parameters'], cq=self.cq, comm=self.comm)
         elif model_params['modeltype'] == '4elwindkesselLpZ':
             from cardiovascular0D_4elwindkesselLpZ import cardiovascular0D4elwindkesselLpZ
-            self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(time_params['theta_ost'], model_params['parameters'], cq=self.cq, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], cq=self.cq, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
-            self.cardvasc0D = cardiovascular0Dsyspul(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-            self.cardvasc0D = cardiovascular0Dsyspulcap(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcapcor':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapcor
-            self.cardvasc0D = cardiovascular0Dsyspulcapcor(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
-            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(time_params['theta_ost'], model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         else:
             raise NameError("Unknown 0D modeltype!")
 
         # vectors and matrices
+        self.dK = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.dK.setUp()
+        
         self.K = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K.setUp()
-        
+
         self.s, self.s_old, self.s_mid = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft()
         self.sTc, self.sTc_old = self.K.createVecLeft(), self.K.createVecLeft()
         
@@ -142,6 +145,30 @@ class Flow0DProblem(problem_base):
         self.cardvasc0D.initialize(self.sTc_old, initialconditions)
 
         self.theta_ost = time_params['theta_ost']
+
+
+    def assemble_residual_stiffness(self):
+        
+        K = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K.setUp()
+        
+        # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
+        r = K.createVecLeft()
+
+        r.axpy(1./self.dt, self.df)
+        r.axpy(-1./self.dt, self.df_old)
+        
+        r.axpy(self.theta_ost, self.f)
+        r.axpy(1.-self.theta_ost, self.f_old)     
+
+        self.dK.assemble()
+        self.K.assemble()
+        K.assemble()
+
+        K.axpy(1./self.dt, self.dK)
+        K.axpy(self.theta_ost, self.K)
+
+        return r, K
 
 
     def writerestart(self, sname, N, ms=False):
@@ -232,8 +259,9 @@ class Flow0DSolver():
             self.pb.y = []
             for ch in ['lv','rv','la','ra']:
                 if self.pb.chamber_models[ch]['type']=='0D_elast': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
+                if self.pb.chamber_models[ch]['type']=='0D_prescr': self.pb.c.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['prescribed_curve'])(self.pb.t_init))
 
-        self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.dt, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, self.pb.c, self.pb.y, self.pb.aux_old)
+        self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, None, self.pb.c, self.pb.y, self.pb.aux_old)
 
 
         # flow 0d main time loop
@@ -257,7 +285,7 @@ class Flow0DSolver():
             self.solnln.newton(self.pb.s, t-t_off)
 
             # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid)
+            self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid, self.pb.theta_ost), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid, self.pb.theta_ost)
 
             # raw txt file output of 0D model quantities
             if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:

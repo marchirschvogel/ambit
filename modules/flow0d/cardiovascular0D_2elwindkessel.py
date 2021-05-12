@@ -20,9 +20,9 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
-    def __init__(self, theta, params, cq='volume', comm=None):
+    def __init__(self, params, cq='volume', comm=None):
         # initialize base class
-        cardiovascular0Dbase.__init__(self, theta, comm=comm)
+        cardiovascular0Dbase.__init__(self, comm=comm)
 
         # parameters
         self.C = params['C']

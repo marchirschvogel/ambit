@@ -38,7 +38,7 @@ def main():
 
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
-                            'quad_degree'           : 1,
+                            'quad_degree'           : 3,
                             'incompressible_2field' : False}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev'     : {'mu' : 10.},

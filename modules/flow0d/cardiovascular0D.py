@@ -18,37 +18,43 @@ from mpiroutines import allgather_vec, allgather_vec_entry
 
 class cardiovascular0Dbase:
     
-    def __init__(self, theta, init=True, comm=None):
+    def __init__(self, init=True, comm=None):
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
-        self.theta = theta # time-integration factor ]0;1]
         self.init = init # for output
         if comm is not None: self.comm = comm # MPI communicator
-    
+       
     
     # evaluate model at current nonlinear iteration
-    def evaluate(self, x, dt, t, df=None, f=None, K=None, c=[], y=[], a=None, fnc=[]):
+    def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None, fnc=[]):
         
         if isinstance(x, np.ndarray): x_sq = x
         else: x_sq = allgather_vec(x, self.comm)
 
-        # rhs part df
+        # ODE lhs (time derivative) residual part df
         if df is not None:
             
             for i in range(self.numdof):
                 df[i] = self.df__[i](x_sq, c, t, fnc)
             
-        # rhs part f
+        # ODE rhs residual part f 
         if f is not None:
             
             for i in range(self.numdof):
                 f[i] = self.f__[i](x_sq, c, t, fnc)
 
-        # stiffness matrix K
+        # ODE lhs (time derivative) stiffness part dK (ddf/dx)
+        if dK is not None:
+            
+            for i in range(self.numdof):
+                for j in range(self.numdof):
+                    dK[i,j] = self.dK__[i][j](x_sq, c, t, fnc)
+
+        # ODE rhs stiffness part K (df/dx)
         if K is not None:
             
             for i in range(self.numdof):
                 for j in range(self.numdof):
-                    K[i,j] = self.Kdf__[i][j](x_sq, c, t, fnc) / dt + self.Kf__[i][j](x_sq, c, t, fnc) * self.theta
+                    K[i,j] = self.K__[i][j](x_sq, c, t, fnc)
 
         # auxiliary variable vector a (for post-processing or periodic state check)
         if a is not None:
@@ -63,8 +69,8 @@ class cardiovascular0Dbase:
         for i in range(self.numdof):
             for j in range(self.numdof):
         
-                self.Kdf_[i][j] = sp.diff(self.df_[i],self.x_[j])
-                self.Kf_[i][j]  = sp.diff(self.f_[i],self.x_[j])
+                self.dK_[i][j] = sp.diff(self.df_[i],self.x_[j])
+                self.K_[i][j]  = sp.diff(self.f_[i],self.x_[j])
 
 
     # make Lambda functions out of symbolic Sympy expressions
@@ -77,8 +83,8 @@ class cardiovascular0Dbase:
         
         for i in range(self.numdof):
             for j in range(self.numdof):
-                self.Kdf__[i][j] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.Kdf_[i][j], 'numpy')
-                self.Kf__[i][j] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.Kf_[i][j], 'numpy')
+                self.dK__[i][j] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.dK_[i][j], 'numpy')
+                self.K__[i][j] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.K_[i][j], 'numpy')
 
 
     # set prescribed variable values
@@ -178,13 +184,13 @@ class cardiovascular0Dbase:
 
 
     # midpoint-averaging of state variables (for post-processing)
-    def midpoint_avg(self, var, var_old, var_mid):
+    def midpoint_avg(self, var, var_old, var_mid, theta):
         
         if isinstance(var, np.ndarray): vs, ve = 0, len(var)
         else: vs, ve = var.getOwnershipRange()
 
         for i in range(vs,ve):
-            var_mid[i] = self.theta*var[i] + (1.-self.theta)*var_old[i]
+            var_mid[i] = theta*var[i] + (1.-theta)*var_old[i]
 
 
     # set up the dof, coupling quantity, rhs, and stiffness arrays
@@ -194,8 +200,8 @@ class cardiovascular0Dbase:
         self.c_, self.fnc_ = [], []
         
         self.df_, self.f_, self.df__, self.f__ = [0]*self.numdof, [0]*self.numdof, [0]*self.numdof, [0]*self.numdof
-        self.Kdf_,  self.Kf_  = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
-        self.Kdf__, self.Kf__ = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
+        self.dK_,  self.K_  = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
+        self.dK__, self.K__ = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
 
 
     # prescribed elastance model 

@@ -68,7 +68,7 @@ def main():
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspul_veins, syspulcap, syspulcapcor_veins
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
-                            'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_fluid', 'num_inflows' : 1, , 'num_outflows' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 5}}, # only for syspul* models - 3D_solid, 3D_fluid: chamber is 3D solid or fluid mechanics model, 0D_elast: chamber is 0D elastance model, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
+                            'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_fluid', 'num_inflows' : 1, , 'num_outflows' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_prescr', 'prescribed_curve' : 5}}, # only for syspul* models - 3D_solid, 3D_fluid: chamber is 3D solid or fluid mechanics model, 0D_elast: chamber is 0D elastance model, 0D_prescr: volume/flux is prescribed over time, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
                             'perturb_type'          : None, # OPTIONAL: ['mr',1.0e-6], ['ms',25.], ['ar',5.0e-6], ['as',50.], ['mi',0.,4] (default: None)
                             'perturb_after_cylce'   : 1, # OPTIONAL: after which cycle to induce the perturbation / disease / cardiovascular state change... (default: -1)
@@ -78,7 +78,7 @@ def main():
     FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid mechanics)
                             'order_vel'             : 1, # order of velocity interpolation (fluid mechanics)
                             'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
-                            'quad_degree'           : 1, # quadrature degree q (number of integration points: n(q) = ((q+2)//2)**dim) --> can be 1 for linear tets, should be >= 3 for linear hexes, should be >= 4 for quadratic tets/hexes
+                            'quad_degree'           : 1, # quadrature degree q (number of integration points: n(q) = ((q+2)//2)**dim) --> can be 1 for linear tets, should be >= 3 for linear hexes, should be >= 5 for quadratic tets/hexes
                             'incompressible_2field' : False, # if we want to use a 2-field functional for pressure dofs (always applies for fluid, optional for solid mechanics)
                             'prestress_initial'     : False} # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
     
