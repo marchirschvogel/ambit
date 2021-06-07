@@ -65,7 +65,7 @@ def main():
     
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'cq_factor'             : [80.,80.],
-                            'coupling_quantity'     : 'volume',
+                            'coupling_quantity'     : ['volume','volume'],
                             'coupling_type'         : 'monolithic_direct'}
 
     MATERIALS            = {'MAT1' : {'holzapfelogden_dev'    : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436},

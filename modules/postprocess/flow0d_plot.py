@@ -28,7 +28,7 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[10])
         lastgandrcycl = int(sys.argv[11])
     except:
-        path = '/home/mh/work/mia_sim/out0d_lalv'
+        path = '/home/mh/Downloads/data_javi/out'
         sname = ''
         nstep_cycl = 1000
         T_cycl = 0.7
@@ -36,7 +36,7 @@ def main():
         t_es = 0.53
         model = 'syspul' # syspul, syspulcap, syspulcapcor
         indpertaftercyl = -1
-        calc_func_params = True
+        calc_func_params = False
         multiscalegandr = False
         lastgandrcycl = 2
     
@@ -112,9 +112,6 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         # get the data and check its length
         tmp = np.loadtxt(''+path+'/results_'+sname+'_q_ar_sys.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
-        # number of heart cycles
-        n_cycl = int(numdata/nstep_cycl)
-        t_off = tmp[0]-T_cycl/nstep_cycl
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
         for i, ch in enumerate(['v_l','v_r','at_l','at_r']):
@@ -235,6 +232,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         
         # function parameters of left and right ventricle
         if calculate_function_params:
+        
+            # number of heart cycles
+            n_cycl = int(numdata/nstep_cycl)
+            t_off = tmp[0]-T_cycl/nstep_cycl
         
             sw, sv, co, ef, edv, esv, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], []
             for ch in ['v_l','v_r']:

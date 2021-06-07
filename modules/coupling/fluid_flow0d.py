@@ -88,10 +88,10 @@ class FluidmechanicsFlow0DProblem():
 
                 ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
           
-                if self.coupling_params['coupling_quantity'] == 'flux':
+                if self.coupling_params['coupling_quantity'][n] == 'flux':
                     assert(self.coupling_type == 'monolithic_direct')
                     cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
-                elif self.coupling_params['coupling_quantity'] == 'pressure':
+                elif self.coupling_params['coupling_quantity'][n] == 'pressure':
                     assert(self.coupling_type == 'monolithic_lagrange')
                     cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
                 else:
@@ -194,6 +194,7 @@ class FluidmechanicsFlow0DSolver():
             self.pb.pbf.y = []
             for ch in ['lv','rv','la','ra']:
                 if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
+                if self.pb.pbf.chamber_models[ch]['type']=='0D_elast_prescr': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['elastance_curve'])(self.pb.pbs.t_init))
                 if self.pb.pbf.chamber_models[ch]['type']=='0D_prescr': self.pb.pbf.c.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['prescribed_curve'])(self.pb.pbs.t_init))
 
         # initially evaluate 0D model at old state

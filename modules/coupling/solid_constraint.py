@@ -82,10 +82,10 @@ class SolidmechanicsConstraintProblem():
                 ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_c_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 
                 # currently, only volume or flux constraints are supported
-                if self.coupling_params['constraint_quantity'] == 'volume':
+                if self.coupling_params['constraint_quantity'][n] == 'volume':
                     cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_vq)
                     cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
-                elif self.coupling_params['constraint_quantity'] == 'flux':
+                elif self.coupling_params['constraint_quantity'][n] == 'flux':
                     cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_vq)
                     cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
                 else:

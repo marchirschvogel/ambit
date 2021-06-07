@@ -40,7 +40,7 @@ def main():
                             'incompressible_2field' : True} # True, False
     
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[3]],
-                            'constraint_quantity'   : 'volume',
+                            'constraint_quantity'   : ['volume'],
                             'prescribed_curve'      : [1]}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100.}, 'inertia' : {'rho0' : 1.0e-6}}}

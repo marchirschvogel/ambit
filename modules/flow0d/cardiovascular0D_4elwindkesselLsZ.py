@@ -27,7 +27,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
-    def __init__(self, params, cq='volume', comm=None):
+    def __init__(self, params, cq=['volume'], comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
         
@@ -49,9 +49,9 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         self.v_ids = [0]
         self.c_ids = [1]
 
-        if self.cq == 'volume':
+        if self.cq[0] == 'volume':
             pass # 'volume' is default
-        elif self.cq == 'flux':
+        elif self.cq[0] == 'flux':
             self.switch_V, self.switch_Q = 0, 1
             self.cname  = 'Q'
         else:

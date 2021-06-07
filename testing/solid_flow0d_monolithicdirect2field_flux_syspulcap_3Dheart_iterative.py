@@ -65,7 +65,7 @@ def main():
     
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
                             'surface_p_ids'         : [[1],[2]],
-                            'coupling_quantity'     : 'flux', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
+                            'coupling_quantity'     : ['flux','flux'], # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange
 
                             # see solid_material.py or fluid_material.py for material laws available (and their parameters)

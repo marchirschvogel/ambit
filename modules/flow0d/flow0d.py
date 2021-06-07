@@ -35,9 +35,6 @@ class Flow0DProblem(problem_base):
         
         try: self.excitation_curve = model_params['excitation_curve']
         except: self.excitation_curve = None
-        
-        try: prescribed_path = io_params['prescribed_path']
-        except: prescribed_path = None
 
         try: initial_file = time_params['initial_file']
         except: initial_file = ''
@@ -54,14 +51,11 @@ class Flow0DProblem(problem_base):
         try: self.output_path_0D = io_params['output_path_0D']
         except: self.output_path_0D = io_params['output_path']
         
-        try: have_elastance = model_params['have_elastance']
-        except: have_elastance = False
-        
         try: valvelaws = model_params['valvelaws']
         except: valvelaws = {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}
 
         try: self.cq = coupling_params['coupling_quantity']
-        except: self.cq = 'volume'
+        except: self.cq = ['volume']
         
         try: self.eps_periodic = time_params['eps_periodic']
         except: self.eps_periodic = 1.0e-20
@@ -100,16 +94,16 @@ class Flow0DProblem(problem_base):
             self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], cq=self.cq, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
-            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcapcor':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapcor
-            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
-            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], chmodels=self.chamber_models, prescrpath=prescribed_path, have_elast=have_elastance, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, valvelaws=valvelaws, comm=self.comm)
         else:
             raise NameError("Unknown 0D modeltype!")
 
@@ -210,6 +204,9 @@ class Flow0DProblem(problem_base):
                 if self.chamber_models[ch]['type']=='0D_elast': 
                     self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(t)
                     ci+=1
+                if self.chamber_models[ch]['type']=='0D_elast_prescr': 
+                    self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(t)
+                    ci+=1
 
 
     def induce_perturbation(self):
@@ -259,6 +256,7 @@ class Flow0DSolver():
             self.pb.y = []
             for ch in ['lv','rv','la','ra']:
                 if self.pb.chamber_models[ch]['type']=='0D_elast': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
+                if self.pb.chamber_models[ch]['type']=='0D_elast_prescr': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['elastance_curve'])(self.pb.t_init))
                 if self.pb.chamber_models[ch]['type']=='0D_prescr': self.pb.c.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['prescribed_curve'])(self.pb.t_init))
 
         self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, None, self.pb.c, self.pb.y, self.pb.aux_old)

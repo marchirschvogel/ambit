@@ -46,7 +46,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
-    def __init__(self, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, cq=['volume','volume','volume','volume'], valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
 
@@ -116,9 +116,6 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         
         self.chmodels = chmodels
         self.valvelaws = valvelaws
-
-        self.prescrpath = prescrpath
-        self.have_elast = have_elast
         
         # number of systemic venous inflows (to right atrium)
         try: self.vs = self.chmodels['ra']['num_inflows']
@@ -323,10 +320,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         nc = len(self.c_)
         self.auxmap={}
         for i in range(nc): self.auxmap[self.cname[i]] = i
-        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='0D_prescr' or self.chmodels['lv']['type']=='prescr_elast': self.auxmap['V_v_l'] = nc+0
-        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='0D_prescr' or self.chmodels['rv']['type']=='prescr_elast': self.auxmap['V_v_r'] = nc+1
-        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='0D_prescr' or self.chmodels['la']['type']=='prescr_elast': self.auxmap['V_at_l'] = nc+2
-        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='0D_prescr' or self.chmodels['ra']['type']=='prescr_elast': self.auxmap['V_at_r'] = nc+3
+        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='0D_prescr' or self.chmodels['lv']['type']=='0D_elast_prescr': self.auxmap['V_v_l'] = nc+0
+        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='0D_prescr' or self.chmodels['rv']['type']=='0D_elast_prescr': self.auxmap['V_v_r'] = nc+1
+        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='0D_prescr' or self.chmodels['la']['type']=='0D_elast_prescr': self.auxmap['V_at_l'] = nc+2
+        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='0D_prescr' or self.chmodels['ra']['type']=='0D_elast_prescr': self.auxmap['V_at_r'] = nc+3
         self.auxmap['V_ar_sys'] = nc+4
         self.auxmap['V_ven_sys'] = nc+5
         self.auxmap['V_ar_pul'] = nc+6

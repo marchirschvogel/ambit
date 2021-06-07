@@ -70,7 +70,7 @@ def main():
                             'lin_remodeling_full'   : False}
     
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
-                            'coupling_quantity'     : 'volume',
+                            'coupling_quantity'     : ['volume','volume'],
                             'coupling_type'         : 'monolithic_direct'}
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_systole', # end_diastole, end_systole

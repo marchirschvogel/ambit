@@ -19,7 +19,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
     
-    def __init__(self, params, chmodels, prescrpath=None, have_elast=False, cq='volume', valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, cq=['volume','volume','volume','volume'], valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
 
         self.R_airw = params['R_airw']
         self.L_alv = params['L_alv']
@@ -71,7 +71,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.V_tisscor = params['V_tisscor']
 
         # initialize base class
-        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, prescrpath, have_elast, cq, valvelaws, comm=comm)
+        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cq, valvelaws, comm=comm)
 
 
     def setup_arrays(self):
@@ -87,7 +87,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.vname_prfx, self.cname_prfx = ['p']*4, []
         
         self.set_solve_arrays()
-
 
 
     def equation_map(self):

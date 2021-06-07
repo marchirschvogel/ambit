@@ -20,8 +20,7 @@ def main():
     IO_PARAMS         = {'problem_type'          : 'flow0d',
                          'write_results_every'   : -999,
                          'output_path'           : ''+basepath+'/tmp/',
-                         'simname'               : 'test',
-                         'prescribed_path'       : ''+str(basepath)+'/input'}
+                         'simname'               : 'test'}
 
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-7,
                          'tol_inc'               : 1.0e-7}
@@ -36,16 +35,55 @@ def main():
     
     MODEL_PARAMS      = {'modeltype'             : 'syspulcaprespir',
                          'parameters'            : param(),
-                         'chamber_models'        : {'lv' : {'type' : 'prescr_elast'}, 'rv' : {'type' : 'prescr_elast'}, 'la' : {'type' : 'prescr_elast'}, 'ra' : {'type' : 'prescr_elast'}},
-                         'have_elastance'        : True}
+                         'chamber_models'        : {'lv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 1}, 'rv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 2}, 'la' : {'type' : '0D_elast_prescr', 'elastance_curve' : 3}, 'ra' : {'type' : '0D_elast_prescr', 'elastance_curve' : 4}}}
     
 
     # define your time curves here (syntax: tcX refers to curve X)
-    # None to be defined
+    class time_curves():
+
+        def tc1(self, t):
+            
+            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_lv.txt', skiprows=0)
+
+            equidist_time_array = np.zeros(len(elastinterp))
+            for i in range(len(equidist_time_array)):
+                equidist_time_array[i] = (i+1)/len(equidist_time_array)
+                
+            return np.interp(t, equidist_time_array, elastinterp)
+
+        def tc2(self, t):
+            
+            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_rv.txt', skiprows=0)
+
+            equidist_time_array = np.zeros(len(elastinterp))
+            for i in range(len(equidist_time_array)):
+                equidist_time_array[i] = (i+1)/len(equidist_time_array)
+                
+            return np.interp(t, equidist_time_array, elastinterp)
+
+        def tc3(self, t):
+            
+            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_la.txt', skiprows=0)
+
+            equidist_time_array = np.zeros(len(elastinterp))
+            for i in range(len(equidist_time_array)):
+                equidist_time_array[i] = (i+1)/len(equidist_time_array)
+                
+            return np.interp(t, equidist_time_array, elastinterp)
+
+        def tc4(self, t):
+            
+            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_ra.txt', skiprows=0)
+
+            equidist_time_array = np.zeros(len(elastinterp))
+            for i in range(len(equidist_time_array)):
+                equidist_time_array[i] = (i+1)/len(equidist_time_array)
+                
+            return np.interp(t, equidist_time_array, elastinterp)
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
     
     # solve time-dependent problem
     problem.solve_problem()

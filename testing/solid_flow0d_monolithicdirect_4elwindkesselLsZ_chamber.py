@@ -48,7 +48,7 @@ def main():
                             'incompressible_2field' : False} # True, False
     
     COUPLING_PARAMS      = {'surface_ids'           : [[3]],
-                            'coupling_quantity'     : 'volume',
+                            'coupling_quantity'     : ['volume'],
                             'coupling_type'         : 'monolithic_direct'}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100.}, 'ogden_vol' : {'kappa' : 100./(1.-2.*0.49)}, 'inertia' : {'rho0' : 1.0e-6}}}

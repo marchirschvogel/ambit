@@ -90,9 +90,9 @@ def main():
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
     # for solid_constraint problem type
-    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint
-                            'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
-                            'constraint_quantity'   : 'volume', # volume, flux
+    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint (for syspul* models: order is lv, rv, la, ra)
+                            'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids) (for syspul* models: order is lv, rv, la, ra)
+                            'constraint_quantity'   : ['volume','volume'], # volume, flux, pressure (for syspul* models: order is lv, rv, la, ra) (default: volume) 
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
     # for solid_flow0d_multiscale_gandr problem type

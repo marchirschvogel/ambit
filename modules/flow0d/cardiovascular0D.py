@@ -204,11 +204,6 @@ class cardiovascular0Dbase:
         self.dK__, self.K__ = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
 
 
-    # prescribed elastance model 
-    def E_p(self, erray, tarray, t):
-
-        return np.interp(t, tarray, erray)
-
 
     # set valve q(p) relationship
     def valvelaw(self, p, popen, Rmin, Rmax, vtype, topen, tclose, epsilon):
@@ -255,21 +250,17 @@ class cardiovascular0Dbase:
             if ch == 'la': chn = 'at_l'
             if ch == 'ra': chn = 'at_r'
             
-            if self.chmodels[ch]['type']=='prescr_elast':
-                self.switch_V[i], self.switch_p[i] = 1, 0
-                self.elastarrays[i], self.eqtimearray = self.set_prescribed_elastance(ch)
-            
-            elif self.chmodels[ch]['type']=='0D_elast':
+            if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i], self.switch_p[i] = 1, 0
             
             elif self.chmodels[ch]['type']=='0D_prescr':
-                if self.cq == 'volume':
+                if self.cq[i] == 'volume':
                     self.switch_V[i], self.switch_p[i] = 1, 0
                     self.cname.append('V_'+chn+'')
-                elif self.cq == 'flux':
+                elif self.cq[i] == 'flux':
                     self.switch_V[i], self.switch_p[i] = 0, 0
                     self.cname.append('Q_'+chn+'')
-                elif self.cq == 'pressure':
+                elif self.cq[i] == 'pressure':
                     self.switch_V[i], self.switch_p[i] = 0, 1
                     self.cname.append('p_'+chn+'')
                     self.vname_prfx[i] = 'Q'
@@ -278,17 +269,17 @@ class cardiovascular0Dbase:
                     raise NameError("Unknown coupling quantity!")
             
             elif self.chmodels[ch]['type']=='3D_solid':
-                if self.cq == 'volume':
+                if self.cq[i] == 'volume':
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
                     self.cname.append('V_'+chn+'')
-                elif self.cq == 'flux':
+                elif self.cq[i] == 'flux':
                     self.switch_V[i], self.switch_p[i] = 0, 0
                     self.cname.append('Q_'+chn+'')
                     self.vname_prfx[i] = 'p'
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
-                elif self.cq == 'pressure':
+                elif self.cq[i] == 'pressure':
                     self.switch_V[i], self.switch_p[i] = 0, 1
                     self.cname.append('p_'+chn+'')
                     self.vname_prfx[i] = 'Q'
@@ -299,7 +290,7 @@ class cardiovascular0Dbase:
             
             # Heart models and 3D fluid currently only working with Cheart!
             elif self.chmodels[ch]['type']=='3D_fluid':
-                assert(self.cq == 'pressure')
+                assert(self.cq[i] == 'pressure')
                 self.switch_V[i], self.switch_p[i] = 0, 1
                 self.vname_prfx[i] = 'Q'
                 self.si[i] = 1 # switch indices of pressure / outflux
@@ -326,7 +317,7 @@ class cardiovascular0Dbase:
         num_pdist = len(chvars)-1
 
         # time-varying elastances
-        if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='prescr_elast':
+        if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
             chvars['vq'] = chvars['pi1']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
             self.fnc_.append(chfncs[0])
             
@@ -343,16 +334,16 @@ class cardiovascular0Dbase:
                 if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
 
-            if self.cq == 'volume' or self.cq == 'flux':
+            if self.cq[i] == 'volume' or self.cq[i] == 'flux':
                 self.c_.append(chvars['vq']) # V or Q
-            if self.cq == 'pressure':
+            if self.cq[i] == 'pressure':
                 self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
                 self.c_.append(chvars['pi1'])
 
         # 3D fluid mechanics model
         elif self.chmodels[ch]['type']=='3D_fluid': # also for 2D FEM models
 
-            assert(self.cq == 'pressure')
+            assert(self.cq[i] == 'pressure')
 
             self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q of chamber is now variable
 
@@ -404,11 +395,13 @@ class cardiovascular0Dbase:
                 
                 ci+=1
 
-            elif self.chmodels[ch]['type']=='prescr_elast':
+            elif self.chmodels[ch]['type']=='0D_elast_prescr':
                 
-                E_ch_t = self.E_p(self.elastarrays[i], self.eqtimearray, t)
+                E_ch_t = y[ci]
                 
                 chamber_funcs.append(E_ch_t)
+                
+                ci+=1
                 
             else:
                 
@@ -433,63 +426,6 @@ class cardiovascular0Dbase:
                 if ch=='ra':
                     if 'p_at_r_0' in iniparam.keys(): var[i] = iniparam['p_at_r_0']
                 
-
-    # set prescribed elastances (if we have p and V of a chamber over time i.e. from another simulation or measurements,
-    # we set p_hat = p, V_hat = V and define the chamber's elastance as E = p_hat/V_hat)
-    def set_prescribed_elastance(self, ch):
-        
-        if not self.have_elast:
-            
-            tmp = np.loadtxt(''+self.prescrpath+'/out/plot/raw/V_'+ch+'.txt')
-            numdata = len(tmp)
-            
-            data = np.loadtxt(''+self.prescrpath+'/out/data_integral.txt', usecols=1)
-            # cycle, no of steps per cycle and number of cycles (to reach periodicity) from data to be prescribed
-            T_cycl_from_prescr = int(data[0])
-            nstep_from_prescr = int(data[1])
-            n_cycl_from_prescr = int(numdata/nstep_from_prescr)
-
-            # computed chamber volumes for the cycle we want to prescribe
-            vol_comp = np.loadtxt(''+self.prescrpath+'/out/plot/raw/V_'+ch+'.txt', skiprows=numdata-nstep_from_prescr, usecols=1)
-
-            # computed chamber pressures for the cycle we want to prescribe
-            pres_comp = np.loadtxt(''+self.prescrpath+'/out/plot/raw/p_'+ch+'.txt', skiprows=numdata-nstep_from_prescr, usecols=1)
-
-            if ch == 'lv': V_unstressed = self.V_v_l_u
-            if ch == 'rv': V_unstressed = self.V_v_r_u
-            if ch == 'la': V_unstressed = self.V_at_l_u
-            if ch == 'ra': V_unstressed = self.V_at_r_u
-
-            # elastance wanted
-            elast_array=np.zeros(len(vol_comp))
-            for b in range(len(vol_comp)):
-                elast_array[b] = pres_comp[b]/(vol_comp[b]-V_unstressed)
-            
-            # we have to interpolate the prescribed data onto an equidistant time array - in case the data had variable time steps!
-            timedata_from_to_be_prescr = np.loadtxt(''+self.prescrpath+'/out/plot/raw/V_'+ch+'.txt', skiprows=numdata-nstep_from_prescr, usecols=0)
-            
-            # subtract time offset to have an array starting at t=0
-            for b in range(len(timedata_from_to_be_prescr)):
-                timedata_from_to_be_prescr[b] -= (n_cycl_from_prescr-1) * T_cycl_from_prescr
-            
-            # build an equidistant time array
-            equidist_time_array = np.zeros(len(timedata_from_to_be_prescr))
-            for b in range(len(timedata_from_to_be_prescr)):
-                equidist_time_array[b] = (b+1)*self.T_cycl/len(timedata_from_to_be_prescr)
-
-            # interpolate the data to the equidistant array
-            elastinterp = np.interp(equidist_time_array, timedata_from_to_be_prescr, elast_array)
-            
-        else:
-            
-            elastinterp = np.loadtxt(''+self.prescrpath+'/elastances_'+ch+'.txt', skiprows=0)
-
-            equidist_time_array = np.zeros(len(elastinterp))
-            for i in range(len(equidist_time_array)):
-                equidist_time_array[i] = (i+1)/len(equidist_time_array)
-            
-        return elastinterp, equidist_time_array
-
 
     # output routine for 0D models
     def write_output(self, path, t, var, aux, nm=''):

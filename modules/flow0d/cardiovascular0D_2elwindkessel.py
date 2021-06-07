@@ -20,7 +20,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
-    def __init__(self, params, cq='volume', comm=None):
+    def __init__(self, params, cq=['volume'], comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
 
@@ -37,13 +37,13 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         self.v_ids = [0]
         self.c_ids = [0]
         
-        if self.cq == 'volume':
+        if self.cq[0] == 'volume':
             pass # 'volume' is default
-        elif self.cq == 'flux':
+        elif self.cq[0] == 'flux':
             self.switch_V, self.switch_p = 0, 0
             self.cname = 'Q'
             self.vname = 'p'
-        elif self.cq == 'pressure':
+        elif self.cq[0] == 'pressure':
             self.switch_V, self.switch_p = 0, 1
             self.cname = 'p'
             self.vname = 'Q'
@@ -84,7 +84,7 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         self.x_[0] = p_
         # coupling variables
         self.c_.append(VQ_)
-        if self.cq == 'pressure': # switch Q <--> p for pressure coupling
+        if self.cq[0] == 'pressure': # switch Q <--> p for pressure coupling
             self.x_[0] = VQ_
             self.c_[0] = p_
 

@@ -998,17 +998,19 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             for i in range(len(col_ids)):
                 k_us_cols.append(assemble_vector(self.pbc.dforce[i])) # already multiplied by time-integration factor
         
-            if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
-                # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
-                if self.pbc.pbf.cq == 'volume':   timefac = 1./self.pb.dt
-                if self.pbc.pbf.cq == 'flux':     timefac = -self.pbc.pbf.theta_ost # 0D model time-integration factor
-                if self.pbc.pbf.cq == 'pressure': timefac = self.pbc.pbs.timefac # 3D solid/fluid time-integration factor
-
-            if self.ptype == 'solid_constraint': timefac = self.pbc.pbs.timefac # 3D solid time-integration factor
 
             # offdiagonal s-u rows
             k_su_rows=[]
             for i in range(len(row_ids)):
+                
+                if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
+                    # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
+                    if self.pbc.pbf.cq[i] == 'volume':   timefac = 1./self.pb.dt
+                    if self.pbc.pbf.cq[i] == 'flux':     timefac = -self.pbc.pbf.theta_ost # 0D model time-integration factor
+                    if self.pbc.pbf.cq[i] == 'pressure': timefac = self.pbc.pbs.timefac # 3D solid/fluid time-integration factor
+
+                if self.ptype == 'solid_constraint': timefac = self.pbc.pbs.timefac # 3D solid time-integration factor
+                
                 k_su_rows.append(assemble_vector((timefac*self.pbc.cq_factor[i])*self.pbc.dcq[i]))
 
             # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
