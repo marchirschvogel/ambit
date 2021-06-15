@@ -436,10 +436,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         nc = len(self.c_)
         self.auxmap={}
         for i in range(nc): self.auxmap[self.cname[i]] = i
-        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='0D_prescr' or self.chmodels['lv']['type']=='0D_elast_prescr': self.auxmap['V_v_l'] = nc+0
-        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='0D_prescr' or self.chmodels['rv']['type']=='0D_elast_prescr': self.auxmap['V_v_r'] = nc+1
-        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='0D_prescr' or self.chmodels['la']['type']=='0D_elast_prescr': self.auxmap['V_at_l'] = nc+2
-        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='0D_prescr' or self.chmodels['ra']['type']=='0D_elast_prescr': self.auxmap['V_at_r'] = nc+3
+        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='prescribed' or self.chmodels['lv']['type']=='0D_elast_prescr': self.auxmap['V_v_l'] = nc+0
+        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='prescribed' or self.chmodels['rv']['type']=='0D_elast_prescr': self.auxmap['V_v_r'] = nc+1
+        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='prescribed' or self.chmodels['la']['type']=='0D_elast_prescr': self.auxmap['V_at_l'] = nc+2
+        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='prescribed' or self.chmodels['ra']['type']=='0D_elast_prescr': self.auxmap['V_at_r'] = nc+3
         self.auxmap['V_ar_sys'] = nc+4
         self.auxmap['V_arperi_sys'] = nc+5
         self.auxmap['V_venspl_sys'] = nc+6
@@ -898,10 +898,10 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         nc = len(self.c_)
         self.auxmap={}
         for i in range(nc): self.auxmap[self.cname[i]] = i
-        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='0D_prescr' or self.chmodels['lv']['type']=='0D_elast_prescr': self.auxmap['V_v_l'] = nc+0
-        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='0D_prescr' or self.chmodels['rv']['type']=='0D_elast_prescr': self.auxmap['V_v_r'] = nc+1
-        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='0D_prescr' or self.chmodels['la']['type']=='0D_elast_prescr': self.auxmap['V_at_l'] = nc+2
-        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='0D_prescr' or self.chmodels['ra']['type']=='0D_elast_prescr': self.auxmap['V_at_r'] = nc+3
+        if self.chmodels['lv']['type']=='0D_elast' or self.chmodels['lv']['type']=='prescribed' or self.chmodels['lv']['type']=='0D_elast_prescr': self.auxmap['V_v_l'] = nc+0
+        if self.chmodels['rv']['type']=='0D_elast' or self.chmodels['rv']['type']=='prescribed' or self.chmodels['rv']['type']=='0D_elast_prescr': self.auxmap['V_v_r'] = nc+1
+        if self.chmodels['la']['type']=='0D_elast' or self.chmodels['la']['type']=='prescribed' or self.chmodels['la']['type']=='0D_elast_prescr': self.auxmap['V_at_l'] = nc+2
+        if self.chmodels['ra']['type']=='0D_elast' or self.chmodels['ra']['type']=='prescribed' or self.chmodels['ra']['type']=='0D_elast_prescr': self.auxmap['V_at_r'] = nc+3
         self.auxmap['V_ar_arcor_sys'] = nc+4
         self.auxmap['V_arperi_sys'] = nc+5
         self.auxmap['V_venspl_sys'] = nc+6

@@ -253,18 +253,13 @@ class cardiovascular0Dbase:
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i], self.switch_p[i] = 1, 0
             
-            elif self.chmodels[ch]['type']=='0D_prescr':
+            elif self.chmodels[ch]['type']=='prescribed':
                 if self.cq[i] == 'volume':
                     self.switch_V[i], self.switch_p[i] = 1, 0
                     self.cname.append('V_'+chn+'')
                 elif self.cq[i] == 'flux':
                     self.switch_V[i], self.switch_p[i] = 0, 0
                     self.cname.append('Q_'+chn+'')
-                elif self.cq[i] == 'pressure':
-                    self.switch_V[i], self.switch_p[i] = 0, 1
-                    self.cname.append('p_'+chn+'')
-                    self.vname_prfx[i] = 'Q'
-                    self.si[i] = 1 # switch indices of pressure / outflux
                 else:
                     raise NameError("Unknown coupling quantity!")
             
@@ -327,7 +322,7 @@ class cardiovascular0Dbase:
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
 
         # 3D solid mechanics model, or 0D prescribed volume/flux/pressure (non-primary variables!)
-        elif self.chmodels[ch]['type']=='3D_solid' or self.chmodels[ch]['type']=='0D_prescr':
+        elif self.chmodels[ch]['type']=='3D_solid' or self.chmodels[ch]['type']=='prescribed':
 
             # all "distributed" p are equal to "main" p of chamber (= pI1)
             for k in range(10): # no more than 10 distributed p's allowed

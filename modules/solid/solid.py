@@ -87,13 +87,23 @@ class SolidmechanicsProblem(problem_base):
             raise NameError("Unknown cell/element type!")
         
         # create finite element objects for u and p
-        self.P_u = VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        self.P_p = FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        P_u = VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+        P_p = FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
         # function spaces for u and p
-        self.V_u = FunctionSpace(self.io.mesh, self.P_u)
-        self.V_p = FunctionSpace(self.io.mesh, self.P_p)
+        self.V_u = FunctionSpace(self.io.mesh, P_u)
+        self.V_p = FunctionSpace(self.io.mesh, P_p)
 
-        # a discontinuous tensor, vector, and scalar function space
+        # Quadrature tensor, vector, and scalar elements
+        Q_tensor = TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
+        Q_vector = VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
+        Q_scalar = FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
+
+        # not yet working - we cannot interpolate into Quadrature elements with the current dolfinx version currently!
+        #self.Vd_tensor = FunctionSpace(self.io.mesh, Q_tensor)
+        #self.Vd_vector = FunctionSpace(self.io.mesh, Q_vector)
+        #self.Vd_scalar = FunctionSpace(self.io.mesh, Q_scalar)
+
+        # Quadrature function spaces (currently not properly functioning for higher-order meshes!!!)
         self.Vd_tensor = TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
         self.Vd_vector = VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
         self.Vd_scalar = FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
