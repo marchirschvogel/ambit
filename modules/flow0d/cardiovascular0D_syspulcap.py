@@ -333,10 +333,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
 
 
         # set valve laws - resistive part of q(p) relationship of momentum equation
-        vl_mv_, R_vin_l_  = self.valvelaw(p_at_l_o1_,p_v_l_i1_,self.R_vin_l_min,self.R_vin_l_max,self.valvelaws['mv'][0],self.t_es,self.t_ed,self.valvelaws['mv'][1])
-        vl_av_, R_vout_l_ = self.valvelaw(p_v_l_o1_,p_ar_sys_,self.R_vout_l_min,self.R_vout_l_max,self.valvelaws['av'][0],self.t_ed,self.t_es,self.valvelaws['av'][1])
-        vl_tv_, R_vin_r_  = self.valvelaw(p_at_r_o1_,p_v_r_i1_,self.R_vin_r_min,self.R_vin_r_max,self.valvelaws['tv'][0],self.t_es,self.t_ed,self.valvelaws['tv'][1])
-        vl_pv_, R_vout_r_ = self.valvelaw(p_v_r_o1_,p_ar_pul_,self.R_vout_r_min,self.R_vout_r_max,self.valvelaws['pv'][0],self.t_ed,self.t_es,self.valvelaws['pv'][1])
+        vl_mv_, R_vin_l_  = self.valvelaw(p_at_l_o1_,p_v_l_i1_,self.R_vin_l_min,self.R_vin_l_max,self.valvelaws['mv'],self.t_es,self.t_ed)
+        vl_av_, R_vout_l_ = self.valvelaw(p_v_l_o1_,p_ar_sys_,self.R_vout_l_min,self.R_vout_l_max,self.valvelaws['av'],self.t_ed,self.t_es)
+        vl_tv_, R_vin_r_  = self.valvelaw(p_at_r_o1_,p_v_r_i1_,self.R_vin_r_min,self.R_vin_r_max,self.valvelaws['tv'],self.t_es,self.t_ed)
+        vl_pv_, R_vout_r_ = self.valvelaw(p_v_r_o1_,p_ar_pul_,self.R_vout_r_min,self.R_vout_r_max,self.valvelaws['pv'],self.t_ed,self.t_es)
 
         # parallel venous resistances and inertances:
         # assume that the total venous resistance/inertance distributes equally over all systemic / pulmonary veins that enter the right / left atrium

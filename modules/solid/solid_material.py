@@ -80,7 +80,7 @@ class materiallaw:
             a_f_c = a_f
             a_s_c = a_s
         
-        # Holzapfel-Ogden (Holzapfel and Ogden 2009) material w/o split applied to invariants I4, I6, I8 (Sansour 2008)
+        # Holzapfel-Ogden (Holzapfel and Ogden 2009) material w/o split applied to invariants I4, I6, I8 (Nolan et al. 2014, Sansour 2008)
         psi_dev = a_0/(2.*b_0)*(exp(b_0*(self.Ic_bar-3.)) - 1.) + \
             a_f_c/(2.*b_f)*(exp(b_f*(I4-1.)**2.) - 1.) + a_s_c/(2.*b_s)*(exp(b_s*(I6-1.)**2.) - 1.) + \
             a_fs/(2.*b_fs)*(exp(b_fs*I8**2.) - 1.)

@@ -206,35 +206,37 @@ class cardiovascular0Dbase:
 
 
     # set valve q(p) relationship
-    def valvelaw(self, p, popen, Rmin, Rmax, vtype, topen, tclose, epsilon):
+    def valvelaw(self, p, popen, Rmin, Rmax, vparams, topen, tclose):
 
-        if vtype=='pwlin_pres': # piecewise linear with resistance depending on pressure difference
+        if vparams[0]=='pwlin_pres': # piecewise linear with resistance depending on pressure difference
             R = sp.Piecewise( (Rmax, p < popen), (Rmin, p >= popen) )
             vl = (popen - p) / R
-        elif vtype=='pwlin_time': # piecewise linear with resistance depending on timing
+        elif vparams[0]=='pwlin_time': # piecewise linear with resistance depending on timing
             if topen > tclose: R = sp.Piecewise( (Rmax, sp.And(self.t_ < topen, self.t_ >= tclose)), (Rmin, sp.Or(self.t_ >= topen, self.t_ < tclose)) )
             else:              R = sp.Piecewise( (Rmax, sp.Or(self.t_ < topen, self.t_ >= tclose)), (Rmin, sp.And(self.t_ >= topen, self.t_ < tclose)) )
             vl = (popen - p) / R
-        elif vtype=='smooth_pres_resistance': # smooth resistance value
-            R = 0.5*(Rmax - Rmin)*(sp.tanh((popen - p)/epsilon) + 1.) + Rmin
+        elif vparams[0]=='smooth_pres_resistance': # smooth resistance value
+            R = 0.5*(Rmax - Rmin)*(sp.tanh((popen - p)/vparams[-1]) + 1.) + Rmin
             vl = (popen - p) / R            
-        elif vtype=='smooth_pres_momentum': # smooth q(p) relationship
+        elif vparams[0]=='smooth_pres_momentum': # smooth q(p) relationship
             # interpolation by cubic spline in epsilon interval
-            p0 = (popen-epsilon/2. - popen)/Rmax
-            p1 = (popen+epsilon/2. - popen)/Rmin
+            p0 = (popen-vparams[-1]/2. - popen)/Rmax
+            p1 = (popen+vparams[-1]/2. - popen)/Rmin
             m0 = 1./Rmax
             m1 = 1./Rmin
-            s = (p - (popen-epsilon/2.))/epsilon
+            s = (p - (popen-vparams[-1]/2.))/vparams[-1]
             # spline ansatz functions
             h00 = 2.*s**3. - 3*s**2. + 1.
             h01 = -2.*s**3. + 3*s**2.
             h10 = s**3. - 2.*s**2. + s
             h11 = s**3. - s**2.
             # spline
-            c = h00*p0 + h10*m0*epsilon + h01*p1 + h11*m1*epsilon
-            vl = sp.Piecewise( ((popen - p)/Rmax, p < popen-epsilon/2), (-c, sp.And(p >= popen-epsilon/2., p < popen+epsilon/2.)), ((popen - p)/Rmin, p >= popen+epsilon/2.) )
+            c = h00*p0 + h10*m0*vparams[-1] + h01*p1 + h11*m1*vparams[-1]
+            vl = sp.Piecewise( ((popen - p)/Rmax, p < popen-vparams[-1]/2), (-c, sp.And(p >= popen-vparams[-1]/2., p < popen+vparams[-1]/2.)), ((popen - p)/Rmin, p >= popen+vparams[-1]/2.) )
+        elif vparams[0]=='pw_pres_regurg':
+            vl = sp.Piecewise( (vparams[1]*vparams[2]*sp.sqrt(popen - p), p < popen), ((popen - p) / Rmin, p >= popen) )
         else:
-            raise NameError("Unknown valve law %s!" % (vtype))
+            raise NameError("Unknown valve law %s!" % (vparams[0]))
         
         return vl, 1./sp.diff(vl,popen)
 
