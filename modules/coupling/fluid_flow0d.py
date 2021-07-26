@@ -91,9 +91,11 @@ class FluidmechanicsFlow0DProblem():
                 if self.coupling_params['coupling_quantity'][n] == 'flux':
                     assert(self.coupling_type == 'monolithic_direct')
                     cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
+                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq)
                 elif self.coupling_params['coupling_quantity'][n] == 'pressure':
-                    assert(self.coupling_type == 'monolithic_lagrange')
+                    assert(self.coupling_type == 'monolithic_lagrange' and self.coupling_params['variable_quantity'][n] == 'flux')
                     cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
+                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq)
                 else:
                     raise NameError("Unknown coupling quantity! Choose flux or pressure!")
             

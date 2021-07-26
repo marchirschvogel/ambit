@@ -241,8 +241,8 @@ class cardiovascular0Dbase:
         return vl, 1./sp.diff(vl,popen)
 
 
-    # set chamber interfaces according to case and coupling quantity (can be volume, flux, or pressure)
-    def set_chamber_interfaces(self):
+    # set compartment interfaces according to case and coupling quantity (can be volume, flux, or pressure)
+    def set_compartment_interfaces(self):
         
         # loop over chambers
         for i, ch in enumerate(['lv','rv','la','ra']):
@@ -253,14 +253,14 @@ class cardiovascular0Dbase:
             if ch == 'ra': chn = 'at_r'
             
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
-                self.switch_V[i], self.switch_p[i] = 1, 0
+                self.switch_V[i] = 1
             
             elif self.chmodels[ch]['type']=='prescribed':
                 if self.cq[i] == 'volume':
-                    self.switch_V[i], self.switch_p[i] = 1, 0
+                    self.switch_V[i] = 1
                     self.cname.append('V_'+chn+'')
                 elif self.cq[i] == 'flux':
-                    self.switch_V[i], self.switch_p[i] = 0, 0
+                    self.switch_V[i] = 0
                     self.cname.append('Q_'+chn+'')
                 else:
                     raise NameError("Unknown coupling quantity!")
@@ -270,26 +270,29 @@ class cardiovascular0Dbase:
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
                     self.cname.append('V_'+chn+'')
+                    self.switch_V[i], self.vname_prfx[i] = 1, 'p'
                 elif self.cq[i] == 'flux':
-                    self.switch_V[i], self.switch_p[i] = 0, 0
                     self.cname.append('Q_'+chn+'')
-                    self.vname_prfx[i] = 'p'
+                    self.switch_V[i], self.vname_prfx[i] = 0, 'p'
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
                 elif self.cq[i] == 'pressure':
-                    self.switch_V[i], self.switch_p[i] = 0, 1
+                    if self.vq[i] == 'volume':
+                        self.switch_V[i], self.vname_prfx[i] = 1, 'V'
+                    elif self.vq[i] == 'flux':
+                        self.switch_V[i], self.vname_prfx[i] = 0, 'Q'
+                    else:
+                        raise ValueError("Variable quantity has to be volume or flux!")
                     self.cname.append('p_'+chn+'')
-                    self.vname_prfx[i] = 'Q'
                     self.si[i] = 1 # switch indices of pressure / outflux
                     self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
                 else:
                     raise NameError("Unknown coupling quantity!")
             
-            # Heart models and 3D fluid currently only working with Cheart!
+            # 3D fluid currently only working with Cheart!
             elif self.chmodels[ch]['type']=='3D_fluid':
                 assert(self.cq[i] == 'pressure')
-                self.switch_V[i], self.switch_p[i] = 0, 1
-                self.vname_prfx[i] = 'Q'
+                self.switch_V[i], self.vname_prfx[i] = 0, 'Q'
                 self.si[i] = 1 # switch indices of pressure / outflux
                 #self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
                 # add inflow pressures to coupling name prefixes
@@ -303,7 +306,7 @@ class cardiovascular0Dbase:
 
 
     # set coupling state (populate x and c vectors with Sympy symbols) according to case and coupling quantity (can be volume, flux, or pressure)
-    def set_chamber_state(self, ch, chvars, chfncs=[]):
+    def set_coupling_state(self, ch, chvars, chfncs=[]):
         
         if ch == 'lv': V_unstressed, i = self.V_v_l_u,  0
         if ch == 'rv': V_unstressed, i = self.V_v_r_u,  1
@@ -315,10 +318,10 @@ class cardiovascular0Dbase:
 
         # time-varying elastances
         if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
-            chvars['vq'] = chvars['pi1']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
+            chvars['VQ'] = chvars['pi1']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
             self.fnc_.append(chfncs[0])
             
-            # all "distributed" p are equal to "main" p of chamber (= pI1)
+            # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
                 if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
@@ -326,23 +329,23 @@ class cardiovascular0Dbase:
         # 3D solid mechanics model, or 0D prescribed volume/flux/pressure (non-primary variables!)
         elif self.chmodels[ch]['type']=='3D_solid' or self.chmodels[ch]['type']=='prescribed':
 
-            # all "distributed" p are equal to "main" p of chamber (= pI1)
+            # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
                 if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
 
             if self.cq[i] == 'volume' or self.cq[i] == 'flux':
-                self.c_.append(chvars['vq']) # V or Q
+                self.c_.append(chvars['VQ']) # V or Q
             if self.cq[i] == 'pressure':
-                self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q
+                self.x_[self.vindex_ch[i]-self.si[i]] = chvars['VQ'] # V or Q
                 self.c_.append(chvars['pi1'])
 
         # 3D fluid mechanics model
         elif self.chmodels[ch]['type']=='3D_fluid': # also for 2D FEM models
 
-            assert(self.cq[i] == 'pressure')
+            assert(self.cq[i] == 'pressure' and self.vq[i] == 'flux')
 
-            self.x_[self.vindex_ch[i]-self.si[i]] = chvars['vq'] # Q of chamber is now variable
+            self.x_[self.vindex_ch[i]-self.si[i]] = chvars['VQ'] # Q of chamber is now variable
 
             # all "distributed" p that are not coupled are set to first inflow p
             for k in range(self.chmodels[ch]['num_inflows'],10):

@@ -46,7 +46,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
-    def __init__(self, params, chmodels, cq=['volume','volume','volume','volume'], valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
 
@@ -126,12 +126,13 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         except: self.vp = 1
         
         self.cq = cq
+        self.vq = vq
 
         # set up arrays
         self.setup_arrays()
 
-        # setup chambers
-        self.set_chamber_interfaces()
+        # setup compartments
+        self.set_compartment_interfaces()
         
         # set up symbolic equations
         self.equation_map()
@@ -150,7 +151,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         
         self.elastarrays = [[]]*4
         
-        self.si, self.switch_V, self.switch_p = [0]*4, [1]*4, [0]*4 # default values
+        self.si, self.switch_V = [0]*4, [1]*4 # default values
 
         self.vindex_ch = [3,10+self.vs,1,8+self.vs] # coupling variable indices (decreased by 1 for pressure coupling!)
         self.vname_prfx, self.cname = ['p']*4, []
@@ -229,25 +230,25 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             self.x_[14+self.vs+n] = q_ven_pul_[n]
 
         # set chamber dicts
-        chdict_lv = {'vq' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
-        chdict_rv = {'vq' : VQ_v_r_, 'pi1' : p_v_r_i1_, 'po1' : p_v_r_o1_}
-        chdict_la = {'vq' : VQ_at_l_, 'po1' : p_at_l_o1_}
+        chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
+        chdict_rv = {'VQ' : VQ_v_r_, 'pi1' : p_v_r_i1_, 'po1' : p_v_r_o1_}
+        chdict_la = {'VQ' : VQ_at_l_, 'po1' : p_at_l_o1_}
         for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_at_l_i_[n]
-        chdict_ra = {'vq' : VQ_at_r_, 'po1' : p_at_r_o1_}
+        chdict_ra = {'VQ' : VQ_at_r_, 'po1' : p_at_r_o1_}
         for n in range(self.vs): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
 
-        # set chamber states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
-        self.set_chamber_state('lv', chdict_lv, [E_v_l_])
-        self.set_chamber_state('rv', chdict_rv, [E_v_r_])
-        self.set_chamber_state('la', chdict_la, [E_at_l_])
-        self.set_chamber_state('ra', chdict_ra, [E_at_r_])
+        # set coupling states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
+        self.set_coupling_state('lv', chdict_lv, [E_v_l_])
+        self.set_coupling_state('rv', chdict_rv, [E_v_r_])
+        self.set_coupling_state('la', chdict_la, [E_at_l_])
+        self.set_coupling_state('ra', chdict_ra, [E_at_r_])
 
         # feed back modified dicts to chamber variables
-        VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['vq'], chdict_lv['pi1'], chdict_lv['po1']
-        VQ_v_r_, p_v_r_i1_, p_v_r_o1_ = chdict_rv['vq'], chdict_rv['pi1'], chdict_rv['po1']
-        VQ_at_l_, p_ati1_l_, p_at_l_o1_ = chdict_la['vq'], chdict_la['pi1'], chdict_la['po1']
+        VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['VQ'], chdict_lv['pi1'], chdict_lv['po1']
+        VQ_v_r_, p_v_r_i1_, p_v_r_o1_ = chdict_rv['VQ'], chdict_rv['pi1'], chdict_rv['po1']
+        VQ_at_l_, p_ati1_l_, p_at_l_o1_ = chdict_la['VQ'], chdict_la['pi1'], chdict_la['po1']
         for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)+'']
-        VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['vq'], chdict_ra['pi1'], chdict_ra['po1']
+        VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['VQ'], chdict_ra['pi1'], chdict_ra['po1']
         for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
 
        

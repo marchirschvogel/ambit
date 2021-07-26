@@ -20,7 +20,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
-    def __init__(self, params, cq=['volume'], comm=None):
+    def __init__(self, params, cq, vq, comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
 
@@ -30,23 +30,22 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         self.p_ref = params['p_ref']
         
         self.cq = cq
-        self.switch_V, self.switch_Q, self.switch_p = 1, 0, 0
-        
-        self.vname, self.cname = 'p', 'V'
+        self.vq = vq
         
         self.v_ids = [0]
         self.c_ids = [0]
         
         if self.cq[0] == 'volume':
-            pass # 'volume' is default
+            self.switch_V, self.cname, self.vname = 1, 'V', 'p'
         elif self.cq[0] == 'flux':
-            self.switch_V, self.switch_p = 0, 0
-            self.cname = 'Q'
-            self.vname = 'p'
+            self.switch_V, self.cname, self.vname = 0, 'Q', 'p'
         elif self.cq[0] == 'pressure':
-            self.switch_V, self.switch_p = 0, 1
-            self.cname = 'p'
-            self.vname = 'Q'
+            if self.vq[0] == 'flux':
+                self.switch_V, self.cname, self.vname = 0, 'p', 'Q'
+            elif self.vq[0] == 'volume':
+                self.switch_V, self.cname, self.vname = 1, 'p', 'V'
+            else:
+                raise ValueError("Unknown variable quantity!")
         else:
             raise NameError("Unknown coupling quantity!")
 
@@ -94,8 +93,15 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0] = (p_-self.p_ref)/self.R - (1-self.switch_V) * VQ_
         
-        # auxiliary vector
-        self.a_[0] = VQ_ * (1-self.switch_p) + p_ * self.switch_p
+        nc = len(self.c_)
+        #self.auxmap={}
+        #for i in range(nc): self.auxmap[self.cname[i]] = i
+        
+        # populate auxiliary variable vector
+        for i in range(nc): self.a_[i] = self.c_[i]
+        
+        ## auxiliary vector
+        #self.a_[0] = VQ_ * (1-self.switch_p) + p_ * self.switch_p
 
 
     def initialize(self, var, iniparam):

@@ -27,7 +27,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
-    def __init__(self, params, cq=['volume'], comm=None):
+    def __init__(self, params, cq, vq, comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
         
@@ -42,18 +42,22 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         self.p_ref = params['p_ref']
 
         self.cq = cq
-        self.switch_V, self.switch_Q = 1, 0
-        
-        self.cname = 'V'
+        self.vq = vq
 
         self.v_ids = [0]
         self.c_ids = [1]
 
         if self.cq[0] == 'volume':
-            pass # 'volume' is default
+            self.switch_V, self.cname, self.vname = 1, 'V', 'p'
         elif self.cq[0] == 'flux':
-            self.switch_V, self.switch_Q = 0, 1
-            self.cname  = 'Q'
+            self.switch_V, self.cname, self.vname = 0, 'Q', 'p'
+        elif self.cq[0] == 'pressure':
+            if self.vq[0] == 'flux':
+                self.switch_V, self.cname, self.vname = 0, 'p', 'Q'
+            elif self.vq[0] == 'volume':
+                self.switch_V, self.cname, self.vname = 1, 'p', 'V'
+            else:
+                raise ValueError("Unknown variable quantity!")
         else:
             raise NameError("Unknown coupling quantity!")
 
@@ -95,6 +99,9 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         self.x_[2] = s_
         # coupling variables
         self.c_.append(VQ_)
+        if self.cq[0] == 'pressure': # switch Q <--> p for pressure coupling
+            self.x_[0] = VQ_
+            self.c_[0] = p_
         
         # df part of rhs contribution (df - df_old)/dt
         self.df_[0] = self.C * p_ + self.L*self.C * s_

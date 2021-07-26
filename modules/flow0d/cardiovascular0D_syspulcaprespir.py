@@ -19,7 +19,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
     
-    def __init__(self, params, chmodels, cq=['volume','volume','volume','volume'], valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
 
         self.R_airw = params['R_airw']
         self.L_alv = params['L_alv']
@@ -71,7 +71,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.V_tisscor = params['V_tisscor']
 
         # initialize base class
-        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cq, valvelaws, comm=comm)
+        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cq, vq, valvelaws, comm=comm)
 
 
     def setup_arrays(self):
@@ -81,7 +81,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         
         self.elastarrays = [[]]*4
         
-        self.si, self.switch_V, self.switch_p = [0]*4, [1]*4, [0]*4 # default values
+        self.si, self.switch_V = [0]*4, [1]*4 # default values
 
         self.varindex_ch = [3,27,1,25] # coupling variable indices (decreased by 1 for pressure coupling!)
         self.vname_prfx, self.cname_prfx = ['p']*4, []

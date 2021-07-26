@@ -28,7 +28,7 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[10])
         lastgandrcycl = int(sys.argv[11])
     except:
-        path = '/home/mh/Downloads/data_javi/out'
+        path = '/home/mh/work/mia_sim_new_0d'
         sname = ''
         nstep_cycl = 1000
         T_cycl = 0.7

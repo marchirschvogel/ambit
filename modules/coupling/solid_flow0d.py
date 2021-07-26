@@ -108,8 +108,14 @@ class SolidmechanicsFlow0DProblem():
                     cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
                 elif self.coupling_params['coupling_quantity'][n] == 'pressure':
                     assert(self.coupling_type == 'monolithic_lagrange')
-                    cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_vq)
-                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
+                    if self.coupling_params['variable_quantity'][n] == 'volume':
+                        cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_vq)
+                        cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
+                    elif self.coupling_params['variable_quantity'][n] == 'flux':
+                        cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_vq)
+                        cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), ds_vq)
+                    else:
+                        raise NameError("Unknown variable quantity! Choose either volume or flux!")
                 else:
                     raise NameError("Unknown coupling quantity! Choose either volume, flux, or pressure!")
             

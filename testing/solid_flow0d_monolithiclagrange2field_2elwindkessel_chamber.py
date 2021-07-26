@@ -49,6 +49,7 @@ def main():
     
     COUPLING_PARAMS      = {'surface_ids'           : [[3]],
                             'coupling_quantity'     : ['pressure'],
+                            'variable_quantity'     : ['flux'],
                             'coupling_type'         : 'monolithic_lagrange'}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100.}, 'inertia' : {'rho0' : 1.0e-6}}}
