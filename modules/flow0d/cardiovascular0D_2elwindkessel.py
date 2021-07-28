@@ -93,15 +93,8 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0] = (p_-self.p_ref)/self.R - (1-self.switch_V) * VQ_
         
-        nc = len(self.c_)
-        #self.auxmap={}
-        #for i in range(nc): self.auxmap[self.cname[i]] = i
-        
         # populate auxiliary variable vector
-        for i in range(nc): self.a_[i] = self.c_[i]
-        
-        ## auxiliary vector
-        #self.a_[0] = VQ_ * (1-self.switch_p) + p_ * self.switch_p
+        self.a_[0] = self.c_[0]
 
 
     def initialize(self, var, iniparam):

@@ -18,30 +18,32 @@ from mpiroutines import allgather_vec
 # systemic and pulmonary closed-loop circulation model, each heart chamber can be treated individually,
 # either as 0D elastance model, volume or flux coming from a 3D solid, or interface fluxes from a 3D fluid model
 
-# 16 governing equations (uncomment and paste directly into a LaTeX environment):
+# 18 governing equations (uncomment and paste directly into a LaTeX environment):
 
-## left heart and systemic circulation:
+#% left heart and systemic circulation:
 #\begin{align}
 #&-Q_{\mathrm{at}}^{\ell} = q_{\mathrm{ven}}^{\mathrm{pul}} - q_{\mathrm{v,in}}^{\ell}\nonumber\\
-#&\tilde{R}_{\mathrm{v,in}}^{\ell} q_{\mathrm{v,in}}^{\ell} = p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}\nonumber\\
+#&\tilde{R}_{\mathrm{v,in}}^{\ell}\,q_{\mathrm{v,in}}^{\ell} = p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}\nonumber\\
 #&-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell}\nonumber\\
-#&\tilde{R}_{\mathrm{v,out}}^{\ell} q_{\mathrm{v,out}}^{\ell} = p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
-#&C_{\mathrm{ar}}^{\mathrm{sys}} \left(\frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} - Z_{\mathrm{ar}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{v,out}}^{\ell}}{\mathrm{d}t}\right) = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
-#&L_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}} - Z_{\mathrm{ar}}^{\mathrm{sys}}q_{\mathrm{v,out}}^{\ell}-p_{\mathrm{ven}}^{\mathrm{sys}}\nonumber\\
+#&\tilde{R}_{\mathrm{v,out}}^{\ell}\,q_{\mathrm{v,out}}^{\ell} = p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
+#&0 = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,prox}}^{\mathrm{sys}}\nonumber\\
+#&I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,prox}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,prox}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,dist}}^{\mathrm{sys}}\nonumber\\
+#&C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,dist}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,prox}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
+#&L_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar,dist}}^{\mathrm{sys}}-p_{\mathrm{ven}}^{\mathrm{sys}}\nonumber\\
 #&C_{\mathrm{ven}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{sys}}-q_{\mathrm{ven}}^{\mathrm{sys}}\nonumber\\
-#&L_{\mathrm{ven}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{sys}} q_{\mathrm{ven}}^{\mathrm{sys}} = p_{\mathrm{ven}}^{\mathrm{sys}} - p_{\mathrm{at}}^{r}\nonumber
+#&L_{\mathrm{ven}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{sys}}\, q_{\mathrm{ven}}^{\mathrm{sys}} = p_{\mathrm{ven}}^{\mathrm{sys}} - p_{\mathrm{at}}^{r}\nonumber
 #\end{align}
 
-## right heart and pulmonary circulation:
+#% right heart and pulmonary circulation:
 #\begin{align}
 #&-Q_{\mathrm{at}}^{r} = q_{\mathrm{ven}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r}\nonumber\\
-#&\tilde{R}_{\mathrm{v,in}}^{r}q_{\mathrm{v,in}}^{r} = p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}\nonumber\\
+#&\tilde{R}_{\mathrm{v,in}}^{r}\,q_{\mathrm{v,in}}^{r} = p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}\nonumber\\
 #&-Q_{\mathrm{v}}^{r} = q_{\mathrm{v,in}}^{r} - q_{\mathrm{v,out}}^{r}\nonumber\\
-#&\tilde{R}_{\mathrm{v,out}}^{r} q_{\mathrm{v,out}}^{r} = p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}\nonumber\\
-#&C_{\mathrm{ar}}^{\mathrm{pul}} \left(\frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} - Z_{\mathrm{ar}}^{\mathrm{pul}}\frac{\mathrm{d}q_{\mathrm{v,out}}^{r}}{\mathrm{d}t}\right) = q_{\mathrm{v,out}}^{r} - q_{\mathrm{ar}}^{\mathrm{pul}}\nonumber\\
-#&L_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{pul}} q_{\mathrm{ar}}^{\mathrm{pul}}=p_{\mathrm{ar}}^{\mathrm{pul}} - Z_{\mathrm{ar}}^{\mathrm{pul}}q_{\mathrm{v,out}}^{r}-p_{\mathrm{ven}}^{\mathrm{pul}}\nonumber\\
+#&\tilde{R}_{\mathrm{v,out}}^{r}\,q_{\mathrm{v,out}}^{r} = p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}\nonumber\\
+#&C_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{v,out}}^{r} - q_{\mathrm{ar}}^{\mathrm{pul}}\nonumber\\
+#&L_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{pul}}\,q_{\mathrm{ar}}^{\mathrm{pul}}=p_{\mathrm{ar}}^{\mathrm{pul}} -p_{\mathrm{ven}}^{\mathrm{pul}}\nonumber\\
 #&C_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{pul}} - q_{\mathrm{ven}}^{\mathrm{pul}}\nonumber\\
-#&L_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{pul}} q_{\mathrm{ven}}^{\mathrm{pul}}=p_{\mathrm{ven}}^{\mathrm{pul}}-p_{\mathrm{at}}^{\ell}\nonumber
+#&L_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ven}}^{\mathrm{pul}}\, q_{\mathrm{ven}}^{\mathrm{pul}}=p_{\mathrm{ven}}^{\mathrm{pul}}-p_{\mathrm{at}}^{\ell}\nonumber
 #\end{align}
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
@@ -51,18 +53,19 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         cardiovascular0Dbase.__init__(self, comm=comm)
 
         # parameters
-        # circulatory system parameters: resistances (R), compliances (C), inertances (L), impedances (Z)
+        # circulatory system parameters: resistances (R), compliances (C), inertances (L, I), impedances (Z)
         self.R_ar_sys = params['R_ar_sys']
         self.C_ar_sys = params['C_ar_sys']
         self.L_ar_sys = params['L_ar_sys']
         self.Z_ar_sys = params['Z_ar_sys']
+        try: self.I_ar_sys = params['I_ar_sys']
+        except: self.I_ar_sys = 0
         self.R_ven_sys = params['R_ven_sys']
         self.C_ven_sys = params['C_ven_sys']
         self.L_ven_sys = params['L_ven_sys']
         self.R_ar_pul = params['R_ar_pul']
         self.C_ar_pul = params['C_ar_pul']
         self.L_ar_pul = params['L_ar_pul']
-        self.Z_ar_pul = params['Z_ar_pul']
         self.R_ven_pul = params['R_ven_pul']
         self.C_ven_pul = params['C_ven_pul']
         self.L_ven_pul = params['L_ven_pul']
@@ -117,14 +120,6 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.chmodels = chmodels
         self.valvelaws = valvelaws
         
-        # number of systemic venous inflows (to right atrium)
-        try: self.vs = self.chmodels['ra']['num_inflows']
-        except: self.vs = 1
-    
-        # number of pulmonary venous inflows (to left atrium)
-        try: self.vp = self.chmodels['la']['num_inflows']
-        except: self.vp = 1
-        
         self.cq = cq
         self.vq = vq
 
@@ -146,19 +141,27 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
     def setup_arrays(self):
 
+        # number of systemic venous inflows (to right atrium)
+        try: self.vs = self.chmodels['ra']['num_inflows']
+        except: self.vs = 1
+    
+        # number of pulmonary venous inflows (to left atrium)
+        try: self.vp = self.chmodels['la']['num_inflows']
+        except: self.vp = 1
+
         # number of degrees of freedom
-        self.numdof = 14 + self.vs + self.vp
+        self.numdof = 16 + self.vs + self.vp
         
         self.elastarrays = [[]]*4
         
         self.si, self.switch_V = [0]*4, [1]*4 # default values
 
-        self.vindex_ch = [3,10+self.vs,1,8+self.vs] # coupling variable indices (decreased by 1 for pressure coupling!)
+        self.vindex_ch = [3,12+self.vs,1,10+self.vs] # coupling variable indices (decreased by 1 for pressure coupling!)
         self.vname_prfx, self.cname = ['p']*4, []
 
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
-        self.cindex_ch = [2,9+self.vs,0,7+self.vs]
+        self.cindex_ch = [2,11+self.vs,0,9+self.vs]
 
         self.set_solve_arrays()
 
@@ -172,10 +175,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
     def equation_map(self):
         
-        self.varmap={'q_vin_l' : 0+self.si[2], ''+self.vname_prfx[2]+'_at_l' : 1-self.si[2], 'q_vout_l' : 2+self.si[0], ''+self.vname_prfx[0]+'_v_l' : 3-self.si[0], 'p_ar_sys' : 4, 'q_ar_sys' : 5, 'p_ven_sys' : 6, 'q_vin_r' : 7+self.vs+self.si[3], ''+self.vname_prfx[3]+'_at_r' : 8+self.vs-self.si[3], 'q_vout_r' : 9+self.vs+self.si[1], ''+self.vname_prfx[1]+'_v_r' : 10+self.vs-self.si[1], 'p_ar_pul' : 11+self.vs, 'q_ar_pul' : 12+self.vs, 'p_ven_pul' : 13+self.vs}
+        self.varmap={'q_vin_l' : 0+self.si[2], ''+self.vname_prfx[2]+'_at_l' : 1-self.si[2], 'q_vout_l' : 2+self.si[0], ''+self.vname_prfx[0]+'_v_l' : 3-self.si[0], 'p_ar_sys' : 4, 'q_arprox_sys' : 5, 'p_ardist_sys' : 6, 'q_ar_sys' : 7, 'p_ven_sys' : 8, 'q_vin_r' : 9+self.vs+self.si[3], ''+self.vname_prfx[3]+'_at_r' : 10+self.vs-self.si[3], 'q_vout_r' : 11+self.vs+self.si[1], ''+self.vname_prfx[1]+'_v_r' : 12+self.vs-self.si[1], 'p_ar_pul' : 13+self.vs, 'q_ar_pul' : 14+self.vs, 'p_ven_pul' : 15+self.vs}
 
-        for n in range(self.vs): self.varmap['q_ven'+str(n+1)+'_sys'] = 7+n
-        for n in range(self.vp): self.varmap['q_ven'+str(n+1)+'_pul'] = 14+self.vs+n
+        for n in range(self.vs): self.varmap['q_ven'+str(n+1)+'_sys'] = 9+n
+        for n in range(self.vp): self.varmap['q_ven'+str(n+1)+'_pul'] = 16+self.vs+n
 
         q_ven_sys_, q_ven_pul_ = [], []
         p_at_l_i_, p_at_r_i_ = [], []
@@ -187,6 +190,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         q_vout_l_          = sp.Symbol('q_vout_l_')
         p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
+        q_arprox_sys_      = sp.Symbol('q_arprox_sys_')
+        p_ardist_sys_      = sp.Symbol('p_ardist_sys_')
         q_ar_sys_          = sp.Symbol('q_ar_sys_')
         p_ven_sys_         = sp.Symbol('p_ven_sys_')
         for n in range(self.vs): q_ven_sys_.append(sp.Symbol('q_ven'+str(n+1)+'_sys_'))
@@ -215,19 +220,21 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.x_[2+self.si[0]] = q_vout_l_
         self.x_[3-self.si[0]] = p_v_l_i1_
         self.x_[4] = p_ar_sys_
-        self.x_[5] = q_ar_sys_
-        self.x_[6] = p_ven_sys_
+        self.x_[5] = q_arprox_sys_
+        self.x_[6] = p_ardist_sys_
+        self.x_[7] = q_ar_sys_
+        self.x_[8] = p_ven_sys_
         for n in range(self.vs):
-            self.x_[7+n] = q_ven_sys_[n]
-        self.x_[7+self.vs+self.si[3]] = q_vin_r_
-        self.x_[8+self.vs-self.si[3]] = p_at_r_i_[0]
-        self.x_[9+self.vs+self.si[1]] = q_vout_r_
-        self.x_[10+self.vs-self.si[1]] = p_v_r_i1_
-        self.x_[11+self.vs] = p_ar_pul_
-        self.x_[12+self.vs] = q_ar_pul_
-        self.x_[13+self.vs] = p_ven_pul_
+            self.x_[9+n] = q_ven_sys_[n]
+        self.x_[9+self.vs+self.si[3]] = q_vin_r_
+        self.x_[10+self.vs-self.si[3]] = p_at_r_i_[0]
+        self.x_[11+self.vs+self.si[1]] = q_vout_r_
+        self.x_[12+self.vs-self.si[1]] = p_v_r_i1_
+        self.x_[13+self.vs] = p_ar_pul_
+        self.x_[14+self.vs] = q_ar_pul_
+        self.x_[15+self.vs] = p_ven_pul_
         for n in range(self.vp):
-            self.x_[14+self.vs+n] = q_ven_pul_[n]
+            self.x_[16+self.vs+n] = q_ven_pul_[n]
 
         # set chamber dicts
         chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
@@ -273,47 +280,51 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             L_ven_pul.append(self.vp*self.L_ven_pul)
         
         # df part of rhs contribution (df - df_old)/dt
-        self.df_[0] = VQ_at_l_ * self.switch_V[2]
-        self.df_[1] = (self.L_vin_l/R_vin_l_) * q_vin_l_
-        self.df_[2] = VQ_v_l_ * self.switch_V[0]
-        self.df_[3] = (self.L_vout_l/R_vout_l_) * q_vout_l_
-        self.df_[4] = self.C_ar_sys * (p_ar_sys_ - self.Z_ar_sys * q_vout_l_)
-        self.df_[5] = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_
-        self.df_[6] = self.C_ven_sys * p_ven_sys_
+        self.df_[0] = VQ_at_l_ * self.switch_V[2]                                            # left atrium volume rate
+        self.df_[1] = (self.L_vin_l/R_vin_l_) * q_vin_l_                                     # mitral valve inertia
+        self.df_[2] = VQ_v_l_ * self.switch_V[0]                                             # left ventricle volume rate
+        self.df_[3] = (self.L_vout_l/R_vout_l_) * q_vout_l_                                  # aortic valve inertia
+        self.df_[4] = 0.
+        self.df_[5] = (self.I_ar_sys/self.Z_ar_sys) * q_arprox_sys_                          # aortic root inertia
+        self.df_[6] = self.C_ar_sys * p_ardist_sys_                                          # systemic arterial volume rate
+        self.df_[7] = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_                              # systemic arterial inertia
+        self.df_[8] = self.C_ven_sys * p_ven_sys_                                            # systemic venous volume rate
         for n in range(self.vs):
-            self.df_[7+n] = (L_ven_sys[n]/R_ven_sys[n]) * q_ven_sys_[n]
+            self.df_[9+n] = (L_ven_sys[n]/R_ven_sys[n]) * q_ven_sys_[n]                      # systemic venous inertia
                 # -----------------------------------------------------------
-        self.df_[7+self.vs] = VQ_at_r_ * self.switch_V[3]
-        self.df_[8+self.vs] = (self.L_vin_r/R_vin_r_) * q_vin_r_
-        self.df_[9+self.vs] = VQ_v_r_ * self.switch_V[1]
-        self.df_[10+self.vs] = (self.L_vout_r/R_vout_r_) * q_vout_r_
-        self.df_[11+self.vs] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_)
-        self.df_[12+self.vs] = (self.L_ar_pul/self.R_ar_pul) * q_ar_pul_
-        self.df_[13+self.vs] = self.C_ven_pul * p_ven_pul_
+        self.df_[9+self.vs] = VQ_at_r_ * self.switch_V[3]                                    # right atrium volume rate
+        self.df_[10+self.vs] = (self.L_vin_r/R_vin_r_) * q_vin_r_                            # tricuspid valve inertia
+        self.df_[11+self.vs] = VQ_v_r_ * self.switch_V[1]                                    # right ventricle volume rate
+        self.df_[12+self.vs] = (self.L_vout_r/R_vout_r_) * q_vout_r_                         # pulmonary valve inertia
+        self.df_[13+self.vs] = self.C_ar_pul * p_ar_pul_                                     # pulmonary arterial volume rate
+        self.df_[14+self.vs] = (self.L_ar_pul/self.R_ar_pul) * q_ar_pul_                     # pulmonary arterial inertia
+        self.df_[15+self.vs] = self.C_ven_pul * p_ven_pul_                                   # pulmonary venous volume rate
         for n in range(self.vp):
-            self.df_[14+self.vs+n] = (L_ven_pul[n]/R_ven_pul[n]) * q_ven_pul_[n]
+            self.df_[16+self.vs+n] = (L_ven_pul[n]/R_ven_pul[n]) * q_ven_pul_[n]             # pulmonary venous inertia
 
 
         # f part of rhs contribution theta * f + (1-theta) * f_old
-        self.f_[0] = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_
-        self.f_[1] = vl_mv_ + q_vin_l_
-        self.f_[2] = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_
-        self.f_[3] = vl_av_ + q_vout_l_
-        self.f_[4] = -q_vout_l_ + q_ar_sys_
-        self.f_[5] = (p_ven_sys_ - p_ar_sys_ + self.Z_ar_sys * q_vout_l_)/self.R_ar_sys + q_ar_sys_
-        self.f_[6] = -q_ar_sys_ + sum(q_ven_sys_)
+        self.f_[0] = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_           # left atrium flow balance
+        self.f_[1] = vl_mv_ + q_vin_l_                                                       # mitral valve momentum
+        self.f_[2] = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_                  # left ventricle flow balance
+        self.f_[3] = vl_av_ + q_vout_l_                                                      # aortic valve momentum
+        self.f_[4] = -q_vout_l_ + q_arprox_sys_                                              # aortic root flow balance
+        self.f_[5] = (p_ardist_sys_ - p_ar_sys_)/self.Z_ar_sys + q_arprox_sys_               # aortic root momentum
+        self.f_[6] = -q_arprox_sys_ + q_ar_sys_                                              # systemic arterial flow balance
+        self.f_[7] = (p_ven_sys_ - p_ardist_sys_)/self.R_ar_sys + q_ar_sys_                  # systemic arterial momentum
+        self.f_[8] = -q_ar_sys_ + sum(q_ven_sys_)                                            # systemic venous flow balance
         for n in range(self.vs):
-            self.f_[7+n] = (p_at_r_i_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]
+            self.f_[9+n] = (p_at_r_i_[n]-p_ven_sys_)/R_ven_sys[n] + q_ven_sys_[n]            # systemic venous momentum
                 # -----------------------------------------------------------
-        self.f_[7+self.vs] = -sum(q_ven_sys_) + q_vin_r_ - (1-self.switch_V[3]) * VQ_at_r_
-        self.f_[8+self.vs] = vl_tv_ + q_vin_r_
-        self.f_[9+self.vs] = -q_vin_r_ + q_vout_r_ - (1-self.switch_V[1]) * VQ_v_r_
-        self.f_[10+self.vs] = vl_pv_ + q_vout_r_
-        self.f_[11+self.vs] = -q_vout_r_ + q_ar_pul_
-        self.f_[12+self.vs] = (p_ven_pul_ - p_ar_pul_ + self.Z_ar_pul * q_vout_r_)/self.R_ar_pul + q_ar_pul_
-        self.f_[13+self.vs] = -q_ar_pul_ + sum(q_ven_pul_)
+        self.f_[9+self.vs] = -sum(q_ven_sys_) + q_vin_r_ - (1-self.switch_V[3]) * VQ_at_r_   # right atrium flow balance
+        self.f_[10+self.vs] = vl_tv_ + q_vin_r_                                              # tricuspid valve momentum
+        self.f_[11+self.vs] = -q_vin_r_ + q_vout_r_ - (1-self.switch_V[1]) * VQ_v_r_         # right ventricle flow balance
+        self.f_[12+self.vs] = vl_pv_ + q_vout_r_                                             # pulmonary valve momentum
+        self.f_[13+self.vs] = -q_vout_r_ + q_ar_pul_                                         # pulmonary arterial flow balance
+        self.f_[14+self.vs] = (p_ven_pul_ - p_ar_pul_)/self.R_ar_pul + q_ar_pul_             # pulmonary arterial momentum
+        self.f_[15+self.vs] = -q_ar_pul_ + sum(q_ven_pul_)                                   # pulmonary venous flow balance
         for n in range(self.vp):
-            self.f_[14+self.vs+n] = (p_at_l_i_[n]-p_ven_pul_)/R_ven_pul[n] + q_ven_pul_[n]
+            self.f_[16+self.vs+n] = (p_at_l_i_[n] - p_ven_pul_)/R_ven_pul[n] + q_ven_pul_[n] # pulmonary venous momentum
 
 
         # setup auxiliary variable map
@@ -336,9 +347,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.a_[nc+1] = VQ_v_r_ * self.switch_V[1]
         self.a_[nc+2] = VQ_at_l_ * self.switch_V[2]
         self.a_[nc+3] = VQ_at_r_ * self.switch_V[3]
-        self.a_[nc+4] = self.C_ar_sys * (p_ar_sys_ - self.Z_ar_sys * q_vout_l_) + self.V_ar_sys_u
+        self.a_[nc+4] = self.C_ar_sys * p_ardist_sys_ + self.V_ar_sys_u
         self.a_[nc+5] = self.C_ven_sys * p_ven_sys_ + self.V_ven_sys_u
-        self.a_[nc+6] = self.C_ar_pul * (p_ar_pul_ - self.Z_ar_pul * q_vout_r_) + self.V_ar_pul_u
+        self.a_[nc+6] = self.C_ar_pul * p_ar_pul_ + self.V_ar_pul_u
         self.a_[nc+7] = self.C_ven_pul * p_ven_pul_ + self.V_ven_pul_u
 
 
@@ -350,21 +361,25 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         var[2+self.si[0]] = iniparam['q_vout_l_0']
         var[3-self.si[0]] = iniparam[''+self.vname_prfx[0]+'_v_l_0']
         var[4] = iniparam['p_ar_sys_0']
-        var[5] = iniparam['q_ar_sys_0']
-        var[6] = iniparam['p_ven_sys_0']
+        try: var[5] = iniparam['q_arprox_sys_0']
+        except: var[5] = iniparam['q_ar_sys_0']
+        try: var[6] = iniparam['p_ardist_sys_0']
+        except: var[6] = iniparam['p_ar_sys_0']
+        var[7] = iniparam['q_ar_sys_0']
+        var[8] = iniparam['p_ven_sys_0']
         for n in range(self.vs):
-            try: var[7+n] = iniparam['q_ven'+str(n+1)+'_sys_0']
-            except: var[7+n] = iniparam['q_ven_sys_0']
-        var[7+self.vs+self.si[3]] = iniparam['q_vin_r_0']
-        var[8+self.vs-self.si[3]] = iniparam[''+self.vname_prfx[3]+'_at_r_0']
-        var[9+self.vs+self.si[1]] = iniparam['q_vout_r_0']
-        var[10+self.vs-self.si[1]] = iniparam[''+self.vname_prfx[1]+'_v_r_0']
-        var[11+self.vs] = iniparam['p_ar_pul_0']
-        var[12+self.vs] = iniparam['q_ar_pul_0']
-        var[13+self.vs] = iniparam['p_ven_pul_0']
+            try: var[9+n] = iniparam['q_ven'+str(n+1)+'_sys_0']
+            except: var[9+n] = iniparam['q_ven_sys_0']
+        var[9+self.vs+self.si[3]] = iniparam['q_vin_r_0']
+        var[10+self.vs-self.si[3]] = iniparam[''+self.vname_prfx[3]+'_at_r_0']
+        var[11+self.vs+self.si[1]] = iniparam['q_vout_r_0']
+        var[12+self.vs-self.si[1]] = iniparam[''+self.vname_prfx[1]+'_v_r_0']
+        var[13+self.vs] = iniparam['p_ar_pul_0']
+        var[14+self.vs] = iniparam['q_ar_pul_0']
+        var[15+self.vs] = iniparam['p_ven_pul_0']
         for n in range(self.vp):
-            try: var[14+self.vs+n] = iniparam['q_ven'+str(n+1)+'_pul_0']
-            except: var[14+self.vs+n] = iniparam['q_ven_pul_0']
+            try: var[16+self.vs+n] = iniparam['q_ven'+str(n+1)+'_pul_0']
+            except: var[16+self.vs+n] = iniparam['q_ven_pul_0']
                 
 
 
@@ -382,7 +397,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         elif check=='pQvar':
             
             vals = []
-            pQvar_ids = [self.varmap[''+self.vname_prfx[2]+'_at_l'],self.varmap[''+self.vname_prfx[0]+'_v_l'],self.varmap['p_ar_sys'],self.varmap['p_ven_sys'],self.varmap[''+self.vname_prfx[3]+'_at_r'],self.varmap[''+self.vname_prfx[1]+'_v_r'],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']]
+            pQvar_ids = [self.varmap[''+self.vname_prfx[2]+'_at_l'],self.varmap[''+self.vname_prfx[0]+'_v_l'],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_ven_sys'],self.varmap[''+self.vname_prfx[3]+'_at_r'],self.varmap[''+self.vname_prfx[1]+'_v_r'],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']]
             for i in range(len(varTc_sq)):
                 if i in pQvar_ids:
                     vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )

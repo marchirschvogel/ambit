@@ -84,7 +84,7 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
     
     def equation_map(self):
         
-        self.varmap = {'p' : 0, 'q' : 1, 's' : 2}
+        self.varmap = {self.vname : 0, 'q' : 1, 's' : 2}
         self.auxmap = {self.cname : 1}
         
         self.t_ = sp.Symbol('t_')
@@ -113,15 +113,13 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         self.f_[1] = -q_ - (1-self.switch_V) * VQ_
         self.f_[2] = -s_
         
-        # auxiliary vector
-        self.a_[0] = 0
-        self.a_[1] = VQ_
-        self.a_[2] = 0
+        # populate auxiliary variable vector
+        self.a_[0] = self.c_[0]
     
 
     def initialize(self, x, iniparam):
         
-        x[0] = iniparam['p_0']
+        x[0] = iniparam[''+self.vname+'_0']
         x[1] = iniparam['q_0']
         x[2] = iniparam['s_0']
 
@@ -142,7 +140,7 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
             
             print('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',a[0]))
             
-            print('{:<1s}{:<3s}{:<10.3f}'.format('p',' = ',x_sq[0]))
+            print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',x_sq[0]))
             print('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',x_sq[1]))
 
             sys.stdout.flush()

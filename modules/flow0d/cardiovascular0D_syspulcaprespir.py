@@ -16,6 +16,7 @@ from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
 from mpiroutines import allgather_vec
 
 # respiratory and gas transport part of syspulcap model (Diss Hirschvogel, p. 58ff.)
+# builds upon syspulcap model
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
     
@@ -77,13 +78,13 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
     def setup_arrays(self):
 
         # number of degrees of freedom
-        self.numdof = 82
+        self.numdof = 84
         
         self.elastarrays = [[]]*4
         
         self.si, self.switch_V = [0]*4, [1]*4 # default values
 
-        self.varindex_ch = [3,27,1,25] # coupling variable indices (decreased by 1 for pressure coupling!)
+        self.varindex_ch = [3,29,1,27] # coupling variable indices (decreased by 1 for pressure coupling!)
         self.vname_prfx, self.cname_prfx = ['p']*4, []
         
         self.set_solve_arrays()
@@ -94,58 +95,58 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         cardiovascular0Dsyspulcap.equation_map(self)
 
         # add to varmap
-        self.varmap['V_alv'] = 34
-        self.varmap['q_alv'] = 35
-        self.varmap['p_alv'] = 36
-        self.varmap['fCO2_alv'] = 37
-        self.varmap['fO2_alv'] = 38
-        self.varmap['q_arspl_sys_in'] = 39
-        self.varmap['q_arespl_sys_in'] = 40
-        self.varmap['q_armsc_sys_in'] = 41
-        self.varmap['q_arcer_sys_in'] = 42
-        self.varmap['q_arcor_sys_in'] = 43
-        self.varmap['ppCO2_at_r'] = 44
-        self.varmap['ppO2_at_r'] = 45
-        self.varmap['ppCO2_v_r'] = 46
-        self.varmap['ppO2_v_r'] = 47
-        self.varmap['ppCO2_ar_pul'] = 48
-        self.varmap['ppO2_ar_pul'] = 49
-        self.varmap['ppCO2_cap_pul'] = 50
-        self.varmap['ppO2_cap_pul'] = 51
-        self.varmap['ppCO2_ven_pul'] = 52
-        self.varmap['ppO2_ven_pul'] = 53
-        self.varmap['ppCO2_at_l'] = 54
-        self.varmap['ppO2_at_l'] = 55
-        self.varmap['ppCO2_v_l'] = 56
-        self.varmap['ppO2_v_l'] = 57
-        self.varmap['ppCO2_ar_sys'] = 58
-        self.varmap['ppO2_ar_sys'] = 59
-        self.varmap['ppCO2_arspl_sys'] = 60
-        self.varmap['ppO2_arspl_sys'] = 61
-        self.varmap['ppCO2_arespl_sys'] = 62
-        self.varmap['ppO2_arespl_sys'] = 63
-        self.varmap['ppCO2_armsc_sys'] = 64
-        self.varmap['ppO2_armsc_sys'] = 65
-        self.varmap['ppCO2_arcer_sys'] = 66
-        self.varmap['ppO2_arcer_sys'] = 67
-        self.varmap['ppCO2_arcor_sys'] = 68
-        self.varmap['ppO2_arcor_sys'] = 69
-        self.varmap['ppCO2_venspl_sys'] = 70
-        self.varmap['ppO2_venspl_sys'] = 71
-        self.varmap['ppCO2_venespl_sys'] = 72
-        self.varmap['ppO2_venespl_sys'] = 73
-        self.varmap['ppCO2_venmsc_sys'] = 74
-        self.varmap['ppO2_venmsc_sys'] = 75
-        self.varmap['ppCO2_vencer_sys'] = 76
-        self.varmap['ppO2_vencer_sys'] = 77
-        self.varmap['ppCO2_vencor_sys'] = 78
-        self.varmap['ppO2_vencor_sys'] = 79
-        self.varmap['ppCO2_ven_sys'] = 80
-        self.varmap['ppO2_ven_sys'] = 81
+        self.varmap['V_alv'] = 36
+        self.varmap['q_alv'] = 37
+        self.varmap['p_alv'] = 38
+        self.varmap['fCO2_alv'] = 39
+        self.varmap['fO2_alv'] = 40
+        self.varmap['q_arspl_sys_in'] = 41
+        self.varmap['q_arespl_sys_in'] = 42
+        self.varmap['q_armsc_sys_in'] = 43
+        self.varmap['q_arcer_sys_in'] = 44
+        self.varmap['q_arcor_sys_in'] = 45
+        self.varmap['ppCO2_at_r'] = 46
+        self.varmap['ppO2_at_r'] = 47
+        self.varmap['ppCO2_v_r'] = 48
+        self.varmap['ppO2_v_r'] = 49
+        self.varmap['ppCO2_ar_pul'] = 50
+        self.varmap['ppO2_ar_pul'] = 51
+        self.varmap['ppCO2_cap_pul'] = 52
+        self.varmap['ppO2_cap_pul'] = 53
+        self.varmap['ppCO2_ven_pul'] = 54
+        self.varmap['ppO2_ven_pul'] = 55
+        self.varmap['ppCO2_at_l'] = 56
+        self.varmap['ppO2_at_l'] = 57
+        self.varmap['ppCO2_v_l'] = 58
+        self.varmap['ppO2_v_l'] = 59
+        self.varmap['ppCO2_ar_sys'] = 60
+        self.varmap['ppO2_ar_sys'] = 61
+        self.varmap['ppCO2_arspl_sys'] = 62
+        self.varmap['ppO2_arspl_sys'] = 63
+        self.varmap['ppCO2_arespl_sys'] = 64
+        self.varmap['ppO2_arespl_sys'] = 65
+        self.varmap['ppCO2_armsc_sys'] = 66
+        self.varmap['ppO2_armsc_sys'] = 67
+        self.varmap['ppCO2_arcer_sys'] = 68
+        self.varmap['ppO2_arcer_sys'] = 69
+        self.varmap['ppCO2_arcor_sys'] = 70
+        self.varmap['ppO2_arcor_sys'] = 71
+        self.varmap['ppCO2_venspl_sys'] = 72
+        self.varmap['ppO2_venspl_sys'] = 73
+        self.varmap['ppCO2_venespl_sys'] = 74
+        self.varmap['ppO2_venespl_sys'] = 75
+        self.varmap['ppCO2_venmsc_sys'] = 76
+        self.varmap['ppO2_venmsc_sys'] = 77
+        self.varmap['ppCO2_vencer_sys'] = 78
+        self.varmap['ppO2_vencer_sys'] = 79
+        self.varmap['ppCO2_vencor_sys'] = 80
+        self.varmap['ppO2_vencor_sys'] = 81
+        self.varmap['ppCO2_ven_sys'] = 82
+        self.varmap['ppO2_ven_sys'] = 83
 
         # add to auxmap
-        self.auxmap['SO2_ar_pul'] = 49
-        self.auxmap['SO2_ar_sys'] = 59
+        self.auxmap['SO2_ar_pul'] = 51
+        self.auxmap['SO2_ar_sys'] = 61
         
         
         # variables from the mechanics model
@@ -153,26 +154,26 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         p_at_l_        = self.x_[1]
         q_vout_l_      = self.x_[2]
         p_v_l_         = self.x_[3]
-        q_ar_sys_      = self.x_[5]
-        p_arperi_sys_  = self.x_[6]
-        q_arspl_sys_   = self.x_[7]
-        q_arespl_sys_  = self.x_[8]
-        q_armsc_sys_   = self.x_[9]
-        q_arcer_sys_   = self.x_[10]
-        q_arcor_sys_   = self.x_[11]
-        q_venspl_sys_  = self.x_[13]
-        q_venespl_sys_ = self.x_[15]
-        q_venmsc_sys_  = self.x_[17]
-        q_vencer_sys_  = self.x_[19]
-        q_vencor_sys_  = self.x_[21]
-        q_ven_sys_     = self.x_[23]
-        q_vin_r_       = self.x_[24]
-        p_at_r_        = self.x_[25]
-        q_vout_r_      = self.x_[26]
-        p_v_r_         = self.x_[27]
-        q_ar_pul_      = self.x_[29]
-        q_cap_pul_     = self.x_[31]
-        q_ven_pul_     = self.x_[33]
+        q_ar_sys_      = self.x_[7]
+        p_arperi_sys_  = self.x_[8]
+        q_arspl_sys_   = self.x_[9]
+        q_arespl_sys_  = self.x_[10]
+        q_armsc_sys_   = self.x_[11]
+        q_arcer_sys_   = self.x_[12]
+        q_arcor_sys_   = self.x_[13]
+        q_venspl_sys_  = self.x_[15]
+        q_venespl_sys_ = self.x_[17]
+        q_venmsc_sys_  = self.x_[19]
+        q_vencer_sys_  = self.x_[21]
+        q_vencor_sys_  = self.x_[23]
+        q_ven_sys_     = self.x_[25]
+        q_vin_r_       = self.x_[26]
+        p_at_r_        = self.x_[27]
+        q_vout_r_      = self.x_[28]
+        p_v_r_         = self.x_[29]
+        q_ar_pul_      = self.x_[31]
+        q_cap_pul_     = self.x_[33]
+        q_ven_pul_     = self.x_[35]
         # volumes from the mechanics model
         V_arspl_sys_   = self.C_arspl_sys * p_arperi_sys_ + self.V_arspl_sys_u
         V_arespl_sys_  = self.C_arespl_sys * p_arperi_sys_ + self.V_arespl_sys_u
@@ -255,317 +256,317 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         ppO2_ven_sys_ = sp.Symbol('ppO2_ven_sys_')
 
 
-        self.x_[34] = V_alv_
-        self.x_[35] = q_alv_
-        self.x_[36] = p_alv_
-        self.x_[37] = fCO2_alv_
-        self.x_[38] = fO2_alv_
-        self.x_[39] = q_arspl_sys_in_
-        self.x_[40] = q_arespl_sys_in_
-        self.x_[41] = q_armsc_sys_in_
-        self.x_[42] = q_arcer_sys_in_
-        self.x_[43] = q_arcor_sys_in_
-        self.x_[44] = ppCO2_at_r_
-        self.x_[45] = ppO2_at_r_
-        self.x_[46] = ppCO2_v_r_
-        self.x_[47] = ppO2_v_r_
-        self.x_[48] = ppCO2_ar_pul_
-        self.x_[49] = ppO2_ar_pul_
-        self.x_[50] = ppCO2_cap_pul_
-        self.x_[51] = ppO2_cap_pul_
-        self.x_[52] = ppCO2_ven_pul_
-        self.x_[53] = ppO2_ven_pul_
-        self.x_[54] = ppCO2_at_l_
-        self.x_[55] = ppO2_at_l_
-        self.x_[56] = ppCO2_v_l_
-        self.x_[57] = ppO2_v_l_
-        self.x_[58] = ppCO2_ar_sys_
-        self.x_[59] = ppO2_ar_sys_
-        self.x_[60] = ppCO2_arspl_sys_
-        self.x_[61] = ppO2_arspl_sys_
-        self.x_[62] = ppCO2_arespl_sys_
-        self.x_[63] = ppO2_arespl_sys_
-        self.x_[64] = ppCO2_armsc_sys_
-        self.x_[65] = ppO2_armsc_sys_
-        self.x_[66] = ppCO2_arcer_sys_
-        self.x_[67] = ppO2_arcer_sys_
-        self.x_[68] = ppCO2_arcor_sys_
-        self.x_[69] = ppO2_arcor_sys_
-        self.x_[70] = ppCO2_venspl_sys_
-        self.x_[71] = ppO2_venspl_sys_
-        self.x_[72] = ppCO2_venespl_sys_
-        self.x_[73] = ppO2_venespl_sys_
-        self.x_[74] = ppCO2_venmsc_sys_
-        self.x_[75] = ppO2_venmsc_sys_
-        self.x_[76] = ppCO2_vencer_sys_
-        self.x_[77] = ppO2_vencer_sys_
-        self.x_[78] = ppCO2_vencor_sys_
-        self.x_[79] = ppO2_vencor_sys_
-        self.x_[80] = ppCO2_ven_sys_
-        self.x_[81] = ppO2_ven_sys_
+        self.x_[36] = V_alv_
+        self.x_[37] = q_alv_
+        self.x_[38] = p_alv_
+        self.x_[39] = fCO2_alv_
+        self.x_[40] = fO2_alv_
+        self.x_[41] = q_arspl_sys_in_
+        self.x_[42] = q_arespl_sys_in_
+        self.x_[43] = q_armsc_sys_in_
+        self.x_[44] = q_arcer_sys_in_
+        self.x_[45] = q_arcor_sys_in_
+        self.x_[46] = ppCO2_at_r_
+        self.x_[47] = ppO2_at_r_
+        self.x_[48] = ppCO2_v_r_
+        self.x_[49] = ppO2_v_r_
+        self.x_[50] = ppCO2_ar_pul_
+        self.x_[51] = ppO2_ar_pul_
+        self.x_[52] = ppCO2_cap_pul_
+        self.x_[53] = ppO2_cap_pul_
+        self.x_[54] = ppCO2_ven_pul_
+        self.x_[55] = ppO2_ven_pul_
+        self.x_[56] = ppCO2_at_l_
+        self.x_[57] = ppO2_at_l_
+        self.x_[58] = ppCO2_v_l_
+        self.x_[59] = ppO2_v_l_
+        self.x_[60] = ppCO2_ar_sys_
+        self.x_[61] = ppO2_ar_sys_
+        self.x_[62] = ppCO2_arspl_sys_
+        self.x_[63] = ppO2_arspl_sys_
+        self.x_[64] = ppCO2_arespl_sys_
+        self.x_[65] = ppO2_arespl_sys_
+        self.x_[66] = ppCO2_armsc_sys_
+        self.x_[67] = ppO2_armsc_sys_
+        self.x_[68] = ppCO2_arcer_sys_
+        self.x_[69] = ppO2_arcer_sys_
+        self.x_[70] = ppCO2_arcor_sys_
+        self.x_[71] = ppO2_arcor_sys_
+        self.x_[72] = ppCO2_venspl_sys_
+        self.x_[73] = ppO2_venspl_sys_
+        self.x_[74] = ppCO2_venespl_sys_
+        self.x_[75] = ppO2_venespl_sys_
+        self.x_[76] = ppCO2_venmsc_sys_
+        self.x_[77] = ppO2_venmsc_sys_
+        self.x_[78] = ppCO2_vencer_sys_
+        self.x_[79] = ppO2_vencer_sys_
+        self.x_[80] = ppCO2_vencor_sys_
+        self.x_[81] = ppO2_vencor_sys_
+        self.x_[82] = ppCO2_ven_sys_
+        self.x_[83] = ppO2_ven_sys_
 
 
 
         # 0D lung
-        self.df_[34] = V_alv_
-        self.df_[35] = self.L_alv * q_alv_
-        self.df_[36] = p_alv_
+        self.df_[36] = V_alv_
+        self.df_[37] = self.L_alv * q_alv_
+        self.df_[38] = p_alv_
 
         fCO2_insp_ = sp.Piecewise( ((fCO2_alv_ * self.V_lung_dead + self.fCO2_ext * (self.V_lung_tidal-self.V_lung_dead)) / self.V_lung_tidal, self.V_lung_tidal >= self.V_lung_dead), (fCO2_alv_, self.V_lung_tidal < self.V_lung_dead) )
         fO2_insp_  = sp.Piecewise( ((fO2_alv_ * self.V_lung_dead + self.fO2_ext * (self.V_lung_tidal-self.V_lung_dead)) / self.V_lung_tidal, self.V_lung_tidal >= self.V_lung_dead), (fO2_alv_, self.V_lung_tidal < self.V_lung_dead) )
 
         q_insp_ = sp.Piecewise( ((self.U_m-p_alv_)/self.R_airw, self.U_m > p_alv_), (0, self.U_m <= p_alv_) )
 
-        self.df_[37] = fCO2_alv_
-        self.df_[38] = fO2_alv_
+        self.df_[39] = fCO2_alv_
+        self.df_[40] = fO2_alv_
         
-        self.df_[39] = self.C_arspl_sys * p_arperi_sys_
-        self.df_[40] = self.C_arespl_sys * p_arperi_sys_
-        self.df_[41] = self.C_armsc_sys * p_arperi_sys_
-        self.df_[42] = self.C_arcer_sys * p_arperi_sys_
-        self.df_[43] = self.C_arcor_sys * p_arperi_sys_
+        self.df_[41] = self.C_arspl_sys * p_arperi_sys_
+        self.df_[42] = self.C_arespl_sys * p_arperi_sys_
+        self.df_[43] = self.C_armsc_sys * p_arperi_sys_
+        self.df_[44] = self.C_arcer_sys * p_arperi_sys_
+        self.df_[45] = self.C_arcor_sys * p_arperi_sys_
 
         # gas transport in cardiovascular system
-        self.df_[44] = ppCO2_at_r_
-        self.df_[45] = ppO2_at_r_
-        self.df_[46] = ppCO2_v_r_
-        self.df_[47] = ppO2_v_r_
-        self.df_[48] = ppCO2_ar_pul_
-        self.df_[49] = ppO2_ar_pul_
+        self.df_[46] = ppCO2_at_r_
+        self.df_[47] = ppO2_at_r_
+        self.df_[48] = ppCO2_v_r_
+        self.df_[49] = ppO2_v_r_
+        self.df_[50] = ppCO2_ar_pul_
+        self.df_[51] = ppO2_ar_pul_
 
         # gas partial pressures at pulmonary capillaries
-        self.df_[50] = ppCO2_cap_pul_
-        self.df_[51] = ppO2_cap_pul_
+        self.df_[52] = ppCO2_cap_pul_
+        self.df_[53] = ppO2_cap_pul_
 
-        self.df_[52] = ppCO2_ven_pul_
-        self.df_[53] = ppO2_ven_pul_
-        self.df_[54] = ppCO2_at_l_
-        self.df_[55] = ppO2_at_l_
-        self.df_[56] = ppCO2_v_l_
-        self.df_[57] = ppO2_v_l_
-        self.df_[58] = ppCO2_ar_sys_
-        self.df_[59] = ppO2_ar_sys_
+        self.df_[54] = ppCO2_ven_pul_
+        self.df_[55] = ppO2_ven_pul_
+        self.df_[56] = ppCO2_at_l_
+        self.df_[57] = ppO2_at_l_
+        self.df_[58] = ppCO2_v_l_
+        self.df_[59] = ppO2_v_l_
+        self.df_[60] = ppCO2_ar_sys_
+        self.df_[61] = ppO2_ar_sys_
 
         # gas partial pressures at systemic capillaries
         # arterioles
-        self.df_[60] = ppCO2_arspl_sys_
-        self.df_[61] = ppO2_arspl_sys_
-        self.df_[62] = ppCO2_arespl_sys_
-        self.df_[63] = ppO2_arespl_sys_
-        self.df_[64] = ppCO2_armsc_sys_
-        self.df_[65] = ppO2_armsc_sys_
-        self.df_[66] = ppCO2_arcer_sys_
-        self.df_[67] = ppO2_arcer_sys_
-        self.df_[68] = ppCO2_arcor_sys_
-        self.df_[69] = ppO2_arcor_sys_
+        self.df_[62] = ppCO2_arspl_sys_
+        self.df_[63] = ppO2_arspl_sys_
+        self.df_[64] = ppCO2_arespl_sys_
+        self.df_[65] = ppO2_arespl_sys_
+        self.df_[66] = ppCO2_armsc_sys_
+        self.df_[67] = ppO2_armsc_sys_
+        self.df_[68] = ppCO2_arcer_sys_
+        self.df_[69] = ppO2_arcer_sys_
+        self.df_[70] = ppCO2_arcor_sys_
+        self.df_[71] = ppO2_arcor_sys_
         # venules
-        self.df_[70] = ppCO2_venspl_sys_
-        self.df_[71] = ppO2_venspl_sys_
-        self.df_[72] = ppCO2_venespl_sys_
-        self.df_[73] = ppO2_venespl_sys_
-        self.df_[74] = ppCO2_venmsc_sys_
-        self.df_[75] = ppO2_venmsc_sys_
-        self.df_[76] = ppCO2_vencer_sys_
-        self.df_[77] = ppO2_vencer_sys_
-        self.df_[78] = ppCO2_vencor_sys_
-        self.df_[79] = ppO2_vencor_sys_
-        self.df_[80] = ppCO2_ven_sys_
-        self.df_[81] = ppO2_ven_sys_
+        self.df_[72] = ppCO2_venspl_sys_
+        self.df_[73] = ppO2_venspl_sys_
+        self.df_[74] = ppCO2_venespl_sys_
+        self.df_[75] = ppO2_venespl_sys_
+        self.df_[76] = ppCO2_venmsc_sys_
+        self.df_[77] = ppO2_venmsc_sys_
+        self.df_[78] = ppCO2_vencer_sys_
+        self.df_[79] = ppO2_vencer_sys_
+        self.df_[80] = ppCO2_vencor_sys_
+        self.df_[81] = ppO2_vencor_sys_
+        self.df_[82] = ppCO2_ven_sys_
+        self.df_[83] = ppO2_ven_sys_
 
 
 
-        self.f_[34] = -q_alv_
-        self.f_[35] = self.R_alv * q_alv_ + self.E_alv*(V_alv_-self.V_lung_u) - p_alv_ + self.U_t()
-        self.f_[36] = -(1./V_alv_) * (self.U_m * ((self.U_m-p_alv_)/self.R_airw + self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37)) + self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37))) - p_alv_ * q_alv_)
+        self.f_[36] = -q_alv_
+        self.f_[37] = self.R_alv * q_alv_ + self.E_alv*(V_alv_-self.V_lung_u) - p_alv_ + self.U_t()
+        self.f_[38] = -(1./V_alv_) * (self.U_m * ((self.U_m-p_alv_)/self.R_airw + self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37)) + self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37))) - p_alv_ * q_alv_)
 
-        self.f_[37] = -(1./V_alv_) * ( self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*p_alv_) + (fCO2_insp_ - fCO2_alv_)*q_insp_ - fCO2_alv_*(self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37)) + self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37))))
-        self.f_[38] = -(1./V_alv_) * ( self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*p_alv_) + (fO2_insp_ - fO2_alv_)*q_insp_ - fO2_alv_*(self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37)) + self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37))))
+        self.f_[39] = -(1./V_alv_) * ( self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*p_alv_) + (fCO2_insp_ - fCO2_alv_)*q_insp_ - fCO2_alv_*(self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37)) + self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37))))
+        self.f_[40] = -(1./V_alv_) * ( self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*p_alv_) + (fO2_insp_ - fO2_alv_)*q_insp_ - fO2_alv_*(self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37)) + self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37))))
 
-        self.f_[39] = q_arspl_sys_ - q_arspl_sys_in_
-        self.f_[40] = q_arespl_sys_ - q_arespl_sys_in_
-        self.f_[41] = q_armsc_sys_ - q_armsc_sys_in_
-        self.f_[42] = q_arcer_sys_ - q_arcer_sys_in_
-        self.f_[43] = q_arcor_sys_ - q_arcor_sys_in_
+        self.f_[41] = q_arspl_sys_ - q_arspl_sys_in_
+        self.f_[42] = q_arespl_sys_ - q_arespl_sys_in_
+        self.f_[43] = q_armsc_sys_ - q_armsc_sys_in_
+        self.f_[44] = q_arcer_sys_ - q_arcer_sys_in_
+        self.f_[45] = q_arcor_sys_ - q_arcor_sys_in_
 
 
         # right atrium CO2
-        self.f_[44] = (1./V_at_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbO2_dppO2(ppCO2_at_r_,ppO2_at_r_) - self.dcbO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbCO2_dppO2(ppCO2_at_r_,ppO2_at_r_) ),-1.) * \
+        self.f_[46] = (1./V_at_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbO2_dppO2(ppCO2_at_r_,ppO2_at_r_) - self.dcbO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbCO2_dppO2(ppCO2_at_r_,ppO2_at_r_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_at_r_,ppO2_at_r_) * (q_ven_sys_ * (self.cbCO2(ppCO2_at_r_,ppO2_at_r_) - self.cbCO2(ppCO2_ven_sys_,ppO2_ven_sys_))) - \
                 self.dcbCO2_dppO2(ppCO2_at_r_,ppO2_at_r_) * (q_ven_sys_ * (self.cbO2(ppCO2_at_r_,ppO2_at_r_) - self.cbO2(ppCO2_ven_sys_,ppO2_ven_sys_))) )
         # right atrium O2
-        self.f_[45] = (1./V_at_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbO2_dppO2(ppCO2_at_r_,ppO2_at_r_) - self.dcbO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbCO2_dppO2(ppCO2_at_r_,ppO2_at_r_) ),-1.) * \
+        self.f_[47] = (1./V_at_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbO2_dppO2(ppCO2_at_r_,ppO2_at_r_) - self.dcbO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbCO2_dppO2(ppCO2_at_r_,ppO2_at_r_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_at_r_,ppO2_at_r_) * (q_ven_sys_ * (self.cbO2(ppCO2_at_r_,ppO2_at_r_) - self.cbO2(ppCO2_ven_sys_,ppO2_ven_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_at_r_,ppO2_at_r_) * (q_ven_sys_ * (self.cbCO2(ppCO2_at_r_,ppO2_at_r_) - self.cbCO2(ppCO2_ven_sys_,ppO2_ven_sys_))) )
 
         # right ventricle CO2
-        self.f_[46] = (1./V_v_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbO2_dppO2(ppCO2_v_r_,ppO2_v_r_) - self.dcbO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbCO2_dppO2(ppCO2_v_r_,ppO2_v_r_) ),-1.) * \
+        self.f_[48] = (1./V_v_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbO2_dppO2(ppCO2_v_r_,ppO2_v_r_) - self.dcbO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbCO2_dppO2(ppCO2_v_r_,ppO2_v_r_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_v_r_,ppO2_v_r_) * (q_vin_r_ * (self.cbCO2(ppCO2_v_r_,ppO2_v_r_) - self.cbCO2(ppCO2_at_r_,ppO2_at_r_))) - \
                 self.dcbCO2_dppO2(ppCO2_v_r_,ppO2_v_r_) * (q_vin_r_ * (self.cbO2(ppCO2_v_r_,ppO2_v_r_) - self.cbO2(ppCO2_at_r_,ppO2_at_r_))) )
         # right ventricle O2
-        self.f_[47] = (1./V_v_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbO2_dppO2(ppCO2_v_r_,ppO2_v_r_) - self.dcbO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbCO2_dppO2(ppCO2_v_r_,ppO2_v_r_) ),-1.) * \
+        self.f_[49] = (1./V_v_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbO2_dppO2(ppCO2_v_r_,ppO2_v_r_) - self.dcbO2_dppCO2(ppCO2_v_r_,ppO2_v_r_)*self.dcbCO2_dppO2(ppCO2_v_r_,ppO2_v_r_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_v_r_,ppO2_v_r_) * (q_vin_r_ * (self.cbO2(ppCO2_v_r_,ppO2_v_r_) - self.cbO2(ppCO2_at_r_,ppO2_at_r_))) - \
                 self.dcbO2_dppCO2(ppCO2_v_r_,ppO2_v_r_) * (q_vin_r_ * (self.cbCO2(ppCO2_v_r_,ppO2_v_r_) - self.cbCO2(ppCO2_at_r_,ppO2_at_r_))) )
 
         # pulmonary arteries CO2
-        self.f_[48] = (1./V_ar_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.dcbO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbCO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) ),-1.) * \
+        self.f_[50] = (1./V_ar_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.dcbO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbCO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) * (q_vout_r_ * (self.cbCO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.cbCO2(ppCO2_v_r_,ppO2_v_r_))) - \
                 self.dcbCO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) * (q_vout_r_ * (self.cbO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.cbO2(ppCO2_v_r_,ppO2_v_r_))) )
         # pulmonary arteries O2
-        self.f_[49] = (1./V_ar_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.dcbO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbCO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) ),-1.) * \
+        self.f_[51] = (1./V_ar_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.dcbO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_)*self.dcbCO2_dppO2(ppCO2_ar_pul_,ppO2_ar_pul_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_) * (q_vout_r_ * (self.cbO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.cbO2(ppCO2_v_r_,ppO2_v_r_))) - \
                 self.dcbO2_dppCO2(ppCO2_ar_pul_,ppO2_ar_pul_) * (q_vout_r_ * (self.cbCO2(ppCO2_ar_pul_,ppO2_ar_pul_) - self.cbCO2(ppCO2_v_r_,ppO2_v_r_))) )
 
         # pulmonary capillaries CO2
-        self.f_[50] = (1./V_cap_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.dcbO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbCO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) ),-1.) * \
+        self.f_[52] = (1./V_cap_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.dcbO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbCO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) * (q_ar_pul_ * (self.cbCO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.cbCO2(ppCO2_ar_pul_,ppO2_ar_pul_)) + self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37))) - \
                 self.dcbCO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) * (q_ar_pul_ * (self.cbO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.cbO2(ppCO2_ar_pul_,ppO2_ar_pul_)) + self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37))) )
         # pulmonary capillaries O2
-        self.f_[51] = (1./V_cap_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.dcbO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbCO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) ),-1.) * \
+        self.f_[53] = (1./V_cap_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.dcbO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_)*self.dcbCO2_dppO2(ppCO2_cap_pul_,ppO2_cap_pul_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_) * (q_ar_pul_ * (self.cbO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.cbO2(ppCO2_ar_pul_,ppO2_ar_pul_)) + self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37))) - \
                 self.dcbO2_dppCO2(ppCO2_cap_pul_,ppO2_cap_pul_) * (q_ar_pul_ * (self.cbCO2(ppCO2_cap_pul_,ppO2_cap_pul_) - self.cbCO2(ppCO2_ar_pul_,ppO2_ar_pul_)) + self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37))) )
 
         # pulmonary veins CO2
-        self.f_[52] = (1./V_ven_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.dcbO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbCO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) ),-1.) * \
+        self.f_[54] = (1./V_ven_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.dcbO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbCO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) * (q_cap_pul_ * (self.cbCO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.cbCO2(ppCO2_cap_pul_,ppO2_cap_pul_))) - \
                 self.dcbCO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) * (q_cap_pul_ * (self.cbO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.cbO2(ppCO2_cap_pul_,ppO2_cap_pul_))) )
         # pulmonary veins O2
-        self.f_[53] = (1./V_ven_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.dcbO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbCO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) ),-1.) * \
+        self.f_[55] = (1./V_ven_pul_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.dcbO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_)*self.dcbCO2_dppO2(ppCO2_ven_pul_,ppO2_ven_pul_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_) * (q_cap_pul_ * (self.cbO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.cbO2(ppCO2_cap_pul_,ppO2_cap_pul_))) - \
                 self.dcbO2_dppCO2(ppCO2_ven_pul_,ppO2_ven_pul_) * (q_cap_pul_ * (self.cbCO2(ppCO2_ven_pul_,ppO2_ven_pul_) - self.cbCO2(ppCO2_cap_pul_,ppO2_cap_pul_))) )
 
         # left atrium CO2
-        self.f_[54] = (1./V_at_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbO2_dppO2(ppCO2_at_l_,ppO2_at_l_) - self.dcbO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbCO2_dppO2(ppCO2_at_l_,ppO2_at_l_) ),-1.) * \
+        self.f_[56] = (1./V_at_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbO2_dppO2(ppCO2_at_l_,ppO2_at_l_) - self.dcbO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbCO2_dppO2(ppCO2_at_l_,ppO2_at_l_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_at_l_,ppO2_at_l_) * (q_ven_pul_ * (self.cbCO2(ppCO2_at_l_,ppO2_at_l_) - self.cbCO2(ppCO2_ven_pul_,ppO2_ven_pul_))) - \
                 self.dcbCO2_dppO2(ppCO2_at_l_,ppO2_at_l_) * (q_ven_pul_ * (self.cbO2(ppCO2_at_l_,ppO2_at_l_) - self.cbO2(ppCO2_ven_pul_,ppO2_ven_pul_))) )
         # left atrium O2
-        self.f_[55] = (1./V_at_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbO2_dppO2(ppCO2_at_l_,ppO2_at_l_) - self.dcbO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbCO2_dppO2(ppCO2_at_l_,ppO2_at_l_) ),-1.) * \
+        self.f_[57] = (1./V_at_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbO2_dppO2(ppCO2_at_l_,ppO2_at_l_) - self.dcbO2_dppCO2(ppCO2_at_l_,ppO2_at_l_)*self.dcbCO2_dppO2(ppCO2_at_l_,ppO2_at_l_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_at_l_,ppO2_at_l_) * (q_ven_pul_ * (self.cbO2(ppCO2_at_l_,ppO2_at_l_) - self.cbO2(ppCO2_ven_pul_,ppO2_ven_pul_))) - \
                 self.dcbO2_dppCO2(ppCO2_at_l_,ppO2_at_l_) * (q_ven_pul_ * (self.cbCO2(ppCO2_at_l_,ppO2_at_l_) - self.cbCO2(ppCO2_ven_pul_,ppO2_ven_pul_))) )
 
         # left ventricle CO2
-        self.f_[56] = (1./V_v_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbO2_dppO2(ppCO2_v_l_,ppO2_v_l_) - self.dcbO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbCO2_dppO2(ppCO2_v_l_,ppO2_v_l_) ),-1.) * \
+        self.f_[58] = (1./V_v_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbO2_dppO2(ppCO2_v_l_,ppO2_v_l_) - self.dcbO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbCO2_dppO2(ppCO2_v_l_,ppO2_v_l_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_v_l_,ppO2_v_l_) * (q_vin_l_ * (self.cbCO2(ppCO2_v_l_,ppO2_v_l_) - self.cbCO2(ppCO2_at_l_,ppO2_at_l_))) - \
                 self.dcbCO2_dppO2(ppCO2_v_l_,ppO2_v_l_) * (q_vin_l_ * (self.cbO2(ppCO2_v_l_,ppO2_v_l_) - self.cbO2(ppCO2_at_l_,ppO2_at_l_))) )
         # left ventricle O2
-        self.f_[57] = (1./V_v_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbO2_dppO2(ppCO2_v_l_,ppO2_v_l_) - self.dcbO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbCO2_dppO2(ppCO2_v_l_,ppO2_v_l_) ),-1.) * \
+        self.f_[59] = (1./V_v_l_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbO2_dppO2(ppCO2_v_l_,ppO2_v_l_) - self.dcbO2_dppCO2(ppCO2_v_l_,ppO2_v_l_)*self.dcbCO2_dppO2(ppCO2_v_l_,ppO2_v_l_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_v_l_,ppO2_v_l_) * (q_vin_l_ * (self.cbO2(ppCO2_v_l_,ppO2_v_l_) - self.cbO2(ppCO2_at_l_,ppO2_at_l_))) - \
                 self.dcbO2_dppCO2(ppCO2_v_l_,ppO2_v_l_) * (q_vin_l_ * (self.cbCO2(ppCO2_v_l_,ppO2_v_l_) - self.cbCO2(ppCO2_at_l_,ppO2_at_l_))) )
 
         # systemic arteries CO2
-        self.f_[58] = (1./V_ar_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.dcbO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbCO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) ),-1.) * \
+        self.f_[60] = (1./V_ar_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.dcbO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbCO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) * (q_vout_l_ * (self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.cbCO2(ppCO2_v_l_,ppO2_v_l_))) - \
                 self.dcbCO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) * (q_vout_l_ * (self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.cbO2(ppCO2_v_l_,ppO2_v_l_))) )
         # systemic arteries O2
-        self.f_[59] = (1./V_ar_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.dcbO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbCO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) ),-1.) * \
+        self.f_[61] = (1./V_ar_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.dcbO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_)*self.dcbCO2_dppO2(ppCO2_ar_sys_,ppO2_ar_sys_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_) * (q_vout_l_ * (self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.cbO2(ppCO2_v_l_,ppO2_v_l_))) - \
                 self.dcbO2_dppCO2(ppCO2_ar_sys_,ppO2_ar_sys_) * (q_vout_l_ * (self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_) - self.cbCO2(ppCO2_v_l_,ppO2_v_l_))) )
 
         ### systemic capillaries
         # systemic splanchnic arteries CO2
-        self.f_[60] = (1./V_arspl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctCO2_dppCO2(ppCO2_arspl_sys_))*(self.dcbO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctO2_dppO2(ppO2_arspl_sys_)) - self.dcbO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_)*self.dcbCO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) ),-1.) * \
+        self.f_[62] = (1./V_arspl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctCO2_dppCO2(ppCO2_arspl_sys_))*(self.dcbO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctO2_dppO2(ppO2_arspl_sys_)) - self.dcbO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_)*self.dcbCO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) ),-1.) * \
             ( (self.dcbO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctO2_dppO2(ppO2_arspl_sys_)) * (q_arspl_sys_in_ * (self.cbCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arspl) - \
                 self.dcbCO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) * (q_arspl_sys_in_ * (self.cbO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arspl*self.ctO2(ppO2_arspl_sys_)/(self.beta_O2+self.ctO2(ppO2_arspl_sys_)) ) )
         # systemic splanchnic arteries O2
-        self.f_[61] = (1./V_arspl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctCO2_dppCO2(ppCO2_arspl_sys_))*(self.dcbO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctO2_dppO2(ppO2_arspl_sys_)) - self.dcbO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_)*self.dcbCO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) ),-1.) * \
+        self.f_[63] = (1./V_arspl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctCO2_dppCO2(ppCO2_arspl_sys_))*(self.dcbO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctO2_dppO2(ppO2_arspl_sys_)) - self.dcbO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_)*self.dcbCO2_dppO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) ),-1.) * \
             ( (self.dcbCO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) + (self.V_tissspl/V_arspl_sys_)*self.dctCO2_dppCO2(ppCO2_arspl_sys_)) * (q_arspl_sys_in_ * (self.cbO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arspl*self.ctO2(ppO2_arspl_sys_)/(self.beta_O2+self.ctO2(ppO2_arspl_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) * (q_arspl_sys_in_ * (self.cbCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arspl) )
 
         # systemic extra-esplanchnic arteries CO2
-        self.f_[62] = (1./V_arespl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctCO2_dppCO2(ppCO2_arespl_sys_))*(self.dcbO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctO2_dppO2(ppO2_arespl_sys_)) - self.dcbO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_)*self.dcbCO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) ),-1.) * \
+        self.f_[64] = (1./V_arespl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctCO2_dppCO2(ppCO2_arespl_sys_))*(self.dcbO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctO2_dppO2(ppO2_arespl_sys_)) - self.dcbO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_)*self.dcbCO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) ),-1.) * \
             ( (self.dcbO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctO2_dppO2(ppO2_arespl_sys_)) * (q_arespl_sys_in_ * (self.cbCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arespl) - \
                 self.dcbCO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) * (q_arespl_sys_in_ * (self.cbO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arespl*self.ctO2(ppO2_arespl_sys_)/(self.beta_O2+self.ctO2(ppO2_arespl_sys_))) )
         # systemic exrta-splanchnic arteries O2
-        self.f_[63] = (1./V_arespl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctCO2_dppCO2(ppCO2_arespl_sys_))*(self.dcbO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctO2_dppO2(ppO2_arespl_sys_)) - self.dcbO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_)*self.dcbCO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) ),-1.) * \
+        self.f_[65] = (1./V_arespl_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctCO2_dppCO2(ppCO2_arespl_sys_))*(self.dcbO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctO2_dppO2(ppO2_arespl_sys_)) - self.dcbO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_)*self.dcbCO2_dppO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) ),-1.) * \
             ( (self.dcbCO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) + (self.V_tissespl/V_arespl_sys_)*self.dctCO2_dppCO2(ppCO2_arespl_sys_)) * (q_arespl_sys_in_ * (self.cbO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arespl*self.ctO2(ppO2_arespl_sys_)/(self.beta_O2+self.ctO2(ppO2_arespl_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) * (q_arespl_sys_in_ * (self.cbCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arespl) )
 
         # systemic muscular arteries CO2
-        self.f_[64] = (1./V_armsc_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctCO2_dppCO2(ppCO2_armsc_sys_))*(self.dcbO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctO2_dppO2(ppO2_armsc_sys_)) - self.dcbO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_)*self.dcbCO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) ),-1.) * \
+        self.f_[66] = (1./V_armsc_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctCO2_dppCO2(ppCO2_armsc_sys_))*(self.dcbO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctO2_dppO2(ppO2_armsc_sys_)) - self.dcbO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_)*self.dcbCO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) ),-1.) * \
             ( (self.dcbO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctO2_dppO2(ppO2_armsc_sys_)) * (q_armsc_sys_in_ * (self.cbCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_armsc) - \
                 self.dcbCO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) * (q_armsc_sys_in_ * (self.cbO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_armsc*self.ctO2(ppO2_armsc_sys_)/(self.beta_O2+self.ctO2(ppO2_armsc_sys_))) )
         # systemic muscular arteries O2
-        self.f_[65] = (1./V_armsc_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctCO2_dppCO2(ppCO2_armsc_sys_))*(self.dcbO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctO2_dppO2(ppO2_armsc_sys_)) - self.dcbO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_)*self.dcbCO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) ),-1.) * \
+        self.f_[67] = (1./V_armsc_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctCO2_dppCO2(ppCO2_armsc_sys_))*(self.dcbO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctO2_dppO2(ppO2_armsc_sys_)) - self.dcbO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_)*self.dcbCO2_dppO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) ),-1.) * \
             ( (self.dcbCO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) + (self.V_tissmsc/V_armsc_sys_)*self.dctCO2_dppCO2(ppCO2_armsc_sys_)) * (q_armsc_sys_in_ * (self.cbO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_armsc*self.ctO2(ppO2_armsc_sys_)/(self.beta_O2+self.ctO2(ppO2_armsc_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) * (q_armsc_sys_in_ * (self.cbCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_armsc) )
 
         # systemic cerebral arteries CO2
-        self.f_[66] = (1./V_arcer_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctCO2_dppCO2(ppCO2_arcer_sys_))*(self.dcbO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctO2_dppO2(ppO2_arcer_sys_)) - self.dcbO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_)*self.dcbCO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) ),-1.) * \
+        self.f_[68] = (1./V_arcer_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctCO2_dppCO2(ppCO2_arcer_sys_))*(self.dcbO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctO2_dppO2(ppO2_arcer_sys_)) - self.dcbO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_)*self.dcbCO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) ),-1.) * \
             ( (self.dcbO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctO2_dppO2(ppO2_arcer_sys_)) * (q_arcer_sys_in_ * (self.cbCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arcer) - \
                 self.dcbCO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) * (q_arcer_sys_in_ * (self.cbO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arcer*self.ctO2(ppO2_arcer_sys_)/(self.beta_O2+self.ctO2(ppO2_arcer_sys_))) )
         # systemic cerebral arteries O2
-        self.f_[67] = (1./V_arcer_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctCO2_dppCO2(ppCO2_arcer_sys_))*(self.dcbO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctO2_dppO2(ppO2_arcer_sys_)) - self.dcbO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_)*self.dcbCO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) ),-1.) * \
+        self.f_[69] = (1./V_arcer_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctCO2_dppCO2(ppCO2_arcer_sys_))*(self.dcbO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctO2_dppO2(ppO2_arcer_sys_)) - self.dcbO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_)*self.dcbCO2_dppO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) ),-1.) * \
             ( (self.dcbCO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) + (self.V_tisscer/V_arcer_sys_)*self.dctCO2_dppCO2(ppCO2_arcer_sys_)) * (q_arcer_sys_in_ * (self.cbO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arcer*self.ctO2(ppO2_arcer_sys_)/(self.beta_O2+self.ctO2(ppO2_arcer_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) * (q_arcer_sys_in_ * (self.cbCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arcer) )
 
         # systemic coronary arteries CO2
-        self.f_[68] = (1./V_arcor_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctCO2_dppCO2(ppCO2_arcor_sys_))*(self.dcbO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctO2_dppO2(ppO2_arcor_sys_)) - self.dcbO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_)*self.dcbCO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) ),-1.) * \
+        self.f_[70] = (1./V_arcor_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctCO2_dppCO2(ppCO2_arcor_sys_))*(self.dcbO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctO2_dppO2(ppO2_arcor_sys_)) - self.dcbO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_)*self.dcbCO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) ),-1.) * \
             ( (self.dcbO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctO2_dppO2(ppO2_arcor_sys_)) * (q_arcor_sys_in_ * (self.cbCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arcor) - \
                 self.dcbCO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) * (q_arcor_sys_in_ * (self.cbO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arcor*self.ctO2(ppO2_arcor_sys_)/(self.beta_O2+self.ctO2(ppO2_arcor_sys_))) )
         # systemic coronary arteries O2
-        self.f_[69] = (1./V_arcor_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctCO2_dppCO2(ppCO2_arcor_sys_))*(self.dcbO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctO2_dppO2(ppO2_arcor_sys_)) - self.dcbO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_)*self.dcbCO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) ),-1.) * \
+        self.f_[71] = (1./V_arcor_sys_) * sp.Pow(( (self.dcbCO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctCO2_dppCO2(ppCO2_arcor_sys_))*(self.dcbO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctO2_dppO2(ppO2_arcor_sys_)) - self.dcbO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_)*self.dcbCO2_dppO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) ),-1.) * \
             ( (self.dcbCO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctCO2_dppCO2(ppCO2_arcor_sys_)) * (q_arcor_sys_in_ * (self.cbO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arcor*self.ctO2(ppO2_arcor_sys_)/(self.beta_O2+self.ctO2(ppO2_arcor_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) * (q_arcor_sys_in_ * (self.cbCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arcor) )
 
 
         # systemic splanchnic veins CO2
-        self.f_[70] = (1./V_venspl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.dcbO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbCO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) ),-1.) * \
+        self.f_[72] = (1./V_venspl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.dcbO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbCO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) * (q_arspl_sys_ * (self.cbCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.cbCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_))) - \
                 self.dcbCO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) * (q_arspl_sys_ * (self.cbO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.cbO2(ppCO2_arspl_sys_,ppO2_arspl_sys_))))
         # systemic splanchnic veins O2
-        self.f_[71]= (1./V_venspl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.dcbO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbCO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) ),-1.) * \
+        self.f_[73]= (1./V_venspl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.dcbO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbCO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) * (q_arspl_sys_ * (self.cbO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.cbO2(ppCO2_arspl_sys_,ppO2_arspl_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) * (q_arspl_sys_ * (self.cbCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.cbCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_))) )
 
         # systemic extra-splanchnic veins CO2
-        self.f_[72] = (1./V_venespl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.dcbO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbCO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) ),-1.) * \
+        self.f_[74] = (1./V_venespl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.dcbO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbCO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) * (q_arespl_sys_ * (self.cbCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.cbCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_))) - \
                 self.dcbCO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) * (q_arespl_sys_ * (self.cbO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.cbO2(ppCO2_arespl_sys_,ppO2_arespl_sys_))))
         # systemic extra-splanchnic veins O2
-        self.f_[73] = (1./V_venespl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.dcbO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbCO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) ),-1.) * \
+        self.f_[75] = (1./V_venespl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.dcbO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_)*self.dcbCO2_dppO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) * (q_arespl_sys_ * (self.cbO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.cbO2(ppCO2_arespl_sys_,ppO2_arespl_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) * (q_arespl_sys_ * (self.cbCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) - self.cbCO2(ppCO2_arespl_sys_,ppO2_arespl_sys_))) )
 
         # systemic muscular veins CO2
-        self.f_[74] = (1./V_venmsc_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.dcbO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbCO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) ),-1.) * \
+        self.f_[76] = (1./V_venmsc_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.dcbO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbCO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) * (q_armsc_sys_ * (self.cbCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.cbCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_))) - \
                 self.dcbCO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) * (q_armsc_sys_ * (self.cbO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.cbO2(ppCO2_armsc_sys_,ppO2_armsc_sys_))))
         # systemic muscular veins O2
-        self.f_[75] = (1./V_venmsc_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.dcbO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbCO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) ),-1.) * \
+        self.f_[77] = (1./V_venmsc_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.dcbO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_)*self.dcbCO2_dppO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) * (q_armsc_sys_ * (self.cbO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.cbO2(ppCO2_armsc_sys_,ppO2_armsc_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) * (q_armsc_sys_ * (self.cbCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) - self.cbCO2(ppCO2_armsc_sys_,ppO2_armsc_sys_))) )
 
         # systemic cerebral veins CO2
-        self.f_[76] = (1./V_vencer_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.dcbO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbCO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) ),-1.) * \
+        self.f_[78] = (1./V_vencer_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.dcbO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbCO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) * (q_arcer_sys_ * (self.cbCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.cbCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_))) - \
                 self.dcbCO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) * (q_arcer_sys_ * (self.cbO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.cbO2(ppCO2_arcer_sys_,ppO2_arcer_sys_))))
         # systemic cerebral veins O2
-        self.f_[77] = (1./V_vencer_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.dcbO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbCO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) ),-1.) * \
+        self.f_[79] = (1./V_vencer_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.dcbO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_)*self.dcbCO2_dppO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) * (q_arcer_sys_ * (self.cbO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.cbO2(ppCO2_arcer_sys_,ppO2_arcer_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) * (q_arcer_sys_ * (self.cbCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) - self.cbCO2(ppCO2_arcer_sys_,ppO2_arcer_sys_))) )
 
         # systemic coronary veins CO2
-        self.f_[78] = (1./V_vencor_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.dcbO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbCO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ),-1.) * \
+        self.f_[80] = (1./V_vencor_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.dcbO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbCO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) * (q_arcor_sys_ * (self.cbCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.cbCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_))) - \
                 self.dcbCO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) * (q_arcor_sys_ * (self.cbO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.cbO2(ppCO2_arcor_sys_,ppO2_arcor_sys_))))
         # systemic coronary veins O2
-        self.f_[79] = (1./V_vencor_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.dcbO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbCO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ),-1.) * \
+        self.f_[81] = (1./V_vencor_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.dcbO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_)*self.dcbCO2_dppO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) * (q_arcor_sys_ * (self.cbO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.cbO2(ppCO2_arcor_sys_,ppO2_arcor_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) * (q_arcor_sys_ * (self.cbCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) - self.cbCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_))) )
 
         # mixture rule for joining flows: c_upstr = (q_upstr_1 * c_upstr_1 + ... + q_upstr_n * c_upstr_n) / (q_upstr_1 + ... + q_upstr_n)
         # systemic veins CO2
-        self.f_[80] = (1./V_ven_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) - self.dcbO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbCO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) ),-1.) * \
+        self.f_[82] = (1./V_ven_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) - self.dcbO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbCO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) * ( ((q_venspl_sys_+q_venespl_sys_+q_venmsc_sys_+q_vencer_sys_+q_vencor_sys_)*self.cbCO2(ppCO2_ven_sys_,ppO2_ven_sys_) - (q_venspl_sys_*self.cbCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) + q_venespl_sys_*self.cbCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) + q_venmsc_sys_*self.cbCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) + q_vencer_sys_*self.cbCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) + q_vencor_sys_*self.cbCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ))) - \
                 self.dcbCO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) * ( ((q_venspl_sys_+q_venespl_sys_+q_venmsc_sys_+q_vencer_sys_+q_vencor_sys_)*self.cbO2(ppCO2_ven_sys_,ppO2_ven_sys_) - (q_venspl_sys_*self.cbO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) + q_venespl_sys_*self.cbO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) + q_venmsc_sys_*self.cbO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) + q_vencer_sys_*self.cbO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) + q_vencor_sys_*self.cbO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ))))
         # systemic veins O2
-        self.f_[81] = (1./V_ven_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) - self.dcbO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbCO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) ),-1.) * \
+        self.f_[83] = (1./V_ven_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) - self.dcbO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_)*self.dcbCO2_dppO2(ppCO2_ven_sys_,ppO2_ven_sys_) ),-1.) * \
             ( self.dcbCO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_) * ( ((q_venspl_sys_+q_venespl_sys_+q_venmsc_sys_+q_vencer_sys_+q_vencor_sys_)*self.cbO2(ppCO2_ven_sys_,ppO2_ven_sys_) - (q_venspl_sys_*self.cbO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) + q_venespl_sys_*self.cbO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) + q_venmsc_sys_*self.cbO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) + q_vencer_sys_*self.cbO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) + q_vencor_sys_*self.cbO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ))) - \
                 self.dcbO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_) * ( ((q_venspl_sys_+q_venespl_sys_+q_venmsc_sys_+q_vencer_sys_+q_vencor_sys_)*self.cbCO2(ppCO2_ven_sys_,ppO2_ven_sys_) - (q_venspl_sys_*self.cbCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) + q_venespl_sys_*self.cbCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) + q_venmsc_sys_*self.cbCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) + q_vencer_sys_*self.cbCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) + q_vencor_sys_*self.cbCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ))) )
 
         
         # add to auxiliary variable vector (mainly in order to store quantities for post-processing)
-        self.a_[49] = self.SO2(ppCO2_ar_pul_,ppO2_ar_pul_)
-        self.a_[59] = self.SO2(ppCO2_ar_sys_,ppO2_ar_sys_)
+        self.a_[51] = self.SO2(ppCO2_ar_pul_,ppO2_ar_pul_)
+        self.a_[61] = self.SO2(ppCO2_ar_sys_,ppO2_ar_sys_)
 
 
     def initialize(self, var, iniparam):
@@ -576,60 +577,60 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         U_t_0 = self.U_t()
 
         V_alv_0 = iniparam['V_alv_0']
-        if V_alv_0>=0: var[34] = V_alv_0
-        if V_alv_0<0: var[34] = (self.U_m - U_t_0)/self.E_alv + self.V_lung_u
+        if V_alv_0>=0: var[36] = V_alv_0
+        if V_alv_0<0: var[36] = (self.U_m - U_t_0)/self.E_alv + self.V_lung_u
 
-        var[35] = iniparam['q_alv_0']
+        var[37] = iniparam['q_alv_0']
 
         p_alv_0 = iniparam['p_alv_0']
-        if p_alv_0>=0: var[36] = p_alv_0
-        if p_alv_0<0: var[36] = self.U_m
+        if p_alv_0>=0: var[38] = p_alv_0
+        if p_alv_0<0: var[38] = self.U_m
 
-        var[37] = iniparam['fCO2_alv_0']
-        var[38] = iniparam['fO2_alv_0']
-        var[39] = iniparam['q_arspl_sys_in_0']
-        var[40] = iniparam['q_arespl_sys_in_0']
-        var[41] = iniparam['q_armsc_sys_in_0']
-        var[42] = iniparam['q_arcer_sys_in_0']
-        var[43] = iniparam['q_arcor_sys_in_0']
-        var[44] = iniparam['ppCO2_at_r_0']
-        var[45] = iniparam['ppO2_at_r_0']
-        var[46] = iniparam['ppCO2_v_r_0']
-        var[47] = iniparam['ppO2_v_r_0']
-        var[48] = iniparam['ppCO2_ar_pul_0']
-        var[49] = iniparam['ppO2_ar_pul_0']
-        var[50] = iniparam['ppCO2_cap_pul_0']
-        var[51] = iniparam['ppO2_cap_pul_0']
-        var[52] = iniparam['ppCO2_ven_pul_0']
-        var[53] = iniparam['ppO2_ven_pul_0']
-        var[54] = iniparam['ppCO2_at_l_0']
-        var[55] = iniparam['ppO2_at_l_0']
-        var[56] = iniparam['ppCO2_v_l_0']
-        var[57] = iniparam['ppO2_v_l_0']
-        var[58] = iniparam['ppCO2_ar_sys_0']
-        var[59] = iniparam['ppO2_ar_sys_0']
-        var[60] = iniparam['ppCO2_arspl_sys_0']
-        var[61] = iniparam['ppO2_arspl_sys_0']
-        var[62] = iniparam['ppCO2_arespl_sys_0']
-        var[63] = iniparam['ppO2_arespl_sys_0']
-        var[64] = iniparam['ppCO2_armsc_sys_0']
-        var[65] = iniparam['ppO2_armsc_sys_0']
-        var[66] = iniparam['ppCO2_arcer_sys_0']
-        var[67] = iniparam['ppO2_arcer_sys_0']
-        var[68] = iniparam['ppCO2_arcor_sys_0']
-        var[69] = iniparam['ppO2_arcor_sys_0']
-        var[70] = iniparam['ppCO2_venspl_sys_0']
-        var[71] = iniparam['ppO2_venspl_sys_0']
-        var[72] = iniparam['ppCO2_venespl_sys_0']
-        var[73] = iniparam['ppO2_venespl_sys_0']
-        var[74] = iniparam['ppCO2_venmsc_sys_0']
-        var[75] = iniparam['ppO2_venmsc_sys_0']
-        var[76] = iniparam['ppCO2_vencer_sys_0']
-        var[77] = iniparam['ppO2_vencer_sys_0']
-        var[78] = iniparam['ppCO2_vencor_sys_0']
-        var[79] = iniparam['ppO2_vencor_sys_0']
-        var[80] = iniparam['ppCO2_ven_sys_0']
-        var[81] = iniparam['ppO2_ven_sys_0']
+        var[39] = iniparam['fCO2_alv_0']
+        var[40] = iniparam['fO2_alv_0']
+        var[41] = iniparam['q_arspl_sys_in_0']
+        var[42] = iniparam['q_arespl_sys_in_0']
+        var[43] = iniparam['q_armsc_sys_in_0']
+        var[44] = iniparam['q_arcer_sys_in_0']
+        var[45] = iniparam['q_arcor_sys_in_0']
+        var[46] = iniparam['ppCO2_at_r_0']
+        var[47] = iniparam['ppO2_at_r_0']
+        var[48] = iniparam['ppCO2_v_r_0']
+        var[49] = iniparam['ppO2_v_r_0']
+        var[50] = iniparam['ppCO2_ar_pul_0']
+        var[51] = iniparam['ppO2_ar_pul_0']
+        var[52] = iniparam['ppCO2_cap_pul_0']
+        var[53] = iniparam['ppO2_cap_pul_0']
+        var[54] = iniparam['ppCO2_ven_pul_0']
+        var[55] = iniparam['ppO2_ven_pul_0']
+        var[56] = iniparam['ppCO2_at_l_0']
+        var[57] = iniparam['ppO2_at_l_0']
+        var[58] = iniparam['ppCO2_v_l_0']
+        var[59] = iniparam['ppO2_v_l_0']
+        var[60] = iniparam['ppCO2_ar_sys_0']
+        var[61] = iniparam['ppO2_ar_sys_0']
+        var[62] = iniparam['ppCO2_arspl_sys_0']
+        var[63] = iniparam['ppO2_arspl_sys_0']
+        var[64] = iniparam['ppCO2_arespl_sys_0']
+        var[65] = iniparam['ppO2_arespl_sys_0']
+        var[66] = iniparam['ppCO2_armsc_sys_0']
+        var[67] = iniparam['ppO2_armsc_sys_0']
+        var[68] = iniparam['ppCO2_arcer_sys_0']
+        var[69] = iniparam['ppO2_arcer_sys_0']
+        var[70] = iniparam['ppCO2_arcor_sys_0']
+        var[71] = iniparam['ppO2_arcor_sys_0']
+        var[72] = iniparam['ppCO2_venspl_sys_0']
+        var[73] = iniparam['ppO2_venspl_sys_0']
+        var[74] = iniparam['ppCO2_venespl_sys_0']
+        var[75] = iniparam['ppO2_venespl_sys_0']
+        var[76] = iniparam['ppCO2_venmsc_sys_0']
+        var[77] = iniparam['ppO2_venmsc_sys_0']
+        var[78] = iniparam['ppCO2_vencer_sys_0']
+        var[79] = iniparam['ppO2_vencer_sys_0']
+        var[80] = iniparam['ppCO2_vencor_sys_0']
+        var[81] = iniparam['ppO2_vencor_sys_0']
+        var[82] = iniparam['ppCO2_ven_sys_0']
+        var[83] = iniparam['ppO2_ven_sys_0']
 
 
     # time-varying pleural pressure
@@ -737,7 +738,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         else: varTc_sq, varTc_old_sq = allgather_vec(varTc, self.comm), allgather_vec(varTc_old, self.comm)
 
         # could get critical here since the respiratory cycle may differ from the heart cycle! So the oscillatory lung dofs should be excluded
-        oscillatory_lung_dofs=[34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53]
+        oscillatory_lung_dofs=[36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55]
         
         if check=='allvar':
             
@@ -749,8 +750,8 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         elif check=='pvar':
             
             vals = []
-            pvar_ids = [1,3,4,6,12,14,16,18,20,22,25,27,28,30,32,
-                        44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81]
+            pvar_ids = [1,3,4,6,8,14,16,18,20,22,24,27,29,30,32,34,
+                        46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83]
             for i in range(len(varTc_sq)):
                 if i in pvar_ids and i not in oscillatory_lung_dofs:
                     vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )

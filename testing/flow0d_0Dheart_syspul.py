@@ -83,17 +83,19 @@ def main():
     s_corr[2] = 2.3863884814303105E-01
     s_corr[3] = 6.2299149148041377E-01
     s_corr[4] = 7.3204325568836603E+00
-    s_corr[5] = 4.4855244723865435E+04
-    s_corr[6] = 1.9666233818994407E+00
-    s_corr[7] = -2.3737219188883661E+04
-    s_corr[8] = 3.2279121521802968E+04
-    s_corr[9] = 4.9648390872022957E-01
-    s_corr[10] = 1.6997499381247427E-01
-    s_corr[11] = 4.6420478719842723E-01
-    s_corr[12] = 1.8990559860434069E+00
-    s_corr[13] = -8.1705347914691476E+04
-    s_corr[14] = 1.4965782216339247E+00
-    s_corr[15] = -1.0232540549572852E+04
+    s_corr[5] = 2.3863885498607551E-01
+    s_corr[6] = 7.3204311250505567E+00
+    s_corr[7] = 4.4855244723865435E+04
+    s_corr[8] = 1.9666233818994407E+00
+    s_corr[9] = -2.3737219188883661E+04
+    s_corr[10] = 3.2279121521802968E+04
+    s_corr[11] = 4.9648390872022957E-01
+    s_corr[12] = 1.6997499381247427E-01
+    s_corr[13] = 4.6420478719842723E-01
+    s_corr[14] = 1.8990559860434069E+00
+    s_corr[15] = -8.1705347914691476E+04
+    s_corr[16] = 1.4965782216339247E+00
+    s_corr[17] = -1.0232540549572852E+04
     
     check1 = results_check.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = results_check.success_check([check1], problem.mp.comm)
@@ -136,7 +138,6 @@ def param():
     C_ven_sys = 30.*C_ar_sys
     R_ar_pul = R_ar_sys/8.
     C_ar_pul = tau_ar_pul/R_ar_pul
-    Z_ar_pul = 0.
     R_ven_pul = R_ar_pul
     C_ven_pul = 2.5*C_ar_pul
     
@@ -169,7 +170,6 @@ def param():
             'R_ar_pul' : R_ar_pul,
             'C_ar_pul' : C_ar_pul,
             'L_ar_pul' : L_ar_pul,
-            'Z_ar_pul' : Z_ar_pul,
             'R_ven_sys' : R_ven_sys,
             'C_ven_sys' : C_ven_sys,
             'L_ven_sys' : L_ven_sys,

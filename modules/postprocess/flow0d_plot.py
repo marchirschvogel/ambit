@@ -110,7 +110,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
     if iscirculation:
 
         # get the data and check its length
-        tmp = np.loadtxt(''+path+'/results_'+sname+'_q_ar_sys.txt', usecols=0) # could be another file - all should have the same length!
+        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_v_l.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
@@ -362,8 +362,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
         numitems = len(list(groups[g].values())[0])
         
         # safety (and sanity...) check
-        if numitems > 16:
-            print("More than 16 items to plot in one graph! Adjust plotfile template or consider if this is sane...")
+        if numitems > 18:
+            print("More than 18 items to plot in one graph! Adjust plotfile template or consider if this is sane...")
             sys.exit()
         
         subprocess.call(['cp', ''+str(fpath)+'/flow0d_gnuplot_template.p', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])
