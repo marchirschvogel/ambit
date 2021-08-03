@@ -245,15 +245,19 @@ class cardiovascular0Dbase:
     def set_compartment_interfaces(self):
         
         # loop over chambers
-        for i, ch in enumerate(['lv','rv','la','ra']):
+        for i, ch in enumerate(['lv','rv','la','ra', 'ao']):
             
             if ch == 'lv': chn = 'v_l'
             if ch == 'rv': chn = 'v_r'
             if ch == 'la': chn = 'at_l'
             if ch == 'ra': chn = 'at_r'
+            if ch == 'ao': chn = 'aortroot'
             
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i] = 1
+                
+            elif self.chmodels[ch]['type']=='0D_rigid':
+                self.switch_V[i] = 0
             
             elif self.chmodels[ch]['type']=='prescribed':
                 if self.cq[i] == 'volume':
@@ -293,7 +297,7 @@ class cardiovascular0Dbase:
             elif self.chmodels[ch]['type']=='3D_fluid':
                 assert(self.cq[i] == 'pressure')
                 self.switch_V[i], self.vname_prfx[i] = 0, 'Q'
-                self.si[i] = 1 # switch indices of pressure / outflux
+                if ch != 'ao': self.si[i] = 1 # switch indices of pressure / outflux
                 #self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
                 # add inflow pressures to coupling name prefixes
                 for m in range(self.chmodels[ch]['num_inflows']):
@@ -312,6 +316,7 @@ class cardiovascular0Dbase:
         if ch == 'rv': V_unstressed, i = self.V_v_r_u,  1
         if ch == 'la': V_unstressed, i = self.V_at_l_u, 2
         if ch == 'ra': V_unstressed, i = self.V_at_r_u, 3
+        if ch == 'ao': V_unstressed, i = self.V_ar_sys_u, 4
    
         # "distributed" p variables
         num_pdist = len(chvars)-1
@@ -320,6 +325,15 @@ class cardiovascular0Dbase:
         if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
             chvars['VQ'] = chvars['pi1']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
             self.fnc_.append(chfncs[0])
+            
+            # all "distributed" p are equal to "main" p of chamber (= pi1)
+            for k in range(10): # no more than 10 distributed p's allowed
+                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
+                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
+
+        # rigid
+        elif self.chmodels[ch]['type']=='0D_rigid':
+            chvars['VQ'] = 0
             
             # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
@@ -342,7 +356,7 @@ class cardiovascular0Dbase:
 
         # 3D fluid mechanics model
         elif self.chmodels[ch]['type']=='3D_fluid': # also for 2D FEM models
-
+            
             assert(self.cq[i] == 'pressure' and self.vq[i] == 'flux')
 
             self.x_[self.vindex_ch[i]-self.si[i]] = chvars['VQ'] # Q of chamber is now variable

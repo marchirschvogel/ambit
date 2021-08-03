@@ -31,6 +31,7 @@ def main():
                          'periodic_checktype'    : 'pQvar'}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspulcapcor',
+                         'coronary_model'        : 'RCar_RCven',
                          'parameters'            : param(),
                          'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
     

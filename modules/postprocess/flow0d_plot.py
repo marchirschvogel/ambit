@@ -25,10 +25,11 @@ def main():
         model = sys.argv[7]
         indpertaftercyl = int(sys.argv[8])
         calc_func_params = str_to_bool(sys.argv[9])
-        multiscalegandr = str_to_bool(sys.argv[10])
-        lastgandrcycl = int(sys.argv[11])
+        coronarymodel = sys.argv[10]
+        multiscalegandr = str_to_bool(sys.argv[11])
+        lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/mia_sim_new_0d'
+        path = '/home/mh/work/mia_sim_new_0d_fixedale'
         sname = ''
         nstep_cycl = 1000
         T_cycl = 0.7
@@ -37,16 +38,17 @@ def main():
         model = 'syspul' # syspul, syspulcap, syspulcapcor
         indpertaftercyl = -1
         calc_func_params = False
+        coronarymodel = None
         multiscalegandr = False
         lastgandrcycl = 2
     
     # initial chamber volumes (in ml!) in case we only have chamber fluxes Q available and want to integrate V (default are common EDPs - order is lv, rv, la, ra)
     V0=[130.,150.,60.,50.]    
     
-    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
+    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaftercyl=0, calc_func_params=False, V0=[130.,150.,60.,50.], multiscalegandr=False, lastgandrcycl=1):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[130.,150.,60.,50.], multiscalegandr=False, lastgandrcycl=1):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -56,28 +58,28 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
     if model == 'syspul':
         
         import cardiovascular0D_syspul
-        cardiovascular0D_syspul.postprocess_groups_syspul(groups,indpertaftercyl,multiscalegandr)
+        cardiovascular0D_syspul.postprocess_groups_syspul(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcap':
         
         import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl,multiscalegandr)
+        cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
         
     elif model == 'syspulcapcor':
         
         import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcapcor(groups,indpertaftercyl,multiscalegandr)
+        cardiovascular0D_syspulcap.postprocess_groups_syspulcapcor(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
         
     elif model == 'syspulcaprespir':
         
         import cardiovascular0D_syspulcaprespir
-        cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,indpertaftercyl,multiscalegandr)
+        cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
     
@@ -110,7 +112,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
     if iscirculation:
 
         # get the data and check its length
-        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_v_l.txt', usecols=0) # could be another file - all should have the same length!
+        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_ar_sys.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
@@ -441,6 +443,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, indpertaft
             if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir'):
                 xextend, yextend     = 1.0, 1.3
                 maxrows, maxcols, sl, swd = 3, 5, 10, 50
+            if coronarymodel is not None:
+                maxrows, maxcols, sl, swd = 2, 5, 20, 40
         if 'ppO2_time' in list(groups[g].keys())[0]:
             x1value, x2value     = 't', ''
             x1unit, x2unit       = 's', ''

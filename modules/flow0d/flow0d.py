@@ -30,8 +30,13 @@ class Flow0DProblem(problem_base):
         self.time_params = time_params
         
         # only relevant to syspul* models
-        try: self.chamber_models = model_params['chamber_models']
+        try:
+            self.chamber_models = model_params['chamber_models']
+            if 'ao' not in self.chamber_models.keys(): self.chamber_models['ao'] = {'type' : '0D_rigid'} # add aortic root model
         except: self.chamber_models = {}
+        
+        try: self.coronary_model = model_params['coronary_model']
+        except: self.coronary_model = None
         
         try: self.excitation_curve = model_params['excitation_curve']
         except: self.excitation_curve = None
@@ -88,25 +93,25 @@ class Flow0DProblem(problem_base):
         # initialize 0D model class
         if model_params['modeltype'] == '2elwindkessel':
             from cardiovascular0D_2elwindkessel import cardiovascular0D2elwindkessel
-            self.cardvasc0D = cardiovascular0D2elwindkessel(model_params['parameters'], cq=self.cq, vq=self.vq, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D2elwindkessel(model_params['parameters'], self.cq, self.vq, comm=self.comm)
         elif model_params['modeltype'] == '4elwindkesselLsZ':
             from cardiovascular0D_4elwindkesselLsZ import cardiovascular0D4elwindkesselLsZ
-            self.cardvasc0D = cardiovascular0D4elwindkesselLsZ(model_params['parameters'], cq=self.cq, vq=self.vq, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D4elwindkesselLsZ(model_params['parameters'], self.cq, self.vq, comm=self.comm)
         elif model_params['modeltype'] == '4elwindkesselLpZ':
             from cardiovascular0D_4elwindkesselLpZ import cardiovascular0D4elwindkesselLpZ
-            self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], cq=self.cq, vq=self.vq, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], self.cq, self.vq, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
-            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, vq=self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, vq=self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcapcor':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapcor
-            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, vq=self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
-            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], chmodels=self.chamber_models, cq=self.cq, vq=self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
         else:
             raise NameError("Unknown 0D modeltype!")
 

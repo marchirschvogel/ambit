@@ -95,54 +95,54 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         cardiovascular0Dsyspulcap.equation_map(self)
 
         # add to varmap
-        self.varmap['V_alv'] = 36
-        self.varmap['q_alv'] = 37
-        self.varmap['p_alv'] = 38
-        self.varmap['fCO2_alv'] = 39
-        self.varmap['fO2_alv'] = 40
-        self.varmap['q_arspl_sys_in'] = 41
-        self.varmap['q_arespl_sys_in'] = 42
-        self.varmap['q_armsc_sys_in'] = 43
-        self.varmap['q_arcer_sys_in'] = 44
-        self.varmap['q_arcor_sys_in'] = 45
-        self.varmap['ppCO2_at_r'] = 46
-        self.varmap['ppO2_at_r'] = 47
-        self.varmap['ppCO2_v_r'] = 48
-        self.varmap['ppO2_v_r'] = 49
-        self.varmap['ppCO2_ar_pul'] = 50
-        self.varmap['ppO2_ar_pul'] = 51
-        self.varmap['ppCO2_cap_pul'] = 52
-        self.varmap['ppO2_cap_pul'] = 53
-        self.varmap['ppCO2_ven_pul'] = 54
-        self.varmap['ppO2_ven_pul'] = 55
-        self.varmap['ppCO2_at_l'] = 56
-        self.varmap['ppO2_at_l'] = 57
-        self.varmap['ppCO2_v_l'] = 58
-        self.varmap['ppO2_v_l'] = 59
-        self.varmap['ppCO2_ar_sys'] = 60
-        self.varmap['ppO2_ar_sys'] = 61
-        self.varmap['ppCO2_arspl_sys'] = 62
-        self.varmap['ppO2_arspl_sys'] = 63
-        self.varmap['ppCO2_arespl_sys'] = 64
-        self.varmap['ppO2_arespl_sys'] = 65
-        self.varmap['ppCO2_armsc_sys'] = 66
-        self.varmap['ppO2_armsc_sys'] = 67
-        self.varmap['ppCO2_arcer_sys'] = 68
-        self.varmap['ppO2_arcer_sys'] = 69
-        self.varmap['ppCO2_arcor_sys'] = 70
-        self.varmap['ppO2_arcor_sys'] = 71
-        self.varmap['ppCO2_venspl_sys'] = 72
-        self.varmap['ppO2_venspl_sys'] = 73
+        self.varmap['V_alv']             = 36
+        self.varmap['q_alv']             = 37
+        self.varmap['p_alv']             = 38
+        self.varmap['fCO2_alv']          = 39
+        self.varmap['fO2_alv']           = 40
+        self.varmap['q_arspl_sys_in']    = 41
+        self.varmap['q_arespl_sys_in']   = 42
+        self.varmap['q_armsc_sys_in']    = 43
+        self.varmap['q_arcer_sys_in']    = 44
+        self.varmap['q_arcor_sys_in']    = 45
+        self.varmap['ppCO2_at_r']        = 46
+        self.varmap['ppO2_at_r']         = 47
+        self.varmap['ppCO2_v_r']         = 48
+        self.varmap['ppO2_v_r']          = 49
+        self.varmap['ppCO2_ar_pul']      = 50
+        self.varmap['ppO2_ar_pul']       = 51
+        self.varmap['ppCO2_cap_pul']     = 52
+        self.varmap['ppO2_cap_pul']      = 53
+        self.varmap['ppCO2_ven_pul']     = 54
+        self.varmap['ppO2_ven_pul']      = 55
+        self.varmap['ppCO2_at_l']        = 56
+        self.varmap['ppO2_at_l']         = 57
+        self.varmap['ppCO2_v_l']         = 58
+        self.varmap['ppO2_v_l']          = 59
+        self.varmap['ppCO2_ar_sys']      = 60
+        self.varmap['ppO2_ar_sys']       = 61
+        self.varmap['ppCO2_arspl_sys']   = 62
+        self.varmap['ppO2_arspl_sys']    = 63
+        self.varmap['ppCO2_arespl_sys']  = 64
+        self.varmap['ppO2_arespl_sys']   = 65
+        self.varmap['ppCO2_armsc_sys']   = 66
+        self.varmap['ppO2_armsc_sys']    = 67
+        self.varmap['ppCO2_arcer_sys']   = 68
+        self.varmap['ppO2_arcer_sys']    = 69
+        self.varmap['ppCO2_arcor_sys']   = 70
+        self.varmap['ppO2_arcor_sys']    = 71
+        self.varmap['ppCO2_venspl_sys']  = 72
+        self.varmap['ppO2_venspl_sys']   = 73
         self.varmap['ppCO2_venespl_sys'] = 74
-        self.varmap['ppO2_venespl_sys'] = 75
-        self.varmap['ppCO2_venmsc_sys'] = 76
-        self.varmap['ppO2_venmsc_sys'] = 77
-        self.varmap['ppCO2_vencer_sys'] = 78
-        self.varmap['ppO2_vencer_sys'] = 79
-        self.varmap['ppCO2_vencor_sys'] = 80
-        self.varmap['ppO2_vencor_sys'] = 81
-        self.varmap['ppCO2_ven_sys'] = 82
-        self.varmap['ppO2_ven_sys'] = 83
+        self.varmap['ppO2_venespl_sys']  = 75
+        self.varmap['ppCO2_venmsc_sys']  = 76
+        self.varmap['ppO2_venmsc_sys']   = 77
+        self.varmap['ppCO2_vencer_sys']  = 78
+        self.varmap['ppO2_vencer_sys']   = 79
+        self.varmap['ppCO2_vencor_sys']  = 80
+        self.varmap['ppO2_vencor_sys']   = 81
+        self.varmap['ppCO2_ven_sys']     = 82
+        self.varmap['ppO2_ven_sys']      = 83
 
         # add to auxmap
         self.auxmap['SO2_ar_pul'] = 51
@@ -793,7 +793,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
 
 
-def postprocess_groups_syspulcaprespir(groups, indpertaftercyl=0,multiscalegandr=False):
+def postprocess_groups_syspulcaprespir(groups, coronarymodel=None, indpertaftercyl=0,multiscalegandr=False):
     
     import cardiovascular0D_syspulcap
     
