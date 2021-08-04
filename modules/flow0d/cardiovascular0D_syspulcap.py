@@ -182,6 +182,14 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         except: self.V_ven_pul_u = 0
         
         self.params = params
+
+        # number of systemic venous inflows (to right atrium)
+        try: self.vs = self.chmodels['ra']['num_inflows']
+        except: self.vs = 1
+    
+        # number of pulmonary venous inflows (to left atrium)
+        try: self.vp = self.chmodels['la']['num_inflows']
+        except: self.vp = 1
         
         self.chmodels = chmodels
         self.cormodel = cormodel
@@ -208,14 +216,6 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
 
     def setup_arrays(self):
 
-        # number of systemic venous inflows (to right atrium)
-        try: self.vs = self.chmodels['ra']['num_inflows']
-        except: self.vs = 1
-    
-        # number of pulmonary venous inflows (to left atrium)
-        try: self.vp = self.chmodels['la']['num_inflows']
-        except: self.vp = 1
-
         # number of degrees of freedom
         self.numdof = 34 + self.vs + self.vp
 
@@ -229,8 +229,6 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
         self.cindex_ch = [2,27+self.vs,0,25+self.vs]
-        
-        self.varmap, self.auxmap = {}, {}
     
         self.set_solve_arrays()
 
@@ -791,14 +789,6 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
     
     def setup_arrays(self):
 
-        # number of systemic venous inflows (to right atrium)
-        try: self.vs = self.chmodels['ra']['num_inflows']
-        except: self.vs = 1
-    
-        # number of pulmonary venous inflows (to left atrium)
-        try: self.vp = self.chmodels['la']['num_inflows']
-        except: self.vp = 1
-
         # number of degrees of freedom
         self.numdof = 31 + self.vs + self.vp
 
@@ -812,8 +802,6 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
         self.cindex_ch = [2,24+self.vs,0,22+self.vs]
-        
-        self.varmap, self.auxmap = {}, {}
     
         self.switch_cor = 0
         

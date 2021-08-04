@@ -20,7 +20,8 @@ class cardiovascular0Dbase:
     
     def __init__(self, init=True, comm=None):
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
-        self.init = init # for output
+        self.init = init # for outputs
+        self.varmap, self.auxmap = {}, {} # maps for primary and auxiliary variables
         if comm is not None: self.comm = comm # MPI communicator
        
     

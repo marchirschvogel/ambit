@@ -126,7 +126,15 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         except: self.V_ven_pul_u = 0
         
         self.params = params
-        
+
+        # number of systemic venous inflows (to right atrium)
+        try: self.vs = self.chmodels['ra']['num_inflows']
+        except: self.vs = 1
+    
+        # number of pulmonary venous inflows (to left atrium)
+        try: self.vp = self.chmodels['la']['num_inflows']
+        except: self.vp = 1
+
         self.chmodels = chmodels
         self.cormodel = cormodel
         self.valvelaws = valvelaws
@@ -148,17 +156,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         # make Lambda functions out of symbolic expressions
         self.lambdify_expressions()
-
+        
 
     def setup_arrays(self):
-
-        # number of systemic venous inflows (to right atrium)
-        try: self.vs = self.chmodels['ra']['num_inflows']
-        except: self.vs = 1
-    
-        # number of pulmonary venous inflows (to left atrium)
-        try: self.vp = self.chmodels['la']['num_inflows']
-        except: self.vp = 1
 
         # number of degrees of freedom
         self.numdof = 16 + self.vs + self.vp
@@ -173,8 +173,6 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
         self.cindex_ch = [2,11+self.vs,0,9+self.vs]
-        
-        self.varmap, self.auxmap = {}, {}
 
         self.switch_cor = 0
         
