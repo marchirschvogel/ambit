@@ -224,7 +224,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.si, self.switch_V = [0]*5, [1]*5 # default values
 
         self.vindex_ch = [3,28+self.vs,1,26+self.vs] # coupling variable indices (decreased by 1 for pressure coupling!)
-        self.vname_prfx, self.cname = ['p']*5, []
+        self.vname, self.cname = ['p_v_l','p_v_r','p_at_l','p_at_r'], []
     
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
@@ -245,44 +245,44 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
     def equation_map(self):
 
         # variable map
-        self.varmap['q_vin_l']                     = 0+self.si[2]
-        self.varmap[''+self.vname_prfx[2]+'_at_l'] = 1-self.si[2]
-        self.varmap['q_vout_l']                    = 2+self.si[0]
-        self.varmap[''+self.vname_prfx[0]+'_v_l']  = 3+self.si[0]
-        self.varmap['p_ar_sys']                    = 4
-        self.varmap['q_arprox_sys']                = 5
-        self.varmap['p_ardist_sys']                = 6
-        self.varmap['q_ar_sys']                    = 7
-        self.varmap['p_arperi_sys']                = 8
-        self.varmap['q_arspl_sys']                 = 9
-        self.varmap['q_arespl_sys']                = 10
-        self.varmap['q_armsc_sys']                 = 11
-        self.varmap['q_arcer_sys']                 = 12
-        self.varmap['q_arcor_sys']                 = 13
-        self.varmap['p_venspl_sys']                = 14
-        self.varmap['q_venspl_sys']                = 15
-        self.varmap['p_venespl_sys']               = 16
-        self.varmap['q_venespl_sys']               = 17
-        self.varmap['p_venmsc_sys']                = 18
-        self.varmap['q_venmsc_sys']                = 19
-        self.varmap['p_vencer_sys']                = 20
-        self.varmap['q_vencer_sys']                = 21
-        self.varmap['p_vencor_sys']                = 22
-        self.varmap['q_vencor_sys']                = 23
-        self.varmap['p_ven_sys']                   = 24
+        self.varmap['q_vin_l']                   = 0+self.si[2]
+        self.varmap[self.vname[2]]               = 1-self.si[2]
+        self.varmap['q_vout_l']                  = 2+self.si[0]
+        self.varmap[self.vname[0]]               = 3+self.si[0]
+        self.varmap['p_ar_sys']                  = 4
+        self.varmap['q_arprox_sys']              = 5
+        self.varmap['p_ardist_sys']              = 6
+        self.varmap['q_ar_sys']                  = 7
+        self.varmap['p_arperi_sys']              = 8
+        self.varmap['q_arspl_sys']               = 9
+        self.varmap['q_arespl_sys']              = 10
+        self.varmap['q_armsc_sys']               = 11
+        self.varmap['q_arcer_sys']               = 12
+        self.varmap['q_arcor_sys']               = 13
+        self.varmap['p_venspl_sys']              = 14
+        self.varmap['q_venspl_sys']              = 15
+        self.varmap['p_venespl_sys']             = 16
+        self.varmap['q_venespl_sys']             = 17
+        self.varmap['p_venmsc_sys']              = 18
+        self.varmap['q_venmsc_sys']              = 19
+        self.varmap['p_vencer_sys']              = 20
+        self.varmap['q_vencer_sys']              = 21
+        self.varmap['p_vencor_sys']              = 22
+        self.varmap['q_vencor_sys']              = 23
+        self.varmap['p_ven_sys']                 = 24
         for n in range(self.vs):
-            self.varmap['q_ven'+str(n+1)+'_sys']   = 25+n
-        self.varmap['q_vin_r']                     = 25+self.vs+self.si[3]
-        self.varmap[''+self.vname_prfx[3]+'_at_r'] = 26+self.vs-self.si[3]
-        self.varmap['q_vout_r']                    = 27+self.vs+self.si[1]
-        self.varmap[''+self.vname_prfx[1]+'_v_r']  = 28+self.vs-self.si[1]
-        self.varmap['p_ar_pul']                    = 29+self.vs
-        self.varmap['q_ar_pul']                    = 30+self.vs
-        self.varmap['p_cap_pul']                   = 31+self.vs
-        self.varmap['q_cap_pul']                   = 32+self.vs
-        self.varmap['p_ven_pul']                   = 33+self.vs
+            self.varmap['q_ven'+str(n+1)+'_sys'] = 25+n
+        self.varmap['q_vin_r']                   = 25+self.vs+self.si[3]
+        self.varmap[self.vname[3]]               = 26+self.vs-self.si[3]
+        self.varmap['q_vout_r']                  = 27+self.vs+self.si[1]
+        self.varmap[self.vname[1]]               = 28+self.vs-self.si[1]
+        self.varmap['p_ar_pul']                  = 29+self.vs
+        self.varmap['q_ar_pul']                  = 30+self.vs
+        self.varmap['p_cap_pul']                 = 31+self.vs
+        self.varmap['q_cap_pul']                 = 32+self.vs
+        self.varmap['p_ven_pul']                 = 33+self.vs
         for n in range(self.vp):
-            self.varmap['q_ven'+str(n+1)+'_pul']   = 34+self.vs+n
+            self.varmap['q_ven'+str(n+1)+'_pul'] = 34+self.vs+n
 
         q_ven_sys_, q_ven_pul_ = [], []
         p_at_l_i_, p_at_r_i_ = [], []
@@ -337,44 +337,44 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         E_at_r_            = sp.Symbol('E_at_r_')
         
         # dofs to differentiate w.r.t.
-        self.x_[self.varmap['q_vin_l']]                     = q_vin_l_
-        self.x_[self.varmap[''+self.vname_prfx[2]+'_at_l']] = p_at_l_i_[0]
-        self.x_[self.varmap['q_vout_l']]                    = q_vout_l_
-        self.x_[self.varmap[''+self.vname_prfx[0]+'_v_l']]  = p_v_l_i1_
-        self.x_[self.varmap['p_ar_sys']]                    = p_ar_sys_
-        self.x_[self.varmap['q_arprox_sys']]                = q_arprox_sys_
-        self.x_[self.varmap['p_ardist_sys']]                = p_ardist_sys_
-        self.x_[self.varmap['q_ar_sys']]                    = q_ar_sys_
-        self.x_[self.varmap['p_arperi_sys']]                = p_arperi_sys_
-        self.x_[self.varmap['q_arspl_sys']]                 = q_arspl_sys_
-        self.x_[self.varmap['q_arespl_sys']]                = q_arespl_sys_
-        self.x_[self.varmap['q_armsc_sys']]                 = q_armsc_sys_
-        self.x_[self.varmap['q_arcer_sys']]                 = q_arcer_sys_
-        self.x_[self.varmap['q_arcor_sys']]                 = q_arcor_sys_
-        self.x_[self.varmap['p_venspl_sys']]                = p_venspl_sys_
-        self.x_[self.varmap['q_venspl_sys']]                = q_venspl_sys_
-        self.x_[self.varmap['p_venespl_sys']]               = p_venespl_sys_
-        self.x_[self.varmap['q_venespl_sys']]               = q_venespl_sys_
-        self.x_[self.varmap['p_venmsc_sys']]                = p_venmsc_sys_
-        self.x_[self.varmap['q_venmsc_sys']]                = q_venmsc_sys_
-        self.x_[self.varmap['p_vencer_sys']]                = p_vencer_sys_
-        self.x_[self.varmap['q_vencer_sys']]                = q_vencer_sys_
-        self.x_[self.varmap['p_vencor_sys']]                = p_vencor_sys_
-        self.x_[self.varmap['q_vencor_sys']]                = q_vencor_sys_
-        self.x_[self.varmap['p_ven_sys']]                   = p_ven_sys_
+        self.x_[self.varmap['q_vin_l']]                   = q_vin_l_
+        self.x_[self.varmap[self.vname[2]]]               = p_at_l_i_[0]
+        self.x_[self.varmap['q_vout_l']]                  = q_vout_l_
+        self.x_[self.varmap[self.vname[0]]]               = p_v_l_i1_
+        self.x_[self.varmap['p_ar_sys']]                  = p_ar_sys_
+        self.x_[self.varmap['q_arprox_sys']]              = q_arprox_sys_
+        self.x_[self.varmap['p_ardist_sys']]              = p_ardist_sys_
+        self.x_[self.varmap['q_ar_sys']]                  = q_ar_sys_
+        self.x_[self.varmap['p_arperi_sys']]              = p_arperi_sys_
+        self.x_[self.varmap['q_arspl_sys']]               = q_arspl_sys_
+        self.x_[self.varmap['q_arespl_sys']]              = q_arespl_sys_
+        self.x_[self.varmap['q_armsc_sys']]               = q_armsc_sys_
+        self.x_[self.varmap['q_arcer_sys']]               = q_arcer_sys_
+        self.x_[self.varmap['q_arcor_sys']]               = q_arcor_sys_
+        self.x_[self.varmap['p_venspl_sys']]              = p_venspl_sys_
+        self.x_[self.varmap['q_venspl_sys']]              = q_venspl_sys_
+        self.x_[self.varmap['p_venespl_sys']]             = p_venespl_sys_
+        self.x_[self.varmap['q_venespl_sys']]             = q_venespl_sys_
+        self.x_[self.varmap['p_venmsc_sys']]              = p_venmsc_sys_
+        self.x_[self.varmap['q_venmsc_sys']]              = q_venmsc_sys_
+        self.x_[self.varmap['p_vencer_sys']]              = p_vencer_sys_
+        self.x_[self.varmap['q_vencer_sys']]              = q_vencer_sys_
+        self.x_[self.varmap['p_vencor_sys']]              = p_vencor_sys_
+        self.x_[self.varmap['q_vencor_sys']]              = q_vencor_sys_
+        self.x_[self.varmap['p_ven_sys']]                 = p_ven_sys_
         for n in range(self.vs):
-            self.x_[self.varmap['q_ven'+str(n+1)+'_sys']]   = q_ven_sys_[n]
-        self.x_[self.varmap['q_vin_r']]                     = q_vin_r_
-        self.x_[self.varmap[''+self.vname_prfx[3]+'_at_r']] = p_at_r_i_[0]
-        self.x_[self.varmap['q_vout_r']]                    = q_vout_r_
-        self.x_[self.varmap[''+self.vname_prfx[1]+'_v_r']]  = p_v_r_i1_
-        self.x_[self.varmap['p_ar_pul']]                    = p_ar_pul_
-        self.x_[self.varmap['q_ar_pul']]                    = q_ar_pul_
-        self.x_[self.varmap['p_cap_pul']]                   = p_cap_pul_
-        self.x_[self.varmap['q_cap_pul']]                   = q_cap_pul_
-        self.x_[self.varmap['p_ven_pul']]                   = p_ven_pul_
+            self.x_[self.varmap['q_ven'+str(n+1)+'_sys']] = q_ven_sys_[n]
+        self.x_[self.varmap['q_vin_r']]                   = q_vin_r_
+        self.x_[self.varmap[self.vname[3]]]               = p_at_r_i_[0]
+        self.x_[self.varmap['q_vout_r']]                  = q_vout_r_
+        self.x_[self.varmap[self.vname[1]]]               = p_v_r_i1_
+        self.x_[self.varmap['p_ar_pul']]                  = p_ar_pul_
+        self.x_[self.varmap['q_ar_pul']]                  = q_ar_pul_
+        self.x_[self.varmap['p_cap_pul']]                 = p_cap_pul_
+        self.x_[self.varmap['q_cap_pul']]                 = q_cap_pul_
+        self.x_[self.varmap['p_ven_pul']]                 = p_ven_pul_
         for n in range(self.vp):
-            self.x_[self.varmap['q_ven'+str(n+1)+'_pul']]   = q_ven_pul_[n]
+            self.x_[self.varmap['q_ven'+str(n+1)+'_pul']] = q_ven_pul_[n]
         
         # set chamber dicts
         chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
@@ -546,17 +546,15 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
     def initialize(self, var, iniparam):
 
         var[self.varmap['q_vin_l']]                           = iniparam['q_vin_l_0']
-        var[self.varmap[''+self.vname_prfx[2]+'_at_l']]       = iniparam[''+self.vname_prfx[2]+'_at_l_0']
+        var[self.varmap[self.vname[2]]]                       = iniparam[self.vname[2]+'_0']
         var[self.varmap['q_vout_l']]                          = iniparam['q_vout_l_0']
-        var[self.varmap[''+self.vname_prfx[0]+'_v_l']]        = iniparam[''+self.vname_prfx[0]+'_v_l_0']
-        
+        var[self.varmap[self.vname[0]]]                       = iniparam[self.vname[0]+'_0']
         var[self.varmap['p_ar_sys']]                          = iniparam['p_ar_sys_0']
         try: var[self.varmap['q_arprox_sys']]                 = iniparam['q_arprox_sys_0']
         except: var[self.varmap['q_arprox_sys']]                 = iniparam['q_ar_sys_0']
         try: var[self.varmap['p_ardist_sys']]                 = iniparam['p_ardist_sys_0']
         except: var[self.varmap['p_ardist_sys']]                 = iniparam['p_ar_sys_0']
         var[self.varmap['q_ar_sys']]                          = iniparam['q_ar_sys_0']
-
         var[self.varmap['p_arperi_sys']]                      = iniparam['p_arperi_sys_0']
         var[self.varmap['q_arspl_sys']]                       = iniparam['q_arspl_sys_0']
         var[self.varmap['q_arespl_sys']]                      = iniparam['q_arespl_sys_0']
@@ -573,15 +571,14 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         var[self.varmap['q_vencer_sys']]                      = iniparam['q_vencer_sys_0']
         var[self.varmap['p_vencor_sys']]                      = iniparam['p_vencor_sys_0']
         var[self.varmap['q_vencor_sys']]                      = iniparam['q_vencor_sys_0']
-
         var[self.varmap['p_ven_sys']]                         = iniparam['p_ven_sys_0']
         for n in range(self.vs):
             try: var[self.varmap['q_ven'+str(n+1)+'_sys']]    = iniparam['q_ven'+str(n+1)+'_sys_0']
             except: var[self.varmap['q_ven'+str(n+1)+'_sys']]    = iniparam['q_ven_sys_0']
         var[self.varmap['q_vin_r']]                           = iniparam['q_vin_r_0']
-        var[self.varmap[''+self.vname_prfx[3]+'_at_r']]       = iniparam[''+self.vname_prfx[3]+'_at_r_0']
+        var[self.varmap[self.vname[3]]]                       = iniparam[self.vname[3]+'_0']
         var[self.varmap['q_vout_r']]                          = iniparam['q_vout_r_0']
-        var[self.varmap[''+self.vname_prfx[1]+'_v_r']]        = iniparam[''+self.vname_prfx[1]+'_v_r_0']
+        var[self.varmap[self.vname[1]]]                       = iniparam[self.vname[1]+'_0']
         var[self.varmap['p_ar_pul']]                          = iniparam['p_ar_pul_0']
         var[self.varmap['q_ar_pul']]                          = iniparam['q_ar_pul_0']
         var[self.varmap['p_cap_pul']]                         = iniparam['p_cap_pul_0']
@@ -606,7 +603,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         elif check=='pQvar':
             
             vals = []
-            pQvar_ids = [self.varmap[''+self.vname_prfx[2]+'_at_l'],self.varmap[''+self.vname_prfx[0]+'_v_l'],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_vencor_sys'],self.varmap['p_ven_sys'],self.varmap[''+self.vname_prfx[3]+'_at_r'],self.varmap[''+self.vname_prfx[1]+'_v_r'],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
+            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_vencor_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
             for i in range(len(varTc_sq)):
                 if i in pQvar_ids:
                     vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
@@ -640,8 +637,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
             for i in range(nc):
                 print('{:<12s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]))
             
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[2]+'_at_l',' = ',var_sq[self.varmap[''+self.vname_prfx[2]+'_at_l']],'   ',''+self.vname_prfx[3]+'_at_r',' = ',var_sq[self.varmap[''+self.vname_prfx[3]+'_at_r']]))
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[0]+'_v_l',' = ',var_sq[self.varmap[''+self.vname_prfx[0]+'_v_l']],'   ',''+self.vname_prfx[1]+'_v_r',' = ',var_sq[self.varmap[''+self.vname_prfx[1]+'_v_r']]))
+            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[2],' = ',var_sq[self.varmap[self.vname[2]]],'   ',self.vname[3],' = ',var_sq[self.varmap[self.vname[3]]]))
+            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[0],' = ',var_sq[self.varmap[self.vname[0]]],'   ',self.vname[1],' = ',var_sq[self.varmap[self.vname[1]]]))
             
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ar_sys',' = ',var_sq[self.varmap['p_ar_sys']],'   ','p_ar_pul',' = ',var_sq[self.varmap['p_ar_pul']]))
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_arperi_sys',' = ',var_sq[self.varmap['p_arperi_sys']],'   ','p_cap_pul',' = ',var_sq[self.varmap['p_cap_pul']]))
@@ -810,7 +807,7 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.si, self.switch_V = [0]*5, [1]*5 # default values
 
         self.vindex_ch = [3,25+self.vs,1,23+self.vs] # coupling variable indices (decreased by 1 for pressure coupling!)
-        self.vname_prfx, self.cname = ['p']*5, []
+        self.vname, self.cname = ['p_v_l','p_v_r','p_at_l','p_at_r'], []
     
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
@@ -848,41 +845,41 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
     def equation_map(self):
         
         # variable map
-        self.varmap['q_vin_l']                     = 0+self.si[2]
-        self.varmap[''+self.vname_prfx[2]+'_at_l'] = 1-self.si[2]
-        self.varmap['q_vout_l']                    = 2+self.si[0]
-        self.varmap[''+self.vname_prfx[0]+'_v_l']  = 3-self.si[0]
-        self.varmap['p_ar_sys']                    = 4
-        self.varmap['q_arprox_sys']                = 5
-        self.varmap['p_ardist_sys']                = 6
-        self.varmap['q_ar_sys']                    = 7
-        self.varmap['p_arperi_sys']                = 8
-        self.varmap['q_arspl_sys']                 = 9
-        self.varmap['q_arespl_sys']                = 10
-        self.varmap['q_armsc_sys']                 = 11
-        self.varmap['q_arcer_sys']                 = 12
-        self.varmap['p_venspl_sys']                = 13
-        self.varmap['q_venspl_sys']                = 14
-        self.varmap['p_venespl_sys']               = 15
-        self.varmap['q_venespl_sys']               = 16
-        self.varmap['p_venmsc_sys']                = 17
-        self.varmap['q_venmsc_sys']                = 18
-        self.varmap['p_vencer_sys']                = 19
-        self.varmap['q_vencer_sys']                = 20
-        self.varmap['p_ven_sys']                   = 21
+        self.varmap['q_vin_l']                   = 0+self.si[2]
+        self.varmap[self.vname[2]]               = 1-self.si[2]
+        self.varmap['q_vout_l']                  = 2+self.si[0]
+        self.varmap[self.vname[0]]               = 3-self.si[0]
+        self.varmap['p_ar_sys']                  = 4
+        self.varmap['q_arprox_sys']              = 5
+        self.varmap['p_ardist_sys']              = 6
+        self.varmap['q_ar_sys']                  = 7
+        self.varmap['p_arperi_sys']              = 8
+        self.varmap['q_arspl_sys']               = 9
+        self.varmap['q_arespl_sys']              = 10
+        self.varmap['q_armsc_sys']               = 11
+        self.varmap['q_arcer_sys']               = 12
+        self.varmap['p_venspl_sys']              = 13
+        self.varmap['q_venspl_sys']              = 14
+        self.varmap['p_venespl_sys']             = 15
+        self.varmap['q_venespl_sys']             = 16
+        self.varmap['p_venmsc_sys']              = 17
+        self.varmap['q_venmsc_sys']              = 18
+        self.varmap['p_vencer_sys']              = 19
+        self.varmap['q_vencer_sys']              = 20
+        self.varmap['p_ven_sys']                 = 21
         for n in range(self.vs):
-            self.varmap['q_ven'+str(n+1)+'_sys']   = 22+n
-        self.varmap['q_vin_r']                     = 22+self.vs+self.si[3]
-        self.varmap[''+self.vname_prfx[3]+'_at_r'] = 23+self.vs-self.si[3]
-        self.varmap['q_vout_r']                    = 24+self.vs+self.si[1]
-        self.varmap[''+self.vname_prfx[1]+'_v_r']  = 25+self.vs-self.si[1]
-        self.varmap['p_ar_pul']                    = 26+self.vs
-        self.varmap['q_ar_pul']                    = 27+self.vs
-        self.varmap['p_cap_pul']                   = 28+self.vs
-        self.varmap['q_cap_pul']                   = 29+self.vs
-        self.varmap['p_ven_pul']                   = 30+self.vs
+            self.varmap['q_ven'+str(n+1)+'_sys'] = 22+n
+        self.varmap['q_vin_r']                   = 22+self.vs+self.si[3]
+        self.varmap[self.vname[3]]               = 23+self.vs-self.si[3]
+        self.varmap['q_vout_r']                  = 24+self.vs+self.si[1]
+        self.varmap[self.vname[1]]               = 25+self.vs-self.si[1]
+        self.varmap['p_ar_pul']                  = 26+self.vs
+        self.varmap['q_ar_pul']                  = 27+self.vs
+        self.varmap['p_cap_pul']                 = 28+self.vs
+        self.varmap['q_cap_pul']                 = 29+self.vs
+        self.varmap['p_ven_pul']                 = 30+self.vs
         for n in range(self.vp):
-            self.varmap['q_ven'+str(n+1)+'_pul']   = 31+self.vs+n
+            self.varmap['q_ven'+str(n+1)+'_pul'] = 31+self.vs+n
 
         q_ven_sys_, q_ven_pul_ = [], []
         p_at_l_i_, p_at_r_i_ = [], []
@@ -935,41 +932,41 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         
     
         # dofs to differentiate w.r.t.
-        self.x_[self.varmap['q_vin_l']]                     = q_vin_l_
-        self.x_[self.varmap[''+self.vname_prfx[2]+'_at_l']] = p_at_l_i_[0]
-        self.x_[self.varmap['q_vout_l']]                    = q_vout_l_
-        self.x_[self.varmap[''+self.vname_prfx[0]+'_v_l']]  = p_v_l_i1_
-        self.x_[self.varmap['p_ar_sys']]                    = p_ar_sys_
-        self.x_[self.varmap['q_arprox_sys']]                = q_arprox_sys_
-        self.x_[self.varmap['p_ardist_sys']]                = p_ardist_sys_
-        self.x_[self.varmap['q_ar_sys']]                    = q_ar_sys_
-        self.x_[self.varmap['p_arperi_sys']]                = p_arperi_sys_
-        self.x_[self.varmap['q_arspl_sys']]                 = q_arspl_sys_
-        self.x_[self.varmap['q_arespl_sys']]                = q_arespl_sys_
-        self.x_[self.varmap['q_armsc_sys']]                 = q_armsc_sys_
-        self.x_[self.varmap['q_arcer_sys']]                 = q_arcer_sys_
-        self.x_[self.varmap['p_venspl_sys']]                = p_venspl_sys_
-        self.x_[self.varmap['q_venspl_sys']]                = q_venspl_sys_
-        self.x_[self.varmap['p_venespl_sys']]               = p_venespl_sys_
-        self.x_[self.varmap['q_venespl_sys']]               = q_venespl_sys_
-        self.x_[self.varmap['p_venmsc_sys']]                = p_venmsc_sys_
-        self.x_[self.varmap['q_venmsc_sys']]                = q_venmsc_sys_
-        self.x_[self.varmap['p_vencer_sys']]                = p_vencer_sys_
-        self.x_[self.varmap['q_vencer_sys']]                = q_vencer_sys_
-        self.x_[self.varmap['p_ven_sys']]                   = p_ven_sys_
+        self.x_[self.varmap['q_vin_l']]                   = q_vin_l_
+        self.x_[self.varmap[self.vname[2]]]               = p_at_l_i_[0]
+        self.x_[self.varmap['q_vout_l']]                  = q_vout_l_
+        self.x_[self.varmap[self.vname[0]]]               = p_v_l_i1_
+        self.x_[self.varmap['p_ar_sys']]                  = p_ar_sys_
+        self.x_[self.varmap['q_arprox_sys']]              = q_arprox_sys_
+        self.x_[self.varmap['p_ardist_sys']]              = p_ardist_sys_
+        self.x_[self.varmap['q_ar_sys']]                  = q_ar_sys_
+        self.x_[self.varmap['p_arperi_sys']]              = p_arperi_sys_
+        self.x_[self.varmap['q_arspl_sys']]               = q_arspl_sys_
+        self.x_[self.varmap['q_arespl_sys']]              = q_arespl_sys_
+        self.x_[self.varmap['q_armsc_sys']]               = q_armsc_sys_
+        self.x_[self.varmap['q_arcer_sys']]               = q_arcer_sys_
+        self.x_[self.varmap['p_venspl_sys']]              = p_venspl_sys_
+        self.x_[self.varmap['q_venspl_sys']]              = q_venspl_sys_
+        self.x_[self.varmap['p_venespl_sys']]             = p_venespl_sys_
+        self.x_[self.varmap['q_venespl_sys']]             = q_venespl_sys_
+        self.x_[self.varmap['p_venmsc_sys']]              = p_venmsc_sys_
+        self.x_[self.varmap['q_venmsc_sys']]              = q_venmsc_sys_
+        self.x_[self.varmap['p_vencer_sys']]              = p_vencer_sys_
+        self.x_[self.varmap['q_vencer_sys']]              = q_vencer_sys_
+        self.x_[self.varmap['p_ven_sys']]                 = p_ven_sys_
         for n in range(self.vs):
-            self.x_[self.varmap['q_ven'+str(n+1)+'_sys']]   = q_ven_sys_[n]
-        self.x_[self.varmap['q_vin_r']]                     = q_vin_r_
-        self.x_[self.varmap[''+self.vname_prfx[3]+'_at_r']] = p_at_r_i_[0]
-        self.x_[self.varmap['q_vout_r']]                    = q_vout_r_
-        self.x_[self.varmap[''+self.vname_prfx[1]+'_v_r']]  = p_v_r_i1_
-        self.x_[self.varmap['p_ar_pul']]                    = p_ar_pul_
-        self.x_[self.varmap['q_ar_pul']]                    = q_ar_pul_
-        self.x_[self.varmap['p_cap_pul']]                   = p_cap_pul_
-        self.x_[self.varmap['q_cap_pul']]                   = q_cap_pul_
-        self.x_[self.varmap['p_ven_pul']]                   = p_ven_pul_
+            self.x_[self.varmap['q_ven'+str(n+1)+'_sys']] = q_ven_sys_[n]
+        self.x_[self.varmap['q_vin_r']]                   = q_vin_r_
+        self.x_[self.varmap[self.vname[3]]]               = p_at_r_i_[0]
+        self.x_[self.varmap['q_vout_r']]                  = q_vout_r_
+        self.x_[self.varmap[self.vname[1]]]               = p_v_r_i1_
+        self.x_[self.varmap['p_ar_pul']]                  = p_ar_pul_
+        self.x_[self.varmap['q_ar_pul']]                  = q_ar_pul_
+        self.x_[self.varmap['p_cap_pul']]                 = p_cap_pul_
+        self.x_[self.varmap['q_cap_pul']]                 = q_cap_pul_
+        self.x_[self.varmap['p_ven_pul']]                 = p_ven_pul_
         for n in range(self.vp):
-            self.x_[self.varmap['q_ven'+str(n+1)+'_pul']]   = q_ven_pul_[n]
+            self.x_[self.varmap['q_ven'+str(n+1)+'_pul']] = q_ven_pul_[n]
             
         
         # set chamber dicts
@@ -1140,9 +1137,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
     def initialize(self, var, iniparam):
 
         var[self.varmap['q_vin_l']]                           = iniparam['q_vin_l_0']
-        var[self.varmap[''+self.vname_prfx[2]+'_at_l']]       = iniparam[''+self.vname_prfx[2]+'_at_l_0']
+        var[self.varmap[self.vname[2]]]                       = iniparam[self.vname[2]+'_0']
         var[self.varmap['q_vout_l']]                          = iniparam['q_vout_l_0']
-        var[self.varmap[''+self.vname_prfx[0]+'_v_l']]        = iniparam[''+self.vname_prfx[0]+'_v_l_0']
+        var[self.varmap[self.vname[0]]]                       = iniparam[self.vname[0]+'_0']
         var[self.varmap['p_ar_sys']]                          = iniparam['p_ar_sys_0']
         try: var[self.varmap['q_arprox_sys']]                 = iniparam['q_arprox_sys_0']
         except: var[self.varmap['q_arprox_sys']]                 = iniparam['q_ar_sys_0']
@@ -1167,9 +1164,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
             try: var[self.varmap['q_ven'+str(n+1)+'_sys']]    = iniparam['q_ven'+str(n+1)+'_sys_0']
             except: var[self.varmap['q_ven'+str(n+1)+'_sys']]    = iniparam['q_ven_sys_0']
         var[self.varmap['q_vin_r']]                           = iniparam['q_vin_r_0']
-        var[self.varmap[''+self.vname_prfx[3]+'_at_r']]       = iniparam[''+self.vname_prfx[3]+'_at_r_0']
+        var[self.varmap[self.vname[3]]]                       = iniparam[self.vname[3]+'_0']
         var[self.varmap['q_vout_r']]                          = iniparam['q_vout_r_0']
-        var[self.varmap[''+self.vname_prfx[1]+'_v_r']]        = iniparam[''+self.vname_prfx[1]+'_v_r_0']
+        var[self.varmap[self.vname[1]]]                       = iniparam[self.vname[1]+'_0']
         var[self.varmap['p_ar_pul']]                          = iniparam['p_ar_pul_0']
         var[self.varmap['q_ar_pul']]                          = iniparam['q_ar_pul_0']
         var[self.varmap['p_cap_pul']]                         = iniparam['p_cap_pul_0']
@@ -1197,7 +1194,7 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         elif check=='pQvar':
             
             vals = []
-            pQvar_ids = [self.varmap[''+self.vname_prfx[2]+'_at_l'],self.varmap[''+self.vname_prfx[0]+'_v_l'],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_ven_sys'],self.varmap[''+self.vname_prfx[3]+'_at_r'],self.varmap[''+self.vname_prfx[1]+'_v_r'],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
+            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
             for i in range(len(varTc_sq)):
                 if i in pQvar_ids:
                     vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
@@ -1231,8 +1228,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
             for i in range(nc):
                 print('{:<12s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]))
             
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[2]+'_at_l',' = ',var_sq[self.varmap[''+self.vname_prfx[2]+'_at_l']],'   ',''+self.vname_prfx[3]+'_at_r',' = ',var_sq[self.varmap[''+self.vname_prfx[3]+'_at_r']]))
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[0]+'_v_l',' = ',var_sq[self.varmap[''+self.vname_prfx[0]+'_v_l']],'   ',''+self.vname_prfx[1]+'_v_r',' = ',var_sq[self.varmap[''+self.vname_prfx[1]+'_v_r']]))
+            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[2],' = ',var_sq[self.varmap[self.vname[2]]],'   ',self.vname[3],' = ',var_sq[self.varmap[self.vname[3]]]))
+            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[0],' = ',var_sq[self.varmap[self.vname[0]]],'   ',self.vname[1],' = ',var_sq[self.varmap[self.vname[1]]]))
             
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ar_sys',' = ',var_sq[self.varmap['p_ar_sys']],'   ','p_ar_pul',' = ',var_sq[self.varmap['p_ar_pul']]))
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_arperi_sys',' = ',var_sq[self.varmap['p_arperi_sys']],'   ','p_cap_pul',' = ',var_sq[self.varmap['p_cap_pul']]))

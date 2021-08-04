@@ -251,8 +251,8 @@ class cardiovascular0Dbase:
             if ch == 'rv': chn = 'v_r'
             if ch == 'la': chn = 'at_l'
             if ch == 'ra': chn = 'at_r'
-            if ch == 'ao': chn = 'aortroot'
-            
+            if ch == 'ao': chn = 'aort'
+
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i] = 1
                 
@@ -262,10 +262,10 @@ class cardiovascular0Dbase:
             elif self.chmodels[ch]['type']=='prescribed':
                 if self.cq[i] == 'volume':
                     self.switch_V[i] = 1
-                    self.cname.append('V_'+chn+'')
+                    self.cname.append('V_'+chn)
                 elif self.cq[i] == 'flux':
                     self.switch_V[i] = 0
-                    self.cname.append('Q_'+chn+'')
+                    self.cname.append('Q_'+chn)
                 else:
                     raise NameError("Unknown coupling quantity!")
             
@@ -273,21 +273,21 @@ class cardiovascular0Dbase:
                 if self.cq[i] == 'volume':
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
-                    self.cname.append('V_'+chn+'')
-                    self.switch_V[i], self.vname_prfx[i] = 1, 'p'
+                    self.cname.append('V_'+chn)
+                    self.switch_V[i], self.vname[i] = 1, 'p_'+chn
                 elif self.cq[i] == 'flux':
-                    self.cname.append('Q_'+chn+'')
-                    self.switch_V[i], self.vname_prfx[i] = 0, 'p'
+                    self.cname.append('Q_'+chn)
+                    self.switch_V[i], self.vname[i] = 0, 'p_'+chn
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
                 elif self.cq[i] == 'pressure':
                     if self.vq[i] == 'volume':
-                        self.switch_V[i], self.vname_prfx[i] = 1, 'V'
+                        self.switch_V[i], self.vname[i] = 1, 'V_'+chn
                     elif self.vq[i] == 'flux':
-                        self.switch_V[i], self.vname_prfx[i] = 0, 'Q'
+                        self.switch_V[i], self.vname[i] = 0, 'Q_'+chn
                     else:
                         raise ValueError("Variable quantity has to be volume or flux!")
-                    self.cname.append('p_'+chn+'')
+                    self.cname.append('p_'+chn)
                     self.si[i] = 1 # switch indices of pressure / outflux
                     self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
                 else:
@@ -296,7 +296,7 @@ class cardiovascular0Dbase:
             # 3D fluid currently only working with Cheart!
             elif self.chmodels[ch]['type']=='3D_fluid':
                 assert(self.cq[i] == 'pressure')
-                self.switch_V[i], self.vname_prfx[i] = 0, 'Q'
+                self.switch_V[i], self.vname[i] = 0, 'Q_'+chn
                 if ch != 'ao': self.si[i] = 1 # switch indices of pressure / outflux
                 #self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
                 # add inflow pressures to coupling name prefixes

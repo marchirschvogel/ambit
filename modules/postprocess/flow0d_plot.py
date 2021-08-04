@@ -29,26 +29,26 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/mia_sim_new_0d_fixedale'
+        path = '/home/mh/work/codes/fem_scripts/tests/tmp/aorta_3d0d/0d'#work/mia_sim_new_0d_fixedale'
         sname = ''
-        nstep_cycl = 1000
+        nstep_cycl = 100
         T_cycl = 0.7
         t_ed = 0.2
         t_es = 0.53
         model = 'syspul' # syspul, syspulcap, syspulcapcor
         indpertaftercyl = -1
         calc_func_params = False
-        coronarymodel = None
+        coronarymodel = 'RLCl_RLCr'#None
         multiscalegandr = False
         lastgandrcycl = 2
     
     # initial chamber volumes (in ml!) in case we only have chamber fluxes Q available and want to integrate V (default are common EDPs - order is lv, rv, la, ra)
-    V0=[130.,150.,60.,50.]    
+    V0=[130.,150.,60.,50., 0.]    
     
     postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[130.,150.,60.,50.], multiscalegandr=False, lastgandrcycl=1):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[130.,150.,60.,50., 0.], multiscalegandr=False, lastgandrcycl=1):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -112,11 +112,11 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
     if iscirculation:
 
         # get the data and check its length
-        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_ar_sys.txt', usecols=0) # could be another file - all should have the same length!
+        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_ar_pul.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
-        for i, ch in enumerate(['v_l','v_r','at_l','at_r']):
+        for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort']):
             # test if volume file exists
             test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
             if test_V > 0:
@@ -150,7 +150,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         # in 3D fluid dynamics, we may have "distributed" 0D in-/outflow pressures, so here we check presence of these
         # and then average them for visualization
         # check presence of default chamber pressure variable
-        for ch in ['v_l','v_r','at_l','at_r']:
+        for ch in ['v_l','v_r','at_l','at_r', 'aort']:
             err = os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'.txt')
             if err==0: # nothing to do if present
                 pass
@@ -176,6 +176,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 for i in range(len(pall)):
                     fpa.write('%.16E %.16E\n' % (tmp[i], pall[i]))
                 fpa.close()
+                # rename file to ar_sys
+                if ch=='aort': os.system('mv '+path+'/results_'+sname+'_p_'+ch+'.txt '+path+'/results_'+sname+'_p_ar_sys.txt')
 
 
         # for plotting of pressure-volume loops

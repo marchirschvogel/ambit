@@ -168,8 +168,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.si, self.switch_V = [0]*5, [1]*5 # default values
 
         self.vindex_ch = [3,12+self.vs,1,10+self.vs, 4] # coupling variable indices (decreased by 1 for pressure coupling!)
-        self.vname_prfx, self.cname = ['p']*5, []
-
+        self.vname, self.cname = ['p_v_l','p_v_r','p_at_l','p_at_r', 'p_ar_sys'], []
+        
         # set those ids which are relevant for monolithic direct coupling
         self.v_ids, self.c_ids = [], []
         self.cindex_ch = [2,11+self.vs,0,9+self.vs]
@@ -213,26 +213,26 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
     def equation_map(self):
 
         # variable map
-        self.varmap['q_vin_l']                     = 0+self.si[2]
-        self.varmap[''+self.vname_prfx[2]+'_at_l'] = 1-self.si[2]
-        self.varmap['q_vout_l']                    = 2+self.si[0]
-        self.varmap[''+self.vname_prfx[0]+'_v_l']  = 3-self.si[0]
-        self.varmap['p_ar_sys']                    = 4
-        self.varmap['q_arprox_sys']                = 5
-        self.varmap['p_ardist_sys']                = 6
-        self.varmap['q_ar_sys']                    = 7
-        self.varmap['p_ven_sys']                   = 8
+        self.varmap['q_vin_l']                   = 0+self.si[2]
+        self.varmap[self.vname[2]]               = 1-self.si[2]
+        self.varmap['q_vout_l']                  = 2+self.si[0]
+        self.varmap[self.vname[0]]               = 3-self.si[0]
+        self.varmap[self.vname[4]]               = 4
+        self.varmap['q_arprox_sys']              = 5
+        self.varmap['p_ardist_sys']              = 6
+        self.varmap['q_ar_sys']                  = 7
+        self.varmap['p_ven_sys']                 = 8
         for n in range(self.vs):
-            self.varmap['q_ven'+str(n+1)+'_sys']   = 9+n
-        self.varmap['q_vin_r']                     = 9+self.vs+self.si[3]
-        self.varmap[''+self.vname_prfx[3]+'_at_r'] = 10+self.vs-self.si[3]
-        self.varmap['q_vout_r']                    = 11+self.vs+self.si[1]
-        self.varmap[''+self.vname_prfx[1]+'_v_r']  = 12+self.vs-self.si[1]
-        self.varmap['p_ar_pul']                    = 13+self.vs
-        self.varmap['q_ar_pul']                    = 14+self.vs
-        self.varmap['p_ven_pul']                   = 15+self.vs
+            self.varmap['q_ven'+str(n+1)+'_sys'] = 9+n
+        self.varmap['q_vin_r']                   = 9+self.vs+self.si[3]
+        self.varmap[self.vname[3]]               = 10+self.vs-self.si[3]
+        self.varmap['q_vout_r']                  = 11+self.vs+self.si[1]
+        self.varmap[self.vname[1]]               = 12+self.vs-self.si[1]
+        self.varmap['p_ar_pul']                  = 13+self.vs
+        self.varmap['q_ar_pul']                  = 14+self.vs
+        self.varmap['p_ven_pul']                 = 15+self.vs
         for n in range(self.vp):
-            self.varmap['q_ven'+str(n+1)+'_pul']   = 16+self.vs+n
+            self.varmap['q_ven'+str(n+1)+'_pul'] = 16+self.vs+n
 
         q_ven_sys_, q_ven_pul_ = [], []
         p_at_l_i_, p_at_r_i_ = [], []
@@ -263,7 +263,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         VQ_at_l_           = sp.Symbol('VQ_at_l_')
         VQ_at_r_           = sp.Symbol('VQ_at_r_')
         # aortic root/ascending aortic volume (for 3D flow analysis)
-        VQ_aortroot_       = sp.Symbol('VQ_aortroot_')
+        VQ_aort_           = sp.Symbol('VQ_aort_')
 
         E_v_l_             = sp.Symbol('E_v_l_')
         E_v_r_             = sp.Symbol('E_v_r_')
@@ -271,26 +271,26 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         E_at_r_            = sp.Symbol('E_at_r_')
             
         # dofs to differentiate w.r.t.
-        self.x_[self.varmap['q_vin_l']]                     = q_vin_l_
-        self.x_[self.varmap[''+self.vname_prfx[2]+'_at_l']] = p_at_l_i_[0]
-        self.x_[self.varmap['q_vout_l']]                    = q_vout_l_
-        self.x_[self.varmap[''+self.vname_prfx[0]+'_v_l']]  = p_v_l_i1_
-        self.x_[self.varmap['p_ar_sys']]                    = p_ar_sys_i1_
-        self.x_[self.varmap['q_arprox_sys']]                = q_arprox_sys_
-        self.x_[self.varmap['p_ardist_sys']]                = p_ardist_sys_
-        self.x_[self.varmap['q_ar_sys']]                    = q_ar_sys_
-        self.x_[self.varmap['p_ven_sys']]                   = p_ven_sys_
+        self.x_[self.varmap['q_vin_l']]                   = q_vin_l_
+        self.x_[self.varmap[self.vname[2]]]               = p_at_l_i_[0]
+        self.x_[self.varmap['q_vout_l']]                  = q_vout_l_
+        self.x_[self.varmap[self.vname[0]]]               = p_v_l_i1_
+        self.x_[self.varmap[self.vname[4]]]               = p_ar_sys_i1_
+        self.x_[self.varmap['q_arprox_sys']]              = q_arprox_sys_
+        self.x_[self.varmap['p_ardist_sys']]              = p_ardist_sys_
+        self.x_[self.varmap['q_ar_sys']]                  = q_ar_sys_
+        self.x_[self.varmap['p_ven_sys']]                 = p_ven_sys_
         for n in range(self.vs):
-            self.x_[self.varmap['q_ven'+str(n+1)+'_sys']]   = q_ven_sys_[n]
-        self.x_[self.varmap['q_vin_r']]                     = q_vin_r_
-        self.x_[self.varmap[''+self.vname_prfx[3]+'_at_r']] = p_at_r_i_[0]
-        self.x_[self.varmap['q_vout_r']]                    = q_vout_r_
-        self.x_[self.varmap[''+self.vname_prfx[1]+'_v_r']]  = p_v_r_i1_
-        self.x_[self.varmap['p_ar_pul']]                    = p_ar_pul_
-        self.x_[self.varmap['q_ar_pul']]                    = q_ar_pul_
-        self.x_[self.varmap['p_ven_pul']]                   = p_ven_pul_
+            self.x_[self.varmap['q_ven'+str(n+1)+'_sys']] = q_ven_sys_[n]
+        self.x_[self.varmap['q_vin_r']]                   = q_vin_r_
+        self.x_[self.varmap[self.vname[3]]]               = p_at_r_i_[0]
+        self.x_[self.varmap['q_vout_r']]                  = q_vout_r_
+        self.x_[self.varmap[self.vname[1]]]               = p_v_r_i1_
+        self.x_[self.varmap['p_ar_pul']]                  = p_ar_pul_
+        self.x_[self.varmap['q_ar_pul']]                  = q_ar_pul_
+        self.x_[self.varmap['p_ven_pul']]                 = p_ven_pul_
         for n in range(self.vp):
-            self.x_[self.varmap['q_ven'+str(n+1)+'_pul']]   = q_ven_pul_[n]
+            self.x_[self.varmap['q_ven'+str(n+1)+'_pul']] = q_ven_pul_[n]
 
         # set chamber dicts
         chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
@@ -300,7 +300,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         chdict_ra = {'VQ' : VQ_at_r_, 'po1' : p_at_r_o1_}
         for n in range(self.vs+self.switch_cor): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
         # aortic root/ascending aortic compartment dict, 1 inflow and 3 outflows (one into arch, two into coronaries)
-        chdict_ao = {'VQ' : VQ_aortroot_, 'pi1' : p_ar_sys_i1_, 'po1' : p_ar_sys_o1_, 'po2' : p_ar_sys_o2_, 'po3' : p_ar_sys_o3_}
+        chdict_ao = {'VQ' : VQ_aort_, 'pi1' : p_ar_sys_i1_, 'po1' : p_ar_sys_o1_, 'po2' : p_ar_sys_o2_, 'po3' : p_ar_sys_o3_}
 
         # set coupling states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
         self.set_coupling_state('lv', chdict_lv, [E_v_l_])
@@ -318,7 +318,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['VQ'], chdict_ra['pi1'], chdict_ra['po1']
         for n in range(self.vs+self.switch_cor): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
         # aortic root/ascending aortic compartment
-        VQ_aortroot_, p_ar_sys_i1_, p_ar_sys_o1_, p_ar_sys_o2_, p_ar_sys_o3_ = chdict_ao['VQ'], chdict_ao['pi1'], chdict_ao['po1'], chdict_ao['po2'], chdict_ao['po3']
+        VQ_aort_, p_ar_sys_i1_, p_ar_sys_o1_, p_ar_sys_o2_, p_ar_sys_o3_ = chdict_ao['VQ'], chdict_ao['pi1'], chdict_ao['po1'], chdict_ao['po2'], chdict_ao['po3']
 
         # add coronary circulation equations
         if self.cormodel is not None:
@@ -375,7 +375,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.f_[1] = vl_mv_ + q_vin_l_                                                       # mitral valve momentum
         self.f_[2] = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_                  # left ventricle flow balance
         self.f_[3] = vl_av_ + q_vout_l_                                                      # aortic valve momentum
-        self.f_[4] = -q_vout_l_ + q_arprox_sys_ + self.switch_cor * sum(q_arcor_sys_in_) - VQ_aortroot_ # aortic root flow balance
+        self.f_[4] = -q_vout_l_ + q_arprox_sys_ + self.switch_cor * sum(q_arcor_sys_in_) - VQ_aort_ # aortic root flow balance
         self.f_[5] = (p_ardist_sys_ - p_ar_sys_o3_)/self.Z_ar_sys + q_arprox_sys_            # aortic root momentum
         self.f_[6] = -q_arprox_sys_ + q_ar_sys_                                              # systemic arterial flow balance
         self.f_[7] = (p_ven_sys_ - p_ardist_sys_)/self.R_ar_sys + q_ar_sys_                  # systemic arterial momentum
@@ -422,10 +422,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
     def initialize(self, var, iniparam):
         
         var[self.varmap['q_vin_l']]                           = iniparam['q_vin_l_0']
-        var[self.varmap[''+self.vname_prfx[2]+'_at_l']]       = iniparam[''+self.vname_prfx[2]+'_at_l_0']
+        var[self.varmap[self.vname[2]]]                       = iniparam[self.vname[2]+'_0']
         var[self.varmap['q_vout_l']]                          = iniparam['q_vout_l_0']
-        var[self.varmap[''+self.vname_prfx[0]+'_v_l']]        = iniparam[''+self.vname_prfx[0]+'_v_l_0']
-        var[self.varmap['p_ar_sys']]                          = iniparam['p_ar_sys_0']
+        var[self.varmap[self.vname[0]]]                       = iniparam[self.vname[0]+'_0']
+        var[self.varmap[self.vname[4]]]                       = iniparam[self.vname[4]+'_0']
         try: var[self.varmap['q_arprox_sys']]                 = iniparam['q_arprox_sys_0']
         except: var[self.varmap['q_arprox_sys']]                 = iniparam['q_ar_sys_0']
         try: var[self.varmap['p_ardist_sys']]                 = iniparam['p_ardist_sys_0']
@@ -436,9 +436,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             try: var[self.varmap['q_ven'+str(n+1)+'_sys']]    = iniparam['q_ven'+str(n+1)+'_sys_0']
             except: var[self.varmap['q_ven'+str(n+1)+'_sys']]    = iniparam['q_ven_sys_0']
         var[self.varmap['q_vin_r']]                           = iniparam['q_vin_r_0']
-        var[self.varmap[''+self.vname_prfx[3]+'_at_r']]       = iniparam[''+self.vname_prfx[3]+'_at_r_0']
+        var[self.varmap[self.vname[3]]]                       = iniparam[self.vname[3]+'_0']
         var[self.varmap['q_vout_r']]                          = iniparam['q_vout_r_0']
-        var[self.varmap[''+self.vname_prfx[1]+'_v_r']]        = iniparam[''+self.vname_prfx[1]+'_v_r_0']
+        var[self.varmap[self.vname[1]]]                       = iniparam[self.vname[1]+'_0']
         var[self.varmap['p_ar_pul']]                          = iniparam['p_ar_pul_0']
         var[self.varmap['q_ar_pul']]                          = iniparam['q_ar_pul_0']
         var[self.varmap['p_ven_pul']]                         = iniparam['p_ven_pul_0']
@@ -464,7 +464,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         elif check=='pQvar':
             
             vals = []
-            pQvar_ids = [self.varmap[''+self.vname_prfx[2]+'_at_l'],self.varmap[''+self.vname_prfx[0]+'_v_l'],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_ven_sys'],self.varmap[''+self.vname_prfx[3]+'_at_r'],self.varmap[''+self.vname_prfx[1]+'_v_r'],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']]
+            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap[self.vname[4]],self.varmap['p_ardist_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']]
             for i in range(len(varTc_sq)):
                 if i in pQvar_ids:
                     vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
@@ -497,10 +497,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             for i in range(nc):
                 print('{:<9s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]))
                         
-            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[2]+'_at_l',' = ',var_sq[self.varmap[''+self.vname_prfx[2]+'_at_l']],'   ',''+self.vname_prfx[3]+'_at_r',' = ',var_sq[self.varmap[''+self.vname_prfx[3]+'_at_r']]))
-            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(''+self.vname_prfx[0]+'_v_l',' = ',var_sq[self.varmap[''+self.vname_prfx[0]+'_v_l']],'   ',''+self.vname_prfx[1]+'_v_r',' = ',var_sq[self.varmap[''+self.vname_prfx[1]+'_v_r']]))
+            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[2],' = ',var_sq[self.varmap[self.vname[2]]],'   ',self.vname[3],' = ',var_sq[self.varmap[self.vname[3]]]))
+            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[0],' = ',var_sq[self.varmap[self.vname[0]]],'   ',self.vname[1],' = ',var_sq[self.varmap[self.vname[1]]]))
             
-            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ar_sys',' = ',var_sq[self.varmap['p_ar_sys']],'   ','p_ar_pul',' = ',var_sq[self.varmap['p_ar_pul']]))
+            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[4],' = ',var_sq[self.varmap[self.vname[4]]],'   ','p_ar_pul',' = ',var_sq[self.varmap['p_ar_pul']]))
             print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ven_sys',' = ',var_sq[self.varmap['p_ven_sys']],'   ','p_ven_pul',' = ',var_sq[self.varmap['p_ven_pul']]))
 
             sys.stdout.flush()
