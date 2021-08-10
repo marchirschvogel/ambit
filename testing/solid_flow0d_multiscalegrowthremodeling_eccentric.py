@@ -26,7 +26,7 @@ def main():
                             'write_results_every'   : 1,
                             'output_path'           : ''+basepath+'/tmp',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e'],
-                            'simname'               : 'multiscale_eccentric_mr'}
+                            'simname'               : 'multiscale_eccentric_mr3'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,
@@ -66,7 +66,7 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 1,
                             'incompressible_2field' : False,
-                            'prestress_initial'     : True,
+                            'prestress_initial'     : False,#True,
                             'lin_remodeling_full'   : False}
     
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
@@ -74,12 +74,12 @@ def main():
                             'coupling_type'         : 'monolithic_direct'}
     
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
-                            'numcycles'             : 10,
+                            'numcycles'             : 2,#10,
                             'tol_small'             : 0.08, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 5.0e-3, # growth rate tolerance [mm^3/s]
-                            'tol_outer'             : 3.0e-3,
+                            'tol_outer'             : 3.0e-30,
                             'write_checkpoints'     : True,
-                            'restart_cycle'         : 0,
+                            'restart_cycle'         : 1,
                             'restart_from_small'    : False}
 
     MATERIALS            = {'MAT1' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
@@ -93,9 +93,9 @@ def main():
                                                             'thres_tol' : 1.0e-3,
                                                             'thetamax' : 3.0,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 2.0e4,
+                                                            'tau_gr' : 99999999999999,#2.0e4,
                                                             'gamma_gr' : 2.0,
-                                                            'tau_gr_rev' : 4.0e4,
+                                                            'tau_gr_rev' : 99999999999999,#4.0e4,
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                                                                 'sussmanbathe_vol' : {'kappa' : 1.0e3}}}}}
@@ -130,12 +130,14 @@ def main():
                 return 0.0
 
 
-    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
-                                        {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},
-                                        {'type' : 'spring',  'id' : [4], 'dir' : 'normal', 'stiff' : 10.0}, # 2.5, 1.25
-                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'normal', 'visc'  : 0.0005},
-                                        {'type' : 'spring',  'id' : [4], 'dir' : 'xyz', 'stiff' : 0.25},
-                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
+    #BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
+                                        #{'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},
+                                        #{'type' : 'spring',  'id' : [4], 'dir' : 'normal', 'stiff' : 10.0}, # 2.5, 1.25
+                                        #{'type' : 'dashpot', 'id' : [4], 'dir' : 'normal', 'visc'  : 0.0005},
+                                        #{'type' : 'spring',  'id' : [4], 'dir' : 'xyz', 'stiff' : 0.25},
+                                        #{'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
+
+    BC_DICT              = { 'dirichlet' : [{'id' : [4], 'dir' : 'all', 'val' : 0.0}]}
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)

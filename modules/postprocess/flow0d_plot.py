@@ -29,7 +29,7 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/codes/fem_scripts/tests/tmp/aorta_3d0d/0d'#work/mia_sim_new_0d_fixedale'
+        path = '/home/mh/work/codes/fem_scripts/tests/tmp/aorta_3d0d/0d_4'#work/mia_sim_new_0d_fixedale'
         sname = ''
         nstep_cycl = 100
         T_cycl = 0.7
@@ -152,6 +152,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         # check presence of default chamber pressure variable
         for ch in ['v_l','v_r','at_l','at_r', 'aort']:
             err = os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'.txt')
+            if ch=='aort': err=0 # temporary: check how to nicely handle different aort pressures (coronaries, root)
             if err==0: # nothing to do if present
                 pass
             else:
@@ -178,6 +179,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 fpa.close()
                 # rename file to ar_sys
                 if ch=='aort': os.system('mv '+path+'/results_'+sname+'_p_'+ch+'.txt '+path+'/results_'+sname+'_p_ar_sys.txt')
+            if ch=='aort': os.system('mv '+path+'/results_'+sname+'_p_aort_i1.txt '+path+'/results_'+sname+'_p_ar_sys.txt') # temporary
 
 
         # for plotting of pressure-volume loops

@@ -248,7 +248,7 @@ class SolidmechanicsFlow0DSolver():
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
-
+            
             jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
@@ -372,8 +372,8 @@ class SolidmechanicsFlow0DSolver():
                     growth_thresolds.append(as_ufl(0))
                 
             growth_thres_proj = project(growth_thresolds, self.pb.pbs.Vd_scalar, self.pb.pbs.dx_)
-            self.pb.pbs.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            self.pb.pbs.growth_thres.interpolate(growth_thres_proj)
+            self.pb.pbs.growth_param_funcs['growth_thres'].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            self.pb.pbs.growth_param_funcs['growth_thres'].interpolate(growth_thres_proj)
 
 
     # for multiscale G&R analysis

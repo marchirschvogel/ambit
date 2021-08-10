@@ -19,9 +19,7 @@ import solid_variationalform
 import timeintegration
 import utilities
 import solver_nonlin
-#import solver_nonlin_ as solver_nonlin
 import boundaryconditions
-import expression
 from projection import project
 from solid_material import activestress_activation
 
@@ -131,7 +129,6 @@ class SolidmechanicsProblem(problem_base):
         # growth stretch
         self.theta = Function(self.Vd_scalar, name="theta")
         self.theta_old = Function(self.Vd_scalar)
-        self.growth_thres = Function(self.Vd_scalar)
         # initialize to one (theta = 1 means no growth)
         self.theta.vector.set(1.0), self.theta_old.vector.set(1.0)
         self.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -168,7 +165,15 @@ class SolidmechanicsProblem(problem_base):
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         have_fiber1, have_fiber2 = False, False
         self.have_active_stress, self.active_stress_trig, self.have_frank_starling, self.have_growth = False, 'ode', False, False
-        self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains
+        self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
+
+        # build up map of (numeric) G&R parameters and corresponding form and function dicts - like this, FFCx does not need (expensive) re-compilation when parameter values are changed
+        self.growth_param_map = {'trigger_reduction' : 1, 'growth_thres' : 0, 'growth_thres_0' : 0, 'thres_tol' : 0, 'thetamax' : 1, 'thetamin' : 1, 'tau_gr' : 0, 'gamma_gr' : 0, 'tau_gr_rev' : 0, 'gamma_gr_rev' : 0}
+        self.mat_growth_param_forms = {}
+        self.growth_param_funcs = {}
+        for name in self.growth_param_map.keys():
+            self.mat_growth_param_forms[name] = []*self.num_domains
+            self.growth_param_funcs[name] = Function(self.Vd_scalar)
 
         self.localsolve, growth_dir = False, None
         self.actstress = []
@@ -219,9 +224,13 @@ class SolidmechanicsProblem(problem_base):
                 # the global Newton scheme - so flag localsolve to true
                 if self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                     self.localsolve = True
-                    self.mat_growth_thres.append(self.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_thres'])
+                    self.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_thres_0'] = self.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_thres']
+                    for name in self.mat_growth_param_forms.keys():
+                        try: self.mat_growth_param_forms[name].append(self.constitutive_models['MAT'+str(n+1)+'']['growth'][name])
+                        except: self.mat_growth_param_forms[name].append(as_ufl(self.growth_param_map[name]))
+                    
                 else:
-                    self.mat_growth_thres.append(as_ufl(0))
+                    for name in self.mat_growth_param_forms.keys(): self.mat_growth_param_forms[name].append(as_ufl(self.growth_param_map[name]))
                 # for the case that we have a prescribed growth stretch over time, append curve to functions that need time updates
                 # if one mat has a prescribed growth model, all have to be!
                 if self.mat_growth_trig[n] == 'prescribed':
@@ -229,19 +238,20 @@ class SolidmechanicsProblem(problem_base):
                 if 'remodeling_mat' in self.constitutive_models['MAT'+str(n+1)+'']['growth'].keys():
                     self.mat_remodel[n] = True
             else:
-                self.mat_growth_thres.append(as_ufl(0))
+                for name in self.mat_growth_param_forms.keys(): self.mat_growth_param_forms[name].append(as_ufl(0))
                 
-        # full linearization of our remodeling law can lead to excessive compiler times for ffcx... :-/
+        # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
         try: self.lin_remod_full = fem_params['lin_remodeling_full']
         except: self.lin_remod_full = True
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
-            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx_)
-            self.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            self.growth_thres.interpolate(growth_thres_proj)
-        
+            for name in self.growth_param_funcs.keys():
+                param_proj = project(self.mat_growth_param_forms[name], self.Vd_scalar, self.dx_)
+                self.growth_param_funcs[name].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                self.growth_param_funcs[name].interpolate(param_proj)
+
         # read in fiber data
         if have_fiber1:
 
@@ -385,7 +395,7 @@ class SolidmechanicsProblem(problem_base):
             
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth residual and increment
-                a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt, 'res_del')
+                a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.internalvars, self.theta_old, self.dt, self.growth_param_funcs, 'res_del')
                 self.r_growth.append(a), self.del_theta.append(b)
             else:
                 self.r_growth.append(as_ufl(0)), self.del_theta.append(as_ufl(0))
@@ -407,10 +417,10 @@ class SolidmechanicsProblem(problem_base):
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
-                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
+                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.internalvars, self.theta_old, self.dt, self.growth_param_funcs)
                 if self.mat_remodel[n] and self.lin_remod_full:
                     # remodeling tangent operator
-                    Cremod = self.ma[n].Cremod(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
+                    Cremod = self.ma[n].Cremod(self.u, self.p, self.internalvars, self.theta_old, self.dt, self.growth_param_funcs)
                     Ctang = Cmat + Cgrowth + Cremod
                 else:
                     Ctang = Cmat + Cgrowth
@@ -445,21 +455,21 @@ class SolidmechanicsProblem(problem_base):
                     Cmat = self.ma[n].S(self.u, self.p, ivar=self.internalvars, tang=True)
                     # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
                     # for stress-mediated growth, we get a contribution to the pressure material tangent operator
-                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
+                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.internalvars, self.theta_old, self.dt, self.growth_param_funcs)
                     if self.mat_remodel[n] and self.lin_remod_full:
                         # remodeling tangent operator
-                        Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
+                        Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.internalvars, self.theta_old, self.dt, self.growth_param_funcs)
                         Ctang_p = Cmat_p + Cgrowth_p + Cremod_p
                     else:
                         Ctang_p = Cmat_p + Cgrowth_p
                     # for all types of deformation-dependent growth, we need to add the growth contributions to the Jacobian tangent operator
-                    Jgrowth = diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
+                    Jgrowth = diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.internalvars, self.theta_old, self.dt, self.growth_param_funcs)
                     Jtang = Jmat + Jgrowth
                     # ok... for stress-mediated growth, we actually get a non-zero right-bottom (11) block in our saddle-point system matrix,
                     # since Je = Je(C,theta(C,p)) ---> dJe/dp = dJe/dtheta * dtheta/dp
                     # TeX: D_{\Delta p}\!\int\limits_{\Omega_0} (J^{\mathrm{e}}-1)\delta p\,\mathrm{d}V = \int\limits_{\Omega_0} \frac{\partial J^{\mathrm{e}}}{\partial p}\Delta p \,\delta p\,\mathrm{d}V,
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
-                    dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.internalvars, self.theta_old, self.growth_thres, self.dt)
+                    dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.internalvars, self.theta_old, self.dt, self.growth_param_funcs)
                     if not isinstance(dthetadp, constantvalue.Zero):
                         self.p11 += diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx_[n]
                 else:

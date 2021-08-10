@@ -52,8 +52,9 @@ if solid:
     errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel.py']) )
     errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel.py']) )
     
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel_incomp.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel_incomp.py']) )
+    # TODO: Re-include once we can have higher-order Quadrature function spaces!
+    #errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel_incomp.py']) )
+    #errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel_incomp.py']) )
 
     errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_prescribed_iso_lv.py']) )
     errs.append( subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_growth_prescribed_iso_lv.py']) )

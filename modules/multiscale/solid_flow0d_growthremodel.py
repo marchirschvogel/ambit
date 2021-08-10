@@ -185,9 +185,6 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 # solve small scale 3D-0D coupled solid-flow0d problem with fixed growth
                 self.solversmall.solve_problem()
                 
-                # next small scale run is a resumption of a previous one
-                self.pb.pbsmall.restart_multiscale = True
-                
                 if self.pb.write_checkpoints:
                     # write checkpoint for potential restarts
                     self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
@@ -204,8 +201,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 self.pb.pbsmall.pbs.prestress_initial = False
                 # set flag to False again
                 self.pb.restart_from_small = False
-                # next small scale run is a resumption of a previous one
-                self.pb.pbsmall.restart_multiscale = True
+            
+            # next small scale run is a resumption of a previous one
+            self.pb.pbsmall.restart_multiscale = True
             
             # set large scale state
             self.set_state_large(N)
@@ -262,10 +260,11 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pbsmall.pbs.p_old.vector.axpy(1.0, p_delta)
             self.pb.pbsmall.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        #self.pb.pbsmall.pbs.v_old.vector.set(0.0)
-        #self.pb.pbsmall.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        #self.pb.pbsmall.pbs.a_old.vector.set(0.0)
-        #self.pb.pbsmall.pbs.a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        # we come from a quasi-static simulation - old v and a from previous small scale run have to be set to zero
+        self.pb.pbsmall.pbs.v_old.vector.set(0.0)
+        self.pb.pbsmall.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.a_old.vector.set(0.0)
+        self.pb.pbsmall.pbs.a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # 0D variables s and s_old are already correctly set from the previous small scale run (end values)
 
@@ -306,8 +305,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         self.pb.pbsmall.pbf.cardvasc0D.set_pressure_fem(self.pb.pbsmall.pbf.s_set, self.pb.pbsmall.pbf.cardvasc0D.v_ids, self.pb.pbsmall.pr0D, self.pb.neumann_funcs)
 
         # growth thresholds from set point
-        self.pb.pblarge.growth_thres.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.vector)
-        self.pb.pblarge.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pblarge.growth_param_funcs['growth_thres'].vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_param_funcs['growth_thres'].vector)
+        self.pb.pblarge.growth_param_funcs['growth_thres'].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def compute_volume_large(self):

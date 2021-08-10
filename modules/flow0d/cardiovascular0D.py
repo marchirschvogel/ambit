@@ -20,7 +20,7 @@ class cardiovascular0Dbase:
     
     def __init__(self, init=True, comm=None):
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
-        self.init = init # for outputs
+        self.init = init # for output
         self.varmap, self.auxmap = {}, {} # maps for primary and auxiliary variables
         if comm is not None: self.comm = comm # MPI communicator
        
@@ -171,7 +171,7 @@ class cardiovascular0Dbase:
         if perturb_type=='as': self.R_vout_l_min *= perturb_factor
 
         # arrays need re-initialization, expressions have to be re-set
-        self.setup_arrays(), self.set_chamber_interfaces()
+        self.setup_arrays(), self.set_compartment_interfaces()
         self.equation_map(), self.set_stiffness(), self.lambdify_expressions()
 
     

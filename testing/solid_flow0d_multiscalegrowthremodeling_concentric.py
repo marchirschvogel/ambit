@@ -80,7 +80,7 @@ def main():
                             'tol_outer'             : 3.0e-3,
                             'write_checkpoints'     : True,
                             'restart_cycle'         : 0,
-                            'restart_from_small'    : False}
+                            'restart_from_small'    : True}
 
     MATERIALS            = {'MAT1' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                       'sussmanbathe_vol' : {'kappa' : 1.0e3},
@@ -89,13 +89,13 @@ def main():
                                       'growth'           : {'growth_dir' : 'crossfiber',
                                                             'growth_trig' : 'volstress',
                                                             'trigger_reduction' : 0.99,
-                                                            'growth_thres' : 1.05,
+                                                            'growth_thres' : 60.0,
                                                             'thres_tol' : 1.0e-3,
-                                                            'thetamax' : 3.0,
+                                                            'thetamax' : 2.0,
                                                             'thetamin' : 1.0,
-                                                            'tau_gr' : 32.0e4,
+                                                            'tau_gr' : 64.0e4,
                                                             'gamma_gr' : 2.0,
-                                                            'tau_gr_rev' : 64.0e4,
+                                                            'tau_gr_rev' : 128.0e4,
                                                             'gamma_gr_rev' : 2.0,
                                                             'remodeling_mat' : {'guccione_dev'     : {'c_0' : 10*1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                                                                 'sussmanbathe_vol' : {'kappa' : 1.0e3},
