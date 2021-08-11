@@ -127,6 +127,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         
         self.params = params
 
+        self.chmodels = chmodels
+        self.cormodel = cormodel
+        self.valvelaws = valvelaws
+        
         # number of systemic venous inflows (to right atrium)
         try: self.vs = self.chmodels['ra']['num_inflows']
         except: self.vs = 1
@@ -134,10 +138,6 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         # number of pulmonary venous inflows (to left atrium)
         try: self.vp = self.chmodels['la']['num_inflows']
         except: self.vp = 1
-
-        self.chmodels = chmodels
-        self.cormodel = cormodel
-        self.valvelaws = valvelaws
         
         self.cq = cq
         self.vq = vq
