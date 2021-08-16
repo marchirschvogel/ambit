@@ -31,7 +31,7 @@ def main():
                          'periodic_checktype'    : 'pQvar'}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspulcapcor',
-                         'coronary_model'        : 'RCar_RCven',
+                         'coronary_model'        : 'ZCRp_CRd',
                          'parameters'            : param(),
                          'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
     
@@ -133,7 +133,6 @@ def init():
             'q_arespl_sys_0' : -1.1129301639510835E+04,
             'q_armsc_sys_0' : -8.7229603630348920E+03,
             'q_arcer_sys_0' : -5.9623606948858287E+03,
-            'q_arcor_sys_0' : -1.9864253416510032E+03,
             'p_venspl_sys_0' : 2.1337514581004355E+00,
             'q_venspl_sys_0' : 2.0406124240978173E+04,
             'p_venespl_sys_0' : 2.0900015313258282E+00,
@@ -142,8 +141,9 @@ def init():
             'q_venmsc_sys_0' : 1.3387364723046561E+04,
             'p_vencer_sys_0' : 2.0933161349988683E+00,
             'q_vencer_sys_0' : 9.1526721881635949E+03,
-            'p_vencor_sys_0' : 2.0910022623881237E+00,
-            'q_vencor_sys_0' : 3.0343572493359602E+03,
+            'q_corp_sys_0' : -1.9864253416510032E+03,
+            'p_cord_sys_0' : 2.0910022623881237E+00,
+            'q_cord_sys_0' : 3.0343572493359602E+03,
 
             'p_ven_sys_0' : 1.8007235104876642E+00,
             'q_ven_sys_0' : -4.5989218100751634E+04,
@@ -299,8 +299,9 @@ def param():
             'C_armsc_sys' : C_armsc_sys,
             'R_arcer_sys' : R_arcer_sys,
             'C_arcer_sys' : C_arcer_sys,
-            'R_arcor_sys' : R_arcor_sys,
-            'C_arcor_sys' : C_arcor_sys,
+            'Z_corp_sys' : 0,
+            'R_corp_sys' : R_arcor_sys,
+            'C_corp_sys' : C_arcor_sys,
             'R_venspl_sys' : R_venspl_sys,
             'C_venspl_sys' : C_venspl_sys,
             'R_venespl_sys' : R_venespl_sys,
@@ -309,8 +310,8 @@ def param():
             'C_venmsc_sys' : C_venmsc_sys,
             'R_vencer_sys' : R_vencer_sys,
             'C_vencer_sys' : C_vencer_sys,
-            'R_vencor_sys' : R_vencor_sys,
-            'C_vencor_sys' : C_vencor_sys,
+            'R_cord_sys' : R_vencor_sys,
+            'C_cord_sys' : C_vencor_sys,
             'R_ar_pul' : R_ar_pul,
             'C_ar_pul' : C_ar_pul,
             'L_ar_pul' : L_ar_pul,

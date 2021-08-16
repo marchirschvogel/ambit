@@ -76,8 +76,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.C_armsc_sys = params['C_armsc_sys']
         self.R_arcer_sys = params['R_arcer_sys']
         self.C_arcer_sys = params['C_arcer_sys']
-        self.R_arcor_sys = params['R_arcor_sys']
-        self.C_arcor_sys = params['C_arcor_sys']
+        try: self.R_arcor_sys = params['R_arcor_sys']
+        except: self.R_arcor_sys = params['R_corp_sys']
+        try: self.C_arcor_sys = params['C_arcor_sys']
+        except: self.C_arcor_sys = params['C_corp_sys']
         # peripheral venous compliances and resistances
         self.R_venspl_sys = params['R_venspl_sys']
         self.C_venspl_sys = params['C_venspl_sys']
@@ -87,8 +89,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.C_venmsc_sys = params['C_venmsc_sys']
         self.R_vencer_sys = params['R_vencer_sys']
         self.C_vencer_sys = params['C_vencer_sys']
-        self.R_vencor_sys = params['R_vencor_sys']
-        self.C_vencor_sys = params['C_vencor_sys']
+        try: self.R_vencor_sys = params['R_vencor_sys']
+        except: self.R_vencor_sys = params['R_cord_sys']
+        try: self.C_vencor_sys = params['C_vencor_sys']
+        except: self.C_vencor_sys = params['C_cord_sys']
         
         self.R_ar_pul = params['R_ar_pul']
         self.C_ar_pul = params['C_ar_pul']
@@ -811,15 +815,12 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
             if 'num_inflows' in self.chmodels['ra'].keys() and self.vs > 1: self.vs -= 1
 
             # initialize coronary circulation model
-            if self.cormodel == 'RC':
-                from cardiovascular0D_coronary import coronary_circ_RC
-                self.corcirc = coronary_circ_RC(self.params, self.varmap, self.auxmap, self.vs)
-            elif self.cormodel == 'RCar_RCven':
-                from cardiovascular0D_coronary import coronary_circ_RCar_RCven
-                self.corcirc = coronary_circ_RCar_RCven(self.params, self.varmap, self.auxmap, self.vs)
-            elif self.cormodel == 'RLCl_RLCr':
-                from cardiovascular0D_coronary import coronary_circ_RLCl_RLCr
-                self.corcirc = coronary_circ_RLCl_RLCr(self.params, self.varmap, self.auxmap, self.vs)
+            if self.cormodel == 'ZCRp_CRd':
+                from cardiovascular0D_coronary import coronary_circ_ZCRp_CRd
+                self.corcirc = coronary_circ_ZCRp_CRd(self.params, self.varmap, self.auxmap, self.vs)
+            elif self.cormodel == 'ZCRp_CRd_lr':
+                from cardiovascular0D_coronary import coronary_circ_ZCRp_CRd_lr
+                self.corcirc = coronary_circ_ZCRp_CRd_lr(self.params, self.varmap, self.auxmap, self.vs)
             else:
                 raise NameError("Unknown coronary circulation model!")
 
@@ -980,8 +981,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         for n in range(self.vs+self.switch_cor): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
 
         # add coronary circulation equations
-        if self.cormodel is not None:
-            q_arcor_sys_in_, q_vencor_sys_out_ = self.corcirc.equation_map(self.numdof-self.corcirc.ndcor, len(self.c_)+14, self.x_, self.a_, self.df_, self.f_, [p_ar_sys_], p_at_r_i_[-1])
+        if self.cormodel is not None: # p_v_l on purpose here NOT passed to coronary model (for comparison reasons to syspulcap model...)
+            q_arcor_sys_in_, q_vencor_sys_out_ = self.corcirc.equation_map(self.numdof-self.corcirc.ndcor, len(self.c_)+14, self.x_, self.a_, self.df_, self.f_, [p_ar_sys_], 0, p_at_r_i_[-1])
         else:
             q_arcor_sys_in_, q_vencor_sys_out_ = [0], 0
 

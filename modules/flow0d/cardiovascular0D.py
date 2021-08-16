@@ -27,7 +27,7 @@ class cardiovascular0Dbase:
     
     # evaluate model at current nonlinear iteration
     def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None, fnc=[]):
-        
+
         if isinstance(x, np.ndarray): x_sq = x
         else: x_sq = allgather_vec(x, self.comm)
 

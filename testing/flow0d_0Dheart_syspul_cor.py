@@ -37,7 +37,7 @@ def main():
                          'periodic_checktype'    : 'pQvar'}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspul',
-                         'coronary_model'        : 'RLCl_RLCr', 
+                         'coronary_model'        : 'ZCRp_CRd', 
                          'parameters'            : param(),
                          'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}},
                          'valvelaws'             : {'av' : ['smooth_pres_momentum',0], 'mv' : ['pwlin_pres'], 'pv' : ['pwlin_pres'], 'tv' : ['pwlin_pres']}}
@@ -80,24 +80,28 @@ def main():
     s_corr = np.zeros(problem.mp.cardvasc0D.numdof)
 
     # correct results
-    s_corr[0] = 2.7156831671111686E+04
-    s_corr[1] = 6.5014832315152615E-01
-    s_corr[2] = 2.3863884814303105E-01
-    s_corr[3] = 6.2299149148041377E-01
-    s_corr[4] = 7.3204325568836603E+00
-    s_corr[5] = 2.3863885498607551E-01
-    s_corr[6] = 7.3204311250505567E+00
-    s_corr[7] = 4.4855244723865435E+04
-    s_corr[8] = 1.9666233818994407E+00
-    s_corr[9] = -2.3737219188883661E+04
-    s_corr[10] = 3.2279121521802968E+04
-    s_corr[11] = 4.9648390872022957E-01
-    s_corr[12] = 1.6997499381247427E-01
-    s_corr[13] = 4.6420478719842723E-01
-    s_corr[14] = 1.8990559860434069E+00
-    s_corr[15] = -8.1705347914691476E+04
-    s_corr[16] = 1.4965782216339247E+00
-    s_corr[17] = -1.0232540549572852E+04
+    s_corr[0] = 2.1891215121189365E+04
+    s_corr[1] = 6.5539843855431468E-01
+    s_corr[2] = 1.6805327962454747E-01
+    s_corr[3] = 6.3350722343312516E-01
+    s_corr[4] = 8.0368039078659965E+00
+    s_corr[5] = -1.4415864662615999E+02
+    s_corr[6] = 8.0376688597457395E+00
+    s_corr[7] = 4.9889324331161697E+04
+    s_corr[8] = 2.0830544812886083E+00
+    s_corr[9] = -1.4582294134657655E+04
+    s_corr[10] = 3.4971689677010771E+04
+    s_corr[11] = 3.9319680680790853E-01
+    s_corr[12] = 1.8896764674462069E-01
+    s_corr[13] = 3.5822511713089783E-01
+    s_corr[14] = 1.6031497654365026E+00
+    s_corr[15] = -9.0263340297088216E+04
+    s_corr[16] = 1.3290418867628540E+00
+    s_corr[17] = -2.1751637234497350E+04
+    s_corr[18] = 1.4432669990573908E+02
+    s_corr[19] = -1.3235004521686183E+03
+    s_corr[20] = 6.5601060482121811E+00
+    s_corr[21] = 4.3174033945046787E+01
     
     check1 = results_check.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = results_check.success_check([check1], problem.mp.comm)
@@ -123,7 +127,11 @@ def init():
             'q_ar_pul_0' : 0.0,
             'p_ven_pul_0' : 1.59986881076,
             'q_ven_pul_0' : 0.0,
-            'q_cor_sys_0' : 0.0}
+            # coronary circulation submodel
+            'q_cor_sys_0' : 0,
+            'q_cord_sys_0' : 0,
+            'q_corp_sys_0' : 0.,
+            'p_cord_sys_0' : 0.}
 
 
 def param():
@@ -202,15 +210,12 @@ def param():
             't_ed' : t_ed,
             't_es' : t_es,
             'T_cycl' : T_cycl,
-            # coronary circulation submodel parameters
-            'R_cor_sys_l' : 1.0e-5,
-            'L_cor_sys_l' : 0.,
-            'C_cor_sys_l' : 1.0e2,
-            'R_cor_sys_r' : 1.0e-5,
-            'L_cor_sys_r' : 0.,
-            'C_cor_sys_r' : 1.0e2}
-
-
+            # coronary circulation submodel parameters - values from Arthurs et al. 2016, Tab. 3
+            'Z_corp_sys' : 3.2e-3,
+            'C_corp_sys' : 4.5e0,
+            'R_corp_sys' : 6.55e-3,
+            'C_cord_sys' : 2.7e1,
+            'R_cord_sys' : 1.45e-1}
 
 
 if __name__ == "__main__":

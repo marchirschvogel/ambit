@@ -182,15 +182,12 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             if 'num_inflows' in self.chmodels['ra'].keys() and self.vs > 1: self.vs -= 1
 
             # initialize coronary circulation model
-            if self.cormodel == 'RC':
-                from cardiovascular0D_coronary import coronary_circ_RC
-                self.corcirc = coronary_circ_RC(self.params, self.varmap, self.auxmap, self.vs)
-            elif self.cormodel == 'RCar_RCven':
-                from cardiovascular0D_coronary import coronary_circ_RCar_RCven
-                self.corcirc = coronary_circ_RCar_RCven(self.params, self.varmap, self.auxmap, self.vs)
-            elif self.cormodel == 'RLCl_RLCr':
-                from cardiovascular0D_coronary import coronary_circ_RLCl_RLCr
-                self.corcirc = coronary_circ_RLCl_RLCr(self.params, self.varmap, self.auxmap, self.vs)
+            if self.cormodel == 'ZCRp_CRd':
+                from cardiovascular0D_coronary import coronary_circ_ZCRp_CRd
+                self.corcirc = coronary_circ_ZCRp_CRd(self.params, self.varmap, self.auxmap, self.vs)
+            elif self.cormodel == 'ZCRp_CRd_lr':
+                from cardiovascular0D_coronary import coronary_circ_ZCRp_CRd_lr
+                self.corcirc = coronary_circ_ZCRp_CRd_lr(self.params, self.varmap, self.auxmap, self.vs)
             else:
                 raise NameError("Unknown coronary circulation model!")
 
@@ -320,7 +317,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         # add coronary circulation equations
         if self.cormodel is not None:
-            q_arcor_sys_in_, q_vencor_sys_out_ = self.corcirc.equation_map(self.numdof-self.corcirc.ndcor, len(self.c_)+8, self.x_, self.a_, self.df_, self.f_, [p_ar_sys_o1_,p_ar_sys_o2_], p_at_r_i_[-1])
+            q_arcor_sys_in_, q_vencor_sys_out_ = self.corcirc.equation_map(self.numdof-self.corcirc.ndcor, len(self.c_)+8, self.x_, self.a_, self.df_, self.f_, [p_ar_sys_o1_,p_ar_sys_o2_], p_v_l_o1_, p_at_r_i_[-1])
         else:
             q_arcor_sys_in_, q_vencor_sys_out_ = [0], 0
        
@@ -532,17 +529,28 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
     groups.append({'vol_time_compart' : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r', 'V_ar_sys', 'V_ven_sys', 'V_ar_pul', 'V_ven_pul'],
                 'tex'              : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
                 'lines'            : [1, 2, 16, 17, 3, 15, 18, 20]})
-    
-    if coronarymodel == 'RLCl_RLCr':
-        
-        groups[5]['vol_time_compart'].append('V_cor_sys_l')
-        groups[5]['vol_time_compart'].append('V_cor_sys_r')
 
-        groups[5]['tex'].append('$V_{\\\mathrm{cor}}^{\\\mathrm{sys},\\\ell}$')
-        groups[5]['tex'].append('$V_{\\\mathrm{cor}}^{\\\mathrm{sys},r}$')
+    if coronarymodel == 'ZCRp_CRd_lr':
+        
+        # index 6
+        groups.append({'flux_time_cor'  : ['q_corp_sys_l_in', 'q_corp_sys_l', 'q_corp_sys_r_in', 'q_corp_sys_r', 'q_cord_sys_l', 'q_cord_sys_r'],
+                    'tex'              : ['$q_{\\\mathrm{cor,p,in}}^{\\\mathrm{sys},\\\ell}$', '$q_{\\\mathrm{cor,p}}^{\\\mathrm{sys},\\\ell}$', '$q_{\\\mathrm{cor,p,in}}^{\\\mathrm{sys},r}$', '$q_{\\\mathrm{cor,p}}^{\\\mathrm{sys},r}$', '$q_{\\\mathrm{cor,d}}^{\\\mathrm{sys},\\\ell}$', '$q_{\\\mathrm{cor,d}}^{\\\mathrm{sys},r}$'],
+                    'lines'            : [1, 5, 2, 6, 12, 14]})
+        
+        groups[5]['vol_time_compart'].append('V_corp_sys_l')
+        groups[5]['vol_time_compart'].append('V_corp_sys_r')
+        groups[5]['vol_time_compart'].append('V_cord_sys_l')
+        groups[5]['vol_time_compart'].append('V_cord_sys_r')
+
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,p}}^{\\\mathrm{sys},\\\ell}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,p}}^{\\\mathrm{sys},r}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,d}}^{\\\mathrm{sys},\\\ell}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,d}}^{\\\mathrm{sys},r}$')
         
         groups[5]['lines'].append(5)
         groups[5]['lines'].append(6)
+        groups[5]['lines'].append(10)
+        groups[5]['lines'].append(11)
 
     # all volumes summed up for conservation check
     groups[5]['vol_time_compart'].append('V_all')
@@ -609,3 +617,9 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
     groups.append({'vol_time_compart_PERIODIC' : list(groups[5].values())[0],
                 'tex'                       : list(groups[5].values())[1],
                 'lines'                     : list(groups[5].values())[2]})
+    
+    if coronarymodel is not None:
+        # index 14            
+        groups.append({'flux_time_cor_PERIODIC' : list(groups[6].values())[0],
+                    'tex'                       : list(groups[6].values())[1],
+                    'lines'                     : list(groups[6].values())[2]})
