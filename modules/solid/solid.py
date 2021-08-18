@@ -25,6 +25,8 @@ from solid_material import activestress_activation
 
 from base import problem_base
 
+import mor
+
 # solid mechanics governing equation
 
 #\rho_{0} \ddot{\boldsymbol{u}} = \boldsymbol{\nabla}_{0} \cdot (\boldsymbol{F}\boldsymbol{S}) + \hat{\boldsymbol{b}}_{0} \quad \text{in} \; \Omega_{0} \times [0, T]
@@ -35,7 +37,7 @@ from base import problem_base
 
 class SolidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, comm=None):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
         problem_base.__init__(self, io_params, time_params, comm)
 
         self.problem_physics = 'solid'
@@ -83,6 +85,12 @@ class SolidmechanicsProblem(problem_base):
                 raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
+        
+        # check if we want to use model order reduction and if yes, initialize MOR class
+        try: self.have_rom = mor_params['use_mor']
+        except: self.have_rom = False
+        
+        if self.have_rom: self.rom = mor.MorBase(mor_params, comm)
         
         # create finite element objects for u and p
         P_u = VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -593,6 +601,9 @@ class SolidmechanicsSolver():
 
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
+
+        if self.pb.have_rom:
+            self.pb.rom.POD(self.pb)
 
         # read restart information
         if self.pb.restart_step > 0:

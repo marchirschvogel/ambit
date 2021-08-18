@@ -381,8 +381,11 @@ class solver_nonlinear:
     def newton(self, u, p, locvar=None, locresform=None, locincrform=None):
 
         # displacement increment
-        del_u = Function(self.V_u)
-        if self.pb.incompressible_2field: del_p = Function(self.V_p)
+        del_u_func = Function(self.V_u)
+        del_u = del_u_func.vector
+        if self.pb.incompressible_2field:
+            del_p_func = Function(self.V_p)
+            del_p = del_p_func.vector
         
         # get start vector in case we need to reset the nonlinear solver
         u_start = u.vector.duplicate()
@@ -421,6 +424,14 @@ class solver_nonlinear:
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_uu.shift(k_PTC)
+                
+            # model order reduction stuff
+            if self.pb.have_rom:
+                tmp = self.pb.rom.V.transposeMatMult(K_uu)
+                K_uu = tmp.matMult(self.pb.rom.V)
+                r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
+                self.pb.rom.V.multTranspose(r_u, r_u_)
+                r_u, del_u = r_u_, del_u_
             
             te = time.time() - tes
             
@@ -481,7 +492,7 @@ class solver_nonlinear:
                     P = PETSc.Mat().createNest([[K_uu, None], [None, P_pp]])
                     P.assemble()
 
-                    del_2field = PETSc.Vec().createNest([del_u.vector, del_p.vector])
+                    del_2field = PETSc.Vec().createNest([del_u, del_p])
                     self.ksp.setOperators(K_2field_nest, P)
                     
                     te += time.time() - tes
@@ -499,17 +510,17 @@ class solver_nonlinear:
                     
                     raise NameError("Unknown solvetype!")
                     
-                del_u.vector.array[:] = del_2field.array_r[:self.offsetp]
-                del_p.vector.array[:] = del_2field.array_r[self.offsetp:]
+                del_u.array[:] = del_2field.array_r[:self.offsetp]
+                del_p.array[:] = del_2field.array_r[self.offsetp:]
                 
                 
             else:
-                
+                    
                 # solve linear system
                 self.ksp.setOperators(K_uu)
                 
                 tss = time.time()
-                self.ksp.solve(-r_u, del_u.vector)
+                self.ksp.solve(-r_u, del_u)
                 ts = time.time() - tss
             
                 if self.solvetype=='iterative':
@@ -519,20 +530,25 @@ class solver_nonlinear:
                     if self.adapt_linsolv_tol:
                         self.adapt_linear_solver(r_u.norm())
 
-
             # get residual and increment norm
             struct_res_u_norm = r_u.norm()
-            struct_inc_u_norm = del_u.vector.norm()
+            struct_inc_u_norm = del_u.norm()
+            
+            # reconstruct full-length increment vector
+            if self.pb.have_rom:
+                del_u = self.pb.rom.V.createVecLeft()
+                self.pb.rom.V.mult(del_u_, del_u)
+                struct_inc_u_norm = del_u.norm() # TODO: Should not be - we should need the reduced, not the reconstructed norm!!! but not converging otherwise... :-(
             
             # update solution
-            u.vector.axpy(1.0, del_u.vector)
+            u.vector.axpy(1.0, del_u)
             u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             if self.pb.incompressible_2field:
-                p.vector.axpy(1.0, del_p.vector)
+                p.vector.axpy(1.0, del_p)
                 p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 struct_res_p_norm = r_p.norm()
-                struct_inc_p_norm = del_p.vector.norm()
+                struct_inc_p_norm = del_p.norm()
                 resnorms = {'res_u' : struct_res_u_norm, 'res_p' : struct_res_p_norm}
                 incnorms = {'inc_u' : struct_inc_u_norm, 'inc_p' : struct_inc_p_norm}
             else:

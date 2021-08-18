@@ -11,7 +11,7 @@ import ioroutines
 
 class Ambit():
     
-    def __init__(self, io_params, time_params, solver_params, fem_params={}, constitutive_params={}, bc_dict={}, time_curves=None, coupling_params={}, multiscale_params={}):
+    def __init__(self, io_params, time_params, solver_params, fem_params={}, constitutive_params={}, bc_dict={}, time_curves=None, coupling_params={}, multiscale_params={}, mor_params={}):
     
         # MPI communicator
         self.comm = MPI.COMM_WORLD
@@ -25,7 +25,7 @@ class Ambit():
             io = ioroutines.IO_solid(io_params, self.comm)
             io.readin_mesh()
             
-            self.mp = solid.SolidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, comm=self.comm)
+            self.mp = solid.SolidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
             self.ms = solid.SolidmechanicsSolver(self.mp, solver_params)
         
         elif problem_type == 'fluid':
@@ -35,7 +35,7 @@ class Ambit():
             io = ioroutines.IO_fluid(io_params, self.comm)
             io.readin_mesh()
             
-            self.mp = fluid.FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, comm=self.comm)
+            self.mp = fluid.FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
             self.ms = fluid.FluidmechanicsSolver(self.mp, solver_params)
         
         elif problem_type == 'flow0d':
@@ -52,7 +52,7 @@ class Ambit():
             io = ioroutines.IO_solid(io_params, self.comm)
             io.readin_mesh()
             
-            self.mp = solid_flow0d.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, comm=self.comm)
+            self.mp = solid_flow0d.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
             self.ms = solid_flow0d.SolidmechanicsFlow0DSolver(self.mp, solver_params[0], solver_params[1])
             
         elif problem_type == 'fluid_flow0d':
@@ -62,7 +62,7 @@ class Ambit():
             io = ioroutines.IO_fluid(io_params, self.comm)
             io.readin_mesh()
             
-            self.mp = fluid_flow0d.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, comm=self.comm)
+            self.mp = fluid_flow0d.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
             self.ms = fluid_flow0d.FluidmechanicsFlow0DSolver(self.mp, solver_params[0], solver_params[1])
 
         elif problem_type == 'solid_flow0d_multiscale_gandr':
@@ -82,7 +82,7 @@ class Ambit():
             io = ioroutines.IO_solid(io_params, self.comm)
             io.readin_mesh()
 
-            self.mp = solid_constraint.SolidmechanicsConstraintProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, coupling_params, io, comm=self.comm)
+            self.mp = solid_constraint.SolidmechanicsConstraintProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
             self.ms = solid_constraint.SolidmechanicsConstraintSolver(self.mp, solver_params[0], solver_params[1])
 
         else:
