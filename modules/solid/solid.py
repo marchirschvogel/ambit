@@ -25,7 +25,6 @@ from solid_material import activestress_activation
 
 from base import problem_base
 
-import mor
 
 # solid mechanics governing equation
 
@@ -87,10 +86,12 @@ class SolidmechanicsProblem(problem_base):
             raise NameError("Unknown cell/element type!")
         
         # check if we want to use model order reduction and if yes, initialize MOR class
-        try: self.have_rom = mor_params['use_mor']
+        try: self.have_rom = io_params['use_model_order_red']
         except: self.have_rom = False
-        
-        if self.have_rom: self.rom = mor.MorBase(mor_params, comm)
+
+        if self.have_rom:
+            import mor
+            self.rom = mor.MorBase(mor_params, comm)
         
         # create finite element objects for u and p
         P_u = VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -602,6 +603,7 @@ class SolidmechanicsSolver():
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
 
+        # perform Proper Orthogonal Decomposition
         if self.pb.have_rom:
             self.pb.rom.POD(self.pb)
 

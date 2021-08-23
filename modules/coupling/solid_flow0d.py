@@ -194,6 +194,9 @@ class SolidmechanicsFlow0DSolver():
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.pbs.comm, self.pb.pbs.ndof)
 
+        if self.pb.pbs.have_rom:
+            self.pb.pbs.rom.POD(self.pb.pbs)
+
         # read restart information
         if self.pb.pbs.restart_step > 0:
             self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)

@@ -32,7 +32,7 @@ from base import problem_base
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, comm=None):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
         problem_base.__init__(self, io_params, time_params, comm)
         
         self.problem_physics = 'fluid'
@@ -72,6 +72,14 @@ class FluidmechanicsProblem(problem_base):
                 raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
+
+        # check if we want to use model order reduction and if yes, initialize MOR class
+        try: self.have_rom = io_params['use_model_order_red']
+        except: self.have_rom = False
+
+        if self.have_rom:
+            import mor
+            self.rom = mor.MorBase(mor_params, comm)
 
         # create finite element objects for v and p
         self.P_v = VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
@@ -246,6 +254,10 @@ class FluidmechanicsSolver():
 
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
+
+        # perform Proper Orthogonal Decomposition
+        if self.pb.have_rom:
+            self.pb.rom.POD(self.pb)
 
         # read restart information
         if self.pb.restart_step > 0:

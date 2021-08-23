@@ -13,21 +13,6 @@ from dolfinx.fem import assemble_matrix, assemble_vector
 from petsc4py import PETSc
 from slepc4py import SLEPc
 
-import numpy as np
-
-#from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
-#from dolfinx.fem import assemble_scalar
-#from ufl import TrialFunction, TestFunction, FiniteElement, VectorElement, TensorElement, derivative, diff, det, inner, inv, dx, ds, as_vector, as_ufl, Identity, constantvalue
-#from petsc4py import PETSc
-
-#import ioroutines
-
-
-#from projection import project
-
-
-#from base import problem_base
-
 
 class MorBase():
 
@@ -35,8 +20,15 @@ class MorBase():
         
         self.numhdms = params['numhdms']
         self.numsnapshots = params['numsnapshots']
-        self.snapshotincr = params['snapshotincr']
-        self.numredbasisvec = params['numredbasisvec']
+        
+        try: self.snapshotincr = params['snapshotincr']
+        except: self.snapshotincr = 1
+        
+        try: self.snapshotoffset = params['snapshotoffset']
+        except: self.snapshotoffset = 0
+        
+        try: self.numredbasisvec = params['numredbasisvec']
+        except: self.numredbasisvec = self.numsnapshots
         
         try: self.print_eigenproblem = params['print_eigenproblem']
         except: self.print_eigenproblem = False
@@ -54,7 +46,7 @@ class MorBase():
         if self.numredbasisvec <= 0 or self.numredbasisvec > self.numhdms*self.numsnapshots:
             raise ValueError('Number of reduced-basis vectors has to be > 0 and <= number of HDMs times number of snapshots!')
         
-        self.hdmpath = params['hdmpath']
+        self.hdmfilenames = params['hdmfilenames']
 
         self.comm = comm
         
@@ -66,29 +58,30 @@ class MorBase():
             print("Performing Proper Orthogonal Decomposition (POD) ...")
             sys.stdout.flush()
         
-        locmatsize_u, locmatsize_p = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs, pb.V_p.dofmap.index_map.size_local * pb.V_p.dofmap.index_map_bs
-        matsize_u, matsize_p = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs, pb.V_p.dofmap.index_map.size_global * pb.V_p.dofmap.index_map_bs
+        locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
+        matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
 
         # snapshot matrix
         S_d = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, nnz=None, csr=None, comm=self.comm)
         S_d.setUp()
 
-        # gather snapshots
+        # gather snapshots (mostly displacement or velocities)
         S_cols=[]
         for h in range(self.numhdms):
             
             for i in range(self.numsnapshots):
+                
+                step = self.snapshotoffset + (i+1)*self.snapshotincr
             
-                disp = Function(pb.V_u)
-
-                # temporary - we need parallel and multi-core I vs. O (with PETSc viewer, we need the same amount of cores for I as for O!!)
-                viewer = PETSc.Viewer().createMPIIO(self.hdmpath+'/checkpoint_romsnaps_u_'+str(i+1)+'_1proc.dat', 'r', self.comm)
-                disp.vector.load(viewer)
+                field = Function(pb.V_u)
                 
-                disp.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                # TODO: Temporary - we need parallel and multi-core I vs. O (with PETSc viewer, we need the same amount of cores for I as for O!!)
+                viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames.replace('*',str(step)), 'r', self.comm)
+                field.vector.load(viewer)
                 
-                S_cols.append(disp.vector)
-
+                field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                
+                S_cols.append(field.vector)
 
         # build snapshot matrix S_d
         Sdrow_s, Sdrow_e = S_d.getOwnershipRange()
@@ -101,13 +94,15 @@ class MorBase():
         S_d.assemble()
         
         # covariance matrix
-        C_d = S_d.transposeMatMult(S_d)
+        C_d = S_d.transposeMatMult(S_d) # S^T * S
+        #D_d = S_d.matTransposeMult(S_d) # S * S^T
         
         eigsolver = SLEPc.EPS()
         eigsolver.create()
-        
+
         eigsolver.setOperators(C_d)
-        #eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # TODO: What are the options?
+        eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # Hermitian problem
+        eigsolver.setType(SLEPc.EPS.Type.LAPACK)
         eigsolver.setFromOptions()
         
         eigsolver.solve()
@@ -116,7 +111,7 @@ class MorBase():
         
         if self.print_eigenproblem:
             if self.comm.rank==0:
-                print("Number of converged eigenpairs %d" % nconv)
+                print("Number of converged eigenpairs: %d" % nconv)
                 sys.stdout.flush()
 
         evecs, evals = [], []
@@ -124,8 +119,8 @@ class MorBase():
 
         if nconv > 0:
             # create the results vectors
-            vr, wr = C_d.getVecs()
-            vi, wi = C_d.getVecs()
+            vr, _ = C_d.getVecs()
+            vi, _ = C_d.getVecs()
             
             if self.print_eigenproblem:
                 if self.comm.rank==0:
@@ -133,10 +128,9 @@ class MorBase():
                     print("   ----------------------   ----------------")
                     sys.stdout.flush()
                     
-            for i in range(nconv):
+            for i in range(self.numredbasisvec):
                 k = eigsolver.getEigenpair(i, vr, vi)
                 error = eigsolver.computeError(i)
-                
                 if self.print_eigenproblem:
                     if k.imag != 0.0:
                         if self.comm.rank==0:
@@ -146,28 +140,28 @@ class MorBase():
                         if self.comm.rank==0:
                             print('{:<3s}{:<4.4e}{:<15s}{:<4.4e}'.format(' ',k.real,' ',error))
                             sys.stdout.flush()
-                            
+                
                 # store
-                evecs.append(vr)
+                evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
                 evals.append(k.real)
                 
                 if k.real > self.eigenvalue_cutoff: numredbasisvec_true += 1
         
-        #if self.numredbasisvec != numredbasisvec_true:
-            #if self.comm.rank==0:
-                #print("Warning: Near-zero or negative eigenvalues occurred! Number of reduced basis vectors for ROB changed from %i to %i." % (self.numredbasisvec,numredbasisvec_true))
-                #sys.stdout.flush()
+        if self.numredbasisvec != numredbasisvec_true:
+            if self.comm.rank==0:
+                print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (self.numredbasisvec,numredbasisvec_true))
+                sys.stdout.flush()
         
-        ## pop out undesired ones
-        #for i in range(self.numsnapshots-numredbasisvec_true):
-            #evecs.pop(-1)
-            #evals.pop(-1)
+        # pop out undesired ones
+        for i in range(self.numredbasisvec-numredbasisvec_true):
+            evecs.pop(-1)
+            evals.pop(-1)
 
         # eigenvectors, scaled with 1 / sqrt(eigenval)
         # calculate first numredbasisvec_true POD modes
-        y = []
+        phi = []
         for i in range(numredbasisvec_true):
-            y.append(S_d * evecs[i] / math.sqrt(evals[i]))
+            phi.append(S_d * evecs[i] / math.sqrt(evals[i]))
 
         # build reduced basis V
         self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(numredbasisvec_true)), bsize=None, nnz=None, csr=None, comm=self.comm)
@@ -175,15 +169,13 @@ class MorBase():
         
         Vrow_s, Vrow_e = self.V.getOwnershipRange()
 
-        for i in range(len(y)):
+        for i in range(numredbasisvec_true):
 
             for row in range(Vrow_s, Vrow_e):
-                self.V.setValue(row,i, y[i][row])
+                self.V.setValue(row,i, phi[i][row])
 
         self.V.assemble()
         
         if self.comm.rank==0:
             print("POD done... Created reduced-order basis for ROM.")
             sys.stdout.flush()
-
-

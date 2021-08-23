@@ -380,7 +380,7 @@ class solver_nonlinear:
 
     def newton(self, u, p, locvar=None, locresform=None, locincrform=None):
 
-        # displacement increment
+        # displacement/velocity increment
         del_u_func = Function(self.V_u)
         del_u = del_u_func.vector
         if self.pb.incompressible_2field:
@@ -424,17 +424,10 @@ class solver_nonlinear:
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_uu.shift(k_PTC)
-                
-            # model order reduction stuff
-            if self.pb.have_rom:
-                tmp = self.pb.rom.V.transposeMatMult(K_uu)
-                K_uu = tmp.matMult(self.pb.rom.V)
-                r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
-                self.pb.rom.V.multTranspose(r_u, r_u_)
-                r_u, del_u = r_u_, del_u_
             
             te = time.time() - tes
-            
+
+
             if self.pb.incompressible_2field:
                 
                 tes = time.time()
@@ -452,14 +445,35 @@ class solver_nonlinear:
                     K_pp.assemble()
                 else:
                     K_pp = None
+                    
+                te += time.time() - tes
+
+            # model order reduction stuff
+            if self.pb.have_rom:
+                tmp = self.pb.rom.V.transposeMatMult(K_uu) # V^T * K_uu
+                K_uu = tmp.matMult(self.pb.rom.V) # V^T * K_uu * V
+                r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
+                self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
+                r_u, del_u = r_u_, del_u_
+                if self.pb.incompressible_2field: # TODO: Not working! May be that zero block of matrix becomes dominant?
+                    # offdiagonal blocks
+                    offdg1 = self.pb.rom.V.transposeMatMult(K_up) # V^T * K_up
+                    offdg2 = K_pu.matMult(self.pb.rom.V) # K_pu * V
+                    K_up, K_pu = offdg1, offdg2
+                    # new offset for pressure block
+                    self.offsetp = self.pb.rom.V.getLocalSize()[1]
+
+            if self.pb.incompressible_2field:
                 
+                tes = time.time()
+
                 # nested u-p vector
                 r_2field_nest = PETSc.Vec().createNest([r_u, r_p])
                 
                 # nested uu-up,pu-zero matrix
                 K_2field_nest = PETSc.Mat().createNest([[K_uu, K_up], [K_pu, K_pp]], isrows=None, iscols=None, comm=self.pb.comm)
                 K_2field_nest.assemble()
-                
+
                 te += time.time() - tes
                 
                 # for monolithic direct solver
@@ -471,7 +485,7 @@ class solver_nonlinear:
                     K_2field_nest.convert("aij", out=K_2field)
             
                     K_2field.assemble()
-                
+                    
                     r_2field = PETSc.Vec().createWithArray(r_2field_nest.getArray())
                     r_2field.assemble()
 
@@ -530,45 +544,40 @@ class solver_nonlinear:
                     if self.adapt_linsolv_tol:
                         self.adapt_linear_solver(r_u.norm())
 
-            # get residual and increment norm
-            struct_res_u_norm = r_u.norm()
-            struct_inc_u_norm = del_u.norm()
+            # get solid/fluid residual and increment norms
+            resnorms = {'res_u' : r_u.norm()}
+            incnorms = {'inc_u' : del_u.norm()}
             
             # reconstruct full-length increment vector
             if self.pb.have_rom:
                 del_u = self.pb.rom.V.createVecLeft()
-                self.pb.rom.V.mult(del_u_, del_u)
-                struct_inc_u_norm = del_u.norm() # TODO: Should not be - we should need the reduced, not the reconstructed norm!!! but not converging otherwise... :-(
+                self.pb.rom.V.mult(del_u_, del_u) # V * d_red
             
-            # update solution
+            # update displacement/velocity solution
             u.vector.axpy(1.0, del_u)
             u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             if self.pb.incompressible_2field:
+                # get pressure residual and increment norms
+                resnorms['res_p'] = r_p.norm()
+                incnorms['inc_p'] = del_p.norm()
+                # update pressure solution
                 p.vector.axpy(1.0, del_p)
                 p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                struct_res_p_norm = r_p.norm()
-                struct_inc_p_norm = del_p.norm()
-                resnorms = {'res_u' : struct_res_u_norm, 'res_p' : struct_res_p_norm}
-                incnorms = {'inc_u' : struct_inc_u_norm, 'inc_p' : struct_inc_p_norm}
-            else:
-                resnorms = {'res_u' : struct_res_u_norm}
-                incnorms = {'inc_u' : struct_inc_u_norm}
-            
+
             self.print_nonlinear_iter(it,resnorms,incnorms,k_PTC,ts=ts,te=te)
             
-
             it += 1
             
             # for PTC
-            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= struct_res_u_norm/struct_res_u_norm_last
-            struct_res_u_norm_last = struct_res_u_norm
+            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= resnorms['res_u']/struct_res_u_norm_last
+            struct_res_u_norm_last = resnorms['res_u']
             
-            # adaptive PTC
+            # adaptive PTC (for 3D block K_uu only!)
             if self.divcont=='PTC':
                 
                 self.maxiter = 250
-                err = self.catch_solver_errors(struct_res_u_norm, incnorm=struct_inc_u_norm, maxval=maxresval)
+                err = self.catch_solver_errors(resnorms['res_u'], incnorm=incnorms['inc_u'], maxval=maxresval)
                 
                 if err:
                     self.PTC = True
@@ -710,14 +719,14 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             # dof offset for 0D model
             self.V3D_map_u = V_u.dofmap.index_map
             self.offset0D = self.V3D_map_u.size_local * V_u.dofmap.index_map_bs
-        
+
         # initialize 0D solver class for monolithic Lagrange multiplier coupling
         if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
             self.snln0D = solver_nonlinear_0D(self.pbc.pbf, self.solver_params_constr)
 
         
     def initialize_petsc_solver(self):
-        
+
         # create solver
         self.ksp = PETSc.KSP().create(self.pb.comm)
         
@@ -829,11 +838,14 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
     def newton(self, u, p, s, t, locvar=None, locresform=None, locincrform=None):
         
-        # 3D displacement increment
-        del_u = Function(self.V_u)
-        # 3D pressure increment
-        if self.pbc.pbs.incompressible_2field: del_p = Function(self.V_p)
-        # 0D increment
+        # 3D displacement/velocity increment
+        del_u_func = Function(self.V_u)
+        del_u = del_u_func.vector
+        if self.pb.incompressible_2field:
+            # 3D pressure increment
+            del_p_func = Function(self.V_p)
+            del_p = del_p_func.vector
+        # 0D/Lagrange multiplier increment
         del_s = self.K_ss.createVecLeft()
         
         # ownership range of dof vector
@@ -894,7 +906,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_uu.shift(k_PTC)
-
 
             if self.pbc.pbs.incompressible_2field:
 
@@ -1072,16 +1083,35 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             K_su.assemble()
 
+            # model order reduction stuff
+            if self.pb.have_rom:
+                tmp = self.pb.rom.V.transposeMatMult(K_uu) # V^T * K_uu
+                K_uu = tmp.matMult(self.pb.rom.V) # V^T * K_uu * V
+                r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
+                self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
+                r_u, del_u = r_u_, del_u_
+                # offdiagonal blocks
+                offdg1 = self.pb.rom.V.transposeMatMult(K_us) # V^T * K_us
+                offdg2 = K_su.matMult(self.pb.rom.V) # K_su * V
+                K_us, K_su = offdg1, offdg2
+                # set adequate offset for 0D/LM block
+                self.offset0D = self.pb.rom.V.getLocalSize()[1]
+                # new offsets for pressure and 0D/LM block
+                if self.pbc.pbs.incompressible_2field:
+                    # TODO up and pu blocks projection - might not work...
+                    self.offsetp = self.pb.rom.V.getLocalSize()[1]
+                    self.offset0D = self.offsetp + self.V3D_map_p.size_local * V_p.dofmap.index_map_bs
+
             if self.pbc.pbs.incompressible_2field:
                 K_3D0D_nest = PETSc.Mat().createNest([[K_uu, K_up, K_us], [K_pu, K_pp, None], [K_su, None, self.K_ss]], isrows=None, iscols=None, comm=self.pbc.comm)
             else:
                 K_3D0D_nest = PETSc.Mat().createNest([[K_uu, K_us], [K_su, self.K_ss]], isrows=None, iscols=None, comm=self.pbc.comm)
 
             K_3D0D_nest.assemble()
-
+            
             # 0D rhs vector
             r_s.assemble()
-
+            
             # nested 3D-0D vector
             if self.pbc.pbs.incompressible_2field:
                 r_3D0D_nest = PETSc.Vec().createNest([r_u, r_p, r_s])
@@ -1101,7 +1131,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 K_3D0D_nest.convert("aij", out=K_3D0D)
             
                 K_3D0D.assemble()
-                
+
                 r_3D0D = PETSc.Vec().createWithArray(r_3D0D_nest.getArray())
                 r_3D0D.assemble()
 
@@ -1132,7 +1162,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     #P = PETSc.Mat().createNest([[K_uu, None, None], [None, P_pp, None], [None, None, self.K_ss]], isrows=None, iscols=None, comm=self.pbc.comm)
                     #P.assemble()
                     
-                    del_sol = PETSc.Vec().createNest([del_u.vector, del_p.vector, del_s])
+                    del_sol = PETSc.Vec().createNest([del_u, del_p, del_s])
                     self.ksp.setOperators(K_3D0D_nest, P)
                 
                 else:
@@ -1144,7 +1174,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     #P = PETSc.Mat().createNest([[K_uu, None], [None, self.K_ss]], isrows=None, iscols=None, comm=self.pbc.comm)
                     #P.assemble()
                     
-                    del_sol = PETSc.Vec().createNest([del_u.vector, del_s])
+                    del_sol = PETSc.Vec().createNest([del_u, del_s])
                     self.ksp.setOperators(K_3D0D_nest, P)
                 
                 te += time.time() - tes
@@ -1163,20 +1193,38 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 raise NameError("Unknown solvetype!")
 
             if self.pbc.pbs.incompressible_2field:
-                del_u.vector.array[:] = del_sol.array_r[:self.offsetp]
-                del_p.vector.array[:] = del_sol.array_r[self.offsetp:self.offset0D]
+                del_u.array[:] = del_sol.array_r[:self.offsetp]
+                del_p.array[:] = del_sol.array_r[self.offsetp:self.offset0D]
                 del_s.array[:] = del_sol.array_r[self.offset0D:]
             else:
-                del_u.vector.array[:] = del_sol.array_r[:self.offset0D]
+                del_u.array[:] = del_sol.array_r[:self.offset0D]
                 del_s.array[:] = del_sol.array_r[self.offset0D:]
-            
-            # update solution - displacement
-            u.vector.axpy(1.0, del_u.vector)
+
+            # get solid/fluid residual and increment norms
+            resnorms = {'res_u' : r_u.norm()}
+            incnorms = {'inc_u' : del_u.norm()}
+
+            # reconstruct full-length increment vector
+            if self.pb.have_rom:
+                del_u = self.pb.rom.V.createVecLeft()
+                self.pb.rom.V.mult(del_u_, del_u) # V * d_red
+
+            if self.pbc.pbs.incompressible_2field:
+                # get pressure residual and increment norms
+                resnorms['res_p'] = r_p.norm()
+                incnorms['inc_p'] = del_p.norm()
+
+            # get flow0d residual and increment norms
+            resnorms['res_0d'] = r_s.norm()
+            incnorms['inc_0d'] = del_s.norm()
+
+            # update solution - displacement/velocity
+            u.vector.axpy(1.0, del_u)
             u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             # update solution - pressure
             if self.pbc.pbs.incompressible_2field:
-                p.vector.axpy(1.0, del_p.vector)
+                p.vector.axpy(1.0, del_p)
                 p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             # update solution - 0D variables (not ghosted!)
@@ -1184,36 +1232,19 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             # update solution - Lagrange multipliers (not ghosted!)
             if self.pbc.coupling_type == 'monolithic_lagrange': self.pbc.lm.axpy(1.0, del_s)
 
-            # get solid/fluid residual and increment norm
-            struct_res_u_norm = r_u.norm()
-            struct_inc_u_norm = del_u.vector.norm()
-            if self.pbc.pbs.incompressible_2field:
-                struct_res_p_norm = r_p.norm()
-                struct_inc_p_norm = del_p.vector.norm()
-            # get flow0d residual and increment norm
-            vasc0D_res_norm = r_s.norm()
-            vasc0D_inc_norm = del_s.norm()
-
-            if self.pbc.pbs.incompressible_2field:
-                resnorms = {'res_u' : struct_res_u_norm, 'res_p' : struct_res_p_norm, 'res_0d' : vasc0D_res_norm}
-                incnorms = {'inc_u' : struct_inc_u_norm, 'inc_p' : struct_inc_p_norm, 'inc_0d' : vasc0D_inc_norm}
-            else:
-                resnorms = {'res_u' : struct_res_u_norm, 'res_0d' : vasc0D_res_norm}
-                incnorms = {'inc_u' : struct_inc_u_norm, 'inc_0d' : vasc0D_inc_norm}
-
             self.print_nonlinear_iter(it,resnorms,incnorms,k_PTC,ts=ts,te=te)
             
             it += 1
             
             # for PTC
-            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= struct_res_u_norm/struct_res_u_norm_last
-            struct_res_u_norm_last = struct_res_u_norm
+            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= resnorms['res_u']/struct_res_u_norm_last
+            struct_res_u_norm_last = resnorms['res_u']
             
             # adaptive PTC (for 3D block K_uu only!)
             if self.divcont=='PTC':
                 
                 self.maxiter = 250
-                err = self.catch_solver_errors(struct_res_u_norm, incnorm=struct_inc_u_norm, maxval=maxresval)
+                err = self.catch_solver_errors(resnorms['res_u'], incnorm=incnorms['inc_u'], maxval=maxresval)
                 
                 if err:
                     self.PTC = True
@@ -1223,7 +1254,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     self.reset_step(u.vector,u_start,True), self.reset_step(s,s_start,False)
                     if self.pbc.pbs.incompressible_2field: self.reset_step(p.vector,p_start,True)
                     counter_adapt += 1
-            
             
             # check if converged
             converged = self.check_converged(resnorms,incnorms)

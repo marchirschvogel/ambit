@@ -500,7 +500,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
             sys.stdout.flush()
             
-
+            if self.cormodel is not None: self.corcirc.print_to_screen(var_sq, aux)
+                
 
 
 def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, multiscalegandr=False):
@@ -551,6 +552,22 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
         groups[5]['lines'].append(6)
         groups[5]['lines'].append(10)
         groups[5]['lines'].append(11)
+
+    if coronarymodel == 'ZCRp_CRd':
+        
+        # index 6
+        groups.append({'flux_time_cor'  : ['q_corp_sys_in', 'q_corp_sys', 'q_ven2_sys'],
+                    'tex'              : ['$q_{\\\mathrm{cor,p,in}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{cor,p}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{cor,d}}^{\\\mathrm{sys}}$'],
+                    'lines'            : [1, 5, 12]})
+        
+        groups[5]['vol_time_compart'].append('V_corp_sys')
+        groups[5]['vol_time_compart'].append('V_cord_sys')
+
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,p}}^{\\\mathrm{sys}}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,d}}^{\\\mathrm{sys}}$')
+        
+        groups[5]['lines'].append(5)
+        groups[5]['lines'].append(10)
 
     # all volumes summed up for conservation check
     groups[5]['vol_time_compart'].append('V_all')
