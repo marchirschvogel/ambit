@@ -13,6 +13,7 @@ def main():
     # all possible input parameters
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr, solid_constraint
+                            'use_model_order_red'   : False, # Model Order Reduction via Proper Orthogonal Decomposition (POD), for solid or fluid mechanics and 3D0D coupled problems (default: False)
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
@@ -86,7 +87,7 @@ def main():
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
-                            'coupling_quantity'     : 'volume', # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
+                            'coupling_quantity'     : ['volume','volume'], # volume, flux, pressure (former two need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
     # for solid_constraint problem type
@@ -94,6 +95,15 @@ def main():
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids) (for syspul* models: order is lv, rv, la, ra)
                             'constraint_quantity'   : ['volume','volume'], # volume, flux, pressure (for syspul* models: order is lv, rv, la, ra) (default: volume) 
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
+
+    # for model order reduction
+    ROM_PARAMS           = {'hdmfilenames'           : ''+basepath+'/input/checkpoint_simname_u_*_1proc.dat', # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
+                            'numhdms'                : 1, # number of high-dimensional models
+                            'numsnapshots'           : 10, # number of snapshots
+                            'snapshotincr'           : 1, # OPTIONAL: snapshot increment (default: 1)
+                            'numredbasisvec'         : 10, # OPTIONAL: number of reduced basis vectors to consider (default: numsnapshots)
+                            'eigenvalue_cutoff'      : 1.0e-8, # OPTIONAL: cutoff tolerance (discard eigenvalues lower than that) (default: 0.0)
+                            'print_eigenproblem'     : False} # OPTIONAL: print output of Proper Orthogonal Decomposition (POD) eigensolve (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
@@ -190,10 +200,10 @@ def main():
                                             {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz', 'visc' : 0.005}] }
 
     # problem setup - exemplary for 3D-0D coupling of solid (fluid) to flow0d
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
     
     # problem setup for solid (fluid) only: just pass parameters related to solid (fluid) instead of lists, so:
-    #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

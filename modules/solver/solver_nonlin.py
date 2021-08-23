@@ -22,8 +22,6 @@ from mpiroutines import allgather_vec
 
 import preconditioner
 
-#from utilities import write_vec_to_file, write_mat_to_file # for debugging purposes
-
 ### useful infos for PETSc mats, vecs, solvers...
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Mat-class.html
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Vec-class.html

@@ -65,7 +65,7 @@ class MorBase():
         S_d = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, nnz=None, csr=None, comm=self.comm)
         S_d.setUp()
 
-        # gather snapshots (mostly displacement or velocities)
+        # gather snapshots (mostly displacements or velocities)
         S_cols=[]
         for h in range(self.numhdms):
             
@@ -97,14 +97,15 @@ class MorBase():
         C_d = S_d.transposeMatMult(S_d) # S^T * S
         #D_d = S_d.matTransposeMult(S_d) # S * S^T
         
+        # setup eigenvalue problem
         eigsolver = SLEPc.EPS()
         eigsolver.create()
-
         eigsolver.setOperators(C_d)
         eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # Hermitian problem
         eigsolver.setType(SLEPc.EPS.Type.LAPACK)
         eigsolver.setFromOptions()
         
+        # solve eigenvalue problem
         eigsolver.solve()
         
         nconv = eigsolver.getConverged()
