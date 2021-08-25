@@ -54,6 +54,18 @@ class materiallaw:
         return S
 
 
+    def exponential_dev(self, params, C):
+        
+        a_0, b_0 = params['a_0'], params['b_0']
+        
+        # exponential SEF (isochoric version)
+        psi_dev = a_0/(2.*b_0)*(exp(b_0*(self.Ic_bar-3.)) - 1.)
+        
+        S = 2.*diff(psi_dev,C)
+        
+        return S
+    
+
     def holzapfelogden_dev(self, params, f0, s0, C):
 
         # anisotropic invariants - keep in mind that for growth, self.C is the elastic part of C (hence != to function input variable C)

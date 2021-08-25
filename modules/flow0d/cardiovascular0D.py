@@ -252,7 +252,7 @@ class cardiovascular0Dbase:
             if ch == 'rv': chn = 'v_r'
             if ch == 'la': chn = 'at_l'
             if ch == 'ra': chn = 'at_r'
-            if ch == 'ao': chn = 'aort'
+            if ch == 'ao': chn = 'aort_sys'
 
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i] = 1

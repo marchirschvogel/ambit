@@ -8,7 +8,7 @@
 
 import time, sys
 import numpy as np
-from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
+from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function
 from ufl import TrialFunction, TestFunction, FiniteElement, VectorElement, TensorElement, derivative, diff, inner, dx, ds, as_vector, as_ufl, dot, grad, sqrt, conditional, ge, Min
 
 import ioroutines

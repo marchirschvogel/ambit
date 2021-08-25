@@ -258,7 +258,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         VQ_at_l_           = sp.Symbol('VQ_at_l_')
         VQ_at_r_           = sp.Symbol('VQ_at_r_')
         # aortic root/ascending aortic volume (for 3D flow analysis)
-        VQ_aort_           = sp.Symbol('VQ_aort_')
+        VQ_aort_sys_       = sp.Symbol('VQ_aort_sys_')
 
         E_v_l_             = sp.Symbol('E_v_l_')
         E_v_r_             = sp.Symbol('E_v_r_')
@@ -295,7 +295,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         chdict_ra = {'VQ' : VQ_at_r_, 'po1' : p_at_r_o1_}
         for n in range(self.vs+self.switch_cor): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
         # aortic root/ascending aortic compartment dict, 1 inflow and 3 outflows (one into arch, two into coronaries)
-        chdict_ao = {'VQ' : VQ_aort_, 'pi1' : p_ar_sys_i1_, 'po1' : p_ar_sys_o1_, 'po2' : p_ar_sys_o2_, 'po3' : p_ar_sys_o3_}
+        chdict_ao = {'VQ' : VQ_aort_sys_, 'pi1' : p_ar_sys_i1_, 'po1' : p_ar_sys_o1_, 'po2' : p_ar_sys_o2_, 'po3' : p_ar_sys_o3_}
 
         # set coupling states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
         self.set_coupling_state('lv', chdict_lv, [E_v_l_])
@@ -313,7 +313,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['VQ'], chdict_ra['pi1'], chdict_ra['po1']
         for n in range(self.vs+self.switch_cor): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
         # aortic root/ascending aortic compartment
-        VQ_aort_, p_ar_sys_i1_, p_ar_sys_o1_, p_ar_sys_o2_, p_ar_sys_o3_ = chdict_ao['VQ'], chdict_ao['pi1'], chdict_ao['po1'], chdict_ao['po2'], chdict_ao['po3']
+        VQ_aort_sys_, p_ar_sys_i1_, p_ar_sys_o1_, p_ar_sys_o2_, p_ar_sys_o3_ = chdict_ao['VQ'], chdict_ao['pi1'], chdict_ao['po1'], chdict_ao['po2'], chdict_ao['po3']
 
         # add coronary circulation equations
         if self.cormodel is not None:
@@ -370,7 +370,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.f_[1] = vl_mv_ + q_vin_l_                                                       # mitral valve momentum
         self.f_[2] = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_                  # left ventricle flow balance
         self.f_[3] = vl_av_ + q_vout_l_                                                      # aortic valve momentum
-        self.f_[4] = -q_vout_l_ + q_arprox_sys_ + self.switch_cor * sum(q_arcor_sys_in_) - VQ_aort_ # aortic root flow balance
+        self.f_[4] = -q_vout_l_ + q_arprox_sys_ + self.switch_cor * sum(q_arcor_sys_in_) - VQ_aort_sys_ # aortic root flow balance
         self.f_[5] = (p_ardist_sys_ - p_ar_sys_o3_)/self.Z_ar_sys + q_arprox_sys_            # aortic root momentum
         self.f_[6] = -q_arprox_sys_ + q_ar_sys_                                              # systemic arterial flow balance
         self.f_[7] = (p_ven_sys_ - p_ardist_sys_)/self.R_ar_sys + q_ar_sys_                  # systemic arterial momentum

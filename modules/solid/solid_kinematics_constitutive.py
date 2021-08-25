@@ -127,6 +127,10 @@ class constitutive:
         elif matlaw == 'mooneyrivlin_dev':
             
             return self.mat.mooneyrivlin_dev(mparams,C_)
+        
+        elif matlaw == 'exponential_dev':
+            
+            return self.mat.exponential_dev(mparams,C_)
             
         elif matlaw == 'holzapfelogden_dev':
 

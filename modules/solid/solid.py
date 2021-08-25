@@ -344,11 +344,13 @@ class SolidmechanicsProblem(problem_base):
         
         
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_robin, w_robin_old = as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0)
+        w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann, w_neumann_old = self.bc.neumann_bcs(self.V_u, self.Vd_scalar, self.u, self.u_old)
         if 'robin' in self.bc_dict.keys():
             w_robin, w_robin_old = self.bc.robin_bcs(self.u, self.vel, self.u_old, self.v_old, self.u_pre)
+        if 'membrane' in self.bc_dict.keys():
+            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.u, self.u_old)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots and replace true with reference Neumann loads in our external virtual work
         w_neumann_prestr, w_robin_prestr = as_ufl(0), as_ufl(0)
@@ -370,8 +372,8 @@ class SolidmechanicsProblem(problem_base):
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
 
         # TODO: Body forces!
-        self.deltaW_ext     = w_neumann + w_robin
-        self.deltaW_ext_old = w_neumann_old + w_robin_old
+        self.deltaW_ext     = w_neumann + w_robin + w_membrane
+        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_membrane_old
 
         self.timefac_m, self.timefac = self.ti.timefactors()
 

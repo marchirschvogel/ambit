@@ -8,7 +8,7 @@
 
 import time, sys, math
 import numpy as np
-from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
+from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function
 from dolfinx.fem import assemble_scalar
 from ufl import TrialFunction, TestFunction, FiniteElement, derivative, diff, dx, ds, tr, as_ufl
 from petsc4py import PETSc

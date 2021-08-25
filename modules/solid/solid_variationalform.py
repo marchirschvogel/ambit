@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-from ufl import dot, inner, inv, grad, div, det, as_tensor, indices, derivative, diff, sym, constantvalue, as_ufl
+from ufl import dot, inner, outer, inv, grad, div, det, tr, as_tensor, indices, derivative, diff, sym, constantvalue, as_ufl, exp, sqrt, Identity, variable
 
 # solid mechanics variational base class
 # Principle of Virtual Work
@@ -172,6 +172,72 @@ class variationalform:
         else:
             return as_ufl(0)
 
+    # Elastic membrane potential on surface
+    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
+    def deltaW_ext_membrane(self, F, params, dboundary):
+        
+        C = F.T*F
+        
+        n0n0 = outer(self.n0,self.n0)
+        
+        I = Identity(3)
+        
+        model = params['model']
+        
+        # wall thickness
+        h0 = params['h0']
+        
+        if model=='membrane_f':
+            # deformation tensor with only normal components (C_nn, C_t1n = C_nt1, C_t2n = C_nt2)
+            Cn = dot(C, n0n0) + dot(n0n0, C) - dot(self.n0,dot(C,self.n0)) * n0n0
+            # plane strain deformation tensor where deformation is "1" in normal direction
+            Cplane = C - Cn + n0n0
+            # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
+            IIIplane = det(Cplane)
+            # deformation tensor where normal stretch is dependent on in-plane stretches
+            Cmod = C - Cn + (1./IIIplane) * n0n0
+            # TODO: Need to recover an Fmod corresponding to Cmod!
+            Fmod = F
+        elif model=='membrane_transverse': # WARNING: NOT objective to large rotations!
+            # only components in normal direction (F_nn, F_t1n, F_t2n)
+            Fn = dot(F, n0n0)
+            # plane deformation gradient: without components F_t1n, F_t2n, but with constant F_nn
+            Fplane = F - Fn + n0n0
+            # third invariant
+            IIIplane = det(Fplane)**2.0
+            # modified deformation gradient: without components F_t1n, F_t2n, and with F_nn dependent on F_t1n, F_t2n
+            Fmod = F - Fn + (1./sqrt(IIIplane)) * n0n0
+            # modified right Cauchy-Green tensor
+            Cmod = Fmod.T*Fmod
+        else:
+            raise NameError("Unkown membrane model type!")
+        
+        # first invariant
+        Ic = tr(Cmod)
+        # declare variable for diff
+        Ic_ = variable(Ic)
+        
+        a_0, b_0 = params['a_0'], params['b_0']
+        
+        # exponential isotropic strain energy
+        Psi = a_0/(2.*b_0)*(exp(b_0*(Ic_-3.)) - 1.)
+        
+        dPsi_dIc = diff(Psi,Ic_)
+        
+        # 2nd PK stress
+        S = 2.*dPsi_dIc * I
+        
+        # pressure contribution of plane stress model: -p C^(-1), with p = 2 (1/(lambda_t1^2 lambda_t2^2) dW/dIc - lambda_t1^2 lambda_t2^2 dW/dIIc) (cf. Holzapfel eq. (6.75) - we don't have an IIc term here)
+        S += -2.*dPsi_dIc/(IIIplane) * inv(Cmod).T
+        
+        # 1st PK stress P = FS
+        P = Fmod * S
+        
+        # only in-plane components of test function derivatives should be used!
+        var_F = grad(self.var_u) - dot(grad(self.var_u),n0n0)
+        
+        # boundary virtual work
+        return -h0*inner(P,var_F)*dboundary
 
 
     ### Volume / flux coupling conditions
