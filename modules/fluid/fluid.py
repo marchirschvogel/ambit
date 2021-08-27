@@ -79,7 +79,7 @@ class FluidmechanicsProblem(problem_base):
 
         if self.have_rom:
             import mor
-            self.rom = mor.MorBase(mor_params, comm)
+            self.rom = mor.ModelOrderReduction(mor_params, comm)
 
         # create finite element objects for v and p
         self.P_v = VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)

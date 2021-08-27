@@ -197,6 +197,7 @@ class variationalform:
             # deformation tensor where normal stretch is dependent on in-plane stretches
             Cmod = C - Cn + (1./IIIplane) * n0n0
             # TODO: Need to recover an Fmod corresponding to Cmod!
+            # Can this be done in ufl? See e.g. https://fenicsproject.org/qa/13600/possible-perform-spectral-decomposition-current-operators
             Fmod = F
         elif model=='membrane_transverse': # WARNING: NOT objective to large rotations!
             # only components in normal direction (F_nn, F_t1n, F_t2n)

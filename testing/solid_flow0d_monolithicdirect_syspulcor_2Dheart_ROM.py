@@ -3,7 +3,7 @@
 ### 2D biventricular generic heart, testing of:
 # - Holzapfel-Ogden material
 # - active stress
-# - 3D-0D monolithic solution of 2D heart w/ syspul circulation (volume coupling)
+# - 3D-0D monolithic solution of 2D heart w/ syspul circulation (volume coupling) and coronary model ZCRp_CRd_lr
 # - Robin BCs in normal direction (spring and dashpot)
 # - Gen-Alpha time-integration for solid
 
@@ -36,13 +36,13 @@ def main():
                             'write_restart_every'   : -999,
                             'restart_step'          : restart_step}
 
-    ROM_PARAMS           = {'hdmfilenames'           : ''+basepath+'/input/checkpoint_romsnaps_2Dheart_u_*_1proc.dat',
-                            'numhdms'                : 1,
-                            'numsnapshots'           : 5,
-                            'snapshotincr'           : 1,
-                            'numredbasisvec'         : 5,
-                            'eigenvalue_cutoff'      : 1.0e-8,
-                            'print_eigenproblem'     : True}
+    ROM_PARAMS           = {'hdmfilenames'          : ''+basepath+'/input/checkpoint_romsnaps_2Dheart_u_*_1proc.dat',
+                            'numhdms'               : 1,
+                            'numsnapshots'          : 5,
+                            'snapshotincr'          : 1,
+                            'numredbasisvec'        : 5,
+                            'eigenvalue_cutoff'     : 1.0e-8,
+                            'print_eigenproblem'    : True}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8,

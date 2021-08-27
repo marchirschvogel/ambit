@@ -9,12 +9,12 @@
 #import h5py
 import time, sys, copy, math
 from dolfinx import Function
-from dolfinx.fem import assemble_matrix, assemble_vector
+from dolfinx.fem import assemble_matrix, assemble_vector, locate_dofs_topological
 from petsc4py import PETSc
 from slepc4py import SLEPc
+import numpy as np
 
-
-class MorBase():
+class ModelOrderReduction():
 
     def __init__(self, params, comm):
         
@@ -35,6 +35,9 @@ class MorBase():
         
         try: self.eigenvalue_cutoff = params['eigenvalue_cutoff']
         except: self.eigenvalue_cutoff = 0.0
+        
+        try: self.surface_rom = params['surface_rom']
+        except: self.surface_rom = []
         
         # some sanity checks
         if self.numhdms <= 0:
@@ -160,23 +163,117 @@ class MorBase():
 
         # eigenvectors, scaled with 1 / sqrt(eigenval)
         # calculate first numredbasisvec_true POD modes
-        phi = []
+        self.Phi = np.zeros((locmatsize_u, numredbasisvec_true))
         for i in range(numredbasisvec_true):
-            phi.append(S_d * evecs[i] / math.sqrt(evals[i]))
+            self.Phi[:,i] = S_d * evecs[i] / math.sqrt(evals[i])       
 
-        # build reduced basis V
-        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(numredbasisvec_true)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.V.setUp()
+        # build reduced basis - either only on designated surfaces or for the whole model
+        if bool(self.surface_rom):
+            self.build_reduced_surface_basis(pb,numredbasisvec_true)
+        else:
+            self.build_reduced_basis(pb,numredbasisvec_true)
         
-        Vrow_s, Vrow_e = self.V.getOwnershipRange()
 
-        for i in range(numredbasisvec_true):
+    def build_reduced_basis(self, pb, rb):
 
-            for row in range(Vrow_s, Vrow_e):
-                self.V.setValue(row,i, phi[i][row])
+        locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
+        matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
 
+        # create dense matrix directly from Phi array
+        self.Vd = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(rb)), bsize=None, array=self.Phi, comm=self.comm)
+        self.Vd.setUp()
+        self.Vd.assemble()
+        
+        # convert to aij matrix for solver
+        self.V = PETSc.Mat()
+        self.Vd.convert("aij", out=self.V)
+        
         self.V.assemble()
         
         if self.comm.rank==0:
             print("POD done... Created reduced-order basis for ROM.")
+            sys.stdout.flush()
+
+
+    def build_reduced_surface_basis(self, pb, rb):
+
+        locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
+        matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
+
+        # get boundary dofs which should be reduced
+        fd=[]
+        for i in range(len(self.surface_rom)):
+            
+            fdof_indices = locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
+            
+            # gather indices
+            fdof_indices_gathered = self.comm.allgather(fdof_indices)
+            
+            # flatten indices from all the processes
+            fdof_indices_flat = [item for sublist in fdof_indices_gathered for item in sublist]
+
+            # remove duplicates
+            fdof_indices_unique = list(dict.fromkeys(fdof_indices_flat))
+
+            fd.append(fdof_indices_unique)
+        
+        # flatten list
+        fd_flat = [item for sublist in fd for item in sublist]
+        
+        # remove duplicates
+        fd_unique = list(dict.fromkeys(fd_flat))
+
+        # number of surface dofs that get reduced
+        ndof_surf = len(fd_unique)
+        
+        fd_unique_set = set(fd_unique)
+
+        # number of non-reduced "bulk" dofs
+        ndof_bulk = matsize_u - ndof_surf
+        
+        # first, eliminate all rows in Phi that do not belong to a surface dof which is reduced
+        for i in range(len(self.Phi)):
+            if i not in fd_unique_set: self.Phi[i,:] = 0.
+        
+        v = np.zeros((locmatsize_u, rb+ndof_bulk))
+
+        nr, a = 0, 0
+        for row in range(len(v)):
+            
+            if row in fd_unique_set:
+                
+                col_id = row-a
+
+                nr += 1
+                if nr <= rb: v[row,col_id] = self.Phi[row,nr-1]
+            
+            else:
+                # determine column id of non-reduced dof
+                col_id = row-a
+                
+                v[row,col_id] = 1.0
+                
+                # if we reached rb, no further surface columns are needed
+                if nr > rb: a += 1
+                
+        
+        #uu=[]
+        #for row in range(len(v)):
+            #if sum(v[row,:]) == 0: uu.append(row)
+        
+        #np.set_printoptions(threshold=np.inf)
+        
+        # create dense matrix directly from v array
+        self.Vd = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, array=v, comm=self.comm)
+        self.Vd.setUp()
+        self.Vd.assemble()
+        
+        # convert to aij matrix for solver
+        self.V = PETSc.Mat()
+        self.Vd.convert("aij", out=self.V)
+        
+        self.V.assemble()
+        
+        if self.comm.rank==0:
+            print("POD done... Created reduced-order basis for surface ROM on boundary id(s) "+str(self.surface_rom)+".")
             sys.stdout.flush()

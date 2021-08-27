@@ -116,7 +116,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         numdata = len(tmp)
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
-        for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort']):
+        for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort_sys']):
             # test if volume file exists
             test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
             if test_V > 0:
@@ -138,7 +138,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                         vol_n = vol_np
                     file_vol.close()
                 else:
-                    if ch!='aort': raise AttributeError("No flux file avaialble for chamber %s!" % (ch))
+                    if ch!='aort_sys': raise AttributeError("No flux file avaialble for chamber %s!" % (ch))
 
         # check number of veins
         sysveins, pulveins = 0, 0
@@ -150,9 +150,9 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         # in 3D fluid dynamics, we may have "distributed" 0D in-/outflow pressures, so here we check presence of these
         # and then average them for visualization
         # check presence of default chamber pressure variable
-        for ch in ['v_l','v_r','at_l','at_r', 'aort']:
+        for ch in ['v_l','v_r','at_l','at_r', 'aort_sys']:
             err = os.system('test -e '+path+'/results_'+sname+'_p_'+ch+'.txt')
-            if ch=='aort': err = os.system('test -e '+path+'/results_'+sname+'_p_ar_sys.txt') # extra check due to naming conventions...
+            if ch=='aort_sys': err = os.system('test -e '+path+'/results_'+sname+'_p_ar_sys.txt') # extra check due to naming conventions...
             if err==0: # nothing to do if present
                 pass
             else:
@@ -178,7 +178,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                     fpa.write('%.16E %.16E\n' % (tmp[i], pall[i]))
                 fpa.close()
                 # rename file to ar_sys - due to naming conventions...
-                if ch=='aort': os.system('mv '+path+'/results_'+sname+'_p_'+ch+'.txt '+path+'/results_'+sname+'_p_ar_sys.txt')
+                if ch=='aort_sys': os.system('mv '+path+'/results_'+sname+'_p_'+ch+'.txt '+path+'/results_'+sname+'_p_ar_sys.txt')
 
 
         # for plotting of pressure-volume loops
