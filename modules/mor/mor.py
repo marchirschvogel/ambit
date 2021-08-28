@@ -14,6 +14,8 @@ from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np
 
+# TODO: Make ROM work in parallel! (I/O and surface dof gathering do not yet work with multiple processes...)
+
 class ModelOrderReduction():
 
     def __init__(self, params, comm):
@@ -201,67 +203,70 @@ class ModelOrderReduction():
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
 
         # get boundary dofs which should be reduced
-        fd=[]
+        fn=[]
         for i in range(len(self.surface_rom)):
             
-            fdof_indices = locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
-            
+            # these are node indices!
+            fnode_indices = locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
+
             # gather indices
-            fdof_indices_gathered = self.comm.allgather(fdof_indices)
+            fnode_indices_gathered = self.comm.allgather(fnode_indices)
             
             # flatten indices from all the processes
-            fdof_indices_flat = [item for sublist in fdof_indices_gathered for item in sublist]
+            fnode_indices_flat = [item for sublist in fnode_indices_gathered for item in sublist]
 
             # remove duplicates
-            fdof_indices_unique = list(dict.fromkeys(fdof_indices_flat))
+            fnode_indices_unique = list(dict.fromkeys(fnode_indices_flat))
 
-            fd.append(fdof_indices_unique)
+            fn.append(fnode_indices_unique)
         
         # flatten list
-        fd_flat = [item for sublist in fd for item in sublist]
+        fn_flat = [item for sublist in fn for item in sublist]
         
         # remove duplicates
-        fd_unique = list(dict.fromkeys(fd_flat))
-
-        # number of surface dofs that get reduced
-        ndof_surf = len(fd_unique)
+        fn_unique = list(dict.fromkeys(fn_flat))
         
-        fd_unique_set = set(fd_unique)
+        # now make list of dof indices according to block size
+        fd=[]
+        for i in range(len(fn_unique)):
+            for j in range(pb.V_u.dofmap.index_map_bs):
+                fd.append(pb.V_u.dofmap.index_map_bs*fn_unique[i]+j)
+        
+        # make set for faster checking
+        fd_set = set(fd)
 
         # number of non-reduced "bulk" dofs
-        ndof_bulk = matsize_u - ndof_surf
+        ndof_bulk = matsize_u - len(fd)
         
         # first, eliminate all rows in Phi that do not belong to a surface dof which is reduced
         for i in range(len(self.Phi)):
-            if i not in fd_unique_set: self.Phi[i,:] = 0.
+            if i not in fd_set: self.Phi[i,:] = 0.
         
+        # reduced basis as numpy array
         v = np.zeros((locmatsize_u, rb+ndof_bulk))
 
+        # row loop to set entries (1's) for "non-reduced" dofs
         nr, a = 0, 0
         for row in range(len(v)):
             
-            if row in fd_unique_set:
-                
-                col_id = row-a
-
+            if row in fd_set:
+                # increase counter for number of reduced dofs
                 nr += 1
-                if nr <= rb: v[row,col_id] = self.Phi[row,nr-1]
-            
+                # column shift if we've exceeded the number of reduced basis vectors
+                if nr > rb: a += 1
             else:
-                # determine column id of non-reduced dof
+                # column id of non-reduced dof (left-shifted by a)
                 col_id = row-a
-                
+                # set value
                 v[row,col_id] = 1.0
                 
-                # if we reached rb, no further surface columns are needed
-                if nr > rb: a += 1
-                
-        
-        #uu=[]
-        #for row in range(len(v)):
-            #if sum(v[row,:]) == 0: uu.append(row)
-        
-        #np.set_printoptions(threshold=np.inf)
+        # column loop to insert columns of Phi
+        n=0
+        for col in range(len(v[0])):
+            # set Phi column if column sum is zero
+            if sum(v[:,col])==0.:
+                v[:,col] = self.Phi[:,n]
+                n += 1
         
         # create dense matrix directly from v array
         self.Vd = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, array=v, comm=self.comm)
