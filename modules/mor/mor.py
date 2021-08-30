@@ -63,15 +63,16 @@ class ModelOrderReduction():
             print("Performing Proper Orthogonal Decomposition (POD) ...")
             sys.stdout.flush()
         
+        ts = time.time()
+        
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
 
-        # snapshot matrix
-        S_d = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        S_d.setUp()
 
+        # snapshot array
+        s = np.zeros((locmatsize_u, self.numhdms*self.numsnapshots))
+        
         # gather snapshots (mostly displacements or velocities)
-        S_cols=[]
         for h in range(self.numhdms):
             
             for i in range(self.numsnapshots):
@@ -86,16 +87,11 @@ class ModelOrderReduction():
                 
                 field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 
-                S_cols.append(field.vector)
+                s[:,self.numhdms*h+i] = field.vector[:]
 
-        # build snapshot matrix S_d
-        Sdrow_s, Sdrow_e = S_d.getOwnershipRange()
-
-        for i in range(len(S_cols)):
-
-            for row in range(Sdrow_s, Sdrow_e):
-                S_d.setValue(row,i, S_cols[i][row])
-        
+        # snapshot matrix, created directly from s array
+        S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=s, comm=self.comm)
+        S_d.setUp()
         S_d.assemble()
         
         # covariance matrix
@@ -109,10 +105,10 @@ class ModelOrderReduction():
         eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # Hermitian problem
         eigsolver.setType(SLEPc.EPS.Type.LAPACK)
         eigsolver.setFromOptions()
-        
+
         # solve eigenvalue problem
         eigsolver.solve()
-        
+
         nconv = eigsolver.getConverged()
         
         if self.print_eigenproblem:
@@ -146,13 +142,13 @@ class ModelOrderReduction():
                         if self.comm.rank==0:
                             print('{:<3s}{:<4.4e}{:<15s}{:<4.4e}'.format(' ',k.real,' ',error))
                             sys.stdout.flush()
-                
+
                 # store
                 evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
                 evals.append(k.real)
                 
                 if k.real > self.eigenvalue_cutoff: numredbasisvec_true += 1
-        
+
         if self.numredbasisvec != numredbasisvec_true:
             if self.comm.rank==0:
                 print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (self.numredbasisvec,numredbasisvec_true))
@@ -168,36 +164,37 @@ class ModelOrderReduction():
         self.Phi = np.zeros((locmatsize_u, numredbasisvec_true))
         for i in range(numredbasisvec_true):
             self.Phi[:,i] = S_d * evecs[i] / math.sqrt(evals[i])       
-
+        
         # build reduced basis - either only on designated surfaces or for the whole model
         if bool(self.surface_rom):
-            self.build_reduced_surface_basis(pb,numredbasisvec_true)
+            self.build_reduced_surface_basis(pb,numredbasisvec_true,ts)
         else:
-            self.build_reduced_basis(pb,numredbasisvec_true)
-        
+            self.build_reduced_basis(pb,numredbasisvec_true,ts)
 
-    def build_reduced_basis(self, pb, rb):
+
+    def build_reduced_basis(self, pb, rb, ts):
 
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
 
-        # create dense matrix directly from Phi array
-        self.Vd = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(rb)), bsize=None, array=self.Phi, comm=self.comm)
-        self.Vd.setUp()
-        self.Vd.assemble()
+        # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
+        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb)), bsize=None, nnz=rb, csr=None, comm=self.comm)
+        self.V.setUp()
         
-        # convert to aij matrix for solver
-        self.V = PETSc.Mat()
-        self.Vd.convert("aij", out=self.V)
-        
+        # set Phi columns
+        for col in range(rb):
+            self.V[:,col] = self.Phi[:,col]
+            
         self.V.assemble()
+
+        te = time.time() - ts
         
         if self.comm.rank==0:
-            print("POD done... Created reduced-order basis for ROM.")
+            print("POD done... Created reduced-order basis for ROM. Time: %.4f s" % (te))
             sys.stdout.flush()
 
 
-    def build_reduced_surface_basis(self, pb, rb):
+    def build_reduced_surface_basis(self, pb, rb, ts):
 
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
@@ -219,7 +216,7 @@ class ModelOrderReduction():
             fnode_indices_unique = list(dict.fromkeys(fnode_indices_flat))
 
             fn.append(fnode_indices_unique)
-        
+
         # flatten list
         fn_flat = [item for sublist in fn for item in sublist]
         
@@ -231,54 +228,53 @@ class ModelOrderReduction():
         for i in range(len(fn_unique)):
             for j in range(pb.V_u.dofmap.index_map_bs):
                 fd.append(pb.V_u.dofmap.index_map_bs*fn_unique[i]+j)
-        
+
         # make set for faster checking
         fd_set = set(fd)
 
         # number of non-reduced "bulk" dofs
+        locndof_bulk = locmatsize_u - len(fd)
         ndof_bulk = matsize_u - len(fd)
         
         # first, eliminate all rows in Phi that do not belong to a surface dof which is reduced
         for i in range(len(self.Phi)):
-            if i not in fd_set: self.Phi[i,:] = 0.
+            if i not in fd_set:
+                self.Phi[i,:] = 0.0
         
-        # reduced basis as numpy array
-        v = np.zeros((locmatsize_u, rb+ndof_bulk))
+        # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
+        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+locndof_bulk,rb+ndof_bulk)), bsize=None, nnz=2*rb, csr=None, comm=self.comm)
+        self.V.setUp()
 
         # row loop to set entries (1's) for "non-reduced" dofs
-        nr, a = 0, 0
-        for row in range(len(v)):
+        nr, a, col_fd = 0, 0, []
+        for row in range(locmatsize_u):
             
             if row in fd_set:
                 # increase counter for number of reduced dofs
                 nr += 1
                 # column shift if we've exceeded the number of reduced basis vectors
+                if nr <= rb: col_fd.append(row)
                 if nr > rb: a += 1
             else:
                 # column id of non-reduced dof (left-shifted by a)
                 col_id = row-a
                 # set value
-                v[row,col_id] = 1.0
-                
+                self.V[row,col_id] = 1.0
+        
+        col_fd_set = set(col_fd)
+        
         # column loop to insert columns of Phi
         n=0
-        for col in range(len(v[0])):
-            # set Phi column if column sum is zero
-            if sum(v[:,col])==0.:
-                v[:,col] = self.Phi[:,n]
+        for col in range(rb+locndof_bulk):
+            # set Phi column
+            if col in col_fd_set:
+                self.V[:,col] = self.Phi[:,n]
                 n += 1
-        
-        # create dense matrix directly from v array
-        self.Vd = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, array=v, comm=self.comm)
-        self.Vd.setUp()
-        self.Vd.assemble()
-        
-        # convert to aij matrix for solver
-        self.V = PETSc.Mat()
-        self.Vd.convert("aij", out=self.V)
-        
+            
         self.V.assemble()
+
+        te = time.time() - ts
         
         if self.comm.rank==0:
-            print("POD done... Created reduced-order basis for surface ROM on boundary id(s) "+str(self.surface_rom)+".")
+            print("POD done... Created reduced-order basis for surface ROM on boundary id(s) "+str(self.surface_rom)+". Time: %.4f s" % (te))
             sys.stdout.flush()

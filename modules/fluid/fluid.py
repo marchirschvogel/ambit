@@ -235,6 +235,16 @@ class FluidmechanicsProblem(problem_base):
             self.a_p11 += inner(self.dp, self.var_p) * self.dx_[n]
 
 
+    # rate equations
+    def evaluate_rate_equations(self, t_abs, t_off=0):
+        pass
+
+
+    # rate-dependent variables that depend on deformation
+    def evaluate_rate_variables_nonlin(self):
+        pass
+
+
 
 class FluidmechanicsSolver():
 
@@ -288,6 +298,9 @@ class FluidmechanicsSolver():
             
             # set time-dependent functions
             self.pb.ti.set_time_funcs(self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_vec, t)
+
+            # evaluate rate equations
+            self.pb.evaluate_rate_equations(t)
             
             # solve
             self.solnln.newton(self.pb.v, self.pb.p)

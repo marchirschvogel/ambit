@@ -146,7 +146,7 @@ class timeintegration_solid(timeintegration):
             p_old.vector.axpby(1.0, 0.0, p.vector)
             p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
-        # update internal variables (e.g. active stress, growth stretch, plastic strains, ...)
+        # update internal variables (e.g. strain rates, active stress, growth stretch, plastic strains, ...)
         for i in range(len(internalvars_old)):
             list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
             list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

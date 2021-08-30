@@ -151,6 +151,11 @@ class constitutive:
         elif matlaw == 'sussmanbathe_vol':
             
             return self.mat.sussmanbathe_vol(mparams,C_)
+
+        elif matlaw == 'visco':
+            
+            dEdt_ = ivar["dEdt"]
+            return self.mat.visco(mparams,dEdt_)
             
         elif matlaw == 'active_fiber':
             
@@ -220,6 +225,13 @@ class constitutive:
         theta_ = ivar["theta"]
         return self.C_e(C_,theta_)*self.S_e(u_,p_,ivar)
 
+
+    # viscous material tangent, for simple Green-Lagrange strain rate-dependent material with pseudo potential Psi_v = 0.5 * eta * dEdt : dEdt
+    def Cvisco(self, eta, dt):
+        i, j, k, l = indices(4)
+        IFOUR = as_tensor(0.5*(self.I[i,k]*self.I[j,l] + self.I[i,l]*self.I[j,k]),(i,j,k,l))
+        return 2.*eta*IFOUR/dt
+        
 
     # growth kinematics are here in the constitutive class, since this is initialized per material law
     # (we can have different mats with different growth settings, or some with and some without growth...),

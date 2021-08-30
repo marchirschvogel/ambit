@@ -81,7 +81,17 @@ class solver_nonlinear:
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']
 
-        if not self.pb.prestress_initial:
+        self.initialize_petsc_solver()
+        
+        if self.pb.incompressible_2field:
+            self.tolerances = {'res_u' : self.tolres, 'inc_u' : self.tolinc, 'res_p' : self.tolres, 'inc_p' : self.tolinc}
+        else:
+            self.tolerances = {'res_u' : self.tolres, 'inc_u' : self.tolinc}
+
+
+    def set_forms_solver(self, prestress):
+
+        if not prestress:
             self.weakform_u = self.pb.weakform_u
             self.jac_uu     = self.pb.jac_uu
             if self.pb.incompressible_2field:
@@ -96,15 +106,11 @@ class solver_nonlinear:
                 self.jac_up     = self.pb.jac_prestress_up
                 self.jac_pu     = self.pb.jac_prestress_pu
 
-        self.initialize_petsc_solver()
-        
-        if self.pb.incompressible_2field:
-            self.tolerances = {'res_u' : self.tolres, 'inc_u' : self.tolinc, 'res_p' : self.tolres, 'inc_p' : self.tolinc}
-        else:
-            self.tolerances = {'res_u' : self.tolres, 'inc_u' : self.tolinc}
-
 
     def initialize_petsc_solver(self):
+        
+        # set forms to use (differ in case of initial prestress)
+        self.set_forms_solver(self.pb.prestress_initial)
 
         # create solver
         self.ksp = PETSc.KSP().create(self.pb.comm)
@@ -397,7 +403,6 @@ class solver_nonlinear:
         counter_adapt, max_adapt = 0, 50
         maxresval = 1.0e16
 
-
         self.print_nonlinear_iter(header=True)
 
         while it < self.maxiter and counter_adapt < max_adapt:
@@ -406,6 +411,9 @@ class solver_nonlinear:
 
             if self.pb.localsolve:
                 self.newton_local(locvar,locresform,locincrform)
+
+            # evaluate any deformation-dependent rate variables
+            self.pb.evaluate_rate_variables_nonlin()
 
             # assemble rhs vector
             r_u = assemble_vector(self.weakform_u)
@@ -420,13 +428,8 @@ class solver_nonlinear:
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_uu.shift(k_PTC)
-            
-            te = time.time() - tes
-
 
             if self.pb.incompressible_2field:
-                
-                tes = time.time()
                 
                 r_p = assemble_vector(self.weakform_p)
                 r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
@@ -441,11 +444,9 @@ class solver_nonlinear:
                     K_pp.assemble()
                 else:
                     K_pp = None
-                    
-                te += time.time() - tes
 
             # model order reduction stuff
-            if self.pb.have_rom:
+            if self.pb.have_rom and not self.pb.prestress_initial:
                 tmp = self.pb.rom.V.transposeMatMult(K_uu) # V^T * K_uu
                 K_uu = tmp.matMult(self.pb.rom.V) # V^T * K_uu * V
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
@@ -458,6 +459,8 @@ class solver_nonlinear:
                     K_up, K_pu = offdg1, offdg2
                     # new offset for pressure block
                     self.offsetp = self.pb.rom.V.getLocalSize()[1]
+
+            te = time.time() - tes
 
             if self.pb.incompressible_2field:
                 
@@ -545,7 +548,7 @@ class solver_nonlinear:
             incnorms = {'inc_u' : del_u.norm()}
             
             # reconstruct full-length increment vector
-            if self.pb.have_rom:
+            if self.pb.have_rom and not self.pb.prestress_initial:
                 del_u = self.pb.rom.V.createVecLeft()
                 self.pb.rom.V.mult(del_u_, del_u) # V * d_red
             
@@ -831,7 +834,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
         
 
-
     def newton(self, u, p, s, t, locvar=None, locresform=None, locincrform=None):
         
         # 3D displacement/velocity increment
@@ -881,6 +883,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 
             if self.pbc.pbs.localsolve:
                 self.newton_local(locvar,locresform,locincrform)
+                
+            # evaluate any deformation-dependent rate variables
+            self.pb.evaluate_rate_variables_nonlin()
 
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pbc.coupling_type == 'monolithic_direct':

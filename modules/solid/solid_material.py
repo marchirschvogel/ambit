@@ -161,6 +161,15 @@ class materiallaw:
         
         return S
     
+    # simple Green-Lagrange strain rate-dependent material, pseudo potential Psi_v = 0.5 * eta * dEdt : dEdt
+    def visco(self, params, dEdt):
+        
+        eta = params['eta']
+
+        S = 2.*eta*dEdt
+        
+        return S
+    
     
     def active_fiber(self, tau, f0):
         

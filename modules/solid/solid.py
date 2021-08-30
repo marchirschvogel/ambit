@@ -147,6 +147,9 @@ class SolidmechanicsProblem(problem_base):
         self.amp_old, self.amp_old_set = Function(self.Vd_scalar), Function(self.Vd_scalar)
         self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
         self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        # for strainrate-dependent materials
+        self.dEdt = Function(self.Vd_tensor, name="dtrE")
+        self.dEdt_old = Function(self.Vd_tensor)
         # prestressing history defgrad and spring prestress
         if self.prestress_initial:
             self.F_hist = Function(self.Vd_tensor, name="Defgrad_hist")
@@ -155,9 +158,8 @@ class SolidmechanicsProblem(problem_base):
             self.F_hist = None
             self.u_pre = None
         
-        self.internalvars     = {"theta" : self.theta, "tau_a" : self.tau_a}
-        self.internalvars_old = {"theta" : self.theta_old, "tau_a" : self.tau_a_old}
-        
+        self.internalvars     = {"theta" : self.theta, "tau_a" : self.tau_a, "dEdt" : self.dEdt}
+        self.internalvars_old = {"theta" : self.theta_old, "tau_a" : self.tau_a_old, "dEdt" : self.dEdt_old}
         
         # reference coordinates
         self.x_ref = Function(self.V_u)
@@ -173,8 +175,8 @@ class SolidmechanicsProblem(problem_base):
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         have_fiber1, have_fiber2 = False, False
-        self.have_active_stress, self.active_stress_trig, self.have_frank_starling, self.have_growth = False, 'ode', False, False
-        self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
+        self.have_active_stress, self.have_visco_mat, self.active_stress_trig, self.have_frank_starling, self.have_growth = False, False, 'ode', False, False
+        self.mat_active_stress, self.mat_visco, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
 
         # build up map of (numeric) G&R parameters and corresponding form and function dicts - like this, FFCx does not need (expensive) re-compilation when parameter values are changed
         self.growth_param_map = {'trigger_reduction' : 1, 'growth_thres' : 0, 'growth_thres_0' : 0, 'thres_tol' : 0, 'thetamax' : 1, 'thetamin' : 1, 'tau_gr' : 0, 'gamma_gr' : 0, 'tau_gr_rev' : 0, 'gamma_gr_rev' : 0}
@@ -237,7 +239,6 @@ class SolidmechanicsProblem(problem_base):
                     for name in self.mat_growth_param_forms.keys():
                         try: self.mat_growth_param_forms[name].append(self.constitutive_models['MAT'+str(n+1)+'']['growth'][name])
                         except: self.mat_growth_param_forms[name].append(as_ufl(self.growth_param_map[name]))
-                    
                 else:
                     for name in self.mat_growth_param_forms.keys(): self.mat_growth_param_forms[name].append(as_ufl(self.growth_param_map[name]))
                 # for the case that we have a prescribed growth stretch over time, append curve to functions that need time updates
@@ -248,6 +249,9 @@ class SolidmechanicsProblem(problem_base):
                     self.mat_remodel[n] = True
             else:
                 for name in self.mat_growth_param_forms.keys(): self.mat_growth_param_forms[name].append(as_ufl(0))
+                
+            if 'visco' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+                self.mat_visco[n], self.have_visco_mat = True, True
                 
         # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
@@ -425,6 +429,10 @@ class SolidmechanicsProblem(problem_base):
             
             # material tangent operator
             Cmat = self.ma[n].S(self.u, self.p, ivar=self.internalvars, tang=True)
+            
+            if self.mat_visco[n]:
+                eta = self.constitutive_models['MAT'+str(n+1)+'']['visco']['eta']
+                Cmat += self.ma[n].Cvisco(eta, self.dt)
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
@@ -585,7 +593,26 @@ class SolidmechanicsProblem(problem_base):
                 f.close()
 
 
-    
+    # rate equations
+    def evaluate_rate_equations(self, t_abs, t_off=0):
+
+        # take care of active stress
+        if self.have_active_stress and self.active_stress_trig == 'ode':
+            self.evaluate_active_stress_ode(t_abs-t_off)
+
+
+    # rate-dependent variables that depend on deformation
+    def evaluate_rate_variables_nonlin(self):
+        
+        # strain rate for viscous material
+        if self.have_visco_mat:
+            
+            dEdt_ = (self.ki.E(self.u) - self.ki.E(self.u_old))/self.dt
+            dEdt_proj = project(dEdt_, self.Vd_tensor, self.dx_)
+            self.dEdt.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            self.dEdt.interpolate(dEdt_proj)
+
+
 class SolidmechanicsSolver():
 
     def __init__(self, problem, solver_params):
@@ -616,9 +643,7 @@ class SolidmechanicsSolver():
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
         if self.pb.prestress_initial and self.pb.restart_step == 0:
-
             self.solve_initial_prestress()
-
         else:
             # set flag definitely to False if we're restarting
             self.pb.prestress_initial = False
@@ -648,13 +673,12 @@ class SolidmechanicsSolver():
             # set time-dependent functions
             self.pb.ti.set_time_funcs(self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_vec, t)
             
-            # take care of active stress
-            if self.pb.have_active_stress and self.pb.active_stress_trig == 'ode':
-                self.pb.evaluate_active_stress_ode(t)
+            # evaluate rate equations
+            self.pb.evaluate_rate_equations(t)
 
             # solve
             self.solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)
-
+            
             # compute the growth rate (has to be called before update_timestep)
             if self.pb.have_growth:
                 self.pb.compute_solid_growth_rate(N, t)
@@ -698,6 +722,7 @@ class SolidmechanicsSolver():
         
         # set flag to false again
         self.pb.prestress_initial = False
+        self.solnln.set_forms_solver(self.pb.prestress_initial)
 
         # reset PTC flag to what it was
         try: self.solnln.PTC = self.solver_params['ptc']
