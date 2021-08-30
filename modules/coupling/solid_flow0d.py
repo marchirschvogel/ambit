@@ -274,10 +274,6 @@ class SolidmechanicsFlow0DSolver():
             
             # set time-dependent functions
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
-
-            ## take care of active stress
-            #if self.pb.pbs.have_active_stress and self.pb.pbs.active_stress_trig == 'ode':
-                #self.pb.pbs.evaluate_active_stress_ode(t-t_off)
             
             # evaluate rate equations
             self.pb.pbs.evaluate_rate_equations(t, t_off)

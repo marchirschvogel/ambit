@@ -148,7 +148,7 @@ class SolidmechanicsProblem(problem_base):
         self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
         self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # for strainrate-dependent materials
-        self.dEdt = Function(self.Vd_tensor, name="dtrE")
+        self.dEdt = Function(self.Vd_tensor, name="dEdt")
         self.dEdt_old = Function(self.Vd_tensor)
         # prestressing history defgrad and spring prestress
         if self.prestress_initial:
