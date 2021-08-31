@@ -14,7 +14,6 @@ from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np
 
-# TODO: Make ROM work in parallel! (I/O and surface dof gathering do not yet work with multiple processes...)
 
 class ModelOrderReduction():
 
@@ -40,6 +39,9 @@ class ModelOrderReduction():
         
         try: self.surface_rom = params['surface_rom']
         except: self.surface_rom = []
+        
+        try: self.snapshotsource = params['snapshotsource']
+        except: self.snapshotsource = 'petscvector'
         
         # some sanity checks
         if self.numhdms <= 0:
@@ -67,10 +69,12 @@ class ModelOrderReduction():
         
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
-
-
-        # snapshot array
-        s = np.zeros((locmatsize_u, self.numhdms*self.numsnapshots))
+        
+        # snapshot matrix
+        S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
+        S_d.setUp()
+        
+        ss, se = S_d.getOwnershipRange()
         
         # gather snapshots (mostly displacements or velocities)
         for h in range(self.numhdms):
@@ -81,22 +85,27 @@ class ModelOrderReduction():
             
                 field = Function(pb.V_u)
                 
-                # TODO: Temporary - we need parallel and multi-core I vs. O (with PETSc viewer, we need the same amount of cores for I as for O!!)
-                viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames.replace('*',str(step)), 'r', self.comm)
-                field.vector.load(viewer)
+                if self.snapshotsource == 'petscvector':
+                    # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
+                    viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
+                    field.vector.load(viewer)
+                    
+                    field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 
-                field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                
-                s[:,self.numhdms*h+i] = field.vector[:]
+                elif self.snapshotsource == 'rawtxt':
+                    
+                    # own read function: requires plain txt format of type valx valy valz x z y
+                    pb.io.readfunction(field, pb.V_u, self.hdmfilenames[h].replace('*',str(step)))
+                    
+                else:
+                    raise NameError("Unknown snapshotsource!")
 
-        # snapshot matrix, created directly from s array
-        S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=s, comm=self.comm)
-        S_d.setUp()
+                S_d[ss:se, self.numhdms*h+i] = field.vector[ss:se]
+
         S_d.assemble()
-        
+
         # covariance matrix
         C_d = S_d.transposeMatMult(S_d) # S^T * S
-        #D_d = S_d.matTransposeMult(S_d) # S * S^T
         
         # setup eigenvalue problem
         eigsolver = SLEPc.EPS()
@@ -164,7 +173,7 @@ class ModelOrderReduction():
         self.Phi = np.zeros((locmatsize_u, numredbasisvec_true))
         for i in range(numredbasisvec_true):
             self.Phi[:,i] = S_d * evecs[i] / math.sqrt(evals[i])       
-        
+
         # build reduced basis - either only on designated surfaces or for the whole model
         if bool(self.surface_rom):
             self.build_reduced_surface_basis(pb,numredbasisvec_true,ts)
@@ -180,10 +189,11 @@ class ModelOrderReduction():
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
         self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb)), bsize=None, nnz=rb, csr=None, comm=self.comm)
         self.V.setUp()
-        
+
+        vrs, vre = self.V.getOwnershipRange()
+
         # set Phi columns
-        for col in range(rb):
-            self.V[:,col] = self.Phi[:,col]
+        self.V[vrs:vre,:] = self.Phi[:,:]
             
         self.V.assemble()
 
@@ -194,6 +204,7 @@ class ModelOrderReduction():
             sys.stdout.flush()
 
 
+    # TODO: Surface ROM does not yet work in parallel!!!
     def build_reduced_surface_basis(self, pb, rb, ts):
 
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
@@ -231,23 +242,28 @@ class ModelOrderReduction():
 
         # make set for faster checking
         fd_set = set(fd)
+        
+        #print(fd_set)
+        #sys.exit()
 
         # number of non-reduced "bulk" dofs
         locndof_bulk = locmatsize_u - len(fd)
         ndof_bulk = matsize_u - len(fd)
         
-        # first, eliminate all rows in Phi that do not belong to a surface dof which is reduced
-        for i in range(len(self.Phi)):
-            if i not in fd_set:
-                self.Phi[i,:] = 0.0
-        
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
         self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+locndof_bulk,rb+ndof_bulk)), bsize=None, nnz=2*rb, csr=None, comm=self.comm)
         self.V.setUp()
-
+        
+        vrs, vre = self.V.getOwnershipRange()
+        
+        # first, eliminate all rows in Phi that do not belong to a surface dof which is reduced
+        for i in range(vrs,vre):
+            if i not in fd_set:
+                self.Phi[i-vrs,:] = 0.0
+        
         # row loop to set entries (1's) for "non-reduced" dofs
         nr, a, col_fd = 0, 0, []
-        for row in range(locmatsize_u):
+        for row in range(vrs,vre):
             
             if row in fd_set:
                 # increase counter for number of reduced dofs
@@ -265,12 +281,12 @@ class ModelOrderReduction():
         
         # column loop to insert columns of Phi
         n=0
-        for col in range(rb+locndof_bulk):
+        for col in range(rb+ndof_bulk):
             # set Phi column
             if col in col_fd_set:
-                self.V[:,col] = self.Phi[:,n]
+                self.V[vrs:vre,col] = self.Phi[:,n]
                 n += 1
-            
+        #sys.exit()    
         self.V.assemble()
 
         te = time.time() - ts

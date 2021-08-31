@@ -235,38 +235,38 @@ class IO_solid(IO):
                     elif res=='cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
                         self.resultsfiles[res].write_function(cauchystress, t)
                     elif res=='trmandelstress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(tr(pb.ma[n].M(pb.u,pb.p,ivar=pb.internalvars)))
+                            stressfuncs.append(tr(pb.ma[n].M(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars)))
                         trmandelstress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress")
                         self.resultsfiles[res].write_function(trmandelstress, t)
                     elif res=='trmandelstress_e':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.ki.C(pb.u),ivar=pb.internalvars)))
+                            if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.ki.C(pb.u),ivar=pb.internalvars,rvar=pb.ratevars)))
                             else: stressfuncs.append(as_ufl(0))
                         trmandelstress_e = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress_e")
                         self.resultsfiles[res].write_function(trmandelstress_e, t)
                     elif res=='vonmises_cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma_vonmises(pb.u,pb.p,ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].sigma_vonmises(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
                         vonmises_cauchystress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="vonMises_CauchyStress")
                         self.resultsfiles[res].write_function(vonmises_cauchystress, t)
                     elif res=='pk1stress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].P(pb.u,pb.p,ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].P(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
                         pk1stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK1Stress")
                         self.resultsfiles[res].write_function(pk1stress, t)
                     elif res=='pk2stress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].S(pb.u,pb.p,ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].S(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
                         pk2stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK2Stress")
                         self.resultsfiles[res].write_function(pk2stress, t)
                     elif res=='jacobian':

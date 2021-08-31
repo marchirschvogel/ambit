@@ -6,14 +6,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
-import sys, os, subprocess, time
-import math
-
-import numpy as np
+import sys
 from petsc4py import PETSc
-
-from dolfinx.fem import assemble_matrix, assemble_vector, set_bc, apply_lifting
 from ufl import constantvalue
 
 from projection import project
@@ -21,7 +15,7 @@ import expression
 
 class timeintegration():
     
-    def __init__(self, time_params, time_curves, t_init, comm):
+    def __init__(self, time_params, time_curves, t_init, domain=[], comm=None):
         
         self.timint = time_params['timint']
         
@@ -32,6 +26,8 @@ class timeintegration():
         
         self.time_curves = time_curves
         self.t_init = t_init
+        
+        self.domain = domain
 
         self.comm = comm
         
@@ -97,8 +93,8 @@ class timeintegration():
 # Solid mechanics time integration class
 class timeintegration_solid(timeintegration):
     
-    def __init__(self, time_params, fem_params, time_curves, t_init, comm):
-        timeintegration.__init__(self, time_params, time_curves, t_init, comm)
+    def __init__(self, time_params, fem_params, time_curves, t_init, dx_, comm):
+        timeintegration.__init__(self, time_params, time_curves, t_init, dx_, comm)
         
         if self.timint == 'genalpha': self.alpha_m, self.alpha_f, self.beta, self.gamma = self.compute_genalpha_params(time_params['rho_inf_genalpha'])
         if self.timint == 'ost': self.theta_ost = time_params['theta_ost']
@@ -133,9 +129,16 @@ class timeintegration_solid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old, funcs, funcs_old, funcsvec, funcsvec_old):
+    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old, ratevars, ratevars_old, funcs, funcs_old, funcsvec, funcsvec_old):
+
+        # first update rate variables (e.g. strain rates for viscous materials), since they depend on u and u_old
+        for i in range(len(ratevars)):
+            rvar_ = list(ratevars.values())[i][0]
+            rvar_proj = project(rvar_, list(ratevars.values())[i][1], self.domain)
+            list(ratevars_old.values())[i][0].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            list(ratevars_old.values())[i][0].interpolate(rvar_proj)
     
-        # update old fields with new quantities
+        # now update old kinematic fields with new quantities
         if self.timint == 'genalpha':
             self.update_fields_newmark(u, u_old, v_old, a_old)
         if self.timint == 'ost':
@@ -146,7 +149,7 @@ class timeintegration_solid(timeintegration):
             p_old.vector.axpby(1.0, 0.0, p.vector)
             p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
-        # update internal variables (e.g. strain rates, active stress, growth stretch, plastic strains, ...)
+        # update internal variables (e.g. active stress, growth stretch, plastic strains, ...)
         for i in range(len(internalvars_old)):
             list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
             list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -266,8 +269,8 @@ class timeintegration_solid(timeintegration):
 class timeintegration_fluid(timeintegration):
     
     def __init__(self, time_params, fem_params, time_curves, t_init, comm):
-        timeintegration.__init__(self, time_params, time_curves, t_init, comm)
-        
+        timeintegration.__init__(self, time_params, time_curves, t_init, comm=comm)
+
         self.theta_ost = time_params['theta_ost']
 
 
@@ -341,7 +344,7 @@ class timeintegration_flow0d(timeintegration):
     
     # initialize base class
     def __init__(self, time_params, time_curves, t_init, comm, cycle=[1], cycleerror=[1]):
-        timeintegration.__init__(self, time_params, time_curves, t_init, comm)
+        timeintegration.__init__(self, time_params, time_curves, t_init, comm=comm)
     
         self.cycle = cycle
         self.cycleerror = cycleerror

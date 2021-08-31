@@ -45,6 +45,8 @@ if solid:
     
     errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_genalpha.py']) )
     errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha.py']) )
+    
+    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_visco.py']) ) # only 1 element, cannot run on multiple cores
 
     errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_static_prestress.py']) )
     errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_static_prestress.py']) )
@@ -98,7 +100,6 @@ if solid_flow0d:
     
     errs.append( subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative.py']) )
 
-    # TODO: ROM works only in serial so far!
     errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspulcor_2Dheart_ROM.py']) )
 
 if solid_constraint:

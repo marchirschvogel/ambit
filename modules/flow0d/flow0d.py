@@ -135,7 +135,7 @@ class Flow0DProblem(problem_base):
         self.c, self.y = [], []
 
         # initialize flow0d time-integration class
-        self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, self.comm)
+        self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, comm=self.comm)
 
         if initial_file:
             initialconditions = self.cardvasc0D.set_initial_from_file(initial_file)

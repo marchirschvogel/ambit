@@ -13,7 +13,7 @@ def main():
     # all possible input parameters
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr, solid_constraint
-                            'use_model_order_red'   : False, # Model Order Reduction via Proper Orthogonal Decomposition (POD), for solid or fluid mechanics and 3D0D coupled problems (default: False)
+                            'use_model_order_red'   : False, # Model Order Reduction via Proper Orthogonal Decomposition (POD), for solid or fluid mechanics and 3D0D coupled problems (default: False); specify parameters in ROM_PARAMS (see below)
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
@@ -67,7 +67,8 @@ def main():
                             'periodic_checktype'    : None} # OPTIONAL: None, 'allvar', 'pQvar' (default: None)
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
-    MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # 2elwindkessel, 4elwindkesselLsZ, 4elwindkesselLpZ, syspul, syspul_veins, syspulcap, syspulcapcor_veins
+    MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # '2elwindkessel', '4elwindkesselLsZ', '4elwindkesselLpZ', 'syspul', 'syspulcap', 'syspulcaprespir'
+                            'coronary_model'        : None, # OPTIONAL: coronary submodel - None, 'ZCRp_CRd', 'ZCRp_CRd_lr' (default: None)
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
                             'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_fluid', 'num_inflows' : 1, , 'num_outflows' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_prescr', 'prescribed_curve' : 5}}, # only for syspul* models - 3D_solid, 3D_fluid: chamber is 3D solid or fluid mechanics model, 0D_elast: chamber is 0D elastance model, 0D_prescr: volume/flux is prescribed over time, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
@@ -88,6 +89,7 @@ def main():
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
                             'coupling_quantity'     : ['volume','volume'], # volume, flux, pressure (former two need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
+                            'variable_quantity'     : ['pressure','pressure'], # OPTIONAL: pressure, flux, volume (former needs 'monolithic_direct', latter two need 'monolithic_lagrange' as coupling_type) (default: 'pressure')
                             'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
 
     # for solid_constraint problem type
@@ -97,13 +99,15 @@ def main():
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
     # for model order reduction
-    ROM_PARAMS           = {'hdmfilenames'           : ''+basepath+'/input/checkpoint_simname_u_*_1proc.dat', # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
-                            'numhdms'                : 1, # number of high-dimensional models
-                            'numsnapshots'           : 10, # number of snapshots
-                            'snapshotincr'           : 1, # OPTIONAL: snapshot increment (default: 1)
-                            'numredbasisvec'         : 10, # OPTIONAL: number of reduced basis vectors to consider (default: numsnapshots)
-                            'eigenvalue_cutoff'      : 1.0e-8, # OPTIONAL: cutoff tolerance (discard eigenvalues lower than that) (default: 0.0)
-                            'print_eigenproblem'     : False} # OPTIONAL: print output of Proper Orthogonal Decomposition (POD) eigensolve (default: False)
+    ROM_PARAMS           = {'hdmfilenames'          : [''+basepath+'/input/checkpoint_simname_u_*_1proc.dat'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
+                            'numhdms'               : 1, # number of high-dimensional models
+                            'numsnapshots'          : 10, # number of snapshots
+                            'snapshotincr'          : 1, # OPTIONAL: snapshot increment (default: 1)
+                            'numredbasisvec'        : 10, # OPTIONAL: number of reduced basis vectors to consider (default: numsnapshots)
+                            'eigenvalue_cutoff'     : 1.0e-8, # OPTIONAL: cutoff tolerance (discard eigenvalues lower than that) (default: 0.0)
+                            'print_eigenproblem'    : False, # OPTIONAL: print output of Proper Orthogonal Decomposition (POD) eigensolve (default: False)
+                            'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
+                            'snapshotsource'        : 'petscvector'} # OPTIONAL: source of snapshot data: 'petscvector' or 'rawtxt' (default: 'petscvector')
 
     # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
@@ -228,7 +232,12 @@ def init():
             'p_ar_pul_0' : 2.2301399591379436E+00,
             'q_ar_pul_0' : 3.6242987765574515E+04,
             'p_ven_pul_0' : 1.6864951426543255E+00,
-            'q_ven_pul_0' : 8.6712368791873596E+04}
+            'q_ven_pul_0' : 8.6712368791873596E+04,
+            # coronary circulation submodel
+            'q_cor_sys_0' : 0,
+            'q_cord_sys_0' : 0,
+            'q_corp_sys_0' : 0.,
+            'p_cord_sys_0' : 0.}
 
 def param():
     
@@ -303,6 +312,12 @@ def param():
             't_ed' : t_ed,
             't_es' : t_es,
             'T_cycl' : 1.0,
+            # coronary circulation submodel parameters - values from Arthurs et al. 2016, Tab. 3
+            'Z_corp_sys' : 3.2e-3,
+            'C_corp_sys' : 4.5e0,
+            'R_corp_sys' : 6.55e-3,
+            'C_cord_sys' : 2.7e1,
+            'R_cord_sys' : 1.45e-1
             # unstressed compartment volumes (for post-processing)
             'V_at_l_u' : 0.0,
             'V_at_r_u' : 0.0,
@@ -311,7 +326,10 @@ def param():
             'V_ar_sys_u' : 0.0,
             'V_ar_pul_u' : 0.0,
             'V_ven_sys_u' : 0.0,
-            'V_ven_pul_u' : 0.0}
+            'V_ven_pul_u' : 0.0,
+            # coronary circulation submodel
+            'V_corp_sys_u' : 0.0,
+            'V_cord_sys_u' : 0.0}
 
 
 

@@ -36,7 +36,7 @@ def main():
                             'write_restart_every'   : -999,
                             'restart_step'          : restart_step}
 
-    ROM_PARAMS           = {'hdmfilenames'          : ''+basepath+'/input/checkpoint_romsnaps_2Dheart_u_*_1proc.dat',
+    ROM_PARAMS           = {'hdmfilenames'          : [''+basepath+'/input/checkpoint_romsnaps_2Dheart_u_*_1proc.dat'],
                             'numhdms'               : 1,
                             'numsnapshots'          : 5,
                             'snapshotincr'          : 1,

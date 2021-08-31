@@ -240,11 +240,6 @@ class FluidmechanicsProblem(problem_base):
         pass
 
 
-    # rate-dependent variables that depend on deformation
-    def evaluate_rate_variables_nonlin(self):
-        pass
-
-
 
 class FluidmechanicsSolver():
 

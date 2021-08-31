@@ -412,9 +412,6 @@ class solver_nonlinear:
             if self.pb.localsolve:
                 self.newton_local(locvar,locresform,locincrform)
 
-            # evaluate any deformation-dependent rate variables
-            self.pb.evaluate_rate_variables_nonlin()
-
             # assemble rhs vector
             r_u = assemble_vector(self.weakform_u)
             apply_lifting(r_u, [self.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=-1.0)
@@ -883,9 +880,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 
             if self.pbc.pbs.localsolve:
                 self.newton_local(locvar,locresform,locincrform)
-                
-            # evaluate any deformation-dependent rate variables
-            self.pb.evaluate_rate_variables_nonlin()
 
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pbc.coupling_type == 'monolithic_direct':

@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ufl import tr, det, dot, ln, sqrt, exp, diff, cos, pi, conditional, ge, le, gt, inner, outer, cross, Max, Min, And, as_ufl
+from ufl import tr, det, dot, ln, sqrt, exp, diff, cos, pi, conditional, ge, le, gt, inner, outer, cross, Max, Min, And, as_ufl, variable
 
 # returns the 2nd Piola-Kirchhoff stress S for different material laws
 
@@ -35,9 +35,9 @@ class materiallaw:
         mu = params['mu']
         
         # classic NeoHookean material (isochoric version)
-        psi_dev = (mu/2.) * (self.Ic_bar - 3.)
+        Psi_dev = (mu/2.) * (self.Ic_bar - 3.)
         
-        S = 2.*diff(psi_dev,C)
+        S = 2.*diff(Psi_dev,C)
         
         return S
 
@@ -47,9 +47,9 @@ class materiallaw:
         c1, c2 = params['c1'], params['c2']
         
         # Mooney Rivlin material (isochoric version)
-        psi_dev = c1 * (self.Ic_bar - 3.) + c2 * (self.IIc_bar - 3.)
+        Psi_dev = c1 * (self.Ic_bar - 3.) + c2 * (self.IIc_bar - 3.)
         
-        S = 2.*diff(psi_dev,C)
+        S = 2.*diff(Psi_dev,C)
         
         return S
 
@@ -59,9 +59,9 @@ class materiallaw:
         a_0, b_0 = params['a_0'], params['b_0']
         
         # exponential SEF (isochoric version)
-        psi_dev = a_0/(2.*b_0)*(exp(b_0*(self.Ic_bar-3.)) - 1.)
+        Psi_dev = a_0/(2.*b_0)*(exp(b_0*(self.Ic_bar-3.)) - 1.)
         
-        S = 2.*diff(psi_dev,C)
+        S = 2.*diff(Psi_dev,C)
         
         return S
     
@@ -93,11 +93,11 @@ class materiallaw:
             a_s_c = a_s
         
         # Holzapfel-Ogden (Holzapfel and Ogden 2009) material w/o split applied to invariants I4, I6, I8 (Nolan et al. 2014, Sansour 2008)
-        psi_dev = a_0/(2.*b_0)*(exp(b_0*(self.Ic_bar-3.)) - 1.) + \
+        Psi_dev = a_0/(2.*b_0)*(exp(b_0*(self.Ic_bar-3.)) - 1.) + \
             a_f_c/(2.*b_f)*(exp(b_f*(I4-1.)**2.) - 1.) + a_s_c/(2.*b_s)*(exp(b_s*(I6-1.)**2.) - 1.) + \
             a_fs/(2.*b_fs)*(exp(b_fs*I8**2.) - 1.)
         
-        S = 2.*diff(psi_dev,C)
+        S = 2.*diff(Psi_dev,C)
         
         return S
 
@@ -122,9 +122,9 @@ class materiallaw:
 
         Q = b_f*E_ff**2. + b_t*(E_ss**2. + E_nn**2. + 2.*E_sn**2.) + b_fs*(2.*E_fs**2. + 2.*E_fn**2.)
 
-        psi_dev = 0.5*c_0*(exp(Q)-1.)
+        Psi_dev = 0.5*c_0*(exp(Q)-1.)
         
-        S = 2.*diff(psi_dev,C)
+        S = 2.*diff(Psi_dev,C)
         
         return S
 
@@ -133,9 +133,9 @@ class materiallaw:
     
         Emod, nu = params['Emod'], params['nu']
         
-        psi = Emod*nu/( 2.*(1.+nu)*(1.-2.*nu) ) * self.trE**2. + Emod/(2.*(1.+nu)) * self.trE2
+        Psi = Emod*nu/( 2.*(1.+nu)*(1.-2.*nu) ) * self.trE**2. + Emod/(2.*(1.+nu)) * self.trE2
         
-        S = 2.*diff(psi,C)
+        S = 2.*diff(Psi,C)
         
         return S
     
@@ -144,9 +144,9 @@ class materiallaw:
         
         kappa = params['kappa']
         
-        psi_vol = (kappa/2.) * (sqrt(self.IIIc) - 1.)**2.
+        Psi_vol = (kappa/2.) * (sqrt(self.IIIc) - 1.)**2.
         
-        S = 2.*diff(psi_vol,C)
+        S = 2.*diff(Psi_vol,C)
         
         return S
     
@@ -155,18 +155,23 @@ class materiallaw:
         
         kappa = params['kappa']
         
-        psi_vol = (kappa/4.) * (self.IIIc - 2.*ln(sqrt(self.IIIc)) - 1.)
+        Psi_vol = (kappa/4.) * (self.IIIc - 2.*ln(sqrt(self.IIIc)) - 1.)
         
-        S = 2.*diff(psi_vol,C)
+        S = 2.*diff(Psi_vol,C)
         
         return S
     
-    # simple Green-Lagrange strain rate-dependent material, pseudo potential Psi_v = 0.5 * eta * dEdt : dEdt
+    # simple Green-Lagrange strain rate-dependent material
     def visco(self, params, dEdt):
         
         eta = params['eta']
+        
+        dEdt_ = variable(dEdt)
+        
+        # pseudo potential 0.5 * eta * dEdt : dEdt
+        Psi_pseudo = 0.5 * eta * tr(dEdt_*dEdt_)
 
-        S = 2.*eta*dEdt
+        S = 2.*diff(Psi_pseudo,dEdt_)
         
         return S
     
