@@ -14,6 +14,8 @@ from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np
 
+from mpiroutines import allgather_mat
+
 
 class ModelOrderReduction():
 
@@ -170,9 +172,9 @@ class ModelOrderReduction():
 
         # eigenvectors, scaled with 1 / sqrt(eigenval)
         # calculate first numredbasisvec_true POD modes
-        self.Phi = np.zeros((locmatsize_u, numredbasisvec_true))
+        self.Phi = np.zeros((matsize_u, numredbasisvec_true))
         for i in range(numredbasisvec_true):
-            self.Phi[:,i] = S_d * evecs[i] / math.sqrt(evals[i])       
+            self.Phi[ss:se,i] = S_d * evecs[i] / math.sqrt(evals[i])       
 
         # build reduced basis - either only on designated surfaces or for the whole model
         if bool(self.surface_rom):
@@ -193,7 +195,7 @@ class ModelOrderReduction():
         vrs, vre = self.V.getOwnershipRange()
 
         # set Phi columns
-        self.V[vrs:vre,:] = self.Phi[:,:]
+        self.V[vrs:vre,:] = self.Phi[vrs:vre,:]
             
         self.V.assemble()
 
@@ -204,7 +206,6 @@ class ModelOrderReduction():
             sys.stdout.flush()
 
 
-    # TODO: Surface ROM does not yet work in parallel!!!
     def build_reduced_surface_basis(self, pb, rb, ts):
 
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
@@ -214,9 +215,12 @@ class ModelOrderReduction():
         fn=[]
         for i in range(len(self.surface_rom)):
             
-            # these are node indices!
-            fnode_indices = locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
+            # these are local node indices!
+            fnode_indices_local = locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
 
+            # get gloabl indices
+            fnode_indices = pb.V_u.dofmap.index_map.local_to_global(fnode_indices_local)
+            
             # gather indices
             fnode_indices_gathered = self.comm.allgather(fnode_indices)
             
@@ -227,10 +231,10 @@ class ModelOrderReduction():
             fnode_indices_unique = list(dict.fromkeys(fnode_indices_flat))
 
             fn.append(fnode_indices_unique)
-
+            
         # flatten list
         fn_flat = [item for sublist in fn for item in sublist]
-        
+
         # remove duplicates
         fn_unique = list(dict.fromkeys(fn_flat))
         
@@ -242,28 +246,15 @@ class ModelOrderReduction():
 
         # make set for faster checking
         fd_set = set(fd)
-        
-        #print(fd_set)
-        #sys.exit()
 
         # number of non-reduced "bulk" dofs
-        locndof_bulk = locmatsize_u - len(fd)
         ndof_bulk = matsize_u - len(fd)
-        
-        # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+locndof_bulk,rb+ndof_bulk)), bsize=None, nnz=2*rb, csr=None, comm=self.comm)
-        self.V.setUp()
-        
-        vrs, vre = self.V.getOwnershipRange()
-        
-        # first, eliminate all rows in Phi that do not belong to a surface dof which is reduced
-        for i in range(vrs,vre):
-            if i not in fd_set:
-                self.Phi[i-vrs,:] = 0.0
-        
-        # row loop to set entries (1's) for "non-reduced" dofs
-        nr, a, col_fd = 0, 0, []
-        for row in range(vrs,vre):
+
+        # row loop to get entries (1's) for "non-reduced" dofs
+        nr, a = 0, 0
+        row_1, col_1, col_fd = [], [], []
+
+        for row in range(matsize_u):
             
             if row in fd_set:
                 # increase counter for number of reduced dofs
@@ -274,19 +265,36 @@ class ModelOrderReduction():
             else:
                 # column id of non-reduced dof (left-shifted by a)
                 col_id = row-a
-                # set value
-                self.V[row,col_id] = 1.0
+                # store
+                row_1.append(row)
+                col_1.append(col_id)
         
+        # make set for faster checking
         col_fd_set = set(col_fd)
+
+        # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
+        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, nnz=2*rb, csr=None, comm=self.comm)
+        self.V.setUp()
         
+        vrs, vre = self.V.getOwnershipRange()
+
+        # now, eliminate all rows in Phi that do not belong to a surface dof which is reduced
+        for i in range(vrs, vre):
+            if i not in fd_set:
+                self.Phi[i,:] = 0.0
+
+        # now set entries
+        for k in range(len(row_1)):
+            self.V[row_1[k],col_1[k]] = 1.0
+
         # column loop to insert columns of Phi
         n=0
         for col in range(rb+ndof_bulk):
             # set Phi column
             if col in col_fd_set:
-                self.V[vrs:vre,col] = self.Phi[:,n]
+                self.V[vrs:vre,col] = self.Phi[vrs:vre,n]
                 n += 1
-        #sys.exit()    
+
         self.V.assemble()
 
         te = time.time() - ts
