@@ -449,8 +449,8 @@ class solver_nonlinear:
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
                 self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
                 r_u, del_u = r_u_, del_u_
-                if self.pb.incompressible_2field: # TODO: Not working! May be that zero block of matrix becomes dominant?
-                    # offdiagonal blocks
+                if self.pb.incompressible_2field:
+                    # offdiagonal pressure blocks
                     offdg1 = self.pb.rom.V.transposeMatMult(K_up) # V^T * K_up
                     offdg2 = K_pu.matMult(self.pb.rom.V) # K_pu * V
                     K_up, K_pu = offdg1, offdg2
@@ -843,9 +843,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         # 0D/Lagrange multiplier increment
         del_s = self.K_ss.createVecLeft()
         
-        # ownership range of dof vector
-        ss, se = s.getOwnershipRange() # same for df, df_old, f, f_old
-        
         # get start vectors in case we need to reset the nonlinear solver
         u_start = u.vector.duplicate()
         s_start = s.duplicate()
@@ -874,8 +871,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
                 ls, le = self.pbc.lm.getOwnershipRange()
                 # Lagrange multipliers (pressures) to be passed to 0D model
-                for i in range(ls,le):
-                    self.pbc.pbf.c[i] = self.pbc.lm[i]
+                self.pbc.pbf.c[ls:le] = self.pbc.lm[ls:le]
                 self.snln0D.newton(s, t, print_iter=False)
                 
             if self.pbc.pbs.localsolve:
@@ -968,7 +964,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     cq = self.pbc.comm.allgather(cq)
                     self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
 
-            
             if self.pbc.coupling_type == 'monolithic_direct':
             
                 # if we have prescribed variable values over time
@@ -984,8 +979,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 r_s = self.K_ss.createVecLeft()
 
                 # Lagrange multiplier coupling residual
-                for i in range(ls,le):
-                    r_s[i] = self.pbc.pbs.timefac * (self.pbc.constr[i] - s[self.pbc.pbf.cardvasc0D.v_ids[i]]) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[i] - self.pbc.pbf.s_old[self.pbc.pbf.cardvasc0D.v_ids[i]])
+                r_s[ls:le] = self.pbc.pbs.timefac * (self.pbc.constr[ls:le] - s[self.pbc.pbf.cardvasc0D.v_ids[ls:le]]) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[ls:le] - self.pbc.pbf.s_old[self.pbc.pbf.cardvasc0D.v_ids[ls:le]])
 
             if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
 
@@ -1058,10 +1052,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             Kusrow_s, Kusrow_e = K_us.getOwnershipRange()
 
+            # set columns
             for i in range(len(col_ids)):
-
-                for row in range(Kusrow_s, Kusrow_e):
-                    K_us.setValue(row,col_ids[i], k_us_cols[i][row])
+                K_us[Kusrow_s:Kusrow_e, col_ids[i]] = k_us_cols[i][Kusrow_s:Kusrow_e]
             
             K_us.assemble()
             
@@ -1070,11 +1063,10 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             K_su.setUp()
 
             Ksucol_s, Ksucol_e = K_su.getOwnershipRangeColumn()
-            
-            for i in range(len(row_ids)):   
-                
-                for col in range(Ksucol_s, Ksucol_e):
-                    K_su.setValue(row_ids[i],col, k_su_rows[i][col])
+
+            # set rows
+            for i in range(len(row_ids)):
+                K_su[row_ids[i], Ksucol_s:Ksucol_e] = k_su_rows[i][Ksucol_s:Ksucol_e]
 
             K_su.assemble()
 
@@ -1093,9 +1085,13 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.offset0D = self.pb.rom.V.getLocalSize()[1]
                 # new offsets for pressure and 0D/LM block
                 if self.pbc.pbs.incompressible_2field:
-                    # TODO up and pu blocks projection - might not work...
+                    # offdiagonal pressure blocks
+                    offdg1 = self.pb.rom.V.transposeMatMult(K_up) # V^T * K_up
+                    offdg2 = K_pu.matMult(self.pb.rom.V) # K_pu * V
+                    K_up, K_pu = offdg1, offdg2
+                    # new offset for pressure and 0D/LM block
                     self.offsetp = self.pb.rom.V.getLocalSize()[1]
-                    self.offset0D = self.offsetp + self.V3D_map_p.size_local * V_p.dofmap.index_map_bs
+                    self.offset0D = self.offsetp + self.V_p.dofmap.index_map.size_local * self.V_p.dofmap.index_map_bs
 
             if self.pbc.pbs.incompressible_2field:
                 K_3D0D_nest = PETSc.Mat().createNest([[K_uu, K_up, K_us], [K_pu, K_pp, None], [K_su, None, self.K_ss]], isrows=None, iscols=None, comm=self.pbc.comm)

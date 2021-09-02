@@ -6,7 +6,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 from ufl import dot, inner, inv, grad, div, det, as_tensor, indices, derivative, diff, dev
 
 # fluid mechanics variational forms class

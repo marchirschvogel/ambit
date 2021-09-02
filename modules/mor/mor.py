@@ -9,7 +9,7 @@
 #import h5py
 import time, sys, copy, math
 from dolfinx import Function
-from dolfinx.fem import assemble_matrix, assemble_vector, locate_dofs_topological
+from dolfinx.fem import locate_dofs_topological
 from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np

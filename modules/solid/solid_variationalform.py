@@ -6,7 +6,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 from ufl import dot, inner, outer, inv, grad, div, det, tr, as_tensor, indices, derivative, diff, sym, constantvalue, as_ufl, exp, sqrt, Identity, variable
 
 # solid mechanics variational base class
