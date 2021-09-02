@@ -859,7 +859,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         counter_adapt, max_adapt = 0, 50
         maxresval = 1.0e16
         
-        
         self.print_nonlinear_iter(header=True)
 
         while it < self.maxiter and counter_adapt < max_adapt:
@@ -934,7 +933,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.pbc.pbf.df.assemble()
                 self.pbc.pbf.f.assemble()
 
-            
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
                 for i in range(self.pbc.num_coupling_surf):
@@ -1014,7 +1012,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             for i in range(len(col_ids)):
                 k_us_cols.append(assemble_vector(self.pbc.dforce[i])) # already multiplied by time-integration factor
         
-
             # offdiagonal s-u rows
             k_su_rows=[]
             for i in range(len(row_ids)):
@@ -1042,31 +1039,29 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 set_bc(k_su_rows[i], self.pb.bc.dbcs, x0=u.vector, scale=0.0)
             
-            # setup offdiagonal matrices:
+            # setup offdiagonal matrices
             locmatsize = self.V3D_map_u.size_local * self.V_u.dofmap.index_map_bs
             matsize = self.V3D_map_u.size_global * self.V_u.dofmap.index_map_bs
+            # row ownership range of uu block
+            irs, ire = K_uu.getOwnershipRange()
 
             # derivative of solid/fluid residual w.r.t. 0D pressures
             K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.K_ss.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.pbc.comm)
             K_us.setUp()
 
-            Kusrow_s, Kusrow_e = K_us.getOwnershipRange()
-
             # set columns
             for i in range(len(col_ids)):
-                K_us[Kusrow_s:Kusrow_e, col_ids[i]] = k_us_cols[i][Kusrow_s:Kusrow_e]
-            
+                K_us[irs:ire, col_ids[i]] = k_us_cols[i][irs:ire]
+                
             K_us.assemble()
             
             # derivative of 0D residual w.r.t. solid displacements/fluid velocities
             K_su = PETSc.Mat().createAIJ(size=((self.K_ss.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.pbc.comm)
             K_su.setUp()
 
-            Ksucol_s, Ksucol_e = K_su.getOwnershipRangeColumn()
-
             # set rows
             for i in range(len(row_ids)):
-                K_su[row_ids[i], Ksucol_s:Ksucol_e] = k_su_rows[i][Ksucol_s:Ksucol_e]
+                K_su[row_ids[i], irs:ire] = k_su_rows[i][irs:ire]
 
             K_su.assemble()
 

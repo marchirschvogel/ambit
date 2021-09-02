@@ -216,7 +216,7 @@ class ModelOrderReduction():
             # these are local node indices!
             fnode_indices_local = locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
 
-            # get gloabl indices
+            # get global indices
             fnode_indices = pb.V_u.dofmap.index_map.local_to_global(fnode_indices_local)
             
             # gather indices
