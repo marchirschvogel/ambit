@@ -14,8 +14,6 @@ from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np
 
-from mpiroutines import allgather_mat
-
 
 class ModelOrderReduction():
 
@@ -189,14 +187,14 @@ class ModelOrderReduction():
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb)), bsize=None, nnz=rb, csr=None, comm=self.comm)
+        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb)), bsize=None, nnz=(rb,locmatsize_u), csr=None, comm=self.comm)
         self.V.setUp()
-
+        
         vrs, vre = self.V.getOwnershipRange()
-
+        
         # set Phi columns
         self.V[vrs:vre,:] = self.Phi[vrs:vre,:]
-            
+  
         self.V.assemble()
 
         te = time.time() - ts
@@ -273,7 +271,7 @@ class ModelOrderReduction():
         col_fd_set = set(col_fd)
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, nnz=2*rb, csr=None, comm=self.comm)
+        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, nnz=(2*rb,locmatsize_u), csr=None, comm=self.comm)
         self.V.setUp()
         
         vrs, vre = self.V.getOwnershipRange()
