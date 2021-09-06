@@ -171,7 +171,7 @@ class materiallaw:
         # pseudo potential 0.5 * eta * dEdt : dEdt
         Psi_pseudo = 0.5 * eta * tr(dEdt_*dEdt_)
 
-        S = 2.*diff(Psi_pseudo,dEdt_)
+        S = diff(Psi_pseudo,dEdt_)
         
         return S
     

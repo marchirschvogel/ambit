@@ -38,7 +38,7 @@ def main():
                          'quad_degree'           : 2,
                          'incompressible_2field' : False} # True, False
 
-    MATERIALS         = {'MAT1' : {'visco'       : {'eta' : 1.0},
+    MATERIALS         = {'MAT1' : {'visco'       : {'eta' : 2.0},
                                    'inertia'     : {'rho0' : 1.0e-6}}}
 
 

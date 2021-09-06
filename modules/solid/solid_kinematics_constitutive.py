@@ -229,7 +229,7 @@ class constitutive:
     def Cvisco(self, eta, dt):
         i, j, k, l = indices(4)
         IFOUR = as_tensor(0.5*(self.I[i,k]*self.I[j,l] + self.I[i,l]*self.I[j,k]),(i,j,k,l))
-        return 2.*eta*IFOUR/dt
+        return eta*IFOUR/dt
         
 
     # growth kinematics are here in the constitutive class, since this is initialized per material law
