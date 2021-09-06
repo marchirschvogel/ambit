@@ -1078,7 +1078,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 K_us, K_su = offdg1, offdg2
                 # set adequate offset for 0D/LM block
                 self.offset0D = self.pb.rom.V.getLocalSize()[1]
-                # new offsets for pressure and 0D/LM block
                 if self.pbc.pbs.incompressible_2field:
                     # offdiagonal pressure blocks
                     offdg1 = self.pb.rom.V.transposeMatMult(K_up) # V^T * K_up

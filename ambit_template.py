@@ -107,7 +107,8 @@ def main():
                             'eigenvalue_cutoff'     : 1.0e-8, # OPTIONAL: cutoff tolerance (discard eigenvalues lower than that) (default: 0.0)
                             'print_eigenproblem'    : False, # OPTIONAL: print output of Proper Orthogonal Decomposition (POD) eigensolve (default: False)
                             'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
-                            'snapshotsource'        : 'petscvector'} # OPTIONAL: source of snapshot data: 'petscvector' or 'rawtxt' (default: 'petscvector')
+                            'snapshotsource'        : 'petscvector', # OPTIONAL: source of snapshot data: 'petscvector' or 'rawtxt' (default: 'petscvector')
+                            'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole

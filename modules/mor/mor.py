@@ -10,6 +10,7 @@
 import time, sys, copy, math
 from dolfinx import Function
 from dolfinx.fem import locate_dofs_topological
+from dolfinx.io import XDMFFile
 from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np
@@ -42,6 +43,9 @@ class ModelOrderReduction():
         
         try: self.snapshotsource = params['snapshotsource']
         except: self.snapshotsource = 'petscvector'
+        
+        try: self.write_pod_modes = params['write_pod_modes']
+        except: self.write_pod_modes = False
         
         # some sanity checks
         if self.numhdms <= 0:
@@ -173,7 +177,16 @@ class ModelOrderReduction():
         self.Phi = np.zeros((matsize_u, numredbasisvec_true))
         for i in range(numredbasisvec_true):
             self.Phi[ss:se,i] = S_d * evecs[i] / math.sqrt(evals[i])       
-
+        
+        # write out POD modes
+        if self.write_pod_modes:
+            for i in range(numredbasisvec_true):
+                outfile = XDMFFile(self.comm, pb.io.output_path+'/results_'+pb.simname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
+                outfile.write_mesh(pb.io.mesh)
+                podfunc = Function(pb.V_u)
+                podfunc.vector[ss:se] = self.Phi[ss:se,i]
+                outfile.write_function(podfunc)
+        
         # build reduced basis - either only on designated surfaces or for the whole model
         if bool(self.surface_rom):
             self.build_reduced_surface_basis(pb,numredbasisvec_true,ts)
