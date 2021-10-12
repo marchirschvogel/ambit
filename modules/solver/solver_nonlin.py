@@ -444,8 +444,8 @@ class solver_nonlinear:
 
             # model order reduction stuff
             if self.pb.have_rom and not self.pb.prestress_initial:
-                tmp = self.pb.rom.V.transposeMatMult(K_uu) # V^T * K_uu
-                K_uu = tmp.matMult(self.pb.rom.V) # V^T * K_uu * V
+                tmp = K_uu.matMult(self.pb.rom.V) # K_uu * V
+                K_uu = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_uu * V
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
                 self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
                 r_u, del_u = r_u_, del_u_
@@ -1067,8 +1067,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             # model order reduction stuff
             if self.pb.have_rom:
-                tmp = self.pb.rom.V.transposeMatMult(K_uu) # V^T * K_uu
-                K_uu = tmp.matMult(self.pb.rom.V) # V^T * K_uu * V
+                tmp = K_uu.matMult(self.pb.rom.V) # K_uu * V
+                K_uu = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_uu * V
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
                 self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
                 r_u, del_u = r_u_, del_u_
