@@ -53,6 +53,9 @@ class solver_nonlinear:
         try: self.PTC_randadapt_range = solver_params['ptc_randadapt_range']
         except: self.PTC_randadapt_range = [0.85, 1.35]
         
+        try: self.direct_solver = solver_params['direct_solver']
+        except: self.direct_solver = 'superlu_dist'
+        
         try: self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
         except: self.adapt_linsolv_tol = False
         
@@ -125,7 +128,7 @@ class solver_nonlinear:
             
             self.ksp.setType("preonly")
             self.ksp.getPC().setType("lu")
-            self.ksp.getPC().setFactorSolverType("superlu_dist")
+            self.ksp.getPC().setFactorSolverType(self.direct_solver)
             
         elif self.solvetype=='iterative':
             
@@ -358,7 +361,7 @@ class solver_nonlinear:
         if self.solvetype=='direct':
             ksp.setType("preonly")
             ksp.getPC().setType("lu")
-            ksp.getPC().setFactorSolverType("superlu_dist")
+            ksp.getPC().setFactorSolverType(self.direct_solver)
         elif self.solvetype=='iterative':
             ksp.getPC().setType("hypre")
             ksp.getPC().setMGLevels(3)
@@ -441,6 +444,8 @@ class solver_nonlinear:
                     K_pp.assemble()
                 else:
                     K_pp = None
+
+            
 
             # model order reduction stuff
             if self.pb.have_rom and not self.pb.prestress_initial:
@@ -734,7 +739,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             
             self.ksp.setType("preonly")
             self.ksp.getPC().setType("lu")
-            self.ksp.getPC().setFactorSolverType("superlu_dist")
+            self.ksp.getPC().setFactorSolverType(self.direct_solver)
         
         elif self.solvetype=='iterative':
 
@@ -1265,6 +1270,9 @@ class solver_nonlinear_0D(solver_nonlinear):
 
         try: self.maxiter = solver_params['maxiter']
         except: self.maxiter = 25
+        
+        try: self.direct_solver = solver_params['direct_solver']
+        except: self.direct_solver = 'superlu_dist'        
 
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']
@@ -1281,7 +1289,7 @@ class solver_nonlinear_0D(solver_nonlinear):
         self.ksp = PETSc.KSP().create(self.pb.comm)
         self.ksp.setType("preonly")
         self.ksp.getPC().setType("lu")
-        self.ksp.getPC().setFactorSolverType("superlu_dist")
+        self.ksp.getPC().setFactorSolverType(self.direct_solver)
 
 
     def newton(self, s, t, print_iter=True):
@@ -1297,9 +1305,7 @@ class solver_nonlinear_0D(solver_nonlinear):
 
             self.pb.cardvasc0D.evaluate(s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
             
-            # 0D rhs vector
-            r = self.pb.K.createVecLeft()
-            
+            # ODE rhs vector and stiffness matrix
             r, K = self.pb.assemble_residual_stiffness()
 
             # if we have prescribed variable values over time

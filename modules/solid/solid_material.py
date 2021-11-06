@@ -66,7 +66,22 @@ class materiallaw:
         return S
     
 
-    def holzapfelogden_dev(self, params, f0, s0, C):
+    def holzapfelogden_dev(self, params, fib1, fib2, C):
+
+        # to tell the material what kind of fibers we have: fs, fn, or sn
+        try: fibers_type = params['fibers_type']
+        except: fibers_type = 'fs'
+
+        if fibers_type == 'fs':
+            f0, s0 = fib1, fib2
+        elif fibers_type == 'fn':
+            f0, n0 = fib1, fib2
+            s0 = cross(f0,n0)
+        elif fibers_type == 'sn':
+            s0, n0 = fib1, fib2
+            f0 = cross(s0,n0)
+        else:
+            raise ValueError("Value for fibers_type has to be fs, fn, or sn!")
 
         # anisotropic invariants - keep in mind that for growth, self.C is the elastic part of C (hence != to function input variable C)
         I4 = dot(dot(self.C,f0), f0)

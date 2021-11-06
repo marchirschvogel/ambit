@@ -36,6 +36,12 @@ class IO:
         
         try: self.meshfile_type = io_params['meshfile_type']
         except: self.meshfile_type = 'ASCII'
+
+        try: self.gridname_domain = io_params['gridname_domain']
+        except: self.gridname_domain = 'Grid'
+
+        try: self.gridname_boundary = io_params['gridname_boundary']
+        except: self.gridname_boundary = 'Grid'
         
         self.comm = comm
 
@@ -51,9 +57,10 @@ class IO:
             
         # read in xdmf mesh - domain
         with XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
-            self.mesh = infile.read_mesh(name="Grid")
-            self.mt_d = infile.read_meshtags(self.mesh, name="Grid")
-        
+            self.mesh = infile.read_mesh(name=self.gridname_domain)
+            try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
+            except: self.mt_d = None
+
         # read in xdmf mesh - boundary
         
         # here, we define b1 BCs as BCs associated to a topology one dimension less than the problem (most common),
@@ -67,21 +74,21 @@ class IO:
             try:
                 self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b1 = infile.read_meshtags(self.mesh, name="Grid")
+                    self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
             
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name="Grid_b2")
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
             except:
                 pass
 
             try:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b3 = infile.read_meshtags(self.mesh, name="Grid_b3")
+                    self.mt_b3 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b3')
             except:
                 pass
 
@@ -90,14 +97,14 @@ class IO:
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b1 = infile.read_meshtags(self.mesh, name="Grid")
+                    self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
             
             try:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name="Grid_b2")
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
             except:
                 pass
 
@@ -126,6 +133,9 @@ class IO_solid(IO):
         else:
             raise AttributeError("Specify 'nodal' or 'elemental' for the fiber data input!")
 
+        try: readin_tol = self.fiber_data['readin_tol']
+        except: readin_tol = 1.0e-8
+        
         fib_func = []
         fib_func_input = []
 
@@ -134,7 +144,7 @@ class IO_solid(IO):
             
             fib_func_input.append(Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
             
-            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si], normalize=True)
+            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si], normalize=True, tol=readin_tol)
 
             # project to output fiber function space
             ff = project(fib_func_input[si], V_fib, dx_, bcs=[], nm='fib_'+s+'')
@@ -143,7 +153,7 @@ class IO_solid(IO):
             fib_func.append(ff / sqrt(dot(ff,ff)))
 
             ## write input fiber field for checking...
-            #outfile = XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_input.xdmf', 'w')
+            #outfile = XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputNEW.xdmf', 'w')
             #outfile.write_mesh(self.mesh)
             #outfile.write_function(fib_func_input[si])
 
@@ -152,7 +162,7 @@ class IO_solid(IO):
         return fib_func
 
 
-    def readfunction(self, f, V, datafile, normalize=False):
+    def readfunction(self, f, V, datafile, normalize=False, tol=1.0e-8):
         
         # block size of vector
         bs = f.vector.getBlockSize()
@@ -168,7 +178,6 @@ class IO_solid(IO):
         # index map
         im = V.dofmap.index_map.global_indices()
 
-        tol = 1.0e-8
         tolerance = int(-np.log10(tol))
 
         # since in parallel, the ordering of the dof ids might change, so we have to find the

@@ -29,10 +29,10 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh20/work/codes/fem_scripts/tests/tmp/aorta_3d0d/0d'#work/mia_sim_new_0d_fixedale'
+        path = '/home/mh/work/sim/aort-flow-be-rom/std/00/v1/out'#work/mia_sim_new_0d_fixedale'
         sname = ''
         nstep_cycl = 100
-        T_cycl = 0.7
+        T_cycl = 1.0
         t_ed = 0.2
         t_es = 0.53
         model = 'syspul' # syspul, syspulcap, syspulcapcor

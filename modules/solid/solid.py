@@ -61,7 +61,8 @@ class SolidmechanicsProblem(problem_base):
         self.dx_, self.rho0, self.rayleigh, self.eta_m, self.eta_k = [], [], [False]*self.num_domains, [], []
         for n in range(self.num_domains):
             # integration domains
-            self.dx_.append(dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            if self.io.mt_d is not None: self.dx_.append(dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            else:                        self.dx_.append(dx(metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial and viscous forces: density and damping
             if self.timint != 'static':
                 self.rho0.append(constitutive_models['MAT'+str(n+1)+'']['inertia']['rho0'])

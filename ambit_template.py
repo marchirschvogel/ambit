@@ -17,7 +17,7 @@ def main():
                             'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
-                            'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt']}, # OPTIONAL: only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center
+                            'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt'], 'readin_tol' : 1.0e-8}, # OPTIONAL: only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center; readin_tol - tolerance for readin (OPTIONAL: default is 1.0e-8, but depending on units, should be adapted)
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
                             'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (default: -1)
@@ -35,6 +35,8 @@ def main():
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
                             'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence continues to occur (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
+                            # direct linear solver settings (only apply for solve_type 'direct')
+                            'direct_solver'         : 'superlu_dist', # OPTIONAL: type of direct solver: 'superlu_dist' or 'mumps' (default: 'superlu_dist')
                             # iterative linear solver settings (only apply for solve_type 'iterative')
                             'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)

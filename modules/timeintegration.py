@@ -96,8 +96,30 @@ class timeintegration_solid(timeintegration):
     def __init__(self, time_params, fem_params, time_curves, t_init, dx_, comm):
         timeintegration.__init__(self, time_params, time_curves, t_init, dx_, comm)
         
-        if self.timint == 'genalpha': self.alpha_m, self.alpha_f, self.beta, self.gamma = self.compute_genalpha_params(time_params['rho_inf_genalpha'])
-        if self.timint == 'ost': self.theta_ost = time_params['theta_ost']
+        if self.timint == 'genalpha':
+            
+            # if the spectral radius, rho_inf_genalpha, is specified, the parameters are computed from it
+            try:
+                self.rho_inf_genalpha = time_params['rho_inf_genalpha']
+                self.alpha_m, self.alpha_f, self.beta, self.gamma = self.compute_genalpha_params(self.rho_inf_genalpha)
+            # otherwise, user can specify each parameter individually
+            except:
+                try: self.alpha_m = time_params['alpha_m']
+                except: raise AttributeError("Need to specify alpha_m if rho_inf_genalpha is not sepcified!")
+
+                try: self.alpha_f = time_params['alpha_f']
+                except: raise AttributeError("Need to specify alpha_f if rho_inf_genalpha is not sepcified!")
+            
+                try: self.beta = time_params['beta']
+                except: raise AttributeError("Need to specify beta if rho_inf_genalpha is not sepcified!")
+            
+                try: self.gamma = time_params['gamma']
+                except: raise AttributeError("Need to specify gamma if rho_inf_genalpha is not sepcified!")
+
+            
+        if self.timint == 'ost':
+            
+            self.theta_ost = time_params['theta_ost']
         
         self.incompressible_2field = fem_params['incompressible_2field']
 
@@ -156,7 +178,6 @@ class timeintegration_solid(timeintegration):
 
         # update time dependent load curves
         self.update_time_funcs(funcs, funcs_old, funcsvec, funcsvec_old)
-
 
 
     def update_a_newmark(self, u, u_old, v_old, a_old, ufl=True):
@@ -259,9 +280,8 @@ class timeintegration_solid(timeintegration):
         alpha_f = rho_inf/(rho_inf+1.)
         beta    = 0.25*(1.-alpha_m+alpha_f)**2.
         gamma   = 0.5-alpha_m+alpha_f
-        
-        return alpha_m, alpha_f, beta, gamma
 
+        return alpha_m, alpha_f, beta, gamma
 
 
 
