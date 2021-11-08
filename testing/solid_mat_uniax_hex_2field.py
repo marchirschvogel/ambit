@@ -42,7 +42,7 @@ def main():
     
     FEM_PARAMS        = {'order_disp'            : 2, # hex27 elements
                          'order_pres'            : 1, # hex8 elements
-                         'quad_degree'           : 5, # should yield 27 Gauss points
+                         'quad_degree'           : 6, # should yield 27 Gauss points
                          'incompressible_2field' : True} # True, False
 
     MATERIALS         = {'MAT1' : {'neohooke_dev'       : {'mu' : 10.}},
