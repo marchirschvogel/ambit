@@ -29,7 +29,7 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/sim/aort-flow-be-rom/std/00/v1/out'#work/mia_sim_new_0d_fixedale'
+        path = '/home/mh/work/sim/lalv-flow-be-rom/rst10n/00a/romdata_m50_25_h10_10_as2_III/out'#work/mia_sim_new_0d_fixedale'
         sname = ''
         nstep_cycl = 100
         T_cycl = 1.0
@@ -38,12 +38,12 @@ def main():
         model = 'syspul' # syspul, syspulcap, syspulcapcor
         indpertaftercyl = -1
         calc_func_params = False
-        coronarymodel = 'ZCRp_CRd_lr' # None, ZCRp_CRd_lr, CRar_CRven
+        coronarymodel = None # None, ZCRp_CRd_lr, CRar_CRven
         multiscalegandr = False
         lastgandrcycl = 2
     
     # initial chamber volumes (in ml!) in case we only have chamber fluxes Q available and want to integrate V (default are common EDPs - order is lv, rv, la, ra)
-    V0=[130.,150.,60.,50., 0.]    
+    V0=[80.,150.,50.,50., 0.]    
     
     postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
 

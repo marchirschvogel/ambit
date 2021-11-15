@@ -9,8 +9,8 @@
 import time, sys, copy
 import numpy as np
 from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
-from dolfinx.fem import assemble_scalar
-from ufl import TrialFunction, TestFunction, FiniteElement, VectorElement, TensorElement, derivative, diff, det, inner, inv, dx, ds, as_vector, as_ufl, Identity, constantvalue
+from dolfinx.fem import assemble_scalar, LinearProblem, locate_dofs_topological
+from ufl import TrialFunction, TestFunction, FiniteElement, VectorElement, TensorElement, derivative, diff, grad, det, dot, inner, inv, dx, ds, as_vector, as_ufl, Identity, constantvalue
 from petsc4py import PETSc
 
 import ioroutines
@@ -38,7 +38,7 @@ class SolidmechanicsProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
         problem_base.__init__(self, io_params, time_params, comm)
-
+        
         self.problem_physics = 'solid'
 
         self.simname = io_params['simname']
@@ -157,7 +157,10 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.F_hist = None
             self.u_pre = None
-        
+
+        try: self.volume_laplace = io_params['volume_laplace']
+        except: self.volume_laplace = []
+
         # dictionaries of internal and rate variables
         self.internalvars, self.internalvars_old = {}, {}
         self.ratevars, self.ratevars_old = {}, {}
@@ -582,7 +585,6 @@ class SolidmechanicsProblem(problem_base):
         
         dtheta_all = as_ufl(0)
         for n in range(self.num_domains):
-            
             dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx_[n]
 
         gr = assemble_scalar(dtheta_all)
@@ -608,6 +610,47 @@ class SolidmechanicsProblem(problem_base):
         # take care of active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
             self.evaluate_active_stress_ode(t_abs-t_off)
+
+
+    # compute volumes of a surface from a Laplace problem
+    def solve_volume_laplace(self, N, t):
+
+        # Define variational problem
+        uf = TrialFunction(self.V_u)
+        vf = TestFunction(self.V_u)
+        
+        f = Function(self.V_u) # zero source term
+        
+        a, L = as_ufl(0), as_ufl(0)
+        for n in range(self.num_domains):
+            a += inner(grad(uf), grad(vf))*self.dx_[n]
+            L += dot(f,vf)*self.dx_[n]
+
+        uf = Function(self.V_u, name="uf")
+        
+        dbcs_laplace=[]
+        dbcs_laplace.append( DirichletBC(self.u, locate_dofs_topological(self.V_u, 2, self.io.mt_b1.indices[self.io.mt_b1.values == self.volume_laplace[0]])) )
+
+        # solve linear Laplace problem
+        lp = LinearProblem(a, L, bcs=dbcs_laplace, u=uf)
+        lp.solve()
+
+        vol_all = as_ufl(0)
+        for n in range(self.num_domains):
+            vol_all += det(Identity(len(uf)) + grad(uf)) * self.dx_[n]
+
+        vol = assemble_scalar(vol_all)
+        vol = self.comm.allgather(vol)
+        volume = sum(vol)
+        
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t,self.dt): mode='wt'
+                else: mode='a'
+                fl = self.io.output_path+'/results_'+self.simname+'_volume_laplace.txt'
+                f = open(fl, mode)
+                f.write('%.16E %.16E\n' % (t,volume))
+                f.close()
 
 
 
@@ -677,9 +720,11 @@ class SolidmechanicsSolver():
             # solve
             self.solnln.newton(self.pb.u, self.pb.p, locvar=self.pb.theta, locresform=self.pb.r_growth, locincrform=self.pb.del_theta)
             
+            # solve volume laplace (for cardiac benchmark)
+            if bool(self.pb.volume_laplace): self.pb.solve_volume_laplace(N, t)
+            
             # compute the growth rate (has to be called before update_timestep)
-            if self.pb.have_growth:
-                self.pb.compute_solid_growth_rate(N, t)
+            if self.pb.have_growth: self.pb.compute_solid_growth_rate(N, t)
 
             # write output
             self.pb.io.write_output(self.pb, N=N, t=t)
