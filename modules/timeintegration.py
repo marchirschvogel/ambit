@@ -36,12 +36,12 @@ class timeintegration():
 
 
     # print timestep info
-    def print_timestep(self, N, t, wt=0):
+    def print_timestep(self, N, t, separator, wt=0):
         
         if self.comm.rank == 0:
 
             print("### TIME STEP %i / %i successfully completed | TIME: %.4f | wt = %.2e" % (N,self.numstep,t,wt))
-            print("--------------------------------------------------------------------------------------------------------------------------------------------------")
+            print(separator)
             sys.stdout.flush()
 
 
@@ -371,7 +371,7 @@ class timeintegration_flow0d(timeintegration):
         
 
     # print time step info
-    def print_timestep(self, N, t, Nmax, wt=0):
+    def print_timestep(self, N, t, separator, Nmax, wt=0):
 
         if self.comm.rank == 0:
 
@@ -379,5 +379,5 @@ class timeintegration_flow0d(timeintegration):
                 print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: - | wt = %.2e" % (N,Nmax,t,self.cycle[0],wt))
             else:
                 print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: %.4f | wt = %.2e" % (N,Nmax,t,self.cycle[0],self.cycleerror[0],wt))
-            print("--------------------------------------------------------------------------------------------------------------------------------------------------")
+            print(separator)
             sys.stdout.flush()

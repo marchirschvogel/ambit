@@ -282,7 +282,6 @@ class FluidmechanicsSolver():
         # write mesh output
         self.pb.io.write_output(self.pb, writemesh=True)
 
-
         # fluid main time loop
         for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
             
@@ -315,7 +314,6 @@ class FluidmechanicsSolver():
 
             # write restart info - old and new quantities are the same at this stage
             self.pb.io.write_restart(self.pb, N)
-
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))

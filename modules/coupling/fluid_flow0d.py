@@ -215,7 +215,6 @@ class FluidmechanicsFlow0DSolver():
         # write mesh output
         self.pb.pbs.io.write_output(self.pb.pbs, writemesh=True)
         
-
         # fluid 0D flow main time loop
         for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
             
@@ -266,7 +265,7 @@ class FluidmechanicsFlow0DSolver():
             # print to screen
             self.pb.pbf.cardvasc0D.print_to_screen(self.pb.pbf.s_mid,self.pb.pbf.aux_mid)
             # print time step info to screen
-            self.pb.pbf.ti.print_timestep(N, t, self.pb.pbs.numstep, wt=wt)
+            self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)
 
             # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
             is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, t-t_off, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
@@ -285,7 +284,6 @@ class FluidmechanicsFlow0DSolver():
                     print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]))
                     sys.stdout.flush()
                 break
-
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))

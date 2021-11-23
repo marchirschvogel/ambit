@@ -18,6 +18,7 @@ from ufl import constantvalue
 from projection import project
 from mpiroutines import allgather_vec
 
+from solver_utils import sol_utils
 import preconditioner
 
 ### useful infos for PETSc mats, vecs, solvers...
@@ -67,9 +68,6 @@ class solver_nonlinear:
 
         try: self.maxliniter = solver_params['max_liniter']
         except: self.maxliniter = 1200
-
-        try: self.print_liniter_every = solver_params['print_liniter_every']
-        except: self.print_liniter_every = 50
         
         try: self.print_local_iter = solver_params['print_local_iter']
         except: self.print_local_iter = False
@@ -91,6 +89,10 @@ class solver_nonlinear:
         else:
             self.tolerances = {'res_u' : self.tolres, 'inc_u' : self.tolinc}
 
+        self.solutils = sol_utils(self.pb, self.ptype, solver_params)
+        
+        self.sepstring = self.solutils.timestep_separator(self.tolerances)
+        
 
     def set_forms_solver(self, prestress):
 
@@ -122,7 +124,6 @@ class solver_nonlinear:
         if self.pb.incompressible_2field:
             self.Vu_map = self.V_u.dofmap.index_map
             self.offsetp = self.Vu_map.size_local * self.V_u.dofmap.index_map_bs
-        
         
         if self.solvetype=='direct':
             
@@ -183,174 +184,12 @@ class solver_nonlinear:
             
             # set tolerances and print routine
             self.ksp.setTolerances(rtol=self.tollin, atol=None, divtol=None, max_it=self.maxliniter)
-            self.ksp.setMonitor(lambda ksp, its, rnorm: self.print_linear_iter(its,rnorm))
+            self.ksp.setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its,rnorm))
 
         else:
             
             raise NameError("Unknown solvetype!")
         
-        
-    def print_nonlinear_iter(self,it=0,resnorms=0,incnorms=0,k_PTC=0,header=False,ts=0,te=0):
-        
-        if self.PTC:
-            nkptc='k_ptc = '+str(format(k_PTC, '.4e'))+''
-        else:
-            nkptc=''
-
-        if header:
-            if self.pb.comm.rank == 0:
-                if self.ptype=='solid' and not self.pb.incompressible_2field:
-                    print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','ts','te'))
-                    sys.stdout.flush()
-                elif self.ptype=='solid' and self.pb.incompressible_2field:
-                    print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','ts','te'))
-                    sys.stdout.flush()
-                elif self.ptype=='fluid':
-                    print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ts','te'))
-                    sys.stdout.flush()
-                elif self.ptype=='flow0d':
-                    print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    sys.stdout.flush()
-                elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
-                    if self.pbc.coupling_type == 'monolithic_direct':
-                        print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pbc.coupling_type == 'monolithic_lagrange':
-                        print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
-                    sys.stdout.flush()
-                elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
-                    if self.pbc.coupling_type == 'monolithic_direct':
-                        print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pbc.coupling_type == 'monolithic_lagrange':
-                        print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
-                    sys.stdout.flush()
-                elif self.ptype=='fluid_flow0d':
-                    if self.pbc.coupling_type == 'monolithic_direct':
-                        print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pbc.coupling_type == 'monolithic_lagrange':
-                        print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
-                    sys.stdout.flush()
-                else:
-                    raise NameError("Unknown problem type!")
-            return
-        
-        if self.pb.comm.rank == 0:
-
-            if self.ptype=='solid' and not self.pb.incompressible_2field: 
-                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',ts,' ',te,' ',nkptc))
-                sys.stdout.flush()
-            elif self.ptype=='solid' and self.pb.incompressible_2field:
-                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_p'],' ',incnorms['inc_p'],' ',ts,' ',te,' ',nkptc))
-                sys.stdout.flush()
-            elif self.ptype=='fluid':
-                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_p'],' ',incnorms['inc_p'],' ',ts,' ',te,' ',nkptc))
-                sys.stdout.flush()
-            elif self.ptype=='flow0d':
-                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
-                sys.stdout.flush()
-            elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
-                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
-                sys.stdout.flush()
-            elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
-                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_p'],' ',incnorms['inc_p'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
-                sys.stdout.flush()
-            elif self.ptype=='fluid_flow0d':
-                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_p'],' ',incnorms['inc_p'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
-                sys.stdout.flush()
-            else:
-                raise NameError("Unknown problem type!")
-
-
-    def print_linear_iter(self,it,rnorm):
-        
-        if it == 0:
-            self.rnorm_start = rnorm
-            if self.pb.comm.rank == 0:
-                print("\n            ***************** linear solve ****************")
-                sys.stdout.flush()
-
-        if it % self.print_liniter_every == 0:
-            
-            if self.pb.comm.rank == 0:
-                print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('            lin. it.: ',it,'     rel. res. norm:',rnorm/self.rnorm_start))
-                sys.stdout.flush()
-
-
-    def print_linear_iter_last(self,it,rnorm):
-        
-        if self.pb.comm.rank == 0:
-            if it % self.print_liniter_every != 0: # otherwise already printed
-                print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('            lin. it.: ',it,'     rel. res. norm:',rnorm/self.rnorm_start))
-            print("            ***********************************************\n")
-            sys.stdout.flush()
-
-
-
-    def check_converged(self,resnorms,incnorms,ptype=None):
-
-        if ptype is None:
-            ptype = self.ptype
-
-        converged = False
-
-        if ptype=='solid' and not self.pb.incompressible_2field:
-            if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u']:
-                converged = True
-                
-        elif ptype=='solid' and self.pb.incompressible_2field:
-            if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u'] and resnorms['res_p'] <= self.tolerances['res_p'] and incnorms['inc_p'] <= self.tolerances['inc_p']:
-                converged = True
-                
-        elif ptype=='fluid':
-            if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u'] and resnorms['res_p'] <= self.tolerances['res_p'] and incnorms['inc_p'] <= self.tolerances['inc_p']:
-                converged = True
-        
-        elif ptype=='flow0d':
-            if resnorms['res_0d'] <= self.tolerances['res_0d'] and incnorms['inc_0d'] <= self.tolerances['inc_0d']:
-                converged = True
-                
-        elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
-            if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u'] and resnorms['res_0d'] <= self.tolerances['res_0d'] and incnorms['inc_0d'] <= self.tolerances['inc_0d']:
-                converged = True
-                
-        elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
-            if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u'] and resnorms['res_p'] <= self.tolerances['res_p'] and incnorms['inc_p'] <= self.tolerances['inc_p'] and resnorms['res_0d'] <= self.tolerances['res_0d'] and incnorms['inc_0d'] <= self.tolerances['inc_0d']:
-                converged = True
-                
-        elif ptype=='fluid_flow0d':
-            if resnorms['res_u'] <= self.tolerances['res_u'] and incnorms['inc_u'] <= self.tolerances['inc_u'] and resnorms['res_p'] <= self.tolerances['res_p'] and incnorms['inc_p'] <= self.tolerances['inc_p'] and resnorms['res_0d'] <= self.tolerances['res_0d'] and incnorms['inc_0d'] <= self.tolerances['inc_0d']:
-                converged = True
-            
-        else:
-            raise NameError("Unknown problem type!")
-        
-        return converged
-        
-
-    def adapt_linear_solver(self,rabsnorm):
-
-        rnorm = self.ksp.getResidualNorm()
-    
-        if rnorm*self.tollin < self.tolres: # currentnlnres*tol < desirednlnres
-
-            # formula: "desirednlnres * factor / currentnlnres"
-            tollin_new = self.adapt_factor * self.tolres/rnorm
-
-            if tollin_new > 1.0:
-                if self.pb.comm.rank == 0:
-                    print("Warning: Adapted relative tolerance > 1. --> Constrained to 0.999, but consider changing parameter 'adapt_factor'!")
-                    sys.stdout.flush()
-                tollin_new = 0.999
-            
-            if tollin_new < self.tollin:
-                tollin_new = self.tollin
-
-            if self.pb.comm.rank == 0 and tollin_new > self.tollin:
-                print("            Adapted linear tolerance to %.1e\n" % tollin_new)
-                sys.stdout.flush()
-
-            # adapt tolerance
-            self.ksp.setTolerances(rtol=tollin_new)
-
 
     # solve for consistent initial acceleration a_old
     def solve_consistent_ini_acc(self, weakform_old, jac_a, a_old):
@@ -382,7 +221,6 @@ class solver_nonlinear:
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-
     def newton(self, u, p, locvar=None, locresform=None, locincrform=None):
 
         # displacement/velocity increment
@@ -406,7 +244,7 @@ class solver_nonlinear:
         counter_adapt, max_adapt = 0, 50
         maxresval = 1.0e16
 
-        self.print_nonlinear_iter(header=True)
+        self.solutils.print_nonlinear_iter(header=True)
 
         while it < self.maxiter and counter_adapt < max_adapt:
 
@@ -444,8 +282,6 @@ class solver_nonlinear:
                     K_pp.assemble()
                 else:
                     K_pp = None
-
-            
 
             # model order reduction stuff
             if self.pb.have_rom and not self.pb.prestress_initial:
@@ -516,10 +352,10 @@ class solver_nonlinear:
                     self.ksp.solve(-r_2field_nest, del_2field)
                     ts = time.time() - tss
                     
-                    self.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
+                    self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
                     
                     if self.adapt_linsolv_tol:
-                        self.adapt_linear_solver(r_u.norm())
+                        self.solutils.adapt_linear_solver(r_u.norm())
 
                 else:
                     
@@ -527,7 +363,6 @@ class solver_nonlinear:
                     
                 del_u.array[:] = del_2field.array_r[:self.offsetp]
                 del_p.array[:] = del_2field.array_r[self.offsetp:]
-                
                 
             else:
                     
@@ -540,10 +375,10 @@ class solver_nonlinear:
             
                 if self.solvetype=='iterative':
                     
-                    self.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
+                    self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
                         
                     if self.adapt_linsolv_tol:
-                        self.adapt_linear_solver(r_u.norm())
+                        self.solutils.adapt_linear_solver(r_u.norm())
 
             # get solid/fluid residual and increment norms
             resnorms = {'res_u' : r_u.norm()}
@@ -566,7 +401,7 @@ class solver_nonlinear:
                 p.vector.axpy(1.0, del_p)
                 p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-            self.print_nonlinear_iter(it,resnorms,incnorms,k_PTC,ts=ts,te=te)
+            self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
             
             it += 1
             
@@ -578,7 +413,7 @@ class solver_nonlinear:
             if self.divcont=='PTC':
                 
                 self.maxiter = 250
-                err = self.catch_solver_errors(resnorms['res_u'], incnorm=incnorms['inc_u'], maxval=maxresval)
+                err = self.solutils.catch_solver_errors(resnorms['res_u'], incnorm=incnorms['inc_u'], maxval=maxresval)
                 
                 if err:
                     self.PTC = True
@@ -590,7 +425,7 @@ class solver_nonlinear:
                     counter_adapt += 1
             
             # check if converged
-            converged = self.check_converged(resnorms,incnorms)
+            converged = self.solutils.check_converged(resnorms,incnorms,self.tolerances)
             if converged:
                 if self.divcont=='PTC':
                     self.PTC = False
@@ -600,38 +435,6 @@ class solver_nonlinear:
         else:
 
             raise RuntimeError("Newton did not converge after %i iterations!" % (it))
-
-
-
-    def catch_solver_errors(self, resnorm, incnorm=0, maxval=1.0e16):
-        
-        err = 0
-        
-        if np.isnan(resnorm):
-                    
-            if self.pb.comm.rank == 0:
-                print("NaN encountered. Reset Newton and perform PTC adaption.")
-                sys.stdout.flush()
-                
-            err = 1
-            
-        if resnorm >= maxval:
-                    
-            if self.pb.comm.rank == 0:
-                print("Large residual > max val %.1E encountered. Reset Newton and perform PTC adaption." % (maxval))
-                sys.stdout.flush()
-                
-            err = 1
-            
-        if np.isinf(incnorm):
-                    
-            if self.pb.comm.rank == 0:
-                print("Inf encountered. Reset Newton and perform PTC adaption.")
-                sys.stdout.flush()
-                
-            err = 1
-        
-        return err
 
 
     def reset_step(self, vec, vec_start, ghosted):
@@ -689,7 +492,6 @@ class solver_nonlinear:
 
 
 
-
 # nonlinear solver for Lagrange multiplier constraints and 3D-0D coupled monolithic formulations
 class solver_nonlinear_constraint_monolithic(solver_nonlinear):
     
@@ -725,6 +527,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
             self.snln0D = solver_nonlinear_0D(self.pbc.pbf, self.solver_params_constr)
 
+        self.sepstring = self.solutils.timestep_separator(self.tolerances)
+        
         
     def initialize_petsc_solver(self):
 
@@ -828,13 +632,12 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             # set tolerances and print routine
             self.ksp.setTolerances(rtol=self.tollin, atol=None, divtol=None, max_it=self.maxliniter)
-            self.ksp.setMonitor(lambda ksp, its, rnorm: self.print_linear_iter(its,rnorm))
+            self.ksp.setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its,rnorm))
 
         else:
             
             raise NameError("Unknown solvetype!")
 
-        
 
     def newton(self, u, p, s, t, locvar=None, locresform=None, locincrform=None):
         
@@ -864,7 +667,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         counter_adapt, max_adapt = 0, 50
         maxresval = 1.0e16
         
-        self.print_nonlinear_iter(header=True)
+        self.solutils.print_nonlinear_iter(header=True)
 
         while it < self.maxiter and counter_adapt < max_adapt:
             
@@ -1173,10 +976,10 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.ksp.solve(-r_3D0D_nest, del_sol)
                 ts = time.time() - tss
 
-                self.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
+                self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
                 
                 if self.adapt_linsolv_tol:
-                    self.adapt_linear_solver(r_u.norm())
+                    self.solutils.adapt_linear_solver(r_u.norm())
 
             else:
                 
@@ -1222,7 +1025,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             # update solution - Lagrange multipliers (not ghosted!)
             if self.pbc.coupling_type == 'monolithic_lagrange': self.pbc.lm.axpy(1.0, del_s)
 
-            self.print_nonlinear_iter(it,resnorms,incnorms,k_PTC,ts=ts,te=te)
+            self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
             
             it += 1
             
@@ -1234,7 +1037,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.divcont=='PTC':
                 
                 self.maxiter = 250
-                err = self.catch_solver_errors(resnorms['res_u'], incnorm=incnorms['inc_u'], maxval=maxresval)
+                err = self.solutils.catch_solver_errors(resnorms['res_u'], incnorm=incnorms['inc_u'], maxval=maxresval)
                 
                 if err:
                     self.PTC = True
@@ -1246,7 +1049,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     counter_adapt += 1
             
             # check if converged
-            converged = self.check_converged(resnorms,incnorms)
+            converged = self.solutils.check_converged(resnorms,incnorms,self.tolerances)
             if converged:
                 if self.divcont=='PTC':
                     self.PTC = False
@@ -1283,6 +1086,11 @@ class solver_nonlinear_0D(solver_nonlinear):
         
         self.initialize_petsc_solver()
         
+        self.solutils = sol_utils(self.pb, self.ptype, solver_params)
+        
+        self.sepstring = self.solutils.timestep_separator(self.tolerances)
+        
+        
     def initialize_petsc_solver(self):
         
         # create solver
@@ -1297,7 +1105,7 @@ class solver_nonlinear_0D(solver_nonlinear):
         # Newton iteration index
         it = 0
         
-        if print_iter: self.print_nonlinear_iter(header=True)
+        if print_iter: self.solutils.print_nonlinear_iter(header=True)
         
         while it < self.maxiter:
             
@@ -1334,17 +1142,15 @@ class solver_nonlinear_0D(solver_nonlinear):
             res_norm = r.norm()
             inc_norm = ds.norm()
             
-            if print_iter: self.print_nonlinear_iter(it,{'res_0d' : res_norm},{'inc_0d' : inc_norm},ts=ts,te=te)
+            if print_iter: self.solutils.print_nonlinear_iter(it,{'res_0d' : res_norm},{'inc_0d' : inc_norm},ts=ts,te=te)
             
             it += 1
 
             # check if converged
-            converged = self.check_converged({'res_0d' : res_norm},{'inc_0d' : inc_norm},ptype='flow0d')
+            converged = self.solutils.check_converged({'res_0d' : res_norm},{'inc_0d' : inc_norm},self.tolerances,ptype='flow0d')
             if converged:
                 break
 
         else:
 
             raise RuntimeError("Newton for ODE system did not converge after %i iterations!" % (it))
-
-

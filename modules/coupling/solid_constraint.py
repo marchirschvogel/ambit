@@ -189,7 +189,6 @@ class SolidmechanicsConstraintSolver():
         # write mesh output
         self.pb.pbs.io.write_output(self.pb.pbs, writemesh=True)
         
-
         # solid constraint main time loop
         for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep_stop+1):
 
@@ -226,12 +225,11 @@ class SolidmechanicsConstraintSolver():
             wt = wte - wts
 
             # print time step info to screen
-            self.pb.pbs.ti.print_timestep(N, t, wt=wt)
+            self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
 
             # write restart info - old and new quantities are the same at this stage
             self.pb.pbs.io.write_restart(self.pb, N)
             
-
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
             sys.stdout.flush()

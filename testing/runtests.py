@@ -31,7 +31,7 @@ elif category=='solid_constraint':
 else:
     raise NameError("Unknown test category!")
 
-errs = []
+errs = {}
 
 start = time.time()
 
@@ -40,84 +40,94 @@ subprocess.call(['mkdir', '-p', 'tmp'])
 
 
 if solid:
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_mat_uniax_hex_2field.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_mat_uniax_hex_2field.py']) )
+    errs['solid_mat_uniax_hex_2field 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_mat_uniax_hex_2field.py'])
+    errs['solid_mat_uniax_hex_2field 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_mat_uniax_hex_2field.py'])
     
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_genalpha.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha.py']) )
+    errs['solid_robin_genalpha 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_genalpha.py'])
+    errs['solid_robin_genalpha 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha.py'])
     
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_visco.py']) ) # only 1 element, cannot run on multiple cores
+    errs['solid_robin_visco 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_visco.py']) # only 1 element, cannot run on multiple cores
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_static_prestress.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_static_prestress.py']) )
+    errs['solid_robin_static_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_static_prestress.py'])
+    errs['solid_robin_static_prestress 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_static_prestress.py'])
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel.py']) )
+    errs['solid_growth_volstressmandel 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel.py'])
+    errs['solid_growth_volstressmandel 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel.py'])
     
     # TODO: Re-include once we can have higher-order Quadrature function spaces!
-    #errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel_incomp.py']) )
-    #errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel_incomp.py']) )
+    #errs['solid_growth_volstressmandel_incomp 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel_incomp.py'])
+    #errs['solid_growth_volstressmandel_incomp 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel_incomp.py'])
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_prescribed_iso_lv.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_growth_prescribed_iso_lv.py']) )
+    errs['solid_growth_prescribed_iso_lv 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_prescribed_iso_lv.py'])
+    errs['solid_growth_prescribed_iso_lv 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_growth_prescribed_iso_lv.py'])
     
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growthremodeling_fiberstretch.py']) ) # only 1 element, cannot run on multiple cores
+    errs['solid_growthremodeling_fiberstretch 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growthremodeling_fiberstretch.py']) # only 1 element, cannot run on multiple cores
     
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_2Dheart_frankstarling.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_2Dheart_frankstarling.py']) )
+    errs['solid_2Dheart_frankstarling 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_2Dheart_frankstarling.py'])
+    errs['solid_2Dheart_frankstarling 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_2Dheart_frankstarling.py'])
 
 if flow0d:
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py']) )
+    errs['flow0d_0Dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
+    errs['flow0d_0Dvol_4elwindkesselLsZ 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLpZ.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLpZ.py']) )
+    errs['flow0d_0Dvol_4elwindkesselLpZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLpZ.py'])
+    errs['flow0d_0Dvol_4elwindkesselLpZ 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLpZ.py'])
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspul.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py', str(450)]) ) # tests restart from step 450
+    errs['flow0d_0Dheart_syspul 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspul.py'])
+    errs['flow0d_0Dheart_syspul 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py'])
+    errs['flow0d_0Dheart_syspul 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py', str(450)]) # tests restart from step 450
 
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcor.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcap.py']) )
+    errs['flow0d_0Dheart_syspulcor 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcor.py'])
+    errs['flow0d_0Dheart_syspulcap 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcap.py'])
 
     # very slow... we have to make this one faster! But should pass...
-    #errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py']) )
-    #errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py']) )
+    #errs['flow0d_0Dheart_syspulcaprespir_periodic 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py'])
+    #errs['flow0d_0Dheart_syspulcaprespir_periodic 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py'])
 
 if solid_flow0d:
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber.py']) )
+    errs['solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber.py'])
+    errs['solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber.py'])
     
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber.py']) )
+    errs['solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber.py'])
+    errs['solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber.py'])
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber.py']) )
+    errs['solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber.py'])
+    errs['solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber.py'])
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py', str(3)]) ) # tests restart from step 3
+    errs['solid_flow0d_monolithicdirect_syspul_2Dheart_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py'])
+    errs['solid_flow0d_monolithicdirect_syspul_2Dheart_prestress 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py'])
+    errs['solid_flow0d_monolithicdirect_syspul_2Dheart_prestress 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py', str(3)]) # tests restart from step 3
     
-    errs.append( subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative.py']) )
+    errs['solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative.py'])
 
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspulcor_2Dheart_ROM.py']) )
+    errs['solid_flow0d_monolithicdirect_syspulcor_2Dheart_ROM 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspulcor_2Dheart_ROM.py'])
 
 if solid_constraint:
-    errs.append( subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_constraint_volume_chamber.py']) )
-    errs.append( subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_constraint_volume_chamber.py']) )
-    
+    errs['solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_constraint_volume_chamber.py'])
+    errs['solid_constraint_volume_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_constraint_volume_chamber.py'])
+     
 
 err = 0
 for e in range(len(errs)):
-    err += errs[e]
+    err += list(errs.values())[e]
 
 if err == 0:
     print("\n##################################")
     print("All tests passed successfully! :-)")
-    print("##################################")
+    print("##################################\n")
 else:
     print("\n##################################")
     print("%i tests failed!!!" % (err))
-    print("##################################")
+    print("##################################\n")
 
-print('Total runtime for tests: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+print("Summary:")
+print("========")
+for e in range(len(errs)):
+    if list(errs.values())[e] == 0:
+        print('{:<75s}{:<18s}'.format(list(errs.keys())[e],'status: passed :-)'))
+    elif list(errs.values())[e] == 1:
+        print('{:<75s}{:<18s}'.format(list(errs.keys())[e],'status: FAILED !!!!!!'))
+    else:
+        raise ValueError("Unknown test status!")
+
+print('\nTotal runtime for tests: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
