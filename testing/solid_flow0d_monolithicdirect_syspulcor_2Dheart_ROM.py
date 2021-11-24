@@ -32,7 +32,7 @@ def main():
                             'write_results_every'   : -999,
                             'output_path'           : ''+basepath+'/tmp/',
                             'results_to_write'      : ['displacement'],
-                            'simname'               : 'ROM_2Dheart',
+                            'simname'               : 'ROM_2Dheart', # ROM_2Dheart
                             'write_restart_every'   : -999,
                             'restart_step'          : restart_step}
 
@@ -54,8 +54,7 @@ def main():
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 500,
                             'numstep_stop'          : 5,
-                            'timint'                : 'genalpha', # genalpha, ost, static
-                            'theta_ost'             : 1.0,
+                            'timint'                : 'genalpha',
                             'rho_inf_genalpha'      : 0.8}
     
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
@@ -127,36 +126,35 @@ def main():
     tol = 1.0e-6
         
     s_corr = np.zeros(problem.mp.pbf.cardvasc0D.numdof)
-
+    
     # correct 0D results
-    s_corr[0] = 1.0216731075223009E+05
-    s_corr[1] = 3.8512297794654698E-01
-    s_corr[2] = -1.0582718169761975E+00
-    s_corr[3] = 2.8295566719431697E-01
-    s_corr[4] = 1.0865673836956290E+01
+    s_corr[0] = 1.0216731076279542E+05
+    s_corr[1] = 3.8512297794648398E-01
+    s_corr[2] = -1.0582718169772605E+00
+    s_corr[3] = 2.8295566718368870E-01
+    s_corr[4] = 1.0865673836956294E+01
     s_corr[5] = -7.3632801641344558E+04
     s_corr[6] = 1.0874047381917078E+01
     s_corr[7] = 7.1800294676209058E+04
     s_corr[8] = 2.2872592766740136E+00
-    s_corr[9] = 8.4948270377701469E+04
-    s_corr[10] = 6.2810990726839227E+04
-    s_corr[11] = 2.4850078760918162E-01
-    s_corr[12] = -2.0264606775695390E-01
-    s_corr[13] = 1.8568979688234236E-01
-    s_corr[14] = 2.2121504744518798E+00
-    s_corr[15] = 3.5717307399520992E+04
-    s_corr[16] = 1.6763908634590663E+00
-    s_corr[17] = 8.6084525700834754E+04
-    s_corr[18] = 6.9673864322703787E+02
-    s_corr[19] = 2.9191035744724518E+03
-    s_corr[20] = 4.4292718561296157E-01
-    s_corr[21] = -3.6278491610237701E-01
-    s_corr[22] = 6.9673864322703787E+02
-    s_corr[23] = 2.9191035744724518E+03
-    s_corr[24] = 4.4292718561296152E-01
-    s_corr[25] = -3.6278491610237751E-01
-    s_corr[26] = -8.5023369056630399E+04
-
+    s_corr[9] = 8.4948270377698762E+04
+    s_corr[10] = 6.2810990694157925E+04
+    s_corr[11] = 2.4850078760924649E-01
+    s_corr[12] = -2.0264606775367924E-01
+    s_corr[13] = 1.8568979691508847E-01
+    s_corr[14] = 2.2121504744518803E+00
+    s_corr[15] = 3.5717307399521123E+04
+    s_corr[16] = 1.6763908634590652E+00
+    s_corr[17] = 8.6084525700838829E+04
+    s_corr[18] = 6.9673864322706243E+02
+    s_corr[19] = 2.9191035744740575E+03
+    s_corr[20] = 4.4292718560236699E-01
+    s_corr[21] = -3.6278491617589065E-01
+    s_corr[22] = 6.9673864322706231E+02
+    s_corr[23] = 2.9191035744740580E+03
+    s_corr[24] = 4.4292718560236699E-01
+    s_corr[25] = -3.6278491617589070E-01
+    s_corr[26] = -8.5023369056630516E+04
 
     check1 = results_check.results_check_vec(problem.mp.pbf.s, s_corr, problem.mp.comm, tol=tol)
     success = results_check.success_check([check1], problem.mp.comm)
