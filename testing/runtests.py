@@ -111,16 +111,7 @@ err = 0
 for e in range(len(errs)):
     err += list(errs.values())[e]
 
-if err == 0:
-    print("\n##################################")
-    print("All tests passed successfully! :-)")
-    print("##################################\n")
-else:
-    print("\n##################################")
-    print("%i tests failed!!!" % (err))
-    print("##################################\n")
-
-print("Summary:")
+print("\nSummary:")
 print("========")
 for e in range(len(errs)):
     if list(errs.values())[e] == 0:
@@ -130,4 +121,13 @@ for e in range(len(errs)):
     else:
         raise ValueError("Unknown test status!")
 
-print('\nTotal runtime for tests: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+if err == 0:
+    print("\n##################################")
+    print("All tests passed successfully! :-)")
+    print("##################################\n")
+else:
+    print("\n##################################")
+    print("%i tests failed!!!" % (err))
+    print("##################################\n")
+
+print('Total runtime for tests: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))

@@ -235,7 +235,13 @@ class cardiovascular0Dbase:
         else:
             raise NameError("Unknown valve law %s!" % (vparams[0]))
         
-        return vl, 1./sp.diff(vl,popen)
+        vlaw = vl
+        if popen is not sp.S.Zero:
+            res = 1./sp.diff(vl,popen)
+        else:
+            res = sp.S.One
+        
+        return vlaw, res
 
 
     # set compartment interfaces according to case and coupling quantity (can be volume, flux, or pressure)
@@ -362,8 +368,8 @@ class cardiovascular0Dbase:
             for k in range(self.chmodels[ch]['num_inflows'],10):
                 if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
 
-            # if no inflow is present, set to outflow pressure (formally, this quantity is not needed then)
-            if self.chmodels[ch]['num_inflows']==0: chvars['pi1'] = chvars['po1']
+            # if no inflow is present, set to zero
+            if self.chmodels[ch]['num_inflows']==0: chvars['pi1'] = sp.S.Zero
 
             # now add inflow pressures to coupling array
             for m in range(self.chmodels[ch]['num_inflows']):
@@ -373,8 +379,8 @@ class cardiovascular0Dbase:
             for k in range(self.chmodels[ch]['num_outflows'],10):
                 if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['po1']
             
-            # if no outflow is present, set to inflow pressure (formally, this quantity is not needed then)
-            if self.chmodels[ch]['num_outflows']==0: chvars['po1'] = chvars['pi1']
+            # if no outflow is present, set to zero
+            if self.chmodels[ch]['num_outflows']==0: chvars['po1'] = sp.S.Zero
 
             # now add outflow pressures to coupling array
             for m in range(self.chmodels[ch]['num_outflows']):

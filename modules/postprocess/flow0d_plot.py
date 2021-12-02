@@ -29,7 +29,7 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/sim/lalv-flow-be-rom/rst10n/00a/romdata_m50_25_h10_10_as2_III/out'#work/mia_sim_new_0d_fixedale'
+        path = '/home/mh/work/mia_sim_new/outNOMR_new/0d'#'#work/mia_sim_new_0d_fixedale'
         sname = ''
         nstep_cycl = 100
         T_cycl = 1.0
