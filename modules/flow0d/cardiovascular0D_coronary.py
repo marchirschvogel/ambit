@@ -79,6 +79,9 @@ class coronary_circ_ZCRp_CRd():
         a_[self.auxmap['V_corp_sys']] = self.C_corp_sys * (p_ar_[0] - self.Z_corp_sys * q_corp_sys_in_) + self.V_corp_sys_u
         a_[self.auxmap['V_cord_sys']] = self.C_cord_sys * (p_cord_sys_ - p_v_) + self.V_cord_sys_u
         
+        # safety check that we don't hand in a zero symbol for p_v
+        if p_v_ is sp.S.Zero: raise ValueError("Zero symbol for left ventricular pressure!")
+        
         return [q_corp_sys_in_], q_cord_sys_
 
 
@@ -218,6 +221,9 @@ class coronary_circ_ZCRp_CRd_lr():
         a_[self.auxmap['V_cord_sys_l']] = self.C_cord_sys_l * (p_cord_sys_l_ - p_v_) + self.V_cord_sys_l_u
         a_[self.auxmap['V_corp_sys_r']] = self.C_corp_sys_r * (p_ar_[1] - self.Z_corp_sys_r * q_corp_sys_r_in_) + self.V_corp_sys_r_u
         a_[self.auxmap['V_cord_sys_r']] = self.C_cord_sys_r * (p_cord_sys_r_ - p_v_) + self.V_cord_sys_r_u
+        
+        # safety check that we don't hand in a zero symbol for p_v
+        if p_v_ is sp.S.Zero: raise ValueError("Zero symbol for left ventricular pressure!")
         
         return [q_corp_sys_l_in_,q_corp_sys_r_in_], q_cord_sys_out_
 

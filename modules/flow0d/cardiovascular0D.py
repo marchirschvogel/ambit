@@ -308,12 +308,16 @@ class cardiovascular0Dbase:
                 # add outflow pressures to coupling name prefixes
                 for m in range(self.chmodels[ch]['num_outflows']):
                     self.cname.append('p_'+chn+'_o'+str(m+1)+'')
+                # special case where we have a coronary model but an LV with no outflows
+                if self.chmodels[ch]['num_inflows']==0 and self.cormodel is not None and ch=='ao':                    
+                    self.cname.append('p_v_l_o1')
+                
             else:
                 raise NameError("Unknown chamber model for chamber %s!" % (ch))
 
 
     # set coupling state (populate x and c vectors with Sympy symbols) according to case and coupling quantity (can be volume, flux, or pressure)
-    def set_coupling_state(self, ch, chvars, chfncs=[]):
+    def set_coupling_state(self, ch, chvars, chfncs=[], chvars_2={}):
         
         if ch == 'lv': V_unstressed, i = self.V_v_l_u,  0
         if ch == 'rv': V_unstressed, i = self.V_v_r_u,  1
@@ -385,6 +389,11 @@ class cardiovascular0Dbase:
             # now add outflow pressures to coupling array
             for m in range(self.chmodels[ch]['num_outflows']):
                 self.c_.append(chvars['po'+str(m+1)+''])
+                
+            # special case where we have a coronary model but an LV with no outflows (need an externally computed LV pressure)
+            if self.chmodels[ch]['num_inflows']==0 and self.cormodel is not None and ch=='ao':
+                chvars_2['po1'] = sp.Symbol('p_v_l_o1_')
+                self.c_.append(chvars_2['po1'])
 
         else:
             raise NameError("Unknown chamber model for chamber %s!" % (ch))
