@@ -301,7 +301,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.set_coupling_state('la', chdict_la, [E_at_l_])
         self.set_coupling_state('ra', chdict_ra, [E_at_r_])
         # aortic root/ascending aortic compartment
-        self.set_coupling_state('ao', chdict_ao, [], chdict_lv)
+        self.set_coupling_state('ao', chdict_ao, [])
 
         # feed back modified dicts to chamber variables
         VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['VQ'], chdict_lv['pi1'], chdict_lv['po1']
