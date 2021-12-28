@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ufl import tr, det, dot, ln, sqrt, exp, diff, conditional, ge, outer, cross
+import ufl
 
 # returns the Cauchy stress sigma for different material laws
 

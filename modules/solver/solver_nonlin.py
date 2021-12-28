@@ -11,9 +11,8 @@ import sys, time
 import numpy as np
 from petsc4py import PETSc
 
-from dolfinx import Function
-from dolfinx.fem import assemble_matrix, assemble_vector, assemble_scalar, set_bc, apply_lifting, create_vector_nest
-from ufl import constantvalue
+from dolfinx import fem
+import ufl
 
 from projection import project
 from mpiroutines import allgather_vec
@@ -209,10 +208,10 @@ class solver_nonlinear:
             raise NameError("Unknown solvetype!")
             
         # solve for consistent initial acceleration a_old
-        M_a = assemble_matrix(jac_a, [])
+        M_a = fem.assemble_matrix(jac_a, [])
         M_a.assemble()
         
-        r_a = assemble_vector(weakform_old)
+        r_a = fem.assemble_vector(weakform_old)
         r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         
         ksp.setOperators(M_a)
@@ -224,10 +223,10 @@ class solver_nonlinear:
     def newton(self, u, p, locvar=None, locresform=None, locincrform=None):
 
         # displacement/velocity increment
-        del_u_func = Function(self.V_u)
+        del_u_func = fem.Function(self.V_u)
         del_u = del_u_func.vector
         if self.pb.incompressible_2field:
-            del_p_func = Function(self.V_p)
+            del_p_func = fem.Function(self.V_p)
             del_p = del_p_func.vector
         
         # get start vector in case we need to reset the nonlinear solver
@@ -254,13 +253,13 @@ class solver_nonlinear:
                 self.newton_local(locvar,locresform,locincrform)
 
             # assemble rhs vector
-            r_u = assemble_vector(self.weakform_u)
-            apply_lifting(r_u, [self.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=-1.0)
+            r_u = fem.assemble_vector(self.weakform_u)
+            fem.apply_lifting(r_u, [self.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=-1.0)
             r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            set_bc(r_u, self.pb.bc.dbcs, x0=u.vector, scale=-1.0)
+            fem.set_bc(r_u, self.pb.bc.dbcs, x0=u.vector, scale=-1.0)
 
             # assemble system matrix
-            K_uu = assemble_matrix(self.jac_uu, self.pb.bc.dbcs)
+            K_uu = fem.assemble_matrix(self.jac_uu, self.pb.bc.dbcs)
             K_uu.assemble()
             
             if self.PTC:
@@ -269,16 +268,16 @@ class solver_nonlinear:
 
             if self.pb.incompressible_2field:
                 
-                r_p = assemble_vector(self.weakform_p)
+                r_p = fem.assemble_vector(self.weakform_p)
                 r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                K_up = assemble_matrix(self.jac_up, self.pb.bc.dbcs)
+                K_up = fem.assemble_matrix(self.jac_up, self.pb.bc.dbcs)
                 K_up.assemble()
-                K_pu = assemble_matrix(self.jac_pu, self.pb.bc.dbcs)
+                K_pu = fem.assemble_matrix(self.jac_pu, self.pb.bc.dbcs)
                 K_pu.assemble()
                 
                 # for stress-mediated volumetric growth, K_pp is not zero!
-                if not isinstance(self.pb.p11, constantvalue.Zero):
-                    K_pp = assemble_matrix(self.pb.p11, [])
+                if not isinstance(self.pb.p11, ufl.constantvalue.Zero):
+                    K_pp = fem.assemble_matrix(self.pb.p11, [])
                     K_pp.assemble()
                 else:
                     K_pp = None
@@ -339,7 +338,7 @@ class solver_nonlinear:
 
                     tes = time.time()
 
-                    P_pp = assemble_matrix(self.pb.a_p11, [])
+                    P_pp = fem.assemble_matrix(self.pb.a_p11, [])
                     P = PETSc.Mat().createNest([[K_uu, None], [None, P_pp]])
                     P.assemble()
 
@@ -450,7 +449,7 @@ class solver_nonlinear:
 
         it_local = 0
         
-        residual, increment = Function(self.pb.Vd_scalar), Function(self.pb.Vd_scalar)
+        residual, increment = fem.Function(self.pb.Vd_scalar), fem.Function(self.pb.Vd_scalar)
 
         # return mapping scheme for nonlinear constitutive laws
         while it_local < maxiter_local:
@@ -642,11 +641,11 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
     def newton(self, u, p, s, t, locvar=None, locresform=None, locincrform=None):
         
         # 3D displacement/velocity increment
-        del_u_func = Function(self.V_u)
+        del_u_func = fem.Function(self.V_u)
         del_u = del_u_func.vector
         if self.pb.incompressible_2field:
             # 3D pressure increment
-            del_p_func = Function(self.V_p)
+            del_p_func = fem.Function(self.V_p)
             del_p = del_p_func.vector
         # 0D/Lagrange multiplier increment
         del_s = self.K_ss.createVecLeft()
@@ -692,13 +691,13 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
                 self.pbc.set_pressure_fem(self.pbc.lm, self.pbc.coupfuncs)
 
-            r_u = assemble_vector(self.pb.weakform_u)
-            apply_lifting(r_u, [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=-1.0)
+            r_u = fem.assemble_vector(self.pb.weakform_u)
+            fem.apply_lifting(r_u, [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=-1.0)
             r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            set_bc(r_u, self.pb.bc.dbcs, x0=u.vector, scale=-1.0)
+            fem.set_bc(r_u, self.pb.bc.dbcs, x0=u.vector, scale=-1.0)
             
             # 3D solid/fluid system matrix
-            K_uu = assemble_matrix(self.pb.jac_uu, self.pb.bc.dbcs)
+            K_uu = fem.assemble_matrix(self.pb.jac_uu, self.pb.bc.dbcs)
             K_uu.assemble()
 
             if self.PTC:
@@ -707,16 +706,16 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             if self.pbc.pbs.incompressible_2field:
 
-                r_p = assemble_vector(self.pb.weakform_p)
+                r_p = fem.assemble_vector(self.pb.weakform_p)
                 r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                K_up = assemble_matrix(self.pb.jac_up, self.pb.bc.dbcs)
+                K_up = fem.assemble_matrix(self.pb.jac_up, self.pb.bc.dbcs)
                 K_up.assemble()
-                K_pu = assemble_matrix(self.pb.jac_pu, self.pb.bc.dbcs)
+                K_pu = fem.assemble_matrix(self.pb.jac_pu, self.pb.bc.dbcs)
                 K_pu.assemble()
                 
                 # for stress-mediated volumetric growth, K_pp is not zero!
-                if not isinstance(self.pb.p11, constantvalue.Zero):
-                    K_pp = assemble_matrix(self.pb.p11, [])
+                if not isinstance(self.pb.p11, ufl.constantvalue.Zero):
+                    K_pp = fem.assemble_matrix(self.pb.p11, [])
                     K_pp.assemble()
                 else:
                     K_pp = None
@@ -725,7 +724,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
                 # volumes/fluxes to be passed to 0D model
                 for i in range(len(self.pbc.pbf.cardvasc0D.c_ids)):
-                    cq = assemble_scalar(self.pbc.cq[i])
+                    cq = fem.assemble_scalar(self.pbc.cq[i])
                     cq = self.pbc.comm.allgather(cq)
                     self.pbc.pbf.c[i] = sum(cq)*self.pbc.cq_factor[i]
 
@@ -744,7 +743,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
                 for i in range(self.pbc.num_coupling_surf):
-                    cq = assemble_scalar(self.pbc.cq[i])
+                    cq = fem.assemble_scalar(self.pbc.cq[i])
                     cq = self.pbc.comm.allgather(cq)
                     self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
 
@@ -766,7 +765,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             
             if self.ptype == 'solid_constraint':
                 for i in range(len(self.pbc.surface_p_ids)):
-                    cq = assemble_scalar(self.pbc.cq[i])
+                    cq = fem.assemble_scalar(self.pbc.cq[i])
                     cq = self.pbc.comm.allgather(cq)
                     self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
 
@@ -818,7 +817,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             # offdiagonal u-s columns
             k_us_cols=[]
             for i in range(len(col_ids)):
-                k_us_cols.append(assemble_vector(self.pbc.dforce[i])) # already multiplied by time-integration factor
+                k_us_cols.append(fem.assemble_vector(self.pbc.dforce[i])) # already multiplied by time-integration factor
         
             # offdiagonal s-u rows
             k_su_rows=[]
@@ -832,20 +831,20 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
                 if self.ptype == 'solid_constraint': timefac = self.pbc.pbs.timefac # 3D solid time-integration factor
                 
-                k_su_rows.append(assemble_vector((timefac*self.pbc.cq_factor[i])*self.pbc.dcq[i]))
+                k_su_rows.append(fem.assemble_vector((timefac*self.pbc.cq_factor[i])*self.pbc.dcq[i]))
 
             # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
             for i in range(len(col_ids)):
                 
-                apply_lifting(k_us_cols[i], [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=0.0)
+                fem.apply_lifting(k_us_cols[i], [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=0.0)
                 k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                set_bc(k_us_cols[i], self.pb.bc.dbcs, x0=u.vector, scale=0.0)
+                fem.set_bc(k_us_cols[i], self.pb.bc.dbcs, x0=u.vector, scale=0.0)
             
             for i in range(len(row_ids)):
             
-                apply_lifting(k_su_rows[i], [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=0.0)
+                fem.apply_lifting(k_su_rows[i], [self.pb.jac_uu], [self.pb.bc.dbcs], x0=[u.vector], scale=0.0)
                 k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                set_bc(k_su_rows[i], self.pb.bc.dbcs, x0=u.vector, scale=0.0)
+                fem.set_bc(k_su_rows[i], self.pb.bc.dbcs, x0=u.vector, scale=0.0)
             
             # setup offdiagonal matrices
             locmatsize = self.V3D_map_u.size_local * self.V_u.dofmap.index_map_bs
@@ -946,12 +945,12 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
                     # SIMPLE/block diagonal preconditioner
                     P_us = preconditioner.simple2x2(K_uu,K_us,K_su,self.K_ss)
-                    P_pp = assemble_matrix(self.pb.a_p11, [])
+                    P_pp = fem.assemble_matrix(self.pb.a_p11, [])
                     P = PETSc.Mat().createNest([[P_us.getNestSubMatrix(0,0), None, P_us.getNestSubMatrix(0,1)], [P_us.getNestSubMatrix(1,0), P_pp, None], [None, None, P_us.getNestSubMatrix(1,1)]], isrows=None, iscols=None, comm=self.pbc.comm)
                     P.assemble()
                     
                     ## block diagonal preconditioner
-                    #P_pp = assemble_matrix(self.pb.a_p11, [])
+                    #P_pp = fem.assemble_matrix(self.pb.a_p11, [])
                     #P = PETSc.Mat().createNest([[K_uu, None, None], [None, P_pp, None], [None, None, self.K_ss]], isrows=None, iscols=None, comm=self.pbc.comm)
                     #P.assemble()
                     

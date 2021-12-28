@@ -9,9 +9,8 @@
 import sys
 import numpy as np
 from petsc4py import PETSc
-from dolfinx import Function, VectorFunctionSpace
-from dolfinx.io import XDMFFile
-from ufl import FacetNormal, CellDiameter, dot, sqrt, tr, as_ufl
+from dolfinx import fem, io
+import ufl
 
 from projection import project
 from mpiroutines import allgather_vec
@@ -49,14 +48,14 @@ class IO:
     def readin_mesh(self):
 
         if self.meshfile_type=='ASCII':
-            encoding = XDMFFile.Encoding.ASCII
+            encoding = io.XDMFFile.Encoding.ASCII
         elif self.meshfile_type=='HDF5':
-            encoding = XDMFFile.Encoding.HDF5
+            encoding = io.XDMFFile.Encoding.HDF5
         else:
             raise NameError('Choose either ASCII or HDF5 as meshfile_type, or add a different encoding!')
             
         # read in xdmf mesh - domain
-        with XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
+        with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
             self.mesh = infile.read_mesh(name=self.gridname_domain)
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
@@ -73,21 +72,21 @@ class IO:
             
             try:
                 self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
-                with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
             
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
-                with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
             except:
                 pass
 
             try:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
-                with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b3 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b3')
             except:
                 pass
@@ -96,14 +95,14 @@ class IO:
             
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
-                with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
             
             try:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
-                with XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
             except:
                 pass
@@ -114,9 +113,9 @@ class IO:
         # useful fields:
         
         # facet normal
-        self.n0 = FacetNormal(self.mesh)
+        self.n0 = ufl.FacetNormal(self.mesh)
         # cell diameter
-        self.h0 = CellDiameter(self.mesh)
+        self.h0 = ufl.CellDiameter(self.mesh)
 
 
 
@@ -127,9 +126,9 @@ class IO_solid(IO):
 
         # V_fib_input is function space the fiber vector is defined on (only CG1 or DG0 supported, add further depending on your input...)
         if list(self.fiber_data.keys())[0] == 'nodal':
-            V_fib_input = VectorFunctionSpace(self.mesh, ("CG", 1))
+            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", 1))
         elif list(self.fiber_data.keys())[0] == 'elemental':
-            V_fib_input = VectorFunctionSpace(self.mesh, ("DG", 0))
+            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("DG", 0))
         else:
             raise AttributeError("Specify 'nodal' or 'elemental' for the fiber data input!")
 
@@ -142,7 +141,7 @@ class IO_solid(IO):
         si = 0
         for s in fibarray:
             
-            fib_func_input.append(Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
+            fib_func_input.append(fem.Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
             
             self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si], normalize=True, tol=readin_tol)
 
@@ -150,10 +149,10 @@ class IO_solid(IO):
             ff = project(fib_func_input[si], V_fib, dx_, bcs=[], nm='fib_'+s+'')
             
             # assure that projected field still has unit length (not always necessarily the case)
-            fib_func.append(ff / sqrt(dot(ff,ff)))
+            fib_func.append(ff / ufl.sqrt(ufl.dot(ff,ff)))
 
             ## write input fiber field for checking...
-            #outfile = XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputNEW.xdmf', 'w')
+            #outfile = io.XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputNEW.xdmf', 'w')
             #outfile.write_mesh(self.mesh)
             #outfile.write_function(fib_func_input[si])
 
@@ -217,7 +216,7 @@ class IO_solid(IO):
             
                 self.resultsfiles = {}
                 for res in self.results_to_write:
-                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
+                    outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
                 
@@ -417,7 +416,7 @@ class IO_fluid(IO):
             
                 self.resultsfiles = {}
                 for res in self.results_to_write:
-                    outfile = XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
+                    outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
             

@@ -8,9 +8,8 @@
 
 import time, sys, copy
 import numpy as np
-from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function, DirichletBC
-from dolfinx.fem import assemble_scalar
-from ufl import TrialFunction, TestFunction, FiniteElement, derivative, diff, dx, ds, as_ufl
+from dolfinx import fem
+import ufl
 from petsc4py import PETSc
 
 import utilities
@@ -111,14 +110,14 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
         # add constant Neumann terms for large scale problem (trigger pressures)
         self.neumann_funcs = []
-        w_neumann = as_ufl(0)
+        w_neumann = ufl.as_ufl(0)
         for n in range(len(self.pbsmall.surface_p_ids)):
             
-            self.neumann_funcs.append(Function(self.pblarge.Vd_scalar))
+            self.neumann_funcs.append(fem.Function(self.pblarge.Vd_scalar))
             
             for i in range(len(self.pbsmall.surface_p_ids[n])):
             
-                ds_ = ds(subdomain_data=self.pblarge.io.mt_b1, subdomain_id=self.pbsmall.surface_p_ids[n][i], metadata={'quadrature_degree': self.pblarge.quad_degree})
+                ds_ = ufl.ds(subdomain_data=self.pblarge.io.mt_b1, subdomain_id=self.pbsmall.surface_p_ids[n][i], metadata={'quadrature_degree': self.pblarge.quad_degree})
             
                 # we apply the pressure onto a fixed configuration of the G&R trigger point, determined by the displacement field u_set
                 # in the last G&R cycle, we assure that growth falls below a tolerance and hence the current and the set configuration coincide
@@ -126,7 +125,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
         self.pblarge.weakform_u -= w_neumann
         # linearization not needed (only if we applied the trigger load on the current state)
-        #self.pblarge.jac_uu -= derivative(w_neumann, self.pblarge.u, self.pblarge.du)
+        #self.pblarge.jac_uu -= ufl.derivative(w_neumann, self.pblarge.u, self.pblarge.du)
 
 
 
@@ -311,12 +310,12 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
 
     def compute_volume_large(self):
         
-        J_all = as_ufl(0)
+        J_all = ufl.as_ufl(0)
         for n in range(self.pb.pblarge.num_domains):
             
             J_all += self.pb.pblarge.ki.J(self.pb.pblarge.u) * self.pb.pblarge.dx_[n]
 
-        vol = assemble_scalar(J_all)
+        vol = fem.assemble_scalar(J_all)
         vol = self.pb.comm.allgather(vol)
         volume_large = sum(vol)
 

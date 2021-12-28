@@ -8,9 +8,7 @@
 
 #import h5py
 import time, sys, copy, math
-from dolfinx import Function
-from dolfinx.fem import locate_dofs_topological
-from dolfinx.io import XDMFFile
+from dolfinx import fem, io
 from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np
@@ -87,7 +85,7 @@ class ModelOrderReduction():
                 
                 step = self.snapshotoffset + (i+1)*self.snapshotincr
             
-                field = Function(pb.V_u)
+                field = fem.Function(pb.V_u)
                 
                 if self.snapshotsource == 'petscvector':
                     # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
@@ -181,9 +179,9 @@ class ModelOrderReduction():
         # write out POD modes
         if self.write_pod_modes:
             for i in range(numredbasisvec_true):
-                outfile = XDMFFile(self.comm, pb.io.output_path+'/results_'+pb.simname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
+                outfile = io.XDMFFile(self.comm, pb.io.output_path+'/results_'+pb.simname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
                 outfile.write_mesh(pb.io.mesh)
-                podfunc = Function(pb.V_u)
+                podfunc = fem.Function(pb.V_u)
                 podfunc.vector[ss:se] = self.Phi[ss:se,i]
                 outfile.write_function(podfunc)
         
@@ -227,7 +225,7 @@ class ModelOrderReduction():
         for i in range(len(self.surface_rom)):
             
             # these are local node indices!
-            fnode_indices_local = locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
+            fnode_indices_local = fem.locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
 
             # get global indices
             fnode_indices = pb.V_u.dofmap.index_map.local_to_global(fnode_indices_local)

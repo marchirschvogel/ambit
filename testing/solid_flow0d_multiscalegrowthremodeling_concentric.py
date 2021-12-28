@@ -80,7 +80,7 @@ def main():
                             'tol_outer'             : 3.0e-3,
                             'write_checkpoints'     : True,
                             'restart_cycle'         : 0,
-                            'restart_from_small'    : True}
+                            'restart_from_small'    : False}
 
     MATERIALS            = {'MAT1' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                       'sussmanbathe_vol' : {'kappa' : 1.0e3},

@@ -7,10 +7,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-from dolfinx import DirichletBC, Function
-from dolfinx.fem import locate_dofs_topological
-from dolfinx.mesh import locate_entities_boundary
-from ufl import ds, as_ufl
+from dolfinx import fem, mesh
+import ufl
 
 import expression
 
@@ -42,7 +40,7 @@ class boundary_cond():
             if bdim_r==2: mdata = self.io.mt_b2
             if bdim_r==3: mdata = self.io.mt_b3
             
-            func, func_old = Function(V), Function(V)
+            func, func_old = fem.Function(V), fem.Function(V)
             
             if 'curve' in d.keys():
                 load = expression.template_vector()
@@ -58,28 +56,28 @@ class boundary_cond():
 
             if d['dir'] == 'all':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( DirichletBC(func, locate_dofs_topological(V, self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological(V, self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
             
             elif d['dir'] == 'x':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(0)) )
+                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(0)) )
 
             elif d['dir'] == 'y':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(1)) )
+                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(1)) )
 
             elif d['dir'] == 'z':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(2)) )
+                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(2)) )
 
             elif d['dir'] == '2dimX':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-bdim_r, locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX)), V.sub(0)) )
+                self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX)), V.sub(0)) )
 
             elif d['dir'] == '2dimY':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-bdim_r, locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY)), V.sub(1)) )
+                self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY)), V.sub(1)) )
                 
             elif d['dir'] == '2dimZ':
-                self.dbcs.append( DirichletBC(func, locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-bdim_r, locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ)), V.sub(2)) )
+                self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ)), V.sub(2)) )
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
@@ -103,7 +101,7 @@ class boundary_cond_solid(boundary_cond):
     # set Neumann BCs
     def neumann_bcs(self, V, V_real, u, u_old):
         
-        w, w_old = as_ufl(0), as_ufl(0)
+        w, w_old = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for n in self.bc_dict['neumann']:
             
@@ -118,7 +116,7 @@ class boundary_cond_solid(boundary_cond):
                 
                 if n['dir'] == 'xyz':
                 
-                    func, func_old = Function(V), Function(V)
+                    func, func_old = fem.Function(V), fem.Function(V)
                     
                     if 'curve' in n.keys():
                         load = expression.template_vector()
@@ -132,14 +130,14 @@ class boundary_cond_solid(boundary_cond):
                     
                     for i in range(len(n['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                     
                         w     += self.vf.deltaW_ext_neumann_ref(func, db_)
                         w_old += self.vf.deltaW_ext_neumann_ref(func_old, db_)
                     
                 elif n['dir'] == 'normal': # reference normal
                     
-                    func, func_old = Function(V_real), Function(V_real)
+                    func, func_old = fem.Function(V_real), fem.Function(V_real)
                     
                     if 'curve' in n.keys():
                         load = expression.template()
@@ -153,7 +151,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     for i in range(len(n['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                     
                         w     += self.vf.deltaW_ext_neumann_refnormal(func, db_)
                         w_old += self.vf.deltaW_ext_neumann_refnormal(func_old, db_)
@@ -166,7 +164,7 @@ class boundary_cond_solid(boundary_cond):
                 
                 if n['dir'] == 'normal': # true normal
                     
-                    func, func_old = Function(V_real), Function(V_real)
+                    func, func_old = fem.Function(V_real), fem.Function(V_real)
                     
                     if 'curve' in n.keys():
                         load = expression.template()
@@ -180,7 +178,7 @@ class boundary_cond_solid(boundary_cond):
 
                     for i in range(len(n['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                         w     += self.vf.deltaW_ext_neumann_true(self.ki.J(u), self.ki.F(u), func, db_)
                         w_old += self.vf.deltaW_ext_neumann_true(self.ki.J(u_old), self.ki.F(u_old), func_old, db_)
@@ -197,7 +195,7 @@ class boundary_cond_solid(boundary_cond):
     # set Robin BCs
     def robin_bcs(self, u, vel, u_old, v_old, u_pre=None):
         
-        w, w_old = as_ufl(0), as_ufl(0)
+        w, w_old = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for r in self.bc_dict['robin']:
             
@@ -214,7 +212,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     for i in range(len(r['id'])):
                     
-                        db_ = ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                         
                         w     += self.vf.deltaW_ext_robin_spring(u, r['stiff'], db_, u_pre)
                         w_old += self.vf.deltaW_ext_robin_spring(u_old, r['stiff'], db_, u_pre)
@@ -224,7 +222,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     for i in range(len(r['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
                         w     += self.vf.deltaW_ext_robin_spring_normal(u, r['stiff'], db_, u_pre)
                         w_old += self.vf.deltaW_ext_robin_spring_normal(u_old, r['stiff'], db_, u_pre) 
@@ -239,7 +237,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     for i in range(len(r['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                     
                         w     += self.vf.deltaW_ext_robin_dashpot(vel, r['visc'], db_)
                         w_old += self.vf.deltaW_ext_robin_dashpot(v_old, r['visc'], db_) 
@@ -249,7 +247,7 @@ class boundary_cond_solid(boundary_cond):
                     
                     for i in range(len(r['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
                         w     += self.vf.deltaW_ext_robin_dashpot_normal(vel, r['visc'], db_)
                         w_old += self.vf.deltaW_ext_robin_dashpot_normal(v_old, r['visc'], db_) 
@@ -267,7 +265,7 @@ class boundary_cond_solid(boundary_cond):
     # set membrane surface BCs
     def membranesurf_bcs(self, u, u_old):
         
-        w, w_old = as_ufl(0), as_ufl(0)
+        w, w_old = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for m in self.bc_dict['membrane']:
             
@@ -280,15 +278,12 @@ class boundary_cond_solid(boundary_cond):
                     
             for i in range(len(m['id'])):
             
-                db_ = ds(subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                db_ = ufl.ds(subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
                 w     += self.vf.deltaW_ext_membrane(self.ki.F(u), m['params'], db_)
                 w_old += self.vf.deltaW_ext_membrane(self.ki.F(u_old), m['params'], db_)
 
         return w, w_old
-    
-
-
 
 
 
@@ -297,7 +292,7 @@ class boundary_cond_fluid(boundary_cond):
     # set Neumann BCs
     def neumann_bcs(self, V, V_real):
         
-        w, w_old = as_ufl(0), as_ufl(0)
+        w, w_old = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for n in self.bc_dict['neumann']:
             
@@ -310,7 +305,7 @@ class boundary_cond_fluid(boundary_cond):
 
             if n['dir'] == 'xyz':
             
-                func, func_old = Function(V), Function(V)
+                func, func_old = fem.Function(V), fem.Function(V)
                 
                 if 'curve' in n.keys():
                     load = expression.template_vector()
@@ -324,7 +319,7 @@ class boundary_cond_fluid(boundary_cond):
                 
                 for i in range(len(n['id'])):
                     
-                    db_ = ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
                     w     += self.vf.deltaP_ext_neumann(func, db_)
                     w_old += self.vf.deltaP_ext_neumann(func_old, db_)
@@ -332,7 +327,7 @@ class boundary_cond_fluid(boundary_cond):
                 
             elif n['dir'] == 'normal': # reference normal
                 
-                func, func_old = Function(V_real), Function(V_real)
+                func, func_old = fem.Function(V_real), fem.Function(V_real)
                 
                 if 'curve' in n.keys():
                     load = expression.template()
@@ -346,7 +341,7 @@ class boundary_cond_fluid(boundary_cond):
                 
                 for i in range(len(n['id'])):
                     
-                    db_ = ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
                     w     += self.vf.deltaP_ext_neumann_normal(func, db_)
                     w_old += self.vf.deltaP_ext_neumann_normal(func_old, db_)
@@ -360,7 +355,7 @@ class boundary_cond_fluid(boundary_cond):
     # set Robin BCs
     def robin_bcs(self, v, v_old):
         
-        w, w_old = as_ufl(0), as_ufl(0)
+        w, w_old = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for r in self.bc_dict['robin']:
             
@@ -377,7 +372,7 @@ class boundary_cond_fluid(boundary_cond):
                     
                     for i in range(len(r['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                     
                         w     += self.vf.deltaP_ext_robin_dashpot(v, r['visc'], db_)
                         w_old += self.vf.deltaP_ext_robin_dashpot(v_old, r['visc'], db_) 
@@ -386,7 +381,7 @@ class boundary_cond_fluid(boundary_cond):
                 
                     for i in range(len(r['id'])):
                         
-                        db_ = ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
                         w     += self.vf.deltaP_ext_robin_dashpot_normal(v, r['visc'], db_)
                         w_old += self.vf.deltaP_ext_robin_dashpot_normal(v_old, r['visc'], db_) 

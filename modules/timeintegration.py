@@ -8,7 +8,7 @@
 
 import sys
 from petsc4py import PETSc
-from ufl import constantvalue
+import ufl
 
 from projection import project
 import expression
@@ -134,8 +134,8 @@ class timeintegration_solid(timeintegration):
             acc = self.update_a_ost(u, u_old, v_old, a_old, ufl=True)
             vel = self.update_v_ost(acc, u, u_old, v_old, a_old, ufl=True)
         elif self.timint == 'static':
-            acc = constantvalue.zero(3)
-            vel = constantvalue.zero(3)
+            acc = ufl.constantvalue.zero(3)
+            vel = ufl.constantvalue.zero(3)
         else:
             raise NameError("Unknown time-integration algorithm for solid mechanics!")
         
@@ -300,7 +300,7 @@ class timeintegration_fluid(timeintegration):
         if self.timint == 'ost':
             acc = self.update_a_ost(v, v_old, a_old, ufl=True)
         elif self.timint == 'static':
-            acc = constantvalue.zero(3)
+            acc = ufl.constantvalue.zero(3)
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
         

@@ -8,9 +8,8 @@
 
 import time, sys, math
 import numpy as np
-from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function
-from dolfinx.fem import assemble_scalar
-from ufl import TrialFunction, TestFunction, FiniteElement, derivative, diff, dx, ds, tr, as_ufl
+from dolfinx import fem
+import ufl
 from petsc4py import PETSc
 
 import utilities
@@ -66,20 +65,20 @@ class SolidmechanicsConstraintProblem():
         # 3D constraint variable (volume or flux)
         self.constr, self.constr_old = [], []
         
-        self.work_coupling, self.work_coupling_old, self.work_coupling_prestr = as_ufl(0), as_ufl(0), as_ufl(0)
+        self.work_coupling, self.work_coupling_old, self.work_coupling_prestr = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
             
             self.pr0D = expression.template()
             
-            self.coupfuncs.append(Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(Function(self.pbs.Vd_scalar))
+            self.coupfuncs.append(fem.Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
             
-            cq_, cq_old_ = as_ufl(0), as_ufl(0)
+            cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_c_ids[n])):
                 
-                ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_c_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                ds_vq = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_c_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 
                 # currently, only volume or flux constraints are supported
                 if self.coupling_params['constraint_quantity'][n] == 'volume':
@@ -92,12 +91,12 @@ class SolidmechanicsConstraintProblem():
                     raise NameError("Unknown constraint quantity! Choose either volume or flux!")
             
             self.cq.append(cq_), self.cq_old.append(cq_old_)
-            self.dcq.append(derivative(self.cq[-1], self.pbs.u, self.pbs.du))
+            self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
             
-            df_ = as_ufl(0)
+            df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
             
-                ds_p = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                ds_p = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 df_ += self.pbs.timefac*self.pbs.vf.surface(self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), ds_p)
             
                 # add to solid rhs contributions
@@ -114,7 +113,7 @@ class SolidmechanicsConstraintProblem():
         self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
         
         # add to solid Jacobian
-        self.pbs.jac_uu += -self.pbs.timefac * derivative(self.work_coupling, self.pbs.u, self.pbs.du)
+        self.pbs.jac_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
 
     def set_pressure_fem(self, var, p0Da):
@@ -171,7 +170,7 @@ class SolidmechanicsConstraintSolver():
         self.pb.constr, self.pb.constr_old = [], []
         for i in range(self.pb.num_coupling_surf):
             lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
-            con = assemble_scalar(self.pb.cq[i])
+            con = fem.assemble_scalar(self.pb.cq[i])
             con = self.pb.pbs.comm.allgather(con)
             self.pb.constr.append(sum(con))
             self.pb.constr_old.append(sum(con))
@@ -181,7 +180,7 @@ class SolidmechanicsConstraintSolver():
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
 
-            jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
+            jac_a = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)

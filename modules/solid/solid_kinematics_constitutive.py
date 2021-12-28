@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ufl import tr, det, dot, grad, inv, dev, inner, Identity, variable, ln, sqrt, exp, diff, conditional, ge, gt, outer, cross, as_tensor, indices, as_ufl, constantvalue
+import ufl
 from petsc4py import PETSc
 
 from solid_material import materiallaw, growth, growthfunction
@@ -49,16 +49,16 @@ class constitutive:
                     self.matparams_remod.append(list(self.gandrparams['remodeling_mat'].values())[i])
             
         # identity tensor
-        self.I = Identity(3)
+        self.I = ufl.Identity(3)
 
 
     # 2nd Piola-Kirchhoff stress core routine
     # we have everything in a Total Lagrangian setting and use S and C to express our internal virtual work
     def S(self, u_, p_, ivar=None, rvar=None, tang=False):
         
-        C_ = variable(self.kin.C(u_))
+        C_ = ufl.variable(self.kin.C(u_))
 
-        stress = constantvalue.zero((3,3))
+        stress = ufl.constantvalue.zero((3,3))
 
         # volumetric (kinematic) growth
         if self.mat_growth:
@@ -85,7 +85,7 @@ class constitutive:
             
             self.stress_base = stress
             
-            self.stress_remod = constantvalue.zero((3,3))
+            self.stress_remod = ufl.constantvalue.zero((3,3))
             
             m = 0
             for matlaw in self.matmodels_remod:
@@ -101,13 +101,13 @@ class constitutive:
         if self.incompr_2field:
             if self.mat_growth:
                 # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J^{\mathrm{e}}-1)]}{\partial \boldsymbol{C}}
-                stress += -2.*diff(p_*(sqrt(det(self.C_e(C_,theta_)))-1.),C_)     
+                stress += -2.*ufl.diff(p_*(ufl.sqrt(ufl.det(self.C_e(C_,theta_)))-1.),C_)     
             else:
                 # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J-1)]}{\partial \boldsymbol{C}} = -Jp\boldsymbol{C}^{-1}
-                stress += -2.*diff(p_*(sqrt(det(C_))-1.),C_)
+                stress += -2.*ufl.diff(p_*(ufl.sqrt(ufl.det(C_))-1.),C_)
 
         if tang:
-            return 2.*diff(stress,C_)
+            return 2.*ufl.diff(stress,C_)
         else:
             return stress
 
@@ -168,15 +168,15 @@ class constitutive:
             
         elif matlaw == 'inertia':
             # density is added to kinetic virtual work
-            return constantvalue.zero((3,3))
+            return ufl.constantvalue.zero((3,3))
         
         elif matlaw == 'rayleigh_damping':
             # Rayleigh damping is added to virtual work
-            return constantvalue.zero((3,3))
+            return ufl.constantvalue.zero((3,3))
         
         elif matlaw == 'growth':
             # growth (and remodeling) treated separately
-            return constantvalue.zero((3,3))
+            return ufl.constantvalue.zero((3,3))
             
         else:
 
@@ -190,12 +190,12 @@ class constitutive:
     
     # deviatoric part of Cauchy stress tensor: sigma_dev = sigma - tr(sigma)/3 I
     def sigma_dev(self, u_, p_, ivar, rvar):
-        return dev(self.sigma(u_,p_,ivar,rvar))
+        return ufl.dev(self.sigma(u_,p_,ivar,rvar))
     
     
     # von Mises Cauchy stress
     def sigma_vonmises(self, u_, p_, ivar, rvar):
-        return sqrt(3.*0.5*inner(self.sigma_dev(u_,p_,ivar,rvar),self.sigma_dev(u_,p_,ivar,rvar)))
+        return ufl.sqrt(3.*0.5*ufl.inner(self.sigma_dev(u_,p_,ivar,rvar),self.sigma_dev(u_,p_,ivar,rvar)))
     
     
     # 1st Piola-Kirchhoff stress tensor: P = F*S
@@ -227,8 +227,8 @@ class constitutive:
 
     # viscous material tangent, for simple Green-Lagrange strain rate-dependent material with pseudo potential Psi_v = 0.5 * eta * dEdt : dEdt
     def Cvisco(self, eta, dt):
-        i, j, k, l = indices(4)
-        IFOUR = as_tensor(0.5*(self.I[i,k]*self.I[j,l] + self.I[i,l]*self.I[j,k]),(i,j,k,l))
+        i, j, k, l = ufl.indices(4)
+        IFOUR = ufl.as_tensor(0.5*(self.I[i,k]*self.I[j,l] + self.I[i,l]*self.I[j,k]),(i,j,k,l))
         return eta*IFOUR/dt
         
 
@@ -254,33 +254,33 @@ class constitutive:
             raise NameError("Unknown growth direction.")
         
         if tang:
-            return diff(defgrd_gr,theta_)
+            return ufl.diff(defgrd_gr,theta_)
         else:
             return defgrd_gr
 
 
     # elastic right Cauchy-Green tensor
     def C_e(self, C_, theta_):
-        return inv(self.F_g(theta_)) * C_ * inv(self.F_g(theta_)).T
+        return ufl.inv(self.F_g(theta_)) * C_ * ufl.inv(self.F_g(theta_)).T
     
     # elastic fiber stretch
     def fibstretch_e(self, C_, theta_, fib_):
-        return sqrt(dot(dot(self.C_e(C_,theta_),fib_), fib_))
+        return ufl.sqrt(ufl.dot(ufl.dot(self.C_e(C_,theta_),fib_), fib_))
 
     # elastic determinant of deformation gradient
     def J_e(self, u_, theta_):
-        return det(self.kin.F(u_)*inv(self.F_g(theta_)))
+        return ufl.det(self.kin.F(u_)*ufl.inv(self.F_g(theta_)))
 
     # dJe/dC, Je is formulated in terms of C
     def dJedC(self, u_, theta_):
-        C_ = variable(self.kin.C(u_))
-        Je = sqrt(det(self.C_e(C_, theta_)))
-        return diff(Je,C_)
+        C_ = ufl.variable(self.kin.C(u_))
+        Je = ufl.sqrt(ufl.det(self.C_e(C_, theta_)))
+        return ufl.diff(Je,C_)
 
 
     # growth velocity gradient tensor
     def L(self, theta_, theta_old, dt):
-        return dot((self.F_g(theta_) - self.F_g(theta_old))/dt, inv(self.F_g(theta_)))
+        return ufl.dot((self.F_g(theta_) - self.F_g(theta_old))/dt, ufl.inv(self.F_g(theta_)))
 
 
     # growth remodeling fraction: fraction of remodeled material
@@ -304,7 +304,7 @@ class constitutive:
             raise NameError("Unknown growth direction.")
         
         if tang:
-            return diff(phi,theta_)
+            return ufl.diff(phi,theta_)
         else:
             return phi
 
@@ -325,12 +325,12 @@ class constitutive:
         except: reduc = 1
         
         # threshold should not be lower than specified (only relevant for multiscale analysis, where threshold is set element-wise)
-        threshold = conditional(gt(thres,grparfuncs['growth_thres_0']), (1.+omega)*thres, grparfuncs['growth_thres_0'])
+        threshold = ufl.conditional(ufl.gt(thres,grparfuncs['growth_thres_0']), (1.+omega)*thres, grparfuncs['growth_thres_0'])
 
         # trace of elastic Mandel stress
         if self.growth_trig == 'volstress':
             
-            trigger = reduc * tr(self.M_e(u_,p_,self.kin.C(u_),ivar,rvar))
+            trigger = reduc * ufl.tr(self.M_e(u_,p_,self.kin.C(u_),ivar,rvar))
             
         # elastic fiber stretch
         elif self.growth_trig == 'fibstretch':
@@ -347,7 +347,7 @@ class constitutive:
         r_growth = theta_ - theta_old_ - ktheta * (trigger - threshold) * dt
 
         # tangent
-        K_growth = diff(r_growth,theta_)
+        K_growth = ufl.diff(r_growth,theta_)
 
         # increment
         del_theta = -r_growth / K_growth
@@ -372,7 +372,7 @@ class constitutive:
         ktheta = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs, 'ktheta')
         K_growth = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs, 'tang')
         
-        i, j, k, l = indices(4)
+        i, j, k, l = ufl.indices(4)
         
         if self.growth_trig == 'volstress':
             
@@ -380,13 +380,13 @@ class constitutive:
             
             # TeX: \frac{\partial \vartheta}{\partial \boldsymbol{C}} = \frac{k(\vartheta) \Delta t}{\frac{\partial r}{\partial \vartheta}}\left(\boldsymbol{S} + \boldsymbol{C} : \frac{1}{2} \check{\mathbb{C}}\right)
 
-            tangdC = (ktheta*dt/K_growth) * (self.S(u_,p_,ivar,rvar) + 0.5*as_tensor(self.kin.C(u_)[i,j]*Cmat[i,j,k,l], (k,l)))
+            tangdC = (ktheta*dt/K_growth) * (self.S(u_,p_,ivar,rvar) + 0.5*ufl.as_tensor(self.kin.C(u_)[i,j]*Cmat[i,j,k,l], (k,l)))
             
         elif self.growth_trig == 'fibstretch':
             
             # TeX: \frac{\partial \vartheta}{\partial \boldsymbol{C}} = \frac{k(\vartheta) \Delta t}{\frac{\partial r}{\partial \vartheta}} \frac{1}{2\lambda_{f}} \boldsymbol{f}_{0}\otimes \boldsymbol{f}_{0}
 
-            tangdC = (ktheta*dt/K_growth) * outer(self.kin.fib_funcs[0],self.kin.fib_funcs[0])/(2.*self.kin.fibstretch(u_,self.kin.fib_funcs[0]))
+            tangdC = (ktheta*dt/K_growth) * ufl.outer(self.kin.fib_funcs[0],self.kin.fib_funcs[0])/(2.*self.kin.fibstretch(u_,self.kin.fib_funcs[0]))
 
         else:
             raise NameError("Unkown growth_trig!")
@@ -407,20 +407,20 @@ class constitutive:
 
         Cmat = self.S(u_,p_,ivar,rvar,tang=True)
 
-        i, j, k, l, m, n = indices(6)
+        i, j, k, l, m, n = ufl.indices(6)
         
         # elastic material tangent (living in intermediate growth configuration)
-        Cmat_e = dot(self.F_g(theta_),dot(self.F_g(theta_),dot(Cmat, dot(self.F_g(theta_).T,self.F_g(theta_).T))))
+        Cmat_e = ufl.dot(self.F_g(theta_),ufl.dot(self.F_g(theta_),ufl.dot(Cmat, ufl.dot(self.F_g(theta_).T,self.F_g(theta_).T))))
 
-        Fginv_outertop_S     = as_tensor(inv(self.F_g(theta_))[i,k]*self.S(u_,p_,ivar,rvar)[j,l], (i,j,k,l))
-        S_outerbot_Fginv     = as_tensor(self.S(u_,p_,ivar,rvar)[i,l]*inv(self.F_g(theta_))[j,k], (i,j,k,l))
-        Fginv_outertop_Fginv = as_tensor(inv(self.F_g(theta_))[i,k]*inv(self.F_g(theta_))[j,l], (i,j,k,l))
-        FginvT_outertop_Ce   = as_tensor(inv(self.F_g(theta_)).T[i,k]*self.C_e(self.kin.C(u_),theta_)[j,l], (i,j,k,l))
-        Ce_outerbot_FginvT   = as_tensor(self.C_e(self.kin.C(u_),theta_)[i,l]*inv(self.F_g(theta_)).T[j,k], (i,j,k,l))
+        Fginv_outertop_S     = ufl.as_tensor(ufl.inv(self.F_g(theta_))[i,k]*self.S(u_,p_,ivar,rvar)[j,l], (i,j,k,l))
+        S_outerbot_Fginv     = ufl.as_tensor(self.S(u_,p_,ivar,rvar)[i,l]*ufl.inv(self.F_g(theta_))[j,k], (i,j,k,l))
+        Fginv_outertop_Fginv = ufl.as_tensor(ufl.inv(self.F_g(theta_))[i,k]*ufl.inv(self.F_g(theta_))[j,l], (i,j,k,l))
+        FginvT_outertop_Ce   = ufl.as_tensor(ufl.inv(self.F_g(theta_)).T[i,k]*self.C_e(self.kin.C(u_),theta_)[j,l], (i,j,k,l))
+        Ce_outerbot_FginvT   = ufl.as_tensor(self.C_e(self.kin.C(u_),theta_)[i,l]*ufl.inv(self.F_g(theta_)).T[j,k], (i,j,k,l))
 
-        Cmat_e_with_C_e = 0.5*as_tensor(Cmat_e[i,j,m,n]*(FginvT_outertop_Ce[m,n,k,l] + Ce_outerbot_FginvT[m,n,k,l]), (i,j,k,l))
+        Cmat_e_with_C_e = 0.5*ufl.as_tensor(Cmat_e[i,j,m,n]*(FginvT_outertop_Ce[m,n,k,l] + Ce_outerbot_FginvT[m,n,k,l]), (i,j,k,l))
 
-        Fginv_outertop_Fginv_with_Cmat_e_with_C_e = as_tensor(Fginv_outertop_Fginv[i,j,m,n]*Cmat_e_with_C_e[m,n,k,l], (i,j,k,l))
+        Fginv_outertop_Fginv_with_Cmat_e_with_C_e = ufl.as_tensor(Fginv_outertop_Fginv[i,j,m,n]*Cmat_e_with_C_e[m,n,k,l], (i,j,k,l))
 
         return -(Fginv_outertop_S + S_outerbot_Fginv) - Fginv_outertop_Fginv_with_Cmat_e_with_C_e
 
@@ -435,15 +435,15 @@ class constitutive:
         
         dFg_dtheta = self.F_g(theta_,tang=True)
         
-        i, j, k, l = indices(4)
+        i, j, k, l = ufl.indices(4)
         
         dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs)
         
         dS_dFg_ = self.dS_dFg(u_, p_, ivar, rvar, theta_old_, dt)
 
-        dS_dFg_times_dFg_dtheta = as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
+        dS_dFg_times_dFg_dtheta = ufl.as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
         
-        Cgrowth = 2.*as_tensor(dS_dFg_times_dFg_dtheta[i,j]*dtheta_dC_[k,l], (i,j,k,l))
+        Cgrowth = 2.*ufl.as_tensor(dS_dFg_times_dFg_dtheta[i,j]*dtheta_dC_[k,l], (i,j,k,l))
         
         return Cgrowth
 
@@ -460,7 +460,7 @@ class constitutive:
         
         if self.growth_trig == 'volstress':
             
-            tangdp = (ktheta*dt/K_growth) * ( diff(tr(self.M_e(u_,p_,self.kin.C(u_),ivar,rvar)),p_) )
+            tangdp = (ktheta*dt/K_growth) * ( ufl.diff(ufl.tr(self.M_e(u_,p_,self.kin.C(u_),ivar,rvar)),p_) )
             
         elif self.growth_trig == 'fibstretch':
             
@@ -481,13 +481,13 @@ class constitutive:
         
         dFg_dtheta = self.F_g(theta_,tang=True)
         
-        i, j, k, l = indices(4)
+        i, j, k, l = ufl.indices(4)
         
         dtheta_dp_ = self.dtheta_dp(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs)
         
         dS_dFg_ = self.dS_dFg(u_, p_, ivar, rvar, theta_old_, dt)
 
-        dS_dFg_times_dFg_dtheta = as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
+        dS_dFg_times_dFg_dtheta = ufl.as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
         
         Cgrowth_p = dS_dFg_times_dFg_dtheta * dtheta_dp_
         
@@ -501,12 +501,12 @@ class constitutive:
         
         theta_ = ivar["theta"]
         
-        i, j, k, l = indices(4)
+        i, j, k, l = ufl.indices(4)
         
         dphi_dtheta_ = self.phi_remod(theta_,tang=True)
         dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs)
 
-        Cremod = 2.*dphi_dtheta_ * as_tensor(dtheta_dC_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
+        Cremod = 2.*dphi_dtheta_ * ufl.as_tensor(dtheta_dC_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
 
         return Cremod
 
@@ -537,27 +537,27 @@ class kinematics:
         self.F_hist = F_hist
         
         # identity tensor
-        self.I = Identity(3)
+        self.I = ufl.Identity(3)
 
 
     # deformation gradient: F = I + du/dx0
     def F(self, u_):
         if self.F_hist is not None:
-            return self.F_hist*(self.I + grad(u_))
+            return self.F_hist*(self.I + ufl.grad(u_))
         else:
-            return self.I + grad(u_)
+            return self.I + ufl.grad(u_)
 
 
     # determinant of deformation gradient: J = det(F)
     def J(self, u_):
-        return det(self.F(u_))
+        return ufl.det(self.F(u_))
 
 
     # dJ/dC = J/2 * C^-1, J is formulated as sqrt(det(C))
     def dJdC(self, u_):
-        C_ = variable(self.C(u_))
-        J = sqrt(det(C_))
-        return diff(J,C_)
+        C_ = ufl.variable(self.C(u_))
+        J = ufl.sqrt(ufl.det(C_))
+        return ufl.diff(J,C_)
 
 
     # right Cauchy-Green tensor: C = F.T * F
@@ -577,12 +577,12 @@ class kinematics:
     
     # Euler-Almansi strain tensor: e = 0.5*(I - b^-1)
     def e(self, u_):
-        return 0.5*(self.I - inv(self.b(u_)))
+        return 0.5*(self.I - ufl.inv(self.b(u_)))
 
 
     # fiber stretch
     def fibstretch(self, u_, fib_):
-        return sqrt(dot(dot(self.C(u_),fib_), fib_))
+        return ufl.sqrt(ufl.dot(ufl.dot(self.C(u_),fib_), fib_))
 
 
     # prestressing update (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010)

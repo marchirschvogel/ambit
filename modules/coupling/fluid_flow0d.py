@@ -8,9 +8,8 @@
 
 import time, sys, math
 import numpy as np
-from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function
-from dolfinx.fem import assemble_scalar
-from ufl import TrialFunction, TestFunction, FiniteElement, derivative, diff, dx, ds, as_ufl
+from dolfinx import fem
+import ufl
 from petsc4py import PETSc
 
 import utilities
@@ -73,20 +72,20 @@ class FluidmechanicsFlow0DProblem():
             # 3D fluxes
             self.constr, self.constr_old = [], []
 
-        self.power_coupling, self.power_coupling_old = as_ufl(0), as_ufl(0)
+        self.power_coupling, self.power_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
     
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
             
             self.pr0D = expression.template()
             
-            self.coupfuncs.append(Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(Function(self.pbs.Vd_scalar))
+            self.coupfuncs.append(fem.Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
 
-            cq_, cq_old_ = as_ufl(0), as_ufl(0)
+            cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                ds_vq = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
           
                 if self.coupling_params['coupling_quantity'][n] == 'flux':
                     assert(self.coupling_type == 'monolithic_direct')
@@ -100,12 +99,12 @@ class FluidmechanicsFlow0DProblem():
                     raise NameError("Unknown coupling quantity! Choose flux or pressure!")
             
             self.cq.append(cq_), self.cq_old.append(cq_old_)
-            self.dcq.append(derivative(self.cq[-1], self.pbs.v, self.pbs.dv))
+            self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.v, self.pbs.dv))
 
-            df_ = as_ufl(0)
+            df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
                 
-                ds_p = ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                ds_p = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 df_ += self.pbs.timefac*self.pbs.vf.surface(ds_p)
             
                 # add to fluid rhs contributions
@@ -118,7 +117,7 @@ class FluidmechanicsFlow0DProblem():
         self.pbs.weakform_u += -self.pbs.timefac * self.power_coupling - (1.-self.pbs.timefac) * self.power_coupling_old
         
         # add to fluid Jacobian
-        self.pbs.jac_uu += -self.pbs.timefac * derivative(self.power_coupling, self.pbs.v, self.pbs.dv)
+        self.pbs.jac_uu += -self.pbs.timefac * ufl.derivative(self.power_coupling, self.pbs.v, self.pbs.dv)
 
         if self.coupling_type == 'monolithic_lagrange':
             # old Lagrange multipliers - initialize with initial pressures
@@ -179,7 +178,7 @@ class FluidmechanicsFlow0DSolver():
         if self.pb.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
             for i in range(self.pb.num_coupling_surf):
-                cq = assemble_scalar(self.pb.cq_old[i])
+                cq = fem.assemble_scalar(self.pb.cq_old[i])
                 cq = self.pb.pbs.comm.allgather(cq)
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
         
@@ -187,7 +186,7 @@ class FluidmechanicsFlow0DSolver():
             for i in range(self.pb.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
                 self.pb.pbf.c.append(lm_sq[i])
-                con = assemble_scalar(self.pb.cq_old[i])
+                con = fem.assemble_scalar(self.pb.cq_old[i])
                 con = self.pb.pbs.comm.allgather(con)
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
@@ -207,7 +206,7 @@ class FluidmechanicsFlow0DSolver():
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaP_kin_old + self.pb.pbs.deltaP_int_old - self.pb.pbs.deltaP_ext_old - self.pb.power_coupling_old
             
-            jac_a = derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.dv) # actually linear in a_old
+            jac_a = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)

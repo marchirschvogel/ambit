@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ufl import dot, inner, outer, inv, grad, div, det, tr, as_tensor, indices, derivative, diff, sym, constantvalue, as_ufl, exp, sqrt, Identity, variable
+import ufl
 
 # solid mechanics variational base class
 # Principle of Virtual Work
@@ -27,12 +27,12 @@ class variationalform:
     # TeX: \delta \mathcal{W}_{\mathrm{kin}} := \int\limits_{\Omega_{0}} \rho_{0}\boldsymbol{a} \cdot \delta\boldsymbol{u} \,\mathrm{d}V
     def deltaW_kin(self, a, rho0, ddomain):
         
-        return rho0*dot(a, self.var_u)*ddomain
+        return rho0*ufl.dot(a, self.var_u)*ddomain
 
     # TeX: \delta \mathcal{W}_{\mathrm{kin,mass}} := \int\limits_{\Omega_{0}} \dot{\rho}_{0}\boldsymbol{v} \cdot \delta\boldsymbol{u} \,\mathrm{d}V
     def deltaW_kin_masschange(self, v, drho0, ddomain):
         
-        return drho0*dot(v, self.var_u)*ddomain
+        return drho0*ufl.dot(v, self.var_u)*ddomain
 
     ### Internal virtual work
 
@@ -40,8 +40,8 @@ class variationalform:
     def deltaW_int(self, S, F, ddomain):
         
         # TeX: \int\limits_{\Omega_0}\boldsymbol{S} : \frac{1}{2}\delta \boldsymbol{C}\mathrm{d}V
-        var_C = grad(self.var_u).T * F + F.T * grad(self.var_u)
-        return inner(S, 0.5*var_C)*ddomain
+        var_C = ufl.grad(self.var_u).T * F + F.T * ufl.grad(self.var_u)
+        return ufl.inner(S, 0.5*var_C)*ddomain
 
     def deltaW_int_pres(self, J, ddomain):
         # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1\right)\delta p\,\mathrm{d}V
@@ -59,11 +59,11 @@ class variationalform:
     # hence, we get a K_mat(u_0) * v contribution in the assembled FE system
     def deltaW_damp(self, eta_m, eta_k, rho0, Cmat, v, ddomain):
         
-        i, j, k, l, m, n = indices(6)
+        i, j, k, l, m, n = ufl.indices(6)
 
-        Cmat_gradv = as_tensor(Cmat[i,j,k,l]*sym(grad(v))[k,l], (i,j))
+        Cmat_gradv = ufl.as_tensor(Cmat[i,j,k,l]*ufl.sym(ufl.grad(v))[k,l], (i,j))
 
-        return (eta_m * rho0*dot(v, self.var_u) + eta_k * inner(Cmat_gradv,sym(grad(self.var_u)))) * ddomain
+        return (eta_m * rho0*ufl.dot(v, self.var_u) + eta_k * ufl.inner(Cmat_gradv,ufl.sym(ufl.grad(self.var_u)))) * ddomain
 
 
     # linearization of internal virtual work
@@ -79,22 +79,22 @@ class variationalform:
     def Lin_deltaW_int_du(self, S, F, u, Ctang, ddomain):
         
         C = F.T*F
-        var_C = grad(self.var_u).T * F + F.T * grad(self.var_u)
+        var_C = ufl.grad(self.var_u).T * F + F.T * ufl.grad(self.var_u)
 
-        i, j, k, l, m, n = indices(6)
-        Ctang_DuC = as_tensor(Ctang[i,j,k,l]*derivative(C, u, self.du)[k,l], (i,j))
-        return (inner(0.5*Ctang_DuC,0.5*var_C) + inner(S,derivative(0.5*var_C, u, self.du)))*ddomain
+        i, j, k, l, m, n = ufl.indices(6)
+        Ctang_DuC = ufl.as_tensor(Ctang[i,j,k,l]*ufl.derivative(C, u, self.du)[k,l], (i,j))
+        return (ufl.inner(0.5*Ctang_DuC,0.5*var_C) + ufl.inner(S,ufl.derivative(0.5*var_C, u, self.du)))*ddomain
 
     ## 1:1 from Holzapfel 2000, formula 8.81 - not working! The material stiffness does not work, no idea why... so see Lin_deltaW_int_du above for a correct form
     #def Lin_deltaW_int_du(self, S, F, u, Ctang, ddomain):
 
-        #FT_graddu = F.T * grad(self.du)
-        #FT_gradvaru = F.T * grad(self.var_u)
+        #FT_graddu = F.T * ufl.grad(self.du)
+        #FT_gradvaru = F.T * ufl.grad(self.var_u)
         
-        #i, j, k, l = indices(4)
-        #FT_graddu_Ctang = as_tensor(Ctang[i,j,k,l]*FT_graddu[k,l], (i,j)) 
-        #stiff_material = inner(FT_gradvaru,FT_graddu_Ctang) # seems to be the problematic one
-        #stiff_geometric = inner(grad(self.var_u), grad(self.du)*S) # seems ok
+        #i, j, k, l = ufl.indices(4)
+        #FT_graddu_Ctang = ufl.as_tensor(Ctang[i,j,k,l]*FT_graddu[k,l], (i,j)) 
+        #stiff_material = ufl.inner(FT_gradvaru,FT_graddu_Ctang) # seems to be the problematic one
+        #stiff_geometric = ufl.inner(ufl.grad(self.var_u), ufl.grad(self.du)*S) # seems ok
         
         #return (stiff_geometric + stiff_material)*ddomain
 
@@ -103,9 +103,9 @@ class variationalform:
     #      \int\limits_{\Omega_0} \frac{\partial\boldsymbol{S}}{\partial p} \Delta p : \frac{1}{2}\delta \boldsymbol{C}\,\mathrm{d}V
     def Lin_deltaW_int_dp(self, F, Ctang_p, ddomain):
 
-        var_C = grad(self.var_u).T * F + F.T * grad(self.var_u)
+        var_C = ufl.grad(self.var_u).T * F + F.T * ufl.grad(self.var_u)
     
-        return inner(Ctang_p*self.dp, 0.5*var_C)*ddomain
+        return ufl.inner(Ctang_p*self.dp, 0.5*var_C)*ddomain
 
 
     # TeX: \int\limits_{\Omega_0} J(\boldsymbol{u})\,\mathrm{div}\Delta\boldsymbol{u}\,\delta p\,\mathrm{d}V = 
@@ -113,7 +113,7 @@ class variationalform:
     def Lin_deltaW_int_pres_du(self, F, Jtang, u, ddomain):
         
         C = F.T*F
-        return inner(Jtang, derivative(C, u, self.du)) * self.var_p*ddomain
+        return ufl.inner(Jtang, ufl.derivative(C, u, self.du)) * self.var_p*ddomain
 
     ### External virtual work
 
@@ -121,44 +121,44 @@ class variationalform:
     # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def deltaW_ext_neumann_true(self, J, F, func, dboundary):
 
-        return func*J*dot(dot(inv(F).T,self.n0), self.var_u)*dboundary
+        return func*J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), self.var_u)*dboundary
     
     # Neumann load on reference configuration (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} \hat{\boldsymbol{t}}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
     def deltaW_ext_neumann_ref(self, func, dboundary):
 
-        return dot(func, self.var_u)*dboundary
+        return ufl.dot(func, self.var_u)*dboundary
     
     # Neumann load in reference normal (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} p\,\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def deltaW_ext_neumann_refnormal(self, func, dboundary):
 
-        return func*dot(self.n0, self.var_u)*dboundary
+        return func*ufl.dot(self.n0, self.var_u)*dboundary
     
     # Robin condition (spring)
     # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def deltaW_ext_robin_spring(self, u, k, dboundary, u_prestr=None):
         
         if u_prestr is not None:
-            return -k*(dot(u + u_prestr, self.var_u)*dboundary)
+            return -k*(ufl.dot(u + u_prestr, self.var_u)*dboundary)
         else:
-            return -k*(dot(u, self.var_u)*dboundary)
+            return -k*(ufl.dot(u, self.var_u)*dboundary)
     
     # Robin condition (spring) in reference normal direction
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def deltaW_ext_robin_spring_normal(self, u, k_n, dboundary, u_prestr=None):
 
         if u_prestr is not None:
-            return -k_n*(dot(u + u_prestr, self.n0)*dot(self.n0, self.var_u)*dboundary)
+            return -k_n*(ufl.dot(u + u_prestr, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
         else:
-            return -k_n*(dot(u, self.n0)*dot(self.n0, self.var_u)*dboundary)
+            return -k_n*(ufl.dot(u, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
     
     # Robin condition (dashpot)
     # TeX: \int\limits_{\Gamma_0} c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def deltaW_ext_robin_dashpot(self, v, c, dboundary):
         
-        if not isinstance(v, constantvalue.Zero):
-            return -c*(dot(v, self.var_u)*dboundary)
+        if not isinstance(v, ufl.constantvalue.Zero):
+            return -c*(ufl.dot(v, self.var_u)*dboundary)
         else:
             return as_ufl(0)
     
@@ -166,8 +166,8 @@ class variationalform:
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def deltaW_ext_robin_dashpot_normal(self, v, c_n, dboundary):
         
-        if not isinstance(v, constantvalue.Zero):
-            return -c_n*(dot(v, self.n0)*dot(self.n0, self.var_u)*dboundary)
+        if not isinstance(v, ufl.constantvalue.Zero):
+            return -c_n*(ufl.dot(v, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
         else:
             return as_ufl(0)
 
@@ -188,7 +188,7 @@ class variationalform:
         
         if model=='membrane_f':
             # deformation tensor with only normal components (C_nn, C_t1n = C_nt1, C_t2n = C_nt2)
-            Cn = dot(C, n0n0) + dot(n0n0, C) - dot(self.n0,dot(C,self.n0)) * n0n0
+            Cn = ufl.dot(C, n0n0) + ufl.dot(n0n0, C) - ufl.dot(self.n0,ufl.dot(C,self.n0)) * n0n0
             # plane strain deformation tensor where deformation is "1" in normal direction
             Cplane = C - Cn + n0n0
             # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
@@ -200,7 +200,7 @@ class variationalform:
             Fmod = F
         elif model=='membrane_transverse': # WARNING: NOT objective to large rotations!
             # only components in normal direction (F_nn, F_t1n, F_t2n)
-            Fn = dot(F, n0n0)
+            Fn = ufl.dot(F, n0n0)
             # plane deformation gradient: without components F_t1n, F_t2n, but with constant F_nn
             Fplane = F - Fn + n0n0
             # third invariant
@@ -228,13 +228,13 @@ class variationalform:
         S = 2.*dPsi_dIc * I
         
         # pressure contribution of plane stress model: -p C^(-1), with p = 2 (1/(lambda_t1^2 lambda_t2^2) dW/dIc - lambda_t1^2 lambda_t2^2 dW/dIIc) (cf. Holzapfel eq. (6.75) - we don't have an IIc term here)
-        S += -2.*dPsi_dIc/(IIIplane) * inv(Cmod).T
+        S += -2.*dPsi_dIc/(IIIplane) * ufl.inv(Cmod).T
         
         # 1st PK stress P = FS
         P = Fmod * S
         
         # only in-plane components of test function derivatives should be used!
-        var_F = grad(self.var_u) - dot(grad(self.var_u),n0n0)
+        var_F = ufl.grad(self.var_u) - ufl.dot(ufl.grad(self.var_u),n0n0)
         
         # boundary virtual work
         return -h0*inner(P,var_F)*dboundary
@@ -245,16 +245,16 @@ class variationalform:
     # volume
     def volume(self, u, J, F, dboundary):
         
-        return -(1./3.)*J*dot(dot(inv(F).T,self.n0), self.x_ref + u)*dboundary
+        return -(1./3.)*J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), self.x_ref + u)*dboundary
         
     # flux: Q = -dV/dt
     # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\boldsymbol{v}\;\mathrm{d}A
     def flux(self, v, J, F, dboundary):
         
-        return J*dot(dot(inv(F).T,self.n0), v)*dboundary
+        return J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), v)*dboundary
         
     # surface - derivative of pressure load w.r.t. pressure
     # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def surface(self, J, F, dboundary):
         
-        return J*dot(dot(inv(F).T,self.n0), self.var_u)*dboundary
+        return J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), self.var_u)*dboundary

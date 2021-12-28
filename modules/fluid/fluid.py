@@ -8,8 +8,10 @@
 
 import time, sys
 import numpy as np
-from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function
-from ufl import TrialFunction, TestFunction, FiniteElement, VectorElement, TensorElement, derivative, diff, inner, dx, ds, as_vector, as_ufl, dot, grad, sqrt, conditional, ge, Min
+#from dolfinx import FunctionSpace, VectorFunctionSpace, TensorFunctionSpace, Function
+#from ufl import TrialFunction, TestFunction, FiniteElement, VectorElement, TensorElement, derivative, diff, inner, dx, ds, as_vector, ufl.as_ufl, dot, grad, sqrt, conditional, ge, Min
+from dolfinx import fem
+import ufl
 
 import ioroutines
 import fluid_kinematics_constitutive
@@ -52,14 +54,14 @@ class FluidmechanicsProblem(problem_base):
         self.dx_, self.rho = [], []
         for n in range(self.num_domains):
             # integration domains
-            self.dx_.append(dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             self.rho.append(constitutive_models['MAT'+str(n+1)+'']['inertia']['rho'])
         
         self.incompressible_2field = True # always true!
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in fluid is somehow senseless...
-        self.p11 = as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
+        self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
     
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
@@ -82,28 +84,28 @@ class FluidmechanicsProblem(problem_base):
             self.rom = mor.ModelOrderReduction(mor_params, comm)
 
         # create finite element objects for v and p
-        self.P_v = VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
-        self.P_p = FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        self.P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
+        self.P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
         # function spaces for v and p
-        self.V_v = FunctionSpace(self.io.mesh, self.P_v)
-        self.V_p = FunctionSpace(self.io.mesh, self.P_p)
+        self.V_v = fem.FunctionSpace(self.io.mesh, self.P_v)
+        self.V_p = fem.FunctionSpace(self.io.mesh, self.P_p)
 
         # a discontinuous tensor, vector, and scalar function space
-        self.Vd_tensor = TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
-        self.Vd_vector = VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
-        self.Vd_scalar = FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
 
         # functions
-        self.dv    = TrialFunction(self.V_v)            # Incremental velocity
-        self.var_v = TestFunction(self.V_v)             # Test function
-        self.dp    = TrialFunction(self.V_p)            # Incremental pressure
-        self.var_p = TestFunction(self.V_p)             # Test function
-        self.v     = Function(self.V_v, name="Velocity")
-        self.p     = Function(self.V_p, name="Pressure")
+        self.dv    = ufl.TrialFunction(self.V_v)            # Incremental velocity
+        self.var_v = ufl.TestFunction(self.V_v)             # Test function
+        self.dp    = ufl.TrialFunction(self.V_p)            # Incremental pressure
+        self.var_p = ufl.TestFunction(self.V_p)             # Test function
+        self.v     = fem.Function(self.V_v, name="Velocity")
+        self.p     = fem.Function(self.V_p, name="Pressure")
         # values of previous time step
-        self.v_old = Function(self.V_v)
-        self.a_old = Function(self.V_v)
-        self.p_old = Function(self.V_p)
+        self.v_old = fem.Function(self.V_v)
+        self.a_old = fem.Function(self.V_v)
+        self.p_old = fem.Function(self.V_p)
 
         self.ndof = self.v.vector.getSize() + self.p.vector.getSize()
 
@@ -142,9 +144,9 @@ class FluidmechanicsProblem(problem_base):
         self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
 
         # kinetic, internal, and pressure virtual power
-        self.deltaP_kin, self.deltaP_kin_old = as_ufl(0), as_ufl(0)
-        self.deltaP_int, self.deltaP_int_old = as_ufl(0), as_ufl(0)
-        self.deltaP_p,   self.deltaP_p_old   = as_ufl(0), as_ufl(0)
+        self.deltaP_kin, self.deltaP_kin_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaP_int, self.deltaP_int_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaP_p,   self.deltaP_p_old   = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for n in range(self.num_domains):
         
@@ -163,7 +165,7 @@ class FluidmechanicsProblem(problem_base):
             
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_robin, w_robin_old = as_ufl(0), as_ufl(0), as_ufl(0), as_ufl(0)
+        w_neumann, w_neumann_old, w_robin, w_robin_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann, w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar)
         if 'robin' in self.bc_dict.keys():
@@ -214,25 +216,25 @@ class FluidmechanicsProblem(problem_base):
             ##delta = conditional(ge(vnorm,1.0e-8), self.io.h0/(2.*vnorm), 0.)
             ##delta_old = conditional(ge(vnorm_old,1.0e-8), self.io.h0/(2.*vnorm_old), 0.)
             
-            #stab_v     = tau_SUPG * dot(dot(self.v, grad(self.var_v)),res_v_strong)*dx1_stab
+            #stab_v     = tau_SUPG * dot(dot(self.v, ufl.grad(self.var_v)),res_v_strong)*dx1_stab
 
-            ##stab_p     = tau_PSPG * dot(dot(self.v, grad(self.var_v)),res_p_strong)*dx1_stab
+            ##stab_p     = tau_PSPG * dot(dot(self.v, ufl.grad(self.var_v)),res_p_strong)*dx1_stab
 
             #self.weakform_u += self.timefac * stab_v #+ (1.-self.timefac) * stab_old
             
-            ##self.weakform_p += tau_SUPG*inner(grad(self.var_p), res_strong)*self.dx1
+            ##self.weakform_p += tau_SUPG*ufl.inner(ufl.grad(self.var_p), res_strong)*self.dx1
         
         ### Jacobians
         
-        self.jac_uu = derivative(self.weakform_u, self.v, self.dv)
-        self.jac_up = derivative(self.weakform_u, self.p, self.dp)
-        self.jac_pu = derivative(self.weakform_p, self.v, self.dv)
+        self.jac_uu = ufl.derivative(self.weakform_u, self.v, self.dv)
+        self.jac_up = ufl.derivative(self.weakform_u, self.p, self.dp)
+        self.jac_pu = ufl.derivative(self.weakform_p, self.v, self.dv)
 
         # for saddle-point block-diagonal preconditioner - TODO: Doesn't work very well...
-        self.a_p11 = as_ufl(0)
+        self.a_p11 = ufl.as_ufl(0)
         
         for n in range(self.num_domains):
-            self.a_p11 += inner(self.dp, self.var_p) * self.dx_[n]
+            self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
 
 
     # rate equations
@@ -274,7 +276,7 @@ class FluidmechanicsSolver():
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaP_kin_old + self.pb.deltaP_int_old - self.pb.deltaP_ext_old
             
-            jac_a = derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
+            jac_a = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
@@ -310,7 +312,7 @@ class FluidmechanicsSolver():
             wt = wte - wts
 
             # print time step info to screen
-            self.pb.ti.print_timestep(N, t, wt=wt)
+            self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
 
             # write restart info - old and new quantities are the same at this stage
             self.pb.io.write_restart(self.pb, N)
