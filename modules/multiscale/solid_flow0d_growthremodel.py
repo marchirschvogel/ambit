@@ -304,8 +304,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         self.pb.pbsmall.pbf.cardvasc0D.set_pressure_fem(self.pb.pbsmall.pbf.s_set, self.pb.pbsmall.pbf.cardvasc0D.v_ids, self.pb.pbsmall.pr0D, self.pb.neumann_funcs)
 
         # growth thresholds from set point
-        self.pb.pblarge.growth_param_funcs['growth_thres'].vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_param_funcs['growth_thres'].vector)
-        self.pb.pblarge.growth_param_funcs['growth_thres'].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pblarge.growth_thres.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.vector)
+        self.pb.pblarge.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def compute_volume_large(self):

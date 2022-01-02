@@ -204,7 +204,7 @@ class SolidmechanicsConstraintSolver():
                 self.pb.pbs.evaluate_active_stress_ode(t)
 
             # solve
-            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
+            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, locvars=[self.pb.pbs.theta], locresforms=[self.pb.pbs.r_growth], locincrforms=[self.pb.pbs.del_theta])
 
             # write output
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)

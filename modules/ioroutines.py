@@ -350,7 +350,7 @@ class IO_solid(IO):
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
             vecs_to_read[pb.u_set] = 'u_set'
-            vecs_to_read[pb.growth_param_funcs['growth_thres']] = 'growth_thres'
+            vecs_to_read[pb.growth_thres] = 'growth_thres'
             if pb.incompressible_2field:
                 vecs_to_read[pb.p_set] = 'p_set'
             if pb.have_active_stress:
@@ -389,7 +389,7 @@ class IO_solid(IO):
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
             vecs_to_write[pb.u_set] = 'u_set'
-            vecs_to_write[pb.growth_param_funcs['growth_thres']] = 'growth_thres'
+            vecs_to_write[pb.growth_thres] = 'growth_thres'
             if pb.incompressible_2field:
                 vecs_to_write[pb.p_set] = 'p_set'
             if pb.have_active_stress:

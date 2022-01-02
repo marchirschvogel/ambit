@@ -254,11 +254,11 @@ class growthfunction(growth):
     
     # add possible variations / different growth functions here...
     
-    def grfnc1(self, trigger, thres, grparfuncs):
+    def grfnc1(self, trigger, thres, params):
         
-        thetamax, thetamin = grparfuncs['thetamax'], grparfuncs['thetamin']
-        tau_gr, tau_gr_rev = grparfuncs['tau_gr'], grparfuncs['tau_gr_rev']
-        gamma_gr, gamma_gr_rev = grparfuncs['gamma_gr'], grparfuncs['gamma_gr_rev']
+        thetamax, thetamin = params['thetamax'], params['thetamin']
+        tau_gr, tau_gr_rev = params['tau_gr'], params['tau_gr_rev']
+        gamma_gr, gamma_gr_rev = params['gamma_gr'], params['gamma_gr_rev']
         
         k_plus = (1./tau_gr) * ((thetamax-self.theta)/(thetamax-thetamin))**(gamma_gr)
         k_minus = (1./tau_gr_rev) * ((self.theta-thetamin)/(thetamax-thetamin))**(gamma_gr_rev)

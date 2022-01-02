@@ -310,22 +310,22 @@ class constitutive:
 
 
     # growth residual and increment at Gauss point
-    def res_dtheta_growth(self, u_, p_, ivar, rvar, theta_old_, dt, grparfuncs, rquant):
+    def res_dtheta_growth(self, u_, p_, ivar, rvar, theta_old_, dt, thres, rquant):
         
         theta_ = ivar["theta"]
         
         grfnc = growthfunction(theta_,self.I)
 
-        thres = grparfuncs['growth_thres']
+        thres = self.gandrparams['growth_thres']
 
-        try: omega = grparfuncs['thres_tol']
+        try: omega = self.gandrparams['thres_tol']
         except: omega = 0
         
-        try: reduc = grparfuncs['trigger_reduction']
+        try: reduc = self.gandrparams['trigger_reduction']
         except: reduc = 1
         
         # threshold should not be lower than specified (only relevant for multiscale analysis, where threshold is set element-wise)
-        threshold = ufl.conditional(ufl.gt(thres,grparfuncs['growth_thres_0']), (1.+omega)*thres, grparfuncs['growth_thres_0'])
+        threshold = ufl.conditional(ufl.gt(thres,self.gandrparams['growth_thres']), (1.+omega)*thres, self.gandrparams['growth_thres'])
 
         # trace of elastic Mandel stress
         if self.growth_trig == 'volstress':
@@ -341,7 +341,7 @@ class constitutive:
             raise NameError("Unknown growth_trig!")
 
         # growth function
-        ktheta = grfnc.grfnc1(trigger, threshold, grparfuncs)
+        ktheta = grfnc.grfnc1(trigger, threshold, self.gandrparams)
         
         # growth residual
         r_growth = theta_ - theta_old_ - ktheta * (trigger - threshold) * dt
@@ -363,14 +363,14 @@ class constitutive:
 
 
     
-    def dtheta_dC(self, u_, p_, ivar, rvar, theta_old_, dt, grparfuncs):
+    def dtheta_dC(self, u_, p_, ivar, rvar, theta_old_, dt, thres):
         
         theta_ = ivar["theta"]
         
         dFg_dtheta = self.F_g(theta_,tang=True)
         
-        ktheta = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs, 'ktheta')
-        K_growth = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs, 'tang')
+        ktheta = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, thres, 'ktheta')
+        K_growth = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, thres, 'tang')
         
         i, j, k, l = ufl.indices(4)
         
@@ -429,7 +429,7 @@ class constitutive:
     # growth material tangent: Cgrowth = 2 (dS/dF_g : dF_g/dtheta) \otimes dtheta/dC
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cgrowth(self, u_, p_, ivar, rvar, theta_old_, dt, grparfuncs):
+    def Cgrowth(self, u_, p_, ivar, rvar, theta_old_, dt, thres):
         
         theta_ = ivar["theta"]
         
@@ -437,7 +437,7 @@ class constitutive:
         
         i, j, k, l = ufl.indices(4)
         
-        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, rvar, theta_old_, dt, thres)
         
         dS_dFg_ = self.dS_dFg(u_, p_, ivar, rvar, theta_old_, dt)
 
@@ -449,14 +449,14 @@ class constitutive:
 
 
     # for a 2-field functional with u and p as variables, theta can depend on p in case of stress-mediated growth!
-    def dtheta_dp(self, u_, p_, ivar, rvar, theta_old_, dt, grparfuncs):
+    def dtheta_dp(self, u_, p_, ivar, rvar, theta_old_, dt, thres):
         
         theta_ = ivar["theta"]
         
         dFg_dtheta = self.F_g(theta_,tang=True)
         
-        ktheta = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs, 'ktheta')
-        K_growth = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs, 'tang')
+        ktheta = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, thres, 'ktheta')
+        K_growth = self.res_dtheta_growth(u_, p_, ivar, rvar, theta_old_, dt, thres, 'tang')
         
         if self.growth_trig == 'volstress':
             
@@ -475,7 +475,7 @@ class constitutive:
     # growth material tangent for 2-field functional: Cgrowth_p = (dS/dF_g : dF_g/dtheta) * dtheta/dp
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cgrowth_p(self, u_, p_, ivar, rvar, theta_old_, dt, grparfuncs):
+    def Cgrowth_p(self, u_, p_, ivar, rvar, theta_old_, dt, thres):
         
         theta_ = ivar["theta"]
         
@@ -483,7 +483,7 @@ class constitutive:
         
         i, j, k, l = ufl.indices(4)
         
-        dtheta_dp_ = self.dtheta_dp(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs)
+        dtheta_dp_ = self.dtheta_dp(u_, p_, ivar, rvar, theta_old_, dt, thres)
         
         dS_dFg_ = self.dS_dFg(u_, p_, ivar, rvar, theta_old_, dt)
 
@@ -497,14 +497,14 @@ class constitutive:
     # remodeling material tangent: Cremod = 2 dphi/dC * (S_remod - S_base) = 2 dphi/dtheta * dtheta/dC * (S_remod - S_base)
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cremod(self, u_, p_, ivar, rvar, theta_old_, dt, grparfuncs):
+    def Cremod(self, u_, p_, ivar, rvar, theta_old_, dt, thres):
         
         theta_ = ivar["theta"]
         
         i, j, k, l = ufl.indices(4)
         
         dphi_dtheta_ = self.phi_remod(theta_,tang=True)
-        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, ivar, rvar, theta_old_, dt, thres)
 
         Cremod = 2.*dphi_dtheta_ * ufl.as_tensor(dtheta_dC_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
 
@@ -514,12 +514,12 @@ class constitutive:
     # remodeling material tangent for 2-field functional: Cremod_p = dphi/dp * (S_remod - S_base) = 2 dphi/dtheta * dtheta/dp * (S_remod - S_base)
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
-    def Cremod_p(self, u_, p_, ivar, rvar, theta_old_, dt, grparfuncs):
+    def Cremod_p(self, u_, p_, ivar, rvar, theta_old_, dt, thres):
     
         theta_ = ivar["theta"]
         
         dphi_dtheta_ = self.phi_remod(theta_,tang=True)
-        dtheta_dp_ = self.dtheta_dp(u_, p_, ivar, rvar, theta_old_, dt, grparfuncs)
+        dtheta_dp_ = self.dtheta_dp(u_, p_, ivar, rvar, theta_old_, dt, thres)
 
         Cremod_p = 2.*dphi_dtheta_ * dtheta_dp_ * (self.stress_remod - self.stress_base)
 

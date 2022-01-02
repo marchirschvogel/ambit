@@ -160,7 +160,7 @@ class variationalform:
         if not isinstance(v, ufl.constantvalue.Zero):
             return -c*(ufl.dot(v, self.var_u)*dboundary)
         else:
-            return as_ufl(0)
+            return ufl.as_ufl(0)
     
     # Robin condition (dashpot) in reference normal direction
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
@@ -169,7 +169,7 @@ class variationalform:
         if not isinstance(v, ufl.constantvalue.Zero):
             return -c_n*(ufl.dot(v, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
         else:
-            return as_ufl(0)
+            return ufl.as_ufl(0)
 
     # Elastic membrane potential on surface
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A

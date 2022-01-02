@@ -279,7 +279,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.evaluate_activation(t-t_off)
             
             # solve
-            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, locvar=self.pb.pbs.theta, locresform=self.pb.pbs.r_growth, locincrform=self.pb.pbs.del_theta)
+            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, locvars=[self.pb.pbs.theta], locresforms=[self.pb.pbs.r_growth], locincrforms=[self.pb.pbs.del_theta])
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid, self.pb.pbf.theta_ost), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid, self.pb.pbf.theta_ost)

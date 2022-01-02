@@ -220,7 +220,7 @@ class solver_nonlinear:
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-    def newton(self, u, p, locvar=None, locresform=None, locincrform=None):
+    def newton(self, u, p, locvars=[], locresforms=[], locincrforms=[]):
 
         # displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -250,7 +250,7 @@ class solver_nonlinear:
             tes = time.time()
 
             if self.pb.localsolve:
-                self.newton_local(locvar,locresform,locincrform)
+                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l])
 
             # assemble rhs vector
             r_u = fem.assemble_vector(self.weakform_u)
@@ -638,7 +638,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             raise NameError("Unknown solvetype!")
 
 
-    def newton(self, u, p, s, t, locvar=None, locresform=None, locincrform=None):
+    def newton(self, u, p, s, t, locvars=[], locresforms=[], locincrforms=[]):
         
         # 3D displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -681,7 +681,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.snln0D.newton(s, t, print_iter=False)
                 
             if self.pbc.pbs.localsolve:
-                self.newton_local(locvar,locresform,locincrform)
+                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l])
 
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pbc.coupling_type == 'monolithic_direct':
