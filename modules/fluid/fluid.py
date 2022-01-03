@@ -45,6 +45,8 @@ class FluidmechanicsProblem(problem_base):
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
+        
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_vel = fem_params['order_vel']
         self.order_pres = fem_params['order_pres']
@@ -56,7 +58,7 @@ class FluidmechanicsProblem(problem_base):
             # integration domains
             self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
-            self.rho.append(constitutive_models['MAT'+str(n+1)+'']['inertia']['rho'])
+            self.rho.append(self.constitutive_models['MAT'+str(n+1)+'']['inertia']['rho'])
         
         self.incompressible_2field = True # always true!
         self.localsolve = False # no idea what might have to be solved locally...
@@ -118,7 +120,7 @@ class FluidmechanicsProblem(problem_base):
         # initialize material/constitutive class
         self.ma = []
         for n in range(self.num_domains):
-            self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, constitutive_models['MAT'+str(n+1)+'']))
+            self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)+'']))
         
         # initialize fluid variational form class
         self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)

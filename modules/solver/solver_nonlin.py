@@ -220,7 +220,7 @@ class solver_nonlinear:
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-    def newton(self, u, p, locvars=[], locresforms=[], locincrforms=[]):
+    def newton(self, u, p, locvars=[], locresforms=[], locincrforms=[], locfuncspaces=[]):
 
         # displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -250,7 +250,7 @@ class solver_nonlinear:
             tes = time.time()
 
             if self.pb.localsolve:
-                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l])
+                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l],locfuncspaces[l])
 
             # assemble rhs vector
             r_u = fem.assemble_vector(self.weakform_u)
@@ -445,43 +445,53 @@ class solver_nonlinear:
 
 
     # local Newton where increment can be expressed as form at integration point level
-    def newton_local(self, var, residual_form, increment_form, maxiter_local=20):
+    def newton_local(self, var, residual_forms, increment_forms, functionspaces, maxiter_local=20):
 
         it_local = 0
         
-        residual, increment = fem.Function(self.pb.Vd_scalar), fem.Function(self.pb.Vd_scalar)
+        num_loc_res = len(residual_forms)
+        
+        residuals, increments = [], []
+        
+        for i in range(num_loc_res):
+            residuals.append(fem.Function(functionspaces[i]))
+            increments.append(fem.Function(functionspaces[i]))
+
+        res_norms, inc_norms = np.ones(num_loc_res), np.ones(num_loc_res)
 
         # return mapping scheme for nonlinear constitutive laws
         while it_local < maxiter_local:
 
-            # interpolate symbolic increment form into increment vector
-            increment_proj = project(increment_form, self.pb.Vd_scalar, self.pb.dx_)
-            increment.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            increment.interpolate(increment_proj)
-            
-            # update var vector
-            var.vector.axpy(1.0, increment.vector)
-            var.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            for i in range(num_loc_res):
+                
+                # interpolate symbolic increment form into increment vector
+                increment_proj = project(increment_forms[i], functionspaces[i], self.pb.dx_)
+                increments[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                increments[i].interpolate(increment_proj)
+                
+                # update var vector
+                var[i].vector.axpy(1.0, increments[i].vector)
+                var[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-            # interpolate symbolic residual form into residual vector
-            residual_proj = project(residual_form, self.pb.Vd_scalar, self.pb.dx_)
-            residual.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            residual.interpolate(residual_proj)
-            
-            # get residual and increment inf norms
-            res_norm = residual.vector.norm(norm_type=3)
-            inc_norm = increment.vector.norm(norm_type=3)
+                # interpolate symbolic residual form into residual vector
+                residual_proj = project(residual_forms[i], functionspaces[i], self.pb.dx_)
+                residuals[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                residuals[i].interpolate(residual_proj)
+                
+                # get residual and increment inf norms
+                res_norms[i] = residuals[i].vector.norm(norm_type=3)
+                inc_norms[i] = increments[i].vector.norm(norm_type=3)
             
             if self.print_local_iter:
                 if self.pb.comm.rank == 0:
-                    print("      (it_local = %i, res: %.4e, inc: %.4e)" % (it_local,res_norm,inc_norm))
+                    print("      (it_local = %i, res: %.4e, inc: %.4e)" % (it_local,np.sum(res_norms),np.sum(inc_norms)))
                     sys.stdout.flush()
             
             # increase iteration index
             it_local += 1
             
             # check if converged
-            if res_norm <= self.tol_res_local and inc_norm <= self.tol_inc_local:
+            if np.sum(res_norms) <= self.tol_res_local and np.sum(inc_norms) <= self.tol_inc_local:
 
                 break
             
@@ -638,7 +648,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             raise NameError("Unknown solvetype!")
 
 
-    def newton(self, u, p, s, t, locvars=[], locresforms=[], locincrforms=[]):
+    def newton(self, u, p, s, t, locvars=[], locresforms=[], locincrforms=[], locfuncspaces=[]):
         
         # 3D displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -681,7 +691,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.snln0D.newton(s, t, print_iter=False)
                 
             if self.pbc.pbs.localsolve:
-                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l])
+                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l],locfuncspaces[l])
 
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pbc.coupling_type == 'monolithic_direct':

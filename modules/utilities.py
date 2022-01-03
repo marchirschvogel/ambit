@@ -6,7 +6,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys
+import sys, copy
+from dolfinx import fem
 
 
 # print header at beginning of simulation
@@ -79,3 +80,22 @@ def print_prestress(inst, comm):
         if comm.rank == 0:
             print("Performed MULF update, finished prestressing.")
             sys.stdout.flush()
+
+
+# copies material parameters to be represented as a dolfinx constant (avoids re-compilation upon parameter change)
+def mat_params_to_dolfinx_constant(matparams, msh):
+    
+    matparams_new = copy.deepcopy(matparams)
+    for k1 in matparams.keys():
+        for k2 in matparams[k1].keys():
+            for k3 in matparams[k1][k2].keys():
+                if isinstance(matparams[k1][k2][k3], float):
+                    matparams_new[k1][k2][k3] = fem.Constant(msh, matparams[k1][k2][k3])
+                # submaterial (e.g. used in remodeling)
+                if isinstance(matparams[k1][k2][k3], dict):
+                    for k4 in matparams[k1][k2][k3].keys():
+                        for k5 in matparams[k1][k2][k3][k4].keys():
+                            if isinstance(matparams[k1][k2][k3][k4][k5], float):
+                                matparams_new[k1][k2][k3][k4][k5] = fem.Constant(msh, matparams[k1][k2][k3][k4][k5])
+                                
+    return matparams_new

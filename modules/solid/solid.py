@@ -47,19 +47,7 @@ class SolidmechanicsProblem(problem_base):
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         
-        # copy material parameters to be represented as a dolfinx constant (avoids re-compilation upon parameter change)
-        self.constitutive_models = copy.deepcopy(constitutive_models)
-        for k1 in constitutive_models.keys():
-            for k2 in constitutive_models[k1].keys():
-                for k3 in constitutive_models[k1][k2].keys():
-                    if isinstance(constitutive_models[k1][k2][k3], float):
-                        self.constitutive_models[k1][k2][k3] = fem.Constant(self.io.mesh, constitutive_models[k1][k2][k3])
-                    # submaterial (e.g. used in remodeling)
-                    if isinstance(constitutive_models[k1][k2][k3], dict):
-                        for k4 in constitutive_models[k1][k2][k3].keys():
-                            for k5 in constitutive_models[k1][k2][k3][k4].keys():
-                                if isinstance(constitutive_models[k1][k2][k3][k4][k5], float):
-                                    self.constitutive_models[k1][k2][k3][k4][k5] = fem.Constant(self.io.mesh, constitutive_models[k1][k2][k3][k4][k5])
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_disp = fem_params['order_disp']
         try: self.order_pres = fem_params['order_pres']
@@ -152,6 +140,9 @@ class SolidmechanicsProblem(problem_base):
         self.theta = fem.Function(self.Vd_scalar, name="theta")
         self.theta_old = fem.Function(self.Vd_scalar)
         self.growth_thres = fem.Function(self.Vd_scalar)
+        # plastic deformation gradient
+        self.F_plast = fem.Function(self.Vd_tensor)
+        self.F_plast_old = fem.Function(self.Vd_tensor)
         # initialize to one (theta = 1 means no growth)
         self.theta.vector.set(1.0), self.theta_old.vector.set(1.0)
         self.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -192,8 +183,8 @@ class SolidmechanicsProblem(problem_base):
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         have_fiber1, have_fiber2 = False, False
-        self.have_active_stress, self.have_visco_mat, self.active_stress_trig, self.have_frank_starling, self.have_growth = False, False, 'ode', False, False
-        self.mat_active_stress, self.mat_visco, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains
+        self.have_active_stress, self.have_visco_mat, self.active_stress_trig, self.have_frank_starling, self.have_growth, self.have_plasticity = False, False, 'ode', False, False, False
+        self.mat_active_stress, self.mat_visco, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
 
         self.localsolve, growth_dir = False, None
         self.actstress = []
@@ -258,6 +249,11 @@ class SolidmechanicsProblem(problem_base):
                 self.internalvars['theta'], self.internalvars_old['theta'] = self.theta, self.theta_old
             else:
                 self.mat_growth_thres.append(ufl.as_ufl(0))
+
+            if 'plastic' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+                self.mat_plastic[n], self.have_plasticity = True, True
+                self.localsolve = True
+                self.internalvars['e_plast'], self.internalvars_old['e_plast'] = self.F_plast, self.F_plast_old
                 
             if 'visco' in self.constitutive_models['MAT'+str(n+1)+''].keys():
                 self.mat_visco[n], self.have_visco_mat = True, True
@@ -295,7 +291,7 @@ class SolidmechanicsProblem(problem_base):
         # initialize material/constitutive class
         self.ma = []
         for n in range(self.num_domains):
-            self.ma.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)+''], self.incompressible_2field, mat_growth=self.mat_growth[n], mat_remodel=self.mat_remodel[n]))
+            self.ma.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)+''], self.incompressible_2field, mat_growth=self.mat_growth[n], mat_remodel=self.mat_remodel[n], mat_plastic=self.mat_plastic[n]))
 
         # initialize solid variational form class
         self.vf = solid_variationalform.variationalform(self.var_u, self.du, self.var_p, self.dp, self.io.n0, self.x_ref)
@@ -417,6 +413,9 @@ class SolidmechanicsProblem(problem_base):
 
 
         ### local weak forms at Gauss points for inelastic materials
+        
+        self.localvars, self.localresforms, self.localincrforms, self.localfuncspaces = [], [], [], []
+        
         self.r_growth, self.del_theta = [], []
         for n in range(self.num_domains):
             
@@ -424,9 +423,16 @@ class SolidmechanicsProblem(problem_base):
                 # growth residual and increment
                 a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres, 'res_del')
                 self.r_growth.append(a), self.del_theta.append(b)
+                self.localvars.append([self.theta])
+                self.localresforms.append([self.r_growth])
+                self.localincrforms.append([self.del_theta])
+                self.localfuncspaces.append([self.Vd_scalar])
             else:
                 self.r_growth.append(ufl.as_ufl(0)), self.del_theta.append(ufl.as_ufl(0))
 
+            if self.mat_plastic[n]:
+                
+                raise ValueError("Finite strain plasticity not yet implemented!")
 
         ### Jacobians
         
@@ -718,7 +724,7 @@ class SolidmechanicsSolver():
             self.pb.evaluate_rate_equations(t)
 
             # solve
-            self.solnln.newton(self.pb.u, self.pb.p, locvars=[self.pb.theta], locresforms=[self.pb.r_growth], locincrforms=[self.pb.del_theta])
+            self.solnln.newton(self.pb.u, self.pb.p, locvars=self.pb.localvars, locresforms=self.pb.localresforms, locincrforms=self.pb.localincrforms, locfuncspaces=self.pb.localfuncspaces)
             
             # solve volume laplace (for cardiac benchmark)
             if bool(self.pb.volume_laplace): self.pb.solve_volume_laplace(N, t)

@@ -16,7 +16,7 @@ from projection import project
 
 class constitutive:
     
-    def __init__(self, kin, materials, incompr_2field, mat_growth=None, mat_remodel=None):
+    def __init__(self, kin, materials, incompr_2field, mat_growth=None, mat_remodel=None, mat_plastic=None):
         
         self.kin = kin
         
@@ -30,6 +30,7 @@ class constitutive:
         
         self.mat_growth = mat_growth
         self.mat_remodel = mat_remodel
+        self.mat_plastic = mat_plastic
         self.incompr_2field = incompr_2field
         
         if self.mat_growth:
@@ -62,12 +63,20 @@ class constitutive:
 
         # volumetric (kinematic) growth
         if self.mat_growth:
+            
+            assert(not self.mat_plastic)
 
             theta_ = ivar["theta"]
             
             # material has to be evaluated with C_e only, however total S has
             # to be computed by differentiating w.r.t. C (S = 2*dPsi/dC)
             self.mat = materiallaw(self.C_e(C_,theta_),self.I)
+
+        elif self.mat_plastic:
+            
+            assert(not self.mat_growth)
+            
+            raise ValueError("Plasticity not yet fully implemented!")
 
         else:
             
@@ -176,6 +185,10 @@ class constitutive:
         
         elif matlaw == 'growth':
             # growth (and remodeling) treated separately
+            return ufl.constantvalue.zero((3,3))
+
+        elif matlaw == 'plastic':
+            # plasticity treated separately
             return ufl.constantvalue.zero((3,3))
             
         else:
@@ -524,6 +537,7 @@ class constitutive:
         Cremod_p = 2.*dphi_dtheta_ * dtheta_dp_ * (self.stress_remod - self.stress_base)
 
         return Cremod_p
+
 
 
 class kinematics:

@@ -246,6 +246,11 @@ class growth:
         return F_g
 
 
+class plasticity:
+    
+    def __init__(self, e_plast, I):
+        self.e_plast = e_plast
+        self.I = I
 
 
 
@@ -267,6 +272,19 @@ class growthfunction(growth):
             
         return k
 
+
+
+class yieldfunction(plasticity):
+    
+    # add possible variations / different yield functions here...
+    
+    def yf1(self, criterion, params):
+        
+        yield_stress = params['yield_stress']
+        
+        k = criterion - yield_stress
+            
+        return k
 
 
 
