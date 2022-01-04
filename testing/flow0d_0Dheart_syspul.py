@@ -6,7 +6,7 @@ import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import results_check
+import resultcheck
 
 
 def main():
@@ -97,8 +97,8 @@ def main():
     s_corr[16] = 1.4965782216339247E+00
     s_corr[17] = -1.0232540549572852E+04
     
-    check1 = results_check.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
-    success = results_check.success_check([check1], problem.mp.comm)
+    check1 = resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
+    success = resultcheck.success_check([check1], problem.mp.comm)
     
     return success
 

@@ -14,7 +14,7 @@ import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import results_check
+import resultcheck
 
 
 def main():
@@ -158,8 +158,8 @@ def main():
     u_corr[7] = -4.6537410754407753E-02 # y
     u_corr[8] = -4.6537410754407753E-02 # z
 
-    check1 = results_check.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
-    success = results_check.success_check([check1], problem.mp.comm)
+    check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
+    success = resultcheck.success_check([check1], problem.mp.comm)
     
     return success
 

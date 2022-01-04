@@ -11,17 +11,17 @@ import numpy as np
 import sympy as sp
 
 from mpiroutines import allgather_vec
-from ode_implicit import odeimplicit
+from oderoutines import ode
 
 # signalling network model, from Ryall et al. (2012) "Network Reconstruction and Systems Analysis of Cardiac Myocyte Hypertrophy Signaling", The Journal of Biological Chemistry 287(50)
 # adopted form supplementary MATLAB code provided by authors
 
-class signethypertrophy(odeimplicit):
+class signethypertrophy(ode):
     
     def __init__(self, params, init=True, comm=None):
         
         # initialize base class
-        odeimplicit.__init__(self, init=init, comm=comm)
+        ode.__init__(self, init=init, comm=comm)
        
         # parameters
         self.p1 = params['p1']

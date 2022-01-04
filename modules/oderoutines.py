@@ -13,7 +13,7 @@ import sympy as sp
 from mpiroutines import allgather_vec, allgather_vec_entry
 
 
-class odeimplicit:
+class ode:
     
     def __init__(self, init=True, comm=None):
         self.init = init # for output

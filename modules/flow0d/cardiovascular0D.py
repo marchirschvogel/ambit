@@ -11,15 +11,15 @@ import numpy as np
 import sympy as sp
 
 from mpiroutines import allgather_vec_entry
-from ode_implicit import odeimplicit
+from oderoutines import ode
 
 
-class cardiovascular0Dbase(odeimplicit):
+class cardiovascular0Dbase(ode):
     
     def __init__(self, init=True, comm=None):
         
         # initialize base class
-        odeimplicit.__init__(self, init=init, comm=comm)
+        ode.__init__(self, init=init, comm=comm)
         
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
 

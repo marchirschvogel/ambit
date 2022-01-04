@@ -8,7 +8,7 @@ import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import results_check
+import resultcheck
 
 
 def main():
@@ -77,10 +77,10 @@ def main():
     
     p_corr[0] = -9.3006817518134621E+00
 
-    check1 = results_check.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
-    check2 = results_check.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p')
+    check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
+    check2 = resultcheck.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p')
     
-    success = results_check.success_check([check1,check2], problem.mp.comm)
+    success = resultcheck.success_check([check1,check2], problem.mp.comm)
 
     return success
 

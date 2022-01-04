@@ -6,7 +6,7 @@ import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import results_check
+import resultcheck
 
 # purely viscous block testing basic rate-dependent solid material
 
@@ -72,8 +72,8 @@ def main():
     u_corr[1] = -3.8042412652908981E-11 # y
     u_corr[2] = 6.4458861009353818E-01 # z
 
-    check1 = results_check.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
-    success = results_check.success_check([check1], problem.mp.comm)
+    check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
+    success = resultcheck.success_check([check1], problem.mp.comm)
     
     return success
 
