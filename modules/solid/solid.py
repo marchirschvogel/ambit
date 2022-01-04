@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -413,26 +413,32 @@ class SolidmechanicsProblem(problem_base):
 
 
         ### local weak forms at Gauss points for inelastic materials
+        self.localdata = {}
+        self.localdata['var'], self.localdata['res'], self.localdata['inc'], self.localdata['fnc'] = [], [], [], []
         
-        self.localvars, self.localresforms, self.localincrforms, self.localfuncspaces = [], [], [], []
-        
-        self.r_growth, self.del_theta = [], []
-        for n in range(self.num_domains):
+        if self.have_growth:
             
-            if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
-                # growth residual and increment
-                a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres, 'res_del')
-                self.r_growth.append(a), self.del_theta.append(b)
-                self.localvars.append([self.theta])
-                self.localresforms.append([self.r_growth])
-                self.localincrforms.append([self.del_theta])
-                self.localfuncspaces.append([self.Vd_scalar])
-            else:
-                self.r_growth.append(ufl.as_ufl(0)), self.del_theta.append(ufl.as_ufl(0))
-
-            if self.mat_plastic[n]:
+            self.r_growth, self.del_theta = [], []
+        
+            for n in range(self.num_domains):
                 
-                raise ValueError("Finite strain plasticity not yet implemented!")
+                if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
+                    # growth residual and increment
+                    a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres, 'res_del')
+                    self.r_growth.append(a), self.del_theta.append(b)
+                else:
+                    self.r_growth.append(ufl.as_ufl(0)), self.del_theta.append(ufl.as_ufl(0))
+
+            self.localdata['var'].append([self.theta])
+            self.localdata['res'].append([self.r_growth])
+            self.localdata['inc'].append([self.del_theta])
+            self.localdata['fnc'].append([self.Vd_scalar])
+            
+        if self.have_plasticity:
+            
+            for n in range(self.num_domains):
+                
+                if self.mat_plastic[n]: raise ValueError("Finite strain plasticity not yet implemented!")
 
         ### Jacobians
         
@@ -724,7 +730,7 @@ class SolidmechanicsSolver():
             self.pb.evaluate_rate_equations(t)
 
             # solve
-            self.solnln.newton(self.pb.u, self.pb.p, locvars=self.pb.localvars, locresforms=self.pb.localresforms, locincrforms=self.pb.localincrforms, locfuncspaces=self.pb.localfuncspaces)
+            self.solnln.newton(self.pb.u, self.pb.p, localdata=self.pb.localdata)
             
             # solve volume laplace (for cardiac benchmark)
             if bool(self.pb.volume_laplace): self.pb.solve_volume_laplace(N, t)

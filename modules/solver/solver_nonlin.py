@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -220,7 +220,7 @@ class solver_nonlinear:
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-    def newton(self, u, p, locvars=[], locresforms=[], locincrforms=[], locfuncspaces=[]):
+    def newton(self, u, p, localdata={}):
 
         # displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -250,7 +250,7 @@ class solver_nonlinear:
             tes = time.time()
 
             if self.pb.localsolve:
-                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l],locfuncspaces[l])
+                for l in range(len(localdata['var'])): self.newton_local(localdata['var'][l],localdata['res'][l],localdata['inc'][l],localdata['fnc'][l])
 
             # assemble rhs vector
             r_u = fem.assemble_vector(self.weakform_u)
@@ -469,15 +469,16 @@ class solver_nonlinear:
                 increments[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 increments[i].interpolate(increment_proj)
                 
+            for i in range(num_loc_res):
                 # update var vector
                 var[i].vector.axpy(1.0, increments[i].vector)
                 var[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+            for i in range(num_loc_res):
                 # interpolate symbolic residual form into residual vector
                 residual_proj = project(residual_forms[i], functionspaces[i], self.pb.dx_)
                 residuals[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 residuals[i].interpolate(residual_proj)
-                
                 # get residual and increment inf norms
                 res_norms[i] = residuals[i].vector.norm(norm_type=3)
                 inc_norms[i] = increments[i].vector.norm(norm_type=3)
@@ -534,7 +535,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
         # initialize 0D solver class for monolithic Lagrange multiplier coupling
         if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-            self.snln0D = solver_nonlinear_0D(self.pbc.pbf, self.solver_params_constr)
+            self.snln0D = solver_nonlinear_ode(self.pbc.pbf, self.solver_params_constr)
 
         self.sepstring = self.solutils.timestep_separator(self.tolerances)
         
@@ -648,7 +649,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             raise NameError("Unknown solvetype!")
 
 
-    def newton(self, u, p, s, t, locvars=[], locresforms=[], locincrforms=[], locfuncspaces=[]):
+    def newton(self, u, p, s, t, localdata={}):
         
         # 3D displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -691,7 +692,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.snln0D.newton(s, t, print_iter=False)
                 
             if self.pbc.pbs.localsolve:
-                for l in range(len(locvars)): self.newton_local(locvars[l],locresforms[l],locincrforms[l],locfuncspaces[l])
+                for l in range(len(localdata['var'])): self.newton_local(localdata['var'][l],localdata['res'][l],localdata['inc'][l],localdata['fnc'][l])
 
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pbc.coupling_type == 'monolithic_direct':
@@ -1071,8 +1072,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
 
 
-# solver for pure 0D problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)
-class solver_nonlinear_0D(solver_nonlinear):
+# solver for pure ODE (0D) problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)
+class solver_nonlinear_ode(solver_nonlinear):
 
     def __init__(self, pb, solver_params):
 
@@ -1120,7 +1121,7 @@ class solver_nonlinear_0D(solver_nonlinear):
             
             tes = time.time()
 
-            self.pb.cardvasc0D.evaluate(s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
+            self.pb.odemodel.evaluate(s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
             
             # ODE rhs vector and stiffness matrix
             r, K = self.pb.assemble_residual_stiffness()
@@ -1128,10 +1129,10 @@ class solver_nonlinear_0D(solver_nonlinear):
             # if we have prescribed variable values over time
             if bool(self.pb.prescribed_variables):
                 for a in self.pb.prescribed_variables:
-                    varindex = self.pb.cardvasc0D.varmap[a]
+                    varindex = self.pb.odemodel.varmap[a]
                     curvenumber = self.pb.prescribed_variables[a]
                     val = self.pb.ti.timecurves(curvenumber)(t)
-                    self.pb.cardvasc0D.set_prescribed_variables(s, r, K, val, varindex)
+                    self.pb.odemodel.set_prescribed_variables(s, r, K, val, varindex)
             
             ds = K.createVecLeft()
             

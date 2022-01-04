@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -48,6 +48,10 @@ def print_problem(ptype, comm, numdof=0):
 
         elif ptype == 'flow0d':
             print("######################### Welcome to lumped-parameter 0D flow #########################")
+            sys.stdout.flush()
+
+        elif ptype == 'signet':
+            print("######################### Welcome to signalling network models ########################")
             sys.stdout.flush()
 
         else:

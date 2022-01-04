@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -84,6 +84,13 @@ class Ambit():
 
             self.mp = solid_constraint.SolidmechanicsConstraintProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
             self.ms = solid_constraint.SolidmechanicsConstraintSolver(self.mp, solver_params[0], solver_params[1])
+
+        elif problem_type == 'signet':
+            
+            import signet
+            
+            self.mp = signet.SignallingNetworkProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm)
+            self.ms = signet.SignallingNetworkSolver(self.mp, solver_params)
 
         else:
             raise NameError("Unknown problem type!")

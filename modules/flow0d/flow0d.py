@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -147,6 +147,8 @@ class Flow0DProblem(problem_base):
         self.cardvasc0D.initialize(self.sTc_old, initialconditions)
 
         self.theta_ost = time_params['theta_ost']
+        
+        self.odemodel = self.cardvasc0D
 
 
     def assemble_residual_stiffness(self):
@@ -241,7 +243,7 @@ class Flow0DSolver():
         self.solver_params = solver_params
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_0D(self.pb, self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear_ode(self.pb, self.solver_params)
         
 
     def solve_problem(self):

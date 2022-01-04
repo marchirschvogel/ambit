@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -204,7 +204,7 @@ class SolidmechanicsConstraintSolver():
                 self.pb.pbs.evaluate_active_stress_ode(t)
 
             # solve
-            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, locvars=self.pb.pbs.localvars, locresforms=self.pb.pbs.localresforms, locincrforms=self.pb.pbs.localincrforms, locfuncspaces=self.pb.pbs.localfuncspaces)
+            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, localdata=self.pb.pbs.localdata)
 
             # write output
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)

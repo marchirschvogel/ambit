@@ -8,10 +8,6 @@ from pathlib import Path
 
 import results_check
 
-# TODO: Pure computation time of the old testcase where we did not use Sympy and lambdify of expressions
-# took only ~5.5 s of pure computing time
-# now, we've slowed down to 107 s (so nearly 2 min) :-( --> We have to find better options than lambdify with numpy backend
-# (ufuncify or theano_function could do the job...)
 
 def main():
     

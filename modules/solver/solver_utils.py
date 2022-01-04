@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -73,6 +73,9 @@ class sol_utils():
                 elif self.ptype=='flow0d':
                     print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
                     sys.stdout.flush()
+                elif self.ptype=='signet':
+                    print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','signet res 2-norm','signet inc 2-norm','ts','te'))
+                    sys.stdout.flush()
                 elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
                     if self.pbc.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
@@ -107,6 +110,9 @@ class sol_utils():
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_p'],' ',incnorms['inc_p'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif self.ptype=='flow0d':
+                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
+                sys.stdout.flush()
+            elif self.ptype=='signet':
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:

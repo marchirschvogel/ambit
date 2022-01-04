@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -279,7 +279,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.evaluate_activation(t-t_off)
 
             # solve
-            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, locvars=self.pb.pbs.localvars, locresforms=self.pb.pbs.localresforms, locincrforms=self.pb.pbs.localincrforms, locfuncspaces=self.pb.pbs.localfuncspaces)
+            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, localdata=self.pb.pbs.localdata)
 
             # get midpoint dof values for post-processing (has to be called before update!)
             self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid, self.pb.pbf.theta_ost), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid, self.pb.pbf.theta_ost)

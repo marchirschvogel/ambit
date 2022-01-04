@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -228,7 +228,7 @@ class timeintegration_solid(timeintegration):
 
     def update_fields_newmark(self, u, u_old, v_old, a_old):
         # update fields at the end of each time step 
-        # Get vectors (references)
+        # get vectors (references)
         u_vec, u0_vec  = u.vector, u_old.vector
         v0_vec, a0_vec = v_old.vector, a_old.vector
         u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
@@ -252,7 +252,7 @@ class timeintegration_solid(timeintegration):
 
     def update_fields_ost(self, u, u_old, v_old, a_old):
         # update fields at the end of each time step 
-        # Get vectors (references)
+        # get vectors (references)
         u_vec, u0_vec  = u.vector, u_old.vector
         v0_vec, a0_vec = v_old.vector, a_old.vector
         u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
@@ -341,7 +341,7 @@ class timeintegration_fluid(timeintegration):
 
     def update_fields_ost(self, v, v_old, a_old):
         # update fields at the end of each time step 
-        # Get vectors (references)
+        # get vectors (references)
         v_vec, v0_vec  = v.vector, v_old.vector
         a0_vec = a_old.vector
         v_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
@@ -359,7 +359,7 @@ class timeintegration_fluid(timeintegration):
 
 
 
-# Cardiovascular0D flow time integration class
+# Flow0d time integration class
 class timeintegration_flow0d(timeintegration):
     
     # initialize base class
@@ -379,5 +379,24 @@ class timeintegration_flow0d(timeintegration):
                 print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: - | wt = %.2e" % (N,Nmax,t,self.cycle[0],wt))
             else:
                 print("### TIME STEP %i / %i successfully completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: %.4f | wt = %.2e" % (N,Nmax,t,self.cycle[0],self.cycleerror[0],wt))
+            print(separator)
+            sys.stdout.flush()
+
+
+
+# SignallingNetwork time integration class
+class timeintegration_signet(timeintegration):
+    
+    # initialize base class
+    def __init__(self, time_params, time_curves, t_init, comm):
+        timeintegration.__init__(self, time_params, time_curves, t_init, comm=comm)
+
+
+    # print time step info
+    def print_timestep(self, N, t, separator, Nmax, wt=0):
+
+        if self.comm.rank == 0:
+
+            print("### TIME STEP %i / %i successfully completed | TIME: %.4f | wt = %.2e" % (N,Nmax,t,wt))
             print(separator)
             sys.stdout.flush()

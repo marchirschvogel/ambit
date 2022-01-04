@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -246,14 +246,6 @@ class growth:
         return F_g
 
 
-class plasticity:
-    
-    def __init__(self, e_plast, I):
-        self.e_plast = e_plast
-        self.I = I
-
-
-
 
 class growthfunction(growth):
     
@@ -269,20 +261,6 @@ class growthfunction(growth):
         k_minus = (1./tau_gr_rev) * ((self.theta-thetamin)/(thetamax-thetamin))**(gamma_gr_rev)
         
         k = ufl.conditional(ufl.ge(trigger,thres), k_plus, k_minus)
-            
-        return k
-
-
-
-class yieldfunction(plasticity):
-    
-    # add possible variations / different yield functions here...
-    
-    def yf1(self, criterion, params):
-        
-        yield_stress = params['yield_stress']
-        
-        k = criterion - yield_stress
             
         return k
 
