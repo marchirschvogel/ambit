@@ -177,9 +177,9 @@ class variationalform:
         
         C = F.T*F
         
-        n0n0 = outer(self.n0,self.n0)
+        n0n0 = ufl.outer(self.n0,self.n0)
         
-        I = Identity(3)
+        I = ufl.Identity(3)
         
         model = params['model']
         
@@ -192,7 +192,7 @@ class variationalform:
             # plane strain deformation tensor where deformation is "1" in normal direction
             Cplane = C - Cn + n0n0
             # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
-            IIIplane = det(Cplane)
+            IIIplane = ufl.det(Cplane)
             # deformation tensor where normal stretch is dependent on in-plane stretches
             Cmod = C - Cn + (1./IIIplane) * n0n0
             # TODO: Need to recover an Fmod corresponding to Cmod!
@@ -204,25 +204,25 @@ class variationalform:
             # plane deformation gradient: without components F_t1n, F_t2n, but with constant F_nn
             Fplane = F - Fn + n0n0
             # third invariant
-            IIIplane = det(Fplane)**2.0
+            IIIplane = ufl.det(Fplane)**2.0
             # modified deformation gradient: without components F_t1n, F_t2n, and with F_nn dependent on F_t1n, F_t2n
-            Fmod = F - Fn + (1./sqrt(IIIplane)) * n0n0
+            Fmod = F - Fn + (1./ufl.sqrt(IIIplane)) * n0n0
             # modified right Cauchy-Green tensor
             Cmod = Fmod.T*Fmod
         else:
             raise NameError("Unkown membrane model type!")
         
         # first invariant
-        Ic = tr(Cmod)
+        Ic = ufl.tr(Cmod)
         # declare variable for diff
-        Ic_ = variable(Ic)
+        Ic_ = ufl.variable(Ic)
         
         a_0, b_0 = params['a_0'], params['b_0']
         
         # exponential isotropic strain energy
-        Psi = a_0/(2.*b_0)*(exp(b_0*(Ic_-3.)) - 1.)
+        Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-3.)) - 1.)
         
-        dPsi_dIc = diff(Psi,Ic_)
+        dPsi_dIc = ufl.diff(Psi,Ic_)
         
         # 2nd PK stress
         S = 2.*dPsi_dIc * I
@@ -237,7 +237,7 @@ class variationalform:
         var_F = ufl.grad(self.var_u) - ufl.dot(ufl.grad(self.var_u),n0n0)
         
         # boundary virtual work
-        return -h0*inner(P,var_F)*dboundary
+        return -h0*ufl.inner(P,var_F)*dboundary
 
 
     ### Volume / flux coupling conditions

@@ -29,9 +29,9 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/mia_sim_new/outNOMR_new/0d'#'#work/mia_sim_new_0d_fixedale'
+        path = '/home/mh/work/sim/lv/fluid_be/00/cycle3D0D/out'
         sname = ''
-        nstep_cycl = 100
+        nstep_cycl = 500
         T_cycl = 1.0
         t_ed = 0.2
         t_es = 0.53
@@ -521,6 +521,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         x_s, x_e = xscale*min(x_s_all), xscale*max(x_e_all)
         #x_s, x_e = 0.0, xscale*max(x_e_all)
         y_s, y_e = yscale*min(y_s_all), yscale*max(y_e_all)
+
+        # nothing to print if we have a vanishing y-range
+        if abs(y_e-y_s) <= 1.0e-16:
+            continue
 
         # if we want to use a x2 or y2 axis
         if x2value != '': subprocess.call(['sed', '-i', 's/#__HAVEX2__//', ''+path+'/plot_'+list(groups[g].keys())[0]+'.p'])

@@ -288,6 +288,17 @@ class solver_nonlinear:
                 K_uu = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_uu * V
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
                 self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
+                # deal with penalties that may be added to reduced residual to penalize certain modes
+                if bool(self.pb.rom.redbasisvec_penalties):
+                    u_ = K_uu.createVecRight()
+                    self.pb.rom.V.multTranspose(u.vector, u_) # V^T * u
+                    penterm_ = self.pb.rom.V.createVecRight()
+                    self.pb.rom.Cpen.mult(u_, penterm_) # Cpen * V^T * u
+                    r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
+                    # we need to add Cpen * V^T * V to the stiffness!
+                    VTV = self.pb.rom.V.transposeMatMult(self.pb.rom.V) # V^T * V
+                    CpenVTV = self.pb.rom.Cpen.matMult(VTV) # Cpen * V^T * V
+                    K_uu.aypx(1.0, CpenVTV) # K_uu + Cpen * V^T * V
                 r_u, del_u = r_u_, del_u_
                 if self.pb.incompressible_2field:
                     # offdiagonal pressure blocks
@@ -889,6 +900,17 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 K_uu = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_uu * V
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
                 self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
+                # deal with penalties that may be added to reduced residual to penalize certain modes
+                if bool(self.pb.rom.redbasisvec_penalties):
+                    u_ = K_uu.createVecRight()
+                    self.pb.rom.V.multTranspose(u.vector, u_) # V^T * u
+                    penterm_ = self.pb.rom.V.createVecRight()
+                    self.pb.rom.Cpen.mult(u_, penterm_) # Cpen * V^T * u
+                    r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
+                    # we need to add Cpen * V^T * V to the stiffness!
+                    VTV = self.pb.rom.V.transposeMatMult(self.pb.rom.V) # V^T * V
+                    CpenVTV = self.pb.rom.Cpen.matMult(VTV) # Cpen * V^T * V
+                    K_uu.aypx(1.0, CpenVTV) # K_uu + Cpen * V^T * V
                 r_u, del_u = r_u_, del_u_
                 # offdiagonal blocks
                 offdg1 = self.pb.rom.V.transposeMatMult(K_us) # V^T * K_us

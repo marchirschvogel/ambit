@@ -45,6 +45,14 @@ class ModelOrderReduction():
         try: self.write_pod_modes = params['write_pod_modes']
         except: self.write_pod_modes = False
         
+        try: self.redbasisvec_indices = params['redbasisvec_indices']
+        except:
+            self.redbasisvec_indices = []
+            for i in range(self.numredbasisvec): self.redbasisvec_indices.append(i)
+        
+        try: self.redbasisvec_penalties = params['redbasisvec_penalties']
+        except: self.redbasisvec_penalties = []
+        
         # some sanity checks
         if self.numhdms <= 0:
             raise ValueError('Number of HDMs has to be > 0!')
@@ -52,7 +60,7 @@ class ModelOrderReduction():
             raise ValueError('Number of snapshots has to be > 0!')
         if self.snapshotincr <= 0:
             raise ValueError('Snapshot increment has to be > 0!')
-        if self.numredbasisvec <= 0 or self.numredbasisvec > self.numhdms*self.numsnapshots:
+        if len(self.redbasisvec_indices) <= 0 or len(self.redbasisvec_indices) > self.numhdms*self.numsnapshots:
             raise ValueError('Number of reduced-basis vectors has to be > 0 and <= number of HDMs times number of snapshots!')
         
         self.hdmfilenames = params['hdmfilenames']
@@ -140,10 +148,10 @@ class ModelOrderReduction():
                     print("   k                        ||Ax-kx||/||kx||")
                     print("   ----------------------   ----------------")
                     sys.stdout.flush()
-                    
-            for i in range(self.numredbasisvec):
-                k = eigsolver.getEigenpair(i, vr, vi)
-                error = eigsolver.computeError(i)
+            
+            for i in range(len(self.redbasisvec_indices)):
+                k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
+                error = eigsolver.computeError(self.redbasisvec_indices[i])
                 if self.print_eigenproblem:
                     if k.imag != 0.0:
                         if self.comm.rank==0:
@@ -160,13 +168,13 @@ class ModelOrderReduction():
                 
                 if k.real > self.eigenvalue_cutoff: numredbasisvec_true += 1
 
-        if self.numredbasisvec != numredbasisvec_true:
+        if len(self.redbasisvec_indices) != numredbasisvec_true:
             if self.comm.rank==0:
-                print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (self.numredbasisvec,numredbasisvec_true))
+                print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),numredbasisvec_true))
                 sys.stdout.flush()
         
         # pop out undesired ones
-        for i in range(self.numredbasisvec-numredbasisvec_true):
+        for i in range(len(self.redbasisvec_indices)-numredbasisvec_true):
             evecs.pop(-1)
             evals.pop(-1)
 
@@ -207,6 +215,19 @@ class ModelOrderReduction():
         self.V[vrs:vre,:] = self.Phi[vrs:vre,:]
   
         self.V.assemble()
+       
+        # set penalties
+        if bool(self.redbasisvec_penalties):
+            self.Cpen = PETSc.Mat().createAIJ(size=((rb),(rb)), bsize=None, nnz=(rb), csr=None, comm=self.comm)
+            self.Cpen.setUp()
+            
+            for i in range(len(self.redbasisvec_penalties)):
+                self.Cpen[i,i] = self.redbasisvec_penalties[i]
+                
+            self.Cpen.assemble()
+            
+            self.pen = self.V.createVecRight()
+            self.pen[:] = self.redbasisvec_penalties[:]
 
         te = time.time() - ts
         
@@ -305,6 +326,20 @@ class ModelOrderReduction():
                 n += 1
 
         self.V.assemble()
+        
+        # set penalties
+        if bool(self.redbasisvec_penalties):
+            
+            self.Cpen = PETSc.Mat().createAIJ(size=((rb+ndof_bulk),(rb+ndof_bulk)), bsize=None, nnz=(rb), csr=None, comm=self.comm)
+            self.Cpen.setUp()
+                
+            n=0
+            for col in range(rb+ndof_bulk):
+                if col in col_fd_set:
+                    self.Cpen[col,col] = self.redbasisvec_penalties[n]
+                    n += 1
+                    
+            self.Cpen.assemble()
 
         te = time.time() - ts
         

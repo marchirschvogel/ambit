@@ -24,10 +24,10 @@ from mpiroutines import allgather_vec
 #&\tilde{R}_{\mathrm{v,in}}^{\ell}\,q_{\mathrm{v,in}}^{\ell} = p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}\nonumber\\
 #&-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell}\nonumber\\
 #&\tilde{R}_{\mathrm{v,out}}^{\ell}\,q_{\mathrm{v,out}}^{\ell} = p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
-#&0 = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,prox}}^{\mathrm{sys}}\nonumber\\
-#&I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,prox}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,prox}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,dist}}^{\mathrm{sys}}\nonumber\\
-#&C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,dist}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,prox}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
-#&L_{\mathrm{ar}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar,dist}}^{\mathrm{sys}} -p_{\mathrm{ar,peri}}^{\mathrm{sys}}\nonumber\\
+#&0 = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}}\nonumber\\
+#&I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,p}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,p}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,d}}^{\mathrm{sys}}\nonumber\\
+#&C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,d}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,p}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
+#&L_{\mathrm{ar}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar,d}}^{\mathrm{sys}} -p_{\mathrm{ar,peri}}^{\mathrm{sys}}\nonumber\\
 #&\left(\sum_{j\in\{\mathrm{spl,espl,\atop msc,cer,cor}\}}\!\!\!\!\!\!\!\!\!C_{\mathrm{ar},j}^{\mathrm{sys}}\right) \frac{\mathrm{d}p_{\mathrm{ar,peri}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{sys}}-\!\!\!\!\!\sum_{j\in\{\mathrm{spl,espl,\atop msc,cer,cor}\}}\!\!\!\!\!\!\!\!\!q_{\mathrm{ar},j}^{\mathrm{sys}}\nonumber\\
 #&R_{\mathrm{ar},i}^{\mathrm{sys}}\,q_{\mathrm{ar},i}^{\mathrm{sys}} = p_{\mathrm{ar,peri}}^{\mathrm{sys}} - p_{\mathrm{ven},i}^{\mathrm{sys}}, \quad\scriptstyle{i\in\{\mathrm{spl,espl,\atop msc,cer,cor}\}}\nonumber\\
 #&C_{\mathrm{ven},i}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ven},i}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar},i}^{\mathrm{sys}} - q_{\mathrm{ven},i}^{\mathrm{sys}}, \quad\scriptstyle{i\in\{\mathrm{spl,espl,\atop msc,cer,cor}\}}\nonumber\\
@@ -250,8 +250,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.varmap['q_vout_l']                  = 2+self.si[0]
         self.varmap[self.vname[0]]               = 3+self.si[0]
         self.varmap['p_ar_sys']                  = 4
-        self.varmap['q_arprox_sys']              = 5
-        self.varmap['p_ardist_sys']              = 6
+        self.varmap['q_arp_sys']              = 5
+        self.varmap['p_ard_sys']              = 6
         self.varmap['q_ar_sys']                  = 7
         self.varmap['p_arperi_sys']              = 8
         self.varmap['q_arspl_sys']               = 9
@@ -294,8 +294,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         q_vout_l_          = sp.Symbol('q_vout_l_')
         p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
-        q_arprox_sys_      = sp.Symbol('q_arprox_sys_')
-        p_ardist_sys_      = sp.Symbol('p_ardist_sys_')
+        q_arp_sys_      = sp.Symbol('q_arp_sys_')
+        p_ard_sys_      = sp.Symbol('p_ard_sys_')
         q_ar_sys_          = sp.Symbol('q_ar_sys_')
         p_arperi_sys_      = sp.Symbol('p_arperi_sys_')
         q_arspl_sys_       = sp.Symbol('q_arspl_sys_')
@@ -342,8 +342,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.x_[self.varmap['q_vout_l']]                  = q_vout_l_
         self.x_[self.varmap[self.vname[0]]]               = p_v_l_i1_
         self.x_[self.varmap['p_ar_sys']]                  = p_ar_sys_
-        self.x_[self.varmap['q_arprox_sys']]              = q_arprox_sys_
-        self.x_[self.varmap['p_ardist_sys']]              = p_ardist_sys_
+        self.x_[self.varmap['q_arp_sys']]              = q_arp_sys_
+        self.x_[self.varmap['p_ard_sys']]              = p_ard_sys_
         self.x_[self.varmap['q_ar_sys']]                  = q_ar_sys_
         self.x_[self.varmap['p_arperi_sys']]              = p_arperi_sys_
         self.x_[self.varmap['q_arspl_sys']]               = q_arspl_sys_
@@ -425,8 +425,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.df_[2]  = VQ_v_l_ * self.switch_V[0]                                                                              # left ventricle volume rate
         self.df_[3]  = (self.L_vout_l/R_vout_l_) * q_vout_l_                                                                   # aortic valve inertia
         self.df_[4]  = 0.
-        self.df_[5]  = (self.I_ar_sys/self.Z_ar_sys) * q_arprox_sys_                                                           # aortic root inertia
-        self.df_[6]  = self.C_ar_sys * p_ardist_sys_                                                                           # systemic arterial volume rate
+        self.df_[5]  = (self.I_ar_sys/self.Z_ar_sys) * q_arp_sys_                                                           # aortic root inertia
+        self.df_[6]  = self.C_ar_sys * p_ard_sys_                                                                           # systemic arterial volume rate
         self.df_[7]  = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_                                                               # systemic arterial inertia
         self.df_[8]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys+self.C_arcor_sys) * p_arperi_sys_ # systemic capillary volume rate
         self.df_[9]  = 0.
@@ -466,10 +466,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.f_[1]  = vl_mv_ + q_vin_l_                                                                                        # mitral valve momentum
         self.f_[2]  = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_                                                   # left ventricle flow balance
         self.f_[3]  = vl_av_ + q_vout_l_                                                                                       # aortic valve momentum
-        self.f_[4]  = -q_vout_l_ + q_arprox_sys_                                                                               # aortic root flow balance
-        self.f_[5]  = (p_ardist_sys_ - p_ar_sys_)/self.Z_ar_sys + q_arprox_sys_                                                # aortic root momentum     
-        self.f_[6]  = -q_arprox_sys_ + q_ar_sys_                                                                               # systemic arterial flow balance
-        self.f_[7]  = (p_arperi_sys_ - p_ardist_sys_)/self.R_ar_sys + q_ar_sys_                                                # systemic arterial momentum
+        self.f_[4]  = -q_vout_l_ + q_arp_sys_                                                                               # aortic root flow balance
+        self.f_[5]  = (p_ard_sys_ - p_ar_sys_)/self.Z_ar_sys + q_arp_sys_                                                # aortic root momentum     
+        self.f_[6]  = -q_arp_sys_ + q_ar_sys_                                                                               # systemic arterial flow balance
+        self.f_[7]  = (p_arperi_sys_ - p_ard_sys_)/self.R_ar_sys + q_ar_sys_                                                # systemic arterial momentum
         self.f_[8]  = -q_ar_sys_ + (q_arspl_sys_ + q_arespl_sys_ + q_armsc_sys_ + q_arcer_sys_ + q_arcor_sys_)                 # systemic capillary flow balance
         self.f_[9]  = (p_venspl_sys_ - p_arperi_sys_)/self.R_arspl_sys + q_arspl_sys_                                          # systemic arterial splanchnic momentum
         self.f_[10] = (p_venespl_sys_ - p_arperi_sys_)/self.R_arespl_sys + q_arespl_sys_                                       # systemic arterial extra-splanchnic momentum
@@ -529,7 +529,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.a_[nc+1]  = VQ_v_r_ * self.switch_V[1]
         self.a_[nc+2]  = VQ_at_l_ * self.switch_V[2]
         self.a_[nc+3]  = VQ_at_r_ * self.switch_V[3]
-        self.a_[nc+4]  = self.C_ar_sys * p_ardist_sys_ + self.V_ar_sys_u
+        self.a_[nc+4]  = self.C_ar_sys * p_ard_sys_ + self.V_ar_sys_u
         self.a_[nc+5]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys+self.C_arcor_sys) * p_arperi_sys_ + self.V_arspl_sys_u+self.V_arespl_sys_u+self.V_armsc_sys_u+self.V_arcer_sys_u+self.V_arcor_sys_u
         self.a_[nc+6]  = self.C_venspl_sys * p_venspl_sys_ + self.V_venspl_sys_u
         self.a_[nc+7]  = self.C_venespl_sys * p_venespl_sys_ + self.V_venespl_sys_u
@@ -550,10 +550,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         var[self.varmap['q_vout_l']]                          = iniparam['q_vout_l_0']
         var[self.varmap[self.vname[0]]]                       = iniparam[self.vname[0]+'_0']
         var[self.varmap['p_ar_sys']]                          = iniparam['p_ar_sys_0']
-        try: var[self.varmap['q_arprox_sys']]                 = iniparam['q_arprox_sys_0']
-        except: var[self.varmap['q_arprox_sys']]                 = iniparam['q_ar_sys_0']
-        try: var[self.varmap['p_ardist_sys']]                 = iniparam['p_ardist_sys_0']
-        except: var[self.varmap['p_ardist_sys']]                 = iniparam['p_ar_sys_0']
+        try: var[self.varmap['q_arp_sys']]                 = iniparam['q_arp_sys_0']
+        except: var[self.varmap['q_arp_sys']]                 = iniparam['q_ar_sys_0']
+        try: var[self.varmap['p_ard_sys']]                 = iniparam['p_ard_sys_0']
+        except: var[self.varmap['p_ard_sys']]                 = iniparam['p_ar_sys_0']
         var[self.varmap['q_ar_sys']]                          = iniparam['q_ar_sys_0']
         var[self.varmap['p_arperi_sys']]                      = iniparam['p_arperi_sys_0']
         var[self.varmap['q_arspl_sys']]                       = iniparam['q_arspl_sys_0']
@@ -603,7 +603,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         elif check=='pQvar':
             
             vals = []
-            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_vencor_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
+            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap['p_ar_sys'],self.varmap['p_ard_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_vencor_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
             for i in range(len(varTc_sq)):
                 if i in pQvar_ids:
                     vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
@@ -757,12 +757,12 @@ def postprocess_groups_syspulcap(groups, indpertaftercyl=0, multiscalegandr=Fals
 #&\tilde{R}_{\mathrm{v,in}}^{\ell}\,q_{\mathrm{v,in}}^{\ell} = p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}\nonumber\\
 #&-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell}\nonumber\\
 #&\tilde{R}_{\mathrm{v,out}}^{\ell}\,q_{\mathrm{v,out}}^{\ell} = p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
-#&0 = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,prox}}^{\mathrm{sys}} - q_{\mathrm{ar,cor,in}}^{\mathrm{sys}}\nonumber\\
-#&I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,prox}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,prox}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,dist}}^{\mathrm{sys}}\nonumber\\
+#&0 = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}} - q_{\mathrm{ar,cor,in}}^{\mathrm{sys}}\nonumber\\
+#&I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,p}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,p}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,d}}^{\mathrm{sys}}\nonumber\\
 #&C_{\mathrm{ar,cor}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,cor,in}}^{\mathrm{sys}} - q_{\mathrm{ar,cor}}^{\mathrm{sys}}\nonumber\\
 #&R_{\mathrm{ar,cor}}^{\mathrm{sys}}\,q_{\mathrm{ar,cor}}^{\mathrm{sys}} = p_{\mathrm{ar}}^{\mathrm{sys}} - p_{\mathrm{ven,cor}}^{\mathrm{sys}}\nonumber\\
-#&C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,dist}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,prox}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
-#&L_{\mathrm{ar}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar,dist}}^{\mathrm{sys}} -p_{\mathrm{ar,peri}}^{\mathrm{sys}}\nonumber\\
+#&C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,d}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,p}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}}\nonumber\\
+#&L_{\mathrm{ar}}^{\mathrm{sys}}\frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar,d}}^{\mathrm{sys}} -p_{\mathrm{ar,peri}}^{\mathrm{sys}}\nonumber\\
 #&\left(\sum_{j\in\{\mathrm{spl,espl,\atop msc,cer}\}}\!\!\!\!\!\!\!\!\!C_{\mathrm{ar},j}^{\mathrm{sys}}\right) \frac{\mathrm{d}p_{\mathrm{ar,peri}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{sys}}-\!\!\!\!\!\sum_{j\in\{\mathrm{spl,espl,\atop msc,cer}\}}\!\!\!\!\!\!\!\!\!q_{\mathrm{ar},j}^{\mathrm{sys}}\nonumber\\
 #&R_{\mathrm{ar},i}^{\mathrm{sys}}\,q_{\mathrm{ar},i}^{\mathrm{sys}} = p_{\mathrm{ar,peri}}^{\mathrm{sys}} - p_{\mathrm{ven},i}^{\mathrm{sys}}, \quad\scriptstyle{i\in\{\mathrm{spl,espl,\atop msc,cer}\}}\nonumber\\
 #&C_{\mathrm{ven},i}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ven},i}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar},i}^{\mathrm{sys}} - q_{\mathrm{ven},i}^{\mathrm{sys}}, \quad\scriptstyle{i\in\{\mathrm{spl,espl,\atop msc,cer}\}}\nonumber\\
@@ -837,8 +837,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.varmap['q_vout_l']                  = 2+self.si[0]
         self.varmap[self.vname[0]]               = 3-self.si[0]
         self.varmap['p_ar_sys']                  = 4
-        self.varmap['q_arprox_sys']              = 5
-        self.varmap['p_ardist_sys']              = 6
+        self.varmap['q_arp_sys']              = 5
+        self.varmap['p_ard_sys']              = 6
         self.varmap['q_ar_sys']                  = 7
         self.varmap['p_arperi_sys']              = 8
         self.varmap['q_arspl_sys']               = 9
@@ -878,8 +878,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         q_vout_l_          = sp.Symbol('q_vout_l_')
         p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
         p_ar_sys_          = sp.Symbol('p_ar_sys_')
-        q_arprox_sys_      = sp.Symbol('q_arprox_sys_')
-        p_ardist_sys_      = sp.Symbol('p_ardist_sys_')
+        q_arp_sys_      = sp.Symbol('q_arp_sys_')
+        p_ard_sys_      = sp.Symbol('p_ard_sys_')
         q_ar_sys_          = sp.Symbol('q_ar_sys_')
         p_arperi_sys_      = sp.Symbol('p_arperi_sys_')
         q_arspl_sys_       = sp.Symbol('q_arspl_sys_')
@@ -924,8 +924,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.x_[self.varmap['q_vout_l']]                  = q_vout_l_
         self.x_[self.varmap[self.vname[0]]]               = p_v_l_i1_
         self.x_[self.varmap['p_ar_sys']]                  = p_ar_sys_
-        self.x_[self.varmap['q_arprox_sys']]              = q_arprox_sys_
-        self.x_[self.varmap['p_ardist_sys']]              = p_ardist_sys_
+        self.x_[self.varmap['q_arp_sys']]              = q_arp_sys_
+        self.x_[self.varmap['p_ard_sys']]              = p_ard_sys_
         self.x_[self.varmap['q_ar_sys']]                  = q_ar_sys_
         self.x_[self.varmap['p_arperi_sys']]              = p_arperi_sys_
         self.x_[self.varmap['q_arspl_sys']]               = q_arspl_sys_
@@ -1011,8 +1011,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.df_[2]  = VQ_v_l_ * self.switch_V[0]                                                             # left ventricle volume rate
         self.df_[3]  = (self.L_vout_l/R_vout_l_) * q_vout_l_                                                  # aortic valve inertia
         self.df_[4]  = 0.
-        self.df_[5]  = (self.I_ar_sys/self.Z_ar_sys) * q_arprox_sys_                                          # aortic root inertia
-        self.df_[6]  = self.C_ar_sys * p_ardist_sys_                                                          # systemic arterial volume rate
+        self.df_[5]  = (self.I_ar_sys/self.Z_ar_sys) * q_arp_sys_                                          # aortic root inertia
+        self.df_[6]  = self.C_ar_sys * p_ard_sys_                                                          # systemic arterial volume rate
         self.df_[7]  = (self.L_ar_sys/self.R_ar_sys) * q_ar_sys_                                              # systemic arterial inertia
         self.df_[8]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys) * p_arperi_sys_ # systemic capillary volume rate
         self.df_[9]  = 0.
@@ -1049,10 +1049,10 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.f_[1]  = vl_mv_ + q_vin_l_                                                                       # mitral valve momentum
         self.f_[2]  = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_                                  # left ventricle flow balance
         self.f_[3]  = vl_av_ + q_vout_l_                                                                      # aortic valve momentum
-        self.f_[4]  = -q_vout_l_ + q_arprox_sys_ + self.switch_cor * sum(q_arcor_sys_in_)                     # aortic root flow balance
-        self.f_[5]  = (p_ardist_sys_ - p_ar_sys_)/self.Z_ar_sys + q_arprox_sys_                               # aortic root momentum        
-        self.f_[6]  = -q_arprox_sys_ + q_ar_sys_                                                              # systemic arterial flow balance
-        self.f_[7]  = (p_arperi_sys_ - p_ardist_sys_)/self.R_ar_sys + q_ar_sys_                               # systemic arterial momentum
+        self.f_[4]  = -q_vout_l_ + q_arp_sys_ + self.switch_cor * sum(q_arcor_sys_in_)                     # aortic root flow balance
+        self.f_[5]  = (p_ard_sys_ - p_ar_sys_)/self.Z_ar_sys + q_arp_sys_                               # aortic root momentum        
+        self.f_[6]  = -q_arp_sys_ + q_ar_sys_                                                              # systemic arterial flow balance
+        self.f_[7]  = (p_arperi_sys_ - p_ard_sys_)/self.R_ar_sys + q_ar_sys_                               # systemic arterial momentum
         self.f_[8]  = -q_ar_sys_ + (q_arspl_sys_ + q_arespl_sys_ + q_armsc_sys_ + q_arcer_sys_)               # systemic capillary flow balance
         self.f_[9]  = (p_venspl_sys_ - p_arperi_sys_)/self.R_arspl_sys + q_arspl_sys_                         # systemic arterial splanchnic momentum
         self.f_[10] = (p_venespl_sys_ - p_arperi_sys_)/self.R_arespl_sys + q_arespl_sys_                      # systemic arterial extra-splanchnic momentum
@@ -1109,7 +1109,7 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.a_[nc+1]  = VQ_v_r_ * self.switch_V[1]
         self.a_[nc+2]  = VQ_at_l_ * self.switch_V[2]
         self.a_[nc+3]  = VQ_at_r_ * self.switch_V[3]
-        self.a_[nc+4]  = self.C_ar_sys * p_ardist_sys_ + self.V_ar_sys_u
+        self.a_[nc+4]  = self.C_ar_sys * p_ard_sys_ + self.V_ar_sys_u
         self.a_[nc+5]  = (self.C_arspl_sys+self.C_arespl_sys+self.C_armsc_sys+self.C_arcer_sys) * p_arperi_sys_ + self.V_arspl_sys_u+self.V_arespl_sys_u+self.V_armsc_sys_u+self.V_arcer_sys_u
         self.a_[nc+6]  = self.C_venspl_sys * p_venspl_sys_ + self.V_venspl_sys_u
         self.a_[nc+7]  = self.C_venespl_sys * p_venespl_sys_ + self.V_venespl_sys_u
@@ -1128,10 +1128,10 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         var[self.varmap['q_vout_l']]                          = iniparam['q_vout_l_0']
         var[self.varmap[self.vname[0]]]                       = iniparam[self.vname[0]+'_0']
         var[self.varmap['p_ar_sys']]                          = iniparam['p_ar_sys_0']
-        try: var[self.varmap['q_arprox_sys']]                 = iniparam['q_arprox_sys_0']
-        except: var[self.varmap['q_arprox_sys']]                 = iniparam['q_ar_sys_0']
-        try: var[self.varmap['p_ardist_sys']]                 = iniparam['p_ardist_sys_0']
-        except: var[self.varmap['p_ardist_sys']]                 = iniparam['p_ar_sys_0']
+        try: var[self.varmap['q_arp_sys']]                 = iniparam['q_arp_sys_0']
+        except: var[self.varmap['q_arp_sys']]                 = iniparam['q_ar_sys_0']
+        try: var[self.varmap['p_ard_sys']]                 = iniparam['p_ard_sys_0']
+        except: var[self.varmap['p_ard_sys']]                 = iniparam['p_ar_sys_0']
         var[self.varmap['q_ar_sys']]                          = iniparam['q_ar_sys_0']
         var[self.varmap['p_arperi_sys']]                      = iniparam['p_arperi_sys_0']
         var[self.varmap['q_arspl_sys']]                       = iniparam['q_arspl_sys_0']
@@ -1181,7 +1181,7 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         elif check=='pQvar':
             
             vals = []
-            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap['p_ar_sys'],self.varmap['p_ardist_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
+            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap['p_ar_sys'],self.varmap['p_ard_sys'],self.varmap['p_arperi_sys'],self.varmap['p_venspl_sys'],self.varmap['p_venespl_sys'],self.varmap['p_venmsc_sys'],self.varmap['p_vencer_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_cap_pul'],self.varmap['p_ven_pul']]
             for i in range(len(varTc_sq)):
                 if i in pQvar_ids:
                     vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
