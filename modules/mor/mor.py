@@ -40,7 +40,12 @@ class ModelOrderReduction():
         except: self.surface_rom = []
         
         try: self.snapshotsource = params['snapshotsource']
-        except: self.snapshotsource = 'petscvector'
+        except:
+            self.snapshotsource = []
+            for h in range(self.numhdms): self.snapshotsource.append('petscvector')
+        
+        try: self.snapshotreadin_tol = params['snapshotreadin_tol']
+        except: self.snapshotreadin_tol = 1.0e-5
         
         try: self.write_pod_modes = params['write_pod_modes']
         except: self.write_pod_modes = False
@@ -79,7 +84,7 @@ class ModelOrderReduction():
         
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
-        
+
         # snapshot matrix
         S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
         S_d.setUp()
@@ -95,22 +100,32 @@ class ModelOrderReduction():
             
                 field = fem.Function(pb.V_u)
                 
-                if self.snapshotsource == 'petscvector':
+                if self.snapshotsource[h] == 'petscvector':
                     # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
                     viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
                     field.vector.load(viewer)
                     
                     field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 
-                elif self.snapshotsource == 'rawtxt':
+                elif self.snapshotsource[h] == 'rawtxt':
                     
                     # own read function: requires plain txt format of type valx valy valz x z y
-                    pb.io.readfunction(field, pb.V_u, self.hdmfilenames[h].replace('*',str(step)))
+                    pb.io.readfunction(field, pb.V_u, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
                     
                 else:
                     raise NameError("Unknown snapshotsource!")
 
                 S_d[ss:se, self.numhdms*h+i] = field.vector[ss:se]
+
+        # for a surface-restricted rom, we need to eliminate any snapshots related to non-surface dofs
+        if bool(self.surface_rom):
+            self.fd_set = self.gather_face_dof_indices(pb)
+            zero = S_d.createVecRight()
+
+            # now, eliminate all rows in S_d that do not belong to a surface dof which is reduced
+            for i in range(ss, se):
+                if i not in self.fd_set:
+                    S_d[i,:] = zero[:]
 
         S_d.assemble()
 
@@ -241,44 +256,8 @@ class ModelOrderReduction():
         locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
         matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
 
-        # get boundary dofs which should be reduced
-        fn=[]
-        for i in range(len(self.surface_rom)):
-            
-            # these are local node indices!
-            fnode_indices_local = fem.locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
-
-            # get global indices
-            fnode_indices = pb.V_u.dofmap.index_map.local_to_global(fnode_indices_local)
-            
-            # gather indices
-            fnode_indices_gathered = self.comm.allgather(fnode_indices)
-            
-            # flatten indices from all the processes
-            fnode_indices_flat = [item for sublist in fnode_indices_gathered for item in sublist]
-
-            # remove duplicates
-            fnode_indices_unique = list(dict.fromkeys(fnode_indices_flat))
-
-            fn.append(fnode_indices_unique)
-            
-        # flatten list
-        fn_flat = [item for sublist in fn for item in sublist]
-
-        # remove duplicates
-        fn_unique = list(dict.fromkeys(fn_flat))
-        
-        # now make list of dof indices according to block size
-        fd=[]
-        for i in range(len(fn_unique)):
-            for j in range(pb.V_u.dofmap.index_map_bs):
-                fd.append(pb.V_u.dofmap.index_map_bs*fn_unique[i]+j)
-
-        # make set for faster checking
-        fd_set = set(fd)
-
         # number of non-reduced "bulk" dofs
-        ndof_bulk = matsize_u - len(fd)
+        ndof_bulk = matsize_u - len(self.fd_set)
 
         # row loop to get entries (1's) for "non-reduced" dofs
         nr, a = 0, 0
@@ -286,7 +265,7 @@ class ModelOrderReduction():
 
         for row in range(matsize_u):
             
-            if row in fd_set:
+            if row in self.fd_set:
                 # increase counter for number of reduced dofs
                 nr += 1
                 # column shift if we've exceeded the number of reduced basis vectors
@@ -308,10 +287,10 @@ class ModelOrderReduction():
         
         vrs, vre = self.V.getOwnershipRange()
 
-        # now, eliminate all rows in Phi that do not belong to a surface dof which is reduced
+        # Phi should not have any non-zero rows that do not belong to a surface dof which is reduced
         for i in range(vrs, vre):
-            if i not in fd_set:
-                self.Phi[i,:] = 0.0
+            if i not in self.fd_set:
+                assert(np.isclose(np.sum(self.Phi[i,:]), 0.0))
 
         # now set entries
         for k in range(len(row_1)):
@@ -346,3 +325,42 @@ class ModelOrderReduction():
         if self.comm.rank==0:
             print("POD done... Created reduced-order basis for surface ROM on boundary id(s) "+str(self.surface_rom)+". Time: %.4f s" % (te))
             sys.stdout.flush()
+        
+        
+    def gather_face_dof_indices(self, pb):
+
+        # get boundary dofs which should be reduced
+        fn=[]
+        for i in range(len(self.surface_rom)):
+            
+            # these are local node indices!
+            fnode_indices_local = fem.locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
+
+            # get global indices
+            fnode_indices = pb.V_u.dofmap.index_map.local_to_global(fnode_indices_local)
+            
+            # gather indices
+            fnode_indices_gathered = self.comm.allgather(fnode_indices)
+            
+            # flatten indices from all the processes
+            fnode_indices_flat = [item for sublist in fnode_indices_gathered for item in sublist]
+
+            # remove duplicates
+            fnode_indices_unique = list(dict.fromkeys(fnode_indices_flat))
+
+            fn.append(fnode_indices_unique)
+            
+        # flatten list
+        fn_flat = [item for sublist in fn for item in sublist]
+
+        # remove duplicates
+        fn_unique = list(dict.fromkeys(fn_flat))
+        
+        # now make list of dof indices according to block size
+        fd=[]
+        for i in range(len(fn_unique)):
+            for j in range(pb.V_u.dofmap.index_map_bs):
+                fd.append(pb.V_u.dofmap.index_map_bs*fn_unique[i]+j)
+
+        # make set for faster checking
+        return set(fd)

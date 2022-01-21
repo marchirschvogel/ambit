@@ -250,8 +250,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.varmap['q_vout_l']                  = 2+self.si[0]
         self.varmap[self.vname[0]]               = 3+self.si[0]
         self.varmap['p_ar_sys']                  = 4
-        self.varmap['q_arp_sys']              = 5
-        self.varmap['p_ard_sys']              = 6
+        self.varmap['q_arp_sys']                 = 5
+        self.varmap['p_ard_sys']                 = 6
         self.varmap['q_ar_sys']                  = 7
         self.varmap['p_arperi_sys']              = 8
         self.varmap['q_arspl_sys']               = 9
@@ -342,8 +342,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.x_[self.varmap['q_vout_l']]                  = q_vout_l_
         self.x_[self.varmap[self.vname[0]]]               = p_v_l_i1_
         self.x_[self.varmap['p_ar_sys']]                  = p_ar_sys_
-        self.x_[self.varmap['q_arp_sys']]              = q_arp_sys_
-        self.x_[self.varmap['p_ard_sys']]              = p_ard_sys_
+        self.x_[self.varmap['q_arp_sys']]                 = q_arp_sys_
+        self.x_[self.varmap['p_ard_sys']]                 = p_ard_sys_
         self.x_[self.varmap['q_ar_sys']]                  = q_ar_sys_
         self.x_[self.varmap['p_arperi_sys']]              = p_arperi_sys_
         self.x_[self.varmap['q_arspl_sys']]               = q_arspl_sys_
@@ -550,9 +550,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         var[self.varmap['q_vout_l']]                          = iniparam['q_vout_l_0']
         var[self.varmap[self.vname[0]]]                       = iniparam[self.vname[0]+'_0']
         var[self.varmap['p_ar_sys']]                          = iniparam['p_ar_sys_0']
-        try: var[self.varmap['q_arp_sys']]                 = iniparam['q_arp_sys_0']
+        try: var[self.varmap['q_arp_sys']]                    = iniparam['q_arp_sys_0']
         except: var[self.varmap['q_arp_sys']]                 = iniparam['q_ar_sys_0']
-        try: var[self.varmap['p_ard_sys']]                 = iniparam['p_ard_sys_0']
+        try: var[self.varmap['p_ard_sys']]                    = iniparam['p_ard_sys_0']
         except: var[self.varmap['p_ard_sys']]                 = iniparam['p_ar_sys_0']
         var[self.varmap['q_ar_sys']]                          = iniparam['q_ar_sys_0']
         var[self.varmap['p_arperi_sys']]                      = iniparam['p_arperi_sys_0']
@@ -837,8 +837,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.varmap['q_vout_l']                  = 2+self.si[0]
         self.varmap[self.vname[0]]               = 3-self.si[0]
         self.varmap['p_ar_sys']                  = 4
-        self.varmap['q_arp_sys']              = 5
-        self.varmap['p_ard_sys']              = 6
+        self.varmap['q_arp_sys']                 = 5
+        self.varmap['p_ard_sys']                 = 6
         self.varmap['q_ar_sys']                  = 7
         self.varmap['p_arperi_sys']              = 8
         self.varmap['q_arspl_sys']               = 9
@@ -924,8 +924,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         self.x_[self.varmap['q_vout_l']]                  = q_vout_l_
         self.x_[self.varmap[self.vname[0]]]               = p_v_l_i1_
         self.x_[self.varmap['p_ar_sys']]                  = p_ar_sys_
-        self.x_[self.varmap['q_arp_sys']]              = q_arp_sys_
-        self.x_[self.varmap['p_ard_sys']]              = p_ard_sys_
+        self.x_[self.varmap['q_arp_sys']]                 = q_arp_sys_
+        self.x_[self.varmap['p_ard_sys']]                 = p_ard_sys_
         self.x_[self.varmap['q_ar_sys']]                  = q_ar_sys_
         self.x_[self.varmap['p_arperi_sys']]              = p_arperi_sys_
         self.x_[self.varmap['q_arspl_sys']]               = q_arspl_sys_
@@ -1128,9 +1128,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         var[self.varmap['q_vout_l']]                          = iniparam['q_vout_l_0']
         var[self.varmap[self.vname[0]]]                       = iniparam[self.vname[0]+'_0']
         var[self.varmap['p_ar_sys']]                          = iniparam['p_ar_sys_0']
-        try: var[self.varmap['q_arp_sys']]                 = iniparam['q_arp_sys_0']
+        try: var[self.varmap['q_arp_sys']]                    = iniparam['q_arp_sys_0']
         except: var[self.varmap['q_arp_sys']]                 = iniparam['q_ar_sys_0']
-        try: var[self.varmap['p_ard_sys']]                 = iniparam['p_ard_sys_0']
+        try: var[self.varmap['p_ard_sys']]                    = iniparam['p_ard_sys_0']
         except: var[self.varmap['p_ard_sys']]                 = iniparam['p_ar_sys_0']
         var[self.varmap['q_ar_sys']]                          = iniparam['q_ar_sys_0']
         var[self.varmap['p_arperi_sys']]                      = iniparam['p_arperi_sys_0']

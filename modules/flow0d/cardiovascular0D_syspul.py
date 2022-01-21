@@ -212,7 +212,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.varmap[self.vname[0]]               = 3-self.si[0]
         self.varmap[self.vname[4]]               = 4
         self.varmap['q_arp_sys']                 = 5
-        self.varmap['p_ard_sys']              = 6
+        self.varmap['p_ard_sys']                 = 6
         self.varmap['q_ar_sys']                  = 7
         self.varmap['p_ven_sys']                 = 8
         for n in range(self.vs):
