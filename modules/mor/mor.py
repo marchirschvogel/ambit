@@ -213,6 +213,12 @@ class ModelOrderReduction():
         else:
             self.build_reduced_basis(pb,numredbasisvec_true,ts)
 
+        if bool(self.redbasisvec_penalties):
+            # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
+            # V^T * V - normally I, but for badly converged eigenvalues may have non-zero off-diagonal terms...
+            self.VTV = self.V.transposeMatMult(self.V) 
+            self.CpenVTV = self.Cpen.matMult(self.VTV) # Cpen * V^T * V
+
 
     def build_reduced_basis(self, pb, rb, ts):
 
