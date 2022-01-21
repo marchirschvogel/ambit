@@ -117,12 +117,11 @@ class ModelOrderReduction():
 
                 S_d[ss:se, self.numhdms*h+i] = field.vector[ss:se]
 
-        # for a surface-restricted rom, we need to eliminate any snapshots related to non-surface dofs
+        # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
         if bool(self.surface_rom):
             self.fd_set = self.gather_face_dof_indices(pb)
             zero = S_d.createVecRight()
-
-            # now, eliminate all rows in S_d that do not belong to a surface dof which is reduced
+            # eliminate corresponding rows in S_d
             for i in range(ss, se):
                 if i not in self.fd_set:
                     S_d[i,:] = zero[:]
@@ -240,9 +239,6 @@ class ModelOrderReduction():
                 self.Cpen[i,i] = self.redbasisvec_penalties[i]
                 
             self.Cpen.assemble()
-            
-            self.pen = self.V.createVecRight()
-            self.pen[:] = self.redbasisvec_penalties[:]
 
         te = time.time() - ts
         
