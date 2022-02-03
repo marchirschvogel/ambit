@@ -29,7 +29,7 @@ def main():
         multiscalegandr = str_to_bool(sys.argv[11])
         lastgandrcycl = int(sys.argv[12])
     except:
-        path = '/home/mh/work/sim/lv/fluid_be/00/cycle3D0D/out'
+        path = '/home/mh/work/sim/lv/fluid_be/00/cycle3D0D/out_rb4_2pen1e2'
         sname = ''
         nstep_cycl = 500
         T_cycl = 1.0
@@ -146,7 +146,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_sys.txt')==0: sysveins += 1
             if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_pul.txt')==0: pulveins += 1
 
-    
+
         # in 3D fluid dynamics, we may have "distributed" 0D in-/outflow pressures, so here we check presence of these
         # and then average them for visualization
         # check presence of default chamber pressure variable

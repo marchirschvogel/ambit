@@ -288,7 +288,7 @@ class SolidmechanicsProblem(problem_base):
         # initialize kinematics class
         self.ki = solid_kinematics_constitutive.kinematics(fib_funcs=self.fib_func, F_hist=self.F_hist)
 
-        # initialize material/constitutive class
+        # initialize material/constitutive classes (one per domain)
         self.ma = []
         for n in range(self.num_domains):
             self.ma.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)+''], self.incompressible_2field, mat_growth=self.mat_growth[n], mat_remodel=self.mat_remodel[n], mat_plastic=self.mat_plastic[n]))
@@ -758,7 +758,7 @@ class SolidmechanicsSolver():
                 break
             
         if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
             sys.stdout.flush()
 
 

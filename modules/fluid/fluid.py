@@ -117,7 +117,7 @@ class FluidmechanicsProblem(problem_base):
         # initialize kinematics_constitutive class
         self.ki = fluid_kinematics_constitutive.kinematics()
         
-        # initialize material/constitutive class
+        # initialize material/constitutive classes (one per domain)
         self.ma = []
         for n in range(self.num_domains):
             self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)+'']))
@@ -135,9 +135,7 @@ class FluidmechanicsProblem(problem_base):
             self.bc.dirichlet_bcs(self.V_v)
 
         self.set_variational_forms_and_jacobians()
-
-
-
+            
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms_and_jacobians(self):
@@ -320,5 +318,5 @@ class FluidmechanicsSolver():
             self.pb.io.write_restart(self.pb, N)
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
             sys.stdout.flush()

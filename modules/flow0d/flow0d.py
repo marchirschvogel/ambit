@@ -328,5 +328,5 @@ class Flow0DSolver():
                 break
             
         if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
             sys.stdout.flush()
