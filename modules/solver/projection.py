@@ -35,7 +35,7 @@ def project(v, V, dx_, bcs=[], nm=None):
     # solve linear system for projection
     function = fem.Function(V, name=nm)
     
-    lp = fem.LinearProblem(a, L, bcs=bcs, u=function)
+    lp = fem.petsc.LinearProblem(a, L, bcs=bcs, u=function)
     lp.solve()
     
     return function

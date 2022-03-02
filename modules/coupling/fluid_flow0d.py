@@ -178,7 +178,7 @@ class FluidmechanicsFlow0DSolver():
         if self.pb.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
             for i in range(self.pb.num_coupling_surf):
-                cq = fem.assemble_scalar(self.pb.cq_old[i])
+                cq = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
                 cq = self.pb.pbs.comm.allgather(cq)
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
         
@@ -186,7 +186,7 @@ class FluidmechanicsFlow0DSolver():
             for i in range(self.pb.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
                 self.pb.pbf.c.append(lm_sq[i])
-                con = fem.assemble_scalar(self.pb.cq_old[i])
+                con = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
                 con = self.pb.pbs.comm.allgather(con)
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])

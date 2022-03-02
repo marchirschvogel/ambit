@@ -56,28 +56,28 @@ class boundary_cond():
 
             if d['dir'] == 'all':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological(V, self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
             
             elif d['dir'] == 'x':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(0)) )
+                    self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
 
             elif d['dir'] == 'y':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(1)) )
+                    self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
 
             elif d['dir'] == 'z':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]]), V.sub(2)) )
+                    self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
 
             elif d['dir'] == '2dimX':
-                self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(0), V.sub(0).collapse()), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX)), V.sub(0)) )
+                self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX))) )
 
             elif d['dir'] == '2dimY':
-                self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(1), V.sub(1).collapse()), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY)), V.sub(1)) )
-                
+                self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY))) )
+
             elif d['dir'] == '2dimZ':
-                self.dbcs.append( fem.DirichletBC(func, fem.locate_dofs_topological((V.sub(2), V.sub(2).collapse()), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ)), V.sub(2)) )
+                self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ))) )
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")

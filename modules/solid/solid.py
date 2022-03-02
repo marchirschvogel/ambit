@@ -600,7 +600,7 @@ class SolidmechanicsProblem(problem_base):
         for n in range(self.num_domains):
             dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx_[n]
 
-        gr = fem.assemble_scalar(dtheta_all)
+        gr = fem.assemble_scalar(fem.form(dtheta_all))
         gr = self.comm.allgather(gr)
         self.growth_rate = sum(gr)
 
@@ -652,7 +652,7 @@ class SolidmechanicsProblem(problem_base):
         for n in range(self.num_domains):
             vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx_[n]
 
-        vol = fem.assemble_scalar(vol_all)
+        vol = fem.assemble_scalar(fem.form(vol_all))
         vol = self.comm.allgather(vol)
         volume = sum(vol)
         

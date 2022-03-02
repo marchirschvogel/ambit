@@ -170,7 +170,7 @@ class SolidmechanicsConstraintSolver():
         self.pb.constr, self.pb.constr_old = [], []
         for i in range(self.pb.num_coupling_surf):
             lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
-            con = fem.assemble_scalar(self.pb.cq[i])
+            con = fem.assemble_scalar(fem.form(self.pb.cq[i]))
             con = self.pb.pbs.comm.allgather(con)
             self.pb.constr.append(sum(con))
             self.pb.constr_old.append(sum(con))
