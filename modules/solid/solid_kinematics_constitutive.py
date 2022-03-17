@@ -557,7 +557,7 @@ class kinematics:
     # deformation gradient: F = I + du/dx0
     def F(self, u_):
         if self.F_hist is not None:
-            return self.F_hist*(self.I + ufl.grad(u_))
+            return (self.I + ufl.grad(u_))*self.F_hist
         else:
             return self.I + ufl.grad(u_)
 

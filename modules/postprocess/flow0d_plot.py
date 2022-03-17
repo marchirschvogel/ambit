@@ -50,7 +50,7 @@ def main():
     postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[130.,150.,60.,50., 0.], multiscalegandr=False, lastgandrcycl=1, export_png=True):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[122.314,150.,50.,50., 0.], multiscalegandr=False, lastgandrcycl=1, export_png=True):
 
     fpath = Path(__file__).parent.absolute()
     
