@@ -59,7 +59,7 @@ def main():
 
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
-                            'quad_degree'           : 2,
+                            'quad_degree'           : 4,
                             'incompressible_2field' : False,
                             'prestress_initial'     : True}
     
@@ -120,24 +120,24 @@ def main():
     s_corr = np.zeros(problem.mp.pbf.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = -1.5276874432434780E-02
-    s_corr[1] = 3.9881117219747397E-01
-    s_corr[2] = -1.0323051143551139E+00
-    s_corr[3] = 5.5157991711413024E-01
-    s_corr[4] = 1.0874631060665273E+01
-    s_corr[5] = -7.2239298388187817E+04
-    s_corr[6] = 1.0874643586107116E+01
-    s_corr[7] = 7.1802422140985407E+04
-    s_corr[8] = 2.2872621187595628E+00
-    s_corr[9] = 8.4731026080746975E+04
-    s_corr[10] = -9.2562990370366142E-03
-    s_corr[11] = 2.5371749282163869E-01
-    s_corr[12] = -1.8658711037845918E-01
-    s_corr[13] = 3.4628048231888992E-01
-    s_corr[14] = 2.2121515861034813E+00
-    s_corr[15] = 3.5710804088476398E+04
-    s_corr[16] = 1.6764895247763361E+00
-    s_corr[17] = 8.5178556838590943E+04
+    s_corr[0] = -2.0562262199494176E-02
+    s_corr[1] = 3.9870496492787205E-01
+    s_corr[2] = -1.0270303505192462E+00
+    s_corr[3] = 6.0432758755946026E-01
+    s_corr[4] = 1.0874631092751919E+01
+    s_corr[5] = -7.2239293113424006E+04
+    s_corr[6] = 1.0874643586545181E+01
+    s_corr[7] = 7.1802421963091751E+04
+    s_corr[8] = 2.2872621884286861E+00
+    s_corr[9] = 8.4721618474559902E+04
+    s_corr[10] = -1.0756389813024281E-02
+    s_corr[11] = 2.5394334503925192E-01
+    s_corr[12] = -1.8506443357170146E-01
+    s_corr[13] = 3.6150724258741812E-01
+    s_corr[14] = 2.2121515783044319E+00
+    s_corr[15] = 3.5710856529204415E+04
+    s_corr[16] = 1.6764887303663674E+00
+    s_corr[17] = 8.5185584362566486E+04
 
     check1 = resultcheck.results_check_vec(problem.mp.pbf.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)

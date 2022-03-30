@@ -337,8 +337,7 @@ class IO_solid(IO):
             vecs_to_read[pb.tau_a_old] = 'tau_a'
             if pb.have_frank_starling:
                 vecs_to_read[pb.amp_old] = 'amp_old'
-        if pb.F_hist is not None:
-            vecs_to_read[pb.F_hist] = 'F_hist'
+        if pb.u_pre is not None:
             vecs_to_read[pb.u_pre] = 'u_pre'
         
         if pb.timint != 'static':
@@ -379,8 +378,7 @@ class IO_solid(IO):
             vecs_to_write[pb.tau_a] = 'tau_a'
             if pb.have_frank_starling:
                 vecs_to_write[pb.amp_old] = 'amp_old'
-        if pb.F_hist is not None:
-            vecs_to_write[pb.F_hist] = 'F_hist'
+        if pb.u_pre is not None:
             vecs_to_write[pb.u_pre] = 'u_pre'
         
         if pb.timint != 'static':

@@ -83,6 +83,8 @@ class SolidmechanicsProblem(problem_base):
             dg_type = "DQ"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 5:
                 raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
+            if self.quad_degree < 2:
+                raise ValueError("Use at least a quadrature degree >= 2 for a hexahedral mesh!")
         else:
             raise NameError("Unknown cell/element type!")
         
@@ -156,10 +158,8 @@ class SolidmechanicsProblem(problem_base):
         self.dEdt_old = fem.Function(self.Vd_tensor)
         # prestressing history defgrad and spring prestress
         if self.prestress_initial:
-            self.F_hist = fem.Function(self.Vd_tensor, name="Defgrad_hist")
-            self.u_pre = fem.Function(self.V_u)
+            self.u_pre = fem.Function(self.V_u, name="Displacement_prestress")
         else:
-            self.F_hist = None
             self.u_pre = None
 
         try: self.volume_laplace = io_params['volume_laplace']
@@ -286,7 +286,7 @@ class SolidmechanicsProblem(problem_base):
         self.tol_stop_large = 0
 
         # initialize kinematics class
-        self.ki = solid_kinematics_constitutive.kinematics(fib_funcs=self.fib_func, F_hist=self.F_hist)
+        self.ki = solid_kinematics_constitutive.kinematics(fib_funcs=self.fib_func, u_pre=self.u_pre)
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
@@ -298,11 +298,6 @@ class SolidmechanicsProblem(problem_base):
         
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_solid(bc_dict, self.fem_params, self.io, self.ki, self.vf, self.ti)
-
-        if self.prestress_initial:
-            # initialize prestressing history deformation gradient
-            Id_proj = project(ufl.Identity(len(self.u)), self.Vd_tensor, self.dx_)
-            self.F_hist.interpolate(Id_proj)
   
         # any rate variables needed
         if self.have_visco_mat:
@@ -772,8 +767,8 @@ class SolidmechanicsSolver():
         self.solnln.newton(self.pb.u, self.pb.p)
 
         # MULF update
-        self.pb.ki.prestress_update(self.pb.u, self.pb.Vd_tensor, self.pb.dx_, self.pb.u_pre)
-        
+        self.pb.ki.prestress_update(self.pb.u, self.pb.Vd_tensor, self.pb.dx_)
+
         # set flag to false again
         self.pb.prestress_initial = False
         self.solnln.set_forms_solver(self.pb.prestress_initial)

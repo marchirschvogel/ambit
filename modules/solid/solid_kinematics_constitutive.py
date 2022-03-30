@@ -131,6 +131,10 @@ class constitutive:
         if matlaw == 'neohooke_dev':
             
             return self.mat.neohooke_dev(mparams,C_)
+
+        elif matlaw == 'yeoh_dev':
+            
+            return self.mat.yeoh_dev(mparams,C_)
             
         elif matlaw == 'mooneyrivlin_dev':
             
@@ -542,29 +546,33 @@ class constitutive:
 
 class kinematics:
     
-    def __init__(self, fib_funcs=None, F_hist=None):
+    def __init__(self, fib_funcs=None, u_pre=None):
         
         # fibers
         self.fib_funcs = fib_funcs
         
-        # history deformation gradient (for prestressing)
-        self.F_hist = F_hist
+        # prestress displacement
+        self.u_pre = u_pre
         
         # identity tensor
         self.I = ufl.Identity(3)
 
 
     # deformation gradient: F = I + du/dx0
-    def F(self, u_):
-        if self.F_hist is not None:
-            return (self.I + ufl.grad(u_))*self.F_hist
+    def F(self, u_, ext=False):
+        if not ext:
+            if self.u_pre is not None:
+                return self.I + ufl.grad(u_+self.u_pre) # Schein and Gee 2021, equivalent to Gee et al. 2010
+            else:
+                return self.I + ufl.grad(u_)
         else:
+            # prestress defgrad only enters internal force vector
             return self.I + ufl.grad(u_)
 
 
     # determinant of deformation gradient: J = det(F)
-    def J(self, u_):
-        return ufl.det(self.F(u_))
+    def J(self, u_, ext=False):
+        return ufl.det(self.F(u_,ext))
 
 
     # dJ/dC = J/2 * C^-1, J is formulated as sqrt(det(C))
@@ -599,16 +607,12 @@ class kinematics:
         return ufl.sqrt(ufl.dot(ufl.dot(self.C(u_),fib_), fib_))
 
 
-    # prestressing update (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010)
-    def prestress_update(self, u_, V, dx_, u_pre=None):
+    # prestressing update (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010,
+    # displacement formulation according to Schein and Gee 2021)
+    def prestress_update(self, u_, V, dx_):
         
-        F_hist_proj = project(self.F(u_), V, dx_)
-        self.F_hist.interpolate(F_hist_proj)
-        
-        # for springs
-        if u_pre is not None:
-            u_pre.vector.axpy(1.0, u_.vector)
-            u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.u_pre.vector.axpy(1.0, u_.vector)
+        self.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
         u_.vector.set(0.0)
         u_.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

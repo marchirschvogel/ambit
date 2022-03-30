@@ -42,6 +42,18 @@ class materiallaw:
         return S
 
 
+    def yeoh_dev(self, params, C):
+        
+        c1, c2, c3 = params['c1'], params['c2'], params['c3']
+        
+        # Yeoh material (isochoric version) - generalized NeoHookean model
+        Psi_dev = c1 * (self.Ic_bar - 3.) + c2 * (self.Ic_bar - 3.)**2. + c3 * (self.Ic_bar - 3.)**3.
+        
+        S = 2.*ufl.diff(Psi_dev,C)
+        
+        return S
+
+
     def mooneyrivlin_dev(self, params, C):
         
         c1, c2 = params['c1'], params['c2']
@@ -170,7 +182,10 @@ class materiallaw:
         
         kappa = params['kappa']
         
-        Psi_vol = (kappa/4.) * (self.IIIc - 2.*ufl.ln(ufl.sqrt(self.IIIc)) - 1.)
+        try: beta = params['beta']
+        except: beta = -2.
+        
+        Psi_vol = (kappa/(beta**2.)) * (beta*ufl.ln(ufl.sqrt(self.IIIc)) + ufl.sqrt(self.IIIc)**(-beta) - 1.)
         
         S = 2.*ufl.diff(Psi_vol,C)
         

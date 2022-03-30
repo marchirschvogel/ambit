@@ -180,8 +180,8 @@ class boundary_cond_solid(boundary_cond):
                         
                         db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
-                        w     += self.vf.deltaW_ext_neumann_true(self.ki.J(u), self.ki.F(u), func, db_)
-                        w_old += self.vf.deltaW_ext_neumann_true(self.ki.J(u_old), self.ki.F(u_old), func_old, db_)
+                        w     += self.vf.deltaW_ext_neumann_true(self.ki.J(u,ext=True), self.ki.F(u,ext=True), func, db_)
+                        w_old += self.vf.deltaW_ext_neumann_true(self.ki.J(u_old,ext=True), self.ki.F(u_old,ext=True), func_old, db_)
                     
                 else:
                     raise NameError("Unknown dir option for Neumann BC!")

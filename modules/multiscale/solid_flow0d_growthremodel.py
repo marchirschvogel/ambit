@@ -89,7 +89,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
         # store to ensure prestressed state is kept throughout the whole cycle (small scale prestress_initial gets set to False after initial prestress)
         self.prestress_initial = self.pbsmall.pbs.prestress_initial
-        # set large scale prestress to False (only F_hist and u_pre are added on the large scale if we have prestress, but no extra prestressing phase is undergone)
+        # set large scale prestress to False (only u_pre is added on the large scale if we have prestress, but no extra prestressing phase is undergone)
         self.pblarge.prestress_initial = False
 
         self.simname_small = self.pbsmall.pbs.simname + '_small'
@@ -121,7 +121,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
             
                 # we apply the pressure onto a fixed configuration of the G&R trigger point, determined by the displacement field u_set
                 # in the last G&R cycle, we assure that growth falls below a tolerance and hence the current and the set configuration coincide
-                w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set), self.pblarge.ki.F(self.pblarge.u_set), self.neumann_funcs[-1], ds_)
+                w_neumann += self.pblarge.vf.deltaW_ext_neumann_true(self.pblarge.ki.J(self.pblarge.u_set,ext=True), self.pblarge.ki.F(self.pblarge.u_set,ext=True), self.neumann_funcs[-1], ds_)
 
         self.pblarge.weakform_u -= w_neumann
         # linearization not needed (only if we applied the trigger load on the current state)
@@ -277,10 +277,8 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
     def set_state_large(self, N):
 
         # update large scale variables
-        # only needed once - set prestressing history deformation gradient and spring offset from small scale
+        # only needed once - set prestress displacement from small scale
         if self.pb.prestress_initial and N == 1:
-            self.pb.pblarge.F_hist.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.F_hist.vector)
-            self.pb.pblarge.F_hist.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             self.pb.pblarge.u_pre.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_pre.vector)
             self.pb.pblarge.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
@@ -313,7 +311,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
         J_all = ufl.as_ufl(0)
         for n in range(self.pb.pblarge.num_domains):
             
-            J_all += self.pb.pblarge.ki.J(self.pb.pblarge.u) * self.pb.pblarge.dx_[n]
+            J_all += self.pb.pblarge.ki.J(self.pb.pblarge.u,ext=True) * self.pb.pblarge.dx_[n]
 
         vol = fem.assemble_scalar(J_all)
         vol = self.pb.comm.allgather(vol)
