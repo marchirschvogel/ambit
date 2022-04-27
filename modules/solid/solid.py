@@ -102,6 +102,9 @@ class SolidmechanicsProblem(problem_base):
         # function spaces for u and p
         self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
         self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
+        # tensor finite element and function space
+        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
 
         # Quadrature tensor, vector, and scalar elements
         Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")

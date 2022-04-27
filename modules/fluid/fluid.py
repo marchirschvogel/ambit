@@ -91,6 +91,9 @@ class FluidmechanicsProblem(problem_base):
         # function spaces for v and p
         self.V_v = fem.FunctionSpace(self.io.mesh, self.P_v)
         self.V_p = fem.FunctionSpace(self.io.mesh, self.P_p)
+        # tensor finite element and function space
+        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
+        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
 
         # a discontinuous tensor, vector, and scalar function space
         self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))

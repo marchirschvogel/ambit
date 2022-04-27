@@ -246,6 +246,12 @@ class IO_solid(IO):
                             stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
                         self.resultsfiles[res].write_function(cauchystress, t)
+                    elif res=='cauchystress_nodal':
+                        stressfuncs=[]
+                        for n in range(pb.num_domains):
+                            stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
+                        cauchystress_nodal = project(stressfuncs, pb.V_tensor, pb.dx_, nm="CauchyStress_nodal")
+                        self.resultsfiles[res].write_function(cauchystress_nodal, t)
                     elif res=='trmandelstress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):

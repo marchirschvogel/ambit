@@ -71,7 +71,7 @@ class materiallaw:
         a_0, b_0 = params['a_0'], params['b_0']
         
         # exponential SEF (isochoric version)
-        Psi_dev = a_0/(2.*b_0)*(exp(b_0*(self.Ic_bar-3.)) - 1.)
+        Psi_dev = a_0/(2.*b_0)*(ufl.exp(b_0*(self.Ic_bar-3.)) - 1.)
         
         S = 2.*ufl.diff(Psi_dev,C)
         
@@ -111,7 +111,7 @@ class materiallaw:
         try: fiber_comp = params['fiber_comp']
         except: fiber_comp = False
 
-        # conditional parameters: fibers are only active in tension if fiber_comp is False
+        # conditional parameters: fibers are only active in compression if fiber_comp is True
         if not fiber_comp:
             a_f_c = ufl.conditional(ufl.ge(I4,1.), a_f, 0.)
             a_s_c = ufl.conditional(ufl.ge(I6,1.), a_s, 0.)
