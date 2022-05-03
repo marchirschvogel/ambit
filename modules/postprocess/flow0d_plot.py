@@ -51,7 +51,7 @@ def main():
     postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[113.25,150.,50.,50., 0.], multiscalegandr=False, lastgandrcycl=1, export_png=True):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[113.25,150.,50.,50., 0.], multiscalegandr=False, lastgandrcycl=1, export_png=True, generate_plots=True):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -363,225 +363,226 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('f_reg_r %.4f [%%]\n' % (f_reg[1]*100.)) 
             fi.close()
 
-
-    for g in range(len(groups)):
-        
-        numitems = len(list(groups[g].values())[0])
-        
-        # safety (and sanity...) check
-        if numitems > 18:
-            print("More than 18 items to plot in one graph! Adjust plotfile template or consider if this is sane...")
-            sys.exit()
-        
-        subprocess.call(['cp', str(fpath)+'/flow0d_gnuplot_template.p', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's#__OUTDIR__#'+path+'/plot0d_'+sname+'/#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's#__FILEDIR__#'+path+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        
-        subprocess.call(['sed', '-i', 's/__OUTNAME__/'+list(groups[g].keys())[0]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        
-        factor_kPa_mmHg = 7.500615
-        
-        if 'pres_time' in list(groups[g].keys())[0]:
-            x1value, x2value     = 't', ''
-            x1unit, x2unit       = 's', ''
-            y1value, y2value     = 'p', 'p'
-            y1unit, y2unit       = 'kPa', 'mmHg'
-            xscale, yscale       = 1.0, 1.0
-            x2rescale, y2rescale = 1.0, factor_kPa_mmHg
-            xextend, yextend     = 1.0, 1.1
-            maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
+    if generate_plots:
+            
+        for g in range(len(groups)):
+            
+            numitems = len(list(groups[g].values())[0])
+            
+            # safety (and sanity...) check
+            if numitems > 18:
+                print("More than 18 items to plot in one graph! Adjust plotfile template or consider if this is sane...")
+                sys.exit()
+            
+            subprocess.call(['cp', str(fpath)+'/flow0d_gnuplot_template.p', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's#__OUTDIR__#'+path+'/plot0d_'+sname+'/#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's#__FILEDIR__#'+path+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            
+            subprocess.call(['sed', '-i', 's/__OUTNAME__/'+list(groups[g].keys())[0]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            
+            factor_kPa_mmHg = 7.500615
+            
+            if 'pres_time' in list(groups[g].keys())[0]:
+                x1value, x2value     = 't', ''
+                x1unit, x2unit       = 's', ''
+                y1value, y2value     = 'p', 'p'
+                y1unit, y2unit       = 'kPa', 'mmHg'
+                xscale, yscale       = 1.0, 1.0
+                x2rescale, y2rescale = 1.0, factor_kPa_mmHg
+                xextend, yextend     = 1.0, 1.1
+                maxrows, maxcols, sl, swd = 1, 5, 20, 50
+                if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir') and 'pres_time_sys_l' in list(groups[g].keys())[0]:
+                    xextend, yextend     = 1.0, 1.2
+                    maxrows, maxcols, sl, swd = 2, 5, 19, 50
+            if 'flux_time' in list(groups[g].keys())[0]:
+                x1value, x2value     = 't', ''
+                x1unit, x2unit       = 's', ''
+                y1value, y2value     = 'q', ''
+                y1unit, y2unit       = 'ml/s', ''
+                xscale, yscale       = 1.0, 1.0e-3
+                x2rescale, y2rescale = 1.0, 1.0
+                xextend, yextend     = 1.0, 1.1
+                maxrows, maxcols, sl, swd = 1, 5, 20, 50
+                if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
+                    xextend, yextend     = 1.0, 1.3
+                    maxrows, maxcols, sl, swd = 3, 5, 20, 50
+                if 'flux_time_pul_r' in list(groups[g].keys())[0] and pulveins > 2:
+                    maxrows, maxcols, sl, swd = 1, 7, 16, 34
+                if 'flux_time_cor' in list(groups[g].keys())[0]:
+                    maxrows, maxcols, sl, swd = 1, 6, 13, 41
+            if 'vol_time' in list(groups[g].keys())[0]:
+                x1value, x2value     = 't', ''
+                x1unit, x2unit       = 's', ''
+                y1value, y2value     = 'V', ''
+                y1unit, y2unit       = 'ml', ''
+                xscale, yscale       = 1.0, 1.0e-3
+                x2rescale, y2rescale = 1.0, 1.0
+                xextend, yextend     = 1.0, 1.1
+                maxrows, maxcols, sl, swd = 1, 5, 20, 50
+            if 'pres_vol_v' in list(groups[g].keys())[0]:
+                x1value, x2value     = 'V_{\\\mathrm{v}}', ''
+                x1unit, x2unit       = 'ml', ''
+                y1value, y2value     = 'p_{\\\mathrm{v}}', 'p_{\\\mathrm{v}}'
+                y1unit, y2unit       = 'kPa', 'mmHg'
+                xscale, yscale       = 1.0e-3, 1.0
+                x2rescale, y2rescale = 1.0, factor_kPa_mmHg
+                xextend, yextend     = 1.1, 1.1
+                maxrows, maxcols, sl, swd = 1, 5, 20, 50
+                if multiscalegandr: sl, swd = 19, 33
+            if 'pres_vol_at' in list(groups[g].keys())[0]:
+                x1value, x2value     = 'V_{\\\mathrm{at}}', ''
+                x1unit, x2unit       = 'ml', ''
+                y1value, y2value     = 'p_{\\\mathrm{at}}', 'p_{\\\mathrm{at}}'
+                y1unit, y2unit       = 'kPa', 'mmHg'
+                xscale, yscale       = 1.0e-3, 1.0
+                x2rescale, y2rescale = 1.0, factor_kPa_mmHg
+                xextend, yextend     = 1.1, 1.1
+                maxrows, maxcols, sl, swd = 1, 5, 20, 50
+                if multiscalegandr: sl, swd = 19, 33
+            if 'vol_time_compart' in list(groups[g].keys())[0]:
+                x1value, x2value     = 't', ''
+                x1unit, x2unit       = 's', ''
+                y1value, y2value     = 'V', ''
+                y1unit, y2unit       = 'ml', ''
+                xscale, yscale       = 1.0, 1.0e-3
+                x2rescale, y2rescale = 1.0, 1.0
                 xextend, yextend     = 1.0, 1.2
-                maxrows, maxcols, sl, swd = 2, 5, 19, 50
-        if 'flux_time' in list(groups[g].keys())[0]:
-            x1value, x2value     = 't', ''
-            x1unit, x2unit       = 's', ''
-            y1value, y2value     = 'q', ''
-            y1unit, y2unit       = 'ml/s', ''
-            xscale, yscale       = 1.0, 1.0e-3
-            x2rescale, y2rescale = 1.0, 1.0
-            xextend, yextend     = 1.0, 1.1
-            maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir') and 'flux_time_sys_l' in list(groups[g].keys())[0]:
-                xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl, swd = 3, 5, 20, 50
-            if 'flux_time_pul_r' in list(groups[g].keys())[0] and pulveins > 2:
-                maxrows, maxcols, sl, swd = 1, 7, 16, 34
-            if 'flux_time_cor' in list(groups[g].keys())[0]:
-                maxrows, maxcols, sl, swd = 1, 6, 13, 41
-        if 'vol_time' in list(groups[g].keys())[0]:
-            x1value, x2value     = 't', ''
-            x1unit, x2unit       = 's', ''
-            y1value, y2value     = 'V', ''
-            y1unit, y2unit       = 'ml', ''
-            xscale, yscale       = 1.0, 1.0e-3
-            x2rescale, y2rescale = 1.0, 1.0
-            xextend, yextend     = 1.0, 1.1
-            maxrows, maxcols, sl, swd = 1, 5, 20, 50
-        if 'pres_vol_v' in list(groups[g].keys())[0]:
-            x1value, x2value     = 'V_{\\\mathrm{v}}', ''
-            x1unit, x2unit       = 'ml', ''
-            y1value, y2value     = 'p_{\\\mathrm{v}}', 'p_{\\\mathrm{v}}'
-            y1unit, y2unit       = 'kPa', 'mmHg'
-            xscale, yscale       = 1.0e-3, 1.0
-            x2rescale, y2rescale = 1.0, factor_kPa_mmHg
-            xextend, yextend     = 1.1, 1.1
-            maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if multiscalegandr: sl, swd = 19, 33
-        if 'pres_vol_at' in list(groups[g].keys())[0]:
-            x1value, x2value     = 'V_{\\\mathrm{at}}', ''
-            x1unit, x2unit       = 'ml', ''
-            y1value, y2value     = 'p_{\\\mathrm{at}}', 'p_{\\\mathrm{at}}'
-            y1unit, y2unit       = 'kPa', 'mmHg'
-            xscale, yscale       = 1.0e-3, 1.0
-            x2rescale, y2rescale = 1.0, factor_kPa_mmHg
-            xextend, yextend     = 1.1, 1.1
-            maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if multiscalegandr: sl, swd = 19, 33
-        if 'vol_time_compart' in list(groups[g].keys())[0]:
-            x1value, x2value     = 't', ''
-            x1unit, x2unit       = 's', ''
-            y1value, y2value     = 'V', ''
-            y1unit, y2unit       = 'ml', ''
-            xscale, yscale       = 1.0, 1.0e-3
-            x2rescale, y2rescale = 1.0, 1.0
-            xextend, yextend     = 1.0, 1.2
-            maxrows, maxcols, sl, swd = 2, 5, 20, 50
-            if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir'):
-                xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl, swd = 3, 5, 10, 50
-            if coronarymodel is not None:
-                maxrows, maxcols, sl, swd = 2, 5, 20, 40
-        if 'ppO2_time' in list(groups[g].keys())[0]:
-            x1value, x2value     = 't', ''
-            x1unit, x2unit       = 's', ''
-            y1value, y2value     = 'p_{\\\mathrm{O}_2}', 'p_{\\\mathrm{O}_2}'
-            y1unit, y2unit       = 'kPa', 'mmHg'
-            xscale, yscale       = 1.0, 1.0
-            x2rescale, y2rescale = 1.0, factor_kPa_mmHg
-            xextend, yextend     = 1.0, 1.2
-            maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if 'sys_l' in list(groups[g].keys())[0]:
-                xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl, swd = 3, 5, 10, 50
-        if 'ppCO2_time' in list(groups[g].keys())[0]:
-            x1value, x2value     = 't', ''
-            x1unit, x2unit       = 's', ''
-            y1value, y2value     = 'p_{\\\mathrm{CO}_2}', 'p_{\\\mathrm{CO}_2}'
-            y1unit, y2unit       = 'kPa', 'mmHg'
-            xscale, yscale       = 1.0, 1.0
-            x2rescale, y2rescale = 1.0, factor_kPa_mmHg
-            xextend, yextend     = 1.0, 1.2
-            maxrows, maxcols, sl, swd = 1, 5, 20, 50
-            if 'sys_l' in list(groups[g].keys())[0]:
-                xextend, yextend     = 1.0, 1.3
-                maxrows, maxcols, sl, swd = 3, 5, 10, 50
-        
-        data = []
-        x_s_all, x_e_all = [], []
-        y_s_all, y_e_all = [], []
-        
-        for q in range(numitems):
+                maxrows, maxcols, sl, swd = 2, 5, 20, 50
+                if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir'):
+                    xextend, yextend     = 1.0, 1.3
+                    maxrows, maxcols, sl, swd = 3, 5, 10, 50
+                if coronarymodel is not None:
+                    maxrows, maxcols, sl, swd = 2, 5, 20, 40
+            if 'ppO2_time' in list(groups[g].keys())[0]:
+                x1value, x2value     = 't', ''
+                x1unit, x2unit       = 's', ''
+                y1value, y2value     = 'p_{\\\mathrm{O}_2}', 'p_{\\\mathrm{O}_2}'
+                y1unit, y2unit       = 'kPa', 'mmHg'
+                xscale, yscale       = 1.0, 1.0
+                x2rescale, y2rescale = 1.0, factor_kPa_mmHg
+                xextend, yextend     = 1.0, 1.2
+                maxrows, maxcols, sl, swd = 1, 5, 20, 50
+                if 'sys_l' in list(groups[g].keys())[0]:
+                    xextend, yextend     = 1.0, 1.3
+                    maxrows, maxcols, sl, swd = 3, 5, 10, 50
+            if 'ppCO2_time' in list(groups[g].keys())[0]:
+                x1value, x2value     = 't', ''
+                x1unit, x2unit       = 's', ''
+                y1value, y2value     = 'p_{\\\mathrm{CO}_2}', 'p_{\\\mathrm{CO}_2}'
+                y1unit, y2unit       = 'kPa', 'mmHg'
+                xscale, yscale       = 1.0, 1.0
+                x2rescale, y2rescale = 1.0, factor_kPa_mmHg
+                xextend, yextend     = 1.0, 1.2
+                maxrows, maxcols, sl, swd = 1, 5, 20, 50
+                if 'sys_l' in list(groups[g].keys())[0]:
+                    xextend, yextend     = 1.0, 1.3
+                    maxrows, maxcols, sl, swd = 3, 5, 10, 50
             
-            # continue if file does not exist
-            if os.system('test -e '+path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') > 0:
+            data = []
+            x_s_all, x_e_all = [], []
+            y_s_all, y_e_all = [], []
+            
+            for q in range(numitems):
+                
+                # continue if file does not exist
+                if os.system('test -e '+path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') > 0:
+                    continue
+                
+                # get the data and check its length
+                tmp = np.loadtxt(path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!
+                numdata = len(tmp)
+                
+                # set quantity, title, and plotting line
+                subprocess.call(['sed', '-i', 's/__QTY'+str(q+1)+'__/results_'+sname+'_'+list(groups[g].values())[0][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+                subprocess.call(['sed', '-i', 's/__TIT'+str(q+1)+'__/'+list(groups[g].values())[1][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+                subprocess.call(['sed', '-i', 's/__LIN'+str(q+1)+'__/'+str(list(groups[g].values())[2][q])+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+                
+                # adjust the plotting command to include all the files to plot in one graph
+                if q!=0: subprocess.call(['sed', '-i', 's/#__'+str(q+1)+'__//g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+                
+                if 'PERIODIC' in list(groups[g].keys())[0]: skip = numdata-nstep_cycl
+                else: skip = 0
+                
+                # get the x,y range on which to plot
+                data.append(np.loadtxt(path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt', skiprows=skip))
+
+                # if time is our x-axis
+                if 'time' in list(groups[g].keys())[0]:
+                    x_s_all.append(min(data[q][:,0]))
+                else: # start plots from x=0 even if data is larger than zero
+                    if min(data[q][:,0]) > 0.0: x_s_all.append(0.0)
+                    else: x_s_all.append(min(data[q][:,0]))
+                
+                x_e_all.append(max(data[q][:,0]))
+                
+                # start plots from y=0 even if data is larger than zero
+                if min(data[q][:,1]) > 0.0: y_s_all.append(0.0)
+                else: y_s_all.append(min(data[q][:,1]))
+                
+                y_e_all.append(max(data[q][:,1]))
+            
+            # get the min and the max of all x's and y's
+            x_s, x_e = xscale*min(x_s_all), xscale*max(x_e_all)
+            #x_s, x_e = 0.0, xscale*max(x_e_all)
+            y_s, y_e = yscale*min(y_s_all), yscale*max(y_e_all)
+
+            # nothing to print if we have a vanishing y-range
+            if abs(y_e-y_s) <= 1.0e-16:
                 continue
-            
-            # get the data and check its length
-            tmp = np.loadtxt(path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!
-            numdata = len(tmp)
-            
-            # set quantity, title, and plotting line
-            subprocess.call(['sed', '-i', 's/__QTY'+str(q+1)+'__/results_'+sname+'_'+list(groups[g].values())[0][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-            subprocess.call(['sed', '-i', 's/__TIT'+str(q+1)+'__/'+list(groups[g].values())[1][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-            subprocess.call(['sed', '-i', 's/__LIN'+str(q+1)+'__/'+str(list(groups[g].values())[2][q])+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-            
-            # adjust the plotting command to include all the files to plot in one graph
-            if q!=0: subprocess.call(['sed', '-i', 's/#__'+str(q+1)+'__//g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-            
-            if 'PERIODIC' in list(groups[g].keys())[0]: skip = numdata-nstep_cycl
-            else: skip = 0
-            
-            # get the x,y range on which to plot
-            data.append(np.loadtxt(path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt', skiprows=skip))
 
-            # if time is our x-axis
-            if 'time' in list(groups[g].keys())[0]:
-                x_s_all.append(min(data[q][:,0]))
-            else: # start plots from x=0 even if data is larger than zero
-                if min(data[q][:,0]) > 0.0: x_s_all.append(0.0)
-                else: x_s_all.append(min(data[q][:,0]))
+            # if we want to use a x2 or y2 axis
+            if x2value != '': subprocess.call(['sed', '-i', 's/#__HAVEX2__//', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            if y2value != '': subprocess.call(['sed', '-i', 's/#__HAVEY2__//', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             
-            x_e_all.append(max(data[q][:,0]))
-            
-            # start plots from y=0 even if data is larger than zero
-            if min(data[q][:,1]) > 0.0: y_s_all.append(0.0)
-            else: y_s_all.append(min(data[q][:,1]))
-            
-            y_e_all.append(max(data[q][:,1]))
-        
-        # get the min and the max of all x's and y's
-        x_s, x_e = xscale*min(x_s_all), xscale*max(x_e_all)
-        #x_s, x_e = 0.0, xscale*max(x_e_all)
-        y_s, y_e = yscale*min(y_s_all), yscale*max(y_e_all)
+            # axis segments - x
+            subprocess.call(['sed', '-i', 's/__X1S__/'+str(x_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__X1E__/'+str(x_e*xextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__X2S__/'+str(x2rescale*x_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__X2E__/'+str(x2rescale*x_e*xextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            # axis segments - y
+            subprocess.call(['sed', '-i', 's/__Y1S__/'+str(y_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__Y1E__/'+str(y_e*yextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__Y2S__/'+str(y2rescale*y_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__Y2E__/'+str(y2rescale*y_e*yextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            # units
+            subprocess.call(['sed', '-i', 's#__X1UNIT__#'+x1unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's#__Y1UNIT__#'+y1unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            if x2unit != '': subprocess.call(['sed', '-i', 's#__X2UNIT__#'+x2unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            if y2unit != '': subprocess.call(['sed', '-i', 's#__Y2UNIT__#'+y2unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            # values
+            subprocess.call(['sed', '-i', 's#__X1VALUE__#'+x1value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's#__Y1VALUE__#'+y1value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            if x2value != '': subprocess.call(['sed', '-i', 's#__X2VALUE__#'+x2value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            if y2value != '': subprocess.call(['sed', '-i', 's#__Y2VALUE__#'+y2value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            # scales
+            subprocess.call(['sed', '-i', 's/__XSCALE__/'+str(xscale)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__YSCALE__/'+str(yscale)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            # rows, columns and sample length for legend
+            subprocess.call(['sed', '-i', 's/__MAXROWS__/'+str(maxrows)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__MAXCOLS__/'+str(maxcols)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__SAMPLEN__/'+str(sl)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            subprocess.call(['sed', '-i', 's/__SAMPWID__/'+str(swd)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
 
-        # nothing to print if we have a vanishing y-range
-        if abs(y_e-y_s) <= 1.0e-16:
-            continue
+            # do the plotting
+            subprocess.call(['gnuplot', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            # convert to PDF
+            subprocess.call(['ps2pdf', '-dEPSCrop', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.pdf'])
+            subprocess.call(['pdflatex', '-interaction=batchmode', '-output-directory='+path+'/plot0d_'+sname+'/', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.tex'])
 
-        # if we want to use a x2 or y2 axis
-        if x2value != '': subprocess.call(['sed', '-i', 's/#__HAVEX2__//', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        if y2value != '': subprocess.call(['sed', '-i', 's/#__HAVEY2__//', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        
-        # axis segments - x
-        subprocess.call(['sed', '-i', 's/__X1S__/'+str(x_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__X1E__/'+str(x_e*xextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__X2S__/'+str(x2rescale*x_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__X2E__/'+str(x2rescale*x_e*xextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        # axis segments - y
-        subprocess.call(['sed', '-i', 's/__Y1S__/'+str(y_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__Y1E__/'+str(y_e*yextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__Y2S__/'+str(y2rescale*y_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__Y2E__/'+str(y2rescale*y_e*yextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        # units
-        subprocess.call(['sed', '-i', 's#__X1UNIT__#'+x1unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's#__Y1UNIT__#'+y1unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        if x2unit != '': subprocess.call(['sed', '-i', 's#__X2UNIT__#'+x2unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        if y2unit != '': subprocess.call(['sed', '-i', 's#__Y2UNIT__#'+y2unit+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        # values
-        subprocess.call(['sed', '-i', 's#__X1VALUE__#'+x1value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's#__Y1VALUE__#'+y1value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        if x2value != '': subprocess.call(['sed', '-i', 's#__X2VALUE__#'+x2value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        if y2value != '': subprocess.call(['sed', '-i', 's#__Y2VALUE__#'+y2value+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        # scales
-        subprocess.call(['sed', '-i', 's/__XSCALE__/'+str(xscale)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__YSCALE__/'+str(yscale)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        # rows, columns and sample length for legend
-        subprocess.call(['sed', '-i', 's/__MAXROWS__/'+str(maxrows)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__MAXCOLS__/'+str(maxcols)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__SAMPLEN__/'+str(sl)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        subprocess.call(['sed', '-i', 's/__SAMPWID__/'+str(swd)+'/g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-
-        # do the plotting
-        subprocess.call(['gnuplot', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-        # convert to PDF
-        subprocess.call(['ps2pdf', '-dEPSCrop', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.pdf'])
-        subprocess.call(['pdflatex', '-interaction=batchmode', '-output-directory='+path+'/plot0d_'+sname+'/', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.tex'])
-
-        if export_png:
-            subprocess.call(['pdftoppm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.pdf', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0], '-png', '-rx', '300', '-ry', '300'])
-            subprocess.call(['mv', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-1.png', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.png']) # output has -1, so rename
-            # delete PDFs
-            subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.pdf'])
-            
-        # clean up
-        subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.aux', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.log'])
-        # guess we do not need these files anymore since we have the final PDF...
-        subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.tex'])
-        subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.pdf'])
-        subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps'])
-        # delete gnuplot file
-        subprocess.call(['rm', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+            if export_png:
+                subprocess.call(['pdftoppm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.pdf', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0], '-png', '-rx', '300', '-ry', '300'])
+                subprocess.call(['mv', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-1.png', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.png']) # output has -1, so rename
+                # delete PDFs
+                subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.pdf'])
+                
+            # clean up
+            subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.aux', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.log'])
+            # guess we do not need these files anymore since we have the final PDF...
+            subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.tex'])
+            subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.pdf'])
+            subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps'])
+            # delete gnuplot file
+            subprocess.call(['rm', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
 
 
 
