@@ -175,7 +175,8 @@ class IO_solid(IO):
         co = V.tabulate_dof_coordinates()
 
         # index map
-        im = V.dofmap.index_map.global_indices()
+        #im = V.dofmap.index_map.global_indices() # function seems to have gone!
+        im = np.asarray(V.dofmap.index_map.local_to_global(np.arange(V.dofmap.index_map.size_local + V.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
 
         tolerance = int(-np.log10(tol))
 

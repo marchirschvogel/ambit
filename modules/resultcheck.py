@@ -9,6 +9,7 @@
 import sys
 import numpy as np
 from mpiroutines import allgather_vec
+from petsc4py import PETSc
 
 
 # check the result of a node (specified by coordinates) in the full parallel (ghosted) dof vector
@@ -26,7 +27,8 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec'):
     co = V.tabulate_dof_coordinates()
 
     # index map
-    im = V.dofmap.index_map.global_indices()
+    #im = V.dofmap.index_map.global_indices() # function seems to have gone!
+    im = np.asarray(V.dofmap.index_map.local_to_global(np.arange(V.dofmap.index_map.size_local + V.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
 
     # in parallel, dof indices can be ordered differently, so we need to check the position of the node in the
     # re-ordered local co array and then grep out the corresponding dof index from the index map
