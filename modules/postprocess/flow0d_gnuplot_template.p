@@ -5,7 +5,7 @@ set grid
 #set size 0.5, 0.5
 
 # gnuplot line colors:
-# https://sites.google.com/site/hrsckim/useful-info/gnuplot/lineandpointtypes
+# https://i.stack.imgur.com/x6yLm.png
 # gnuplot dash types:
 # http://gnuplot.sourceforge.net/demo_svg_5.2/dashtypes.html
 
@@ -40,6 +40,7 @@ set style line 20 dashtype 10 linecolor rgb '#8b008b' linewidth 3 # dark-magenta
 set style line 201 dashtype 10 linecolor rgb '#f055f0' linewidth 3 # light-magenta - ven2_pul
 set style line 202 dashtype 11 linecolor rgb '#ff00ff' linewidth 3 # magenta - ven3_pul
 set style line 203 dashtype 12 linecolor rgb '#ff1493' linewidth 3 # dark-pink - ven4_pul
+set style line 204 dashtype 13 linecolor rgb '#804080' linewidth 3 # orchid4 - ven5_pul
 
 set style line 21 dashtype 1 linecolor rgb '#006400' linewidth 4 # dark-green
 set style line 22 dashtype 1 linecolor rgb '#a020f0' linewidth 4 # purple

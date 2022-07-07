@@ -178,10 +178,10 @@ class cardiovascular0Dbase(ode):
                 #self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
                 # add inflow pressures to coupling name prefixes
                 for m in range(self.chmodels[ch]['num_inflows']):
-                    self.cname.append('p_'+chn+'_i'+str(m+1)+'')
+                    self.cname.append('p_'+chn+'_i'+str(m+1))
                 # add outflow pressures to coupling name prefixes
                 for m in range(self.chmodels[ch]['num_outflows']):
-                    self.cname.append('p_'+chn+'_o'+str(m+1)+'')
+                    self.cname.append('p_'+chn+'_o'+str(m+1))
                 
             else:
                 raise NameError("Unknown chamber model for chamber %s!" % (ch))
@@ -206,8 +206,8 @@ class cardiovascular0Dbase(ode):
             
             # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
-                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
-                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
+                if 'pi'+str(k+1) in chvars.keys(): chvars['pi'+str(k+1)] = chvars['pi1']
+                if 'po'+str(k+1) in chvars.keys(): chvars['po'+str(k+1)] = chvars['pi1']
 
         # rigid
         elif self.chmodels[ch]['type']=='0D_rigid':
@@ -215,16 +215,16 @@ class cardiovascular0Dbase(ode):
             
             # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
-                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
-                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
+                if 'pi'+str(k+1) in chvars.keys(): chvars['pi'+str(k+1)] = chvars['pi1']
+                if 'po'+str(k+1) in chvars.keys(): chvars['po'+str(k+1)] = chvars['pi1']
 
         # 3D solid mechanics model, or 0D prescribed volume/flux/pressure (non-primary variables!)
         elif self.chmodels[ch]['type']=='3D_solid' or self.chmodels[ch]['type']=='prescribed':
 
             # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
-                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
-                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['pi1']
+                if 'pi'+str(k+1) in chvars.keys(): chvars['pi'+str(k+1)] = chvars['pi1']
+                if 'po'+str(k+1) in chvars.keys(): chvars['po'+str(k+1)] = chvars['pi1']
 
             if self.cq[i] == 'volume' or self.cq[i] == 'flux':
                 self.c_.append(chvars['VQ']) # V or Q
@@ -241,25 +241,25 @@ class cardiovascular0Dbase(ode):
 
             # all "distributed" p that are not coupled are set to first inflow p
             for k in range(self.chmodels[ch]['num_inflows'],10):
-                if 'pi'+str(k+1)+'' in chvars.keys(): chvars['pi'+str(k+1)+''] = chvars['pi1']
+                if 'pi'+str(k+1) in chvars.keys(): chvars['pi'+str(k+1)] = chvars['pi1']
 
             # if no inflow is present, set to zero
             if self.chmodels[ch]['num_inflows']==0: chvars['pi1'] = sp.S.Zero
 
             # now add inflow pressures to coupling array
             for m in range(self.chmodels[ch]['num_inflows']):
-                self.c_.append(chvars['pi'+str(m+1)+''])
+                self.c_.append(chvars['pi'+str(m+1)])
             
             # all "distributed" p that are not coupled are set to first outflow p
             for k in range(self.chmodels[ch]['num_outflows'],10):
-                if 'po'+str(k+1)+'' in chvars.keys(): chvars['po'+str(k+1)+''] = chvars['po1']
+                if 'po'+str(k+1) in chvars.keys(): chvars['po'+str(k+1)] = chvars['po1']
             
             # if no outflow is present, set to zero
             if self.chmodels[ch]['num_outflows']==0: chvars['po1'] = sp.S.Zero
 
             # now add outflow pressures to coupling array
             for m in range(self.chmodels[ch]['num_outflows']):
-                self.c_.append(chvars['po'+str(m+1)+''])
+                self.c_.append(chvars['po'+str(m+1)])
 
         else:
             raise NameError("Unknown chamber model for chamber %s!" % (ch))
