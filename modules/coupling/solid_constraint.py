@@ -46,6 +46,8 @@ class SolidmechanicsConstraintProblem():
         # initialize problem instances (also sets the variational forms for the solid problem)
         self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
 
+        self.incompressible_2field = self.pbs.incompressible_2field
+
         self.set_variational_forms_and_jacobians()
 
         

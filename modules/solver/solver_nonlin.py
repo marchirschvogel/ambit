@@ -89,7 +89,6 @@ class solver_nonlinear:
             self.tolerances = {'res_u' : self.tolres, 'inc_u' : self.tolinc}
 
         self.solutils = sol_utils(self.pb, self.ptype, solver_params)
-        
         self.sepstring = self.solutils.timestep_separator(self.tolerances)
         
 
@@ -524,6 +523,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         super().__init__(pbc.pbs, V_u, V_p, solver_params_3D)
         
         self.ptype = self.pbc.problem_physics
+        self.solutils = sol_utils(self.pbc, self.ptype, solver_params_3D)
+        self.sepstring = self.solutils.timestep_separator(self.tolerances)
 
         self.tolres0D = solver_params_constr['tol_res']
         self.tolinc0D = solver_params_constr['tol_inc']

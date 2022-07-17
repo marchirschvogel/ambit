@@ -52,6 +52,8 @@ class SolidmechanicsFlow0DProblem():
         self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
         self.pbf = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
+        self.incompressible_2field = self.pbs.incompressible_2field
+
         # for multiscale G&R analysis
         self.t_prev = 0
         self.t_gandr_setpoint = 0

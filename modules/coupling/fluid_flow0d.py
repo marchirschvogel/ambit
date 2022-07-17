@@ -51,6 +51,8 @@ class FluidmechanicsFlow0DProblem():
         self.pbs = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
         self.pbf = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
+        self.incompressible_2field = self.pbs.incompressible_2field
+
         self.set_variational_forms_and_jacobians()
 
         

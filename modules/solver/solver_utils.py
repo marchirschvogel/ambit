@@ -55,7 +55,7 @@ class sol_utils():
     def print_nonlinear_iter(self,it=0,resnorms=0,incnorms=0,PTC=False,k_PTC=0,header=False,ts=0,te=0):
         
         if PTC:
-            nkptc='k_ptc = '+str(format(k_PTC, '.4e'))+''
+            nkptc='k_ptc = '+str(format(k_PTC, '.4e'))
         else:
             nkptc=''
 
@@ -77,21 +77,21 @@ class sol_utils():
                     print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','signet res 2-norm','signet inc 2-norm','ts','te'))
                     sys.stdout.flush()
                 elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
-                    if self.pbc.coupling_type == 'monolithic_direct':
+                    if self.pb.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pbc.coupling_type == 'monolithic_lagrange':
+                    if self.pb.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
                 elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
-                    if self.pbc.coupling_type == 'monolithic_direct':
+                    if self.pb.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pbc.coupling_type == 'monolithic_lagrange':
+                    if self.pb.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
                 elif self.ptype=='fluid_flow0d':
-                    if self.pbc.coupling_type == 'monolithic_direct':
+                    if self.pb.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pbc.coupling_type == 'monolithic_lagrange':
+                    if self.pb.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
                 else:
