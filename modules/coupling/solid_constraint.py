@@ -80,7 +80,7 @@ class SolidmechanicsConstraintProblem():
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_c_ids[n])):
                 
-                ds_vq = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_c_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                ds_vq = ufl.ds(subdomain_data=self.pbs.io.mt_b1[0], subdomain_id=self.surface_c_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 
                 # currently, only volume or flux constraints are supported
                 if self.coupling_params['constraint_quantity'][n] == 'volume':
@@ -98,7 +98,7 @@ class SolidmechanicsConstraintProblem():
             df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
             
-                ds_p = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                ds_p = ufl.ds(subdomain_data=self.pbs.io.mt_b1[0], subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 df_ += self.pbs.timefac*self.pbs.vf.surface(self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_p)
             
                 # add to solid rhs contributions

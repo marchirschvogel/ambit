@@ -26,17 +26,17 @@ def main():
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
                             'use_model_order_red'   : True,
-                            'mesh_domain'           : ''+basepath+'/input/heart2D_domain.xdmf',
-                            'mesh_boundary'         : ''+basepath+'/input/heart2D_boundary.xdmf',
-                            'fiber_data'            : {'nodal' : [''+basepath+'/input/fib_fiber_coords_nodal_2D.txt',''+basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
+                            'mesh_domain'           : [basepath+'/input/heart2D_domain.xdmf'],
+                            'mesh_boundary'         : [basepath+'/input/heart2D_boundary.xdmf'],
+                            'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_2D.txt',basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
                             'write_results_every'   : -999,
-                            'output_path'           : ''+basepath+'/tmp/',
+                            'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement'],
                             'simname'               : 'ROM_2Dheart', # ROM_2Dheart
                             'write_restart_every'   : -999,
                             'restart_step'          : restart_step}
 
-    ROM_PARAMS           = {'hdmfilenames'          : [''+basepath+'/input/checkpoint_romsnaps_2Dheart_u_*_1proc.dat'],
+    ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_romsnaps_2Dheart_u_*_1proc.dat'],
                             'numhdms'               : 1,
                             'numsnapshots'          : 5,
                             'snapshotincr'          : 1,

@@ -47,7 +47,7 @@ class SolidmechanicsProblem(problem_base):
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh[0])
 
         self.order_disp = fem_params['order_disp']
         try: self.order_pres = fem_params['order_pres']
@@ -61,8 +61,8 @@ class SolidmechanicsProblem(problem_base):
         self.dx_, self.rho0, self.rayleigh, self.eta_m, self.eta_k = [], [], [False]*self.num_domains, [], []
         for n in range(self.num_domains):
             # integration domains
-            if self.io.mt_d is not None: self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
-            else:                        self.dx_.append(ufl.dx(metadata={'quadrature_degree': self.quad_degree}))
+            if self.io.mt_d[0] is not None: self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d[0], subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            else:                           self.dx_.append(ufl.dx(metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial and viscous forces: density and damping
             if self.timint != 'static':
                 self.rho0.append(self.constitutive_models['MAT'+str(n+1)+'']['inertia']['rho0'])
@@ -75,11 +75,11 @@ class SolidmechanicsProblem(problem_base):
         except: self.prestress_initial = False
 
         # type of discontinuous function spaces
-        if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
+        if str(self.io.mesh[0].ufl_cell()) == 'tetrahedron' or str(self.io.mesh[0].ufl_cell()) == 'triangle3D':
             dg_type = "DG"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 3:
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
-        elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
+        elif str(self.io.mesh[0].ufl_cell()) == 'hexahedron' or str(self.io.mesh[0].ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 5:
                 raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
@@ -97,29 +97,29 @@ class SolidmechanicsProblem(problem_base):
             self.rom = mor.ModelOrderReduction(mor_params, comm)
         
         # create finite element objects for u and p
-        P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        P_u = ufl.VectorElement("CG", self.io.mesh[0].ufl_cell(), self.order_disp)
+        P_p = ufl.FiniteElement("CG", self.io.mesh[0].ufl_cell(), self.order_pres)
         # function spaces for u and p
-        self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
-        self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
+        self.V_u = fem.FunctionSpace(self.io.mesh[0], P_u)
+        self.V_p = fem.FunctionSpace(self.io.mesh[0], P_p)
         # tensor finite element and function space
-        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
+        P_tensor = ufl.TensorElement("CG", self.io.mesh[0].ufl_cell(), self.order_disp)
+        self.V_tensor = fem.FunctionSpace(self.io.mesh[0], P_tensor)
 
         # Quadrature tensor, vector, and scalar elements
-        Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
-        Q_vector = ufl.VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
-        Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
+        Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh[0].ufl_cell(), degree=1, quad_scheme="default")
+        Q_vector = ufl.VectorElement("Quadrature", self.io.mesh[0].ufl_cell(), degree=1, quad_scheme="default")
+        Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh[0].ufl_cell(), degree=1, quad_scheme="default")
 
         # not yet working - we cannot interpolate into Quadrature elements with the current dolfinx version currently!
-        #self.Vd_tensor = fem.FunctionSpace(self.io.mesh, Q_tensor)
-        #self.Vd_vector = fem.FunctionSpace(self.io.mesh, Q_vector)
-        #self.Vd_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
+        #self.Vd_tensor = fem.FunctionSpace(self.io.mesh[0], Q_tensor)
+        #self.Vd_vector = fem.FunctionSpace(self.io.mesh[0], Q_vector)
+        #self.Vd_scalar = fem.FunctionSpace(self.io.mesh[0], Q_scalar)
 
         # Quadrature function spaces (currently not properly functioning for higher-order meshes!!!)
-        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh[0], (dg_type, self.order_disp-1))
+        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh[0], (dg_type, self.order_disp-1))
+        self.Vd_scalar = fem.FunctionSpace(self.io.mesh[0], (dg_type, self.order_disp-1))
 
         # functions
         self.du    = ufl.TrialFunction(self.V_u)            # Incremental displacement
@@ -640,7 +640,7 @@ class SolidmechanicsProblem(problem_base):
         uf = Function(self.V_u, name="uf")
         
         dbcs_laplace=[]
-        dbcs_laplace.append( DirichletBC(self.u, locate_dofs_topological(self.V_u, 2, self.io.mt_b1.indices[self.io.mt_b1.values == self.volume_laplace[0]])) )
+        dbcs_laplace.append( DirichletBC(self.u, locate_dofs_topological(self.V_u, 2, self.io.mt_b1[0].indices[self.io.mt_b1[0].values == self.volume_laplace[0]])) )
 
         # solve linear Laplace problem
         lp = LinearProblem(a, L, bcs=dbcs_laplace, u=uf)

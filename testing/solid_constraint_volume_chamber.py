@@ -14,10 +14,10 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'solid_constraint', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
-                            'mesh_domain'           : ''+basepath+'/input/chamber_domain.xdmf',
-                            'mesh_boundary'         : ''+basepath+'/input/chamber_boundary.xdmf',
+                            'mesh_domain'           : [basepath+'/input/chamber_domain.xdmf'],
+                            'mesh_boundary'         : [basepath+'/input/chamber_boundary.xdmf'],
                             'write_results_every'   : -999,
-                            'output_path'           : ''+basepath+'/tmp/',
+                            'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement','pressure'],
                             'simname'               : 'solid_constraint_volume_chamber'}
 

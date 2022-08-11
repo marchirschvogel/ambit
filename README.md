@@ -37,7 +37,7 @@ if not present, install: (seems that uidmap needs to be installed, which require
 ``sudo apt install uidmap``\
 ``curl -fsSL https://get.docker.com/rootless | sh``
 
-* Get latest tested ambit-compatible digest (28 Jul 2022) of dolfinx Docker image (the experimental FEniCS version, https://hub.docker.com/u/dolfinx):
+* Get latest tested ambit-compatible digest (6 Aug 2022) of dolfinx Docker image (the experimental FEniCS version, https://hub.docker.com/u/dolfinx):
 (latest nightly image can be pulled without @..., but may or may not work with current ambit code):
 
 ``docker pull dolfinx/dolfinx@sha256:9ebac7eb88f6255f7385d99c9ce4e4f11d290e0f398aec6b9623b587d9c1e47d``

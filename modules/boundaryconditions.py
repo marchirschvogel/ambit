@@ -36,9 +36,9 @@ class boundary_cond():
             try: bdim_r = d['bdim_reduction']
             except: bdim_r = 1
             
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1[0]
+            if bdim_r==2: mdata = self.io.mt_b2[0]
+            if bdim_r==3: mdata = self.io.mt_b3[0]
             
             func, func_old = fem.Function(V), fem.Function(V)
             
@@ -56,28 +56,28 @@ class boundary_cond():
 
             if d['dir'] == 'all':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.io.mesh[0].topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
             
             elif d['dir'] == 'x':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh[0].topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
 
             elif d['dir'] == 'y':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh[0].topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
 
             elif d['dir'] == 'z':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh[0].topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
 
             elif d['dir'] == '2dimX':
-                self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX))) )
+                self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh[0].topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh[0], self.io.mesh[0].topology.dim-bdim_r, self.twodimX))) )
 
             elif d['dir'] == '2dimY':
-                self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY))) )
+                self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh[0].topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh[0], self.io.mesh[0].topology.dim-bdim_r, self.twodimY))) )
 
             elif d['dir'] == '2dimZ':
-                self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ))) )
+                self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh[0].topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh[0], self.io.mesh[0].topology.dim-bdim_r, self.twodimZ))) )
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
@@ -108,9 +108,9 @@ class boundary_cond_solid(boundary_cond):
             try: bdim_r = n['bdim_reduction']
             except: bdim_r = 1
             
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1[0]
+            if bdim_r==2: mdata = self.io.mt_b2[0]
+            if bdim_r==3: mdata = self.io.mt_b3[0]
             
             if n['type'] == 'pk1':
                 
@@ -202,9 +202,9 @@ class boundary_cond_solid(boundary_cond):
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1[0]
+            if bdim_r==2: mdata = self.io.mt_b2[0]
+            if bdim_r==3: mdata = self.io.mt_b3[0]
 
             if r['type'] == 'spring':
                 
@@ -272,9 +272,9 @@ class boundary_cond_solid(boundary_cond):
             try: bdim_r = m['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1[0]
+            if bdim_r==2: mdata = self.io.mt_b2[0]
+            if bdim_r==3: mdata = self.io.mt_b3[0]
                     
             for i in range(len(m['id'])):
             
@@ -299,9 +299,9 @@ class boundary_cond_fluid(boundary_cond):
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1[0]
+            if bdim_r==2: mdata = self.io.mt_b2[0]
+            if bdim_r==3: mdata = self.io.mt_b3[0]
 
             if n['dir'] == 'xyz':
             
@@ -362,9 +362,9 @@ class boundary_cond_fluid(boundary_cond):
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1[0]
+            if bdim_r==2: mdata = self.io.mt_b2[0]
+            if bdim_r==3: mdata = self.io.mt_b3[0]
 
             if r['type'] == 'dashpot':
                 
