@@ -246,6 +246,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             t_off = tmp[0]-T_cycl/nstep_cycl
         
             sw, sv, co, ef, edv, esv, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], []
+            edp2 = []
             for ch in ['v_l','v_r']:
                 
                 # stroke work
@@ -257,36 +258,22 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 sw.append(val)
                 
                 # stroke volume, cardiac output, end-diastolic and end-systolic volume, ejection fraction
-                vol = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=numdata-nstep_cycl, usecols=1)
-                sv.append(max(vol)-min(vol))
-                co.append((max(vol)-min(vol))/T_cycl)
-                edv.append(max(vol))
-                esv.append(min(vol))
-                ef.append((max(vol)-min(vol))/max(vol))
+                vol = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=numdata-nstep_cycl)
+                sv.append(max(vol[:,1])-min(vol[:,1]))
+                co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
+                #edv.append(max(vol[:,1]))
+                #esv.append(min(vol[:,1]))
+                edv.append(np.interp(t_ed+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
+                esv.append(np.interp(t_es+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
+                ef.append((max(vol[:,1])-min(vol[:,1]))/max(vol[:,1]))
 
                 pres = np.loadtxt(path+'/results_'+sname+'_p_'+ch+'.txt', skiprows=numdata-nstep_cycl)
 
                 # end-diastolic pressure
-                edp_index = -1
-                for k in range(len(pres)):
-                    if round(pres[k,0],2) == round(t_ed+(n_cycl-1)*T_cycl+t_off,2):
-                        edp_index = k
-                        break
-                if edp_index >= 0:
-                    edp.append(pres[edp_index,1])
-                else:
-                    edp.append(np.nan)
+                edp.append(np.interp(t_ed+(n_cycl-1)*T_cycl+t_off, pres[:,0], pres[:,1]))
 
                 # end-systolic pressure
-                esp_index = -1
-                for k in range(len(pres)):
-                    if round(pres[k,0],2) == round(t_es+(n_cycl-1)*T_cycl+t_off,2):
-                        esp_index = k
-                        break
-                if esp_index >= 0:
-                    esp.append(pres[esp_index,1])
-                else:
-                    esp.append(np.nan)
+                esp.append(np.interp(t_es+(n_cycl-1)*T_cycl+t_off, pres[:,0], pres[:,1]))
                 
                 # net values (in case of regurgitation of valves, for example), computed by integrating in- and out-fluxes
                 if ch=='v_l':
