@@ -15,8 +15,8 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'solid',
-                         'mesh_domain'           : [basepath+'/input/block_domain.xdmf'],
-                         'mesh_boundary'         : [basepath+'/input/block_boundary.xdmf'],
+                         'mesh_domain'           : basepath+'/input/block_domain.xdmf',
+                         'mesh_boundary'         : basepath+'/input/block_boundary.xdmf',
                          'write_results_every'   : 1,
                          'output_path'           : basepath+'/tmp/',
                          'results_to_write'      : ['displacement'],

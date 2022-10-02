@@ -27,7 +27,7 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
         
         # identity tensor
-        self.I = Identity(3)
+        self.I = Identity(self.kin.dim)
 
 
     # Cauchy stress core routine
@@ -69,6 +69,9 @@ class constitutive:
 
 
 class kinematics:
+    
+    def __init__(self, dim):
+        self.dim = dim
 
     # velocity gradient: gamma = 0.5(dv/dx + (dv/dx)^T)
     def gamma(self, v_):

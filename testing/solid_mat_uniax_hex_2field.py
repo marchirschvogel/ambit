@@ -22,8 +22,8 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'solid',
-                         'mesh_domain'           : [basepath+'/input/blockshex_domain.xdmf'],
-                         'mesh_boundary'         : [basepath+'/input/blockshex_boundary.xdmf'],
+                         'mesh_domain'           : basepath+'/input/blockshex_domain.xdmf',
+                         'mesh_boundary'         : basepath+'/input/blockshex_boundary.xdmf',
                          'fiber_data'            : {'nodal' : [basepath+'/input/fib1_blockshex.txt',basepath+'/input/fib2_blockshex.txt']},
                          'write_results_every'   : 1,
                          'output_path'           : basepath+'/tmp/',

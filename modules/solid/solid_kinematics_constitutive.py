@@ -50,7 +50,7 @@ class constitutive:
                     self.matparams_remod.append(list(self.gandrparams['remodeling_mat'].values())[i])
             
         # identity tensor
-        self.I = ufl.Identity(3)
+        self.I = ufl.Identity(self.kin.dim)
 
 
     # 2nd Piola-Kirchhoff stress core routine
@@ -59,7 +59,7 @@ class constitutive:
         
         C_ = ufl.variable(self.kin.C(u_))
 
-        stress = ufl.constantvalue.zero((3,3))
+        stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
 
         # volumetric (kinematic) growth
         if self.mat_growth:
@@ -94,7 +94,7 @@ class constitutive:
             
             self.stress_base = stress
             
-            self.stress_remod = ufl.constantvalue.zero((3,3))
+            self.stress_remod = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
             
             m = 0
             for matlaw in self.matmodels_remod:
@@ -181,19 +181,19 @@ class constitutive:
             
         elif matlaw == 'inertia':
             # density is added to kinetic virtual work
-            return ufl.constantvalue.zero((3,3))
+            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
         
         elif matlaw == 'rayleigh_damping':
             # Rayleigh damping is added to virtual work
-            return ufl.constantvalue.zero((3,3))
+            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
         
         elif matlaw == 'growth':
             # growth (and remodeling) treated separately
-            return ufl.constantvalue.zero((3,3))
+            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
 
         elif matlaw == 'plastic':
             # plasticity treated separately
-            return ufl.constantvalue.zero((3,3))
+            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
             
         else:
 
@@ -546,7 +546,10 @@ class constitutive:
 
 class kinematics:
     
-    def __init__(self, fib_funcs=None, u_pre=None):
+    def __init__(self, dim, fib_funcs=None, u_pre=None):
+        
+        # physics dimension
+        self.dim = dim
         
         # fibers
         self.fib_funcs = fib_funcs
@@ -555,7 +558,7 @@ class kinematics:
         self.u_pre = u_pre
         
         # identity tensor
-        self.I = ufl.Identity(3)
+        self.I = ufl.Identity(self.dim)
 
 
     # deformation gradient: F = I + du/dx0
@@ -609,7 +612,7 @@ class kinematics:
 
     # prestressing update (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010,
     # displacement formulation according to Schein and Gee 2021)
-    def prestress_update(self, u_, V, dx_):
+    def prestress_update(self, u_):
         
         self.u_pre.vector.axpy(1.0, u_.vector)
         self.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

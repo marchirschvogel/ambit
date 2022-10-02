@@ -23,8 +23,8 @@ def main():
     # all possible input parameters
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
-                            'mesh_domain'           : [basepath+'/input/heart3Dcoarse_domain.xdmf'],
-                            'mesh_boundary'         : [basepath+'/input/heart3Dcoarse_boundary.xdmf'],
+                            'mesh_domain'           : basepath+'/input/heart3Dcoarse_domain.xdmf',
+                            'mesh_boundary'         : basepath+'/input/heart3Dcoarse_boundary.xdmf',
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement','pressure'], # see io_routines.py for what to write

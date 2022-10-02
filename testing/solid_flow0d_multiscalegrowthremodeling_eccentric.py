@@ -20,8 +20,8 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d_multiscale_gandr',
-                            'mesh_domain'           : [basepath+'/input/heart3Dcoarse_domain.xdmf'],
-                            'mesh_boundary'         : [basepath+'/input/heart3Dcoarse_boundary.xdmf'],
+                            'mesh_domain'           : basepath+'/input/heart3Dcoarse_domain.xdmf',
+                            'mesh_boundary'         : basepath+'/input/heart3Dcoarse_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_3Dcoarse.txt',basepath+'/input/fib_sheet_coords_nodal_3Dcoarse.txt']},
                             'write_results_every'   : 1,
                             'output_path'           : basepath+'/tmp',

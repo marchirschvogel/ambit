@@ -47,7 +47,7 @@ class SolidmechanicsProblem(problem_base):
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh[0])
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_disp = fem_params['order_disp']
         try: self.order_pres = fem_params['order_pres']
@@ -59,27 +59,30 @@ class SolidmechanicsProblem(problem_base):
 
         # collect domain data
         self.dx_, self.rho0, self.rayleigh, self.eta_m, self.eta_k = [], [], [False]*self.num_domains, [], []
+
         for n in range(self.num_domains):
             # integration domains
-            if self.io.mt_d[0] is not None: self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d[0], subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
-            else:                           self.dx_.append(ufl.dx(metadata={'quadrature_degree': self.quad_degree}))
-            # data for inertial and viscous forces: density and damping
-            if self.timint != 'static':
-                self.rho0.append(self.constitutive_models['MAT'+str(n+1)+'']['inertia']['rho0'])
-                if 'rayleigh_damping' in self.constitutive_models['MAT'+str(n+1)+''].keys():
-                    self.rayleigh[n] = True
-                    self.eta_m.append(self.constitutive_models['MAT'+str(n+1)+'']['rayleigh_damping']['eta_m'])
-                    self.eta_k.append(self.constitutive_models['MAT'+str(n+1)+'']['rayleigh_damping']['eta_k'])
+            if self.io.mt_d is not None: self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            else:                        self.dx_.append(ufl.dx(metadata={'quadrature_degree': self.quad_degree}))
+        # data for inertial and viscous forces: density and damping
+        if self.timint != 'static':
+            self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
+            if 'rayleigh_damping' in self.constitutive_models['MAT'+str(n+1)].keys():
+                self.rayleigh[n] = True
+                self.eta_m.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_m'])
+                self.eta_k.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_k'])
 
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
 
+        self.dim = self.io.mesh.geometry.dim
+
         # type of discontinuous function spaces
-        if str(self.io.mesh[0].ufl_cell()) == 'tetrahedron' or str(self.io.mesh[0].ufl_cell()) == 'triangle3D':
+        if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 3:
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
-        elif str(self.io.mesh[0].ufl_cell()) == 'hexahedron' or str(self.io.mesh[0].ufl_cell()) == 'quadrilateral3D':
+        elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 5:
                 raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
@@ -87,6 +90,11 @@ class SolidmechanicsProblem(problem_base):
                 raise ValueError("Use at least a quadrature degree >= 2 for a hexahedral mesh!")
         else:
             raise NameError("Unknown cell/element type!")
+
+        # make sure that we use the correct displacement order in case of a higher-order mesh
+        if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() > 1:
+            if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() != self.order_disp:
+                raise ValueError("Order of displacement field not compatible with degree of finite element!")
         
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']
@@ -97,29 +105,29 @@ class SolidmechanicsProblem(problem_base):
             self.rom = mor.ModelOrderReduction(mor_params, comm)
         
         # create finite element objects for u and p
-        P_u = ufl.VectorElement("CG", self.io.mesh[0].ufl_cell(), self.order_disp)
-        P_p = ufl.FiniteElement("CG", self.io.mesh[0].ufl_cell(), self.order_pres)
+        P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+        P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
         # function spaces for u and p
-        self.V_u = fem.FunctionSpace(self.io.mesh[0], P_u)
-        self.V_p = fem.FunctionSpace(self.io.mesh[0], P_p)
+        self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
+        self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
         # tensor finite element and function space
-        P_tensor = ufl.TensorElement("CG", self.io.mesh[0].ufl_cell(), self.order_disp)
-        self.V_tensor = fem.FunctionSpace(self.io.mesh[0], P_tensor)
+        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
 
         # Quadrature tensor, vector, and scalar elements
-        Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh[0].ufl_cell(), degree=1, quad_scheme="default")
-        Q_vector = ufl.VectorElement("Quadrature", self.io.mesh[0].ufl_cell(), degree=1, quad_scheme="default")
-        Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh[0].ufl_cell(), degree=1, quad_scheme="default")
+        Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
+        Q_vector = ufl.VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
+        Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
 
         # not yet working - we cannot interpolate into Quadrature elements with the current dolfinx version currently!
-        #self.Vd_tensor = fem.FunctionSpace(self.io.mesh[0], Q_tensor)
-        #self.Vd_vector = fem.FunctionSpace(self.io.mesh[0], Q_vector)
-        #self.Vd_scalar = fem.FunctionSpace(self.io.mesh[0], Q_scalar)
+        #self.Vd_tensor = fem.FunctionSpace(self.io.mesh, Q_tensor)
+        #self.Vd_vector = fem.FunctionSpace(self.io.mesh, Q_vector)
+        #self.Vd_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
 
         # Quadrature function spaces (currently not properly functioning for higher-order meshes!!!)
-        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh[0], (dg_type, self.order_disp-1))
-        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh[0], (dg_type, self.order_disp-1))
-        self.Vd_scalar = fem.FunctionSpace(self.io.mesh[0], (dg_type, self.order_disp-1))
+        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
 
         # functions
         self.du    = ufl.TrialFunction(self.V_u)            # Incremental displacement
@@ -193,43 +201,43 @@ class SolidmechanicsProblem(problem_base):
         self.actstress = []
         for n in range(self.num_domains):
             
-            if 'holzapfelogden_dev' in self.constitutive_models['MAT'+str(n+1)+''].keys() or 'guccione_dev' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+            if 'holzapfelogden_dev' in self.constitutive_models['MAT'+str(n+1)].keys() or 'guccione_dev' in self.constitutive_models['MAT'+str(n+1)].keys():
                 have_fiber1, have_fiber2 = True, True
             
-            if 'active_fiber' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+            if 'active_fiber' in self.constitutive_models['MAT'+str(n+1)].keys():
                 have_fiber1 = True
                 self.mat_active_stress[n], self.have_active_stress = True, True
                 # if one mat has a prescribed active stress, all have to be!
-                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']:
+                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
                     self.active_stress_trig = 'prescribed'
-                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']:
+                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
-                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']['activation_curve'])
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)+'']['active_fiber'], act_curve))
+                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['activation_curve'])
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_fiber'], act_curve))
                     if self.actstress[-1].frankstarling: self.have_frank_starling = True
                 if self.active_stress_trig == 'prescribed':
-                    self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_fiber']['prescribed_curve'])})
+                    self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['prescribed_curve'])})
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
 
-            if 'active_iso' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+            if 'active_iso' in self.constitutive_models['MAT'+str(n+1)].keys():
                 self.mat_active_stress[n], self.have_active_stress = True, True
                 # if one mat has a prescribed active stress, all have to be!
-                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)+'']['active_iso']:
+                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)]['active_iso']:
                     self.active_stress_trig = 'prescribed'
-                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)+'']['active_iso']:
+                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_iso']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
-                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_iso']['activation_curve'])
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)+'']['active_iso'], act_curve))
+                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['activation_curve'])
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_iso'], act_curve))
                 if self.active_stress_trig == 'prescribed':
-                    self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['active_iso']['prescribed_curve'])})
+                    self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['prescribed_curve'])})
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
 
-            if 'growth' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+            if 'growth' in self.constitutive_models['MAT'+str(n+1)].keys():
                 self.mat_growth[n], self.have_growth = True, True
-                self.mat_growth_dir[n] = self.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_dir']
-                self.mat_growth_trig[n] = self.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_trig']
+                self.mat_growth_dir[n] = self.constitutive_models['MAT'+str(n+1)]['growth']['growth_dir']
+                self.mat_growth_trig[n] = self.constitutive_models['MAT'+str(n+1)]['growth']['growth_trig']
                 # need to have fiber fields for the following growth options
                 if self.mat_growth_dir[n] == 'fiber' or self.mat_growth_trig[n] == 'fibstretch':
                     have_fiber1 = True
@@ -240,25 +248,25 @@ class SolidmechanicsProblem(problem_base):
                 # the global Newton scheme - so flag localsolve to true
                 if self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                     self.localsolve = True
-                    self.mat_growth_thres.append(self.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_thres'])
+                    self.mat_growth_thres.append(self.constitutive_models['MAT'+str(n+1)]['growth']['growth_thres'])
                 else:
                     self.mat_growth_thres.append(ufl.as_ufl(0))
                 # for the case that we have a prescribed growth stretch over time, append curve to functions that need time updates
                 # if one mat has a prescribed growth model, all have to be!
                 if self.mat_growth_trig[n] == 'prescribed':
-                    self.ti.funcs_to_update.append({self.theta : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)+'']['growth']['prescribed_curve'])})
-                if 'remodeling_mat' in self.constitutive_models['MAT'+str(n+1)+'']['growth'].keys():
+                    self.ti.funcs_to_update.append({self.theta : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['growth']['prescribed_curve'])})
+                if 'remodeling_mat' in self.constitutive_models['MAT'+str(n+1)]['growth'].keys():
                     self.mat_remodel[n] = True
                 self.internalvars['theta'], self.internalvars_old['theta'] = self.theta, self.theta_old
             else:
                 self.mat_growth_thres.append(ufl.as_ufl(0))
 
-            if 'plastic' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+            if 'plastic' in self.constitutive_models['MAT'+str(n+1)].keys():
                 self.mat_plastic[n], self.have_plasticity = True, True
                 self.localsolve = True
                 self.internalvars['e_plast'], self.internalvars_old['e_plast'] = self.F_plast, self.F_plast_old
                 
-            if 'visco' in self.constitutive_models['MAT'+str(n+1)+''].keys():
+            if 'visco' in self.constitutive_models['MAT'+str(n+1)].keys():
                 self.mat_visco[n], self.have_visco_mat = True, True
                 
         # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
@@ -289,12 +297,12 @@ class SolidmechanicsProblem(problem_base):
         self.tol_stop_large = 0
 
         # initialize kinematics class
-        self.ki = solid_kinematics_constitutive.kinematics(fib_funcs=self.fib_func, u_pre=self.u_pre)
+        self.ki = solid_kinematics_constitutive.kinematics(self.dim, fib_funcs=self.fib_func, u_pre=self.u_pre)
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
         for n in range(self.num_domains):
-            self.ma.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)+''], self.incompressible_2field, mat_growth=self.mat_growth[n], mat_remodel=self.mat_remodel[n], mat_plastic=self.mat_plastic[n]))
+            self.ma.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)], self.incompressible_2field, mat_growth=self.mat_growth[n], mat_remodel=self.mat_remodel[n], mat_plastic=self.mat_plastic[n]))
 
         # initialize solid variational form class
         self.vf = solid_variationalform.variationalform(self.var_u, self.du, self.var_p, self.dp, self.io.n0, self.x_ref)
@@ -454,7 +462,7 @@ class SolidmechanicsProblem(problem_base):
             
             # visco material tangent - TODO: Think of how ufl can handle this
             if self.mat_visco[n]:
-                eta = self.constitutive_models['MAT'+str(n+1)+'']['visco']['eta']
+                eta = self.constitutive_models['MAT'+str(n+1)]['visco']['eta']
                 Cmat += self.ma[n].Cvisco(eta, self.dt)
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
@@ -533,11 +541,11 @@ class SolidmechanicsProblem(problem_base):
                 self.jac_prestress_up = ufl.derivative(self.weakform_prestress_u, self.p, self.dp)
                 self.jac_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
 
-
         
     # reference coordinates
     def x_ref_expr(self, x):
-        return np.stack((x[0],x[1],x[2]))
+        if self.dim==3: return np.stack((x[0],x[1],x[2]))
+        if self.dim==2: return np.stack((x[0],x[1]))
 
 
     # active stress ODE evaluation
@@ -640,7 +648,7 @@ class SolidmechanicsProblem(problem_base):
         uf = Function(self.V_u, name="uf")
         
         dbcs_laplace=[]
-        dbcs_laplace.append( DirichletBC(self.u, locate_dofs_topological(self.V_u, 2, self.io.mt_b1[0].indices[self.io.mt_b1[0].values == self.volume_laplace[0]])) )
+        dbcs_laplace.append( DirichletBC(self.u, locate_dofs_topological(self.V_u, 2, self.io.mt_b1.indices[self.io.mt_b1.values == self.volume_laplace[0]])) )
 
         # solve linear Laplace problem
         lp = LinearProblem(a, L, bcs=dbcs_laplace, u=uf)
@@ -770,7 +778,7 @@ class SolidmechanicsSolver():
         self.solnln.newton(self.pb.u, self.pb.p)
 
         # MULF update
-        self.pb.ki.prestress_update(self.pb.u, self.pb.Vd_tensor, self.pb.dx_)
+        self.pb.ki.prestress_update(self.pb.u)
 
         # set flag to false again
         self.pb.prestress_initial = False

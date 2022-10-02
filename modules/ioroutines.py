@@ -43,8 +43,6 @@ class IO:
         except: self.gridname_boundary = 'Grid'
         
         self.comm = comm
-        
-        self.mesh, self.mt_d, self.mt_b1, self.mt_b2, self.mt_b3 = [], [], [], [], []
 
 
     def readin_mesh(self):
@@ -57,11 +55,10 @@ class IO:
             raise NameError('Choose either ASCII or HDF5 as meshfile_type, or add a different encoding!')
             
         # read in xdmf mesh - domain
-        for nm in range(len(self.mesh_domain)):
-            with io.XDMFFile(self.comm, self.mesh_domain[nm], 'r', encoding=encoding) as infile:
-                self.mesh.append(infile.read_mesh(name=self.gridname_domain))
-                try: self.mt_d.append(infile.read_meshtags(self.mesh[nm], name=self.gridname_domain))
-                except: self.mt_d.append(None)
+        with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
+            self.mesh = infile.read_mesh(name=self.gridname_domain)
+            try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
+            except: self.mt_d = None
 
         # read in xdmf mesh - boundary
         
@@ -71,56 +68,54 @@ class IO:
         # for a 2D problem - b1: edge BCs, b2: point BCs
         # 1D problems not supported (currently...)
         
-        for nm in range(len(self.mesh_boundary)):
-        
-            if self.mesh[nm].topology.dim == 3:
-                
-                try:
-                    self.mesh[nm].topology.create_connectivity(2, self.mesh[nm].topology.dim)
-                    with io.XDMFFile(self.comm, self.mesh_boundary[nm], 'r', encoding=encoding) as infile:
-                        self.mt_b1.append(infile.read_meshtags(self.mesh[nm], name=self.gridname_boundary))
-                except:
-                    pass
-                
-                try:
-                    self.mesh[nm].topology.create_connectivity(1, self.mesh[nm].topology.dim)
-                    with io.XDMFFile(self.comm, self.mesh_boundary[nm], 'r', encoding=encoding) as infile:
-                        self.mt_b2.append(infile.read_meshtags(self.mesh[nm], name=self.gridname_boundary+'_b2'))
-                except:
-                    pass
+        if self.mesh.topology.dim == 3:
+            
+            try:
+                self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                    self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+            except:
+                pass
+            
+            try:
+                self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
+            except:
+                pass
 
-                try:
-                    self.mesh[nm].topology.create_connectivity(0, self.mesh[nm].topology.dim)
-                    with io.XDMFFile(self.comm, self.mesh_boundary[nm], 'r', encoding=encoding) as infile:
-                        self.mt_b3.append(infile.read_meshtags(self.mesh[nm], name=self.gridname_boundary+'_b3'))
-                except:
-                    pass
+            try:
+                self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                    self.mt_b3 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b3')
+            except:
+                pass
 
-            elif self.mesh[nm].topology.dim == 2:
-                
-                try:
-                    self.mesh[nm].topology.create_connectivity(1, self.mesh[nm].topology.dim)
-                    with io.XDMFFile(self.comm, self.mesh_boundary[nm], 'r', encoding=encoding) as infile:
-                        self.mt_b1.append(infile.read_meshtags(self.mesh[nm], name=self.gridname_boundary))
-                except:
-                    pass
-                
-                try:
-                    self.mesh[nm].topology.create_connectivity(0, self.mesh[nm].topology.dim)
-                    with io.XDMFFile(self.comm, self.mesh_boundary[nm], 'r', encoding=encoding) as infile:
-                        self.mt_b2.append(infile.read_meshtags(self.mesh[nm], name=self.gridname_boundary+'_b2'))
-                except:
-                    pass
+        elif self.mesh.topology.dim == 2:
+            
+            try:
+                self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                    self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+            except:
+                pass
+            
+            try:
+                self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
+                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
+            except:
+                pass
 
-            else:
-                raise AttributeError("Your mesh seems to be 1D! Not supported!")
+        else:
+            raise AttributeError("Your mesh seems to be 1D! Not supported!")
 
         # useful fields - currently only set for first mesh:
         
         # facet normal
-        self.n0 = ufl.FacetNormal(self.mesh[0])
+        self.n0 = ufl.FacetNormal(self.mesh)
         # cell diameter
-        self.h0 = ufl.CellDiameter(self.mesh[0])
+        self.h0 = ufl.CellDiameter(self.mesh)
 
 
 
@@ -131,9 +126,9 @@ class IO_solid(IO):
 
         # V_fib_input is function space the fiber vector is defined on (only CG1 or DG0 supported, add further depending on your input...)
         if list(self.fiber_data.keys())[0] == 'nodal':
-            V_fib_input = fem.VectorFunctionSpace(self.mesh[0], ("CG", 1))
+            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", 1))
         elif list(self.fiber_data.keys())[0] == 'elemental':
-            V_fib_input = fem.VectorFunctionSpace(self.mesh[0], ("DG", 0))
+            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("DG", 0))
         else:
             raise AttributeError("Specify 'nodal' or 'elemental' for the fiber data input!")
 
@@ -158,7 +153,7 @@ class IO_solid(IO):
 
             ## write input fiber field for checking...
             #outfile = io.XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputNEW.xdmf', 'w')
-            #outfile.write_mesh(self.mesh[0])
+            #outfile.write_mesh(self.mesh)
             #outfile.write_function(fib_func_input[si])
 
             si+=1
@@ -191,7 +186,7 @@ class IO_solid(IO):
         for i in im:
             
             ind = np.where((np.round(coords,tolerance) == np.round(co[ci],tolerance)).all(axis=1))[0]
-            
+
             # only write if we've found the index
             if len(ind):
                 
@@ -223,7 +218,7 @@ class IO_solid(IO):
                 self.resultsfiles = {}
                 for res in self.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
-                    outfile.write_mesh(self.mesh[0])
+                    outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
                 
             return
@@ -427,7 +422,7 @@ class IO_fluid(IO):
                 self.resultsfiles = {}
                 for res in self.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
-                    outfile.write_mesh(self.mesh[0])
+                    outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
             
             return

@@ -17,8 +17,8 @@ def main():
 
 
     IO_PARAMS            = {'problem_type'           : 'solid',
-                            'mesh_domain'            : [basepath+'/input/lv_domain.xdmf'],
-                            'mesh_boundary'          : [basepath+'/input/lv_boundary.xdmf'],
+                            'mesh_domain'            : basepath+'/input/lv_domain.xdmf',
+                            'mesh_boundary'          : basepath+'/input/lv_boundary.xdmf',
                             'write_results_every'    : -999,
                             'output_path'            : basepath+'/tmp/',
                             'results_to_write'       : ['displacement','theta'],

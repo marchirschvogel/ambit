@@ -19,8 +19,8 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'solid', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
-                            'mesh_domain'           : [basepath+'/input/heart2D_domain.xdmf'],
-                            'mesh_boundary'         : [basepath+'/input/heart2D_boundary.xdmf'],
+                            'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
+                            'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_2D.txt']},
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',

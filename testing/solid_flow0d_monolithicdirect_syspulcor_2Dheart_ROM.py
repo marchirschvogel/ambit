@@ -26,8 +26,8 @@ def main():
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
                             'use_model_order_red'   : True,
-                            'mesh_domain'           : [basepath+'/input/heart2D_domain.xdmf'],
-                            'mesh_boundary'         : [basepath+'/input/heart2D_boundary.xdmf'],
+                            'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
+                            'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_2D.txt',basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',

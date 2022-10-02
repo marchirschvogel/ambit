@@ -15,8 +15,8 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'solid',
-                         'mesh_domain'           : [basepath+'/input/blockhex_domain.xdmf'],
-                         'mesh_boundary'         : [basepath+'/input/blockhex_boundary.xdmf'],
+                         'mesh_domain'           : basepath+'/input/blockhex_domain.xdmf',
+                         'mesh_boundary'         : basepath+'/input/blockhex_boundary.xdmf',
                          'write_results_every'   : -999,
                          'output_path'           : '/home/shared/work/codes/fem_scripts/tests/tmp/',
                          'results_to_write'      : ['displacement'],

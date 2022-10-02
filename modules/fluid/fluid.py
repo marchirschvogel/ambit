@@ -53,29 +53,40 @@ class FluidmechanicsProblem(problem_base):
         self.quad_degree = fem_params['quad_degree']
         
         # collect domain data
-        self.dx_, self.rho = [], []
+        self.rho = []
+        self.dx_ = [[] for _ in range(len(self.io.mesh_domain))]
         for n in range(self.num_domains):
             # integration domains
             self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
-            self.rho.append(self.constitutive_models['MAT'+str(n+1)+'']['inertia']['rho'])
+            self.rho.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
         
         self.incompressible_2field = True # always true!
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in fluid is somehow senseless...
         self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
+
+        self.dim = self.io.mesh.geometry.dim
     
         # type of discontinuous function spaces
-        if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
+        if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
             if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 3:
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
-        elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
+        elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
             if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 5:
                 raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
+
+        # make sure that we use the correct velocity order in case of a higher-order mesh
+        if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() > 1:
+            if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() != self.order_vel:
+                raise ValueError("Order of velocity field not compatible with degree of finite element!")
+
+        if self.order_vel == self.order_pres:
+            raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
 
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']
@@ -86,11 +97,11 @@ class FluidmechanicsProblem(problem_base):
             self.rom = mor.ModelOrderReduction(mor_params, comm)
 
         # create finite element objects for v and p
-        self.P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
-        self.P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
+        P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
         # function spaces for v and p
-        self.V_v = fem.FunctionSpace(self.io.mesh, self.P_v)
-        self.V_p = fem.FunctionSpace(self.io.mesh, self.P_p)
+        self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
+        self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
         # tensor finite element and function space
         P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
         self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
@@ -118,12 +129,12 @@ class FluidmechanicsProblem(problem_base):
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves, self.t_init, self.comm)
 
         # initialize kinematics_constitutive class
-        self.ki = fluid_kinematics_constitutive.kinematics()
+        self.ki = fluid_kinematics_constitutive.kinematics(self.dim)
         
         # initialize material/constitutive classes (one per domain)
         self.ma = []
         for n in range(self.num_domains):
-            self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)+'']))
+            self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)]))
         
         # initialize fluid variational form class
         self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
@@ -193,39 +204,6 @@ class FluidmechanicsProblem(problem_base):
         
         # Reynolds number: ratio of inertial to viscous forces
         #self.Re = sqrt(dot(self.vf.f_inert(self.acc,self.v,self.rho), self.vf.f_inert(self.acc,self.v,self.rho))) / sqrt(dot(self.vf.f_viscous(self.ma[0].sigma(self.v, self.p)), self.vf.f_viscous(self.ma[0].sigma(self.v, self.p))))
-        
-        if self.order_vel == self.order_pres:
-            
-            raise ValueError("Equal order velocity and pressure interpolation requires stabilization! Not yet implemented! Use order_vel > order_pres.") 
-            
-            #dx1_stab = dx(subdomain_data=self.io.mt_d, subdomain_id=1, metadata={'quadrature_degree': 2*3})
-
-            ## stabilization stuff - TODO: FIXME and finish!!!
-            #res_v_strong = self.vf.residual_v_strong(self.acc, self.v, self.rho, self.ma[0].sigma(self.v, self.p))
-            #res_v_strong_old = self.vf.residual_v_strong(self.a_old, self.v_old, self.rho, self.ma[0].sigma(self.v_old, self.p_old))
-            
-            #res_p_strong = self.vf.residual_p_strong(self.v)
-            #res_p_strong_old = self.vf.residual_p_strong(self.v_old)
-            
-            #vnorm, vnorm_old = sqrt(dot(self.v, self.v)), sqrt(dot(self.v_old, self.v_old))
-
-            #nu = 0.004/self.rho
-            #Cinv = 16.*self.Re
-            #tau_SUPG = Min(self.io.h0**2./(Cinv*nu), self.io.h0/(2.*vnorm))
-
-
-            ##tau = ( (2.*self.dt)**2. + (2.0*vnorm_/self.io.h0)**2 + (4.0*nu/self.io.h0**2.)**2. )**(-0.5)
-
-            ##delta = conditional(ge(vnorm,1.0e-8), self.io.h0/(2.*vnorm), 0.)
-            ##delta_old = conditional(ge(vnorm_old,1.0e-8), self.io.h0/(2.*vnorm_old), 0.)
-            
-            #stab_v     = tau_SUPG * dot(dot(self.v, ufl.grad(self.var_v)),res_v_strong)*dx1_stab
-
-            ##stab_p     = tau_PSPG * dot(dot(self.v, ufl.grad(self.var_v)),res_p_strong)*dx1_stab
-
-            #self.weakform_u += self.timefac * stab_v #+ (1.-self.timefac) * stab_old
-            
-            ##self.weakform_p += tau_SUPG*ufl.inner(ufl.grad(self.var_p), res_strong)*self.dx1
         
         ### Jacobians
         

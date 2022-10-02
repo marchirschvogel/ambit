@@ -2,7 +2,7 @@
   <Domain>
     <Grid Name="Grid">
       <Geometry GeometryType="XYZ">
-        <DataItem DataType="Float" Dimensions="717 2" Format="XML" Precision="8">
+        <DataItem DataType="Float" Dimensions="717 3" Format="XML" Precision="8">
           28.43071432626059 34.37801530361559 -2.25152518851246e-09
           60.249187871755865 -8.537374628522348e-15 -3.552713678800501e-15
           24.533784544402447 25.621015519622034 2.2904175261401085e-14
