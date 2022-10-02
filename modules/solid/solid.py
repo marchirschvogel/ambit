@@ -64,13 +64,13 @@ class SolidmechanicsProblem(problem_base):
             # integration domains
             if self.io.mt_d is not None: self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             else:                        self.dx_.append(ufl.dx(metadata={'quadrature_degree': self.quad_degree}))
-        # data for inertial and viscous forces: density and damping
-        if self.timint != 'static':
-            self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
-            if 'rayleigh_damping' in self.constitutive_models['MAT'+str(n+1)].keys():
-                self.rayleigh[n] = True
-                self.eta_m.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_m'])
-                self.eta_k.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_k'])
+            # data for inertial and viscous forces: density and damping
+            if self.timint != 'static':
+                self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
+                if 'rayleigh_damping' in self.constitutive_models['MAT'+str(n+1)].keys():
+                    self.rayleigh[n] = True
+                    self.eta_m.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_m'])
+                    self.eta_k.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_k'])
 
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
