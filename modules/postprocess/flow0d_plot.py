@@ -258,7 +258,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 sw.append(val)
                 
                 # stroke volume, cardiac output, end-diastolic and end-systolic volume, ejection fraction
-                vol = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=numdata-nstep_cycl)
+                vol = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
                 sv.append(max(vol[:,1])-min(vol[:,1]))
                 co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
                 #edv.append(max(vol[:,1]))
@@ -267,7 +267,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 esv.append(np.interp(t_es+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
                 ef.append((max(vol[:,1])-min(vol[:,1]))/max(vol[:,1]))
 
-                pres = np.loadtxt(path+'/results_'+sname+'_p_'+ch+'.txt', skiprows=numdata-nstep_cycl)
+                pres = np.loadtxt(path+'/results_'+sname+'_p_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
 
                 # end-diastolic pressure
                 edp.append(np.interp(t_ed+(n_cycl-1)*T_cycl+t_off, pres[:,0], pres[:,1]))
@@ -277,11 +277,11 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 
                 # net values (in case of regurgitation of valves, for example), computed by integrating in- and out-fluxes
                 if ch=='v_l':
-                    fluxout = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', skiprows=numdata-nstep_cycl)
-                    fluxin = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', skiprows=numdata-nstep_cycl)
+                    fluxout = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', skiprows=max(0,numdata-nstep_cycl))
+                    fluxin = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', skiprows=max(0,numdata-nstep_cycl))
                 if ch=='v_r':
-                    fluxout = np.loadtxt(path+'/results_'+sname+'_q_vout_r.txt', skiprows=numdata-nstep_cycl)
-                    fluxin = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', skiprows=numdata-nstep_cycl)
+                    fluxout = np.loadtxt(path+'/results_'+sname+'_q_vout_r.txt', skiprows=max(0,numdata-nstep_cycl))
+                    fluxin = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', skiprows=max(0,numdata-nstep_cycl))
 
                 # true (net) stroke volume
                 val = 0.0
@@ -310,7 +310,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             marp = []
             for pc in ['ar_sys','ar_pul']:
                 
-                pr = np.loadtxt(path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=numdata-nstep_cycl)
+                pr = np.loadtxt(path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=max(0,numdata-nstep_cycl))
                 
                 val = 0.0
                 for k in range(len(pr)-1):
@@ -487,7 +487,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 # adjust the plotting command to include all the files to plot in one graph
                 if q!=0: subprocess.call(['sed', '-i', 's/#__'+str(q+1)+'__//g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
                 
-                if 'PERIODIC' in list(groups[g].keys())[0]: skip = numdata-nstep_cycl
+                if 'PERIODIC' in list(groups[g].keys())[0]: skip = max(0,numdata-nstep_cycl)
                 else: skip = 0
                 
                 # get the x,y range on which to plot
