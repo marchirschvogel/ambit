@@ -44,8 +44,7 @@ def main():
         lastgandrcycl = 2
         export_png = True # True, False - Libre Impress has issues importing a PDF in good quality, so PNG should be used
     
-    # initial chamber volumes (in ml!) in case we only have chamber fluxes Q available and want to integrate V (default are common EDPs - order is lv, rv, la, ra)
-    #V0=[122.314,150.,50.,50., 0.]
+    # initial chamber volumes (in ml) in case we only have chamber fluxes Q available and want to integrate V (default are common EDPs - order is lv, rv, la, ra, ao)
     V0=[113.25,150.,50.,50., 0.]  
     
     postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
