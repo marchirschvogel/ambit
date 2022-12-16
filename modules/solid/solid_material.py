@@ -111,7 +111,7 @@ class materiallaw:
         try: fiber_comp = params['fiber_comp']
         except: fiber_comp = False
 
-        # conditional parameters: fibers are only active in compression if fiber_comp is True
+        # conditional parameters: fibers are only active in tension if fiber_comp is False, otherwise also in compression
         if not fiber_comp:
             a_f_c = ufl.conditional(ufl.ge(I4,1.), a_f, 0.)
             a_s_c = ufl.conditional(ufl.ge(I6,1.), a_s, 0.)
@@ -327,7 +327,7 @@ class activestress_activation:
     # \dot{a}(\lambda_{\mathrm{myo}}) = \dot{g}(\lambda_{\mathrm{myo}}) \,\mathbb{I}_{|u|_{-}>0}
     def amp(self, t, lam, amp_old):
         
-        uabs_minus = ufl.Max(-ufl.Min(self.ua(t),0),0)
+        uabs_minus = ufl.max_value(-ufl.min_value(self.ua(t),0),0)
 
         return ufl.conditional(ufl.gt(uabs_minus,0.), self.g(lam), amp_old)
 
@@ -336,7 +336,7 @@ class activestress_activation:
     def tau_act(self, tau_a_old, t, dt, lam=None, amp_old=None):
         
         uabs = abs(self.ua(t))
-        uabs_plus = ufl.Max(self.ua(t),0)
+        uabs_plus = ufl.max_value(self.ua(t),0)
         
         # Frank Starling amplification factor
         if self.frankstarling:
