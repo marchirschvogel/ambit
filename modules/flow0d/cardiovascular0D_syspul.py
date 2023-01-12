@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2023, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -505,9 +505,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, multiscalegandr=False):
     
     # index 0
-    groups.append({'pres_time_sys_l'  : ['p_at_l', 'p_v_l', 'p_ar_sys', 'p_ven_sys'],
-                'tex'              : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
-                'lines'            : [1, 2, 3, 15]})
+    groups.append({'pres_time_sys_l'  : ['p_at_l', 'p_v_l', 'p_ar_sys', 'p_ard_sys', 'p_ven_sys'],
+                'tex'              : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ar,d}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                'lines'            : [1, 2, 3, 5, 15]})
     # index 1
     groups.append({'pres_time_pul_r'  : ['p_at_r', 'p_v_r', 'p_ar_pul', 'p_ven_pul'],
                 'tex'              : ['$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
@@ -528,6 +528,10 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
     groups.append({'vol_time_compart' : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r', 'V_ar_sys', 'V_ven_sys', 'V_ar_pul', 'V_ven_pul'],
                 'tex'              : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
                 'lines'            : [1, 2, 16, 17, 3, 15, 18, 20]})
+    # index 6
+    groups.append({'flux_time_compart' : ['Q_at_l', 'Q_v_l', 'Q_at_r', 'Q_v_r'],
+                'tex'              : ['$Q_{\\\mathrm{at}}^{\\\ell}$', '$Q_{\\\mathrm{v}}^{\\\ell}$', '$Q_{\\\mathrm{at}}^{r}$', '$Q_{\\\mathrm{v}}^{r}$'],
+                'lines'            : [1, 2, 16, 17]})
 
     if coronarymodel == 'ZCRp_CRd_lr':
         
@@ -602,12 +606,9 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
         groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last'],
                     'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$'],
                     'lines'                    : [1, 16]})
-        
-
 
     # now append all the values again but with suffix PERIODIC, since we want to plot both:
     # values over all heart cycles as well as only for the periodic cycle
-
     # index 8
     groups.append({'pres_time_sys_l_PERIODIC'  : list(groups[0].values())[0],
                 'tex'                       : list(groups[0].values())[1],
@@ -632,6 +633,10 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
     groups.append({'vol_time_compart_PERIODIC' : list(groups[5].values())[0],
                 'tex'                       : list(groups[5].values())[1],
                 'lines'                     : list(groups[5].values())[2]})
+    # index 14            
+    groups.append({'flux_time_compart_PERIODIC' : list(groups[6].values())[0],
+                'tex'                       : list(groups[6].values())[1],
+                'lines'                     : list(groups[6].values())[2]})
     
     if coronarymodel is not None:
         # index 14            

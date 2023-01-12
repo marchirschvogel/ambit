@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2023, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -107,14 +107,13 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
 
         raise NameError("Unknown 0D model!")
 
-
     # make a directory for the plots
-    subprocess.call(['mkdir', '-p', ''+path+'/plot0d_'+sname+'/'])
+    subprocess.call(['mkdir', '-p', path+'/plot0d_'+sname+'/'])
 
     if iscirculation:
 
         # get the data and check its length
-        tmp = np.loadtxt(''+path+'/results_'+sname+'_p_ar_pul.txt', usecols=0) # could be another file - all should have the same length!
+        tmp = np.loadtxt(path+'/results_'+sname+'_p_ar_pul.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
         
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
@@ -125,11 +124,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 # safety check - flux file should exist in case of missing volume file!
                 test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
                 if test_Q == 0:
-                    fluxes = np.loadtxt(''+path+'/results_'+sname+'_Q_'+ch+'.txt', usecols=1)
+                    fluxes = np.loadtxt(path+'/results_'+sname+'_Q_'+ch+'.txt', usecols=1)
                     # integrate volume (mid-point rule): Q_{mid} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{mid}*dt + V_{n}
                     # --> V_{mid} = 0.5 * V_{n+1} + 0.5 * V_{n}
-                    filename_vol = path+'/results_'+sname+'_V_'+ch+'.txt'
-                    file_vol = open(filename_vol, 'wt')
+                    file_vol = open(path+'/results_'+sname+'_V_'+ch+'.txt', 'wt')
                     vol_n = V0[i]*1.0e3 # mm^3, initial volume (from V0 list, which is in ml)
                     file_vol.write('%.16E %.16E\n' % (tmp[0], vol_n))
                     for n in range(len(fluxes)-1):
@@ -140,14 +138,49 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                         vol_n = vol_np
                     file_vol.close()
                 else:
-                    if ch!='aort_sys': raise AttributeError("No flux file avaialble for chamber %s!" % (ch))
+                    if ch!='aort_sys': raise AttributeError("No flux file available for chamber %s!" % (ch))
+
+        # in case our coupling quantity was not flux or pressure, but volume, we could calculate the chamber fluxes Q
+        for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort_sys']):
+            # test if flux file exists
+            test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
+            if test_Q > 0:
+                # safety check - volume file should exist in case of missing flux file!
+                test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
+                if test_V == 0:
+                    
+                    if ch=='v_l':
+                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', usecols=1)
+                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', usecols=1)
+                    elif ch=='v_r':
+                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', usecols=1)
+                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vout_r.txt', usecols=1)
+                    elif ch=='at_l':
+                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_ven1_pul.txt', usecols=1)
+                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', usecols=1)
+                    elif ch=='at_r':
+                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_ven1_sys.txt', usecols=1)
+                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', usecols=1)
+                    elif ch=='aort_sys':
+                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', usecols=1)
+                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_arp_sys.txt', usecols=1)
+                    else:
+                        raise NameError("Unknown chamber/compartment!")
+                    
+                    flux = -flux_i + flux_o # -Q_ch = q_ch_in - q_ch_out
+                    file_flx = open(path+'/results_'+sname+'_Q_'+ch+'.txt', 'wt')
+                    for n in range(len(flux)):
+                        file_flx.write('%.16E %.16E\n' % (tmp[n], flux[n]))
+                    file_flx.close()
+
+                else:
+                    if ch!='aort_sys': raise AttributeError("No volume file available for chamber %s!" % (ch))
 
         # check number of veins
         sysveins, pulveins = 0, 0
         for i in range(10):
             if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_sys.txt')==0: sysveins += 1
             if os.system('test -e '+path+'/results_'+sname+'_q_ven'+str(i+1)+'_pul.txt')==0: pulveins += 1
-
 
         # in 3D fluid dynamics, we may have "distributed" 0D in-/outflow pressures, so here we check presence of these
         # and then average them for visualization
@@ -182,7 +215,6 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 # rename file to ar_sys - due to naming conventions...
                 if ch=='aort_sys': os.system('mv '+path+'/results_'+sname+'_p_'+ch+'.txt '+path+'/results_'+sname+'_p_ar_sys.txt')
 
-
         # for plotting of pressure-volume loops
         for ch in ['v_l','v_r','at_l','at_r']:
             subprocess.call(['cp', path+'/results_'+sname+'_p_'+ch+'.txt', path+'/results_'+sname+'_p_'+ch+'_tmp.txt'])
@@ -210,8 +242,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             # clean-up
             subprocess.call(['rm', path+'/results_'+sname+'_p_'+ch+'_tmp.txt'])
             subprocess.call(['rm', path+'/results_'+sname+'_V_'+ch+'_tmp.txt'])
-            
-            
+
         # for plotting of compartment volumes: gather all volumes and add them in order to check if volume conservation is fulfilled!
         # Be worried if the total sum in V_all.txt changes over time (more than to a certain tolerance)!
         volall = np.zeros(numdata)
@@ -234,8 +265,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         fi = open(file_integral, 'wt')
         
         fi.write('T_cycl ' +str(T_cycl) + '\n')
-        fi.write('N_step ' +str(nstep_cycl) + '\n\n')
-        
+        fi.write('N_step ' +str(nstep_cycl) + '\n')
         
         # function parameters of left and right ventricle
         if calculate_function_params:
@@ -303,8 +333,13 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 
                 # regurgitant fraction
                 f_reg.append(v_reg[-1]/sv[-1])
-                
-                
+
+            # atrial stroke volumes
+            sv_at = []
+            for ch in ['at_l','at_r']:
+                vol_at = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
+                sv_at.append(max(vol_at[:,1])-min(vol_at[:,1]))
+
             # mean arterial pressure
             marp = []
             for pc in ['ar_sys','ar_pul']:
@@ -317,36 +352,49 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 val /= (pr[-1,0]-pr[0,0])
                 marp.append(val)
             
+            # systolic and diastolic blood pressures: from diastal arterial pressure in systemic tree
+            p_ar_dias, p_ar_syst = [], []
+            for pc in ['ard_sys','ar_pul']:
+                par = np.loadtxt(path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=max(0,numdata-nstep_cycl))
+                p_ar_dias.append(min(par[:,1]))
+                p_ar_syst.append(max(par[:,1]))
+            
             # we assume here that units kg - mm - s are used --> pressures are kPa, forces are mN, volumes are mm^3
-            # for convenience, we convert work to mJ, volumes to ml and cardiac output to l/min
-            fi.write('sw_l %.4f [mJ]\n' % (sw[0]/1000.))
-            fi.write('sw_r %.4f [mJ]\n' % (sw[1]/1000.))
-            fi.write('sv_l %.4f [ml]\n' % (sv[0]/1000.))
-            fi.write('sv_r %.4f [ml]\n' % (sv[1]/1000.))
-            fi.write('co_l %.4f [l/min]\n' % (co[0]*60./1.0e6))
-            fi.write('co_r %.4f [l/min]\n' % (co[1]*60./1.0e6))
-            fi.write('ef_l %.4f [%%]\n' % (ef[0]*100.))
-            fi.write('ef_r %.4f [%%]\n' % (ef[1]*100.))
-            fi.write('edv_l %.4f [ml]\n' % (edv[0]/1000.))
-            fi.write('edv_r %.4f [ml]\n' % (edv[1]/1000.))
-            fi.write('esv_l %.4f [ml]\n' % (esv[0]/1000.))
-            fi.write('esv_r %.4f [ml]\n' % (esv[1]/1000.))
-            fi.write('edp_l %.4f [kPa]\n' % (edp[0]))
-            fi.write('edp_r %.4f [kPa]\n' % (edp[1]))
-            fi.write('esp_l %.4f [kPa]\n' % (esp[0]))
-            fi.write('esp_r %.4f [kPa]\n' % (esp[1]))
-            fi.write('map_sys %.4f [kPa]\n' % (marp[0]))
-            fi.write('map_pul %.4f [kPa]\n' % (marp[1]))
-            fi.write('sv_net_l %.4f [ml]\n' % (sv_net[0]/1000.))
-            fi.write('sv_net_r %.4f [ml]\n' % (sv_net[1]/1000.))
-            fi.write('co_net_l %.4f [l/min]\n' % (co_net[0]*60./1.0e6))
-            fi.write('co_net_r %.4f [l/min]\n' % (co_net[1]*60./1.0e6))
-            fi.write('ef_net_l %.4f [%%]\n' % (ef_net[0]*100.))
-            fi.write('ef_net_r %.4f [%%]\n' % (ef_net[1]*100.))
-            fi.write('v_reg_l %.4f [ml]\n' % (v_reg[0]/1000.))
-            fi.write('v_reg_r %.4f [ml]\n' % (v_reg[1]/1000.))
-            fi.write('f_reg_l %.4f [%%]\n' % (f_reg[0]*100.))
-            fi.write('f_reg_r %.4f [%%]\n' % (f_reg[1]*100.)) 
+            fi.write('sw_lv %.16f\n' % (sw[0]))
+            fi.write('sw_rv %.16f\n' % (sw[1]))
+            fi.write('sv_lv %.16f\n' % (sv[0]))
+            fi.write('sv_rv %.16f\n' % (sv[1]))
+            fi.write('co_lv %.16f\n' % (co[0]))
+            fi.write('co_rv %.16f\n' % (co[1]))
+            fi.write('ef_lv %.16f\n' % (ef[0]))
+            fi.write('ef_rv %.16f\n' % (ef[1]))
+            fi.write('edv_lv %.16f\n' % (edv[0]))
+            fi.write('edv_rv %.16f\n' % (edv[1]))
+            fi.write('esv_lv %.16f\n' % (esv[0]))
+            fi.write('esv_rv %.16f\n' % (esv[1]))
+            fi.write('edp_lv %.16f\n' % (edp[0]))
+            fi.write('edp_rv %.16f\n' % (edp[1]))
+            fi.write('esp_lv %.16f\n' % (esp[0]))
+            fi.write('esp_rv %.16f\n' % (esp[1]))
+            fi.write('map_sys %.16f\n' % (marp[0]))
+            fi.write('map_pul %.16f\n' % (marp[1]))
+            fi.write('sv_net_lv %.16f\n' % (sv_net[0]))
+            fi.write('sv_net_rv %.16f\n' % (sv_net[1]))
+            fi.write('co_net_lv %.16f\n' % (co_net[0]))
+            fi.write('co_net_rv %.16f\n' % (co_net[1]))
+            fi.write('ef_net_lv %.16f\n' % (ef_net[0]))
+            fi.write('ef_net_rv %.16f\n' % (ef_net[1]))
+            fi.write('v_reg_lv %.16f\n' % (v_reg[0]))
+            fi.write('v_reg_rv %.16f\n' % (v_reg[1]))
+            fi.write('f_reg_lv %.16f\n' % (f_reg[0]))
+            fi.write('f_reg_rv %.16f\n' % (f_reg[1]))
+            fi.write('p_ard_sys_dias %.16f\n' % (p_ar_dias[0]))
+            fi.write('p_ard_sys_syst %.16f\n' % (p_ar_syst[0])) 
+            fi.write('p_ar_pul_dias %.16f\n' % (p_ar_dias[1]))
+            fi.write('p_ar_pul_syst %.16f\n' % (p_ar_syst[1])) 
+            fi.write('sv_la %.16f\n' % (sv_at[0]))
+            fi.write('sv_ra %.16f\n' % (sv_at[1]))
+            
             fi.close()
 
     if generate_plots:
@@ -396,6 +444,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                     maxrows, maxcols, sl, swd = 1, 7, 16, 34
                 if 'flux_time_cor' in list(groups[g].keys())[0]:
                     maxrows, maxcols, sl, swd = 1, 6, 13, 41
+            if 'flux_time_compart' in list(groups[g].keys())[0]:
+                y1value, y2value     = 'Q', ''
             if 'vol_time' in list(groups[g].keys())[0]:
                 x1value, x2value     = 't', ''
                 x1unit, x2unit       = 's', ''
@@ -405,6 +455,14 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 x2rescale, y2rescale = 1.0, 1.0
                 xextend, yextend     = 1.0, 1.1
                 maxrows, maxcols, sl, swd = 1, 5, 20, 50
+            if 'vol_time_compart' in list(groups[g].keys())[0]:
+                xextend, yextend     = 1.0, 1.2
+                maxrows, maxcols, sl, swd = 2, 5, 20, 50
+                if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir'):
+                    xextend, yextend     = 1.0, 1.3
+                    maxrows, maxcols, sl, swd = 3, 5, 10, 50
+                if coronarymodel is not None:
+                    maxrows, maxcols, sl, swd = 2, 5, 20, 40
             if 'pres_vol_v' in list(groups[g].keys())[0]:
                 x1value, x2value     = 'V_{\\\mathrm{v}}', ''
                 x1unit, x2unit       = 'ml', ''
@@ -425,20 +483,6 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 xextend, yextend     = 1.1, 1.1
                 maxrows, maxcols, sl, swd = 1, 5, 20, 50
                 if multiscalegandr: sl, swd = 19, 33
-            if 'vol_time_compart' in list(groups[g].keys())[0]:
-                x1value, x2value     = 't', ''
-                x1unit, x2unit       = 's', ''
-                y1value, y2value     = 'V', ''
-                y1unit, y2unit       = 'ml', ''
-                xscale, yscale       = 1.0, 1.0e-3
-                x2rescale, y2rescale = 1.0, 1.0
-                xextend, yextend     = 1.0, 1.2
-                maxrows, maxcols, sl, swd = 2, 5, 20, 50
-                if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir'):
-                    xextend, yextend     = 1.0, 1.3
-                    maxrows, maxcols, sl, swd = 3, 5, 10, 50
-                if coronarymodel is not None:
-                    maxrows, maxcols, sl, swd = 2, 5, 20, 40
             if 'ppO2_time' in list(groups[g].keys())[0]:
                 x1value, x2value     = 't', ''
                 x1unit, x2unit       = 's', ''
@@ -470,16 +514,18 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             
             for q in range(numitems):
                 
+                prfx = 'results_'+sname+'_'
+                
                 # continue if file does not exist
-                if os.system('test -e '+path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') > 0:
+                if os.system('test -e '+path+'/'+prfx+list(groups[g].values())[0][q]+'.txt') > 0:
                     continue
                 
                 # get the data and check its length
-                tmp = np.loadtxt(path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!
+                tmp = np.loadtxt(path+'/'+prfx+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!
                 numdata = len(tmp)
                 
                 # set quantity, title, and plotting line
-                subprocess.call(['sed', '-i', 's/__QTY'+str(q+1)+'__/results_'+sname+'_'+list(groups[g].values())[0][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+                subprocess.call(['sed', '-i', 's/__QTY'+str(q+1)+'__/'+prfx+list(groups[g].values())[0][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
                 subprocess.call(['sed', '-i', 's/__TIT'+str(q+1)+'__/'+list(groups[g].values())[1][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
                 subprocess.call(['sed', '-i', 's/__LIN'+str(q+1)+'__/'+str(list(groups[g].values())[2][q])+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
                 
@@ -490,7 +536,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 else: skip = 0
                 
                 # get the x,y range on which to plot
-                data.append(np.loadtxt(path+'/results_'+sname+'_'+list(groups[g].values())[0][q]+'.txt', skiprows=skip))
+                data.append(np.loadtxt(path+'/'+prfx+list(groups[g].values())[0][q]+'.txt', skiprows=skip))
 
                 # if time is our x-axis
                 if 'time' in list(groups[g].keys())[0]:
