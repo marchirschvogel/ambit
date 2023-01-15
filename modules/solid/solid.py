@@ -75,6 +75,9 @@ class SolidmechanicsProblem(problem_base):
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
 
+        if self.prestress_initial:
+            self.constitutive_models_prestr = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
+
         self.dim = self.io.mesh.geometry.dim
 
         # type of discontinuous function spaces
@@ -304,6 +307,16 @@ class SolidmechanicsProblem(problem_base):
         for n in range(self.num_domains):
             self.ma.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)], self.incompressible_2field, mat_growth=self.mat_growth[n], mat_remodel=self.mat_remodel[n], mat_plastic=self.mat_plastic[n]))
 
+        # for prestress, we don't have any inelastic or rate-dependent stuff
+        if self.prestress_initial:
+            self.ma_prestr = []
+            mat_remove = ['visco','growth','plastic']
+            for n in range(self.num_domains):
+                for mr in mat_remove:
+                    try:    self.constitutive_models_prestr['MAT'+str(n+1)].pop(mr)
+                    except: pass
+                self.ma_prestr.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models_prestr['MAT'+str(n+1)], self.incompressible_2field, mat_growth=False, mat_remodel=False, mat_plastic=False))
+
         # initialize solid variational form class
         self.vf = solid_variationalform.variationalform(self.var_u, self.du, self.var_p, self.dp, self.io.n0, self.x_ref)
         
@@ -360,7 +373,6 @@ class SolidmechanicsProblem(problem_base):
             self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx_[n])
             self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx_[n])
         
-        
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
@@ -371,8 +383,13 @@ class SolidmechanicsProblem(problem_base):
             w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.u, self.u_old)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots and replace true with reference Neumann loads in our external virtual work
-        w_neumann_prestr, w_robin_prestr = ufl.as_ufl(0), ufl.as_ufl(0)
+        # plus no rate-dependent or inelastic constitutive models
+        w_neumann_prestr, w_robin_prestr, self.deltaW_prestr_int = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial:
+            # internal virtual work
+            for n in range(self.num_domains):
+                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, ivar=self.internalvars, rvar=None), self.ki.F(self.u), self.dx_[n])
+            # boundary conditions
             bc_dict_prestr = copy.deepcopy(self.bc_dict)
             # get rid of dashpots
             if 'robin' in bc_dict_prestr.keys():
@@ -394,7 +411,6 @@ class SolidmechanicsProblem(problem_base):
         self.deltaW_ext_old = w_neumann_old + w_robin_old + w_membrane_old
 
         self.timefac_m, self.timefac = self.ti.timefactors()
-
 
         ### full weakforms 
 
@@ -534,7 +550,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.prestress_initial:
             # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
-            self.weakform_prestress_u = self.deltaW_int - self.deltaW_prestr_ext
+            self.weakform_prestress_u = self.deltaW_prestr_int - self.deltaW_prestr_ext
             self.jac_prestress_uu = ufl.derivative(self.weakform_prestress_u, self.u, self.du)
             if self.incompressible_2field:
                 self.weakform_prestress_p = self.deltaW_p
@@ -789,3 +805,7 @@ class SolidmechanicsSolver():
         except: self.solnln.PTC = False
 
         utilities.print_prestress('end', self.pb.comm)
+
+        # write prestress displacement (given that we want to write the displacement)
+        if 'displacement' in self.pb.io.results_to_write:
+            self.pb.io.write_output_pre(self.pb, self.pb.u_pre, 'displacement_pre')

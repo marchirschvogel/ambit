@@ -271,7 +271,7 @@ class cardiovascular0Dbase(ode):
         chamber_funcs=[]
 
         ci=0
-        for i, ch in enumerate(['lv','rv','la','ra']):
+        for ch in ['lv','rv','la','ra']:
 
             if self.chmodels[ch]['type']=='0D_elast':
                 
@@ -305,15 +305,18 @@ class cardiovascular0Dbase(ode):
     # initialize Lagrange multipliers for monolithic Lagrange-type coupling (FEniCS)
     def initialize_lm(self, var, iniparam):
         
-        for i, ch in enumerate(['lv','rv','la','ra']):
+        ci=0
+        for ch in ['lv','rv','la','ra']:
             
             if self.chmodels[ch]['type']=='3D_solid':
                 
                 if ch=='lv':
-                    if 'p_v_l_0' in iniparam.keys(): var[i] = iniparam['p_v_l_0']
+                    if 'p_v_l_0' in iniparam.keys(): var[ci] = iniparam['p_v_l_0']
                 if ch=='rv':
-                    if 'p_v_r_0' in iniparam.keys(): var[i] = iniparam['p_v_r_0']
+                    if 'p_v_r_0' in iniparam.keys(): var[ci] = iniparam['p_v_r_0']
                 if ch=='la':
-                    if 'p_at_l_0' in iniparam.keys(): var[i] = iniparam['p_at_l_0']
+                    if 'p_at_l_0' in iniparam.keys(): var[ci] = iniparam['p_at_l_0']
                 if ch=='ra':
-                    if 'p_at_r_0' in iniparam.keys(): var[i] = iniparam['p_at_r_0']
+                    if 'p_at_r_0' in iniparam.keys(): var[ci] = iniparam['p_at_r_0']
+
+                ci+=1

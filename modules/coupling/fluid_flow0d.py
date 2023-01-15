@@ -43,6 +43,9 @@ class FluidmechanicsFlow0DProblem():
         try: self.coupling_type = self.coupling_params['coupling_type']
         except: self.coupling_type = 'monolithic_direct'
 
+        try: self.eps_fd = self.coupling_params['eps_fd']
+        except: self.eps_fd = 1.0e-5
+
         # assert that we do not have conflicting timings
         time_params_flow0d['maxtime'] = time_params_fluid['maxtime']
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
@@ -253,11 +256,10 @@ class FluidmechanicsFlow0DSolver():
             if self.pb.coupling_type == 'monolithic_direct':
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
             if self.pb.coupling_type == 'monolithic_lagrange':
-                self.pb.lm.assemble(), self.pb.lm_old.axpby(1.0, 0.0, self.pb.lm)
+                self.pb.lm_old.axpby(1.0, 0.0, self.pb.lm)
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs_old)
                 # update old 3D fluxes
-                for i in range(self.pb.num_coupling_surf):
-                    self.pb.constr_old[i] = self.pb.constr[i]
+                self.pb.constr_old[:] = self.pb.constr[:]
 
             # solve time for time step
             wte = time.time()

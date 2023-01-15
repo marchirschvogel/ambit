@@ -14,15 +14,15 @@ def main():
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr, solid_constraint
                             'use_model_order_red'   : False, # Model Order Reduction via Proper Orthogonal Decomposition (POD), for solid or fluid mechanics and 3D0D coupled problems (default: False); specify parameters in ROM_PARAMS (see below)
-                            'mesh_domain'           : ''+basepath+'/input/blocks_domain.xdmf', # domain mesh file
-                            'mesh_boundary'         : ''+basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
+                            'mesh_domain'           : basepath+'/input/blocks_domain.xdmf', # domain mesh file
+                            'mesh_boundary'         : basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
-                            'fiber_data'            : {'nodal' : [''+basepath+'/file1.txt',''+basepath+'/file2.txt'], 'readin_tol' : 1.0e-8}, # OPTIONAL: only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center; readin_tol - tolerance for readin (OPTIONAL: default is 1.0e-8, but depending on units, should be adapted)
+                            'fiber_data'            : {'nodal' : [basepath+'/file1.txt',basepath+'/file2.txt'], 'readin_tol' : 1.0e-8}, # OPTIONAL: only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center; readin_tol - tolerance for readin (OPTIONAL: default is 1.0e-8, but depending on units, should be adapted)
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
                             'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (default: -1)
-                            'output_path'           : ''+basepath+'/tmp/', # where results are written to
-                            'output_path_0D'        : ''+basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
+                            'output_path'           : basepath+'/tmp/', # where results are written to
+                            'output_path_0D'        : basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
                             'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
@@ -66,7 +66,8 @@ def main():
                             'initial_conditions'    : init(), # initial condition dictionary (here defined as function, see below)
                             'initial_file'          : None, # OPTIONAL: if we want to read initial conditions from a file (overwrites above specified dict)
                             'eps_periodic'          : 1.0e-3, # OPTIONAL: cardiac cycle periodicity tolerance (default: 1.0e-20)
-                            'periodic_checktype'    : None} # OPTIONAL: None, 'allvar', 'pQvar' (default: None)
+                            'periodic_checktype'    : None, # OPTIONAL: None, 'allvar', 'pQvar' (default: None)
+                            'initial_backwardeuler' : False} # OPTIONAL: do Backward Euler for initial time step regardless of value for theta_ost (default: False)
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # '2elwindkessel', '4elwindkesselLsZ', '4elwindkesselLpZ', 'syspul', 'syspulcap', 'syspulcaprespir'
@@ -92,7 +93,8 @@ def main():
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
                             'coupling_quantity'     : ['volume','volume'], # volume, flux, pressure (former two need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'variable_quantity'     : ['pressure','pressure'], # OPTIONAL: pressure, flux, volume (former needs 'monolithic_direct', latter two need 'monolithic_lagrange' as coupling_type) (default: 'pressure')
-                            'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
+                            'coupling_type'         : 'monolithic_direct', # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
+                            'eps_fd'                : 1e-6} # OPTIONAL: perturbation for monolithic_lagrange coupling (default: 1e-5)
 
     # for solid_constraint problem type
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint (for syspul* models: order is lv, rv, la, ra)
@@ -101,7 +103,7 @@ def main():
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
     # for model order reduction
-    ROM_PARAMS           = {'hdmfilenames'          : [''+basepath+'/input/checkpoint_simname_u_*_1proc.dat'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
+    ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_simname_u_*_1proc.dat'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
                             'numhdms'               : 1, # number of high-dimensional models
                             'numsnapshots'          : 10, # number of snapshots
                             'snapshotincr'          : 1, # OPTIONAL: snapshot increment (default: 1)
@@ -150,7 +152,6 @@ def main():
                                                               'gamma_gr_rev' : 2.0, # reverse growth nonlinearity
                                                               'remodeling_mat' : {'neohooke_dev' : {'mu' : 3.}, # remodeling material
                                                                                   'ogden_vol'    : {'kappa' : 3./(1.-2.*0.49)}}}}}
-
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)

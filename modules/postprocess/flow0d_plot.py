@@ -6,51 +6,40 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
 import sys, os, subprocess, time
 import math
 from pathlib import Path
 import numpy as np
+import argparse
+import distutils.util
 
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-p', '--path', dest='p', action='store')
+parser.add_argument('-s', '--simname', dest='s', action='store')
+parser.add_argument('-n', '--nstep', dest='n', action='store', type=int, default=500)
+parser.add_argument('-ted', '--tenddias', dest='ted', action='store', default=0.2)
+parser.add_argument('-tes', '--tendsyst', dest='tes', action='store', default=0.53)
+parser.add_argument('-T', '--Tcycl', dest='T', action='store', default=1.0)
+parser.add_argument('-m', '--model', dest='m', action='store', default='syspul')
+parser.add_argument('-mc', '--modelcoronary', dest='mc', action='store', default=None)
+parser.add_argument('-cf', '--calcfunc', dest='cf', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
+parser.add_argument('-ip', '--inducepertafter', dest='ip', action='store', type=int, default=-1)
+parser.add_argument('-mgr', '--multgandr', dest='mgr', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
+parser.add_argument('-lgr', '--lastgandrcycl', dest='lgr', action='store', type=int, default=-1)
+parser.add_argument('-V0', '--Vinitial', dest='V0', nargs=5, action='store', default=[113.25,150.,50.,50.,0.]) # initial chamber vols (in ml!): order is lv,rv,la,ra,ao
+parser.add_argument('-png', '--pngexport', dest='png', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
+parser.add_argument('-plt', '--genplots', dest='plt', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
+parser.add_argument('-ext', '--extplot', dest='ext', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
 
 def main():
     
-    try: # from command line
-        path = sys.argv[1]
-        sname = sys.argv[2]
-        nstep_cycl = int(sys.argv[3])
-        T_cycl = float(sys.argv[4])
-        t_ed = float(sys.argv[5])
-        t_es = float(sys.argv[6])
-        model = sys.argv[7]
-        indpertaftercyl = int(sys.argv[8])
-        calc_func_params = str_to_bool(sys.argv[9])
-        coronarymodel = sys.argv[10]
-        multiscalegandr = str_to_bool(sys.argv[11])
-        lastgandrcycl = int(sys.argv[12])
-        export_png = str_to_bool(sys.argv[13]) # Libre Impress has issues importing a PDF in good quality, so PNG should be used
-    except:
-        path = '/home/mh/work/sim/lv/fsi/00/cycle3D0D_rom/out_highcontr_rb3' # '/home/mh/work/sim/lv/fluid_be/00/cycle3D0D/out_rb4_fib_gamma1.9'
-        sname = ''
-        nstep_cycl = 500
-        T_cycl = 1.0
-        t_ed = 0.2
-        t_es = 0.53
-        model = 'syspul' # syspul, syspulcap, syspulcapcor
-        indpertaftercyl = -1
-        calc_func_params = False
-        coronarymodel = None # None, ZCRp_CRd_lr, CRar_CRven
-        multiscalegandr = False
-        lastgandrcycl = 2
-        export_png = True # True, False - Libre Impress has issues importing a PDF in good quality, so PNG should be used
-    
-    # initial chamber volumes (in ml) in case we only have chamber fluxes Q available and want to integrate V (default are common EDPs - order is lv, rv, la, ra, ao)
-    V0=[113.25,150.,50.,50., 0.]  
-    
-    postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl, calc_func_params=calc_func_params, V0=V0, multiscalegandr=multiscalegandr, lastgandrcycl=lastgandrcycl)
+    args = parser.parse_args()
+
+    postprocess0D(args.p, args.s, args.n, args.T, args.ted, args.tes, args.m, args.mc, args.ip, calc_func_params=args.cf, V0=args.V0, multiscalegandr=args.mgr, lastgandrcycl=args.lgr, export_png=args.png, generate_plots=args.plt, ext_plot=args.ext)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[113.25,150.,50.,50., 0.], multiscalegandr=False, lastgandrcycl=1, export_png=True, generate_plots=True):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[113.25,150.,50.,50., 0.], multiscalegandr=False, lastgandrcycl=1, export_png=True, generate_plots=True, ext_plot=False):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -352,12 +341,17 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 val /= (pr[-1,0]-pr[0,0])
                 marp.append(val)
             
-            # systolic and diastolic blood pressures: from diastal arterial pressure in systemic tree
+            # systolic and diastolic blood pressures
             p_ar_dias, p_ar_syst = [], []
-            for pc in ['ard_sys','ar_pul']:
+            for pc in ['ar_sys','ar_pul']:
                 par = np.loadtxt(path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=max(0,numdata-nstep_cycl))
                 p_ar_dias.append(min(par[:,1]))
                 p_ar_syst.append(max(par[:,1]))
+
+            # distal systemic arterial blood pressure (should only differ significantly if Z_ar_sys and/or I_ar_sys != 0)
+            pard = np.loadtxt(path+'/results_'+sname+'_p_ard_sys.txt', skiprows=max(0,numdata-nstep_cycl))
+            p_ard_dias = min(pard[:,1])
+            p_ard_syst = max(pard[:,1])
             
             # we assume here that units kg - mm - s are used --> pressures are kPa, forces are mN, volumes are mm^3
             fi.write('sw_lv %.16f\n' % (sw[0]))
@@ -388,8 +382,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('v_reg_rv %.16f\n' % (v_reg[1]))
             fi.write('f_reg_lv %.16f\n' % (f_reg[0]))
             fi.write('f_reg_rv %.16f\n' % (f_reg[1]))
-            fi.write('p_ard_sys_dias %.16f\n' % (p_ar_dias[0]))
-            fi.write('p_ard_sys_syst %.16f\n' % (p_ar_syst[0])) 
+            fi.write('p_ard_sys_dias %.16f\n' % (p_ard_dias))
+            fi.write('p_ard_sys_syst %.16f\n' % (p_ard_syst)) 
+            fi.write('p_ar_sys_dias %.16f\n' % (p_ar_dias[0]))
+            fi.write('p_ar_sys_syst %.16f\n' % (p_ar_syst[0])) 
             fi.write('p_ar_pul_dias %.16f\n' % (p_ar_dias[1]))
             fi.write('p_ar_pul_syst %.16f\n' % (p_ar_syst[1])) 
             fi.write('sv_la %.16f\n' % (sv_at[0]))
@@ -398,7 +394,23 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.close()
 
     if generate_plots:
+
+        # tmp!!!!
+        if ext_plot:
+            groups[6]['flux_time_compart'].pop(-1)
+            groups[6]['flux_time_compart'].pop(-1)
+            groups[6]['tex'].pop(-1)
+            groups[6]['tex'].pop(-1)
+            groups[6]['lines'].pop(-1)
+            groups[6]['lines'].pop(-1)
             
+            groups[6]['flux_time_compart'].append('Meas_Qlv')
+            groups[6]['flux_time_compart'].append('Meas_Qla')
+            groups[6]['tex'].append('$\\\hat{Q}_{\\\mathrm{lv}}$')
+            groups[6]['tex'].append('$\\\hat{Q}_{\\\mathrm{la}}$')
+            groups[6]['lines'].append(300)
+            groups[6]['lines'].append(301)
+
         for g in range(len(groups)):
             
             numitems = len(list(groups[g].values())[0])
@@ -617,18 +629,6 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             subprocess.call(['rm', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
 
 
-
-def str_to_bool(s):
-    if s == 'True':
-         return True
-    elif s == 'False':
-         return False
-    else:
-         raise RuntimeError("str_to_bool failed!")
-
-
-
 if __name__ == "__main__":
     
     main()
-

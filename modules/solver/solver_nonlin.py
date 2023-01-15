@@ -692,12 +692,16 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             
             tes = time.time()
             
-            if self.ptype == 'solid_constraint': ls, le = self.pbc.lm.getOwnershipRange()
+            if self.ptype == 'solid_constraint':
+                self.pbc.lm.assemble()
+                ls, le = self.pbc.lm.getOwnershipRange()
             
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
+                self.pbc.lm.assemble()
                 ls, le = self.pbc.lm.getOwnershipRange()
                 # Lagrange multipliers (pressures) to be passed to 0D model
-                self.pbc.pbf.c[ls:le] = self.pbc.lm[ls:le]
+                lm_sq = allgather_vec(self.pbc.lm, self.pbc.comm)
+                self.pbc.pbf.c[:] = lm_sq[:]
                 self.snln0D.newton(s, t, print_iter=False)
                 
             if self.pbc.pbs.localsolve:
@@ -752,7 +756,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.pbc.pbf.cardvasc0D.evaluate(s, t, self.pbc.pbf.df, self.pbc.pbf.f, self.pbc.pbf.dK, self.pbc.pbf.K, self.pbc.pbf.c, self.pbc.pbf.y, self.pbc.pbf.aux)
 
                 # 0D rhs vector and stiffness
-                r_s, self.K_ss = self.pbc.pbf.assemble_residual_stiffness()
+                r_s, self.K_ss = self.pbc.pbf.assemble_residual_stiffness(t)
 
                 # assemble 0D rhs contributions
                 self.pbc.pbf.df_old.assemble()
@@ -766,23 +770,21 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     cq = fem.assemble_scalar(fem.form(self.pbc.cq[i]))
                     cq = self.pbc.comm.allgather(cq)
                     self.pbc.constr[i] = sum(cq)*self.pbc.cq_factor[i]
-
-                # finite differencing for LM siffness matrix
-                eps = 1.0e-5
                 
-                lm_sq, s_sq = allgather_vec(self.pbc.lm, self.pbc.comm), allgather_vec(s, self.pbc.comm)
+                s_sq = allgather_vec(s, self.pbc.comm)
                 
                 s_pert = self.pbc.pbf.K.createVecLeft()
                 s_pert.axpby(1.0, 0.0, s)
-                
+
+                # finite differencing for LM siffness matrix
                 for i in range(self.pbc.num_coupling_surf):
                     for j in range(self.pbc.num_coupling_surf):
-                        self.pbc.pbf.c[j] = lm_sq[j] + eps # perturbed LM
+                        self.pbc.pbf.c[j] = lm_sq[j] + self.pbc.eps_fd # perturbed LM
                         self.snln0D.newton(s_pert, t, print_iter=False)
                         s_pert_sq = allgather_vec(s_pert, self.pbc.comm)
-                        self.K_ss[i,j] = -self.pbc.pbs.timefac * (s_pert_sq[self.pbc.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pbc.pbf.cardvasc0D.v_ids[i]])/eps
+                        self.K_ss[i,j] = -self.pbc.pbs.timefac * (s_pert_sq[self.pbc.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pbc.pbf.cardvasc0D.v_ids[i]])/self.pbc.eps_fd
                         self.pbc.pbf.c[j] = lm_sq[j] # restore LM
-            
+
             if self.ptype == 'solid_constraint':
                 for i in range(len(self.pbc.surface_p_ids)):
                     cq = fem.assemble_scalar(fem.form(self.pbc.cq[i]))
@@ -802,10 +804,13 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.pbc.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
                 r_s = self.K_ss.createVecLeft()
+                
+                s_old_sq = allgather_vec(self.pbc.pbf.s_old, self.pbc.comm)
 
                 # Lagrange multiplier coupling residual
-                r_s[ls:le] = self.pbc.pbs.timefac * (self.pbc.constr[ls:le] - s[self.pbc.pbf.cardvasc0D.v_ids[ls:le]]) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[ls:le] - self.pbc.pbf.s_old[self.pbc.pbf.cardvasc0D.v_ids[ls:le]])
-
+                for i in range(ls,le):
+                    r_s[i] = self.pbc.pbs.timefac * (self.pbc.constr[i] - s_sq[self.pbc.pbf.cardvasc0D.v_ids[i]]) + (1.-self.pbc.pbs.timefac) * (self.pbc.constr_old[i] - s_old_sq[self.pbc.pbf.cardvasc0D.v_ids[i]])
+                
             if self.pbc.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
 
                 r_s = self.K_ss.createVecLeft()
@@ -1141,7 +1146,7 @@ class solver_nonlinear_ode(solver_nonlinear):
             self.pb.odemodel.evaluate(s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
             
             # ODE rhs vector and stiffness matrix
-            r, K = self.pb.assemble_residual_stiffness()
+            r, K = self.pb.assemble_residual_stiffness(t)
 
             # if we have prescribed variable values over time
             if bool(self.pb.prescribed_variables):

@@ -59,6 +59,9 @@ set style line 117 dashtype 3 linecolor rgb '#0000ff' linewidth 4 # blue - v_r
 set style line 101 dashtype 5 linecolor rgb '#ff0000' linewidth 4 # light-red - at_l
 set style line 116 dashtype 6 linecolor rgb '#0000ff' linewidth 4 # dark-turquoise - at_r
 
+set style line 300 dashtype 1 linecolor rgb 'black' linewidth 4
+set style line 301 dashtype 3 linecolor rgb 'black' linewidth 4
+
 #set terminal unknown
 
 set key samplen __SAMPLEN__ width __SAMPWID__ font '2,2' right top spacing 3.5 maxcolumns __MAXCOLS__ maxrows __MAXROWS__

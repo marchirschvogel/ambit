@@ -118,6 +118,12 @@ class IO:
         self.h0 = ufl.CellDiameter(self.mesh)
 
 
+    def write_output_pre(self, pb, func, name):
+
+        outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+name+'.xdmf', 'w')
+        outfile.write_mesh(self.mesh)
+        outfile.write_function(func, 0)
+
 
 class IO_solid(IO):
 

@@ -83,6 +83,9 @@ class Flow0DProblem(problem_base):
         try: self.perturb_id = model_params['perturb_type'][2]
         except: self.perturb_id = -1
         
+        try: self.initial_backwardeuler = time_params['initial_backwardeuler']
+        except: self.initial_backwardeuler = False
+        
         try: self.perturb_after_cylce = model_params['perturb_after_cylce']
         except: self.perturb_after_cylce = -1
         # definitely set to -1 if we don't have a perturb type
@@ -151,7 +154,15 @@ class Flow0DProblem(problem_base):
         self.odemodel = self.cardvasc0D
 
 
-    def assemble_residual_stiffness(self):
+    def assemble_residual_stiffness(self, t):
+        
+        if self.initial_backwardeuler:
+            if np.isclose(t,self.dt):
+                theta = 1.0
+            else:
+                theta = self.theta_ost
+        else:
+            theta = self.theta_ost
         
         K = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         K.setUp()
@@ -162,15 +173,15 @@ class Flow0DProblem(problem_base):
         r.axpy(1./self.dt, self.df)
         r.axpy(-1./self.dt, self.df_old)
         
-        r.axpy(self.theta_ost, self.f)
-        r.axpy(1.-self.theta_ost, self.f_old)     
+        r.axpy(theta, self.f)
+        r.axpy(1.-theta, self.f_old)     
 
         self.dK.assemble()
         self.K.assemble()
         K.assemble()
 
         K.axpy(1./self.dt, self.dK)
-        K.axpy(self.theta_ost, self.K)
+        K.axpy(theta, self.K)
 
         return r, K
 

@@ -172,7 +172,7 @@ class constitutive:
         elif matlaw == 'active_fiber':
             
             tau_a_ = ivar["tau_a"]
-            return self.mat.active_fiber(tau_a_, self.kin.fib_funcs[0])
+            return self.mat.active_fiber(tau_a_,self.kin.fib_funcs[0])
             
         elif matlaw == 'active_iso':
             

@@ -47,6 +47,9 @@ class SignallingNetworkProblem(problem_base):
         try: self.prescribed_variables = model_params['prescribed_variables']
         except: self.prescribed_variables = {}
 
+        try: self.initial_backwardeuler = time_params['initial_backwardeuler']
+        except: self.initial_backwardeuler = False
+
         # initialize signet model class
         if model_params['modeltype'] == 'hypertrophy':
             from signet_hypertrophy import signethypertrophy
@@ -91,7 +94,15 @@ class SignallingNetworkProblem(problem_base):
 
 
 
-    def assemble_residual_stiffness(self):
+    def assemble_residual_stiffness(self, t):
+        
+        if self.initial_backwardeuler:
+            if np.isclose(t,self.dt):
+                theta = 1.0
+            else:
+                theta = self.theta_ost
+        else:
+            theta = self.theta_ost
         
         K = PETSc.Mat().createAIJ(size=(self.signet.numdof,self.signet.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         K.setUp()
@@ -102,15 +113,15 @@ class SignallingNetworkProblem(problem_base):
         r.axpy(1./self.dt, self.df)
         r.axpy(-1./self.dt, self.df_old)
         
-        r.axpy(self.theta_ost, self.f)
-        r.axpy(1.-self.theta_ost, self.f_old)     
+        r.axpy(theta, self.f)
+        r.axpy(1.-theta, self.f_old)     
 
         self.dK.assemble()
         self.K.assemble()
         K.assemble()
 
         K.axpy(1./self.dt, self.dK)
-        K.axpy(self.theta_ost, self.K)
+        K.axpy(theta, self.K)
 
         return r, K
 
