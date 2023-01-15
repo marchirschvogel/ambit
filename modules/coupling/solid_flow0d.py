@@ -287,7 +287,7 @@ class SolidmechanicsFlow0DSolver():
             self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t-t_off, localdata=self.pb.pbs.localdata)
 
             # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid, self.pb.pbf.theta_ost), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid, self.pb.pbf.theta_ost)
+            self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid, self.pb.pbf.theta0d_timint(t)), self.pb.pbf.cardvasc0D.midpoint_avg(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid, self.pb.pbf.theta0d_timint(t))
 
             # write output
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)

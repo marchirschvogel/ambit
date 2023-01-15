@@ -155,15 +155,9 @@ class Flow0DProblem(problem_base):
 
 
     def assemble_residual_stiffness(self, t):
-        
-        if self.initial_backwardeuler:
-            if np.isclose(t,self.dt):
-                theta = 1.0
-            else:
-                theta = self.theta_ost
-        else:
-            theta = self.theta_ost
-        
+
+        theta = self.theta0d_timint(t)
+
         K = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         K.setUp()
         
@@ -184,6 +178,19 @@ class Flow0DProblem(problem_base):
         K.axpy(theta, self.K)
 
         return r, K
+
+
+    def theta0d_timint(self, t):
+
+        if self.initial_backwardeuler:
+            if np.isclose(t,self.dt):
+                theta = 1.0
+            else:
+                theta = self.theta_ost
+        else:
+            theta = self.theta_ost
+            
+        return theta
 
 
     def writerestart(self, sname, N, ms=False):

@@ -93,17 +93,10 @@ class SignallingNetworkProblem(problem_base):
         self.odemodel = self.signet
 
 
-
     def assemble_residual_stiffness(self, t):
-        
-        if self.initial_backwardeuler:
-            if np.isclose(t,self.dt):
-                theta = 1.0
-            else:
-                theta = self.theta_ost
-        else:
-            theta = self.theta_ost
-        
+
+        theta = self.thetasn_timint(t)
+
         K = PETSc.Mat().createAIJ(size=(self.signet.numdof,self.signet.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         K.setUp()
         
@@ -124,6 +117,19 @@ class SignallingNetworkProblem(problem_base):
         K.axpy(theta, self.K)
 
         return r, K
+
+
+    def thetasn_timint(self, t):
+
+        if self.initial_backwardeuler:
+            if np.isclose(t,self.dt):
+                theta = 1.0
+            else:
+                theta = self.theta_ost
+        else:
+            theta = self.theta_ost
+            
+        return theta
 
 
     def writerestart(self, sname, N, ms=False):
@@ -154,7 +160,6 @@ class SignallingNetworkProblem(problem_base):
             self.ti.cycle[0] = np.loadtxt(self.output_path_signet+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(0), dtype=int)
             self.ti.cycleerror[0] = np.loadtxt(self.output_path_signet+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(1), dtype=float)
             self.t_init -= (self.ti.cycle[0]-1) * self.signet.T_cycl
-
 
 
 

@@ -851,7 +851,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
                     # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
                     if self.pbc.pbf.cq[i] == 'volume':   timefac = 1./self.pb.dt
-                    if self.pbc.pbf.cq[i] == 'flux':     timefac = -self.pbc.pbf.theta_ost # 0D model time-integration factor
+                    if self.pbc.pbf.cq[i] == 'flux':     timefac = -self.pbc.pbf.theta0d_timint(t) # 0D model time-integration factor
                     if self.pbc.pbf.cq[i] == 'pressure': timefac = self.pbc.pbs.timefac # 3D solid/fluid time-integration factor
 
                 if self.ptype == 'solid_constraint': timefac = self.pbc.pbs.timefac # 3D solid time-integration factor
