@@ -15,7 +15,7 @@ from dolfinx import fem
 import ufl
 
 from projection import project
-from mpiroutines import allgather_vec
+from mpiroutines import allgather_vec,allgather_mat
 
 from solver_utils import sol_utils
 import preconditioner
@@ -702,7 +702,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 # Lagrange multipliers (pressures) to be passed to 0D model
                 lm_sq = allgather_vec(self.pbc.lm, self.pbc.comm)
                 self.pbc.pbf.c[:] = lm_sq[:]
-                self.snln0D.newton(s, t, print_iter=False)
+                self.snln0D.newton(s, t, print_iter=self.pbc.print_subiter, sub=True)
                 
             if self.pbc.pbs.localsolve:
                 for l in range(len(localdata['var'])): self.newton_local(localdata['var'][l],localdata['res'][l],localdata['inc'][l],localdata['fnc'][l])
@@ -1132,12 +1132,12 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.ksp.getPC().setFactorSolverType(self.direct_solver)
 
 
-    def newton(self, s, t, print_iter=True):
+    def newton(self, s, t, print_iter=True, sub=False):
 
         # Newton iteration index
         it = 0
         
-        if print_iter: self.solutils.print_nonlinear_iter(header=True)
+        if print_iter: self.solutils.print_nonlinear_iter(header=True,sub=sub)
         
         while it < self.maxiter:
             
@@ -1174,13 +1174,18 @@ class solver_nonlinear_ode(solver_nonlinear):
             res_norm = r.norm()
             inc_norm = ds.norm()
             
-            if print_iter: self.solutils.print_nonlinear_iter(it,{'res_0d' : res_norm},{'inc_0d' : inc_norm},ts=ts,te=te)
+            if print_iter: self.solutils.print_nonlinear_iter(it,{'res_0d' : res_norm},{'inc_0d' : inc_norm},ts=ts,te=te,sub=sub)
             
             it += 1
 
             # check if converged
             converged = self.solutils.check_converged({'res_0d' : res_norm},{'inc_0d' : inc_norm},self.tolerances,ptype='flow0d')
             if converged:
+                if print_iter and sub:
+                    if self.pb.comm.rank == 0:
+                        print('      **************************************************************')
+                        print(' ')
+                        sys.stdout.flush()
                 break
 
         else:

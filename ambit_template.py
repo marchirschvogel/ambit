@@ -94,7 +94,8 @@ def main():
                             'coupling_quantity'     : ['volume','volume'], # volume, flux, pressure (former two need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'variable_quantity'     : ['pressure','pressure'], # OPTIONAL: pressure, flux, volume (former needs 'monolithic_direct', latter two need 'monolithic_lagrange' as coupling_type) (default: 'pressure')
                             'coupling_type'         : 'monolithic_direct', # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
-                            'eps_fd'                : 1e-6} # OPTIONAL: perturbation for monolithic_lagrange coupling (default: 1e-5)
+                            'eps_fd'                : 1e-6, # OPTIONAL: perturbation for monolithic_lagrange coupling (default: 1e-5)
+                            'print_subiter'         : False} # OPTIONAL: print subiterations in case of monolithic_lagrange-type coupling (default: False)
 
     # for solid_constraint problem type
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint (for syspul* models: order is lv, rv, la, ra)

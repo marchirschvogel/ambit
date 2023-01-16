@@ -46,6 +46,9 @@ class FluidmechanicsFlow0DProblem():
         try: self.eps_fd = self.coupling_params['eps_fd']
         except: self.eps_fd = 1.0e-5
 
+        try: self.print_subiter = self.coupling_params['print_subiter']
+        except: self.print_subiter = False
+
         # assert that we do not have conflicting timings
         time_params_flow0d['maxtime'] = time_params_fluid['maxtime']
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
