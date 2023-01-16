@@ -15,7 +15,7 @@ from dolfinx import fem
 import ufl
 
 from projection import project
-from mpiroutines import allgather_vec,allgather_mat
+from mpiroutines import allgather_vec
 
 from solver_utils import sol_utils
 import preconditioner
