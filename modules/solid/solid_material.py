@@ -111,7 +111,7 @@ class materiallaw:
         try: fiber_comp = params['fiber_comp']
         except: fiber_comp = False
 
-        # conditional parameters: fibers are only active in tension if fiber_comp is False, otherwise also in compression
+        # conditional parameters: if fiber_comp is False, fibers are only active in tension, otherwise also in compression
         if not fiber_comp:
             a_f_c = ufl.conditional(ufl.ge(I4,1.), a_f, 0.)
             a_s_c = ufl.conditional(ufl.ge(I6,1.), a_s, 0.)

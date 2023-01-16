@@ -15,19 +15,19 @@ import distutils.util
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-p', '--path', dest='p', action='store')
-parser.add_argument('-s', '--simname', dest='s', action='store')
+parser.add_argument('-p', '--path', dest='p', action='store', type=str)
+parser.add_argument('-s', '--simname', dest='s', action='store', type=str)
 parser.add_argument('-n', '--nstep', dest='n', action='store', type=int, default=500)
-parser.add_argument('-ted', '--tenddias', dest='ted', action='store', default=0.2)
-parser.add_argument('-tes', '--tendsyst', dest='tes', action='store', default=0.53)
-parser.add_argument('-T', '--Tcycl', dest='T', action='store', default=1.0)
-parser.add_argument('-m', '--model', dest='m', action='store', default='syspul')
+parser.add_argument('-ted', '--tenddias', dest='ted', action='store', type=float, default=0.2)
+parser.add_argument('-tes', '--tendsyst', dest='tes', action='store', type=float, default=0.53)
+parser.add_argument('-T', '--Tcycl', dest='T', action='store', type=float, default=1.0)
+parser.add_argument('-m', '--model', dest='m', action='store', default='syspul', type=str)
 parser.add_argument('-mc', '--modelcoronary', dest='mc', action='store', default=None)
 parser.add_argument('-cf', '--calcfunc', dest='cf', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
 parser.add_argument('-ip', '--inducepertafter', dest='ip', action='store', type=int, default=-1)
 parser.add_argument('-mgr', '--multgandr', dest='mgr', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
 parser.add_argument('-lgr', '--lastgandrcycl', dest='lgr', action='store', type=int, default=-1)
-parser.add_argument('-V0', '--Vinitial', dest='V0', nargs=5, action='store', default=[113.25,150.,50.,50.,0.]) # initial chamber vols (in ml!): order is lv,rv,la,ra,ao
+parser.add_argument('-V0', '--Vinitial', dest='V0', nargs=5, action='store', type=float, default=[113.25,150.,50.,50.,0.]) # initial chamber vols (in ml!): order is lv,rv,la,ra,ao
 parser.add_argument('-png', '--pngexport', dest='png', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
 parser.add_argument('-plt', '--genplots', dest='plt', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
 parser.add_argument('-ext', '--extplot', dest='ext', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
