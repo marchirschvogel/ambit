@@ -10,7 +10,6 @@ import sys, time
 
 import numpy as np
 from petsc4py import PETSc
-
 from dolfinx import fem
 import ufl
 
@@ -448,8 +447,6 @@ class solver_nonlinear:
         else:
 
             raise RuntimeError("Newton did not converge after %i iterations!" % (it))
-        
-        #self.ksp.destroy()
 
 
     def reset_step(self, vec, vec_start, ghosted):
@@ -1105,9 +1102,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         else:
 
             raise RuntimeError("Monolithic 3D-0D Newton did not converge after %i iterations!" % (it))
-        
-        #self.ksp.destroy()
-
 
 
 # solver for pure ODE (0D) problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)

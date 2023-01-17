@@ -6,16 +6,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys, copy
-import numpy as np
-from dolfinx import fem
-import ufl
+import time, sys
 from petsc4py import PETSc
-
-import utilities
-import expression
-from projection import project
-from mpiroutines import allgather_vec
 
 from solid_flow0d import SolidmechanicsFlow0DSolver
 
@@ -29,7 +21,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # set indicator to zero (no temporal offsets)
         self.pb.noperiodicref = 0
         
-        # initialize solver instances
+        # initialize solver instance
         self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params_solid, solver_params_flow0d)
         
         # store prestress flag (because flag is set to False after one prestress run)
@@ -47,7 +39,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         
         # outer heart cycle main time loop
         for N in range(self.pb.restart_periodicref+1, self.pb.Nmax_periodicref+1):
-
+            
             wts = time.time()
 
             # change output names
@@ -62,10 +54,6 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             if self.prestress_initial:
                 self.pb.pbs.prestress_initial = self.prestress_initial
                 self.solver.solverprestr.solnln.initialize_petsc_solver()
-            
-            # check if below tolerance
-            if abs(self.pb.pbf.ti.cycleerror[0]) <= self.pb.pbf.eps_periodic:
-                break
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Program complete. Time for full computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
@@ -90,4 +78,9 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             self.pb.pbs.p_old.vector.set(0.0)
             self.pb.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        if self.prestress_initial:
+            self.pb.pbs.u_pre.vector.set(0.0)
+            self.pb.pbs.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
         # 0D variables s and s_old are already correctly set from the previous run (end values) and should serve as new initial conditions
+        # internal variables like active stress should not be zero'd as they may contribute to the prestressed state

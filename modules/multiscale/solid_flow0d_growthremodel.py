@@ -13,10 +13,6 @@ import ufl
 from petsc4py import PETSc
 
 import utilities
-import expression
-from projection import project
-from mpiroutines import allgather_vec
-
 from solid import SolidmechanicsProblem, SolidmechanicsSolver
 from solid_flow0d import SolidmechanicsFlow0DProblem, SolidmechanicsFlow0DSolver
 
