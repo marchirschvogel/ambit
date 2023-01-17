@@ -54,6 +54,13 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             if self.prestress_initial:
                 self.pb.pbs.prestress_initial = self.prestress_initial
                 self.solver.solverprestr.solnln.initialize_petsc_solver()
+            
+            # check if below tolerance
+            if abs(self.pb.pbf.ti.cycleerror[0]) <= self.pb.pbf.eps_periodic:
+                if self.pb.comm.rank == 0:
+                    print("Periodicity on reference configuration reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]))
+                    sys.stdout.flush()
+                break
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Program complete. Time for full computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
