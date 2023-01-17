@@ -45,9 +45,6 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         
         start = time.time()
         
-        # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.comm)
-        
         # outer heart cycle main time loop
         for N in range(self.pb.restart_periodicref+1, self.pb.Nmax_periodicref+1):
 
