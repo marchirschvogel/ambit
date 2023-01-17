@@ -557,6 +557,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
         self.sepstring = self.solutils.timestep_separator(self.tolerances)
         
+        self.initialize_petsc_solver()
+        
         
     def initialize_petsc_solver(self):
 
@@ -668,8 +670,6 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
 
     def newton(self, u, p, s, t, localdata={}):
-        
-        self.initialize_petsc_solver()
         
         # 3D displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -1125,12 +1125,12 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.tolerances = {'res_0d' : self.tolres, 'inc_0d' : self.tolinc}
         
         self.PTC = False # don't think we'll ever need PTC for the 0D ODE problem...
-        
-        self.initialize_petsc_solver()
-        
+
         self.solutils = sol_utils(self.pb, self.ptype, solver_params)
         
         self.sepstring = self.solutils.timestep_separator(self.tolerances)
+        
+        self.initialize_petsc_solver()
         
         
     def initialize_petsc_solver(self):
