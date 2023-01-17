@@ -49,6 +49,12 @@ class FluidmechanicsFlow0DProblem():
         try: self.print_subiter = self.coupling_params['print_subiter']
         except: self.print_subiter = False
 
+        try: self.restart_periodicref = self.coupling_params['restart_periodicref']
+        except: self.restart_periodicref = 0
+
+        try: self.Nmax_periodicref = self.coupling_params['Nmax_periodicref']
+        except: self.Nmax_periodicref = 10
+
         # assert that we do not have conflicting timings
         time_params_flow0d['maxtime'] = time_params_fluid['maxtime']
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
@@ -56,6 +62,9 @@ class FluidmechanicsFlow0DProblem():
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbs = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
         self.pbf = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
+
+        # indicator for no periodic reference state estimation
+        self.noperiodicref = 1
 
         self.incompressible_2field = self.pbs.incompressible_2field
 
@@ -167,7 +176,7 @@ class FluidmechanicsFlow0DSolver():
         start = time.time()
         
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.pbs.comm, self.pb.pbs.ndof)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.ndof)
 
         # read restart information
         if self.pb.pbs.restart_step > 0:
@@ -187,7 +196,7 @@ class FluidmechanicsFlow0DSolver():
             # old 3D coupling quantities (volumes or fluxes)
             for i in range(self.pb.num_coupling_surf):
                 cq = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
-                cq = self.pb.pbs.comm.allgather(cq)
+                cq = self.pb.comm.allgather(cq)
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
         
         if self.pb.coupling_type == 'monolithic_lagrange':
@@ -195,7 +204,7 @@ class FluidmechanicsFlow0DSolver():
                 lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
                 self.pb.pbf.c.append(lm_sq[i])
                 con = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
-                con = self.pb.pbs.comm.allgather(con)
+                con = self.pb.comm.allgather(con)
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
@@ -231,7 +240,7 @@ class FluidmechanicsFlow0DSolver():
             t = N * self.pb.pbs.dt
             
             # offset time for multiple cardiac cycles
-            t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
+            t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.cardvasc0D.T_cycl * self.pb.noperiodicref # zero if T_cycl variable is not specified
 
             # set time-dependent functions
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)

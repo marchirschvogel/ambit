@@ -50,6 +50,12 @@ class SolidmechanicsFlow0DProblem():
         try: self.print_subiter = self.coupling_params['print_subiter']
         except: self.print_subiter = False
         
+        try: self.restart_periodicref = self.coupling_params['restart_periodicref']
+        except: self.restart_periodicref = 0
+
+        try: self.Nmax_periodicref = self.coupling_params['Nmax_periodicref']
+        except: self.Nmax_periodicref = 10
+        
         # assert that we do not have conflicting timings
         time_params_flow0d['maxtime'] = time_params_solid['maxtime']
         time_params_flow0d['numstep'] = time_params_solid['numstep']
@@ -64,6 +70,9 @@ class SolidmechanicsFlow0DProblem():
         self.t_prev = 0
         self.t_gandr_setpoint = 0
         self.restart_multiscale = False
+        
+        # indicator for no periodic reference state estimation
+        self.noperiodicref = 1
 
         if self.pbs.problem_type == 'solid_flow0d_multiscale_gandr': self.have_multiscale_gandr = True
         else: self.have_multiscale_gandr = False
@@ -186,6 +195,7 @@ class SolidmechanicsFlow0DSolver():
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
         
+        
         if self.pb.pbs.prestress_initial:
             # add coupling work to prestress weak form
             self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            
@@ -198,7 +208,7 @@ class SolidmechanicsFlow0DSolver():
         start = time.time()
         
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.pbs.comm, self.pb.pbs.ndof)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.ndof)
 
         if self.pb.pbs.have_rom:
             self.pb.pbs.rom.POD(self.pb.pbs)
@@ -220,7 +230,7 @@ class SolidmechanicsFlow0DSolver():
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
-            del self.solverprestr
+            self.solverprestr.solnln.ksp.destroy()
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
@@ -230,7 +240,7 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbf.c = []
             for i in range(self.pb.num_coupling_surf):
                 cq = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
-                cq = self.pb.pbs.comm.allgather(cq)
+                cq = self.pb.comm.allgather(cq)
                 self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
 
         if self.pb.coupling_type == 'monolithic_lagrange':
@@ -239,7 +249,7 @@ class SolidmechanicsFlow0DSolver():
                 lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
                 self.pb.pbf.c.append(lm_sq[i])
                 con = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
-                con = self.pb.pbs.comm.allgather(con)
+                con = self.pb.comm.allgather(con)
                 self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
                 self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
 
@@ -275,8 +285,8 @@ class SolidmechanicsFlow0DSolver():
             t = N * self.pb.pbs.dt + self.pb.t_prev # t_prev for multiscale analysis (time from previous cycles)
             
             # offset time for multiple cardiac cycles
-            t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
-            
+            t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.cardvasc0D.T_cycl * self.pb.noperiodicref # zero if T_cycl variable is not specified
+
             # set time-dependent functions
             self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
             

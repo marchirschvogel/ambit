@@ -54,6 +54,16 @@ class Ambit():
             
             self.mp = solid_flow0d.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
             self.ms = solid_flow0d.SolidmechanicsFlow0DSolver(self.mp, solver_params[0], solver_params[1])
+
+        elif problem_type == 'solid_flow0d_periodicref':
+            
+            import solid_flow0d, solid_flow0d_periodicref
+            
+            io = ioroutines.IO_solid(io_params, self.comm)
+            io.readin_mesh()
+            
+            self.mp = solid_flow0d.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.ms = solid_flow0d_periodicref.SolidmechanicsFlow0DPeriodicRefSolver(self.mp, solver_params[0], solver_params[1])
             
         elif problem_type == 'fluid_flow0d':
             

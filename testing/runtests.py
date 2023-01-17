@@ -107,17 +107,16 @@ if solid_constraint:
 
 err = 0
 for e in range(len(errs)):
-    err += list(errs.values())[e]
+    if list(errs.values())[e] != 0:
+        err += 1
 
 print("\nSummary:")
 print("========")
 for e in range(len(errs)):
     if list(errs.values())[e] == 0:
         print('{:<75s}{:<18s}'.format(list(errs.keys())[e],'status: passed :-)'))
-    elif list(errs.values())[e] == 1:
-        print('{:<75s}{:<18s}'.format(list(errs.keys())[e],'status: FAILED !!!!!!'))
     else:
-        raise ValueError("Unknown test status!")
+        print('{:<75s}{:<18s}'.format(list(errs.keys())[e],'status: FAILED !!!!!!'))
 
 if err == 0:
     print("\n##################################")

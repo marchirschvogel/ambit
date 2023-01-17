@@ -31,7 +31,7 @@ class cardiovascular0Dbase(ode):
         else: vs, ve = var.getOwnershipRange()
 
         is_periodic = False
-        
+
         if self.T_cycl > 0. and np.isclose(t, self.T_cycl):
             
             varTc[vs:ve] = var[vs:ve]

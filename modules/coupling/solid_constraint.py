@@ -151,7 +151,7 @@ class SolidmechanicsConstraintSolver():
         start = time.time()
         
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.pbs.comm, self.pb.pbs.ndof)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.ndof)
 
         # read restart information
         if self.pb.pbs.restart_step > 0:
@@ -173,7 +173,7 @@ class SolidmechanicsConstraintSolver():
         for i in range(self.pb.num_coupling_surf):
             lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
             con = fem.assemble_scalar(fem.form(self.pb.cq[i]))
-            con = self.pb.pbs.comm.allgather(con)
+            con = self.pb.comm.allgather(con)
             self.pb.constr.append(sum(con))
             self.pb.constr_old.append(sum(con))
                  
