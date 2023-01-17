@@ -194,8 +194,7 @@ class SolidmechanicsFlow0DSolver():
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
-        
-        
+
         if self.pb.pbs.prestress_initial:
             # add coupling work to prestress weak form
             self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            

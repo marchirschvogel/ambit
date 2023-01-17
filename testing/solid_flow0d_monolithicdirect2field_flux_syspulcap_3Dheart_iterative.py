@@ -52,7 +52,7 @@ def main():
                             'theta_ost'             : 0.5,
                             'initial_conditions'    : init(), # a dictionary
                             'eps_periodic'          : 1.0e-3, # cardiac cycle periodicity tolerance
-                            'periodic_checktype'    : None} # None, 'allvar', 'pQvar'
+                            'periodic_checktype'    : None}
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',
                             'parameters'            : param(),

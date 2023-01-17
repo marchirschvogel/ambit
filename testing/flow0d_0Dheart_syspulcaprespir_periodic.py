@@ -15,7 +15,7 @@ def main():
 
     IO_PARAMS         = {'problem_type'          : 'flow0d',
                          'write_results_every'   : -999,
-                         'output_path'           : ''+basepath+'/tmp/',
+                         'output_path'           : basepath+'/tmp/',
                          'simname'               : 'test'}
 
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-7,
@@ -27,7 +27,7 @@ def main():
                          'theta_ost'             : 1.0,
                          'initial_conditions'    : init(),
                          'eps_periodic'          : 0.05,
-                         'periodic_checktype'    : 'pvar'}
+                         'periodic_checktype'    : ['pvar']}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspulcaprespir',
                          'parameters'            : param(),
@@ -39,7 +39,7 @@ def main():
 
         def tc1(self, t):
             
-            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_lv.txt', skiprows=0)
+            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_lv.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
@@ -49,7 +49,7 @@ def main():
 
         def tc2(self, t):
             
-            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_rv.txt', skiprows=0)
+            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_rv.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
@@ -59,7 +59,7 @@ def main():
 
         def tc3(self, t):
             
-            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_la.txt', skiprows=0)
+            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_la.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
@@ -69,7 +69,7 @@ def main():
 
         def tc4(self, t):
             
-            elastinterp = np.loadtxt(''+str(basepath)+'/input/elastances_ra.txt', skiprows=0)
+            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_ra.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):

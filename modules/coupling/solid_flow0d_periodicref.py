@@ -37,7 +37,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         
         start = time.time()
         
-        # outer heart cycle main time loop
+        # outer heart cycle loop
         for N in range(self.pb.restart_periodicref+1, self.pb.Nmax_periodicref+1):
             
             wts = time.time()

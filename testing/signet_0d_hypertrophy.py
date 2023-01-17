@@ -15,7 +15,7 @@ def main():
 
     IO_PARAMS         = {'problem_type'          : 'signet',
                          'write_results_every'   : 1,
-                         'output_path'           : ''+basepath+'/tmp/',
+                         'output_path'           : basepath+'/tmp/',
                          'simname'               : 'test'}
 
     SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct

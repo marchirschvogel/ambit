@@ -294,7 +294,7 @@ class FluidmechanicsFlow0DSolver():
             if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
                 self.pb.pbf.writerestart(self.pb.pbs.simname, N)
 
-            if is_periodic:
+            if is_periodic and self.pb.noperiodicref==1:
                 if self.pb.comm.rank == 0:
                     print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]))
                     sys.stdout.flush()

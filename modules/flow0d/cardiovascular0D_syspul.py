@@ -448,23 +448,30 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         if isinstance(varTc, np.ndarray): varTc_sq, varTc_old_sq = varTc, varTc_old
         else: varTc_sq, varTc_old_sq = allgather_vec(varTc, self.comm), allgather_vec(varTc_old, self.comm)
 
-        if check=='allvar':
-            
-            vals = []
-            for i in range(len(varTc_sq)):
-                vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+        vals = []
 
-        elif check=='pQvar':
+        if check[0]=='allvar':
+
+            var_ids = list(self.varmap.values())
+
+        elif check[0]=='pQvar':
             
-            vals = []
-            pQvar_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap[self.vname[4]],self.varmap['p_ard_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']]
-            for i in range(len(varTc_sq)):
-                if i in pQvar_ids:
-                    vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+            var_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap[self.vname[4]],self.varmap['p_ard_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']]
+
+        elif check[0]=='specific':
+            
+            var_ids = []
+            for k in range(len(self.varmap)):
+                if list(self.varmap.keys())[k] in check[1]:
+                    var_ids.append(list(self.varmap.values())[k])
 
         else:
-            
             raise NameError("Unknown check option!")
+
+        # compute the errors
+        for i in range(len(varTc_sq)):
+            if i in var_ids:
+                vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
 
         cyclerr[0] = max(vals)
 
@@ -499,7 +506,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             sys.stdout.flush()
             
             if self.cormodel is not None: self.corcirc.print_to_screen(var_sq, aux)
-                
+
+
 
 
 def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, multiscalegandr=False):

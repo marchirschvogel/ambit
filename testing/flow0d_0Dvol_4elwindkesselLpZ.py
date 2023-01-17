@@ -15,7 +15,7 @@ def main():
 
     IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
                          'write_results_every'   : -999,
-                         'output_path'           : ''+basepath+'/tmp/',
+                         'output_path'           : basepath+'/tmp/',
                          'simname'               : 'test'}
 
     SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct

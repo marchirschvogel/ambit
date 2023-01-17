@@ -53,7 +53,7 @@ def main():
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
                             'theta_ost'             : 0.5,
                             'eps_periodic'          : 999,
-                            'periodic_checktype'    : 'pQvar',
+                            'periodic_checktype'    : ['pQvar'],
                             'initial_file'          : basepath+'/input/initial_syspulcap_multiscale.txt'}
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',

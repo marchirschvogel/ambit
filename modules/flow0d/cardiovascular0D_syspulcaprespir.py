@@ -728,35 +728,39 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         return dctCO2_dppCO2_val
 
 
-
-
     def check_periodic(self, varTc, varTc_old, eps, check, cyclerr):
 
         if isinstance(varTc, np.ndarray): varTc_sq, varTc_old_sq = varTc, varTc_old
         else: varTc_sq, varTc_old_sq = allgather_vec(varTc, self.comm), allgather_vec(varTc_old, self.comm)
 
+        vals = []
+
         # could get critical here since the respiratory cycle may differ from the heart cycle! So the oscillatory lung dofs should be excluded
         oscillatory_lung_dofs=[36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55]
         
-        if check=='allvar':
+        if check[0]=='allvar':
             
-            vals = []
-            for i in range(len(varTc_sq)):
-                if i not in oscillatory_lung_dofs:
-                    vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+            var_ids = list(self.varmap.values())
 
-        elif check=='pvar':
+        elif check[0]=='pvar':
             
-            vals = []
-            pvar_ids = [1,3,4,6,8,14,16,18,20,22,24,27,29,30,32,34,
+            var_ids = [1,3,4,6,8,14,16,18,20,22,24,27,29,30,32,34,
                         46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83]
-            for i in range(len(varTc_sq)):
-                if i in pvar_ids and i not in oscillatory_lung_dofs:
-                    vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+
+        elif check[0]=='specific':
+            
+            var_ids = []
+            for k in range(len(self.varmap)):
+                if list(self.varmap.keys())[k] in check[1]:
+                    var_ids.append(list(self.varmap.values())[k])
 
         else:
-            
             raise NameError("Unknown check option!")
+
+        # compute the errors
+        for i in range(len(varTc_sq)):
+            if i in var_ids and i not in oscillatory_lung_dofs:
+                vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
 
         cyclerr[0] = max(vals)
 
@@ -766,7 +770,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             is_periodic = False
             
         return is_periodic
-
 
 
     def print_to_screen(self, var, aux):
@@ -786,7 +789,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_sq[self.varmap['ppCO2_ar_sys']],'   ','ppCO2_ar_pul',' = ',var_sq[self.varmap['ppCO2_ar_pul']]))
 
             sys.stdout.flush()
-
 
 
 

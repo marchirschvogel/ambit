@@ -69,7 +69,7 @@ class Flow0DProblem(problem_base):
         except: self.eps_periodic = 1.0e-20
         
         try: self.periodic_checktype = time_params['periodic_checktype']
-        except: self.periodic_checktype = 'allvar'
+        except: self.periodic_checktype = ['allvar']
         
         try: self.prescribed_variables = model_params['prescribed_variables']
         except: self.prescribed_variables = {}

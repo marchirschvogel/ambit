@@ -15,7 +15,7 @@ def main():
 
     IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
                          'write_results_every'   : -999,
-                         'output_path'           : ''+basepath+'/tmp',
+                         'output_path'           : basepath+'/tmp',
                          'simname'               : 'test'}
 
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-8,
@@ -28,7 +28,7 @@ def main():
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init(),
                          'eps_periodic'          : 0.03,
-                         'periodic_checktype'    : 'pQvar'}
+                         'periodic_checktype'    : ['pQvar']}
     
     MODEL_PARAMS      = {'modeltype'             : 'syspulcapcor',
                          'coronary_model'        : 'ZCRp_CRd',
