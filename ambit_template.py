@@ -66,7 +66,7 @@ def main():
                             'initial_conditions'    : init(), # initial condition dictionary (here defined as function, see below)
                             'initial_file'          : None, # OPTIONAL: if we want to read initial conditions from a file (overwrites above specified dict)
                             'eps_periodic'          : 1.0e-3, # OPTIONAL: cardiac cycle periodicity tolerance (default: 1.0e-20)
-                            'periodic_checktype'    : None, # OPTIONAL: None, ['allvar'], ['pQvar'], ['specific',['p_ar_sys',...,'q_ven_pul']] (default: None)
+                            'periodic_checktype'    : None, # OPTIONAL: None, ['allvar'], ['allvaraux'], ['pQvar'], ['specific',['V_v_l','p_ar_sys',...,'q_ven_pul']] (default: None)
                             'initial_backwardeuler' : False} # OPTIONAL: do Backward Euler for initial time step regardless of value for theta_ost (default: False)
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types

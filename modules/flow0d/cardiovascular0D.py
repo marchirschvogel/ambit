@@ -25,7 +25,7 @@ class cardiovascular0Dbase(ode):
 
        
     # check for cardiac cycle periodicity 
-    def cycle_check(self, var, varTc, varTc_old, t, cycle, cyclerr, eps_periodic, check=['allvar'], inioutpath=None, nm='', induce_pert_after_cycl=-1):
+    def cycle_check(self, var, varTc, varTc_old, aux, auxTc, auxTc_old, t, cycle, cyclerr, eps_periodic, check=['allvar'], inioutpath=None, nm='', induce_pert_after_cycl=-1):
         
         if isinstance(varTc, np.ndarray): vs, ve = 0, len(varTc)
         else: vs, ve = var.getOwnershipRange()
@@ -35,8 +35,9 @@ class cardiovascular0Dbase(ode):
         if self.T_cycl > 0. and np.isclose(t, self.T_cycl):
             
             varTc[vs:ve] = var[vs:ve]
+            auxTc[:] = aux[:]
             
-            if check[0] is not None: is_periodic = self.check_periodic(varTc, varTc_old, eps_periodic, check, cyclerr)
+            if check[0] is not None: is_periodic = self.check_periodic(varTc, varTc_old, auxTc, auxTc_old, eps_periodic, check, cyclerr)
             
             # definitely should not be True if we've not yet surpassed the "disease induction" cycle
             if cycle[0] <= induce_pert_after_cycl:
@@ -47,6 +48,7 @@ class cardiovascular0Dbase(ode):
                 self.write_initial(inioutpath, nm, varTc_old, varTc)
             
             varTc_old[vs:ve] = varTc[vs:ve]
+            auxTc_old[:] = auxTc[:]
                 
             # update cycle counter
             cycle[0] += 1

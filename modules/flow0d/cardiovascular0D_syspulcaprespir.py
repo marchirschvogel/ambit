@@ -728,7 +728,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         return dctCO2_dppCO2_val
 
 
-    def check_periodic(self, varTc, varTc_old, eps, check, cyclerr):
+    def check_periodic(self, varTc, varTc_old, auxTc, auxTc_old, eps, check, cyclerr):
 
         if isinstance(varTc, np.ndarray): varTc_sq, varTc_old_sq = varTc, varTc_old
         else: varTc_sq, varTc_old_sq = allgather_vec(varTc, self.comm), allgather_vec(varTc_old, self.comm)
@@ -740,12 +740,16 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         
         if check[0]=='allvar':
             
-            var_ids = list(self.varmap.values())
+            var_ids, aux_ids = list(self.varmap.values()), []
+
+        elif check[0]=='allvaraux':
+
+            var_ids, aux_ids = list(self.varmap.values()), list(self.auxmap.values())
 
         elif check[0]=='pvar':
             
-            var_ids = [1,3,4,6,8,14,16,18,20,22,24,27,29,30,32,34,
-                        46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83]
+            var_ids, aux_ids = [1,3,4,6,8,14,16,18,20,22,24,27,29,30,32,34,
+                        46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83], []
 
         elif check[0]=='specific':
             
@@ -754,6 +758,11 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
                 if list(self.varmap.keys())[k] in check[1]:
                     var_ids.append(list(self.varmap.values())[k])
 
+            aux_ids = []
+            for k in range(len(self.auxmap)):
+                if list(self.auxmap.keys())[k] in check[1]:
+                    aux_ids.append(list(self.auxmap.values())[k])
+
         else:
             raise NameError("Unknown check option!")
 
@@ -761,6 +770,10 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         for i in range(len(varTc_sq)):
             if i in var_ids and i not in oscillatory_lung_dofs:
                 vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+
+        for i in range(len(auxTc)):
+            if i in aux_ids:
+                vals.append( math.fabs((auxTc[i]-auxTc_old[i])/max(1.0,math.fabs(auxTc_old[i]))) )
 
         cyclerr[0] = max(vals)
 

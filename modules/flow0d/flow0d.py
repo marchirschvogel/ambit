@@ -132,6 +132,7 @@ class Flow0DProblem(problem_base):
         self.f, self.f_old   = self.K.createVecLeft(), self.K.createVecLeft()
 
         self.aux, self.aux_old, self.aux_mid = np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof)
+        self.auxTc, self.auxTc_old = np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof)
         
         self.s_set = self.K.createVecLeft() # set point for multisale analysis
         
@@ -288,6 +289,7 @@ class Flow0DSolver():
                 if self.pb.chamber_models[ch]['type']=='0D_prescr': self.pb.c.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['prescribed_curve'])(self.pb.t_init))
 
         self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, None, self.pb.c, self.pb.y, self.pb.aux_old)
+        self.pb.auxTc_old[:] = self.pb.aux_old[:]
 
         # flow 0d main time loop
         for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
@@ -330,7 +332,7 @@ class Flow0DSolver():
             self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, wt=wt)
             
             # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, t-t_off, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
+            is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, self.pb.aux, self.pb.auxTc, self.pb.auxTc_old, t-t_off, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
 
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.perturb_type is not None and not self.pb.have_induced_pert: self.pb.induce_perturbation()

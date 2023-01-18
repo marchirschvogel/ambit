@@ -443,7 +443,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             self.corcirc.initialize(var, iniparam)
 
 
-    def check_periodic(self, varTc, varTc_old, eps, check, cyclerr):
+    def check_periodic(self, varTc, varTc_old, auxTc, auxTc_old, eps, check, cyclerr):
         
         if isinstance(varTc, np.ndarray): varTc_sq, varTc_old_sq = varTc, varTc_old
         else: varTc_sq, varTc_old_sq = allgather_vec(varTc, self.comm), allgather_vec(varTc_old, self.comm)
@@ -452,11 +452,15 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         if check[0]=='allvar':
 
-            var_ids = list(self.varmap.values())
+            var_ids, aux_ids = list(self.varmap.values()), []
+
+        elif check[0]=='allvaraux':
+
+            var_ids, aux_ids = list(self.varmap.values()), list(self.auxmap.values())
 
         elif check[0]=='pQvar':
             
-            var_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap[self.vname[4]],self.varmap['p_ard_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']]
+            var_ids, aux_ids = [self.varmap[self.vname[2]],self.varmap[self.vname[0]],self.varmap[self.vname[4]],self.varmap['p_ard_sys'],self.varmap['p_ven_sys'],self.varmap[self.vname[3]],self.varmap[self.vname[1]],self.varmap['p_ar_pul'],self.varmap['p_ven_pul']], []
 
         elif check[0]=='specific':
             
@@ -465,6 +469,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
                 if list(self.varmap.keys())[k] in check[1]:
                     var_ids.append(list(self.varmap.values())[k])
 
+            aux_ids = []
+            for k in range(len(self.auxmap)):
+                if list(self.auxmap.keys())[k] in check[1]:
+                    aux_ids.append(list(self.auxmap.values())[k])
+
         else:
             raise NameError("Unknown check option!")
 
@@ -472,6 +481,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         for i in range(len(varTc_sq)):
             if i in var_ids:
                 vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+
+        for i in range(len(auxTc)):
+            if i in aux_ids:
+                vals.append( math.fabs((auxTc[i]-auxTc_old[i])/max(1.0,math.fabs(auxTc_old[i]))) )
 
         cyclerr[0] = max(vals)
 
