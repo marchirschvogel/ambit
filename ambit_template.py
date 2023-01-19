@@ -97,7 +97,8 @@ def main():
                             'eps_fd'                : 1e-6, # OPTIONAL: perturbation for monolithic_lagrange coupling (default: 1e-5)
                             'print_subiter'         : False, # OPTIONAL: print subiterations in case of monolithic_lagrange-type coupling (default: False)
                             'Nmax_periodicref'      : 10, # OPTIONAL: maximum heart cycles for solid_flow0d_periodicref problem (default: 10)
-                            'restart_periodicref'   : 0} # OPTIONAL: restart outer cycle for solid_flow0d_periodicref problem (default: 0)
+                            'restart_periodicref'   : 0, # OPTIONAL: restart outer cycle for solid_flow0d_periodicref problem (default: 0)
+                            'write_checkpoints_periodicref' : False} # OPTIONAL: write restart after each cycle (default: False)
 
     # for solid_constraint problem type
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint (for syspul* models: order is lv, rv, la, ra)

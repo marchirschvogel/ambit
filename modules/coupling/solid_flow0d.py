@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2022, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2023, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the BSD-style license found in the
@@ -49,6 +49,9 @@ class SolidmechanicsFlow0DProblem():
 
         try: self.print_subiter = self.coupling_params['print_subiter']
         except: self.print_subiter = False
+        
+        try: self.write_checkpoints_periodicref = self.coupling_params['write_checkpoints_periodicref']
+        except: self.write_checkpoints_periodicref = False
         
         try: self.restart_periodicref = self.coupling_params['restart_periodicref']
         except: self.restart_periodicref = 0

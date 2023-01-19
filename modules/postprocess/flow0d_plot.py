@@ -15,7 +15,7 @@ import distutils.util
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-p', '--path', dest='p', action='store', type=str)
+parser.add_argument('-p', '--path', dest='p', action='store', default='.', type=str)
 parser.add_argument('-s', '--simname', dest='s', action='store', type=str)
 parser.add_argument('-n', '--nstep', dest='n', action='store', type=int, default=500)
 parser.add_argument('-ted', '--tenddias', dest='ted', action='store', type=float, default=0.2)
@@ -263,8 +263,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             n_cycl = int(numdata/nstep_cycl)
             t_off = tmp[0]-T_cycl/nstep_cycl
         
-            sw, sv, co, ef, edv, esv, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], []
-            edp2 = []
+            sw, sv, co, ef, edv, esv, vmin, vmax, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
             for ch in ['v_l','v_r']:
                 
                 # stroke work
@@ -279,8 +278,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 vol = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
                 sv.append(max(vol[:,1])-min(vol[:,1]))
                 co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
-                #edv.append(max(vol[:,1]))
-                #esv.append(min(vol[:,1]))
+                vmin.append(min(vol[:,1]))
+                vmax.append(max(vol[:,1]))
                 edv.append(np.interp(t_ed+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
                 esv.append(np.interp(t_es+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
                 ef.append((max(vol[:,1])-min(vol[:,1]))/max(vol[:,1]))
@@ -323,10 +322,12 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 # regurgitant fraction
                 f_reg.append(v_reg[-1]/sv[-1])
 
-            # atrial stroke volumes
-            sv_at = []
+            # atrial min, max, and stroke volumes
+            vmin_at, vmax_at, sv_at = [], [], []
             for ch in ['at_l','at_r']:
                 vol_at = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
+                vmin_at.append(min(vol_at[:,1]))
+                vmax_at.append(max(vol_at[:,1]))
                 sv_at.append(max(vol_at[:,1])-min(vol_at[:,1]))
 
             # mean arterial pressure
@@ -366,6 +367,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('edv_rv %.16f\n' % (edv[1]))
             fi.write('esv_lv %.16f\n' % (esv[0]))
             fi.write('esv_rv %.16f\n' % (esv[1]))
+            fi.write('vmin_lv %.16f\n' % (vmin[0]))
+            fi.write('vmin_rv %.16f\n' % (vmin[1]))
+            fi.write('vmax_lv %.16f\n' % (vmax[0]))
+            fi.write('vmax_rv %.16f\n' % (vmax[1]))
             fi.write('edp_lv %.16f\n' % (edp[0]))
             fi.write('edp_rv %.16f\n' % (edp[1]))
             fi.write('esp_lv %.16f\n' % (esp[0]))
@@ -387,29 +392,33 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('p_ar_sys_dias %.16f\n' % (p_ar_dias[0]))
             fi.write('p_ar_sys_syst %.16f\n' % (p_ar_syst[0])) 
             fi.write('p_ar_pul_dias %.16f\n' % (p_ar_dias[1]))
-            fi.write('p_ar_pul_syst %.16f\n' % (p_ar_syst[1])) 
+            fi.write('p_ar_pul_syst %.16f\n' % (p_ar_syst[1]))
             fi.write('sv_la %.16f\n' % (sv_at[0]))
             fi.write('sv_ra %.16f\n' % (sv_at[1]))
-            
+            fi.write('vmin_la %.16f\n' % (vmin_at[0]))
+            fi.write('vmin_ra %.16f\n' % (vmin_at[1]))
+            fi.write('vmax_la %.16f\n' % (vmax_at[0]))
+            fi.write('vmax_ra %.16f\n' % (vmax_at[1]))
+
             fi.close()
 
     if generate_plots:
 
         # tmp!!!!
         if ext_plot:
-            groups[6]['flux_time_compart'].pop(-1)
-            groups[6]['flux_time_compart'].pop(-1)
-            groups[6]['tex'].pop(-1)
-            groups[6]['tex'].pop(-1)
-            groups[6]['lines'].pop(-1)
-            groups[6]['lines'].pop(-1)
-            
-            groups[6]['flux_time_compart'].append('Meas_Qlv')
-            groups[6]['flux_time_compart'].append('Meas_Qla')
-            groups[6]['tex'].append('$\\\hat{Q}_{\\\mathrm{lv}}$')
-            groups[6]['tex'].append('$\\\hat{Q}_{\\\mathrm{la}}$')
-            groups[6]['lines'].append(300)
-            groups[6]['lines'].append(301)
+            grind, grname = 4, 'vol_time_l_r'
+            groups[grind][grname].pop(-1)
+            groups[grind][grname].pop(-1)
+            groups[grind]['tex'].pop(-1)
+            groups[grind]['tex'].pop(-1)
+            groups[grind]['lines'].pop(-1)
+            groups[grind]['lines'].pop(-1)
+            groups[grind][grname].append('Meas_Vlv')
+            groups[grind][grname].append('Meas_Vla')
+            groups[grind]['tex'].append('$\\\hat{V}_{\\\mathrm{lv}}$')
+            groups[grind]['tex'].append('$\\\hat{V}_{\\\mathrm{la}}$')
+            groups[grind]['lines'].append(300)
+            groups[grind]['lines'].append(301)
 
         for g in range(len(groups)):
             
