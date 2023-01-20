@@ -93,6 +93,10 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             self.pb.pbs.p_old.vector.set(0.0)
             self.pb.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        if self.pb.pbs.have_visco_mat:
+            self.pb.pbs.dEdt_old.vector.set(0.0)
+            self.pb.pbs.dEdt_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
         if self.prestress_initial:
             self.pb.pbs.u_pre.vector.set(0.0)
             self.pb.pbs.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

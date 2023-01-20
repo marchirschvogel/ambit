@@ -27,7 +27,7 @@ parser.add_argument('-cf', '--calcfunc', dest='cf', action='store', type=lambda 
 parser.add_argument('-ip', '--inducepertafter', dest='ip', action='store', type=int, default=-1)
 parser.add_argument('-mgr', '--multgandr', dest='mgr', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
 parser.add_argument('-lgr', '--lastgandrcycl', dest='lgr', action='store', type=int, default=-1)
-parser.add_argument('-V0', '--Vinitial', dest='V0', nargs=5, action='store', type=float, default=[113.25,150.,50.,50.,0.]) # initial chamber vols (in ml!): order is lv,rv,la,ra,ao
+parser.add_argument('-V0', '--Vinitial', dest='V0', nargs=5, action='store', type=float, default=[113.25e3,150e3,50e3,50e3, 0e3]) # initial chamber vols: order is lv,rv,la,ra,ao
 parser.add_argument('-png', '--pngexport', dest='png', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
 parser.add_argument('-plt', '--genplots', dest='plt', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
 parser.add_argument('-ext', '--extplot', dest='ext', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
@@ -39,7 +39,7 @@ def main():
     postprocess0D(args.p, args.s, args.n, args.T, args.ted, args.tes, args.m, args.mc, args.ip, calc_func_params=args.cf, V0=args.V0, multiscalegandr=args.mgr, lastgandrcycl=args.lgr, export_png=args.png, generate_plots=args.plt, ext_plot=args.ext)
 
 
-def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[113.25,150.,50.,50., 0.], multiscalegandr=False, lastgandrcycl=1, export_png=True, generate_plots=True, ext_plot=False):
+def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[113.25e3,150e3,50e3,50e3, 0e3], multiscalegandr=False, lastgandrcycl=1, export_png=True, generate_plots=True, ext_plot=False):
 
     fpath = Path(__file__).parent.absolute()
     
@@ -117,7 +117,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                     # integrate volume (mid-point rule): Q_{mid} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{mid}*dt + V_{n}
                     # --> V_{mid} = 0.5 * V_{n+1} + 0.5 * V_{n}
                     file_vol = open(path+'/results_'+sname+'_V_'+ch+'.txt', 'wt')
-                    vol_n = V0[i]*1.0e3 # mm^3, initial volume (from V0 list, which is in ml)
+                    vol_n = V0[i]
                     file_vol.write('%.16E %.16E\n' % (tmp[0], vol_n))
                     for n in range(len(fluxes)-1):
                         dt = tmp[n+1] - tmp[n]
@@ -276,13 +276,13 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 
                 # stroke volume, cardiac output, end-diastolic and end-systolic volume, ejection fraction
                 vol = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
-                sv.append(max(vol[:,1])-min(vol[:,1]))
-                co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
                 vmin.append(min(vol[:,1]))
                 vmax.append(max(vol[:,1]))
                 vend.append(vol[-1,1])
                 edv.append(np.interp(t_ed+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
                 esv.append(np.interp(t_es+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
+                sv.append(max(vol[:,1])-min(vol[:,1]))
+                co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
                 ef.append((max(vol[:,1])-min(vol[:,1]))/max(vol[:,1]))
 
                 pres = np.loadtxt(path+'/results_'+sname+'_p_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))

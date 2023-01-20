@@ -359,6 +359,8 @@ class IO_solid(IO):
             vecs_to_read[pb.a_old] = 'a_old'
             if pb.incompressible_2field:
                 vecs_to_read[pb.p_old] = 'p'
+            if pb.have_visco_mat:
+                vecs_to_read[pb.dEdt_old] = 'dEdt_old'
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
             vecs_to_read[pb.u_set] = 'u_set'
@@ -397,6 +399,8 @@ class IO_solid(IO):
         if pb.timint != 'static':
             vecs_to_write[pb.v_old] = 'v_old'
             vecs_to_write[pb.a_old] = 'a_old'
+            if pb.have_visco_mat:
+                vecs_to_write[pb.dEdt_old] = 'dEdt_old'
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
             vecs_to_write[pb.u_set] = 'u_set'
