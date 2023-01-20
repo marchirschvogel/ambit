@@ -263,7 +263,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             n_cycl = int(numdata/nstep_cycl)
             t_off = tmp[0]-T_cycl/nstep_cycl
         
-            sw, sv, co, ef, edv, esv, vmin, vmax, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
+            sw, sv, co, ef, edv, esv, vmin, vmax, vend, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
             for ch in ['v_l','v_r']:
                 
                 # stroke work
@@ -280,6 +280,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 co.append((max(vol[:,1])-min(vol[:,1]))/T_cycl)
                 vmin.append(min(vol[:,1]))
                 vmax.append(max(vol[:,1]))
+                vend.append(vol[-1,1])
                 edv.append(np.interp(t_ed+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
                 esv.append(np.interp(t_es+(n_cycl-1)*T_cycl+t_off, vol[:,0], vol[:,1]))
                 ef.append((max(vol[:,1])-min(vol[:,1]))/max(vol[:,1]))
@@ -323,12 +324,13 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 f_reg.append(v_reg[-1]/sv[-1])
 
             # atrial min, max, and stroke volumes
-            vmin_at, vmax_at, sv_at = [], [], []
+            vmin_at, vmax_at, vend_at, sv_at = [], [], [], []
             for ch in ['at_l','at_r']:
                 vol_at = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
                 vmin_at.append(min(vol_at[:,1]))
                 vmax_at.append(max(vol_at[:,1]))
                 sv_at.append(max(vol_at[:,1])-min(vol_at[:,1]))
+                vend_at.append(vol_at[-1,1])
 
             # mean arterial pressure
             marp = []
@@ -371,6 +373,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('vmin_rv %.16f\n' % (vmin[1]))
             fi.write('vmax_lv %.16f\n' % (vmax[0]))
             fi.write('vmax_rv %.16f\n' % (vmax[1]))
+            fi.write('vend_lv %.16f\n' % (vend[0]))
+            fi.write('vend_rv %.16f\n' % (vend[1]))
             fi.write('edp_lv %.16f\n' % (edp[0]))
             fi.write('edp_rv %.16f\n' % (edp[1]))
             fi.write('esp_lv %.16f\n' % (esp[0]))
@@ -399,6 +403,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('vmin_ra %.16f\n' % (vmin_at[1]))
             fi.write('vmax_la %.16f\n' % (vmax_at[0]))
             fi.write('vmax_ra %.16f\n' % (vmax_at[1]))
+            fi.write('vend_la %.16f\n' % (vend_at[0]))
+            fi.write('vend_ra %.16f\n' % (vend_at[1]))
 
             fi.close()
 
