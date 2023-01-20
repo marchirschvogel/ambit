@@ -56,7 +56,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             
             # set prestress and re-initialize solid petsc solver
             if self.prestress_initial:
-                self.pb.pbs.prestress_initial = self.prestress_initial
+                self.pb.pbs.prestress_initial = True
                 self.solver.solverprestr.solnln.initialize_petsc_solver()
             
             if self.pb.write_checkpoints_periodicref:
@@ -75,8 +75,9 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             sys.stdout.flush()
 
 
+    # set state to zero
     def reset_state_initial(self):
-        # set state to zero
+
         self.pb.pbs.u.vector.set(0.0)
         self.pb.pbs.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self.pb.pbs.u_old.vector.set(0.0)
@@ -93,13 +94,20 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             self.pb.pbs.p_old.vector.set(0.0)
             self.pb.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if self.pb.pbs.have_visco_mat:
-            self.pb.pbs.dEdt_old.vector.set(0.0)
-            self.pb.pbs.dEdt_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
         if self.prestress_initial:
             self.pb.pbs.u_pre.vector.set(0.0)
             self.pb.pbs.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
+        # reset internal variables
+        for i in range(len(self.pb.pbs.internalvars)):
+            list(self.pb.pbs.internalvars.values())[i].vector.set(0.0)
+            list(self.pb.pbs.internalvars.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            list(self.pb.pbs.internalvars_old.values())[i].vector.set(0.0)
+            list(self.pb.pbs.internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # reset old rate variables
+        for i in range(len(self.pb.pbs.ratevars)):
+            list(self.pb.pbs.ratevars_old.values())[i][0].vector.set(0.0)
+            list(self.pb.pbs.ratevars_old.values())[i][0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
         # 0D variables s and s_old are already correctly set from the previous run (end values) and should serve as new initial conditions
-        # internal variables like active stress should not be zero'd as they may contribute to the prestressed state
