@@ -138,12 +138,15 @@ class ode:
             
             
     # midpoint-averaging of state variables (for post-processing)
-    def midpoint_avg(self, var, var_old, var_mid, theta):
+    def set_output_state(self, var, var_old, var_out, theta, midpoint=True):
         
         if isinstance(var, np.ndarray): vs, ve = 0, len(var)
         else: vs, ve = var.getOwnershipRange()
 
-        var_mid[vs:ve] = theta*var[vs:ve] + (1.-theta)*var_old[vs:ve]
+        if midpoint:
+            var_out[vs:ve] = theta*var[vs:ve] + (1.-theta)*var_old[vs:ve]
+        else:
+            var_out[vs:ve] = var[vs:ve]
 
 
     # set up the dof, coupling quantity, rhs, and stiffness arrays

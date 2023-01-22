@@ -21,6 +21,7 @@ def main():
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
                             'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (default: -1)
+                            'output_midpoint_0D'    : True, # OPTIONAL: whether to output mid- or end-point of 0D ODE model results (default: True)
                             'output_path'           : basepath+'/tmp/', # where results are written to
                             'output_path_0D'        : basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write

@@ -56,6 +56,10 @@ class Flow0DProblem(problem_base):
         try: self.output_path_0D = io_params['output_path_0D']
         except: self.output_path_0D = io_params['output_path']
         
+        # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
+        try: self.output_midpoint = io_params['output_midpoint_0D']
+        except: self.output_midpoint = True
+        
         try: valvelaws = model_params['valvelaws']
         except: valvelaws = {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}
 
@@ -312,7 +316,7 @@ class Flow0DSolver():
             self.solnln.newton(self.pb.s, t-t_off)
 
             # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.cardvasc0D.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid, self.pb.theta_ost), self.pb.cardvasc0D.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid, self.pb.theta_ost)
+            self.pb.cardvasc0D.set_output_state(self.pb.s, self.pb.s_old, self.pb.s_mid, self.pb.theta_ost, midpoint=self.pb.output_midpoint), self.pb.cardvasc0D.set_output_state(self.pb.aux, self.pb.aux_old, self.pb.aux_mid, self.pb.theta_ost, midpoint=self.pb.output_midpoint)
 
             # raw txt file output of 0D model quantities
             if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:

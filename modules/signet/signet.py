@@ -44,6 +44,10 @@ class SignallingNetworkProblem(problem_base):
         try: self.output_path_0D = io_params['output_path_signet']
         except: self.output_path_signet = io_params['output_path']
         
+        # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
+        try: self.output_midpoint = io_params['output_midpoint_0D']
+        except: self.output_midpoint = True
+        
         try: self.prescribed_variables = model_params['prescribed_variables']
         except: self.prescribed_variables = {}
 
@@ -216,7 +220,7 @@ class SignallingNetworkSolver():
             self.solnln.newton(self.pb.s, t-t_off)
 
             # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.signet.midpoint_avg(self.pb.s, self.pb.s_old, self.pb.s_mid, self.pb.theta_ost), self.pb.signet.midpoint_avg(self.pb.aux, self.pb.aux_old, self.pb.aux_mid, self.pb.theta_ost)
+            self.pb.signet.set_output_state(self.pb.s, self.pb.s_old, self.pb.s_mid, self.pb.theta_ost, midpoint=self.output_midpoint), self.pb.signet.set_output_state(self.pb.aux, self.pb.aux_old, self.pb.aux_mid, self.pb.theta_ost, midpoint=self.output_midpoint)
 
             # raw txt file output of signet model quantities
             if self.pb.write_results_every_signet > 0 and N % self.pb.write_results_every_signet == 0:
