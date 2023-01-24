@@ -126,6 +126,28 @@ class SolidmechanicsConstraintProblem():
             p0Da[i].interpolate(self.pr0D.evaluate)
 
 
+    # write restart for constraint problem
+    def writerestart(self, sname, N):
+
+        self.pbs.io.write_restart(self.pbs, N)
+
+        lm_sq = allgather_vec(self.lm, self.comm)
+        if self.comm.rank == 0:
+            f = open(self.output_path+'/checkpoint_lm_'+str(N)+'.txt', 'wt')
+            for i in range(len(lm_sq)):
+                f.write('%.16E\n' % (lm_sq[i]))
+            f.close()
+
+
+    # read restart for constraint problem
+    def readrestart(self, sname, N):
+
+        self.pbs.io.readcheckpoint(self.pbs, N)
+        self.pbs.simname += '_r'+str(N)
+        restart_data = np.loadtxt(self.output_path+'/checkpoint_lm_'+str(N)+'.txt')
+        self.lm[:], self.lm_old[:] = restart_data[:], restart_data[:]
+
+
 
 class SolidmechanicsConstraintSolver():
 
@@ -155,8 +177,7 @@ class SolidmechanicsConstraintSolver():
 
         # read restart information
         if self.pb.pbs.restart_step > 0:
-            self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)
-            self.pb.pbs.simname += '_r'+str(self.pb.pbs.restart_step)
+            self.pb.readrestart(self.pb.pbs.simname, self.pb.pbs.restart_step)
 
         self.pb.set_pressure_fem(self.pb.lm_old, self.pb.coupfuncs_old)
 
@@ -164,7 +185,7 @@ class SolidmechanicsConstraintSolver():
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
-            del self.solverprestr
+            self.solverprestr.solnln.ksp.destroy()
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
@@ -229,7 +250,7 @@ class SolidmechanicsConstraintSolver():
             self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
 
             # write restart info - old and new quantities are the same at this stage
-            self.pb.pbs.io.write_restart(self.pb, N)
+            self.pb.writerestart(self.pb.pbs.simname, N)
             
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))

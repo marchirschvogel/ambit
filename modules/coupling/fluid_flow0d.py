@@ -157,6 +157,28 @@ class FluidmechanicsFlow0DProblem():
                 self.pbf.have_induced_pert = True
 
 
+    # write restart for coupled problem
+    def writerestart(self, sname, N):
+        
+        self.pbs.io.write_restart(self.pbs, N)
+        
+        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
+            self.pbf.writerestart(sname, N)
+            if self.coupling_type == 'monolithic_lagrange':
+                self.pbf.cardvasc0D.write_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
+
+
+    # read restart for coupled problem
+    def readrestart(self, sname, N):
+
+        self.pbs.io.readcheckpoint(self.pbs, N)
+        self.pbf.readrestart(self.pbs.simname, N)
+        self.pbs.simname += '_r'+str(N)
+        if self.coupling_type == 'monolithic_lagrange':
+            self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
+            self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm_old)
+
+
 
 class FluidmechanicsFlow0DSolver():
 
@@ -180,9 +202,7 @@ class FluidmechanicsFlow0DSolver():
 
         # read restart information
         if self.pb.pbs.restart_step > 0:
-            self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.pbs.restart_step)
-            self.pb.pbf.readrestart(self.pb.pbs.simname, self.pb.pbs.restart_step)
-            self.pb.pbs.simname += '_r'+str(self.pb.pbs.restart_step)
+            self.pb.readrestart(self.pb.pbs.simname, self.pb.pbs.restart_step
 
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.pb.coupling_type == 'monolithic_direct':
@@ -190,7 +210,6 @@ class FluidmechanicsFlow0DSolver():
         
         if self.pb.coupling_type == 'monolithic_lagrange':
             self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs_old)
-
 
         if self.pb.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
@@ -289,11 +308,8 @@ class FluidmechanicsFlow0DSolver():
             # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
             if self.pb.pbf.perturb_type is not None and not self.pb.pbf.have_induced_pert: self.pb.induce_perturbation()
 
-            # write restart info - old and new quantities are the same at this stage
-            self.pb.pbs.io.write_restart(self.pb.pbs, N)
-            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
-            if self.pb.pbs.io.write_restart_every > 0 and N % self.pb.pbs.io.write_restart_every == 0:
-                self.pb.pbf.writerestart(self.pb.pbs.simname, N)
+            # write restart info - old and new quantities are the same at this stage (except cycle values sTc)
+            self.pb.writerestart(self.pb.pbs.simname, N)
 
             if is_periodic and self.pb.noperiodicref==1:
                 if self.pb.comm.rank == 0:

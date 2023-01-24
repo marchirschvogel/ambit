@@ -33,8 +33,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # read restart information
         if self.pb.restart_periodicref > 0:
             self.pb.pbs.simname = self.simname + str(self.pb.restart_periodicref)
-            self.pb.pbs.io.readcheckpoint(self.pb.pbs, self.pb.restart_periodicref)
-            self.pb.pbf.readrestart(self.pb.pbs.simname, self.pb.restart_periodicref)
+            self.pb.readrestart(self.pb.pbs.simname, self.pb.restart_periodicref)
 
 
     def solve_problem(self):
@@ -60,8 +59,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
                 self.solver.solverprestr.solnln.initialize_petsc_solver()
             
             if self.pb.write_checkpoints_periodicref:
-                self.pb.pbs.io.writecheckpoint(self.pb.pbs, N)
-                self.pb.pbf.writerestart(self.pb.pbs.simname, N)
+                self.pb.writerestart(self.pb.pbs.simname, N)
             
             # check if below tolerance
             if abs(self.pb.pbf.ti.cycleerror[0]) <= self.pb.pbf.eps_periodic:

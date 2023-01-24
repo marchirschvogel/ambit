@@ -138,7 +138,7 @@ class Flow0DProblem(problem_base):
         self.aux, self.aux_old, self.aux_mid = np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof)
         self.auxTc, self.auxTc_old = np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof)
         
-        self.s_set = self.K.createVecLeft() # set point for multisale analysis
+        self.s_set = self.K.createVecLeft() # set point for multiscale analysis
         
         self.c, self.y = [], []
 
