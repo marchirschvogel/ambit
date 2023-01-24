@@ -131,12 +131,13 @@ class SolidmechanicsConstraintProblem():
 
         self.pbs.io.write_restart(self.pbs, N)
 
-        lm_sq = allgather_vec(self.lm, self.comm)
-        if self.comm.rank == 0:
-            f = open(self.output_path+'/checkpoint_lm_'+str(N)+'.txt', 'wt')
-            for i in range(len(lm_sq)):
-                f.write('%.16E\n' % (lm_sq[i]))
-            f.close()
+        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
+            lm_sq = allgather_vec(self.lm, self.comm)
+            if self.comm.rank == 0:
+                f = open(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt', 'wt')
+                for i in range(len(lm_sq)):
+                    f.write('%.16E\n' % (lm_sq[i]))
+                f.close()
 
 
     # read restart for constraint problem
@@ -144,7 +145,7 @@ class SolidmechanicsConstraintProblem():
 
         self.pbs.io.readcheckpoint(self.pbs, N)
         self.pbs.simname += '_r'+str(N)
-        restart_data = np.loadtxt(self.output_path+'/checkpoint_lm_'+str(N)+'.txt')
+        restart_data = np.loadtxt(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt')
         self.lm[:], self.lm_old[:] = restart_data[:], restart_data[:]
 
 
