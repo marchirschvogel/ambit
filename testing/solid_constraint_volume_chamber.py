@@ -32,7 +32,7 @@ def main():
                             'numstep'               : 10,
                             'numstep_stop'          : 5,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0}
+                            'theta_ost'             : 0.5}
 
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,

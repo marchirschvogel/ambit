@@ -335,9 +335,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             # mean arterial pressure
             marp = []
             for pc in ['ar_sys','ar_pul']:
-                
                 pr = np.loadtxt(path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=max(0,numdata-nstep_cycl))
-                
                 val = 0.0
                 for k in range(len(pr)-1):
                     val += 0.5*(pr[k+1,1]+pr[k,1]) * (pr[k+1,0] - pr[k,0])
@@ -355,7 +353,23 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             pard = np.loadtxt(path+'/results_'+sname+'_p_ard_sys.txt', skiprows=max(0,numdata-nstep_cycl))
             p_ard_dias = min(pard[:,1])
             p_ard_syst = max(pard[:,1])
-            
+
+            # mean atrial pressure
+            mpat = []
+            for pc in ['at_l','at_r']:
+                pr = np.loadtxt(path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=max(0,numdata-nstep_cycl))
+                val = 0.0
+                for k in range(len(pr)-1):
+                    val += 0.5*(pr[k+1,1]+pr[k,1]) * (pr[k+1,0] - pr[k,0])
+                val /= (pr[-1,0]-pr[0,0])
+                mpat.append(val)
+
+            # end-cyclic pressures
+            pend = []
+            for pc in ['v_l','v_r','at_l','at_r']:
+                pr = np.loadtxt(path+'/results_'+sname+'_p_'+pc+'.txt', skiprows=max(0,numdata-nstep_cycl))
+                pend.append(pr[-1,1])
+
             # we assume here that units kg - mm - s are used --> pressures are kPa, forces are mN, volumes are mm^3
             fi.write('sw_lv %.16f\n' % (sw[0]))
             fi.write('sw_rv %.16f\n' % (sw[1]))
@@ -397,6 +411,8 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('p_ar_sys_syst %.16f\n' % (p_ar_syst[0])) 
             fi.write('p_ar_pul_dias %.16f\n' % (p_ar_dias[1]))
             fi.write('p_ar_pul_syst %.16f\n' % (p_ar_syst[1]))
+            fi.write('mpat_l %.16f\n' % (mpat[0]))
+            fi.write('mpat_r %.16f\n' % (mpat[1]))
             fi.write('sv_la %.16f\n' % (sv_at[0]))
             fi.write('sv_ra %.16f\n' % (sv_at[1]))
             fi.write('vmin_la %.16f\n' % (vmin_at[0]))
@@ -405,6 +421,10 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('vmax_ra %.16f\n' % (vmax_at[1]))
             fi.write('vend_la %.16f\n' % (vend_at[0]))
             fi.write('vend_ra %.16f\n' % (vend_at[1]))
+            fi.write('pend_lv %.16f\n' % (pend[0]))
+            fi.write('pend_rv %.16f\n' % (pend[1]))
+            fi.write('pend_la %.16f\n' % (pend[2]))
+            fi.write('pend_ra %.16f\n' % (pend[3]))
 
             fi.close()
 

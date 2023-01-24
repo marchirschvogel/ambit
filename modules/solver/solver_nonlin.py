@@ -793,7 +793,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                         self.pb.pbf.c[j] = lm_sq[j] + self.pb.eps_fd # perturbed LM
                         self.snln0D.newton(s_pert, t, print_iter=False)
                         s_pert_sq = allgather_vec(s_pert, self.pb.comm)
-                        self.K_ss[i,j] = -self.pb.pbs.timefac * (s_pert_sq[self.pb.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pb.pbf.cardvasc0D.v_ids[i]])/self.pb.eps_fd
+                        self.K_ss[i,j] = -(s_pert_sq[self.pb.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pb.pbf.cardvasc0D.v_ids[i]])/self.pb.eps_fd
                         self.pb.pbf.c[j] = lm_sq[j] # restore LM
 
             if self.ptype == 'solid_constraint':
@@ -820,7 +820,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
                 # Lagrange multiplier coupling residual
                 for i in range(ls,le):
-                    r_s[i] = self.pb.pbs.timefac * (self.pb.constr[i] - s_sq[self.pb.pbf.cardvasc0D.v_ids[i]]) + (1.-self.pb.pbs.timefac) * (self.pb.constr_old[i] - s_old_sq[self.pb.pbf.cardvasc0D.v_ids[i]])
+                    r_s[i] = self.pb.constr[i] - s_sq[self.pb.pbf.cardvasc0D.v_ids[i]]
                 
             if self.pb.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
 
@@ -833,7 +833,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
     
                 # Lagrange multiplier coupling residual
                 for i in range(ls,le):
-                    r_s[i] = self.pb.pbs.timefac * (self.pb.constr[i] - val[i]) + (1.-self.pb.pbs.timefac) * (self.pb.constr_old[i] - val_old[i])
+                    r_s[i] = self.pb.constr[i] - val[i]
 
             # 0D / Lagrange multiplier system matrix
             self.K_ss.assemble()
@@ -863,9 +863,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                     # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
                     if self.pb.pbf.cq[i] == 'volume':   timefac = 1./self.pb.pbs.dt
                     if self.pb.pbf.cq[i] == 'flux':     timefac = -self.pb.pbf.theta0d_timint(t) # 0D model time-integration factor
-                    if self.pb.pbf.cq[i] == 'pressure': timefac = self.pb.pbs.timefac # 3D solid/fluid time-integration factor
+                    if self.pb.pbf.cq[i] == 'pressure': timefac = 1.
 
-                if self.ptype == 'solid_constraint': timefac = self.pb.pbs.timefac # 3D solid time-integration factor
+                if self.ptype == 'solid_constraint': timefac = 1.
                 
                 k_su_rows.append(fem.petsc.assemble_vector(fem.form((timefac*self.pb.cq_factor[i])*self.pb.dcq[i])))
 
