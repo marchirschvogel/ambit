@@ -221,23 +221,28 @@ class ode:
 
     # to write initial conditions (i.e. after a model has reached periodicity, so we may want to export these if we want to use
     # them in a new simulation starting from a homeostatic state)
-    def write_initial(self, path, nm, varTc_old, varTc):
-        
+    def write_initial(self, path, nm, varTc_old, varTc, auxTc_old, auxTc):
+
         if isinstance(varTc_old, np.ndarray): varTc_old_sq, varTc_sq = varTc_old, varTc
         else: varTc_old_sq, varTc_sq = allgather_vec(varTc_old, self.comm), allgather_vec(varTc, self.comm)
-        
+
         if self.comm.rank == 0:
-        
-            filename1 = path+'/initial_data_'+nm+'_Tstart.txt' # conditions at beginning of cycle
+
+            filename1 = path+'/results_'+nm+'_initial_data_Tstart.txt' # conditions at beginning of cycle
             f1 = open(filename1, 'wt')
-            filename2 = path+'/initial_data_'+nm+'_Tend.txt' # conditions at end of cycle
+            filename2 = path+'/results_'+nm+'_initial_data_Tend.txt' # conditions at end of cycle
             f2 = open(filename2, 'wt')
-            
+
             for i in range(len(self.varmap)):
-                
+
                 f1.write('%s %.16E\n' % (list(self.varmap.keys())[i]+'_0',varTc_old_sq[list(self.varmap.values())[i]]))
                 f2.write('%s %.16E\n' % (list(self.varmap.keys())[i]+'_0',varTc_sq[list(self.varmap.values())[i]]))
-                
+
+            for i in range(len(self.auxmap)):
+
+                f1.write('%s %.16E\n' % (list(self.auxmap.keys())[i]+'_0',auxTc_old[list(self.auxmap.values())[i]]))
+                f2.write('%s %.16E\n' % (list(self.auxmap.keys())[i]+'_0',auxTc[list(self.auxmap.values())[i]]))
+
             f1.close()
             f2.close()
 

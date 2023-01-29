@@ -45,7 +45,7 @@ class cardiovascular0Dbase(ode):
             
             # write "periodic" initial conditions in case we want to restart from this model in another simulation
             if is_periodic and inioutpath is not None:
-                self.write_initial(inioutpath, nm, varTc_old, varTc)
+                self.write_initial(inioutpath, nm, varTc_old, varTc, auxTc_old, auxTc)
             
             varTc_old[vs:ve] = varTc[vs:ve]
             auxTc_old[:] = auxTc[:]
