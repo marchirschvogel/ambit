@@ -164,8 +164,8 @@ class SolidmechanicsFlow0DProblem():
 
         if self.coupling_type == 'monolithic_lagrange':
             # old Lagrange multipliers - initialize with initial pressures
-            self.pbf.cardvasc0D.initialize_lm(self.lm, self.pbf.time_params['initial_conditions'])
-            self.pbf.cardvasc0D.initialize_lm(self.lm_old, self.pbf.time_params['initial_conditions'])
+            self.pbf.cardvasc0D.initialize_lm(self.lm, self.pbf.initialconditions)
+            self.pbf.cardvasc0D.initialize_lm(self.lm_old, self.pbf.initialconditions)
 
 
     def induce_perturbation(self):

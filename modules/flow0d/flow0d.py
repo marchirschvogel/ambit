@@ -146,13 +146,13 @@ class Flow0DProblem(problem_base):
         self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, comm=self.comm)
 
         if initial_file:
-            initialconditions = self.cardvasc0D.set_initial_from_file(initial_file)
+            self.initialconditions = self.cardvasc0D.set_initial_from_file(initial_file)
         else:
-            initialconditions = time_params['initial_conditions']
+            self.initialconditions = time_params['initial_conditions']
 
-        self.cardvasc0D.initialize(self.s, initialconditions)
-        self.cardvasc0D.initialize(self.s_old, initialconditions)
-        self.cardvasc0D.initialize(self.sTc_old, initialconditions)
+        self.cardvasc0D.initialize(self.s, self.initialconditions)
+        self.cardvasc0D.initialize(self.s_old, self.initialconditions)
+        self.cardvasc0D.initialize(self.sTc_old, self.initialconditions)
 
         self.theta_ost = time_params['theta_ost']
         
