@@ -7,30 +7,32 @@
 # LICENSE file in the root directory of this source tree.
 
 import sys, os, subprocess, time
-import math
 from pathlib import Path
 import numpy as np
 import argparse
 import distutils.util
 
+# postprocessing script for flow0d model results (needs gnuplot to be installed when plot generation is desired)
+# can/probably should be run outside of Docker container
+
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-p', '--path', dest='p', action='store', default='.', type=str)
-parser.add_argument('-s', '--simname', dest='s', action='store', type=str)
-parser.add_argument('-n', '--nstep', dest='n', action='store', type=int, default=500)
-parser.add_argument('-ted', '--tenddias', dest='ted', action='store', type=float, default=0.2)
-parser.add_argument('-tes', '--tendsyst', dest='tes', action='store', type=float, default=0.53)
-parser.add_argument('-T', '--Tcycl', dest='T', action='store', type=float, default=1.0)
-parser.add_argument('-m', '--model', dest='m', action='store', default='syspul', type=str)
-parser.add_argument('-mc', '--modelcoronary', dest='mc', action='store', default=None)
-parser.add_argument('-cf', '--calcfunc', dest='cf', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
-parser.add_argument('-ip', '--inducepertafter', dest='ip', action='store', type=int, default=-1)
-parser.add_argument('-mgr', '--multgandr', dest='mgr', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
-parser.add_argument('-lgr', '--lastgandrcycl', dest='lgr', action='store', type=int, default=-1)
+parser.add_argument('-p', '--path', dest='p', action='store', type=str, default='.') # output path
+parser.add_argument('-s', '--simname', dest='s', action='store', type=str, default='') # name of simulation to postprocess
+parser.add_argument('-n', '--nstep', dest='n', action='store', type=int, default=500) # number of time steps used in simulation
+parser.add_argument('-ted', '--tenddias', dest='ted', action='store', type=float, default=0.2) # end-diastolic time point (relative to cycle time)
+parser.add_argument('-tes', '--tendsyst', dest='tes', action='store', type=float, default=0.53) # end-systolic time point (relative to cycle time)
+parser.add_argument('-T', '--Tcycl', dest='T', action='store', type=float, default=1.0) # cardiac cycle time
+parser.add_argument('-m', '--model', dest='m', action='store', type=str, default='syspul') # type of 0D model
+parser.add_argument('-mc', '--modelcoronary', dest='mc', action='store', default=None) # type of coronary sub-model
+parser.add_argument('-cf', '--calcfunc', dest='cf', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True) # whether to calculate funtion parameters (like stroke volume, cardiac output, ...)
+parser.add_argument('-ip', '--inducepertafter', dest='ip', action='store', type=int, default=-1) # at which cycle a perturbation has been introduced (e.g. valvular defect/repair)
+parser.add_argument('-mgr', '--multgandr', dest='mgr', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False) # whether we have results from multiscale G&R analysis
+parser.add_argument('-lgr', '--lastgandrcycl', dest='lgr', action='store', type=int, default=-1) # what cycle is last G&R cycle in case of results from multiscale G&R analysis
 parser.add_argument('-V0', '--Vinitial', dest='V0', nargs=5, action='store', type=float, default=[113.25e3,150e3,50e3,50e3, 0e3]) # initial chamber vols: order is lv,rv,la,ra,ao
-parser.add_argument('-png', '--pngexport', dest='png', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
-parser.add_argument('-plt', '--genplots', dest='plt', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True)
-parser.add_argument('-ext', '--extplot', dest='ext', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False)
+parser.add_argument('-png', '--pngexport', dest='png', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True) # whether png files should be created for the plots
+parser.add_argument('-plt', '--genplots', dest='plt', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True) # whether plots should be generated
+parser.add_argument('-ext', '--extplot', dest='ext', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False) # whether some external data should be added to some plots (needs to be specified...)
 
 def main():
     
