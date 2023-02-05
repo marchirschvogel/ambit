@@ -57,9 +57,9 @@ class variationalform:
     #    = D_{\Delta \boldsymbol{u}}\int\limits_{\Omega_{0}} \boldsymbol{S}(\boldsymbol{C},\dot{\boldsymbol{C}}):\frac{1}{2}\delta\boldsymbol{C}\,\mathrm{d}V = 
     #    = \frac{1}{2}\int\limits_{\Omega_{0}} \left(\left[\frac{\partial\boldsymbol{S}}{\partial\boldsymbol{C}} : D_{\Delta \boldsymbol{u}} \boldsymbol{C} + \frac{\partial\boldsymbol{S}}{\partial\dot{\boldsymbol{C}}} : D_{\Delta \boldsymbol{u}} \dot{\boldsymbol{C}}\right] : \delta\boldsymbol{C} + \boldsymbol{S}:D_{\Delta \boldsymbol{u}}\delta\boldsymbol{C}\right)\mathrm{d}V = 
     #    = \frac{1}{2}\int\limits_{\Omega_{0}} \left(\left[\frac{1}{2}\mathbb{C} : D_{\Delta \boldsymbol{u}} \boldsymbol{C} + \frac{1}{2}\mathbb{C}_{\mathrm{v}} : D_{\Delta \boldsymbol{u}} \dot{\boldsymbol{C}}\right] : \delta\boldsymbol{C} + \boldsymbol{S}:D_{\Delta \boldsymbol{u}}\delta\boldsymbol{C}\right)\mathrm{d}V
-    def Lin_deltaW_int_du(self, S, F, dF, u, Ctang, Cmat_v, ddomain):
+    def Lin_deltaW_int_du(self, S, F, Fdot, u, Ctang, Cmat_v, ddomain):
 
-        C, dC = F.T*F, dF.T*F + F.T*dF
+        C, Cdot = F.T*F, Fdot.T*F + F.T*Fdot
         var_C = ufl.grad(self.var_u).T * F + F.T * ufl.grad(self.var_u)
         dim = len(u)
 
@@ -67,7 +67,7 @@ class variationalform:
         Ctang_DuC = ufl.as_tensor(Ctang[i,j,k,l]*ufl.derivative(C, u, self.du)[k,l], (i,j))
 
         if Cmat_v != ufl.constantvalue.zero((dim,dim)):
-            Ctangv_DudC = ufl.as_tensor(Cmat_v[i,j,k,l]*ufl.derivative(dC, u, self.du)[k,l], (i,j))
+            Ctangv_DudC = ufl.as_tensor(Cmat_v[i,j,k,l]*ufl.derivative(Cdot, u, self.du)[k,l], (i,j))
         else:
             Ctangv_DudC = ufl.constantvalue.zero((dim,dim))
 

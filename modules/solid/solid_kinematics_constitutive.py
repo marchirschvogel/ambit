@@ -60,9 +60,9 @@ class constitutive:
         C_ = ufl.variable(self.kin.C(u_))
 
         if v_!=ufl.constantvalue.zero(self.kin.dim):
-            dC_ = ufl.variable(self.kin.dC(u_,v_))
+            Cdot_ = ufl.variable(self.kin.Cdot(u_,v_))
         else:
-            dC_ = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
+            Cdot_ = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
 
         stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
 
@@ -73,9 +73,9 @@ class constitutive:
 
             theta_ = ivar["theta"]
             
-            # material has to be evaluated with C_e only, however total S has
-            # to be computed by differentiating w.r.t. C (S = 2*dPsi/dC)
-            self.mat = materiallaw(self.C_e(C_,theta_),dC_,self.I)
+            # material has to be evaluated with C_e (and Cdot_v) only, however total S has
+            # to be computed by differentiating w.r.t. C (and Cdot)
+            self.mat = materiallaw(self.C_e(C_,theta_), self.Cdot_v(Cdot_,theta_), self.I)
 
         elif self.mat_plastic:
             
@@ -85,12 +85,12 @@ class constitutive:
 
         else:
             
-            self.mat = materiallaw(C_,dC_,self.I)
+            self.mat = materiallaw(C_, Cdot_, self.I)
         
         m = 0
         for matlaw in self.matmodels:
 
-            stress += self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, dC_)
+            stress += self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, Cdot_)
 
             m += 1
         
@@ -104,7 +104,7 @@ class constitutive:
             m = 0
             for matlaw in self.matmodels_remod:
             
-                self.stress_remod += self.add_stress_mat(matlaw, self.matparams_remod[m], ivar, C_, dC_)
+                self.stress_remod += self.add_stress_mat(matlaw, self.matparams_remod[m], ivar, C_, Cdot_)
 
                 m += 1
             
@@ -123,7 +123,7 @@ class constitutive:
         if tang:
             Cmat = 2.*ufl.diff(stress,C_)
             if v_!=ufl.constantvalue.zero(self.kin.dim):
-                Cmat_v = 2.*ufl.diff(stress,dC_)
+                Cmat_v = 2.*ufl.diff(stress,Cdot_)
             else:
                 Cmat_v = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
             return Cmat, Cmat_v
@@ -132,7 +132,7 @@ class constitutive:
 
 
     # add stress contributions from materials
-    def add_stress_mat(self, matlaw, mparams, ivar, C_, dC_):
+    def add_stress_mat(self, matlaw, mparams, ivar, C_, Cdot_):
 
         # sanity check
         if self.incompr_2field and '_vol' in matlaw:
@@ -176,7 +176,7 @@ class constitutive:
 
         elif matlaw == 'visco_green':
 
-            return self.mat.visco_green(mparams,dC_)
+            return self.mat.visco_green(mparams,Cdot_)
             
         elif matlaw == 'active_fiber':
             
@@ -277,6 +277,10 @@ class constitutive:
     # elastic right Cauchy-Green tensor
     def C_e(self, C_, theta_):
         return ufl.inv(self.F_g(theta_)) * C_ * ufl.inv(self.F_g(theta_)).T
+    
+    # viscous right Cauchy-Green tensor
+    def Cdot_v(self, Cdot_, theta_):
+        return ufl.inv(self.F_g(theta_)) * Cdot_ * ufl.inv(self.F_g(theta_)).T
     
     # elastic fiber stretch
     def fibstretch_e(self, C_, theta_, fib_):
@@ -452,13 +456,13 @@ class constitutive:
         
         i, j, k, l = ufl.indices(4)
         
-        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_Cdot_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
         
         dS_dFg_ = self.dS_dFg(u_, p_, v_, ivar, theta_old_, dt)
 
         dS_dFg_times_dFg_dtheta = ufl.as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
         
-        Cgrowth = 2.*ufl.as_tensor(dS_dFg_times_dFg_dtheta[i,j]*dtheta_dC_[k,l], (i,j,k,l))
+        Cgrowth = 2.*ufl.as_tensor(dS_dFg_times_dFg_dtheta[i,j]*dtheta_Cdot_[k,l], (i,j,k,l))
         
         return Cgrowth
 
@@ -519,9 +523,9 @@ class constitutive:
         i, j, k, l = ufl.indices(4)
         
         dphi_dtheta_ = self.phi_remod(theta_,tang=True)
-        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_Cdot_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
 
-        Cremod = 2.*dphi_dtheta_ * ufl.as_tensor(dtheta_dC_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
+        Cremod = 2.*dphi_dtheta_ * ufl.as_tensor(dtheta_Cdot_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
 
         return Cremod
 
@@ -572,7 +576,7 @@ class kinematics:
 
 
     # rate of deformation gradient: dF/dt = dv/dx0
-    def dF(self, v_):
+    def Fdot(self, v_):
         if v_!=ufl.constantvalue.zero(self.dim):
             return ufl.grad(v_)
         else:
@@ -597,8 +601,8 @@ class kinematics:
     
     
     # rate of right Cauchy-Green tensor: dC/dt = (dF/dt)^T F + F^T dF/dt
-    def dC(self, u_, v_):
-        return self.dF(v_).T*self.F(u_) + self.F(u_).T*self.dF(v_)
+    def Cdot(self, u_, v_):
+        return self.Fdot(v_).T*self.F(u_) + self.F(u_).T*self.Fdot(v_)
     
     
     # left Cauchy-Green tensor: b = F * F.T
@@ -612,8 +616,8 @@ class kinematics:
 
 
     # rate of Green-Lagrange strain tensor: dE/dt = 0.5 * dC/dt
-    def dE(self, u_, v_):
-        return 0.5 * self.dC(u_,v_)
+    def Edot(self, u_, v_):
+        return 0.5 * self.Cdot(u_,v_)
     
     
     # Euler-Almansi strain tensor: e = 0.5*(I - b^-1)

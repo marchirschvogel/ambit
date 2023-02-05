@@ -460,7 +460,7 @@ class SolidmechanicsProblem(problem_base):
             else:
                 Ctang = Cmat
             
-            self.jac_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.dF(self.vel), self.u, Ctang, Cmat_v, self.dx_[n])
+            self.jac_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx_[n])
         
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
         self.jac_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
