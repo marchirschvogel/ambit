@@ -38,7 +38,7 @@ def main():
                          'quad_degree'           : 2,
                          'incompressible_2field' : False} # True, False
 
-    MATERIALS         = {'MAT1' : {'visco'       : {'eta' : 2.0},
+    MATERIALS         = {'MAT1' : {'visco_green' : {'eta' : 2.0},
                                    'inertia'     : {'rho0' : 1.0e-6}}}
 
 
@@ -66,11 +66,11 @@ def main():
     check_node.append(np.array([0.0, 0.0, 0.0]))
 
     u_corr = np.zeros(3*len(check_node))
-    
+
     ## correct results
-    u_corr[0] = -9.3310481940784017E-17 # x
-    u_corr[1] = -3.8042412652908981E-11 # y
-    u_corr[2] = 6.4458861009353818E-01 # z
+    u_corr[0] = 4.1339456496613357E-16 # x
+    u_corr[1] = 7.9621728464189152E-12 # y
+    u_corr[2] = 5.4685728955011093E-01 # z
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
     success = resultcheck.success_check([check1], problem.mp.comm)

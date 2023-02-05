@@ -12,9 +12,10 @@ import ufl
 
 class materiallaw:
     
-    def __init__(self, C, I):
+    def __init__(self, C, dC, I):
         self.C = C
         self.I = I
+        self.dC = dC
 
         # Cauchy-Green invariants
         self.Ic   = ufl.tr(C)
@@ -28,6 +29,8 @@ class materiallaw:
         self.E = 0.5*(C - I)
         self.trE  = ufl.tr(self.E)
         self.trE2 = ufl.tr(self.E*self.E)
+        # rate of Green-Lagrange strain and invariant
+        self.dE = 0.5*dC
     
 
     def neohooke_dev(self, params, C):
@@ -192,16 +195,14 @@ class materiallaw:
         return S
     
     # simple Green-Lagrange strain rate-dependent material
-    def visco(self, params, dEdt):
+    def visco_green(self, params, dC):
         
         eta = params['eta']
         
-        dEdt_ = ufl.variable(dEdt)
-        
         # pseudo potential 0.5 * eta * dEdt : dEdt
-        Psi_pseudo = 0.5 * eta * ufl.tr(dEdt_*dEdt_)
+        Psi_pseudo = 0.5 * eta * ufl.tr(self.dE*self.dE)
 
-        S = ufl.diff(Psi_pseudo,dEdt_)
+        S = 2.*ufl.diff(Psi_pseudo,dC)
         
         return S
     

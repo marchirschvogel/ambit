@@ -103,9 +103,4 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             list(self.pb.pbs.internalvars_old.values())[i].vector.set(0.0)
             list(self.pb.pbs.internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # reset old rate variables
-        for i in range(len(self.pb.pbs.ratevars)):
-            list(self.pb.pbs.ratevars_old.values())[i][0].vector.set(0.0)
-            list(self.pb.pbs.ratevars_old.values())[i][0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
         # 0D variables s and s_old are already correctly set from the previous run (end values) and should serve as new initial conditions

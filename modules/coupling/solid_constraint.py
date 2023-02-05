@@ -234,7 +234,7 @@ class SolidmechanicsConstraintSolver():
             self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
 
             # update time step
-            self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ratevars, self.pb.pbs.ratevars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
+            self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
 
             # update old pressures on solid
             self.pb.lm_old.axpby(1.0, 0.0, self.pb.lm)

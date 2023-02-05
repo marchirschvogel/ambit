@@ -58,19 +58,15 @@ class SolidmechanicsProblem(problem_base):
         self.fem_params = fem_params
 
         # collect domain data
-        self.dx_, self.rho0, self.rayleigh, self.eta_m, self.eta_k = [], [], [False]*self.num_domains, [], []
+        self.dx_, self.rho0, self.eta_m, self.eta_k = [], [], [], []
 
         for n in range(self.num_domains):
             # integration domains
             if self.io.mt_d is not None: self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             else:                        self.dx_.append(ufl.dx(metadata={'quadrature_degree': self.quad_degree}))
-            # data for inertial and viscous forces: density and damping
+            # data for inertial forces: density
             if self.timint != 'static':
                 self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
-                if 'rayleigh_damping' in self.constitutive_models['MAT'+str(n+1)].keys():
-                    self.rayleigh[n] = True
-                    self.eta_m.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_m'])
-                    self.eta_k.append(self.constitutive_models['MAT'+str(n+1)]['rayleigh_damping']['eta_k'])
 
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
@@ -148,10 +144,6 @@ class SolidmechanicsProblem(problem_base):
         self.u_set = fem.Function(self.V_u)
         self.p_set = fem.Function(self.V_p)
         self.tau_a_set = fem.Function(self.Vd_scalar)
-        # initial (zero) functions for initial stiffness evaluation (e.g. for Rayleigh damping)
-        self.u_ini, self.p_ini, self.theta_ini, self.tau_a_ini = fem.Function(self.V_u), fem.Function(self.V_p), fem.Function(self.Vd_scalar), fem.Function(self.Vd_scalar)
-        self.theta_ini.vector.set(1.0)
-        self.theta_ini.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # growth stretch
         self.theta = fem.Function(self.Vd_scalar, name="theta")
         self.theta_old = fem.Function(self.Vd_scalar)
@@ -168,8 +160,6 @@ class SolidmechanicsProblem(problem_base):
         self.amp_old, self.amp_old_set = fem.Function(self.Vd_scalar), fem.Function(self.Vd_scalar)
         self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
         self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        # for strainrate-dependent materials
-        self.dEdt_old = fem.Function(self.Vd_tensor)
         # prestressing history defgrad and spring prestress
         if self.prestress_initial:
             self.u_pre = fem.Function(self.V_u, name="Displacement_prestress")
@@ -179,9 +169,8 @@ class SolidmechanicsProblem(problem_base):
         try: self.volume_laplace = io_params['volume_laplace']
         except: self.volume_laplace = []
 
-        # dictionaries of internal and rate variables
+        # dictionaries of internal variables
         self.internalvars, self.internalvars_old = {}, {}
-        self.ratevars, self.ratevars_old = {}, {}
         
         # reference coordinates
         self.x_ref = fem.Function(self.V_u)
@@ -197,8 +186,8 @@ class SolidmechanicsProblem(problem_base):
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         have_fiber1, have_fiber2 = False, False
-        self.have_active_stress, self.have_visco_mat, self.active_stress_trig, self.have_frank_starling, self.have_growth, self.have_plasticity = False, False, 'ode', False, False, False
-        self.mat_active_stress, self.mat_visco, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
+        self.have_active_stress, self.active_stress_trig, self.have_frank_starling, self.have_growth, self.have_plasticity = False, 'ode', False, False, False
+        self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
 
         self.localsolve, growth_dir = False, None
         self.actstress = []
@@ -269,9 +258,6 @@ class SolidmechanicsProblem(problem_base):
                 self.localsolve = True
                 self.internalvars['e_plast'], self.internalvars_old['e_plast'] = self.F_plast, self.F_plast_old
                 
-            if 'visco' in self.constitutive_models['MAT'+str(n+1)].keys():
-                self.mat_visco[n], self.have_visco_mat = True, True
-                
         # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
         try: self.lin_remod_full = fem_params['lin_remodeling_full']
@@ -310,7 +296,7 @@ class SolidmechanicsProblem(problem_base):
         # for prestress, we don't have any inelastic or rate-dependent stuff
         if self.prestress_initial:
             self.ma_prestr = []
-            mat_remove = ['visco','growth','plastic']
+            mat_remove = ['visco_green','growth','plastic']
             for n in range(self.num_domains):
                 for mr in mat_remove:
                     try:    self.constitutive_models_prestr['MAT'+str(n+1)].pop(mr)
@@ -322,13 +308,6 @@ class SolidmechanicsProblem(problem_base):
         
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_solid(bc_dict, self.fem_params, self.io, self.ki, self.vf, self.ti)
-  
-        # any rate variables needed
-        if self.have_visco_mat:
-            # Green-Lagramge strain rate for viscous materials
-            dEdt_ = (self.ki.E(self.u) - self.ki.E(self.u_old))/self.dt
-            self.ratevars['dEdt'], self.ratevars_old['dEdt'] = [dEdt_,self.Vd_tensor], [self.dEdt_old,self.Vd_tensor]
-            
         self.bc_dict = bc_dict
         
         # Dirichlet boundary conditions
@@ -347,7 +326,6 @@ class SolidmechanicsProblem(problem_base):
         # kinetic, internal, and pressure virtual work
         self.deltaW_kin,  self.deltaW_kin_old  = ufl.as_ufl(0), ufl.as_ufl(0)
         self.deltaW_int,  self.deltaW_int_old  = ufl.as_ufl(0), ufl.as_ufl(0)
-        self.deltaW_damp, self.deltaW_damp_old = ufl.as_ufl(0), ufl.as_ufl(0)
         self.deltaW_p,    self.deltaW_p_old    = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for n in range(self.num_domains):
@@ -357,14 +335,9 @@ class SolidmechanicsProblem(problem_base):
                 self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx_[n])
                 self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.dx_[n])
 
-                # Rayleigh damping virtual work
-                if self.rayleigh[n]:
-                    self.deltaW_damp     += self.vf.deltaW_damp(self.eta_m[n], self.eta_k[n], self.rho0[n], self.ma[n].S(self.u_ini, self.p_ini, ivar={"theta" : self.theta_ini, "tau_a" : self.tau_a_ini}, tang=True), self.vel, self.dx_[n])
-                    self.deltaW_damp_old += self.vf.deltaW_damp(self.eta_m[n], self.eta_k[n], self.rho0[n], self.ma[n].S(self.u_ini, self.p_ini, ivar={"theta" : self.theta_ini, "tau_a" : self.tau_a_ini}, tang=True), self.v_old, self.dx_[n])
-
             # internal virtual work
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, ivar=self.internalvars, rvar=self.ratevars), self.ki.F(self.u), self.dx_[n])
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, ivar=self.internalvars_old, rvar=self.ratevars_old), self.ki.F(self.u_old), self.dx_[n])
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx_[n])
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.dx_[n])
         
             # pressure virtual work (for incompressible formulation)
             # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
@@ -388,7 +361,7 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial:
             # internal virtual work
             for n in range(self.num_domains):
-                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, ivar=self.internalvars, rvar=None), self.ki.F(self.u), self.dx_[n])
+                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx_[n])
             # boundary conditions
             bc_dict_prestr = copy.deepcopy(self.bc_dict)
             # get rid of dashpots
@@ -422,11 +395,10 @@ class SolidmechanicsProblem(problem_base):
             if self.incompressible_2field:
                 self.weakform_p = self.deltaW_p
 
-        # full dynamic weak form: kinetic plus internal (plus damping) minus external virtual work
+        # full dynamic weak form: kinetic plus internal minus external virtual work
         else:
             
             self.weakform_u = self.timefac_m * self.deltaW_kin  + (1.-self.timefac_m) * self.deltaW_kin_old + \
-                              self.timefac   * self.deltaW_damp + (1.-self.timefac)   * self.deltaW_damp_old + \
                               self.timefac   * self.deltaW_int  + (1.-self.timefac)   * self.deltaW_int_old - \
                               self.timefac   * self.deltaW_ext  - (1.-self.timefac)   * self.deltaW_ext_old
             
@@ -446,7 +418,7 @@ class SolidmechanicsProblem(problem_base):
                 
                 if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                     # growth residual and increment
-                    a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres, 'res_del')
+                    a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres, 'res_del')
                     self.r_growth.append(a), self.del_theta.append(b)
                 else:
                     self.r_growth.append(ufl.as_ufl(0)), self.del_theta.append(ufl.as_ufl(0))
@@ -473,30 +445,22 @@ class SolidmechanicsProblem(problem_base):
         # dependence of the internal variables on the deformation if this dependence is nonlinear and cannot be expressed analytically)
         for n in range(self.num_domains):
             
-            # material tangent operator
-            Cmat = self.ma[n].S(self.u, self.p, ivar=self.internalvars, rvar=self.ratevars, tang=True)
-            
-            # visco material tangent - TODO: Think of how ufl can handle this
-            if self.mat_visco[n]:
-                eta = self.constitutive_models['MAT'+str(n+1)]['visco']['eta']
-                Cmat += self.ma[n].Cvisco(eta, self.dt)
+            # elastic and viscous material tangent operator
+            Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, tang=True)
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
-                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres)
+                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                 if self.mat_remodel[n] and self.lin_remod_full:
                     # remodeling tangent operator
-                    Cremod = self.ma[n].Cremod(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres)
+                    Cremod = self.ma[n].Cremod(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                     Ctang = Cmat + Cgrowth + Cremod
                 else:
                     Ctang = Cmat + Cgrowth
             else:
                 Ctang = Cmat
             
-            self.jac_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, ivar=self.internalvars, rvar=self.ratevars), self.ki.F(self.u), self.u, Ctang, self.dx_[n])
-        
-        # Rayleigh damping virtual work contribution to stiffness
-        self.jac_uu += self.timefac * ufl.derivative(self.deltaW_damp, self.u, self.du)
+            self.jac_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.dF(self.vel), self.u, Ctang, Cmat_v, self.dx_[n])
         
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
         self.jac_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
@@ -515,27 +479,28 @@ class SolidmechanicsProblem(problem_base):
                     J    = self.ki.J(self.u)
                     Jmat = self.ki.dJdC(self.u)
                 
-                Cmat_p = ufl.diff(self.ma[n].S(self.u, self.p, ivar=self.internalvars, rvar=self.ratevars), self.p)
+                Cmat_p = ufl.diff(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.p)
                 
                 if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
-                    Cmat = self.ma[n].S(self.u, self.p, ivar=self.internalvars, rvar=self.ratevars, tang=True)
+                    # elastic and viscous material tangent operator
+                    Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, tang=True)
                     # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
                     # for stress-mediated growth, we get a contribution to the pressure material tangent operator
-                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres)
+                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                     if self.mat_remodel[n] and self.lin_remod_full:
                         # remodeling tangent operator
-                        Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres)
+                        Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                         Ctang_p = Cmat_p + Cgrowth_p + Cremod_p
                     else:
                         Ctang_p = Cmat_p + Cgrowth_p
                     # for all types of deformation-dependent growth, we need to add the growth contributions to the Jacobian tangent operator
-                    Jgrowth = ufl.diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres)
+                    Jgrowth = ufl.diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                     Jtang = Jmat + Jgrowth
                     # ok... for stress-mediated growth, we actually get a non-zero right-bottom (11) block in our saddle-point system matrix,
                     # since Je = Je(C,theta(C,p)) ---> dJe/dp = dJe/dtheta * dtheta/dp
                     # TeX: D_{\Delta p}\!\int\limits_{\Omega_0} (J^{\mathrm{e}}-1)\delta p\,\mathrm{d}V = \int\limits_{\Omega_0} \frac{\partial J^{\mathrm{e}}}{\partial p}\Delta p \,\delta p\,\mathrm{d}V,
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
-                    dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.internalvars, self.ratevars, self.theta_old, self.dt, self.growth_thres)
+                    dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                     if not isinstance(dthetadp, ufl.constantvalue.Zero):
                         self.p11 += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx_[n]
                 else:
@@ -764,7 +729,7 @@ class SolidmechanicsSolver():
             self.pb.io.write_output(self.pb, N=N, t=t)
             
             # update - displacement, velocity, acceleration, pressure, all internal and rate variables, all time functions
-            self.pb.ti.update_timestep(self.pb.u, self.pb.u_old, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.internalvars, self.pb.internalvars_old, self.pb.ratevars, self.pb.ratevars_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)
+            self.pb.ti.update_timestep(self.pb.u, self.pb.u_old, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.internalvars, self.pb.internalvars_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)
 
             # solve time for time step
             wte = time.time()

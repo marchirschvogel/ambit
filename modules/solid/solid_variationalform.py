@@ -47,56 +47,31 @@ class variationalform:
         # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1\right)\delta p\,\mathrm{d}V
         return (J-1.)*self.var_p*ddomain
 
-    # Rayleigh damping linear form: in the linear elastic case, we would have eta_m * mass_form + eta_k * stiffness_form,
-    # the stiffness damping form would read 
-    # \int\limits_{\Omega_{0}} \left[\mathbb{C} : \mathrm{sym}(\mathrm{Grad}\boldsymbol{v})\right] : \delta\boldsymbol{\varepsilon} \,\mathrm{d}V
-    # rendering K * v in the assembled FE system
-    # now, in the nonlinear case, the stiffness is deformation-dependent, and has a geometric as well as a material contribution
-    # at first, we should only include material, not geometric stiffness to the stiffness part (see Charney 2008, "Unintended Consequences of Modeling Damping in Structures")
-    # secondly, here, we only use the stiffness evaluated in the initial configuration
-    # so, in the nonlinear realm, we would have the form
-    # TeX: \int\limits_{\Omega_{0}} \left[\mathbb{C}(\boldsymbol{C}(\boldsymbol{u}_{0})) : \mathrm{sym}(\mathrm{Grad}\boldsymbol{v})\right] : \mathrm{sym}(\mathrm{Grad}\delta\boldsymbol{u}) \,\mathrm{d}V
-    # hence, we get a K_mat(u_0) * v contribution in the assembled FE system
-    def deltaW_damp(self, eta_m, eta_k, rho0, Cmat, v, ddomain):
-        
-        i, j, k, l, m, n = ufl.indices(6)
-
-        Cmat_gradv = ufl.as_tensor(Cmat[i,j,k,l]*ufl.sym(ufl.grad(v))[k,l], (i,j))
-
-        return (eta_m * rho0*ufl.dot(v, self.var_u) + eta_k * ufl.inner(Cmat_gradv,ufl.sym(ufl.grad(self.var_u)))) * ddomain
-
 
     # linearization of internal virtual work
-    # we could use ufl to compute the derivative directly, via "derivative(self.deltaW_int(S,F,ddomain), u, self.du)",
-    # however then, no material tangents from nonlinear consitutive laws at the integration point level can be introduced
-    # so we use a more explicit expression where Ctang can be included
+    # we could use ufl to compute the derivative directly via ufl.derivative(...), however then, no material tangents from nonlinear consitutive laws
+    # at the integration point level can be introduced, so we use a more explicit expression where Ctang can be included
     # TeX: D_{\Delta \boldsymbol{u}}\delta \mathcal{W}_{\mathrm{int}} = \int\limits_{\Omega_{0}} \left(\mathrm{Grad}\delta\boldsymbol{u}:\mathrm{Grad}\Delta\boldsymbol{u}\,\boldsymbol{S} + \boldsymbol{F}^{\mathrm{T}}\mathrm{Grad}\delta\boldsymbol{u} : \mathbb{C} : \boldsymbol{F}^{\mathrm{T}}\mathrm{Grad}\Delta\boldsymbol{u}\right)\mathrm{d}V
-    # (Holzapfel 2000, formula 8.81)
-    # or:  D_{\Delta \boldsymbol{u}}\delta \mathcal{W}_{\mathrm{int}} = 
-    #    = D_{\Delta \boldsymbol{u}}\int\limits_{\Omega_{0}} \boldsymbol{S}:\frac{1}{2}\delta\boldsymbol{C}\,\mathrm{d}V = 
-    #    = \frac{1}{2}\int\limits_{\Omega_{0}} \left(\left[\frac{\partial\boldsymbol{S}}{\partial\boldsymbol{C}} : D_{\Delta \boldsymbol{u}} \boldsymbol{C}\right] : \delta\boldsymbol{C} + \boldsymbol{S}:D_{\Delta \boldsymbol{u}}\delta\boldsymbol{C}\right)\mathrm{d}V = 
-    #    = \frac{1}{2}\int\limits_{\Omega_{0}} \left(\left[\frac{1}{2}\mathbb{C} : D_{\Delta \boldsymbol{u}} \boldsymbol{C}\right] : \delta\boldsymbol{C} + \boldsymbol{S}:D_{\Delta \boldsymbol{u}}\delta\boldsymbol{C}\right)\mathrm{d}V
-    def Lin_deltaW_int_du(self, S, F, u, Ctang, ddomain):
-        
-        C = F.T*F
+    # (Holzapfel 2000, formula 8.81); or, including the viscous material tangent:
+    #      D_{\Delta \boldsymbol{u}}\delta \mathcal{W}_{\mathrm{int}} = 
+    #    = D_{\Delta \boldsymbol{u}}\int\limits_{\Omega_{0}} \boldsymbol{S}(\boldsymbol{C},\dot{\boldsymbol{C}}):\frac{1}{2}\delta\boldsymbol{C}\,\mathrm{d}V = 
+    #    = \frac{1}{2}\int\limits_{\Omega_{0}} \left(\left[\frac{\partial\boldsymbol{S}}{\partial\boldsymbol{C}} : D_{\Delta \boldsymbol{u}} \boldsymbol{C} + \frac{\partial\boldsymbol{S}}{\partial\dot{\boldsymbol{C}}} : D_{\Delta \boldsymbol{u}} \dot{\boldsymbol{C}}\right] : \delta\boldsymbol{C} + \boldsymbol{S}:D_{\Delta \boldsymbol{u}}\delta\boldsymbol{C}\right)\mathrm{d}V = 
+    #    = \frac{1}{2}\int\limits_{\Omega_{0}} \left(\left[\frac{1}{2}\mathbb{C} : D_{\Delta \boldsymbol{u}} \boldsymbol{C} + \frac{1}{2}\mathbb{C}_{\mathrm{v}} : D_{\Delta \boldsymbol{u}} \dot{\boldsymbol{C}}\right] : \delta\boldsymbol{C} + \boldsymbol{S}:D_{\Delta \boldsymbol{u}}\delta\boldsymbol{C}\right)\mathrm{d}V
+    def Lin_deltaW_int_du(self, S, F, dF, u, Ctang, Cmat_v, ddomain):
+
+        C, dC = F.T*F, dF.T*F + F.T*dF
         var_C = ufl.grad(self.var_u).T * F + F.T * ufl.grad(self.var_u)
+        dim = len(u)
 
         i, j, k, l, m, n = ufl.indices(6)
         Ctang_DuC = ufl.as_tensor(Ctang[i,j,k,l]*ufl.derivative(C, u, self.du)[k,l], (i,j))
-        return (ufl.inner(0.5*Ctang_DuC,0.5*var_C) + ufl.inner(S,ufl.derivative(0.5*var_C, u, self.du)))*ddomain
 
-    ## 1:1 from Holzapfel 2000, formula 8.81 - not working! The material stiffness does not work, no idea why... so see Lin_deltaW_int_du above for a correct form
-    #def Lin_deltaW_int_du(self, S, F, u, Ctang, ddomain):
+        if Cmat_v != ufl.constantvalue.zero((dim,dim)):
+            Ctangv_DudC = ufl.as_tensor(Cmat_v[i,j,k,l]*ufl.derivative(dC, u, self.du)[k,l], (i,j))
+        else:
+            Ctangv_DudC = ufl.constantvalue.zero((dim,dim))
 
-        #FT_graddu = F.T * ufl.grad(self.du)
-        #FT_gradvaru = F.T * ufl.grad(self.var_u)
-        
-        #i, j, k, l = ufl.indices(4)
-        #FT_graddu_Ctang = ufl.as_tensor(Ctang[i,j,k,l]*FT_graddu[k,l], (i,j)) 
-        #stiff_material = ufl.inner(FT_gradvaru,FT_graddu_Ctang) # seems to be the problematic one
-        #stiff_geometric = ufl.inner(ufl.grad(self.var_u), ufl.grad(self.du)*S) # seems ok
-        
-        #return (stiff_geometric + stiff_material)*ddomain
+        return (ufl.inner(0.5*(Ctang_DuC+Ctangv_DudC),0.5*var_C) + ufl.inner(S,ufl.derivative(0.5*var_C, u, self.du)))*ddomain
 
 
     # TeX: \int\limits_{\Omega_0} J(\boldsymbol{u})\Delta p \,\mathrm{div}\delta\boldsymbol{u}\,\mathrm{d}V = 

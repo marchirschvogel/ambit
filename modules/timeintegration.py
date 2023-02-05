@@ -151,14 +151,7 @@ class timeintegration_solid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old, ratevars, ratevars_old, funcs, funcs_old, funcsvec, funcsvec_old):
-
-        # first update rate variables (e.g. strain rates for viscous materials), since they depend on u and u_old
-        for i in range(len(ratevars)):
-            rvar_ = list(ratevars.values())[i][0]
-            rvar_proj = project(rvar_, list(ratevars.values())[i][1], self.domain)
-            list(ratevars_old.values())[i][0].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            list(ratevars_old.values())[i][0].interpolate(rvar_proj)
+    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old, funcs, funcs_old, funcsvec, funcsvec_old):
     
         # now update old kinematic fields with new quantities
         if self.timint == 'genalpha':

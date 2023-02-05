@@ -250,44 +250,44 @@ class IO_solid(IO):
                     elif res=='cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
+                            stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
                         self.resultsfiles[res].write_function(cauchystress, t)
                     elif res=='cauchystress_nodal':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
+                            stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         cauchystress_nodal = project(stressfuncs, pb.V_tensor, pb.dx_, nm="CauchyStress_nodal")
                         self.resultsfiles[res].write_function(cauchystress_nodal, t)
                     elif res=='trmandelstress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(tr(pb.ma[n].M(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars)))
+                            stressfuncs.append(tr(pb.ma[n].M(pb.u,pb.p,pb.vel,ivar=pb.internalvars)))
                         trmandelstress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress")
                         self.resultsfiles[res].write_function(trmandelstress, t)
                     elif res=='trmandelstress_e':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.ki.C(pb.u),ivar=pb.internalvars,rvar=pb.ratevars)))
+                            if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.vel,pb.ki.C(pb.u),ivar=pb.internalvars)))
                             else: stressfuncs.append(as_ufl(0))
                         trmandelstress_e = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress_e")
                         self.resultsfiles[res].write_function(trmandelstress_e, t)
                     elif res=='vonmises_cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma_vonmises(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
+                            stressfuncs.append(pb.ma[n].sigma_vonmises(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         vonmises_cauchystress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="vonMises_CauchyStress")
                         self.resultsfiles[res].write_function(vonmises_cauchystress, t)
                     elif res=='pk1stress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].P(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
+                            stressfuncs.append(pb.ma[n].P(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         pk1stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK1Stress")
                         self.resultsfiles[res].write_function(pk1stress, t)
                     elif res=='pk2stress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].S(pb.u,pb.p,ivar=pb.internalvars,rvar=pb.ratevars))
+                            stressfuncs.append(pb.ma[n].S(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         pk2stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK2Stress")
                         self.resultsfiles[res].write_function(pk2stress, t)
                     elif res=='jacobian':
@@ -359,8 +359,6 @@ class IO_solid(IO):
             vecs_to_read[pb.a_old] = 'a_old'
             if pb.incompressible_2field:
                 vecs_to_read[pb.p_old] = 'p'
-            if pb.have_visco_mat:
-                vecs_to_read[pb.dEdt_old] = 'dEdt_old'
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
             vecs_to_read[pb.u_set] = 'u_set'
@@ -399,8 +397,6 @@ class IO_solid(IO):
         if pb.timint != 'static':
             vecs_to_write[pb.v_old] = 'v_old'
             vecs_to_write[pb.a_old] = 'a_old'
-            if pb.have_visco_mat:
-                vecs_to_write[pb.dEdt_old] = 'dEdt_old'
 
         if pb.problem_type == 'solid_flow0d_multiscale_gandr':
             vecs_to_write[pb.u_set] = 'u_set'

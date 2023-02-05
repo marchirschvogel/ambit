@@ -53,7 +53,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         for n in range(len(constitutive_models_large)):
             try:
                 constitutive_models_large['MAT'+str(n+1)+''].pop('inertia')
-                constitutive_models_large['MAT'+str(n+1)+''].pop('rayleigh_damping')
+                constitutive_models_large['MAT'+str(n+1)+''].pop('visco_green')
             except:
                 pass
 

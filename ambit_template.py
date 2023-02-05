@@ -138,9 +138,9 @@ def main():
                             # - see solid_material.py or fluid_material.py for material laws available (and their parameters), and feel free to implement/add new strain energy functions or laws fairly quickly
     MATERIALS            = {'MAT1' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436, 'fiber_comp' : False},
                                       'sussmanbathe_vol'   : {'kappa' : 1.0e3},
+                                      'visco_green'        : {'eta' : 0.001},
                                       'active_fiber'       : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 4, 'frankstarling' : True, 'amp_min' : 1., 'amp_max' : 1.7, 'lam_threslo' : 1.01, 'lam_maxlo' : 1.15, 'lam_threshi' : 999., 'lam_maxhi' : 9999.},
-                                      'inertia'            : {'rho0' : 1.0e-6},
-                                      'rayleigh_damping'   : {'eta_m' : 0.0, 'eta_k' : 0.0001}},
+                                      'inertia'            : {'rho0' : 1.0e-6}},
                             'MAT2' : {'neohooke_dev'       : {'mu' : 10.},
                                       'ogden_vol'          : {'kappa' : 10./(1.-2.*0.49)},
                                       'inertia'            : {'rho0' : 1.0e-6},

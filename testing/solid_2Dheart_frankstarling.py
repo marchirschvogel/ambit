@@ -47,7 +47,7 @@ def main():
     MATERIALS            = {'MAT1' : {'mooneyrivlin_dev'  : {'c1' : 60., 'c2' : -20.},
                                       'active_fiber'      : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 3, 'frankstarling' : True, 'amp_min' : 1., 'amp_max' : 1.7, 'lam_threslo' : 1.01, 'lam_maxlo' : 1.15, 'lam_threshi' : 999., 'lam_maxhi' : 9999.},
                                       'inertia'           : {'rho0' : 1.0e-5},
-                                      'rayleigh_damping'  : {'eta_m' : 0.001, 'eta_k' : 0.0001}}}
+                                      'visco_green'       : {'eta' : 0.001}}}
 
 
 
@@ -102,10 +102,10 @@ def main():
     check_node.append(np.array([-21.089852094479845, -26.26308841783208, 9.227760327944651e-16]))
 
     u_corr = np.zeros(3*len(check_node))
-    
+
     ## correct results
-    u_corr[0] = 4.9439615617476127E+00 # x
-    u_corr[1] = 2.4846265243158223E+00 # y
+    u_corr[0] = 4.9482773318905533E+00 # x
+    u_corr[1] = 2.4915248104317373E+00 # y
     u_corr[2] = 0.0 # z
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')

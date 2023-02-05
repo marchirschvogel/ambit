@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 ### 3D biventricular generic heart, testing of:
-# - incompressible Neo-Hookean material (p2p1 interpolation)
+# - incompressible Neo-Hookean material (p2p1 interpolation), viscous Green material
 # - 3D-0D monolithic solution of 3D heart w/ syspulcap circulation (flux coupling)
 # - Robin BCs in xyz and normal direction (spring and dashpot)
 # - OST time-integration for solid
 # - 3x3 block iterative method for incompressible solid coupled to 0D model
-# - Rayleigh damping
 
 import ambit
 
@@ -71,7 +70,7 @@ def main():
                             # see solid_material.py or fluid_material.py for material laws available (and their parameters)
     MATERIALS            = {'MAT1' : {'neohooke_dev'      : {'mu' : 10.},
                                       'inertia'           : {'rho0' : 1.0e-6},
-                                      'rayleigh_damping'  : {'eta_m' : 0.0, 'eta_k' : 0.0001}}}
+                                      'visco_green'       : {'eta' : 0.0001}}}
 
 
 
@@ -109,42 +108,42 @@ def main():
     s_corr = np.zeros(problem.mp.pbf.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 1.5095864743040130E+06
-    s_corr[1] = 1.2844204058649662E+00
-    s_corr[2] = -2.2965082274795714E+00
-    s_corr[3] = -2.2516606843904677E-01
-    s_corr[4] = 1.2035047944220826E+01
-    s_corr[5] = -2.2965082274795789E+00
-    s_corr[6] = 1.2035061723270191E+01
-    s_corr[7] = 7.9266376779754364E+03
-    s_corr[8] = 1.0920576465746846E+01
-    s_corr[9] = 4.8757248185773104E+04
-    s_corr[10] = 4.5874998121783552E+04
-    s_corr[11] = 3.5972406593836102E+04
-    s_corr[12] = 2.4558826877860327E+04
-    s_corr[13] = 8.1860969826562832E+03
-    s_corr[14] = 2.2677989771675335E+00
-    s_corr[15] = 8.3769499009227275E+02
-    s_corr[16] = 2.2702566758390823E+00
-    s_corr[17] = 9.5189334925959599E+02
-    s_corr[18] = 2.2702868360248418E+00
-    s_corr[19] = 7.5312458499319700E+02
-    s_corr[20] = 2.2701207039868367E+00
-    s_corr[21] = 5.0027868673701960E+02
-    s_corr[22] = 2.2705227157170751E+00
-    s_corr[23] = 1.7138025576859900E+02
-    s_corr[24] = 2.2541277949292278E+00
-    s_corr[25] = 2.0733856020336604E+05
-    s_corr[26] = 9.9000307744360238E+04
-    s_corr[27] = 2.7306345247149444E-01
-    s_corr[28] = -4.3686268354670260E-01
-    s_corr[29] = 1.7406314472713416E-01
-    s_corr[30] = 2.4017163277669913E+00
-    s_corr[31] = 1.1803816043509409E+04
-    s_corr[32] = 2.3131877074406706E+00
-    s_corr[33] = 2.0066530960234333E+05
-    s_corr[34] = 1.6159475288856615E+00
-    s_corr[35] = 3.9878128320907672E+04
+    s_corr[0] = 1.5140154884790708E+06
+    s_corr[1] = 1.2842189823315804E+00
+    s_corr[2] = -2.2969712709549372E+00
+    s_corr[3] = -2.2979650614749048E-01
+    s_corr[4] = 1.2035047941266040E+01
+    s_corr[5] = -2.2969712709549372E+00
+    s_corr[6] = 1.2035061723093666E+01
+    s_corr[7] = 7.9266376767811471E+03
+    s_corr[8] = 1.0920576465738236E+01
+    s_corr[9] = 4.8757248185760414E+04
+    s_corr[10] = 4.5874998121789955E+04
+    s_corr[11] = 3.5972406593841457E+04
+    s_corr[12] = 2.4558826877863074E+04
+    s_corr[13] = 8.1860969826577357E+03
+    s_corr[14] = 2.2677989771637215E+00
+    s_corr[15] = 8.3769512865623369E+02
+    s_corr[16] = 2.2702566758279015E+00
+    s_corr[17] = 9.5189348228574841E+02
+    s_corr[18] = 2.2702868360134905E+00
+    s_corr[19] = 7.5312469003723868E+02
+    s_corr[20] = 2.2701207039761671E+00
+    s_corr[21] = 5.0027875726087944E+02
+    s_corr[22] = 2.2705227157051970E+00
+    s_corr[23] = 1.7138027932289609E+02
+    s_corr[24] = 2.2541277926640513E+00
+    s_corr[25] = 2.0733859810437830E+05
+    s_corr[26] = 9.9018455409868766E+04
+    s_corr[27] = 2.7306272250688318E-01
+    s_corr[28] = -4.3686457082345953E-01
+    s_corr[29] = 1.7404426709701443E-01
+    s_corr[30] = 2.4017163229044409E+00
+    s_corr[31] = 1.1803825766722653E+04
+    s_corr[32] = 2.3131876296540206E+00
+    s_corr[33] = 2.0066547489885686E+05
+    s_corr[34] = 1.6159462113751601E+00
+    s_corr[35] = 3.9891468722433310E+04
 
     check1 = resultcheck.results_check_vec(problem.mp.pbf.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
