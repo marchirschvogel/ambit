@@ -444,7 +444,6 @@ class constitutive:
         return -(Fginv_outertop_S + S_outerbot_Fginv) - Fginv_outertop_Fginv_with_Cmat_e_with_C_e
 
 
-
     # growth material tangent: Cgrowth = 2 (dS/dF_g : dF_g/dtheta) \otimes dtheta/dC
     # has to be set analytically, since nonlinear Gauss point theta cannot be expressed as
     # function of u, so ufl cannot take care of it...
@@ -456,13 +455,13 @@ class constitutive:
         
         i, j, k, l = ufl.indices(4)
         
-        dtheta_Cdot_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
         
         dS_dFg_ = self.dS_dFg(u_, p_, v_, ivar, theta_old_, dt)
 
         dS_dFg_times_dFg_dtheta = ufl.as_tensor(dS_dFg_[i,j,k,l]*dFg_dtheta[k,l], (i,j))
         
-        Cgrowth = 2.*ufl.as_tensor(dS_dFg_times_dFg_dtheta[i,j]*dtheta_Cdot_[k,l], (i,j,k,l))
+        Cgrowth = 2.*ufl.as_tensor(dS_dFg_times_dFg_dtheta[i,j]*dtheta_dC_[k,l], (i,j,k,l))
         
         return Cgrowth
 
@@ -523,9 +522,9 @@ class constitutive:
         i, j, k, l = ufl.indices(4)
         
         dphi_dtheta_ = self.phi_remod(theta_,tang=True)
-        dtheta_Cdot_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
+        dtheta_dC_ = self.dtheta_dC(u_, p_, v_, ivar, theta_old_, dt, thres)
 
-        Cremod = 2.*dphi_dtheta_ * ufl.as_tensor(dtheta_Cdot_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
+        Cremod = 2.*dphi_dtheta_ * ufl.as_tensor(dtheta_dC_[i,j]*(self.stress_remod - self.stress_base)[k,l], (i,j,k,l))
 
         return Cremod
 
