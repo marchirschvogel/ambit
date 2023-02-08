@@ -198,7 +198,7 @@ class FluidmechanicsFlow0DSolver():
         start = time.time()
         
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.ndof)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.numdof)
 
         # read restart information
         if self.pb.pbs.restart_step > 0:

@@ -14,7 +14,7 @@ import timeintegration
 import utilities
 import solver_nonlin
 
-from base import problem_base
+from base import problem_base, solver_base
 
 # framework of 0D flow models, relating pressure p (and its derivative) to fluxes q
 
@@ -37,6 +37,9 @@ class Flow0DProblem(problem_base):
         
         try: self.coronary_model = model_params['coronary_model']
         except: self.coronary_model = None
+        
+        try: self.vad_model = model_params['vad_model']
+        except: self.vad_model = None
         
         try: self.excitation_curve = model_params['excitation_curve']
         except: self.excitation_curve = None
@@ -109,18 +112,20 @@ class Flow0DProblem(problem_base):
             self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], self.cq, self.vq, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
-            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcapcor':
             from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapcor
-            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
-            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], self.chamber_models, self.coronary_model, self.cq, self.vq, valvelaws=valvelaws, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, comm=self.comm)
         else:
             raise NameError("Unknown 0D modeltype!")
+
+        self.numdof = self.cardvasc0D.numdof
 
         # vectors and matrices
         self.dK = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
@@ -214,7 +219,7 @@ class Flow0DProblem(problem_base):
 
 
     def readrestart(self, sname, rst, ms=False):
-        
+
         self.cardvasc0D.read_restart(self.output_path_0D, sname+'_s', rst, self.s)
         self.cardvasc0D.read_restart(self.output_path_0D, sname+'_s', rst, self.s_old)
         self.cardvasc0D.read_restart(self.output_path_0D, sname+'_aux', rst, self.aux)
@@ -256,101 +261,111 @@ class Flow0DProblem(problem_base):
                 self.have_induced_pert = True
 
 
+    def read_restart(self):
 
-class Flow0DSolver():
+        # read restart information
+        if self.restart_step > 0:
+            self.readrestart(self.simname, self.restart_step)
+            self.simname += '_r'+str(self.restart_step)
 
-    def __init__(self, problem, solver_params):
+
+    def evaluate_initial(self):
+        
+        # evaluate old state
+        if self.excitation_curve is not None:
+            self.c = []
+            self.c.append(self.ti.timecurves(self.excitation_curve)(self.t_init))
+        if bool(self.chamber_models):
+            self.y = []
+            for ch in ['lv','rv','la','ra']:
+                if self.chamber_models[ch]['type']=='0D_elast': self.y.append(self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(self.t_init))
+                if self.chamber_models[ch]['type']=='0D_elast_prescr': self.y.append(self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(self.t_init))
+                if self.chamber_models[ch]['type']=='0D_prescr': self.c.append(self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(self.t_init))
+
+        self.cardvasc0D.evaluate(self.s_old, self.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)
+        self.auxTc_old[:] = self.aux_old[:]
+
+
+    def get_time_offset(self):
+        
+        return (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
+
+
+    def evaluate_pre_solve(self, t):
+        
+        # external volume/flux from time curve
+        if self.excitation_curve is not None:
+            self.c[0] = self.ti.timecurves(self.excitation_curve)(t)
+        # activation curves
+        self.evaluate_activation(t)
+
+
+    def set_output_state(self):
+        
+        # get midpoint dof values for post-processing (has to be called before update!)
+        self.cardvasc0D.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=self.output_midpoint)
+        self.cardvasc0D.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=self.output_midpoint)
+
+
+    def write_output(self, N, t):
+        
+        # raw txt file output of 0D model quantities
+        if self.write_results_every_0D > 0 and N % self.write_results_every_0D == 0:
+            self.cardvasc0D.write_output(self.output_path_0D, t, self.s_mid, self.aux_mid, self.simname)
+        
+        
+    def update(self):
+        
+        # update timestep
+        self.cardvasc0D.update(self.s, self.df, self.f, self.s_old, self.df_old, self.f_old, self.aux, self.aux_old)
+
+
+    def check_abort(self, t):
+
+        # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
+        is_periodic = self.cardvasc0D.cycle_check(self.s, self.sTc, self.sTc_old, self.aux, self.auxTc, self.auxTc_old, t, self.ti.cycle, self.ti.cycleerror, self.eps_periodic, check=self.periodic_checktype, inioutpath=self.output_path_0D, nm=self.simname, induce_pert_after_cycl=self.perturb_after_cylce)
+
+        if is_periodic:
+            if self.comm.rank == 0:
+                print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.ti.cycle[0]-1,self.ti.cycleerror[0]))
+                sys.stdout.flush()
+            return True
+
+
+    def print_to_screen(self):
+        
+        self.cardvasc0D.print_to_screen(self.s_mid,self.aux_mid)
+        
+        
+    def induce_state_change(self):
     
-        self.pb = problem
+        # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
+        if self.perturb_type is not None and not self.have_induced_pert:
+            self.induce_perturbation()
 
-        self.solver_params = solver_params
+
+    def write_restart(self, N):
+        
+        # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
+        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+            self.writerestart(self.simname, N)
+
+
+
+class Flow0DSolver(solver_base):
+
+    def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_ode(self.pb, self.solver_params)
+
+
+    def solve_nonlinear_problem(self, t):
         
+        self.solnln.newton(self.pb.s, t)
 
-    def solve_problem(self):
-        
-        start = time.time()
-        
-        # print header
-        utilities.print_problem(self.pb.problem_type, self.pb.comm, self.pb.cardvasc0D.numdof)
 
-        # read restart information
-        if self.pb.restart_step > 0:
-            self.pb.readrestart(self.pb.simname, self.pb.restart_step)
-            self.pb.simname += '_r'+str(self.pb.restart_step)
-        
-        # evaluate old state
-        if self.pb.excitation_curve is not None:
-            self.pb.c = []
-            self.pb.c.append(self.pb.ti.timecurves(self.pb.excitation_curve)(self.pb.t_init))
-        if bool(self.pb.chamber_models):
-            self.pb.y = []
-            for ch in ['lv','rv','la','ra']:
-                if self.pb.chamber_models[ch]['type']=='0D_elast': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['activation_curve'])(self.pb.t_init))
-                if self.pb.chamber_models[ch]['type']=='0D_elast_prescr': self.pb.y.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['elastance_curve'])(self.pb.t_init))
-                if self.pb.chamber_models[ch]['type']=='0D_prescr': self.pb.c.append(self.pb.ti.timecurves(self.pb.chamber_models[ch]['prescribed_curve'])(self.pb.t_init))
-
-        self.pb.cardvasc0D.evaluate(self.pb.s_old, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, None, self.pb.c, self.pb.y, self.pb.aux_old)
-        self.pb.auxTc_old[:] = self.pb.aux_old[:]
-
-        # flow 0d main time loop
-        for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
-            
-            wts = time.time()
-            
-            # current time
-            t = N * self.pb.dt
-
-            # offset time for multiple cardiac cycles
-            t_off = (self.pb.ti.cycle[0]-1) * self.pb.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
-
-            # external volume/flux from time curve
-            if self.pb.excitation_curve is not None:
-                self.pb.c[0] = self.pb.ti.timecurves(self.pb.excitation_curve)(t-t_off)
-            # activation curves
-            self.pb.evaluate_activation(t-t_off)
-
-            # solve
-            self.solnln.newton(self.pb.s, t-t_off)
-
-            # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.cardvasc0D.set_output_state(self.pb.s, self.pb.s_old, self.pb.s_mid, self.pb.theta_ost, midpoint=self.pb.output_midpoint), self.pb.cardvasc0D.set_output_state(self.pb.aux, self.pb.aux_old, self.pb.aux_mid, self.pb.theta_ost, midpoint=self.pb.output_midpoint)
-
-            # raw txt file output of 0D model quantities
-            if self.pb.write_results_every_0D > 0 and N % self.pb.write_results_every_0D == 0:
-                self.pb.cardvasc0D.write_output(self.pb.output_path_0D, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
-
-            # update timestep
-            self.pb.cardvasc0D.update(self.pb.s, self.pb.df, self.pb.f, self.pb.s_old, self.pb.df_old, self.pb.f_old, self.pb.aux, self.pb.aux_old)
-            
-            # print to screen
-            self.pb.cardvasc0D.print_to_screen(self.pb.s_mid,self.pb.aux_mid)
-
-            # solve time for time step
-            wte = time.time()
-            wt = wte - wts
-
-            # print time step info to screen
-            self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, wt=wt)
-            
-            # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.cardvasc0D.cycle_check(self.pb.s, self.pb.sTc, self.pb.sTc_old, self.pb.aux, self.pb.auxTc, self.pb.auxTc_old, t-t_off, self.pb.ti.cycle, self.pb.ti.cycleerror, self.pb.eps_periodic, check=self.pb.periodic_checktype, inioutpath=self.pb.output_path_0D, nm=self.pb.simname, induce_pert_after_cycl=self.pb.perturb_after_cylce)
-
-            # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
-            if self.pb.perturb_type is not None and not self.pb.have_induced_pert: self.pb.induce_perturbation()
-            
-            # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
-            if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
-                self.pb.writerestart(self.pb.simname, N)
-
-            if is_periodic:
-                if self.pb.comm.rank == 0:
-                    print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.ti.cycle[0]-1,self.pb.ti.cycleerror[0]))
-                    sys.stdout.flush()
-                break
-            
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            sys.stdout.flush()
+    def print_timestep_info(self, N, t, wt):
+    
+        # print time step info to screen
+        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, wt=wt)

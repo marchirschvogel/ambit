@@ -46,7 +46,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
-    def __init__(self, params, chmodels, cormodel, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
 
@@ -126,8 +126,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.params = params
 
         self.chmodels = chmodels
-        self.cormodel = cormodel
         self.valvelaws = valvelaws
+        
+        self.cormodel = cormodel
+        self.vadmodel = vadmodel
         
         # number of systemic venous inflows (to right atrium)
         try: self.vs = self.chmodels['ra']['num_inflows']
@@ -172,7 +174,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.v_ids, self.c_ids = [], []
         self.cindex_ch = [2,11+self.vs,0,9+self.vs]
 
-        self.switch_cor = 0
+        self.switch_cor, self.switch_vad = 0, 0
         
         if self.cormodel is not None:
        
@@ -191,7 +193,22 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
             self.switch_cor = 1
             
+            self.doff_cor = self.numdof
             self.numdof += self.corcirc.ndcor
+
+        if self.vadmodel is not None:
+
+            # initialize VAD model
+            if self.vadmodel == 'lvad':
+                from cardiovascular0D_vad import vad_circ
+                self.vadcirc = vad_circ(self.params, self.varmap, self.auxmap)
+            else:
+                raise NameError("Unknown VAD model!")
+
+            self.switch_vad = 1
+            
+            self.doff_vad = self.numdof
+            self.numdof += self.vadcirc.ndvad
 
         self.set_solve_arrays()
 
@@ -236,7 +253,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         p_at_l_o1_         = sp.Symbol('p_at_l_o1_')
         q_vout_l_          = sp.Symbol('q_vout_l_')
         p_v_l_i1_, p_v_l_o1_ = sp.Symbol('p_v_l_i1_'), sp.Symbol('p_v_l_o1_')
+        p_v_l_o2_          = sp.Symbol('p_v_l_o2_') # for a VAD model
         p_ar_sys_i1_, p_ar_sys_o1_, p_ar_sys_o2_, p_ar_sys_o3_ = sp.Symbol('p_ar_sys_i1_'), sp.Symbol('p_ar_sys_o1_'), sp.Symbol('p_ar_sys_o2_'), sp.Symbol('p_ar_sys_o3_')
+        p_ar_sys_o4_       = sp.Symbol('p_ar_sys_o4_') # for a VAD model
         q_arp_sys_         = sp.Symbol('q_arp_sys_')
         p_ard_sys_         = sp.Symbol('p_ard_sys_')
         q_ar_sys_          = sp.Symbol('q_ar_sys_')
@@ -286,14 +305,14 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             self.x_[self.varmap['q_ven'+str(n+1)+'_pul']] = q_ven_pul_[n]
 
         # set chamber dicts
-        chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
+        chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_, 'po2' : p_v_l_o2_}
         chdict_rv = {'VQ' : VQ_v_r_, 'pi1' : p_v_r_i1_, 'po1' : p_v_r_o1_}
         chdict_la = {'VQ' : VQ_at_l_, 'po1' : p_at_l_o1_}
-        for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_at_l_i_[n]
+        for n in range(self.vp): chdict_la['pi'+str(n+1)] = p_at_l_i_[n]
         chdict_ra = {'VQ' : VQ_at_r_, 'po1' : p_at_r_o1_}
-        for n in range(self.vs+self.switch_cor): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
+        for n in range(self.vs+self.switch_cor): chdict_ra['pi'+str(n+1)] = p_at_r_i_[n]
         # aortic root/ascending aortic compartment dict, 1 inflow and 3 outflows (one into arch, two into coronaries)
-        chdict_ao = {'VQ' : VQ_aort_sys_, 'pi1' : p_ar_sys_i1_, 'po1' : p_ar_sys_o1_, 'po2' : p_ar_sys_o2_, 'po3' : p_ar_sys_o3_}
+        chdict_ao = {'VQ' : VQ_aort_sys_, 'pi1' : p_ar_sys_i1_, 'po1' : p_ar_sys_o1_, 'po2' : p_ar_sys_o2_, 'po3' : p_ar_sys_o3_, 'po4' : p_ar_sys_o4_}
 
         # set coupling states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
         self.set_coupling_state('lv', chdict_lv, [E_v_l_])
@@ -304,20 +323,26 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.set_coupling_state('ao', chdict_ao, [])
 
         # feed back modified dicts to chamber variables
-        VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['VQ'], chdict_lv['pi1'], chdict_lv['po1']
+        VQ_v_l_, p_v_l_i1_, p_v_l_o1_, p_v_l_o2_ = chdict_lv['VQ'], chdict_lv['pi1'], chdict_lv['po1'], chdict_lv['po2']
         VQ_v_r_, p_v_r_i1_, p_v_r_o1_ = chdict_rv['VQ'], chdict_rv['pi1'], chdict_rv['po1']
         VQ_at_l_, p_ati1_l_, p_at_l_o1_ = chdict_la['VQ'], chdict_la['pi1'], chdict_la['po1']
-        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)+'']
+        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)]
         VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['VQ'], chdict_ra['pi1'], chdict_ra['po1']
-        for n in range(self.vs+self.switch_cor): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
+        for n in range(self.vs+self.switch_cor): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)]
         # aortic root/ascending aortic compartment
-        VQ_aort_sys_, p_ar_sys_i1_, p_ar_sys_o1_, p_ar_sys_o2_, p_ar_sys_o3_ = chdict_ao['VQ'], chdict_ao['pi1'], chdict_ao['po1'], chdict_ao['po2'], chdict_ao['po3']
+        VQ_aort_sys_, p_ar_sys_i1_, p_ar_sys_o1_, p_ar_sys_o2_, p_ar_sys_o3_, p_ar_sys_o4_ = chdict_ao['VQ'], chdict_ao['pi1'], chdict_ao['po1'], chdict_ao['po2'], chdict_ao['po3'], chdict_ao['po4']
 
         # add coronary circulation equations
         if self.cormodel is not None:
-            q_arcor_sys_in_, q_vencor_sys_out_ = self.corcirc.equation_map(self.numdof-self.corcirc.ndcor, len(self.c_)+8, self.x_, self.a_, self.df_, self.f_, [p_ar_sys_o1_,p_ar_sys_o2_], p_v_l_o1_, p_at_r_i_[-1])
+            q_arcor_sys_in_, q_vencor_sys_out_ = self.corcirc.equation_map(self.doff_cor, len(self.c_)+8, self.x_, self.a_, self.df_, self.f_, [p_ar_sys_o1_,p_ar_sys_o2_], p_v_l_o1_, p_at_r_i_[-1])
         else:
             q_arcor_sys_in_, q_vencor_sys_out_ = [0], 0
+
+        # add VAD circulation equations
+        if self.vadmodel is not None:
+            q_vad_in_, q_vad_out_ = self.vadcirc.equation_map(self.doff_vad, len(self.c_)+8, self.x_, self.a_, self.df_, self.f_, p_v_l_o2_, p_ar_sys_o4_)
+        else:
+            q_vad_in_, q_vad_out_ = 0, 0
        
         # set valve laws - resistive part of q(p) relationship of momentum equation
         vl_mv_, R_vin_l_  = self.valvelaw(p_at_l_o1_,p_v_l_i1_,self.R_vin_l_min,self.R_vin_l_max,self.valvelaws['mv'],self.t_es,self.t_ed)
@@ -366,9 +391,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0] = -sum(q_ven_pul_) + q_vin_l_ - (1-self.switch_V[2]) * VQ_at_l_           # left atrium flow balance
         self.f_[1] = vl_mv_ + q_vin_l_                                                       # mitral valve momentum
-        self.f_[2] = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_                  # left ventricle flow balance
+        self.f_[2] = -q_vin_l_ + q_vout_l_ - (1-self.switch_V[0]) * VQ_v_l_ + self.switch_vad * q_vad_in_ # left ventricle flow balance
         self.f_[3] = vl_av_ + q_vout_l_                                                      # aortic valve momentum
-        self.f_[4] = -q_vout_l_ + q_arp_sys_ + self.switch_cor * sum(q_arcor_sys_in_) - VQ_aort_sys_ # aortic root flow balance
+        self.f_[4] = -q_vout_l_ + q_arp_sys_ + self.switch_cor * sum(q_arcor_sys_in_) - self.switch_vad * q_vad_out_ - VQ_aort_sys_ # aortic root flow balance
         self.f_[5] = (p_ard_sys_ - p_ar_sys_o3_)/self.Z_ar_sys + q_arp_sys_                  # aortic root momentum
         self.f_[6] = -q_arp_sys_ + q_ar_sys_                                                 # systemic arterial flow balance
         self.f_[7] = (p_ven_sys_ - p_ard_sys_)/self.R_ar_sys + q_ar_sys_                     # systemic arterial momentum
@@ -441,6 +466,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         if self.cormodel is not None:
             self.corcirc.initialize(var, iniparam)
+
+        if self.vadmodel is not None:
+            self.vadcirc.initialize(var, iniparam)
 
 
     def check_periodic(self, varTc, varTc_old, auxTc, auxTc_old, eps, check, cyclerr):
@@ -519,6 +547,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             sys.stdout.flush()
             
             if self.cormodel is not None: self.corcirc.print_to_screen(var_sq, aux)
+            if self.vadmodel is not None: self.vadcirc.print_to_screen(var_sq, aux)
 
 
 

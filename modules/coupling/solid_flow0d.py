@@ -232,7 +232,7 @@ class SolidmechanicsFlow0DSolver():
         start = time.time()
         
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.ndof)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.numdof)
 
         if self.pb.pbs.have_rom:
             self.pb.pbs.rom.POD(self.pb.pbs)

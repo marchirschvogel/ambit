@@ -18,7 +18,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
     
-    def __init__(self, params, chmodels, cormodel, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, comm=None):
 
         self.R_airw = params['R_airw']
         self.L_alv = params['L_alv']
@@ -70,7 +70,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.V_tisscor = params['V_tisscor']
 
         # initialize base class
-        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cormodel, cq, vq, valvelaws, comm=comm)
+        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cq, vq, valvelaws, cormodel=cormodel, vadmodel=vadmodel, comm=comm)
 
 
     def setup_arrays(self):
@@ -146,7 +146,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.auxmap['SO2_ar_pul'] = 51
         self.auxmap['SO2_ar_sys'] = 61
         
-        
         # variables from the mechanics model
         q_vin_l_       = self.x_[0]
         p_at_l_        = self.x_[1]
@@ -195,7 +194,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         V_cap_pul_     = self.a_[self.auxmap['V_cap_pul']]
         V_ven_pul_     = self.a_[self.auxmap['V_ven_pul']]
 
-    
         # respiratory model variables
         V_alv_ = sp.Symbol('V_alv_')
         q_alv_ = sp.Symbol('q_alv_')
@@ -253,7 +251,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         ppCO2_ven_sys_ = sp.Symbol('ppCO2_ven_sys_')
         ppO2_ven_sys_ = sp.Symbol('ppO2_ven_sys_')
 
-
         self.x_[36] = V_alv_
         self.x_[37] = q_alv_
         self.x_[38] = p_alv_
@@ -302,8 +299,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.x_[81] = ppO2_vencor_sys_
         self.x_[82] = ppCO2_ven_sys_
         self.x_[83] = ppO2_ven_sys_
-
-
 
         # 0D lung
         self.df_[36] = V_alv_
@@ -371,8 +366,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.df_[82] = ppCO2_ven_sys_
         self.df_[83] = ppO2_ven_sys_
 
-
-
         self.f_[36] = -q_alv_
         self.f_[37] = self.R_alv * q_alv_ + self.E_alv*(V_alv_-self.V_lung_u) - p_alv_ + self.U_t()
         self.f_[38] = -(1./V_alv_) * (self.U_m * ((self.U_m-p_alv_)/self.R_airw + self.V_m_gas*self.kappa_CO2*(ppCO2_cap_pul_ - fCO2_alv_*(p_alv_-self.p_vap_water_37)) + self.V_m_gas*self.kappa_O2*(ppO2_cap_pul_ - fO2_alv_*(p_alv_-self.p_vap_water_37))) - p_alv_ * q_alv_)
@@ -385,7 +378,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.f_[43] = q_armsc_sys_ - q_armsc_sys_in_
         self.f_[44] = q_arcer_sys_ - q_arcer_sys_in_
         self.f_[45] = q_arcor_sys_ - q_arcor_sys_in_
-
 
         # right atrium CO2
         self.f_[46] = (1./V_at_r_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbO2_dppO2(ppCO2_at_r_,ppO2_at_r_) - self.dcbO2_dppCO2(ppCO2_at_r_,ppO2_at_r_)*self.dcbCO2_dppO2(ppCO2_at_r_,ppO2_at_r_) ),-1.) * \
@@ -505,7 +497,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             ( (self.dcbCO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) + (self.V_tisscor/V_arcor_sys_)*self.dctCO2_dppCO2(ppCO2_arcor_sys_)) * (q_arcor_sys_in_ * (self.cbO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) - self.cbO2(ppCO2_ar_sys_,ppO2_ar_sys_)) + self.M_O2_arcor*self.ctO2(ppO2_arcor_sys_)/(self.beta_O2+self.ctO2(ppO2_arcor_sys_))) - \
                 self.dcbO2_dppCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) * (q_arcor_sys_in_ * (self.cbCO2(ppCO2_arcor_sys_,ppO2_arcor_sys_) - self.cbCO2(ppCO2_ar_sys_,ppO2_ar_sys_)) - self.M_CO2_arcor) )
 
-
         # systemic splanchnic veins CO2
         self.f_[72] = (1./V_venspl_sys_) * sp.Pow(( self.dcbCO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.dcbO2_dppCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_)*self.dcbCO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) ),-1.) * \
             ( self.dcbO2_dppO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) * (q_arspl_sys_ * (self.cbCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) - self.cbCO2(ppCO2_arspl_sys_,ppO2_arspl_sys_))) - \
@@ -561,7 +552,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             ( self.dcbCO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_) * ( ((q_venspl_sys_+q_venespl_sys_+q_venmsc_sys_+q_vencer_sys_+q_vencor_sys_)*self.cbO2(ppCO2_ven_sys_,ppO2_ven_sys_) - (q_venspl_sys_*self.cbO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) + q_venespl_sys_*self.cbO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) + q_venmsc_sys_*self.cbO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) + q_vencer_sys_*self.cbO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) + q_vencor_sys_*self.cbO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ))) - \
                 self.dcbO2_dppCO2(ppCO2_ven_sys_,ppO2_ven_sys_) * ( ((q_venspl_sys_+q_venespl_sys_+q_venmsc_sys_+q_vencer_sys_+q_vencor_sys_)*self.cbCO2(ppCO2_ven_sys_,ppO2_ven_sys_) - (q_venspl_sys_*self.cbCO2(ppCO2_venspl_sys_,ppO2_venspl_sys_) + q_venespl_sys_*self.cbCO2(ppCO2_venespl_sys_,ppO2_venespl_sys_) + q_venmsc_sys_*self.cbCO2(ppCO2_venmsc_sys_,ppO2_venmsc_sys_) + q_vencer_sys_*self.cbCO2(ppCO2_vencer_sys_,ppO2_vencer_sys_) + q_vencor_sys_*self.cbCO2(ppCO2_vencor_sys_,ppO2_vencor_sys_) ))) )
 
-        
         # add to auxiliary variable vector (mainly in order to store quantities for post-processing)
         self.a_[51] = self.SO2(ppCO2_ar_pul_,ppO2_ar_pul_)
         self.a_[61] = self.SO2(ppCO2_ar_sys_,ppO2_ar_sys_)

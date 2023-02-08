@@ -22,7 +22,7 @@ import boundaryconditions
 from projection import project
 from solid_material import activestress_activation
 
-from base import problem_base
+from base import problem_base, solver_base
 
 
 # solid mechanics governing equation
@@ -177,9 +177,9 @@ class SolidmechanicsProblem(problem_base):
         self.x_ref.interpolate(self.x_ref_expr)
         
         if self.incompressible_2field:
-            self.ndof = self.u.vector.getSize() + self.p.vector.getSize()
+            self.numdof = self.u.vector.getSize() + self.p.vector.getSize()
         else:
-            self.ndof = self.u.vector.getSize()
+            self.numdof = self.u.vector.getSize()
 
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.dx_, self.comm)
@@ -651,36 +651,77 @@ class SolidmechanicsProblem(problem_base):
                 f = open(fl, mode)
                 f.write('%.16E %.16E\n' % (t,volume))
                 f.close()
+                
+    def read_restart(self):
 
+        # read restart information
+        if self.restart_step > 0:
+            self.io.readcheckpoint(self, self.restart_step)
+            self.simname += '_r'+str(self.restart_step)
 
-
-class SolidmechanicsSolver():
-
-    def __init__(self, problem, solver_params):
     
-        self.pb = problem
+    def pre_timestep_routines(self):
+
+        # perform Proper Orthogonal Decomposition
+        if self.have_rom:
+            self.rom.POD(self)
+
+            
+    def write_output(self, N, t, mesh=False): 
+
+        self.io.write_output(self, N=N, t=t)
+
+
+    def write_output_ini(self):
         
-        self.solver_params = solver_params
+        self.io.write_output(self, writemesh=True)
+
+
+    def evaluate_pre_solve(self, t):
+
+        # set time-dependent functions
+        self.ti.set_time_funcs(self.ti.funcs_to_update, self.ti.funcs_to_update_vec, t)
+            
+        # evaluate rate equations
+        self.evaluate_rate_equations(t)
+            
+            
+    def evaluate_post_solve(self, t, N):
+        
+        # solve volume laplace (for cardiac benchmark)
+        if bool(self.volume_laplace): self.solve_volume_laplace(N, t)
+        
+        # compute the growth rate (has to be called before update_timestep)
+        if self.have_growth: self.compute_solid_growth_rate(N, t)
+            
+            
+    def update(self):
+        
+        # update - displacement, velocity, acceleration, pressure, all internal and rate variables, all time functions
+        self.ti.update_timestep(self.u, self.u_old, self.v_old, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old)
+
+
+    def write_restart(self, N):
+
+        self.io.write_restart(self, N)
+        
+        
+    def check_abort(self, t):
+            
+        if self.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.growth_rate) <= self.tol_stop_large:
+            return True
+
+
+
+class SolidmechanicsSolver(solver_base):
+
+    def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
 
 
-    def solve_problem(self):
-        
-        start = time.time()
-
-        # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.ndof)
-
-        # perform Proper Orthogonal Decomposition
-        if self.pb.have_rom:
-            self.pb.rom.POD(self.pb)
-
-        # read restart information
-        if self.pb.restart_step > 0:
-            self.pb.io.readcheckpoint(self.pb, self.pb.restart_step)
-            self.pb.simname += '_r'+str(self.pb.restart_step)
+    def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
         if self.pb.prestress_initial and self.pb.restart_step == 0:
@@ -699,55 +740,16 @@ class SolidmechanicsSolver():
             # solve for consistent initial acceleration a_old
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
 
-        # write mesh output
-        self.pb.io.write_output(self.pb, writemesh=True)
+
+    def solve_nonlinear_problem(self, t):
         
-        # solid main time loop
-        for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
+        self.solnln.newton(self.pb.u, self.pb.p, localdata=self.pb.localdata)
 
-            wts = time.time()
-            
-            # current time
-            t = N * self.pb.dt
 
-            # set time-dependent functions
-            self.pb.ti.set_time_funcs(self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_vec, t)
-            
-            # evaluate rate equations
-            self.pb.evaluate_rate_equations(t)
-
-            # solve
-            self.solnln.newton(self.pb.u, self.pb.p, localdata=self.pb.localdata)
-            
-            # solve volume laplace (for cardiac benchmark)
-            if bool(self.pb.volume_laplace): self.pb.solve_volume_laplace(N, t)
-            
-            # compute the growth rate (has to be called before update_timestep)
-            if self.pb.have_growth: self.pb.compute_solid_growth_rate(N, t)
-
-            # write output
-            self.pb.io.write_output(self.pb, N=N, t=t)
-            
-            # update - displacement, velocity, acceleration, pressure, all internal and rate variables, all time functions
-            self.pb.ti.update_timestep(self.pb.u, self.pb.u_old, self.pb.v_old, self.pb.a_old, self.pb.p, self.pb.p_old, self.pb.internalvars, self.pb.internalvars_old, self.pb.ti.funcs_to_update, self.pb.ti.funcs_to_update_old, self.pb.ti.funcs_to_update_vec, self.pb.ti.funcs_to_update_vec_old)
-
-            # solve time for time step
-            wte = time.time()
-            wt = wte - wts
-
-            # print time step info to screen
-            self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
-
-            # write restart info - old and new quantities are the same at this stage
-            self.pb.io.write_restart(self.pb, N)
-
-            if self.pb.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.pb.growth_rate) <= self.pb.tol_stop_large:
-                break
-            
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            sys.stdout.flush()
-
+    def print_timestep_info(self, N, t, wt):
+    
+        # print time step info to screen
+        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
 
 
     def solve_initial_prestress(self):

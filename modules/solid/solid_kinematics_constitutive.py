@@ -75,7 +75,7 @@ class constitutive:
             
             # material has to be evaluated with C_e (and Cdot_v) only, however total S has
             # to be computed by differentiating w.r.t. C (and Cdot)
-            self.mat = materiallaw(self.C_e(C_,theta_), self.Cdot_v(Cdot_,theta_), self.I)
+            self.mat = materiallaw(self.C_e(C_,theta_), self.Cdot_v(Cdot_,theta_), self.I) # TODO: Using Cdot_v might not be consistent here, but C_edot...
 
         elif self.mat_plastic:
             
@@ -296,10 +296,21 @@ class constitutive:
         Je = ufl.sqrt(ufl.det(self.C_e(C_, theta_)))
         return ufl.diff(Je,C_)
 
+    # dF_g/dt
+    def F_gdot(self, theta_, theta_old, dt):
+        return (self.F_g(theta_) - self.F_g(theta_old))/dt
+
+    # d(F_g^(-1))/dt = -F_g^(-1) dF_g/dt F_g^(-1) (cf. Holzapfel 2000, eq. (1.237))
+    def F_gdot(self, theta_, theta_old, dt):
+        return -ufl.inv(self.F_g(theta_)) * self.F_gdot(theta_, theta_old, dt) * ufl.inv(self.F_g(theta_))
 
     # growth velocity gradient tensor
     def L(self, theta_, theta_old, dt):
-        return ufl.dot((self.F_g(theta_) - self.F_g(theta_old))/dt, ufl.inv(self.F_g(theta_)))
+        return ufl.dot(self.F_gdot(theta_, theta_old, dt), ufl.inv(self.F_g(theta_)))
+
+    # rate of elastic right Cauchy-Green tensor: note that d(F_g^(-T))/dt = [d(F_g^(-1))/dt]^T (cf. Holzapfel 2000, eq. (1.235))
+    def C_edot(self, C_, Cdot_, theta_, theta_old, dt):
+        return ufl.inv(self.F_gdot(theta_, theta_old, dt)) * C_ * ufl.inv(self.F_g(theta_)).T + ufl.inv(self.F_g(theta_)) * Cdot_ * ufl.inv(self.F_g(theta_)).T + ufl.inv(self.F_g(theta_)) * C_ * ufl.inv(self.F_gdot(theta_, theta_old, dt)).T
 
 
     # growth remodeling fraction: fraction of remodeled material

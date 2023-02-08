@@ -52,7 +52,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
     
-    def __init__(self, params, chmodels, cormodel, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
         
@@ -380,9 +380,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
         chdict_rv = {'VQ' : VQ_v_r_, 'pi1' : p_v_r_i1_, 'po1' : p_v_r_o1_}
         chdict_la = {'VQ' : VQ_at_l_, 'po1' : p_at_l_o1_}
-        for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_at_l_i_[n]
+        for n in range(self.vp): chdict_la['pi'+str(n+1)] = p_at_l_i_[n]
         chdict_ra = {'VQ' : VQ_at_r_, 'po1' : p_at_r_o1_}
-        for n in range(self.vs): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
+        for n in range(self.vs): chdict_ra['pi'+str(n+1)] = p_at_r_i_[n]
 
         # set coupling states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
         self.set_coupling_state('lv', chdict_lv, [E_v_l_])
@@ -394,9 +394,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['VQ'], chdict_lv['pi1'], chdict_lv['po1']
         VQ_v_r_, p_v_r_i1_, p_v_r_o1_ = chdict_rv['VQ'], chdict_rv['pi1'], chdict_rv['po1']
         VQ_at_l_, p_ati1_l_, p_at_l_o1_ = chdict_la['VQ'], chdict_la['pi1'], chdict_la['po1']
-        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)+'']
+        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)]
         VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['VQ'], chdict_ra['pi1'], chdict_ra['po1']
-        for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
+        for n in range(self.vs): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)]
 
 
         # set valve laws - resistive part of q(p) relationship of momentum equation
@@ -979,9 +979,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         chdict_lv = {'VQ' : VQ_v_l_, 'pi1' : p_v_l_i1_, 'po1' : p_v_l_o1_}
         chdict_rv = {'VQ' : VQ_v_r_, 'pi1' : p_v_r_i1_, 'po1' : p_v_r_o1_}
         chdict_la = {'VQ' : VQ_at_l_, 'po1' : p_at_l_o1_}
-        for n in range(self.vp): chdict_la['pi'+str(n+1)+''] = p_at_l_i_[n]
+        for n in range(self.vp): chdict_la['pi'+str(n+1)] = p_at_l_i_[n]
         chdict_ra = {'VQ' : VQ_at_r_, 'po1' : p_at_r_o1_}
-        for n in range(self.vs+self.switch_cor): chdict_ra['pi'+str(n+1)+''] = p_at_r_i_[n]
+        for n in range(self.vs+self.switch_cor): chdict_ra['pi'+str(n+1)] = p_at_r_i_[n]
 
         # set coupling states and variables (e.g., express V in terms of p and E in case of elastance models, ...)
         self.set_coupling_state('lv', chdict_lv, [E_v_l_])
@@ -993,9 +993,9 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         VQ_v_l_, p_v_l_i1_, p_v_l_o1_ = chdict_lv['VQ'], chdict_lv['pi1'], chdict_lv['po1']
         VQ_v_r_, p_v_r_i1_, p_v_r_o1_ = chdict_rv['VQ'], chdict_rv['pi1'], chdict_rv['po1']
         VQ_at_l_, p_ati1_l_, p_at_l_o1_ = chdict_la['VQ'], chdict_la['pi1'], chdict_la['po1']
-        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)+'']
+        for n in range(self.vp): p_at_l_i_[n] = chdict_la['pi'+str(n+1)]
         VQ_at_r_, p_ati1_r_, p_at_r_o1_ = chdict_ra['VQ'], chdict_ra['pi1'], chdict_ra['po1']
-        for n in range(self.vs+self.switch_cor): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)+'']
+        for n in range(self.vs+self.switch_cor): p_at_r_i_[n] = chdict_ra['pi'+str(n+1)]
 
         # add coronary circulation equations
         if self.cormodel is not None: # p_v_l on purpose here NOT passed to coronary model (for comparison reasons to syspulcap model...)
