@@ -897,7 +897,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 K_us[irs:ire, col_ids[i]] = k_us_cols[i][irs:ire]
                 
             K_us.assemble()
-            
+
             # derivative of 0D residual w.r.t. solid displacements/fluid velocities
             K_su = PETSc.Mat().createAIJ(size=((self.K_ss.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
             K_su.setUp()

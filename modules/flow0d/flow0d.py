@@ -128,10 +128,10 @@ class Flow0DProblem(problem_base):
         self.numdof = self.cardvasc0D.numdof
 
         # vectors and matrices
-        self.dK = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.dK = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.dK.setUp()
         
-        self.K = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K.setUp()
 
         self.s, self.s_old, self.s_mid = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft()
@@ -140,8 +140,8 @@ class Flow0DProblem(problem_base):
         self.df, self.df_old = self.K.createVecLeft(), self.K.createVecLeft()
         self.f, self.f_old   = self.K.createVecLeft(), self.K.createVecLeft()
 
-        self.aux, self.aux_old, self.aux_mid = np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof)
-        self.auxTc, self.auxTc_old = np.zeros(self.cardvasc0D.numdof), np.zeros(self.cardvasc0D.numdof)
+        self.aux, self.aux_old, self.aux_mid = np.zeros(self.numdof), np.zeros(self.numdof), np.zeros(self.numdof)
+        self.auxTc, self.auxTc_old = np.zeros(self.numdof), np.zeros(self.numdof)
         
         self.s_set = self.K.createVecLeft() # set point for multiscale analysis
         
@@ -168,7 +168,7 @@ class Flow0DProblem(problem_base):
 
         theta = self.theta0d_timint(t)
 
-        K = PETSc.Mat().createAIJ(size=(self.cardvasc0D.numdof,self.cardvasc0D.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         K.setUp()
         
         # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
@@ -260,6 +260,11 @@ class Flow0DProblem(problem_base):
                 self.cardvasc0D.induce_perturbation(self.perturb_type, self.perturb_factor)
                 self.have_induced_pert = True
 
+    ### now the base routines for this problem
+    
+    def pre_timestep_routines(self):
+        pass
+
 
     def read_restart(self):
 
@@ -286,6 +291,10 @@ class Flow0DProblem(problem_base):
         self.auxTc_old[:] = self.aux_old[:]
 
 
+    def write_output_ini(self):
+        pass
+
+
     def get_time_offset(self):
         
         return (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
@@ -298,6 +307,10 @@ class Flow0DProblem(problem_base):
             self.c[0] = self.ti.timecurves(self.excitation_curve)(t)
         # activation curves
         self.evaluate_activation(t)
+
+
+    def evaluate_post_solve(self, t, N):
+        pass
 
 
     def set_output_state(self):
@@ -320,18 +333,6 @@ class Flow0DProblem(problem_base):
         self.cardvasc0D.update(self.s, self.df, self.f, self.s_old, self.df_old, self.f_old, self.aux, self.aux_old)
 
 
-    def check_abort(self, t):
-
-        # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-        is_periodic = self.cardvasc0D.cycle_check(self.s, self.sTc, self.sTc_old, self.aux, self.auxTc, self.auxTc_old, t, self.ti.cycle, self.ti.cycleerror, self.eps_periodic, check=self.periodic_checktype, inioutpath=self.output_path_0D, nm=self.simname, induce_pert_after_cycl=self.perturb_after_cylce)
-
-        if is_periodic:
-            if self.comm.rank == 0:
-                print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.ti.cycle[0]-1,self.ti.cycleerror[0]))
-                sys.stdout.flush()
-            return True
-
-
     def print_to_screen(self):
         
         self.cardvasc0D.print_to_screen(self.s_mid,self.aux_mid)
@@ -351,6 +352,18 @@ class Flow0DProblem(problem_base):
             self.writerestart(self.simname, N)
 
 
+    def check_abort(self, t):
+
+        # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
+        is_periodic = self.cardvasc0D.cycle_check(self.s, self.sTc, self.sTc_old, self.aux, self.auxTc, self.auxTc_old, t, self.ti.cycle, self.ti.cycleerror, self.eps_periodic, check=self.periodic_checktype, inioutpath=self.output_path_0D, nm=self.simname, induce_pert_after_cycl=self.perturb_after_cylce)
+
+        if is_periodic:
+            if self.comm.rank == 0:
+                print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.ti.cycle[0]-1,self.ti.cycleerror[0]))
+                sys.stdout.flush()
+            return True
+
+
 
 class Flow0DSolver(solver_base):
 
@@ -358,6 +371,10 @@ class Flow0DSolver(solver_base):
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_ode(self.pb, self.solver_params)
+
+
+    def solve_initial_state(self):
+        pass
 
 
     def solve_nonlinear_problem(self, t):

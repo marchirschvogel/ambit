@@ -14,7 +14,7 @@ import timeintegration
 import utilities
 import solver_nonlin
 
-from base import problem_base
+from base import problem_base, solver_base
 
 # framework of signalling network models
 
@@ -41,7 +41,7 @@ class SignallingNetworkProblem(problem_base):
         except: self.write_restart_every = -1
 
         # could use extra output path setting for signet model (i.e. for coupled problem)
-        try: self.output_path_0D = io_params['output_path_signet']
+        try: self.output_path_signet = io_params['output_path_signet']
         except: self.output_path_signet = io_params['output_path']
         
         # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
@@ -61,11 +61,13 @@ class SignallingNetworkProblem(problem_base):
         else:
             raise NameError("Unknown signet modeltype!")
 
+        self.numdof = self.signet.numdof
+
         # vectors and matrices
-        self.dK = PETSc.Mat().createAIJ(size=(self.signet.numdof,self.signet.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.dK = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.dK.setUp()
         
-        self.K = PETSc.Mat().createAIJ(size=(self.signet.numdof,self.signet.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K.setUp()
 
         self.s, self.s_old, self.s_mid = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft()
@@ -74,7 +76,7 @@ class SignallingNetworkProblem(problem_base):
         self.df, self.df_old = self.K.createVecLeft(), self.K.createVecLeft()
         self.f, self.f_old   = self.K.createVecLeft(), self.K.createVecLeft()
 
-        self.aux, self.aux_old, self.aux_mid = np.zeros(self.signet.numdof), np.zeros(self.signet.numdof), np.zeros(self.signet.numdof)
+        self.aux, self.aux_old, self.aux_mid = np.zeros(self.numdof), np.zeros(self.numdof), np.zeros(self.numdof)
         
         self.s_set = self.K.createVecLeft() # set point for multisale analysis
         
@@ -101,7 +103,7 @@ class SignallingNetworkProblem(problem_base):
 
         theta = self.thetasn_timint(t)
 
-        K = PETSc.Mat().createAIJ(size=(self.signet.numdof,self.signet.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         K.setUp()
         
         # signet rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
@@ -166,89 +168,100 @@ class SignallingNetworkProblem(problem_base):
             self.t_init -= (self.ti.cycle[0]-1) * self.signet.T_cycl
 
 
-
-class SignallingNetworkSolver():
-
-    def __init__(self, problem, solver_params):
+    ### now the base routines for this problem
     
-        self.pb = problem
+    def pre_timestep_routines(self):
+        pass
 
-        self.solver_params = solver_params
+
+    def read_restart(self):
+
+        # read restart information
+        if self.restart_step > 0:
+            self.readrestart(self.simname, self.restart_step)
+            self.simname += '_r'+str(self.restart_step)
+
+
+    def evaluate_initial(self):
+
+        self.signet.evaluate(self.s_old, self.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)
+
+
+    def write_output_ini(self):
+        pass
+
+
+    def get_time_offset(self):
+        return 0.
+
+
+    def evaluate_pre_solve(self, t):
+        pass
+
+
+    def evaluate_post_solve(self, t, N):
+        pass
+
+
+    def set_output_state(self):
+        
+        # get midpoint dof values for post-processing (has to be called before update!)
+        self.signet.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=self.output_midpoint)
+        self.signet.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=self.output_midpoint)
+
+
+    def write_output(self, N, t):
+        
+        # raw txt file output of 0D model quantities
+        if self.write_results_every_signet > 0 and N % self.write_results_every_signet == 0:
+            self.signet.write_output(self.output_path_signet, t, self.s_mid, self.aux_mid, self.simname)
+
+
+    def update(self):
+        
+        # update timestep
+        self.signet.update(self.s, self.df, self.f, self.s_old, self.df_old, self.f_old, self.aux, self.aux_old)
+
+
+    def print_to_screen(self):
+        pass
+        
+        
+    def induce_state_change(self):
+        pass
+
+
+    def write_restart(self, N):
+        
+        # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
+        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+            self.writerestart(self.simname, N)
+
+
+    def check_abort(self, t):
+        pass
+
+
+
+class SignallingNetworkSolver(solver_base):
+
+
+    def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_ode(self.pb, self.solver_params)
+
+
+    def solve_initial_state(self):
+        pass
+
+
+    def solve_nonlinear_problem(self, t):
         
+        self.solnln.newton(self.pb.s, t)
 
-    def solve_problem(self):
-        
-        start = time.time()
-        
-        # print header
-        utilities.print_problem(self.pb.problem_type, self.pb.comm, self.pb.signet.numdof)
 
-        # read restart information
-        if self.pb.restart_step > 0:
-            self.pb.readrestart(self.pb.simname, self.pb.restart_step)
-            self.pb.simname += '_r'+str(self.pb.restart_step)
-        
-        ## evaluate old state
-        #if self.pb.excitation_curve is not None:
-            #self.pb.c = []
-            #self.pb.c.append(self.pb.ti.timecurves(self.pb.excitation_curve)(self.pb.t_init))
-
-        self.pb.signet.evaluate(self.pb.s_old, self.pb.t_init, self.pb.df_old, self.pb.f_old, None, None, self.pb.c, self.pb.y, self.pb.aux_old)
-
-        # flow 0d main time loop
-        for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
-            
-            wts = time.time()
-            
-            # current time
-            t = N * self.pb.dt
-
-            ## offset time for multiple cardiac cycles
-            #t_off = (self.pb.ti.cycle[0]-1) * self.pb.signet.T_cycl # zero if T_cycl variable is not specified
-            t_off = 0.
-
-            ## external volume/flux from time curve
-            #if self.pb.excitation_curve is not None:
-                #self.pb.c[0] = self.pb.ti.timecurves(self.pb.excitation_curve)(t-t_off)
-            ## activation curves
-            #self.pb.evaluate_activation(t-t_off)
-
-            # solve
-            self.solnln.newton(self.pb.s, t-t_off)
-
-            # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.signet.set_output_state(self.pb.s, self.pb.s_old, self.pb.s_mid, self.pb.theta_ost, midpoint=self.output_midpoint), self.pb.signet.set_output_state(self.pb.aux, self.pb.aux_old, self.pb.aux_mid, self.pb.theta_ost, midpoint=self.output_midpoint)
-
-            # raw txt file output of signet model quantities
-            if self.pb.write_results_every_signet > 0 and N % self.pb.write_results_every_signet == 0:
-                self.pb.signet.write_output(self.pb.output_path_signet, t, self.pb.s_mid, self.pb.aux_mid, self.pb.simname)
-
-            # update timestep
-            self.pb.signet.update(self.pb.s, self.pb.df, self.pb.f, self.pb.s_old, self.pb.df_old, self.pb.f_old, self.pb.aux, self.pb.aux_old)
-            
-            # print to screen
-            self.pb.signet.print_to_screen(self.pb.s_mid,self.pb.aux_mid)
-
-            # solve time for time step
-            wte = time.time()
-            wt = wte - wts
-
-            # print time step info to screen
-            self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, wt=wt)
-                        
-            # write signet restart info - old and new quantities are the same at this stage (except cycle values sTc)
-            if self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0:
-                self.pb.writerestart(self.pb.simname, N)
-
-            #if is_periodic:
-                #if self.pb.comm.rank == 0:
-                    #print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.ti.cycle[0]-1,self.pb.ti.cycleerror[0]))
-                    #sys.stdout.flush()
-                #break
-            
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            sys.stdout.flush()
+    def print_timestep_info(self, N, t, wt):
+    
+        # print time step info to screen
+        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, wt=wt)

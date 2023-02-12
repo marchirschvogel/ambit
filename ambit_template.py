@@ -57,12 +57,12 @@ def main():
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0, # maximum simulation time
                             'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
                             'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
-                            'timint'                : 'genalpha', # time-integration algorithm: genalpha, ost, static
+                            'timint'                : 'genalpha', # time-integration algorithm: 'genalpha', 'ost', 'static'
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor 
                             'rho_inf_genalpha'      : 0.8} # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
     
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
-    TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: ost
+    TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: 'ost'
                             'theta_ost'             : 0.5, # One-Step-Theta time integration factor 
                             'initial_conditions'    : init(), # initial condition dictionary (here defined as function, see below)
                             'initial_file'          : None, # OPTIONAL: if we want to read initial conditions from a file (overwrites above specified dict)
@@ -73,6 +73,7 @@ def main():
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul', # '2elwindkessel', '4elwindkesselLsZ', '4elwindkesselLpZ', 'syspul', 'syspulcap', 'syspulcaprespir'
                             'coronary_model'        : None, # OPTIONAL: coronary submodel - None, 'ZCRp_CRd', 'ZCRp_CRd_lr' (default: None)
+                            'vad_model'             : None, # OPTIONAL: VAD submodel - None, 'lvad' (default: None)
                             'parameters'            : param(), # parameter dictionary (here defined as function, see below)
                             'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_fluid', 'num_inflows' : 1, , 'num_outflows' : 1}, 'la' : {'type' : '0D_elast', 'activation_curve' : 5}, 'ra' : {'type' : '0D_prescr', 'prescribed_curve' : 5}}, # only for syspul* models - 3D_solid, 3D_fluid: chamber is 3D solid or fluid mechanics model, 0D_elast: chamber is 0D elastance model, 0D_prescr: volume/flux is prescribed over time, prescr_elast: chamber is 0D elastance model with prescribed elastance over time
                             'prescribed_variables'  : {'q_vin_l' : 1}, # OPTIONAL: in case we want to prescribe values: variable name, and time curve number (define below)
@@ -92,9 +93,9 @@ def main():
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
-                            'coupling_quantity'     : ['volume','volume'], # volume, flux, pressure (former two need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
+                            'coupling_quantity'     : ['volume','volume'], # 'volume', 'flux', 'pressure' (former two need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
                             'variable_quantity'     : ['pressure','pressure'], # OPTIONAL: pressure, flux, volume (former needs 'monolithic_direct', latter two need 'monolithic_lagrange' as coupling_type) (default: 'pressure')
-                            'coupling_type'         : 'monolithic_direct', # monolithic_direct, monolithic_lagrange (ask MH for the difference... or try to find out in the code... :))
+                            'coupling_type'         : 'monolithic_direct', # 'monolithic_direct', 'monolithic_lagrange' (ask MH for the difference... or try to find out in the code... :))
                             'eps_fd'                : 1e-6, # OPTIONAL: perturbation for monolithic_lagrange coupling (default: 1e-5)
                             'print_subiter'         : False, # OPTIONAL: print subiterations in case of monolithic_lagrange-type coupling (default: False)
                             'Nmax_periodicref'      : 10, # OPTIONAL: maximum heart cycles for solid_flow0d_periodicref problem (default: 10)
@@ -102,9 +103,9 @@ def main():
                             'write_checkpoints_periodicref' : False} # OPTIONAL: write restart after each cycle (default: False)
 
     # for solid_constraint problem type
-    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint (for syspul* models: order is lv, rv, la, ra)
-                            'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids) (for syspul* models: order is lv, rv, la, ra)
-                            'constraint_quantity'   : ['volume','volume'], # volume, flux, pressure (for syspul* models: order is lv, rv, la, ra) (default: volume) 
+    CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint
+                            'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
+                            'constraint_quantity'   : ['volume','volume'], # 'volume', 'flux' (default: volume) 
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
     # for model order reduction
@@ -120,7 +121,7 @@ def main():
                             'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type
-    MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
+    MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # 'end_diastole', 'end_systole'
                             'numcycles'             : 10, # max. number of multiscale cycles (one cycle means one small scale succeeded by a large scale run)
                             'tol_small'             : 1.0e-3, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
                             'tol_large'             : 1.0e-4, # growth rate tolerance
@@ -144,8 +145,8 @@ def main():
                             'MAT2' : {'neohooke_dev'       : {'mu' : 10.},
                                       'ogden_vol'          : {'kappa' : 10./(1.-2.*0.49)},
                                       'inertia'            : {'rho0' : 1.0e-6},
-                                      'growth'             : {'growth_dir' : 'isotropic', # isotropic, fiber, crossfiber, radial
-                                                              'growth_trig' : 'volstress', # fibstretch, volstress, prescribed
+                                      'growth'             : {'growth_dir' : 'isotropic', # 'isotropic', 'fiber', 'crossfiber', 'radial'
+                                                              'growth_trig' : 'volstress', # 'fibstretch', 'volstress', 'prescribed'
                                                               'growth_thres' : 1.01, # critial value above which growth happens (i.e. a critial stretch, stress or whatever depending on the growth trigger)
                                                               'thres_tol' : 1.0e-4, # tolerance for threshold (makes sense in multiscale approach, where threshold is set element-wise)
                                                               'trigger_reduction' : 1, # reduction factor for trigger ]0,1]
@@ -261,11 +262,11 @@ def param():
     C_ven_sys = 30.*C_ar_sys
     R_ar_pul = R_ar_sys/8.
     C_ar_pul = tau_ar_pul/R_ar_pul
-    Z_ar_pul = 0.
     R_ven_pul = R_ar_pul
     C_ven_pul = 2.5*C_ar_pul
 
-    L_ar_sys = 0.667e-6
+    I_ar_sys = 0.667e-6
+    L_ar_sys = 0.
     L_ven_sys = 0.
     L_ar_pul = 0.
     L_ven_pul = 0.
@@ -278,15 +279,14 @@ def param():
     t_ed = 0.2
     t_es = 0.53
 
-
     return {'R_ar_sys' : R_ar_sys,
             'C_ar_sys' : C_ar_sys,
             'L_ar_sys' : L_ar_sys,
             'Z_ar_sys' : Z_ar_sys,
+            'I_ar_sys' : I_ar_sys,
             'R_ar_pul' : R_ar_pul,
             'C_ar_pul' : C_ar_pul,
             'L_ar_pul' : L_ar_pul,
-            'Z_ar_pul' : Z_ar_pul,
             'R_ven_sys' : R_ven_sys,
             'C_ven_sys' : C_ven_sys,
             'L_ven_sys' : L_ven_sys,

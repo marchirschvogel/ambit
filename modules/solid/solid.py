@@ -276,7 +276,7 @@ class SolidmechanicsProblem(problem_base):
             if have_fiber2: fibarray.append('sheet')
 
             # fiber function space - vector defined on quadrature points
-            V_fib = self.Vd_vector
+            V_fib = self.Vd_vector # self.V_u
             self.fib_func = self.io.readin_fibers(fibarray, V_fib, self.dx_)
 
         else:
@@ -652,6 +652,15 @@ class SolidmechanicsProblem(problem_base):
                 f.write('%.16E %.16E\n' % (t,volume))
                 f.close()
                 
+    ### now the base routines for this problem
+                
+    def pre_timestep_routines(self):
+
+        # perform Proper Orthogonal Decomposition
+        if self.have_rom:
+            self.rom.POD(self)
+
+                
     def read_restart(self):
 
         # read restart information
@@ -660,21 +669,17 @@ class SolidmechanicsProblem(problem_base):
             self.simname += '_r'+str(self.restart_step)
 
     
-    def pre_timestep_routines(self):
-
-        # perform Proper Orthogonal Decomposition
-        if self.have_rom:
-            self.rom.POD(self)
-
-            
-    def write_output(self, N, t, mesh=False): 
-
-        self.io.write_output(self, N=N, t=t)
+    def evaluate_initial(self):
+        pass
 
 
     def write_output_ini(self):
         
         self.io.write_output(self, writemesh=True)
+
+
+    def get_time_offset(self):
+        return 0.
 
 
     def evaluate_pre_solve(self, t):
@@ -693,12 +698,29 @@ class SolidmechanicsProblem(problem_base):
         
         # compute the growth rate (has to be called before update_timestep)
         if self.have_growth: self.compute_solid_growth_rate(N, t)
+
+
+    def set_output_state(self):
+        pass
+
             
+    def write_output(self, N, t, mesh=False): 
+
+        self.io.write_output(self, N=N, t=t)
+
             
     def update(self):
         
         # update - displacement, velocity, acceleration, pressure, all internal and rate variables, all time functions
         self.ti.update_timestep(self.u, self.u_old, self.v_old, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old)
+
+
+    def print_to_screen(self):
+        pass
+    
+    
+    def induce_state_change(self):
+        pass
 
 
     def write_restart(self, N):

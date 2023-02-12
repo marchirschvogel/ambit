@@ -31,32 +31,63 @@ class problem_base():
 
         self.t_init = self.restart_step * self.dt
 
-    def write_output_ini(self):
-        pass
-    
+
+    # routines that should be implemented by derived model problem
     def pre_timestep_routines(self):
-        pass
-    
+        raise RuntimeError("Problem misses function implementation!")
+
+
+    def read_restart(self):
+        raise RuntimeError("Problem misses function implementation!")
+
+
     def evaluate_initial(self):
-        pass
-    
+        raise RuntimeError("Problem misses function implementation!")
+
+
+    def write_output_ini(self):
+        raise RuntimeError("Problem misses function implementation!")
+
+
     def get_time_offset(self):
-        return 0.
+        raise RuntimeError("Problem misses function implementation!")
+
     
     def evaluate_pre_solve(self, t):
-        pass
+        raise RuntimeError("Problem misses function implementation!")
+
 
     def evaluate_post_solve(self, t, N):
-        pass
+        raise RuntimeError("Problem misses function implementation!")
+
     
     def set_output_state(self):
-        pass
+        raise RuntimeError("Problem misses function implementation!")
+
+    
+    def write_output(self, N, t):
+        raise RuntimeError("Problem misses function implementation!")
+
+    
+    def update(self):
+        raise RuntimeError("Problem misses function implementation!")
+
     
     def print_to_screen(self):
-        pass
+        raise RuntimeError("Problem misses function implementation!")
+
 
     def induce_state_change(self):
-        pass
+        raise RuntimeError("Problem misses function implementation!")
+    
+    
+    def write_restart(self, N):
+        raise RuntimeError("Problem misses function implementation!")
+    
+    
+    def check_abort(self, t):
+        raise RuntimeError("Problem misses function implementation!")
+
 
 
 class solver_base():
@@ -69,9 +100,18 @@ class solver_base():
 
         self.initialize_nonlinear_solver()
 
-
+    
+    # routines that should be implemented by derived model solver
     def solve_initial_state(self):
-        pass
+        raise RuntimeError("Problem solver misses function implementation!")
+
+
+    def print_timestep_info(self):
+        raise RuntimeError("Problem solver misses function implementation!")
+
+
+    def solve_nonlinear_problem(self, t):
+        raise RuntimeError("Problem solver misses function implementation!")
 
 
     def solve_problem(self):

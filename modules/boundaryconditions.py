@@ -81,8 +81,7 @@ class boundary_cond():
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
-    
-    
+
     # function to mark x=0
     def twodimX(self, x):
         return np.isclose(x[0], 0.0)
@@ -94,6 +93,7 @@ class boundary_cond():
     # function to mark z=0
     def twodimZ(self, x):
         return np.isclose(x[2], 0.0)
+
 
 
 class boundary_cond_solid(boundary_cond):

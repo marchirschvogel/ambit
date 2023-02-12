@@ -46,7 +46,7 @@ if solid:
     errs['solid_robin_genalpha 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_genalpha.py'])
     errs['solid_robin_genalpha 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha.py'])
     
-    errs['solid_robin_visco 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_visco.py']) # only 1 element, cannot run on multiple cores
+    errs['solid_robin_visco 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_visco.py'])
 
     errs['solid_robin_static_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_static_prestress.py'])
     errs['solid_robin_static_prestress 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_static_prestress.py'])
