@@ -22,7 +22,7 @@ def main():
                          'results_to_write'      : ['displacement'],
                          'simname'               : 'solid_robin_visc'}
 
-    SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-5,
                          'maxiter'               : 25,
@@ -31,12 +31,12 @@ def main():
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 10,
                          'numstep_stop'          : 5,
-                         'timint'                : 'genalpha', # genalpha, ost, static
+                         'timint'                : 'genalpha',
                          'rho_inf_genalpha'      : 1.0}
     
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 2,
-                         'incompressible_2field' : False} # True, False
+                         'incompressible_2field' : False}
 
     MATERIALS         = {'MAT1' : {'visco_green' : {'eta' : 2.0},
                                    'inertia'     : {'rho0' : 1.0e-6}}}

@@ -18,8 +18,9 @@ Still experimental / to-do:
 
 - Fluid mechanics is not tested!
 - Inf-sup stable equal order fluid mechanics formulation for Navier Stokes (SUPG/PSPG stabilization)
-- ALE fluid
+- ALE fluid / FSI / FrSI
 - Linear solvers and preconditioners (working, but best choices for specific problems still need investigation)
+- Finite strain plasticity
 - ... whatever might be wanted in some future ...
 
 
@@ -37,9 +38,9 @@ if not present, install: (seems that uidmap needs to be installed, which require
 ``sudo apt install uidmap``\
 ``curl -fsSL https://get.docker.com/rootless | sh``
 
-* Get latest tested ambit-compatible digest (3 Feb 2023) of dolfinx Docker image:
+* Get latest tested ambit-compatible digest (17 Feb 2023) of dolfinx Docker image:
 
-``docker pull dolfinx/dolfinx@sha256:74b8119ba4e7741276837e019e9b3d5c4f74308910c9c663e3f92e4b593fd486``
+``docker pull dolfinx/dolfinx@sha256:04c23dcbe223461480145dd5e5212476a54481435afb4cbd024040d68f00e4da``
 
 * To get dolfinx nightly build (may or may not work with ambit code):
 
@@ -47,7 +48,7 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * put the following shortcut in .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
 
-``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:74b8119ba4e7741276837e019e9b3d5c4f74308910c9c663e3f92e4b593fd486'``
+``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:04c23dcbe223461480145dd5e5212476a54481435afb4cbd024040d68f00e4da'``
 
 * if 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
 

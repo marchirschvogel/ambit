@@ -30,7 +30,7 @@ def main():
                          'results_to_write'      : ['displacement','cauchystress','vonmises_cauchystress','pk1stress','pk2stress','glstrain','eastrain','jacobian','fiber1','fiber2'],
                          'simname'               : 'solid_mat_uniax_hex_2field'}
 
-    SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8,
                          'maxiter'               : 25,

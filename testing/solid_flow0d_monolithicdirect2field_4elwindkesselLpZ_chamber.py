@@ -13,7 +13,7 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d',
                             'mesh_domain'           : basepath+'/input/chamber_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/chamber_boundary.xdmf',
                             'write_results_every'   : -999,
@@ -21,7 +21,7 @@ def main():
                             'results_to_write'      : [''],
                             'simname'               : 'test'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
     
@@ -31,7 +31,7 @@ def main():
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 20,
                             'numstep_stop'          : 10,
-                            'timint'                : 'genalpha', # genalpha, ost, static
+                            'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
     
@@ -45,7 +45,7 @@ def main():
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 2,
-                            'incompressible_2field' : True} # True, False
+                            'incompressible_2field' : True}
     
     COUPLING_PARAMS      = {'surface_ids'           : [[3]],
                             'coupling_quantity'     : ['volume'],

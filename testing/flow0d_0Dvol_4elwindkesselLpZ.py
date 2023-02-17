@@ -13,19 +13,19 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS         = {'problem_type'          : 'flow0d',
                          'write_results_every'   : -999,
                          'output_path'           : basepath+'/tmp/',
                          'simname'               : 'test'}
 
-    SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct
+    SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 100,
                          'numstep_stop'          : 100,
-                         'timint'                : 'ost', # ost
+                         'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init()}
     

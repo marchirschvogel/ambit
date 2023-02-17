@@ -19,24 +19,23 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    # all possible input parameters
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d',
                             'mesh_domain'           : basepath+'/input/heart3Dcoarse_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart3Dcoarse_boundary.xdmf',
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
-                            'results_to_write'      : ['displacement','pressure'], # see io_routines.py for what to write
-                            'simname'               : 'test'} # how to name the output
+                            'results_to_write'      : ['displacement','pressure'],
+                            'simname'               : 'test'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'iterative', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'iterative',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'tol_lin'               : 1.0e-7,
                             'print_liniter_every'   : 50,
-                            'divergence_continue'   : None, # what to apply when Newton diverges: None, PTC ('ptc' can stay False)
-                            'ptc'                   : False, # if you want to use PTC straight away (independent of divergence_continue)
-                            'k_ptc_initial'         : 0.1} # initial PTC value that adapts during nonlinear iteration
+                            'divergence_continue'   : None,
+                            'ptc'                   : False,
+                            'k_ptc_initial'         : 0.1}
     
     SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6,
                             'tol_inc'               : 1.0e-6}
@@ -49,25 +48,24 @@ def main():
     
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
-                            'initial_conditions'    : init(), # a dictionary
-                            'eps_periodic'          : 1.0e-3, # cardiac cycle periodicity tolerance
+                            'initial_conditions'    : init(),
+                            'eps_periodic'          : 1.0e-3,
                             'periodic_checktype'    : None}
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspulcap',
                             'parameters'            : param(),
                             'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_solid'}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
 
-    FEM_PARAMS           = {'order_disp'            : 2, # order of displacement interpolation (solid mechanics)
-                            'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
-                            'quad_degree'           : 5, # quadrature degree
-                            'incompressible_2field' : True} # if we want to use a 2-field functional for pressure dofs (always applies for fluid mechanics, optional for solid)
+    FEM_PARAMS           = {'order_disp'            : 2, 
+                            'order_pres'            : 1,
+                            'quad_degree'           : 5,
+                            'incompressible_2field' : True}
     
-    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # for syspul* models: order is lv, rv, la, ra (has to be consistent with chamber_models dict)
+    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'surface_p_ids'         : [[1],[2]],
-                            'coupling_quantity'     : ['flux','flux'], # volume, flux, pressure (former need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
-                            'coupling_type'         : 'monolithic_direct'} # monolithic_direct, monolithic_lagrange
+                            'coupling_quantity'     : ['flux','flux'],
+                            'coupling_type'         : 'monolithic_direct'}
 
-                            # see solid_material.py or fluid_material.py for material laws available (and their parameters)
     MATERIALS            = {'MAT1' : {'neohooke_dev'      : {'mu' : 10.},
                                       'inertia'           : {'rho0' : 1.0e-6},
                                       'visco_green'       : {'eta' : 0.0001}}}

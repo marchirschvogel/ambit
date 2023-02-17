@@ -13,7 +13,7 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS         = {'problem_type'          : 'solid', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS         = {'problem_type'          : 'solid',
                          'mesh_domain'           : basepath+'/input/block2_domain.xdmf',
                          'mesh_boundary'         : basepath+'/input/block2_boundary.xdmf',
                          'write_results_every'   : -999,
@@ -21,7 +21,7 @@ def main():
                          'results_to_write'      : [''],
                          'simname'               : 'solid_robin_genalpha'}
 
-    SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8,
                          'maxiter'               : 25,
@@ -30,12 +30,12 @@ def main():
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 10,
                          'numstep_stop'          : 10,
-                         'timint'                : 'genalpha', # genalpha, ost, static
+                         'timint'                : 'genalpha',
                          'rho_inf_genalpha'      : 1.0}
     
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 1,
-                         'incompressible_2field' : False} # True, False
+                         'incompressible_2field' : False}
 
     MATERIALS         = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 1000., 'nu' : 0.3},
                                    'inertia'           : {'rho0' : 1.0e-6}}}

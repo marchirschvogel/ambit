@@ -18,7 +18,7 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS            = {'problem_type'          : 'solid', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS            = {'problem_type'          : 'solid',
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_2D.txt']},
@@ -27,7 +27,7 @@ def main():
                             'results_to_write'      : ['displacement','pressure','fiberstretch'],
                             'simname'               : 'solid_2Dheart_frankstarling'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'ptc'                   : False}

@@ -22,7 +22,7 @@ def main():
                          'results_to_write'      : ['displacement'],
                          'simname'               : 'solid_plasticity_vonmises'}
 
-    SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8,
                          'maxiter'               : 25,
@@ -31,12 +31,12 @@ def main():
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 10,
                          'numstep_stop'          : 10,
-                         'timint'                : 'static', # genalpha, ost, static
+                         'timint'                : 'static',
                          'rho_inf_genalpha'      : 1.0}
     
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 1,
-                         'incompressible_2field' : False} # True, False
+                         'incompressible_2field' : False}
 
     MATERIALS         = {'MAT1' : {'neohooke_dev' : {'mu' : 10.},
                                    'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},

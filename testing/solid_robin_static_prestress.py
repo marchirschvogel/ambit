@@ -13,7 +13,7 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS         = {'problem_type'          : 'solid', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS         = {'problem_type'          : 'solid',
                          'mesh_domain'           : basepath+'/input/block2_domain.xdmf',
                          'mesh_boundary'         : basepath+'/input/block2_boundary.xdmf',
                          'write_results_every'   : -999,
@@ -21,7 +21,7 @@ def main():
                          'results_to_write'      : [''],
                          'simname'               : 'solid_robin_static_prestress'}
 
-    SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 

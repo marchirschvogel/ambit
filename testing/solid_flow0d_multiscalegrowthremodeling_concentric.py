@@ -28,7 +28,7 @@ def main():
                             'results_to_write'      : ['displacement','theta','phi_remod','trmandelstress_e'],
                             'simname'               : 'multiscale_concentric_as'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'divergence_continue'   : 'PTC',

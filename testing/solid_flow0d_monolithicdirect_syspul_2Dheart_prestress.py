@@ -24,7 +24,7 @@ def main():
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d',
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_2D.txt',basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
@@ -35,7 +35,7 @@ def main():
                             'write_restart_every'   : 1,
                             'restart_step'          : restart_step}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
     
@@ -45,11 +45,11 @@ def main():
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 500,
                             'numstep_stop'          : 5,
-                            'timint'                : 'genalpha', # genalpha, ost, static
+                            'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
     
-    TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
+    TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
                             'initial_conditions'    : init()}
 

@@ -24,7 +24,7 @@ def main():
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d',
                             'use_model_order_red'   : True,
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
@@ -32,7 +32,7 @@ def main():
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement'],
-                            'simname'               : 'ROM_2Dheart', # ROM_2Dheart
+                            'simname'               : 'ROM_2Dheart',
                             'write_restart_every'   : -999,
                             'restart_step'          : restart_step}
 
@@ -44,7 +44,7 @@ def main():
                             'eigenvalue_cutoff'     : 1.0e-8,
                             'print_eigenproblem'    : True}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
     
@@ -57,7 +57,7 @@ def main():
                             'timint'                : 'genalpha',
                             'rho_inf_genalpha'      : 0.8}
     
-    TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
+    TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
                             'initial_conditions'    : init()}
 

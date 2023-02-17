@@ -18,14 +18,14 @@ def main():
                          'output_path'           : basepath+'/tmp/',
                          'simname'               : 'test'}
 
-    SOLVER_PARAMS     = {'solve_type'            : 'direct', # direct
+    SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 100,
                          'numstep_stop'          : 100,
-                         'timint'                : 'ost', # ost
+                         'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init()}
     

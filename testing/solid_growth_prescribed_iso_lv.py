@@ -29,7 +29,7 @@ def main():
                             'quad_degree'            : 1,
                             'incompressible_2field'  : True}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'             : 'direct', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'             : 'direct',
                             'tol_res'                : 1.0e-8,
                             'tol_inc'                : 1.0e-8}
 

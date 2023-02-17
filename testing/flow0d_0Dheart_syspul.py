@@ -17,7 +17,7 @@ def main():
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
 
-    IO_PARAMS         = {'problem_type'          : 'flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d
+    IO_PARAMS         = {'problem_type'          : 'flow0d',
                          'write_results_every'   : -999,
                          'output_path'           : basepath+'/tmp',
                          'simname'               : 'test',
@@ -29,7 +29,7 @@ def main():
 
     TIME_PARAMS       = {'maxtime'               : 10*1.0,
                          'numstep'               : 10*100,
-                         'timint'                : 'ost', # ost
+                         'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init(),
                          'eps_periodic'          : 0.03,

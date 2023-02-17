@@ -28,7 +28,7 @@ def main():
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e'],
                             'simname'               : 'multiscale_eccentric_mr3'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'divergence_continue'   : 'PTC',
