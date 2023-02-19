@@ -711,7 +711,7 @@ class SolidmechanicsProblem(problem_base):
             
     def update(self):
         
-        # update - displacement, velocity, acceleration, pressure, all internal and rate variables, all time functions
+        # update - displacement, velocity, acceleration, pressure, all internal variables, all time functions
         self.ti.update_timestep(self.u, self.u_old, self.v_old, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old)
 
 

@@ -20,6 +20,7 @@ from mpiroutines import allgather_vec
 
 from solid import SolidmechanicsProblem, SolidmechanicsSolver
 from flow0d import Flow0DProblem
+from base import solver_base
 
 
 class SolidmechanicsFlow0DProblem():
@@ -206,9 +207,101 @@ class SolidmechanicsFlow0DProblem():
             self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
             self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm_old)
 
+    ### now the base routines for this problem
+                
+    def pre_timestep_routines(self):
+        pass
 
 
-class SolidmechanicsFlow0DSolver():
+    def read_restart(self):
+        pass
+
+
+    def evaluate_initial(self):
+
+        # set pressure functions for old state - s_old already initialized by 0D flow problem
+        if self.coupling_type == 'monolithic_direct':
+            self.pbf.cardvasc0D.set_pressure_fem(self.pbf.s_old, self.pbf.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
+
+        if self.coupling_type == 'monolithic_lagrange':
+            self.pbf.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+
+        if self.coupling_type == 'monolithic_direct':
+            # old 3D coupling quantities (volumes or fluxes)
+            self.pbf.c = []
+            for i in range(self.num_coupling_surf):
+                cq = fem.assemble_scalar(fem.form(self.cq_old[i]))
+                cq = self.comm.allgather(cq)
+                self.pbf.c.append(sum(cq)*self.cq_factor[i])
+
+        if self.coupling_type == 'monolithic_lagrange':
+            self.pbf.c, self.constr, self.constr_old = [], [], []
+            for i in range(self.num_coupling_surf):
+                lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
+                self.pbf.c.append(lm_sq[i])
+                con = fem.assemble_scalar(fem.form(self.cq_old[i]))
+                con = self.comm.allgather(con)
+                self.constr.append(sum(con)*self.cq_factor[i])
+                self.constr_old.append(sum(con)*self.cq_factor[i])
+
+        if bool(self.pbf.chamber_models):
+            self.pbf.y = []
+            for ch in ['lv','rv','la','ra']:
+                if self.pbf.chamber_models[ch]['type']=='0D_elast': self.pbf.y.append(self.pbs.ti.timecurves(self.pbf.chamber_models[ch]['activation_curve'])(self.pbs.t_init))
+                if self.pbf.chamber_models[ch]['type']=='0D_elast_prescr': self.pbf.y.append(self.pbs.ti.timecurves(self.pbf.chamber_models[ch]['elastance_curve'])(self.pbs.t_init))
+                if self.pbf.chamber_models[ch]['type']=='0D_prescr': self.pbf.c.append(self.pbs.ti.timecurves(self.pbf.chamber_models[ch]['prescribed_curve'])(self.pbs.t_init))
+
+        # initially evaluate 0D model at old state
+        self.pbf.cardvasc0D.evaluate(self.pbf.s_old, self.pbs.t_init, self.pbf.df_old, self.pbf.f_old, None, None, self.pbf.c, self.pbf.y, self.pbf.aux_old)
+        self.pbf.auxTc_old[:] = self.pbf.aux_old[:]
+
+
+    def write_output_ini(self):
+        pass
+
+
+    def get_time_offset(self):
+        return 0.
+
+
+    def evaluate_pre_solve(self, t):
+        pass
+            
+            
+    def evaluate_post_solve(self, t, N):
+        pass
+
+
+    def set_output_state(self):
+        pass
+
+            
+    def write_output(self, N, t, mesh=False): 
+        pass
+
+            
+    def update(self):
+        pass
+
+
+    def print_to_screen(self):
+        pass
+    
+    
+    def induce_state_change(self):
+        pass
+
+
+    def write_restart(self, N):
+        pass
+        
+        
+    def check_abort(self, t):
+        pass
+
+
+
+class SolidmechanicsFlow0DSolver(solver_base):
 
     def __init__(self, problem, solver_params_solid, solver_params_flow0d):
         
@@ -216,6 +309,11 @@ class SolidmechanicsFlow0DSolver():
         
         self.solver_params_solid = solver_params_solid
         self.solver_params_flow0d = solver_params_flow0d
+        
+        self.initialize_nonlinear_solver()
+
+
+    def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
@@ -225,6 +323,28 @@ class SolidmechanicsFlow0DSolver():
             self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            
             # initialize solid mechanics solver
             self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
+
+
+    def solve_initial_state(self):
+
+        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
+        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
+            # solve solid prestress problem
+            self.solverprestr.solve_initial_prestress()
+            self.solverprestr.solnln.ksp.destroy()
+        else:
+            # set flag definitely to False if we're restarting
+            self.pb.pbs.prestress_initial = False
+        
+        # consider consistent initial acceleration
+        if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
+            # weak form at initial state for consistent initial acceleration solve
+            weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
+            
+            jac_a = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
+
+            # solve for consistent initial acceleration a_old
+            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
 
     def solve_problem(self):
@@ -240,61 +360,10 @@ class SolidmechanicsFlow0DSolver():
         # read restart information
         if self.pb.pbs.restart_step > 0:
             self.pb.readrestart(self.pb.pbs.simname, self.pb.pbs.restart_step)
-            
-        # set pressure functions for old state - s_old already initialized by 0D flow problem
-        if self.pb.coupling_type == 'monolithic_direct':
-            self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
 
-        if self.pb.coupling_type == 'monolithic_lagrange':
-            self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs_old)
+        self.pb.evaluate_initial()
 
-        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
-        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
-            # solve solid prestress problem
-            self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.ksp.destroy()
-        else:
-            # set flag definitely to False if we're restarting
-            self.pb.pbs.prestress_initial = False
-
-        if self.pb.coupling_type == 'monolithic_direct':
-            # old 3D coupling quantities (volumes or fluxes)
-            self.pb.pbf.c = []
-            for i in range(self.pb.num_coupling_surf):
-                cq = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
-                cq = self.pb.comm.allgather(cq)
-                self.pb.pbf.c.append(sum(cq)*self.pb.cq_factor[i])
-
-        if self.pb.coupling_type == 'monolithic_lagrange':
-            self.pb.pbf.c, self.pb.constr, self.pb.constr_old = [], [], []
-            for i in range(self.pb.num_coupling_surf):
-                lm_sq, lm_old_sq = allgather_vec(self.pb.lm, self.pb.comm), allgather_vec(self.pb.lm_old, self.pb.comm)
-                self.pb.pbf.c.append(lm_sq[i])
-                con = fem.assemble_scalar(fem.form(self.pb.cq_old[i]))
-                con = self.pb.comm.allgather(con)
-                self.pb.constr.append(sum(con)*self.pb.cq_factor[i])
-                self.pb.constr_old.append(sum(con)*self.pb.cq_factor[i])
-
-        if bool(self.pb.pbf.chamber_models):
-            self.pb.pbf.y = []
-            for ch in ['lv','rv','la','ra']:
-                if self.pb.pbf.chamber_models[ch]['type']=='0D_elast': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['activation_curve'])(self.pb.pbs.t_init))
-                if self.pb.pbf.chamber_models[ch]['type']=='0D_elast_prescr': self.pb.pbf.y.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['elastance_curve'])(self.pb.pbs.t_init))
-                if self.pb.pbf.chamber_models[ch]['type']=='0D_prescr': self.pb.pbf.c.append(self.pb.pbs.ti.timecurves(self.pb.pbf.chamber_models[ch]['prescribed_curve'])(self.pb.pbs.t_init))
-
-        # initially evaluate 0D model at old state
-        self.pb.pbf.cardvasc0D.evaluate(self.pb.pbf.s_old, self.pb.pbs.t_init, self.pb.pbf.df_old, self.pb.pbf.f_old, None, None, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux_old)
-        self.pb.pbf.auxTc_old[:] = self.pb.pbf.aux_old[:]
-        
-        # consider consistent initial acceleration
-        if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
-            # weak form at initial state for consistent initial acceleration solve
-            weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
-            
-            jac_a = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
-
-            # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
+        self.solve_initial_state()
 
         # write mesh output
         self.pb.pbs.io.write_output(self.pb.pbs, writemesh=True)
