@@ -70,6 +70,13 @@ class FluidmechanicsFlow0DProblem():
         self.incompressible_2field = self.pbs.incompressible_2field
 
         self.set_variational_forms_and_jacobians()
+        
+        self.numdof = self.pbs.numdof + self.pbf.numdof
+        # fluid is 'master' problem - define problem variables based on its values
+        self.simname = self.pbs.simname
+        self.restart_step = self.pbs.restart_step
+        self.numstep_stop = self.pbs.numstep_stop
+        self.dt = self.pbs.dt
 
         
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
@@ -143,50 +150,24 @@ class FluidmechanicsFlow0DProblem():
             self.pbf.cardvasc0D.initialize_lm(self.lm_old, self.pbf.initialconditions)
 
 
-    def induce_perturbation(self):
-        
-        if self.pbf.perturb_after_cylce > 0: # at least run through one healthy cycle
-            
-            if self.pbf.ti.cycle[0] > self.pbf.perturb_after_cylce:
-
-                if self.comm.rank == 0:
-                    print(">>> Induced cardiovascular disease type: %s" % (self.pbf.perturb_type))
-                    sys.stdout.flush()
-        
-                self.pbf.cardvasc0D.induce_perturbation(self.pbf.perturb_type, self.pbf.perturb_factor)
-                        
-                self.pbf.have_induced_pert = True
-
-
-    # write restart for coupled problem
-    def writerestart(self, sname, N):
-        
-        self.pbs.io.write_restart(self.pbs, N)
-        
-        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
-            self.pbf.writerestart(sname, N)
-            if self.coupling_type == 'monolithic_lagrange':
-                self.pbf.cardvasc0D.write_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
-
-
-    # read restart for coupled problem
-    def readrestart(self, sname, N):
-
-        self.pbs.io.readcheckpoint(self.pbs, N)
-        self.pbf.readrestart(self.pbs.simname, N)
-        self.pbs.simname += '_r'+str(N)
-        if self.coupling_type == 'monolithic_lagrange':
-            self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
-            self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm_old)
-
     ### now the base routines for this problem
                 
     def pre_timestep_routines(self):
-        pass
+
+        self.pbs.pre_timestep_routines()
+        self.pbf.pre_timestep_routines()
 
 
-    def read_restart(self):
-        pass
+    def read_restart(self, sname, N):
+
+        # fluid + flow0d problem
+        self.pbs.read_restart(sname, N)
+        self.pbf.read_restart(sname, N)
+
+        if self.pbs.restart_step > 0:
+            if self.coupling_type == 'monolithic_lagrange':
+                self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
+                self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm_old)
 
 
     def evaluate_initial(self):
@@ -227,47 +208,80 @@ class FluidmechanicsFlow0DProblem():
 
 
     def write_output_ini(self):
-        pass
+
+        self.pbs.write_output_ini()
 
 
     def get_time_offset(self):
-        return 0.
+
+        return (self.pbf.ti.cycle[0]-1) * self.pbf.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
     def evaluate_pre_solve(self, t):
-        pass
+
+        self.pbs.evaluate_pre_solve(t)
+        self.pbf.evaluate_pre_solve(t)
             
             
     def evaluate_post_solve(self, t, N):
-        pass
+
+        self.pbs.evaluate_post_solve(t, N)
+        self.pbf.evaluate_post_solve(t, N)
 
 
     def set_output_state(self):
-        pass
+
+        self.pbs.set_output_state()
+        self.pbf.set_output_state()
 
             
     def write_output(self, N, t, mesh=False): 
-        pass
+
+        self.pbs.write_output(N, t)
+        self.pbf.write_output(N, t)
 
             
     def update(self):
-        pass
+
+        # update time step - fluid and 0D model
+        self.pbs.update()
+        self.pbf.update()
+        
+        # update old pressures on fluid
+        if self.coupling_type == 'monolithic_direct':
+            self.pbf.cardvasc0D.set_pressure_fem(self.pbf.s_old, self.pbf.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
+        if self.coupling_type == 'monolithic_lagrange':
+            self.lm_old.axpby(1.0, 0.0, self.lm)
+            self.pbf.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+            # update old 3D fluxes
+            self.constr_old[:] = self.constr[:]
 
 
     def print_to_screen(self):
-        pass
+
+        self.pbs.print_to_screen()
+        self.pbf.print_to_screen()
     
     
     def induce_state_change(self):
-        pass
+        
+        self.pbs.induce_state_change()
+        self.pbf.induce_state_change()
 
 
-    def write_restart(self, N):
-        pass
+    def write_restart(self, sname, N):
+
+        self.pbs.io.write_restart(self.pbs, N)
+        
+        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
+            self.pbf.writerestart(sname, N)
+            if self.coupling_type == 'monolithic_lagrange':
+                self.pbf.cardvasc0D.write_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
         
         
     def check_abort(self, t):
-        pass
+        
+        self.pbf.check_abort(t)
 
 
 
@@ -302,90 +316,73 @@ class FluidmechanicsFlow0DSolver(solver_base):
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
 
-    def solve_problem(self):
+    def solve_nonlinear_problem(self, t):
         
-        start = time.time()
+        self.solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t)
         
-        # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.numdof)
 
-        # read restart information
-        if self.pb.pbs.restart_step > 0:
-            self.pb.readrestart(self.pb.pbs.simname, self.pb.pbs.restart_step
+    def print_timestep_info(self, N, t, wt):
 
-        self.pb.evaluate_initial()
+        # print time step info to screen
+        self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)
 
-        self.solve_initial_state()
 
-        # write mesh output
-        self.pb.pbs.io.write_output(self.pb.pbs, writemesh=True)
+    #def solve_problem(self):
         
-        # fluid 0D flow main time loop
-        for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
+        #start = time.time()
+        
+        ## print header
+        #utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.numdof)
+
+        #self.pb.pre_timestep_routines()
+
+        ## read restart information
+        #self.pb.read_restart(self.pb.pbs.simname, self.pb.pbs.restart_step)
+
+        #self.pb.evaluate_initial()
+
+        #self.solve_initial_state()
+
+        ## write mesh output
+        #self.pb.write_output_ini()
+        
+        ## fluid 0D flow main time loop
+        #for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep_stop+1):
             
-            wts = time.time()
+            #wts = time.time()
             
-            # current time
-            t = N * self.pb.pbs.dt
+            ## current time
+            #t = N * self.pb.pbs.dt
             
-            # offset time for multiple cardiac cycles
-            t_off = (self.pb.pbf.ti.cycle[0]-1) * self.pb.pbf.cardvasc0D.T_cycl * self.pb.noperiodicref # zero if T_cycl variable is not specified
+            ## offset time for multiple cardiac cycles
+            #t_off = self.pb.get_time_offset()
 
-            # set time-dependent functions
-            self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t-t_off)
+            #self.pb.evaluate_pre_solve(t-t_off)
 
-            # activation curves for 0D chambers (if present)
-            self.pb.pbf.evaluate_activation(t-t_off)
+            #self.solve_nonlinear_problem(t-t_off)
 
-            # solve
-            self.solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pbf.s, t-t_off)
+            #self.pb.set_output_state()
 
-            # get midpoint dof values for post-processing (has to be called before update!)
-            self.pb.pbf.cardvasc0D.set_output_state(self.pb.pbf.s, self.pb.pbf.s_old, self.pb.pbf.s_mid, self.pb.pbf.theta0d_timint(t), midpoint=self.output_midpoint), self.pb.pbf.cardvasc0D.set_output_state(self.pb.pbf.aux, self.pb.pbf.aux_old, self.pb.pbf.aux_mid, self.pb.pbf.theta0d_timint(t), midpoint=self.output_midpoint)
+            ## write output of solutions
+            #self.pb.write_output(N, t)
 
-            # write output
-            self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
-            # raw txt file output of 0D model quantities
-            if self.pb.pbf.write_results_every_0D > 0 and N % self.pb.pbf.write_results_every_0D == 0:
-                self.pb.pbf.cardvasc0D.write_output(self.pb.pbf.output_path_0D, t, self.pb.pbf.s_mid, self.pb.pbf.aux_mid, self.pb.pbs.simname)
-
-            # update time step - fluid and 0D model
-            self.pb.pbs.ti.update_timestep(self.pb.pbs.v, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
-            self.pb.pbf.cardvasc0D.update(self.pb.pbf.s, self.pb.pbf.df, self.pb.pbf.f, self.pb.pbf.s_old, self.pb.pbf.df_old, self.pb.pbf.f_old, self.pb.pbf.aux, self.pb.pbf.aux_old)
+            #self.pb.update()
             
-            # update old pressures on fluid
-            if self.pb.coupling_type == 'monolithic_direct':
-                self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.pbf.s_old, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs_old)
-            if self.pb.coupling_type == 'monolithic_lagrange':
-                self.pb.lm_old.axpby(1.0, 0.0, self.pb.lm)
-                self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm_old, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs_old)
-                # update old 3D fluxes
-                self.pb.constr_old[:] = self.pb.constr[:]
+            #self.pb.print_to_screen()
 
-            # solve time for time step
-            wte = time.time()
-            wt = wte - wts
+            ## solve time for time step
+            #wte = time.time()
+            #wt = wte - wts
 
-            # print to screen
-            self.pb.pbf.cardvasc0D.print_to_screen(self.pb.pbf.s_mid,self.pb.pbf.aux_mid)
-            # print time step info to screen
-            self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)
+            ## print to screen
+            #self.print_timestep_info(N, t, wt)
 
-            # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-            is_periodic = self.pb.pbf.cardvasc0D.cycle_check(self.pb.pbf.s, self.pb.pbf.sTc, self.pb.pbf.sTc_old, self.pb.pbf.aux, self.pb.pbf.auxTc, self.pb.pbf.auxTc_old, t-t_off, self.pb.pbf.ti.cycle, self.pb.pbf.ti.cycleerror, self.pb.pbf.eps_periodic, check=self.pb.pbf.periodic_checktype, inioutpath=self.pb.pbf.output_path_0D, nm=self.pb.pbs.simname, induce_pert_after_cycl=self.pb.pbf.perturb_after_cylce)
+            #self.pb.induce_state_change()
 
-            # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
-            if self.pb.pbf.perturb_type is not None and not self.pb.pbf.have_induced_pert: self.pb.induce_perturbation()
+            ## write restart info - old and new quantities are the same at this stage (except cycle values sTc)
+            #self.pb.write_restart(self.pb.pbs.simname, N)
 
-            # write restart info - old and new quantities are the same at this stage (except cycle values sTc)
-            self.pb.writerestart(self.pb.pbs.simname, N)
 
-            if is_periodic and self.pb.noperiodicref==1:
-                if self.pb.comm.rank == 0:
-                    print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]))
-                    sys.stdout.flush()
-                break
-
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            sys.stdout.flush()
+        #if self.pb.comm.rank == 0: # only proc 0 should print this
+            #print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+            #sys.stdout.flush()

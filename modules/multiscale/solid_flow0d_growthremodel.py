@@ -183,7 +183,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 if self.pb.write_checkpoints:
                     # write checkpoint for potential restarts
                     self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
-                    self.pb.pbsmall.pbf.writerestart(self.pb.pbsmall.pbs.simname, N, ms=True)
+                    self.pb.pbsmall.pbf.write_restart(self.pb.pbsmall.pbs.simname, N, ms=True)
                 
             else:
                 

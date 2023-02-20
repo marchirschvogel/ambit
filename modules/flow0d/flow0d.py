@@ -266,12 +266,12 @@ class Flow0DProblem(problem_base):
         pass
 
 
-    def read_restart(self):
+    def read_restart(self, sname, N):
 
         # read restart information
         if self.restart_step > 0:
-            self.readrestart(self.simname, self.restart_step)
-            self.simname += '_r'+str(self.restart_step)
+            self.readrestart(sname, N)
+            self.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -345,11 +345,11 @@ class Flow0DProblem(problem_base):
             self.induce_perturbation()
 
 
-    def write_restart(self, N):
+    def write_restart(self, sname, N):
         
         # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
         if self.write_restart_every > 0 and N % self.write_restart_every == 0:
-            self.writerestart(self.simname, N)
+            self.writerestart(sname, N)
 
 
     def check_abort(self, t):

@@ -51,6 +51,13 @@ class SolidmechanicsConstraintProblem():
 
         self.set_variational_forms_and_jacobians()
 
+        self.numdof = self.pbs.numdof + 1
+        # solid is 'master' problem - define problem variables based on its values
+        self.simname = self.pbs.simname
+        self.restart_step = self.pbs.restart_step
+        self.numstep_stop = self.pbs.numstep_stop
+        self.dt = self.pbs.dt
+
         
     # defines the monolithic coupling forms for constraints and solid mechanics
     def set_variational_forms_and_jacobians(self):
@@ -127,36 +134,21 @@ class SolidmechanicsConstraintProblem():
             p0Da[i].interpolate(self.pr0D.evaluate)
 
 
-    # write restart for constraint problem
-    def writerestart(self, sname, N):
-
-        self.pbs.io.write_restart(self.pbs, N)
-
-        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
-            lm_sq = allgather_vec(self.lm, self.comm)
-            if self.comm.rank == 0:
-                f = open(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt', 'wt')
-                for i in range(len(lm_sq)):
-                    f.write('%.16E\n' % (lm_sq[i]))
-                f.close()
-
-
-    # read restart for constraint problem
-    def readrestart(self, sname, N):
-
-        self.pbs.io.readcheckpoint(self.pbs, N)
-        self.pbs.simname += '_r'+str(N)
-        restart_data = np.loadtxt(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt')
-        self.lm[:], self.lm_old[:] = restart_data[:], restart_data[:]
-
     ### now the base routines for this problem
                 
     def pre_timestep_routines(self):
-        pass
+
+        self.pbs.pre_timestep_routines()
 
 
-    def read_restart(self):
-        pass
+    def read_restart(self, sname, N):
+        
+        # solid problem
+        self.pbs.read_restart(sname, N)
+        # LM data
+        if self.pbs.restart_step > 0:
+            restart_data = np.loadtxt(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt')
+            self.lm[:], self.lm_old[:] = restart_data[:], restart_data[:]
 
 
     def evaluate_initial(self):
@@ -173,7 +165,8 @@ class SolidmechanicsConstraintProblem():
 
 
     def write_output_ini(self):
-        pass
+        
+        self.pbs.write_output_ini()
 
 
     def get_time_offset(self):
@@ -181,35 +174,59 @@ class SolidmechanicsConstraintProblem():
 
 
     def evaluate_pre_solve(self, t):
-        pass
+
+        self.pbs.evaluate_pre_solve(t)
             
             
     def evaluate_post_solve(self, t, N):
-        pass
+        
+        self.pbs.evaluate_post_solve(t, N)
 
 
     def set_output_state(self):
-        pass
+        
+        self.pbs.set_output_state()
 
             
     def write_output(self, N, t, mesh=False): 
-        pass
+
+        self.pbs.write_output(N, t)
 
             
     def update(self):
-        pass
+
+        # update time step
+        self.pbs.update()
+
+        # update old pressures on solid
+        self.lm_old.axpby(1.0, 0.0, self.lm)
+        self.set_pressure_fem(self.lm_old, self.coupfuncs_old)
+        # update old 3D constraint variable
+        for i in range(self.num_coupling_surf):
+            self.constr_old[i] = self.constr[i]
 
 
     def print_to_screen(self):
-        pass
+        
+        self.pbs.print_to_screen()
     
     
     def induce_state_change(self):
-        pass
+
+        self.pbs.induce_state_change()
 
 
-    def write_restart(self, N):
-        pass
+    def write_restart(self, sname, N):
+
+        self.pbs.write_restart(sname, N)
+
+        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
+            lm_sq = allgather_vec(self.lm, self.comm)
+            if self.comm.rank == 0:
+                f = open(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt', 'wt')
+                for i in range(len(lm_sq)):
+                    f.write('%.16E\n' % (lm_sq[i]))
+                f.close()
         
         
     def check_abort(self, t):
@@ -263,65 +280,11 @@ class SolidmechanicsConstraintSolver(solver_base):
             self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
 
 
-    def solve_problem(self):
+    def solve_nonlinear_problem(self, t):
         
-        start = time.time()
+        self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, localdata=self.pb.pbs.localdata)
+
+
+    def print_timestep_info(self, N, t, wt):
         
-        # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.numdof)
-
-        # read restart information
-        if self.pb.pbs.restart_step > 0:
-            self.pb.readrestart(self.pb.pbs.simname, self.pb.pbs.restart_step)
-
-        self.pb.evaluate_initial()
-
-        self.solve_initial_state()
-
-        # write mesh output
-        self.pb.pbs.io.write_output(self.pb.pbs, writemesh=True)
-        
-        # solid constraint main time loop
-        for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep_stop+1):
-
-            wts = time.time()
-            
-            # current time
-            t = N * self.pb.pbs.dt
-            
-            # set time-dependent functions
-            self.pb.pbs.ti.set_time_funcs(self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_vec, t)
-
-            # take care of active stress
-            if self.pb.pbs.have_active_stress and self.pb.pbs.active_stress_trig == 'ode':
-                self.pb.pbs.evaluate_active_stress_ode(t)
-
-            # solve
-            self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, localdata=self.pb.pbs.localdata)
-
-            # write output
-            self.pb.pbs.io.write_output(self.pb.pbs, N=N, t=t)
-
-            # update time step
-            self.pb.pbs.ti.update_timestep(self.pb.pbs.u, self.pb.pbs.u_old, self.pb.pbs.v_old, self.pb.pbs.a_old, self.pb.pbs.p, self.pb.pbs.p_old, self.pb.pbs.internalvars, self.pb.pbs.internalvars_old, self.pb.pbs.ti.funcs_to_update, self.pb.pbs.ti.funcs_to_update_old, self.pb.pbs.ti.funcs_to_update_vec, self.pb.pbs.ti.funcs_to_update_vec_old)
-
-            # update old pressures on solid
-            self.pb.lm_old.axpby(1.0, 0.0, self.pb.lm)
-            self.pb.set_pressure_fem(self.pb.lm_old, self.pb.coupfuncs_old)
-            # update old 3D constraint variable
-            for i in range(self.pb.num_coupling_surf):
-                self.pb.constr_old[i] = self.pb.constr[i]
-
-            # solve time for time step
-            wte = time.time()
-            wt = wte - wts
-
-            # print time step info to screen
-            self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
-
-            # write restart info - old and new quantities are the same at this stage
-            self.pb.writerestart(self.pb.pbs.simname, N)
-            
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            sys.stdout.flush()
+        self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)

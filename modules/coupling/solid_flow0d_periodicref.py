@@ -59,7 +59,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
                 self.solver.solverprestr.solnln.initialize_petsc_solver()
             
             if self.pb.write_checkpoints_periodicref:
-                self.pb.writerestart(self.pb.pbs.simname, N)
+                self.pb.write_restart(self.pb.pbs.simname, N)
             
             # check if below tolerance
             if abs(self.pb.pbf.ti.cycleerror[0]) <= self.pb.pbf.eps_periodic:

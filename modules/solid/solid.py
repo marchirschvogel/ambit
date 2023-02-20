@@ -661,12 +661,12 @@ class SolidmechanicsProblem(problem_base):
             self.rom.POD(self)
 
                 
-    def read_restart(self):
+    def read_restart(self, sname, N):
 
         # read restart information
         if self.restart_step > 0:
-            self.io.readcheckpoint(self, self.restart_step)
-            self.simname += '_r'+str(self.restart_step)
+            self.io.readcheckpoint(self, N)
+            self.simname += '_r'+str(N)
 
     
     def evaluate_initial(self):
@@ -697,7 +697,8 @@ class SolidmechanicsProblem(problem_base):
         if bool(self.volume_laplace): self.solve_volume_laplace(N, t)
         
         # compute the growth rate (has to be called before update_timestep)
-        if self.have_growth: self.compute_solid_growth_rate(N, t)
+        if self.have_growth:
+            self.compute_solid_growth_rate(N, t)
 
 
     def set_output_state(self):
@@ -723,7 +724,7 @@ class SolidmechanicsProblem(problem_base):
         pass
 
 
-    def write_restart(self, N):
+    def write_restart(self, sname, N):
 
         self.io.write_restart(self, N)
         

@@ -81,7 +81,7 @@ class problem_base():
         raise RuntimeError("Problem misses function implementation!")
     
     
-    def write_restart(self, N):
+    def write_restart(self, sname, N):
         raise RuntimeError("Problem misses function implementation!")
     
     
@@ -119,13 +119,13 @@ class solver_base():
         start = time.time()
 
         # print header
-        utilities.print_problem(self.pb.problem_type, self.pb.comm, self.pb.numdof)
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.numdof)
 
         # anything that should be performed before the time loop (e.g. model reduction offline phase)
         self.pb.pre_timestep_routines()
 
         # read restart information if requested
-        self.pb.read_restart()
+        self.pb.read_restart(self.pb.simname, self.pb.restart_step)
 
         # evaluate old initial state of model
         self.pb.evaluate_initial()
@@ -179,7 +179,7 @@ class solver_base():
             self.pb.induce_state_change()
 
             # write restart information if desired
-            self.pb.write_restart(N)
+            self.pb.write_restart(self.pb.simname, N)
 
             # check any abort criterion
             if self.pb.check_abort(t-t_off):

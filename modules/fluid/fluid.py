@@ -222,12 +222,12 @@ class FluidmechanicsProblem(problem_base):
             self.rom.POD(self)
 
                 
-    def read_restart(self):
+    def read_restart(self, sname, N):
 
         # read restart information
         if self.restart_step > 0:
-            self.io.readcheckpoint(self, self.restart_step)
-            self.simname += '_r'+str(self.restart_step)
+            self.io.readcheckpoint(self, N)
+            self.simname += '_r'+str(N)
 
     
     def evaluate_initial(self):
@@ -276,7 +276,7 @@ class FluidmechanicsProblem(problem_base):
         pass
 
 
-    def write_restart(self, N):
+    def write_restart(self, sname, N):
 
         self.io.write_restart(self, N)
         
