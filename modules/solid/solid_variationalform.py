@@ -148,7 +148,7 @@ class variationalform:
 
     # Elastic membrane potential on surface
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
-    def deltaW_ext_membrane(self, F, params, dboundary):
+    def deltaW_ext_membrane(self, F, Fdot, params, dboundary):
         
         C = F.T*F
         
@@ -162,48 +162,59 @@ class variationalform:
         h0 = params['h0']
         
         if model=='membrane_f':
-            # deformation tensor with only normal components (C_nn, C_t1n = C_nt1, C_t2n = C_nt2)
-            Cn = ufl.dot(C, n0n0) + ufl.dot(n0n0, C) - ufl.dot(self.n0,ufl.dot(C,self.n0)) * n0n0
+            # only components in normal direction (F_nn, F_t1n, F_t2n)
+            Fn = F*n0n0
+            Fdotn = Fdot*n0n0
+            # rank-deficient deformation gradient and Cauchy-Green tensor (phased-out normal components)
+            F0 = F - Fn
+            C0 = F0.T*F0
             # plane strain deformation tensor where deformation is "1" in normal direction
-            Cplane = C - Cn + n0n0
+            Cplane = C0 + n0n0
             # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
             IIIplane = ufl.det(Cplane)
             # deformation tensor where normal stretch is dependent on in-plane stretches
-            Cmod = C - Cn + (1./IIIplane) * n0n0
+            Cmod = C0 + (1./IIIplane) * n0n0
+            # rates of deformation: in-plane time derivatives of deformation gradient and Cauchy-Green tensor
+            Fdotmod = Fdot - Fdotn
+            Cplanedot = Fdotmod.T*F0 + F0.T*Fdotmod
+            # Jacobi's formula: d(detA)/dt = detA * tr(A^-1 * dA/dt)
+            IIIplanedot = IIIplane * ufl.tr(ufl.inv(Cplane) * Cplanedot)
+            # time derivative of Cmod
+            Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
             # TODO: Need to recover an Fmod corresponding to Cmod!
             # Can this be done in ufl? See e.g. https://fenicsproject.org/qa/13600/possible-perform-spectral-decomposition-current-operators
             Fmod = F
-        elif model=='membrane_transverse': # WARNING: NOT objective to large rotations!
-            # only components in normal direction (F_nn, F_t1n, F_t2n)
-            Fn = ufl.dot(F, n0n0)
-            # plane deformation gradient: without components F_t1n, F_t2n, but with constant F_nn
-            Fplane = F - Fn + n0n0
-            # third invariant
-            IIIplane = ufl.det(Fplane)**2.0
-            # modified deformation gradient: without components F_t1n, F_t2n, and with F_nn dependent on F_t1n, F_t2n
-            Fmod = F - Fn + (1./ufl.sqrt(IIIplane)) * n0n0
-            # modified right Cauchy-Green tensor
-            Cmod = Fmod.T*Fmod
         else:
             raise NameError("Unkown membrane model type!")
         
-        # first invariant
+        # first and second invariant
         Ic = ufl.tr(Cmod)
-        # declare variable for diff
+        IIc  = 0.5*(ufl.tr(Cmod)**2. - ufl.tr(Cmod*Cmod))
+        # declare variables for diff
         Ic_ = ufl.variable(Ic)
+        IIc_ = ufl.variable(IIc)
+        Cmoddot_ = ufl.variable(Cmoddot)
         
         a_0, b_0 = params['a_0'], params['b_0']
-        
+        try: eta = params['eta']
+        except: eta = 0.
+
         # exponential isotropic strain energy
         Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-3.)) - 1.)
+        # viscous pseudo-potential
+        Psi_v = (eta/8.) * eta * ufl.tr(Cmoddot_*Cmoddot_)
         
         dPsi_dIc = ufl.diff(Psi,Ic_)
+        dPsi_dIIc = ufl.diff(Psi,IIc_)
         
-        # 2nd PK stress
-        S = 2.*dPsi_dIc * I
+        # elastic 2nd PK stress
+        S = 2.*(dPsi_dIc + Ic*dPsi_dIIc) * I - 2.*dPsi_dIIc * Cmod
+        # viscous 2nd PK stress
+        S += 2.*ufl.diff(Psi_v,Cmoddot_)
         
         # pressure contribution of plane stress model: -p C^(-1), with p = 2 (1/(lambda_t1^2 lambda_t2^2) dW/dIc - lambda_t1^2 lambda_t2^2 dW/dIIc) (cf. Holzapfel eq. (6.75) - we don't have an IIc term here)
-        S += -2.*dPsi_dIc/(IIIplane) * ufl.inv(Cmod).T
+        p = 2.*(dPsi_dIc/(IIIplane) - IIIplane*dPsi_dIIc)
+        S += -p * ufl.inv(Cmod).T
         
         # 1st PK stress P = FS
         P = Fmod * S

@@ -280,8 +280,8 @@ class boundary_cond_solid(boundary_cond):
             
                 db_ = ufl.ds(subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                w     += self.vf.deltaW_ext_membrane(self.ki.F(u), m['params'], db_)
-                w_old += self.vf.deltaW_ext_membrane(self.ki.F(u_old), m['params'], db_)
+                w     += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(u), m['params'], db_)
+                w_old += self.vf.deltaW_ext_membrane(self.ki.F(u_old), self.ki.Fdot(u_old), m['params'], db_)
 
         return w, w_old
 

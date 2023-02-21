@@ -202,7 +202,7 @@ class ModelOrderReduction():
         if self.write_pod_modes:
             for i in range(numredbasisvec_true):
                 outfile = io.XDMFFile(self.comm, pb.io.output_path+'/results_'+pb.simname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
-                outfile.write_mesh(pb.io.mesh[0])
+                outfile.write_mesh(pb.io.mesh)
                 podfunc = fem.Function(pb.V_u)
                 podfunc.vector[ss:se] = self.Phi[ss:se,i]
                 outfile.write_function(podfunc)
@@ -336,7 +336,7 @@ class ModelOrderReduction():
         for i in range(len(self.surface_rom)):
             
             # these are local node indices!
-            fnode_indices_local = fem.locate_dofs_topological(pb.V_u, pb.io.mesh[0].topology.dim-1, pb.io.mt_b1[0].indices[pb.io.mt_b1[0].values == self.surface_rom[i]])
+            fnode_indices_local = fem.locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
 
             # get global indices
             fnode_indices = pb.V_u.dofmap.index_map.local_to_global(fnode_indices_local)
