@@ -66,7 +66,7 @@ class variationalform:
         i, j, k, l, m, n = ufl.indices(6)
         Ctang_DuC = ufl.as_tensor(Ctang[i,j,k,l]*ufl.derivative(C, u, self.du)[k,l], (i,j))
 
-        if Cmat_v != ufl.constantvalue.zero((dim,dim)):
+        if not isinstance(Cmat_v, ufl.constantvalue.Zero):
             Ctangv_DudC = ufl.as_tensor(Cmat_v[i,j,k,l]*ufl.derivative(Cdot, u, self.du)[k,l], (i,j))
         else:
             Ctangv_DudC = ufl.constantvalue.zero((dim,dim))
@@ -147,8 +147,8 @@ class variationalform:
             return ufl.as_ufl(0)
 
     # Elastic membrane potential on surface
-    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, params, dboundary):
+    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
+    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary):
         
         C = F.T*F
         
@@ -198,6 +198,8 @@ class variationalform:
         a_0, b_0 = params['a_0'], params['b_0']
         try: eta = params['eta']
         except: eta = 0.
+        try: rho0 = params['rho0']
+        except: rho0 = 0.
 
         # exponential isotropic strain energy
         Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-3.)) - 1.)
@@ -221,9 +223,18 @@ class variationalform:
         
         # only in-plane components of test function derivatives should be used!
         var_F = ufl.grad(self.var_u) - ufl.dot(ufl.grad(self.var_u),n0n0)
-        
-        # boundary virtual work
-        return -h0*ufl.inner(P,var_F)*dboundary
+
+        # boundary inner virtual work
+        dWb_int = h0*ufl.inner(P,var_F)*dboundary
+
+        # boundary kinetic virtual work
+        if not isinstance(a, ufl.constantvalue.Zero):
+            dWb_kin = h0*rho0*ufl.dot(a,self.var_u)*dboundary
+        else:
+            dWb_kin = ufl.as_ufl(0)
+
+        # minus signs, since this sums into external virtual work!
+        return -dWb_int - dWb_kin
 
 
     ### Volume / flux coupling conditions

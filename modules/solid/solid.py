@@ -353,7 +353,7 @@ class SolidmechanicsProblem(problem_base):
         if 'robin' in self.bc_dict.keys():
             w_robin, w_robin_old = self.bc.robin_bcs(self.u, self.vel, self.u_old, self.v_old, self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.u, self.u_old)
+            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.u, self.u_old, self.acc, self.a_old)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots and replace true with reference Neumann loads in our external virtual work
         # plus no rate-dependent or inelastic constitutive models

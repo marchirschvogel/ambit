@@ -59,7 +59,7 @@ class constitutive:
 
         C_ = ufl.variable(self.kin.C(u_))
 
-        if v_!=ufl.constantvalue.zero(self.kin.dim):
+        if not isinstance(v_, ufl.constantvalue.Zero):
             Cdot_ = ufl.variable(self.kin.Cdot(u_,v_))
         else:
             Cdot_ = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
@@ -122,7 +122,7 @@ class constitutive:
 
         if tang:
             Cmat = 2.*ufl.diff(stress,C_)
-            if v_!=ufl.constantvalue.zero(self.kin.dim):
+            if not isinstance(v_, ufl.constantvalue.Zero):
                 Cmat_v = 2.*ufl.diff(stress,Cdot_)
             else:
                 Cmat_v = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
@@ -587,7 +587,8 @@ class kinematics:
 
     # rate of deformation gradient: dF/dt = dv/dx0
     def Fdot(self, v_):
-        if v_!=ufl.constantvalue.zero(self.dim):
+
+        if not isinstance(v_, ufl.constantvalue.Zero):
             return ufl.grad(v_)
         else:
             return ufl.constantvalue.zero((self.dim,self.dim))
