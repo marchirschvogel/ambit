@@ -455,7 +455,7 @@ class IO_fluid(IO):
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
                         self.resultsfiles[res].write_function(cauchystress, t)
                     elif res=='reynolds':
-                        reynolds = project(re, pb.Vd_scalar, pb.dx_, nm="Reynolds")
+                        reynolds = project(pb.Re, pb.Vd_scalar, pb.dx_, nm="Reynolds")
                         self.resultsfiles[res].write_function(reynolds, t)
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")

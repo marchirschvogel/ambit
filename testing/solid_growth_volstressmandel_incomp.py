@@ -78,7 +78,7 @@ def main():
 
     u_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
     
-    ## correct results
+    # correct results
     u_corr[0] = 1.8222579446973952E-01 # x
     u_corr[1] = 1.8222579446973952E-01 # y
     u_corr[2] = 1.8222579446973952E-01 # z

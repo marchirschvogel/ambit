@@ -17,17 +17,19 @@ try: # from command line
 except:
     pass
 
-# TODO: Add fluid and fluid_flow0d testcases!
+# TODO: Add fluid_flow0d testcases!
 if category=='all':
-    solid, flow0d, solid_flow0d, solid_constraint = True, True, True, True
+    solid, fluid, flow0d, solid_flow0d, solid_constraint = True, True, True, True, True
 elif category=='solid':
-    solid, flow0d, solid_flow0d, solid_constraint = True, False, False, False
+    solid, fluid, flow0d, solid_flow0d, solid_constraint = True, False, False, False, False
+elif category=='fluid':
+    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, True, False, False, False
 elif category=='flow0d':
-    solid, flow0d, solid_flow0d, solid_constraint = False, True, False, False
+    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, False, True, False, False
 elif category=='solid_flow0d':
-    solid, flow0d, solid_flow0d, solid_constraint = False, False, True, False
+    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, False, False, True, False
 elif category=='solid_constraint':
-    solid, flow0d, solid_flow0d, solid_constraint = False, False, False, True
+    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, False, False, False, True
 else:
     raise NameError("Unknown test category!")
 
@@ -64,6 +66,10 @@ if solid:
     
     errs['solid_2Dheart_frankstarling 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_2Dheart_frankstarling.py'])
     errs['solid_2Dheart_frankstarling 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_2Dheart_frankstarling.py'])
+
+if fluid:
+    errs['fluid_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_taylorhood_cylinder.py'])
+    errs['fluid_taylorhood_cylinder 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'fluid_taylorhood_cylinder.py'])
 
 if flow0d:
     errs['flow0d_0Dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])

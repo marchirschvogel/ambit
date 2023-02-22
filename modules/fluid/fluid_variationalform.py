@@ -58,7 +58,7 @@ class variationalform:
     
     def f_viscous(self, sig):
         
-        return ufl.div(dev(sig))
+        return ufl.div(ufl.dev(sig))
 
     ### External virtual power
     

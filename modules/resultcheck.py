@@ -13,7 +13,7 @@ from petsc4py import PETSc
 
 
 # check the result of a node (specified by coordinates) in the full parallel (ghosted) dof vector
-def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec'):
+def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec', readtol=1.0e-8):
 
     success = True
 
@@ -30,12 +30,14 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec'):
     #im = V.dofmap.index_map.global_indices() # function seems to have gone!
     im = np.asarray(V.dofmap.index_map.local_to_global(np.arange(V.dofmap.index_map.size_local + V.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
 
+    readtolerance = int(-np.log10(readtol))
+
     # in parallel, dof indices can be ordered differently, so we need to check the position of the node in the
     # re-ordered local co array and then grep out the corresponding dof index from the index map
     dof_indices, dof_indices_gathered = {}, []
     for i in range(len(check_node)):
         
-        ind = np.where((np.round(check_node[i],8) == np.round(co,8)).all(axis=1))[0]
+        ind = np.where((np.round(check_node[i],readtolerance) == np.round(co,readtolerance)).all(axis=1))[0]
         
         if len(ind): dof_indices[i] = im[ind[0]]
     
@@ -65,7 +67,7 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec'):
     for i in range(len(check_node)):
         for j in range(bs):
             if comm.rank == 0:
-                print(""+nm+"[%i]    = %.16E,    CORR = %.16E,    err = %.16E" % (bs*i+j, u_sq[bs*dof_indices_unique[i]+j], u_corr[bs*i+j], errs[bs*i+j]))
+                print(nm+"[%i]    = %.16E,    CORR = %.16E,    err = %.16E" % (bs*i+j, u_sq[bs*dof_indices_unique[i]+j], u_corr[bs*i+j], errs[bs*i+j]))
                 sys.stdout.flush()
 
     if comm.rank == 0:

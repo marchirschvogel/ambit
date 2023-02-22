@@ -198,7 +198,9 @@ class FluidmechanicsProblem(problem_base):
         self.weakform_p = self.timefac   * self.deltaP_p   + (1.-self.timefac)   * self.deltaP_p_old
         
         # Reynolds number: ratio of inertial to viscous forces
-        #self.Re = sqrt(dot(self.vf.f_inert(self.acc,self.v,self.rho), self.vf.f_inert(self.acc,self.v,self.rho))) / sqrt(dot(self.vf.f_viscous(self.ma[0].sigma(self.v, self.p)), self.vf.f_viscous(self.ma[0].sigma(self.v, self.p))))
+        self.Re = ufl.as_ufl(0)
+        for n in range(self.num_domains):
+            self.Re += ufl.sqrt(ufl.dot(self.vf.f_inert(self.acc,self.v,self.rho[n]), self.vf.f_inert(self.acc,self.v,self.rho[n]))) / ufl.sqrt(ufl.dot(self.vf.f_viscous(self.ma[n].sigma(self.v, self.p)), self.vf.f_viscous(self.ma[n].sigma(self.v, self.p))))
         
         ### Jacobians
         

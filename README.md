@@ -16,7 +16,6 @@
 
 Still experimental / to-do:
 
-- Fluid mechanics is not tested!
 - Inf-sup stable equal order fluid mechanics formulation for Navier Stokes (SUPG/PSPG stabilization)
 - ALE fluid / FSI / FrSI
 - Linear solvers and preconditioners (working, but best choices for specific problems still need investigation)
