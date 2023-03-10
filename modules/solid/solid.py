@@ -55,6 +55,10 @@ class SolidmechanicsProblem(problem_base):
         self.quad_degree = fem_params['quad_degree']
         self.incompressible_2field = fem_params['incompressible_2field']
         
+        # whether to enforce continuity of mass at midpoint or not - only relevant for incompressible_2field option
+        try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
+        except: self.pressure_at_midpoint = False
+        
         self.fem_params = fem_params
 
         # collect domain data
@@ -403,8 +407,10 @@ class SolidmechanicsProblem(problem_base):
                               self.timefac   * self.deltaW_ext  - (1.-self.timefac)   * self.deltaW_ext_old
             
             if self.incompressible_2field:
-                self.weakform_p = self.timefac * self.deltaW_p + (1.-self.timefac) * self.deltaW_p_old 
-
+                if self.pressure_at_midpoint:
+                    self.weakform_p = self.timefac * self.deltaW_p + (1.-self.timefac) * self.deltaW_p_old
+                else:
+                    self.weakform_p = self.deltaW_p
 
         ### local weak forms at Gauss points for inelastic materials
         self.localdata = {}
@@ -508,7 +514,10 @@ class SolidmechanicsProblem(problem_base):
                     Jtang = Jmat
                 
                 self.jac_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx_[n])
-                self.jac_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
+                if self.pressure_at_midpoint:
+                    self.jac_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
+                else:
+                    self.jac_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
                 
                 # for saddle-point block-diagonal preconditioner
                 self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]

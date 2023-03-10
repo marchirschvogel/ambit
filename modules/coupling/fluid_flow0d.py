@@ -181,12 +181,14 @@ class FluidmechanicsFlow0DProblem():
 
         if self.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
+            self.pbf.c = []
             for i in range(self.num_coupling_surf):
                 cq = fem.assemble_scalar(fem.form(self.cq_old[i]))
                 cq = self.comm.allgather(cq)
                 self.pbf.c.append(sum(cq)*self.cq_factor[i])
         
         if self.coupling_type == 'monolithic_lagrange':
+            self.pbf.c, self.constr, self.constr_old = [], [], []
             for i in range(self.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
                 self.pbf.c.append(lm_sq[i])
@@ -325,64 +327,3 @@ class FluidmechanicsFlow0DSolver(solver_base):
 
         # print time step info to screen
         self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)
-
-
-    #def solve_problem(self):
-        
-        #start = time.time()
-        
-        ## print header
-        #utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.pbs.numdof)
-
-        #self.pb.pre_timestep_routines()
-
-        ## read restart information
-        #self.pb.read_restart(self.pb.pbs.simname, self.pb.pbs.restart_step)
-
-        #self.pb.evaluate_initial()
-
-        #self.solve_initial_state()
-
-        ## write mesh output
-        #self.pb.write_output_ini()
-        
-        ## fluid 0D flow main time loop
-        #for N in range(self.pb.pbs.restart_step+1, self.pb.pbs.numstep_stop+1):
-            
-            #wts = time.time()
-            
-            ## current time
-            #t = N * self.pb.pbs.dt
-            
-            ## offset time for multiple cardiac cycles
-            #t_off = self.pb.get_time_offset()
-
-            #self.pb.evaluate_pre_solve(t-t_off)
-
-            #self.solve_nonlinear_problem(t-t_off)
-
-            #self.pb.set_output_state()
-
-            ## write output of solutions
-            #self.pb.write_output(N, t)
-
-            #self.pb.update()
-            
-            #self.pb.print_to_screen()
-
-            ## solve time for time step
-            #wte = time.time()
-            #wt = wte - wts
-
-            ## print to screen
-            #self.print_timestep_info(N, t, wt)
-
-            #self.pb.induce_state_change()
-
-            ## write restart info - old and new quantities are the same at this stage (except cycle values sTc)
-            #self.pb.write_restart(self.pb.pbs.simname, N)
-
-
-        #if self.pb.comm.rank == 0: # only proc 0 should print this
-            #print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            #sys.stdout.flush()

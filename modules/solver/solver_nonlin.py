@@ -769,6 +769,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 # 0D rhs vector and stiffness
                 r_s, self.K_ss = self.pb.pbf.assemble_residual_stiffness(t)
 
+            if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
                 # assemble 0D rhs contributions
                 self.pb.pbf.df_old.assemble()
                 self.pb.pbf.f_old.assemble()
@@ -787,14 +788,26 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 s_pert = self.pb.pbf.K.createVecLeft()
                 s_pert.axpby(1.0, 0.0, s)
 
+                # store df, f, and aux vectors prior to perturbation solves
+                df_tmp, f_tmp, aux_tmp = self.pb.pbf.K.createVecLeft(), self.pb.pbf.K.createVecLeft(), np.zeros(self.pb.pbf.numdof)
+                df_tmp.axpby(1.0, 0.0, self.pb.pbf.df)
+                f_tmp.axpby(1.0, 0.0, self.pb.pbf.f)
+                aux_tmp[:] = self.pb.pbf.aux[:]
+
                 # finite differencing for LM siffness matrix
                 for i in range(self.pb.num_coupling_surf):
                     for j in range(self.pb.num_coupling_surf):
+
                         self.pb.pbf.c[j] = lm_sq[j] + self.pb.eps_fd # perturbed LM
                         self.snln0D.newton(s_pert, t, print_iter=False)
                         s_pert_sq = allgather_vec(s_pert, self.pb.comm)
                         self.K_ss[i,j] = -(s_pert_sq[self.pb.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pb.pbf.cardvasc0D.v_ids[i]])/self.pb.eps_fd
                         self.pb.pbf.c[j] = lm_sq[j] # restore LM
+
+                # restore df, f, and aux vectors for correct time step update
+                self.pb.pbf.df.axpby(1.0, 0.0, df_tmp)
+                self.pb.pbf.f.axpby(1.0, 0.0, f_tmp)
+                self.pb.pbf.aux[:] = aux_tmp[:]
 
             if self.ptype == 'solid_constraint':
                 for i in range(len(self.pb.surface_p_ids)):

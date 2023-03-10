@@ -81,8 +81,8 @@ def main():
     s_corr = np.zeros(problem.mp.pbf.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 9.0742660503706130E-01
-    
+    s_corr[0] = 9.0742817444402890E-01
+
     check1 = resultcheck.results_check_vec(problem.mp.pbf.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
     

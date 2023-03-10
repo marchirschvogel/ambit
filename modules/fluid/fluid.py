@@ -59,6 +59,11 @@ class FluidmechanicsProblem(problem_base):
             self.rho.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
         
         self.incompressible_2field = True # always true!
+        
+        # whether to enforce continuity of mass at midpoint or not
+        try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
+        except: self.pressure_at_midpoint = False
+        
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in fluid is somehow senseless...
         self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
@@ -195,7 +200,10 @@ class FluidmechanicsProblem(problem_base):
                           self.timefac   * self.deltaP_int + (1.-self.timefac)   * self.deltaP_int_old - \
                           self.timefac   * self.deltaP_ext - (1.-self.timefac)   * self.deltaP_ext_old
         
-        self.weakform_p = self.timefac   * self.deltaP_p   + (1.-self.timefac)   * self.deltaP_p_old
+        if self.pressure_at_midpoint:
+            self.weakform_p = self.timefac   * self.deltaP_p   + (1.-self.timefac)   * self.deltaP_p_old
+        else:
+            self.weakform_p = self.deltaP_p
         
         # Reynolds number: ratio of inertial to viscous forces
         self.Re = ufl.as_ufl(0)

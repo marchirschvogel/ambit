@@ -85,6 +85,19 @@ class Ambit():
             self.mp = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, io, comm=self.comm)
             self.ms = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params[0], solver_params[1])
 
+        elif problem_type == 'fsi':
+            
+            import fsi
+            
+            ios = ioroutines.IO_solid(io_params['io_solid'], self.comm)
+            ios.readin_mesh()
+
+            iof = ioroutines.IO_fluid(io_params['io_fluid'], self.comm)
+            iof.readin_mesh()
+            
+            self.mp = fsi.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, ios, iof, mor_params=mor_params, comm=self.comm)
+            self.ms = fsi.FSISolver(self.mp, solver_params[0], solver_params[1])
+
         elif problem_type == 'solid_constraint':
             
             import solid_constraint
