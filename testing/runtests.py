@@ -17,19 +17,20 @@ try: # from command line
 except:
     pass
 
-# TODO: Add fluid_flow0d testcases!
 if category=='all':
-    solid, fluid, flow0d, solid_flow0d, solid_constraint = True, True, True, True, True
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = True, True, True, True, True, True
 elif category=='solid':
-    solid, fluid, flow0d, solid_flow0d, solid_constraint = True, False, False, False, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = True, False, False, False, False, False
 elif category=='fluid':
-    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, True, False, False, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, True, False, False, False, False
 elif category=='flow0d':
-    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, False, True, False, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, True, False, False, False
 elif category=='solid_flow0d':
-    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, False, False, True, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, False, True, False, False
+elif category=='fluid_flow0d':
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, False, False, True, False
 elif category=='solid_constraint':
-    solid, fluid, flow0d, solid_flow0d, solid_constraint = False, False, False, False, True
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, False, False, False, True
 else:
     raise NameError("Unknown test category!")
 
@@ -71,6 +72,10 @@ if fluid:
     errs['fluid_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_taylorhood_cylinder.py'])
     errs['fluid_taylorhood_cylinder 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'fluid_taylorhood_cylinder.py'])
 
+if fluid_flow0d:
+    errs['fluid_flow0d_monolagr_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_flow0d_monolagr_taylorhood_cylinder.py'])
+    errs['fluid_flow0d_monolagr_taylorhood_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'fluid_flow0d_monolagr_taylorhood_cylinder.py'])
+
 if flow0d:
     errs['flow0d_0Dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
     errs['flow0d_0Dvol_4elwindkesselLsZ 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
@@ -89,22 +94,22 @@ if flow0d:
     errs['flow0d_0Dheart_syspulcaprespir_periodic 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py'])
 
 if solid_flow0d:
-    errs['solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber.py'])
-    errs['solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithicdirect_4elwindkesselLsZ_chamber.py'])
+    errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
+    errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
     
-    errs['solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber.py'])
-    errs['solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithicdirect2field_4elwindkesselLpZ_chamber.py'])
+    errs['solid_flow0d_monodir2field_4elwindkesselLpZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir2field_4elwindkesselLpZ_chamber.py'])
+    errs['solid_flow0d_monodir2field_4elwindkesselLpZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir2field_4elwindkesselLpZ_chamber.py'])
 
-    errs['solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber.py'])
-    errs['solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolithiclagrange2field_2elwindkessel_chamber.py'])
+    errs['solid_flow0d_monolagr2field_2elwindkessel_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolagr2field_2elwindkessel_chamber.py'])
+    errs['solid_flow0d_monolagr2field_2elwindkessel_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolagr2field_2elwindkessel_chamber.py'])
 
-    errs['solid_flow0d_monolithicdirect_syspul_2Dheart_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py'])
-    errs['solid_flow0d_monolithicdirect_syspul_2Dheart_prestress 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py'])
-    errs['solid_flow0d_monolithicdirect_syspul_2Dheart_prestress 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monolithicdirect_syspul_2Dheart_prestress.py', str(3)]) # tests restart from step 3
+    errs['solid_flow0d_monodir_syspul_2Dheart_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py'])
+    errs['solid_flow0d_monodir_syspul_2Dheart_prestress 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py'])
+    errs['solid_flow0d_monodir_syspul_2Dheart_prestress 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py', str(3)]) # tests restart from step 3
     
-    errs['solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monolithicdirect2field_flux_syspulcap_3Dheart_iterative.py'])
+    errs['solid_flow0d_monodir2field_flux_syspulcap_3Dheart_iterative 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monodir2field_flux_syspulcap_3Dheart_iterative.py'])
 
-    errs['solid_flow0d_monolithicdirect_syspulcor_2Dheart_ROM 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolithicdirect_syspulcor_2Dheart_ROM.py'])
+    errs['solid_flow0d_monodir_syspulcor_2Dheart_ROM 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_syspulcor_2Dheart_ROM.py'])
 
 if solid_constraint:
     errs['solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_constraint_volume_chamber.py'])
