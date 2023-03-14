@@ -119,7 +119,7 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
     def initialize(self, x, iniparam):
         
-        x[0] = iniparam[''+self.vname+'_0']
+        x[0] = iniparam[self.vname+'_0']
         x[1] = iniparam['q_0']
         x[2] = iniparam['s_0']
 

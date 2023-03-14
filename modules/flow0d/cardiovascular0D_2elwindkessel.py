@@ -99,7 +99,7 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
     def initialize(self, var, iniparam):
 
-        var[0] = iniparam[''+self.vname+'_0']
+        var[0] = iniparam[self.vname+'_0']
 
 
     def initialize_lm(self, var, iniparam):
