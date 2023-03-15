@@ -10,6 +10,7 @@ import time, sys
 import numpy as np
 from dolfinx import fem
 import ufl
+from petsc4py import PETSc
 
 import ioroutines
 import fluid_kinematics_constitutive
@@ -20,8 +21,6 @@ import solver_nonlin
 import boundaryconditions
 
 from base import problem_base, solver_base
-
-# NOTE: Fluid code is still experimental and NOT tested!!!
 
 # fluid mechanics, governed by incompressible Navier-Stokes equations:
 
@@ -96,7 +95,7 @@ class FluidmechanicsProblem(problem_base):
 
         if self.have_rom:
             import mor
-            self.rom = mor.ModelOrderReduction(mor_params, comm)
+            self.rom = mor.ModelOrderReduction(mor_params, self.comm)
 
         # create finite element objects for v and p
         P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
@@ -114,16 +113,18 @@ class FluidmechanicsProblem(problem_base):
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
 
         # functions
-        self.dv    = ufl.TrialFunction(self.V_v)            # Incremental velocity
-        self.var_v = ufl.TestFunction(self.V_v)             # Test function
-        self.dp    = ufl.TrialFunction(self.V_p)            # Incremental pressure
-        self.var_p = ufl.TestFunction(self.V_p)             # Test function
-        self.v     = fem.Function(self.V_v, name="Velocity")
-        self.p     = fem.Function(self.V_p, name="Pressure")
+        self.dv     = ufl.TrialFunction(self.V_v)            # Incremental velocity
+        self.var_v  = ufl.TestFunction(self.V_v)             # Test function
+        self.dp     = ufl.TrialFunction(self.V_p)            # Incremental pressure
+        self.var_p  = ufl.TestFunction(self.V_p)             # Test function
+        self.v      = fem.Function(self.V_v, name="Velocity")
+        self.p      = fem.Function(self.V_p, name="Pressure")
         # values of previous time step
-        self.v_old = fem.Function(self.V_v)
-        self.a_old = fem.Function(self.V_v)
-        self.p_old = fem.Function(self.V_p)
+        self.v_old  = fem.Function(self.V_v)
+        self.a_old  = fem.Function(self.V_v)
+        self.p_old  = fem.Function(self.V_p)
+        # a fluid displacement
+        self.uf_old = fem.Function(self.V_v)
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
@@ -142,7 +143,7 @@ class FluidmechanicsProblem(problem_base):
         self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_fluid(bc_dict, fem_params, self.io, self.ki, self.vf, self.ti)
+        self.bc = boundaryconditions.boundary_cond_fluid(bc_dict, fem_params, self.io, self.vf, self.ti, ki=self.ki)
         
         self.bc_dict = bc_dict
 
@@ -158,6 +159,9 @@ class FluidmechanicsProblem(problem_base):
 
         # set form for acceleration
         self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
+
+        # set form for fluid displacement (needed for FrSI)
+        self.uf = self.ti.set_uf(self.v, self.v_old, self.uf_old)
 
         # kinetic, internal, and pressure virtual power
         self.deltaP_kin, self.deltaP_kin_old = ufl.as_ufl(0), ufl.as_ufl(0)
@@ -181,15 +185,18 @@ class FluidmechanicsProblem(problem_base):
             
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_robin, w_robin_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann, w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar)
         if 'robin' in self.bc_dict.keys():
             w_robin, w_robin_old = self.bc.robin_bcs(self.v, self.v_old)
+        # reduced-solid for FrSI problem
+        if 'membrane' in self.bc_dict.keys():
+            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.uf, self.v, self.acc, self.uf_old, self.v_old, self.a_old)
 
         # TODO: Body forces!
-        self.deltaP_ext     = w_neumann + w_robin
-        self.deltaP_ext_old = w_neumann_old + w_robin_old
+        self.deltaP_ext     = w_neumann + w_robin + w_membrane
+        self.deltaP_ext_old = w_neumann_old + w_robin_old + w_membrane_old
         
         self.timefac_m, self.timefac = self.ti.timefactors()
 
@@ -221,6 +228,41 @@ class FluidmechanicsProblem(problem_base):
         
         for n in range(self.num_domains):
             self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
+            
+
+    def set_forms_solver(self):
+        pass
+
+
+    def assemble_residual_stiffness_main(self, u):
+
+        # assemble rhs vector
+        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u))
+        fem.apply_lifting(r_u, [fem.form(self.jac_uu)], [self.bc.dbcs], x0=[u.vector], scale=-1.0)
+        r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(r_u, self.bc.dbcs, x0=u.vector, scale=-1.0)
+
+        # assemble system matrix
+        K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu), self.bc.dbcs)
+        K_uu.assemble()
+        
+        return r_u, K_uu
+
+
+    def assemble_residual_stiffness_incompressible(self):
+        
+        # assemble rhs vector
+        r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p))
+        r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+
+        # assemble system matrices
+        K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up), self.bc.dbcs)
+        K_up.assemble()
+        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu), self.bc.dbcs)
+        K_pu.assemble()
+        K_pp = None
+            
+        return r_p, K_pp, K_up, K_pu
 
 
     ### now the base routines for this problem
@@ -275,7 +317,7 @@ class FluidmechanicsProblem(problem_base):
     def update(self):
         
         # update - velocity, acceleration, pressure, all internal variables, all time functions
-        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old)
+        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old, uf=self.uf, uf_old=self.uf_old)
 
 
     def print_to_screen(self):
@@ -301,7 +343,7 @@ class FluidmechanicsSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, solver_params=self.solver_params)
 
 
     def solve_initial_state(self):

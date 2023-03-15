@@ -99,6 +99,9 @@ class sol_utils():
                     if self.pb.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
+                elif self.ptype=='fluid_ale':
+                    print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','ts','te'))
+                    sys.stdout.flush()
                 else:
                     raise NameError("Unknown problem type!")
             return
@@ -131,6 +134,9 @@ class sol_utils():
                 sys.stdout.flush()
             elif self.ptype=='fluid_flow0d':
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',resnorms['res_p'],' ',incnorms['inc_p'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
+                sys.stdout.flush()
+            elif self.ptype=='fluid_ale': 
+                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_u'],' ',incnorms['inc_u'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             else:
                 raise NameError("Unknown problem type!")
@@ -193,6 +199,10 @@ class sol_utils():
                 
         elif ptype=='fluid_flow0d':
             if resnorms['res_u'] <= tolerances['res_u'] and incnorms['inc_u'] <= tolerances['inc_u'] and resnorms['res_p'] <= tolerances['res_p'] and incnorms['inc_p'] <= tolerances['inc_p'] and resnorms['res_0d'] <= tolerances['res_0d'] and incnorms['inc_0d'] <= tolerances['inc_0d']:
+                converged = True
+            
+        elif ptype=='fluid_ale':
+            if resnorms['res_u'] <= tolerances['res_u'] and incnorms['inc_u'] <= tolerances['inc_u']:
                 converged = True
             
         else:

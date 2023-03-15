@@ -28,8 +28,6 @@ class FSIProblem():
 
     def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, constitutive_models_solid, constitutive_models_fluid, bc_dict_solid, bc_dict_fluid, time_curves, coupling_params, ios, iof, mor_params={}, comm=None):
         
-        raise RuntimeError("FSI not yet fully implemented!")
-        
         self.problem_physics = 'fsi'
         
         self.comm = comm

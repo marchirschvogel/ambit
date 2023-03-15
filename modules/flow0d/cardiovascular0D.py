@@ -124,7 +124,7 @@ class cardiovascular0Dbase(ode):
     def set_compartment_interfaces(self):
 
         # first get the number of 3D in- and out-flows in case of 3D-0D fluid coupling
-        num_3dinfl, num_3doutfl = [[] for _ in range(5)], [[] for _ in range(5)]
+        num_3dinfl, num_3doutfl = [0]*5, [0]*5
         for i, ch in enumerate(['lv','rv','la','ra', 'ao']):
             try: num_3dinfl[i] = self.chmodels[ch]['num_inflows']
             except: num_3dinfl[i] = 0

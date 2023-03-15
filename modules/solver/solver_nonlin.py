@@ -29,7 +29,7 @@ import preconditioner
 # standard nonlinear solver for FEM problems
 class solver_nonlinear:
     
-    def __init__(self, pb, V_u, V_p, solver_params):
+    def __init__(self, pb, V_u, V_p=None, solver_params={}):
 
         self.pb = pb
         self.V_u = V_u
@@ -94,30 +94,12 @@ class solver_nonlinear:
         self.solvetype = solver_params['solve_type']
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']
-        
-
-    def set_forms_solver(self, prestress):
-
-        if not prestress:
-            self.weakform_u = self.pb.weakform_u
-            self.jac_uu     = self.pb.jac_uu
-            if self.pb.incompressible_2field:
-                self.weakform_p = self.pb.weakform_p
-                self.jac_up     = self.pb.jac_up
-                self.jac_pu     = self.pb.jac_pu
-        else:
-            self.weakform_u = self.pb.weakform_prestress_u
-            self.jac_uu     = self.pb.jac_prestress_uu
-            if self.pb.incompressible_2field:
-                self.weakform_p = self.pb.weakform_prestress_p
-                self.jac_up     = self.pb.jac_prestress_up
-                self.jac_pu     = self.pb.jac_prestress_pu
 
 
     def initialize_petsc_solver(self):
         
         # set forms to use (differ in case of initial prestress)
-        self.set_forms_solver(self.pb.prestress_initial)
+        self.pb.set_forms_solver()
 
         # create solver
         self.ksp = PETSc.KSP().create(self.pb.comm)
@@ -223,9 +205,15 @@ class solver_nonlinear:
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
         ksp.destroy()
+    
 
+    def solve_local(self, localdata):
+        
+        for l in range(len(localdata['var'])):
+            self.newton_local(localdata['var'][l],localdata['res'][l],localdata['inc'][l],localdata['fnc'][l])
+        
 
-    def newton(self, u, p, localdata={}):
+    def newton(self, u, p=None, localdata={}):
 
         # displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -253,39 +241,18 @@ class solver_nonlinear:
         while it < self.maxiter and counter_adapt < max_adapt:
 
             tes = time.time()
-
-            if self.pb.localsolve:
-                for l in range(len(localdata['var'])): self.newton_local(localdata['var'][l],localdata['res'][l],localdata['inc'][l],localdata['fnc'][l])
-
-            # assemble rhs vector
-            r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u))
-            fem.apply_lifting(r_u, [fem.form(self.jac_uu)], [self.pb.bc.dbcs], x0=[u.vector], scale=-1.0)
-            r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(r_u, self.pb.bc.dbcs, x0=u.vector, scale=-1.0)
-
-            # assemble system matrix
-            K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu), self.pb.bc.dbcs)
-            K_uu.assemble()
             
+            if self.pb.localsolve:
+                self.solve_local(localdata)
+
+            r_u, K_uu = self.pb.assemble_residual_stiffness_main(u)
+      
+            if self.pb.incompressible_2field:
+                r_p, K_pp, K_up, K_pu = self.pb.assemble_residual_stiffness_incompressible()
+
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_uu.shift(k_PTC)
-
-            if self.pb.incompressible_2field:
-                
-                r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p))
-                r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up), self.pb.bc.dbcs)
-                K_up.assemble()
-                K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu), self.pb.bc.dbcs)
-                K_pu.assemble()
-                
-                # for stress-mediated volumetric growth, K_pp is not zero!
-                if not isinstance(self.pb.p11, ufl.constantvalue.Zero):
-                    K_pp = fem.petsc.assemble_matrix(fem.form(self.pb.p11), [])
-                    K_pp.assemble()
-                else:
-                    K_pp = None
 
             # model order reduction stuff
             if self.pb.have_rom and not self.pb.prestress_initial:
@@ -518,7 +485,7 @@ class solver_nonlinear:
 # nonlinear solver for Lagrange multiplier constraints and 3D-0D coupled monolithic formulations
 class solver_nonlinear_constraint_monolithic(solver_nonlinear):
     
-    def __init__(self, pb, V_u, V_p, solver_params_3D, solver_params_constr):
+    def __init__(self, pb, V_u, V_p=None, solver_params_3D={}, solver_params_constr={}):
         
         # coupled problem
         self.pb = pb
@@ -561,6 +528,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         
         
     def initialize_petsc_solver(self):
+
+        # set forms to use (differ in case of initial prestress)
+        self.pb.pbs.set_forms_solver()
 
         # create solver
         self.ksp = PETSc.KSP().create(self.pb.comm)
@@ -714,9 +684,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 lm_sq = allgather_vec(self.pb.lm, self.pb.comm)
                 self.pb.pbf.c[:] = lm_sq[:]
                 self.snln0D.newton(s, t, print_iter=self.pb.print_subiter, sub=True)
-                
+
             if self.pb.pbs.localsolve:
-                for l in range(len(localdata['var'])): self.newton_local(localdata['var'][l],localdata['res'][l],localdata['inc'][l],localdata['fnc'][l])
+                self.solve_local(localdata)
 
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pb.coupling_type == 'monolithic_direct':
@@ -725,35 +695,15 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs)
             if self.pb.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
                 self.pb.set_pressure_fem(self.pb.lm, self.pb.coupfuncs)
-
-            r_u = fem.petsc.assemble_vector(fem.form(self.pb.pbs.weakform_u))
-            fem.apply_lifting(r_u, [fem.form(self.pb.pbs.jac_uu)], [self.pb.pbs.bc.dbcs], x0=[u.vector], scale=-1.0)
-            r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(r_u, self.pb.pbs.bc.dbcs, x0=u.vector, scale=-1.0)
             
-            # 3D solid/fluid system matrix
-            K_uu = fem.petsc.assemble_matrix(fem.form(self.pb.pbs.jac_uu), self.pb.pbs.bc.dbcs)
-            K_uu.assemble()
+            r_u, K_uu = self.pb.pbs.assemble_residual_stiffness_main(u)
 
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_uu.shift(k_PTC)
 
             if self.pb.pbs.incompressible_2field:
-
-                r_p = fem.petsc.assemble_vector(fem.form(self.pb.pbs.weakform_p))
-                r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                K_up = fem.petsc.assemble_matrix(fem.form(self.pb.pbs.jac_up), self.pb.pbs.bc.dbcs)
-                K_up.assemble()
-                K_pu = fem.petsc.assemble_matrix(fem.form(self.pb.pbs.jac_pu), self.pb.pbs.bc.dbcs)
-                K_pu.assemble()
-                
-                # for stress-mediated volumetric growth, K_pp is not zero!
-                if not isinstance(self.pb.pbs.p11, ufl.constantvalue.Zero):
-                    K_pp = fem.petsc.assemble_matrix(fem.form(self.pb.pbs.p11), [])
-                    K_pp.assemble()
-                else:
-                    K_pp = None
+                r_p, K_pp, K_up, K_pu = self.pb.pbs.assemble_residual_stiffness_incompressible()
 
             if self.pb.coupling_type == 'monolithic_direct':
 
@@ -1120,7 +1070,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 # solver for pure ODE (0D) problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)
 class solver_nonlinear_ode(solver_nonlinear):
 
-    def __init__(self, pb, solver_params):
+    def __init__(self, pb, solver_params={}):
 
         self.pb = pb
         

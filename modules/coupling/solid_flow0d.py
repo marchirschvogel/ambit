@@ -413,6 +413,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
+            self.pb.pbs.set_forms_solver()
         
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:

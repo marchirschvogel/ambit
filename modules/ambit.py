@@ -37,6 +37,18 @@ class Ambit():
             
             self.mp = fluid.FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
             self.ms = fluid.FluidmechanicsSolver(self.mp, solver_params)
+
+        elif problem_type == 'fluid_ale':
+            
+            raise RuntimeError("Fluid-ALE coupling not yet implemented!")
+            
+            import ale
+            
+            io = ioroutines.IO_ale(io_params, self.comm)
+            io.readin_mesh()
+            
+            self.mp = ale.AleProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+            self.ms = ale.AleSolver(self.mp, solver_params)
         
         elif problem_type == 'flow0d':
             
@@ -86,6 +98,8 @@ class Ambit():
             self.ms = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params[0], solver_params[1])
 
         elif problem_type == 'fsi':
+            
+            raise RuntimeError("Monolithic FSI not yet fully implemented!")
             
             import fsi
             

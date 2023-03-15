@@ -105,7 +105,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.have_rom:
             import mor
-            self.rom = mor.ModelOrderReduction(mor_params, comm)
+            self.rom = mor.ModelOrderReduction(mor_params, self.comm)
         
         # create finite element objects for u and p
         P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -311,7 +311,7 @@ class SolidmechanicsProblem(problem_base):
         self.vf = solid_variationalform.variationalform(self.var_u, self.du, self.var_p, self.dp, self.io.n0, self.x_ref)
         
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_solid(bc_dict, self.fem_params, self.io, self.ki, self.vf, self.ti)
+        self.bc = boundaryconditions.boundary_cond_solid(bc_dict, self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
         self.bc_dict = bc_dict
         
         # Dirichlet boundary conditions
@@ -357,7 +357,7 @@ class SolidmechanicsProblem(problem_base):
         if 'robin' in self.bc_dict.keys():
             w_robin, w_robin_old = self.bc.robin_bcs(self.u, self.vel, self.u_old, self.v_old, self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.u, self.u_old, self.acc, self.a_old)
+            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.u, self.vel, self.acc, self.u_old, self.v_old, self.a_old)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots and replace true with reference Neumann loads in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
@@ -376,7 +376,7 @@ class SolidmechanicsProblem(problem_base):
             if 'neumann' in bc_dict_prestr.keys():
                 for n in bc_dict_prestr['neumann']:
                     if n['type'] == 'true': n['type'] = 'pk1'
-            bc_prestr = boundaryconditions.boundary_cond_solid(bc_dict_prestr, self.fem_params, self.io, self.ki, self.vf, self.ti)
+            bc_prestr = boundaryconditions.boundary_cond_solid(bc_dict_prestr, self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
             if 'neumann' in bc_dict_prestr.keys():
                 w_neumann_prestr, _ = bc_prestr.neumann_bcs(self.V_u, self.Vd_scalar, self.u, self.u_old)
             if 'robin' in bc_dict_prestr.keys():
@@ -661,6 +661,62 @@ class SolidmechanicsProblem(problem_base):
                 f.write('%.16E %.16E\n' % (t,volume))
                 f.close()
                 
+                
+    def set_forms_solver(self):
+
+        if not self.prestress_initial:
+            self.weakform_u_sol = self.weakform_u
+            self.jac_uu_sol     = self.jac_uu
+            if self.incompressible_2field:
+                self.weakform_p_sol = self.weakform_p
+                self.jac_up_sol     = self.jac_up
+                self.jac_pu_sol     = self.jac_pu
+        else:
+            self.weakform_u_sol = self.weakform_prestress_u
+            self.jac_uu_sol     = self.jac_prestress_uu
+            if self.incompressible_2field:
+                self.weakform_p_sol = self.weakform_prestress_p
+                self.jac_up_sol     = self.jac_prestress_up
+                self.jac_pu_sol     = self.jac_prestress_pu
+                
+                
+    def assemble_residual_stiffness_main(self, u):
+
+        # assemble rhs vector
+        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u_sol))
+        fem.apply_lifting(r_u, [fem.form(self.jac_uu_sol)], [self.bc.dbcs], x0=[u.vector], scale=-1.0)
+        r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(r_u, self.bc.dbcs, x0=u.vector, scale=-1.0)
+
+        # assemble system matrix
+        K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu_sol), self.bc.dbcs)
+        K_uu.assemble()
+        
+        return r_u, K_uu
+
+
+    def assemble_residual_stiffness_incompressible(self):
+        
+        # assemble rhs vector
+        r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p_sol))
+        r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        
+        # assemble system matrices
+        K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up_sol), self.bc.dbcs)
+        K_up.assemble()
+        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu_sol), self.bc.dbcs)
+        K_pu.assemble()
+        
+        # for stress-mediated volumetric growth, K_pp is not zero!
+        if not isinstance(self.p11, ufl.constantvalue.Zero):
+            K_pp = fem.petsc.assemble_matrix(fem.form(self.p11), [])
+            K_pp.assemble()
+        else:
+            K_pp = None
+            
+        return r_p, K_pp, K_up, K_pu
+
+
     ### now the base routines for this problem
                 
     def pre_timestep_routines(self):
@@ -750,7 +806,7 @@ class SolidmechanicsSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, solver_params=self.solver_params)
 
 
     def solve_initial_state(self):
@@ -761,6 +817,7 @@ class SolidmechanicsSolver(solver_base):
         else:
             # set flag definitely to False if we're restarting
             self.pb.prestress_initial = False
+            self.pb.set_forms_solver()
 
         # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
@@ -798,7 +855,7 @@ class SolidmechanicsSolver(solver_base):
 
         # set flag to false again
         self.pb.prestress_initial = False
-        self.solnln.set_forms_solver(self.pb.prestress_initial)
+        self.pb.set_forms_solver()
 
         # reset PTC flag to what it was
         try: self.solnln.PTC = self.solver_params['ptc']

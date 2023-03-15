@@ -125,6 +125,13 @@ class IO:
         outfile.write_function(func, 0)
 
 
+    def write_restart(self, pb, N):
+        
+        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+            
+            self.writecheckpoint(pb, N)
+
+
 class IO_solid(IO):
 
     # read in fibers defined at nodes (nodal fiber and coordiante files have to be present)
@@ -330,11 +337,7 @@ class IO_solid(IO):
                         raise NameError("Unknown output to write for solid mechanics!")
 
 
-    def write_restart(self, pb, N):
-        
-        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
-            
-            self.writecheckpoint(pb, N)
+
 
 
     def readcheckpoint(self, pb, N_rest):
@@ -457,15 +460,11 @@ class IO_fluid(IO):
                     elif res=='reynolds':
                         reynolds = project(pb.Re, pb.Vd_scalar, pb.dx_, nm="Reynolds")
                         self.resultsfiles[res].write_function(reynolds, t)
+                    elif res=='fluiddisplacement': # passed in uf is not a function but form, so we have to project
+                        uf_proj = project(pb.uf, pb.V_v, pb.dx_, nm="FluidDisplacement")
+                        self.resultsfiles[res].write_function(uf_proj, t)
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
-
-
-    def write_restart(self, pb, N):
-        
-        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
-            
-            self.writecheckpoint(pb, N)
 
 
     def readcheckpoint(self, pb):
@@ -493,6 +492,62 @@ class IO_fluid(IO):
         vecs_to_write = {'v_old' : pb.v_old}
         vecs_to_write = {'a_old' : pb.a_old}
         vecs_to_write = {'p_old' : pb.p_old}
+        
+        for key in vecs_to_write:
+
+            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+            # and for safety reasons, include the number of cores in the dat file name
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+
+
+
+class IO_ale(IO):
+    
+    def write_output(self, pb=None, writemesh=False, N=1, t=0):
+        
+        if writemesh:
+            
+            if self.write_results_every > 0:
+            
+                self.resultsfiles = {}
+                for res in self.results_to_write:
+                    outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
+                    outfile.write_mesh(self.mesh)
+                    self.resultsfiles[res] = outfile
+            
+            return
+        
+        else:
+            
+            # write results every write_results_every steps
+            if self.write_results_every > 0 and N % self.write_results_every == 0:
+                
+                # save solution to XDMF format
+                for res in self.results_to_write:
+                    
+                    if res=='displacement':
+                        self.resultsfiles[res].write_function(pb.u, t)
+                    else:
+                        raise NameError("Unknown output to write for fluid mechanics!")
+
+
+    def readcheckpoint(self, pb):
+
+        vecs_to_read = {'u' : pb.u}
+        
+        for key in vecs_to_read:
+
+            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+            # and for safety reasons, include the number of cores in the dat file name
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            vecs_to_read[key].vector.load(viewer)
+            
+            vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    def writecheckpoint(self, pb, N):
+
+        vecs_to_write = {'u' : pb.u}
         
         for key in vecs_to_write:
 

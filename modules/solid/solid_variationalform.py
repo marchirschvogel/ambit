@@ -146,7 +146,7 @@ class variationalform:
         else:
             return ufl.as_ufl(0)
 
-    # Elastic membrane potential on surface
+    # Visco-elastic membrane potential on surface
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
     def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary):
         

@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2019-2023, Dr.-Ing. Marc Hirschvogel
+# All rights reserved.
+
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+import time, sys
+import numpy as np
+from dolfinx import fem
+import ufl
+from petsc4py import PETSc
+
+import ioroutines
+import ale_kinematics_constitutive
+import ale_variationalform
+import timeintegration
+import utilities
+import solver_nonlin
+import boundaryconditions
+
+from base import problem_base, solver_base
+
+
+# Arbitrary Lagrangian Eulerian (ALE) mechanics problem
+
+class AleProblem(problem_base):
+
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
+        problem_base.__init__(self, io_params, time_params, comm)
+
+        self.problem_physics = 'fluid_ale'
+        
+        self.simname = io_params['simname']
+        
+        self.io = io
+
+        # number of distinct domains (each one has to be assigned a own material model)
+        self.num_domains = len(constitutive_models)
+        
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
+
+        self.order_disp = fem_params['order_disp']
+        self.quad_degree = fem_params['quad_degree']
+        
+        # collect domain data
+        self.dx_, self.rho = [], []
+        for n in range(self.num_domains):
+            # integration domains
+            self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+        
+        # whether to enforce continuity of mass at midpoint or not
+        try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
+        except: self.pressure_at_midpoint = False
+        
+        self.localsolve = False # no idea what might have to be solved locally...
+        self.prestress_initial = False # guess prestressing in ALE is somehow senseless...
+        self.incompressible_2field = False # always False here...
+
+        self.dim = self.io.mesh.geometry.dim
+    
+        # type of discontinuous function spaces
+        if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
+            dg_type = "DG"
+            if (self.order_disp > 1) and self.quad_degree < 3:
+                raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
+        elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
+            dg_type = "DQ"
+            if (self.order_disp > 1) and self.quad_degree < 5:
+                raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
+        else:
+            raise NameError("Unknown cell/element type!")
+
+        # make sure that we use the correct velocity order in case of a higher-order mesh
+        if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() > 1:
+            if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() != self.order_disp:
+                raise ValueError("Order of velocity field not compatible with degree of finite element!")
+
+        # check if we want to use model order reduction and if yes, initialize MOR class
+        try: self.have_rom = io_params['use_model_order_red']
+        except: self.have_rom = False
+
+        if self.have_rom:
+            import mor
+            self.rom = mor.ModelOrderReduction(mor_params, self.comm)
+
+        # create finite element objects for v and p
+        P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+        # function spaces for v and p
+        self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
+        # tensor finite element and function space
+        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
+
+        # a discontinuous tensor, vector, and scalar function space
+        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+
+        # functions
+        self.du    = ufl.TrialFunction(self.V_u)            # Incremental displacement
+        self.var_u = ufl.TestFunction(self.V_u)             # Test function
+        self.u     = fem.Function(self.V_u, name="AleDisplacement")
+        # old state
+        self.u_old = fem.Function(self.V_u)
+
+        self.numdof = self.u.vector.getSize()
+
+        # initialize ALE time-integration class
+        self.ti = timeintegration.timeintegration_ale(time_params, time_curves, self.t_init, comm=self.comm)
+        
+        # initialize material/constitutive classes (one per domain)
+        self.ma = []
+        for n in range(self.num_domains):
+            self.ma.append(ale_kinematics_constitutive.constitutive(self.constitutive_models['MAT'+str(n+1)]))
+        
+        # initialize ALE variational form class
+        self.vf = ale_variationalform.variationalform(self.var_u, self.io.n0)
+
+        # initialize boundary condition class
+        self.bc = boundaryconditions.boundary_cond_ale(bc_dict, fem_params, self.io, self.vf, self.ti)
+        
+        self.bc_dict = bc_dict
+
+        # Dirichlet boundary conditions
+        if 'dirichlet' in self.bc_dict.keys():
+            self.bc.dirichlet_bcs(self.V_u)
+
+        self.set_variational_forms_and_jacobians()
+            
+
+    # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
+    def set_variational_forms_and_jacobians(self):
+
+        # internal virtual work
+        self.deltaW_int = ufl.as_ufl(0)
+        
+        for n in range(self.num_domains):
+            # internal virtual work
+            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.u), self.dx_[n])
+        
+        # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
+        w_neumann, w_robin = ufl.as_ufl(0), ufl.as_ufl(0)
+        if 'neumann' in self.bc_dict.keys():
+            w_neumann = self.bc.neumann_bcs(self.V_u, self.Vd_scalar)
+        if 'robin' in self.bc_dict.keys():
+            w_robin = self.bc.robin_bcs(self.u)
+
+        self.deltaW_ext = w_neumann + w_robin
+
+        ### full weakforms 
+        
+        # internal minus external virtual work
+        self.weakform_u = self.deltaW_int - self.deltaW_ext
+       
+        ### Jacobian
+        self.jac_uu = ufl.derivative(self.weakform_u, self.u, self.du)
+            
+
+    def set_forms_solver(self):
+        pass
+
+
+    def assemble_residual_stiffness_main(self, u):
+
+        # assemble rhs vector
+        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u))
+        fem.apply_lifting(r_u, [fem.form(self.jac_uu)], [self.bc.dbcs], x0=[u.vector], scale=-1.0)
+        r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(r_u, self.bc.dbcs, x0=u.vector, scale=-1.0)
+
+        # assemble system matrix
+        K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu), self.bc.dbcs)
+        K_uu.assemble()
+        
+        return r_u, K_uu
+
+
+    ### now the base routines for this problem
+                
+    def pre_timestep_routines(self):
+
+        # perform Proper Orthogonal Decomposition
+        if self.have_rom:
+            self.rom.POD(self)
+
+                
+    def read_restart(self, sname, N):
+
+        # read restart information
+        if self.restart_step > 0:
+            self.io.readcheckpoint(self, N)
+            self.simname += '_r'+str(N)
+
+    
+    def evaluate_initial(self):
+        pass
+
+
+    def write_output_ini(self):
+        
+        self.io.write_output(self, writemesh=True)
+
+
+    def get_time_offset(self):
+        return 0.
+
+
+    def evaluate_pre_solve(self, t):
+
+        # set time-dependent functions
+        self.ti.set_time_funcs(self.ti.funcs_to_update, self.ti.funcs_to_update_vec, t)
+            
+            
+    def evaluate_post_solve(self, t, N):
+        pass
+
+
+    def set_output_state(self):
+        pass
+
+            
+    def write_output(self, N, t, mesh=False): 
+
+        self.io.write_output(self, N=N, t=t)
+
+            
+    def update(self):
+        
+        self.ti.update_timestep(self.u, self.u_old)
+
+
+    def print_to_screen(self):
+        pass
+    
+    
+    def induce_state_change(self):
+        pass
+
+
+    def write_restart(self, sname, N):
+
+        self.io.write_restart(self, N)
+        
+        
+    def check_abort(self, t):
+        pass
+
+
+
+class AleSolver(solver_base):
+
+    def initialize_nonlinear_solver(self):
+
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, solver_params=self.solver_params)
+
+
+    def solve_initial_state(self):
+        pass
+
+
+    def solve_nonlinear_problem(self, t):
+
+        self.solnln.newton(self.pb.u)
+
+
+    def print_timestep_info(self, N, t, wt):
+    
+        # print time step info to screen
+        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)

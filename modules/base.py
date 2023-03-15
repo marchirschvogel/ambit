@@ -17,7 +17,8 @@ class problem_base():
         
         self.problem_type = io_params['problem_type']
 
-        self.timint = time_params['timint']
+        try: self.timint = time_params['timint']
+        except: self.timint = 'static'
         
         if 'maxtime' in time_params.keys(): self.maxtime = time_params['maxtime']
         if 'numstep' in time_params.keys(): self.numstep = time_params['numstep']

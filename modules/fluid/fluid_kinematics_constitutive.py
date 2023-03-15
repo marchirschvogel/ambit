@@ -6,8 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ufl import tr, det, dot, grad, inv, dev, inner, Identity, variable, ln, sqrt, exp, diff, conditional, ge, outer, cross, as_tensor, indices
-
+import ufl
 from fluid_material import materiallaw
 
 # fluid kinematics and constitutive class
@@ -27,7 +26,7 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
         
         # identity tensor
-        self.I = Identity(self.kin.dim)
+        self.I = ufl.Identity(self.kin.dim)
 
 
     # Cauchy stress core routine
@@ -35,7 +34,7 @@ class constitutive:
         
         gamma_ = self.kin.gamma(v_)
 
-        stress = 0
+        stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
             
         mat = materiallaw(gamma_,self.I)
         
@@ -70,9 +69,36 @@ class constitutive:
 
 class kinematics:
     
-    def __init__(self, dim):
+    def __init__(self, dim, uf_pre=None):
+        
         self.dim = dim
+        
+        # prestress displacement
+        self.uf_pre = uf_pre
+        
+        # identity tensor
+        self.I = ufl.Identity(self.dim)
+
 
     # velocity gradient: gamma = 0.5(dv/dx + (dv/dx)^T)
     def gamma(self, v_):
-        return 0.5*(grad(v_) + grad(v_).T)
+        
+        return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
+
+
+    # fluid deformation gradient (relevant on boundary for FrSI): F = I + duf/dx0
+    def F(self, uf_):
+
+        if self.uf_pre is not None:
+            return self.I + ufl.grad(uf_+self.uf_pre) # Schein and Gee 2021, equivalent to Gee et al. 2010
+        else:
+            return self.I + ufl.grad(uf_)
+
+
+    # rate of deformation gradient: dF/dt = dv/dx0
+    def Fdot(self, v_):
+
+        if not isinstance(v_, ufl.constantvalue.Zero):
+            return ufl.grad(v_)
+        else:
+            return ufl.constantvalue.zero((self.dim,self.dim))

@@ -17,7 +17,8 @@ class timeintegration():
     
     def __init__(self, time_params, time_curves, t_init, domain=[], comm=None):
         
-        self.timint = time_params['timint']
+        try: self.timint = time_params['timint']
+        except: self.timint = 'static'
         
         if 'numstep' in time_params.keys(): self.numstep = time_params['numstep']
         if 'maxtime' in time_params.keys(): self.maxtime = time_params['maxtime'] 
@@ -300,6 +301,19 @@ class timeintegration_fluid(timeintegration):
         return acc
 
 
+    def set_uf(self, v, v_old, uf_old):
+        
+        # set forms for acc and vel
+        if self.timint == 'ost':
+            uf = self.update_uf_ost(v, v_old, uf_old, ufl=True)
+        elif self.timint == 'static':
+            uf = ufl.constantvalue.zero(3)
+        else:
+            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
+        
+        return uf
+
+
     def timefactors(self):
         
         if self.timint=='ost':    timefac_m, timefac = self.theta_ost, self.theta_ost
@@ -308,10 +322,10 @@ class timeintegration_fluid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, v, v_old, a_old, p, p_old, funcs, funcs_old, funcsvec, funcsvec_old):
+    def update_timestep(self, v, v_old, a_old, p, p_old, funcs, funcs_old, funcsvec, funcsvec_old, uf=None, uf_old=None):
     
         # update old fields with new quantities
-        self.update_fields_ost(v, v_old, a_old)
+        self.update_fields_ost(v, v_old, a_old, uf=uf, uf_old=uf_old)
         
         # update pressure variable
         p_old.vector.axpby(1.0, 0.0, p.vector)
@@ -332,7 +346,18 @@ class timeintegration_fluid(timeintegration):
         return 1./(theta_*dt_) * (v - v_old) - (1.-theta_)/theta_ * a_old
 
 
-    def update_fields_ost(self, v, v_old, a_old):
+    def update_uf_ost(self, v, v_old, uf_old, ufl=True):
+        # update formula for integrated fluid displacement uf
+        if ufl:
+            dt_ = self.dt
+            theta_ = self.theta_ost
+        else:
+            dt_ = float(self.dt)
+            theta_ = float(self.theta_ost)
+        return theta_*dt_ * v + (1.-theta_)*dt_ * v_old + uf_old
+
+
+    def update_fields_ost(self, v, v_old, a_old, uf=None, uf_old=None):
         # update fields at the end of each time step 
         # get vectors (references)
         v_vec, v0_vec  = v.vector, v_old.vector
@@ -349,7 +374,26 @@ class timeintegration_fluid(timeintegration):
         # update velocity: v_old <- v
         v_old.vector.axpby(1.0, 0.0, v_vec)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        if uf is not None:
 
+            uf0_vec = uf_old.vector
+            # use update functions using vector arguments
+            uf_vec = self.update_uf_ost(v_vec, v0_vec, uf0_vec, ufl=False)
+        
+            # update fluid displacement: uf_old <- uf
+            uf_old.vector.axpby(1.0, 0.0, uf_vec)
+            uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            
+
+
+# ALE time integration class
+class timeintegration_ale(timeintegration):
+
+    def update_timestep(self, u, u_old):
+        # update state variable
+        u_old.vector.axpby(1.0, 0.0, u.vector)
+        u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
 # Flow0d time integration class
