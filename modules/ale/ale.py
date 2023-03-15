@@ -41,7 +41,8 @@ class AleProblem(problem_base):
         
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
-        self.order_disp = fem_params['order_disp']
+        try: self.order_disp = fem_params['order_disp']
+        except: self.order_disp = fem_params['order_vel'] # from fluid problem!
         self.quad_degree = fem_params['quad_degree']
         
         # collect domain data
@@ -86,9 +87,9 @@ class AleProblem(problem_base):
             self.rom = mor.ModelOrderReduction(mor_params, self.comm)
 
         # create finite element objects for v and p
-        P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+        P_w = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
         # function spaces for v and p
-        self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
+        self.V_w = fem.FunctionSpace(self.io.mesh, P_w)
         # tensor finite element and function space
         P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
         self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
@@ -99,13 +100,13 @@ class AleProblem(problem_base):
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
 
         # functions
-        self.du    = ufl.TrialFunction(self.V_u)            # Incremental displacement
-        self.var_u = ufl.TestFunction(self.V_u)             # Test function
-        self.u     = fem.Function(self.V_u, name="AleDisplacement")
+        self.dw    = ufl.TrialFunction(self.V_w)            # Incremental displacement
+        self.var_w = ufl.TestFunction(self.V_w)             # Test function
+        self.w     = fem.Function(self.V_w, name="AleDisplacement")
         # old state
-        self.u_old = fem.Function(self.V_u)
+        self.w_old = fem.Function(self.V_w)
 
-        self.numdof = self.u.vector.getSize()
+        self.numdof = self.w.vector.getSize()
 
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(time_params, time_curves, self.t_init, comm=self.comm)
@@ -116,7 +117,7 @@ class AleProblem(problem_base):
             self.ma.append(ale_kinematics_constitutive.constitutive(self.constitutive_models['MAT'+str(n+1)]))
         
         # initialize ALE variational form class
-        self.vf = ale_variationalform.variationalform(self.var_u, self.io.n0)
+        self.vf = ale_variationalform.variationalform(self.var_w, self.io.n0)
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_ale(bc_dict, fem_params, self.io, self.vf, self.ti)
@@ -125,7 +126,7 @@ class AleProblem(problem_base):
 
         # Dirichlet boundary conditions
         if 'dirichlet' in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.V_u)
+            self.bc.dirichlet_bcs(self.V_w)
 
         self.set_variational_forms_and_jacobians()
             
@@ -138,43 +139,46 @@ class AleProblem(problem_base):
         
         for n in range(self.num_domains):
             # internal virtual work
-            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.u), self.dx_[n])
+            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.w), self.dx_[n])
         
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_robin = ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.V_u, self.Vd_scalar)
+            w_neumann = self.bc.neumann_bcs(self.V_w, self.Vd_scalar)
         if 'robin' in self.bc_dict.keys():
-            w_robin = self.bc.robin_bcs(self.u)
+            w_robin = self.bc.robin_bcs(self.w)
 
         self.deltaW_ext = w_neumann + w_robin
 
         ### full weakforms 
         
         # internal minus external virtual work
-        self.weakform_u = self.deltaW_int - self.deltaW_ext
+        self.weakform_w = self.deltaW_int - self.deltaW_ext
        
         ### Jacobian
-        self.jac_uu = ufl.derivative(self.weakform_u, self.u, self.du)
+        self.jac_ww = ufl.derivative(self.weakform_w, self.w, self.dw)
             
 
     def set_forms_solver(self):
         pass
 
 
-    def assemble_residual_stiffness_main(self, u):
+    def assemble_residual_stiffness_main(self, dbcfluid=None):
+
+        if dbcfluid is not None:
+            self.bc.dbcs.append(dbcfluid)
 
         # assemble rhs vector
-        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u))
-        fem.apply_lifting(r_u, [fem.form(self.jac_uu)], [self.bc.dbcs], x0=[u.vector], scale=-1.0)
-        r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(r_u, self.bc.dbcs, x0=u.vector, scale=-1.0)
+        r_w = fem.petsc.assemble_vector(fem.form(self.weakform_w))
+        fem.apply_lifting(r_w, [fem.form(self.jac_ww)], [self.bc.dbcs], x0=[self.w.vector], scale=-1.0)
+        r_w.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(r_w, self.bc.dbcs, x0=self.w.vector, scale=-1.0)
 
         # assemble system matrix
-        K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu), self.bc.dbcs)
-        K_uu.assemble()
+        K_ww = fem.petsc.assemble_matrix(fem.form(self.jac_ww), self.bc.dbcs)
+        K_ww.assemble()
         
-        return r_u, K_uu
+        return r_w, K_ww
 
 
     ### now the base routines for this problem
@@ -254,7 +258,7 @@ class AleSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_w, solver_params=self.solver_params)
 
 
     def solve_initial_state(self):

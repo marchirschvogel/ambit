@@ -31,7 +31,7 @@ from base import problem_base, solver_base
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, domainvel=[None,None]):
         problem_base.__init__(self, io_params, time_params, comm)
         
         self.problem_physics = 'fluid'
@@ -96,6 +96,9 @@ class FluidmechanicsProblem(problem_base):
         if self.have_rom:
             import mor
             self.rom = mor.ModelOrderReduction(mor_params, self.comm)
+
+        # domain velocity in case of ALE fluid problem
+        self.domainvel = domainvel
 
         # create finite element objects for v and p
         P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
@@ -172,8 +175,8 @@ class FluidmechanicsProblem(problem_base):
 
             if self.timint != 'static':
                 # kinetic virtual power
-                self.deltaP_kin     += self.vf.deltaP_kin(self.acc, self.v, self.rho[n], self.dx_[n])
-                self.deltaP_kin_old += self.vf.deltaP_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n])
+                self.deltaP_kin     += self.vf.deltaP_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.domainvel[0])
+                self.deltaP_kin_old += self.vf.deltaP_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.domainvel[1])
             
             # internal virtual power
             self.deltaP_int     += self.vf.deltaP_int(self.ma[n].sigma(self.v, self.p), self.dx_[n])
@@ -203,7 +206,7 @@ class FluidmechanicsProblem(problem_base):
         ### full weakforms 
         
         # kinetic plus internal minus external virtual power
-        self.weakform_u = self.timefac_m * self.deltaP_kin + (1.-self.timefac_m) * self.deltaP_kin_old + \
+        self.weakform_v = self.timefac_m * self.deltaP_kin + (1.-self.timefac_m) * self.deltaP_kin_old + \
                           self.timefac   * self.deltaP_int + (1.-self.timefac)   * self.deltaP_int_old - \
                           self.timefac   * self.deltaP_ext - (1.-self.timefac)   * self.deltaP_ext_old
         
@@ -219,9 +222,9 @@ class FluidmechanicsProblem(problem_base):
         
         ### Jacobians
         
-        self.jac_uu = ufl.derivative(self.weakform_u, self.v, self.dv)
-        self.jac_up = ufl.derivative(self.weakform_u, self.p, self.dp)
-        self.jac_pu = ufl.derivative(self.weakform_p, self.v, self.dv)
+        self.jac_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
+        self.jac_vp = ufl.derivative(self.weakform_v, self.p, self.dp)
+        self.jac_pv = ufl.derivative(self.weakform_p, self.v, self.dv)
 
         # for saddle-point block-diagonal preconditioner - TODO: Doesn't work very well...
         self.a_p11 = ufl.as_ufl(0)
@@ -234,19 +237,19 @@ class FluidmechanicsProblem(problem_base):
         pass
 
 
-    def assemble_residual_stiffness_main(self, u):
+    def assemble_residual_stiffness_main(self):
 
         # assemble rhs vector
-        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u))
-        fem.apply_lifting(r_u, [fem.form(self.jac_uu)], [self.bc.dbcs], x0=[u.vector], scale=-1.0)
+        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_v))
+        fem.apply_lifting(r_u, [fem.form(self.jac_vv)], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
         r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(r_u, self.bc.dbcs, x0=u.vector, scale=-1.0)
+        fem.set_bc(r_u, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
 
         # assemble system matrix
-        K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu), self.bc.dbcs)
-        K_uu.assemble()
+        K_vv = fem.petsc.assemble_matrix(fem.form(self.jac_vv), self.bc.dbcs)
+        K_vv.assemble()
         
-        return r_u, K_uu
+        return r_u, K_vv
 
 
     def assemble_residual_stiffness_incompressible(self):
@@ -256,9 +259,9 @@ class FluidmechanicsProblem(problem_base):
         r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # assemble system matrices
-        K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up), self.bc.dbcs)
+        K_up = fem.petsc.assemble_matrix(fem.form(self.jac_vp), self.bc.dbcs)
         K_up.assemble()
-        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu), self.bc.dbcs)
+        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pv), self.bc.dbcs)
         K_pu.assemble()
         K_pp = None
             

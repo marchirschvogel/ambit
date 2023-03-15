@@ -213,7 +213,7 @@ class solver_nonlinear:
             self.newton_local(localdata['var'][l],localdata['res'][l],localdata['inc'][l],localdata['fnc'][l])
         
 
-    def newton(self, u, p=None, localdata={}):
+    def newton(self, u, p=None, w=None, localdata={}):
 
         # displacement/velocity increment
         del_u_func = fem.Function(self.V_u)
@@ -245,7 +245,7 @@ class solver_nonlinear:
             if self.pb.localsolve:
                 self.solve_local(localdata)
 
-            r_u, K_uu = self.pb.assemble_residual_stiffness_main(u)
+            r_u, K_uu = self.pb.assemble_residual_stiffness_main()
       
             if self.pb.incompressible_2field:
                 r_p, K_pp, K_up, K_pu = self.pb.assemble_residual_stiffness_incompressible()
@@ -520,7 +520,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
         # initialize 0D solver class for monolithic Lagrange multiplier coupling
         if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-            self.snln0D = solver_nonlinear_ode(self.pb.pbf, self.solver_params_constr)
+            self.snln0D = solver_nonlinear_ode(self.pb.pb0, self.solver_params_constr)
 
         self.sepstring = self.solutils.timestep_separator(self.tolerances)
         
@@ -536,7 +536,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
         self.ksp = PETSc.KSP().create(self.pb.comm)
         
         # 0D flow, or Lagrange multiplier system matrix
-        if self.pb.coupling_type == 'monolithic_direct': self.K_ss = self.pb.pbf.K
+        if self.pb.coupling_type == 'monolithic_direct': self.K_ss = self.pb.pb0.K
         if self.pb.coupling_type == 'monolithic_lagrange': self.K_ss = self.pb.K_lm
         
         if self.solvetype=='direct':
@@ -682,7 +682,7 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 ls, le = self.pb.lm.getOwnershipRange()
                 # Lagrange multipliers (pressures) to be passed to 0D model
                 lm_sq = allgather_vec(self.pb.lm, self.pb.comm)
-                self.pb.pbf.c[:] = lm_sq[:]
+                self.pb.pb0.c[:] = lm_sq[:]
                 self.snln0D.newton(s, t, print_iter=self.pb.print_subiter, sub=True)
 
             if self.pb.pbs.localsolve:
@@ -690,41 +690,41 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             # set the pressure functions for the load onto the 3D solid/fluid problem
             if self.pb.coupling_type == 'monolithic_direct':
-                self.pb.pbf.cardvasc0D.set_pressure_fem(s, self.pb.pbf.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs)
+                self.pb.pb0.cardvasc0D.set_pressure_fem(s, self.pb.pb0.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs)
             if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-                self.pb.pbf.cardvasc0D.set_pressure_fem(self.pb.lm, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs)
+                self.pb.pb0.cardvasc0D.set_pressure_fem(self.pb.lm, list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs)
             if self.pb.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
                 self.pb.set_pressure_fem(self.pb.lm, self.pb.coupfuncs)
             
-            r_u, K_uu = self.pb.pbs.assemble_residual_stiffness_main(u)
+            r_u, K_uu = self.pb.assemble_residual_stiffness_main()
 
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_uu.shift(k_PTC)
 
             if self.pb.pbs.incompressible_2field:
-                r_p, K_pp, K_up, K_pu = self.pb.pbs.assemble_residual_stiffness_incompressible()
+                r_p, K_pp, K_up, K_pu = self.pb.assemble_residual_stiffness_incompressible()
 
             if self.pb.coupling_type == 'monolithic_direct':
 
                 # volumes/fluxes to be passed to 0D model
-                for i in range(len(self.pb.pbf.cardvasc0D.c_ids)):
+                for i in range(len(self.pb.pb0.cardvasc0D.c_ids)):
                     cq = fem.assemble_scalar(fem.form(self.pb.cq[i]))
                     cq = self.pb.comm.allgather(cq)
-                    self.pb.pbf.c[i] = sum(cq)*self.pb.cq_factor[i]
+                    self.pb.pb0.c[i] = sum(cq)*self.pb.cq_factor[i]
 
                 # evaluate 0D model with current p and return df, f, K_ss
-                self.pb.pbf.cardvasc0D.evaluate(s, t, self.pb.pbf.df, self.pb.pbf.f, self.pb.pbf.dK, self.pb.pbf.K, self.pb.pbf.c, self.pb.pbf.y, self.pb.pbf.aux)
+                self.pb.pb0.cardvasc0D.evaluate(s, t, self.pb.pb0.df, self.pb.pb0.f, self.pb.pb0.dK, self.pb.pb0.K, self.pb.pb0.c, self.pb.pb0.y, self.pb.pb0.aux)
 
                 # 0D rhs vector and stiffness
-                r_s, self.K_ss = self.pb.pbf.assemble_residual_stiffness(t)
+                r_s, self.K_ss = self.pb.pb0.assemble_residual_stiffness(t)
 
             if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
                 # assemble 0D rhs contributions
-                self.pb.pbf.df_old.assemble()
-                self.pb.pbf.f_old.assemble()
-                self.pb.pbf.df.assemble()
-                self.pb.pbf.f.assemble()
+                self.pb.pb0.df_old.assemble()
+                self.pb.pb0.f_old.assemble()
+                self.pb.pb0.df.assemble()
+                self.pb.pb0.f.assemble()
 
             if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
@@ -735,29 +735,29 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 
                 s_sq = allgather_vec(s, self.pb.comm)
                 
-                s_pert = self.pb.pbf.K.createVecLeft()
+                s_pert = self.pb.pb0.K.createVecLeft()
                 s_pert.axpby(1.0, 0.0, s)
 
                 # store df, f, and aux vectors prior to perturbation solves
-                df_tmp, f_tmp, aux_tmp = self.pb.pbf.K.createVecLeft(), self.pb.pbf.K.createVecLeft(), np.zeros(self.pb.pbf.numdof)
-                df_tmp.axpby(1.0, 0.0, self.pb.pbf.df)
-                f_tmp.axpby(1.0, 0.0, self.pb.pbf.f)
-                aux_tmp[:] = self.pb.pbf.aux[:]
+                df_tmp, f_tmp, aux_tmp = self.pb.pb0.K.createVecLeft(), self.pb.pb0.K.createVecLeft(), np.zeros(self.pb.pb0.numdof)
+                df_tmp.axpby(1.0, 0.0, self.pb.pb0.df)
+                f_tmp.axpby(1.0, 0.0, self.pb.pb0.f)
+                aux_tmp[:] = self.pb.pb0.aux[:]
 
                 # finite differencing for LM siffness matrix
                 for i in range(self.pb.num_coupling_surf):
                     for j in range(self.pb.num_coupling_surf):
 
-                        self.pb.pbf.c[j] = lm_sq[j] + self.pb.eps_fd # perturbed LM
+                        self.pb.pb0.c[j] = lm_sq[j] + self.pb.eps_fd # perturbed LM
                         self.snln0D.newton(s_pert, t, print_iter=False)
                         s_pert_sq = allgather_vec(s_pert, self.pb.comm)
-                        self.K_ss[i,j] = -(s_pert_sq[self.pb.pbf.cardvasc0D.v_ids[i]] - s_sq[self.pb.pbf.cardvasc0D.v_ids[i]])/self.pb.eps_fd
-                        self.pb.pbf.c[j] = lm_sq[j] # restore LM
+                        self.K_ss[i,j] = -(s_pert_sq[self.pb.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb.pb0.cardvasc0D.v_ids[i]])/self.pb.eps_fd
+                        self.pb.pb0.c[j] = lm_sq[j] # restore LM
 
                 # restore df, f, and aux vectors for correct time step update
-                self.pb.pbf.df.axpby(1.0, 0.0, df_tmp)
-                self.pb.pbf.f.axpby(1.0, 0.0, f_tmp)
-                self.pb.pbf.aux[:] = aux_tmp[:]
+                self.pb.pb0.df.axpby(1.0, 0.0, df_tmp)
+                self.pb.pb0.f.axpby(1.0, 0.0, f_tmp)
+                self.pb.pb0.aux[:] = aux_tmp[:]
 
             if self.ptype == 'solid_constraint':
                 for i in range(len(self.pb.surface_p_ids)):
@@ -768,22 +768,22 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             if self.pb.coupling_type == 'monolithic_direct':
             
                 # if we have prescribed variable values over time
-                if bool(self.pb.pbf.prescribed_variables):
-                    for a in self.pb.pbf.prescribed_variables:
-                        varindex = self.pb.pbf.cardvasc0D.varmap[a]
-                        curvenumber = self.pb.pbf.prescribed_variables[a]
+                if bool(self.pb.pb0.prescribed_variables):
+                    for a in self.pb.pb0.prescribed_variables:
+                        varindex = self.pb.pb0.cardvasc0D.varmap[a]
+                        curvenumber = self.pb.pb0.prescribed_variables[a]
                         val = self.pb.pbs.ti.timecurves(curvenumber)(t)
-                        self.pb.pbf.cardvasc0D.set_prescribed_variables(s, r_s, self.K_ss, val, varindex)
+                        self.pb.pb0.cardvasc0D.set_prescribed_variables(s, r_s, self.K_ss, val, varindex)
 
             if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
 
                 r_s = self.K_ss.createVecLeft()
                 
-                s_old_sq = allgather_vec(self.pb.pbf.s_old, self.pb.comm)
+                s_old_sq = allgather_vec(self.pb.pb0.s_old, self.pb.comm)
 
                 # Lagrange multiplier coupling residual
                 for i in range(ls,le):
-                    r_s[i] = self.pb.constr[i] - s_sq[self.pb.pbf.cardvasc0D.v_ids[i]]
+                    r_s[i] = self.pb.constr[i] - s_sq[self.pb.pb0.cardvasc0D.v_ids[i]]
                 
             if self.pb.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
 
@@ -803,8 +803,8 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
 
             if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d': 
                 if self.pb.coupling_type == 'monolithic_direct':
-                    row_ids = self.pb.pbf.cardvasc0D.c_ids
-                    col_ids = self.pb.pbf.cardvasc0D.v_ids
+                    row_ids = self.pb.pb0.cardvasc0D.c_ids
+                    col_ids = self.pb.pb0.cardvasc0D.v_ids
                 if self.pb.coupling_type == 'monolithic_lagrange':
                     row_ids = list(range(self.pb.num_coupling_surf))
                     col_ids = list(range(self.pb.num_coupling_surf))
@@ -824,9 +824,9 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
                 
                 if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
                     # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
-                    if self.pb.pbf.cq[i] == 'volume':   timefac = 1./self.pb.pbs.dt
-                    if self.pb.pbf.cq[i] == 'flux':     timefac = -self.pb.pbf.theta0d_timint(t) # 0D model time-integration factor
-                    if self.pb.pbf.cq[i] == 'pressure': timefac = 1.
+                    if self.pb.pb0.cq[i] == 'volume':   timefac = 1./self.pb.pbs.dt
+                    if self.pb.pb0.cq[i] == 'flux':     timefac = -self.pb.pb0.theta0d_timint(t) # 0D model time-integration factor
+                    if self.pb.pb0.cq[i] == 'pressure': timefac = 1.
 
                 if self.ptype == 'solid_constraint': timefac = 1.
                 
@@ -835,13 +835,13 @@ class solver_nonlinear_constraint_monolithic(solver_nonlinear):
             # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
             for i in range(len(col_ids)):
                 
-                fem.apply_lifting(k_us_cols[i], [fem.form(self.pb.pbs.jac_uu)], [self.pb.pbs.bc.dbcs], x0=[u.vector], scale=0.0)
+                fem.apply_lifting(k_us_cols[i], [fem.form(self.pb.jac_uu)], [self.pb.pbs.bc.dbcs], x0=[u.vector], scale=0.0)
                 k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 fem.set_bc(k_us_cols[i], self.pb.pbs.bc.dbcs, x0=u.vector, scale=0.0)
             
             for i in range(len(row_ids)):
             
-                fem.apply_lifting(k_su_rows[i], [fem.form(self.pb.pbs.jac_uu)], [self.pb.pbs.bc.dbcs], x0=[u.vector], scale=0.0)
+                fem.apply_lifting(k_su_rows[i], [fem.form(self.pb.jac_uu)], [self.pb.pbs.bc.dbcs], x0=[u.vector], scale=0.0)
                 k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 fem.set_bc(k_su_rows[i], self.pb.pbs.bc.dbcs, x0=u.vector, scale=0.0)
             

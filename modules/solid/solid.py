@@ -680,13 +680,13 @@ class SolidmechanicsProblem(problem_base):
                 self.jac_pu_sol     = self.jac_prestress_pu
                 
                 
-    def assemble_residual_stiffness_main(self, u):
+    def assemble_residual_stiffness_main(self):
 
         # assemble rhs vector
         r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u_sol))
-        fem.apply_lifting(r_u, [fem.form(self.jac_uu_sol)], [self.bc.dbcs], x0=[u.vector], scale=-1.0)
+        fem.apply_lifting(r_u, [fem.form(self.jac_uu_sol)], [self.bc.dbcs], x0=[self.u.vector], scale=-1.0)
         r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(r_u, self.bc.dbcs, x0=u.vector, scale=-1.0)
+        fem.set_bc(r_u, self.bc.dbcs, x0=self.u.vector, scale=-1.0)
 
         # assemble system matrix
         K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu_sol), self.bc.dbcs)

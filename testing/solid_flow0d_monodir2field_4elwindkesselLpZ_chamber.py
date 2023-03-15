@@ -77,7 +77,7 @@ def main():
     # --- results check
     tol = 1.0e-7
         
-    s_corr = np.zeros(problem.mp.pbf.cardvasc0D.numdof)
+    s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
     s_corr[0] = 8.6484650873435367E+00
@@ -85,7 +85,7 @@ def main():
     s_corr[2] = -8.5948391584497758E-03
     s_corr[3] = 2.8463464067727982E-03
     
-    check1 = resultcheck.results_check_vec(problem.mp.pbf.s, s_corr, problem.mp.comm, tol=tol)
+    check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
     
     return success

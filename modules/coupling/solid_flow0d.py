@@ -66,7 +66,7 @@ class SolidmechanicsFlow0DProblem():
         
         # initialize problem instances (also sets the variational forms for the solid problem)
         self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pbf = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
+        self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
         self.incompressible_2field = self.pbs.incompressible_2field
 
@@ -83,7 +83,7 @@ class SolidmechanicsFlow0DProblem():
 
         self.set_variational_forms_and_jacobians()
         
-        self.numdof = self.pbs.numdof + self.pbf.numdof
+        self.numdof = self.pbs.numdof + self.pb0.numdof
         # solid is 'master' problem - define problem variables based on its values
         self.simname = self.pbs.simname
         self.restart_step = self.pbs.restart_step
@@ -170,10 +170,13 @@ class SolidmechanicsFlow0DProblem():
         # add to solid Jacobian
         self.pbs.jac_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
+        # for naming/access convention in solver... TODO: should go away after solver restructuring!
+        self.jac_uu = self.pbs.jac_uu
+
         if self.coupling_type == 'monolithic_lagrange':
             # old Lagrange multipliers - initialize with initial pressures
-            self.pbf.cardvasc0D.initialize_lm(self.lm, self.pbf.initialconditions)
-            self.pbf.cardvasc0D.initialize_lm(self.lm_old, self.pbf.initialconditions)
+            self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
+            self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
 
 
     # for multiscale G&R analysis
@@ -236,7 +239,17 @@ class SolidmechanicsFlow0DProblem():
                 self.pbs.amp_old_set.vector.axpby(1.0, 0.0, self.pbs.amp_old.vector)
                 self.pbs.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-            self.pbf.s_set.axpby(1.0, 0.0, self.pbf.s)
+            self.pb0.s_set.axpby(1.0, 0.0, self.pb0.s)
+
+
+    def assemble_residual_stiffness_main(self):
+
+        return self.pbs.assemble_residual_stiffness_main()
+
+
+    def assemble_residual_stiffness_incompressible(self):
+        
+        return self.pbs.assemble_residual_stiffness_incompressible()
 
 
     ### now the base routines for this problem
@@ -244,58 +257,58 @@ class SolidmechanicsFlow0DProblem():
     def pre_timestep_routines(self):
         
         self.pbs.pre_timestep_routines()
-        self.pbf.pre_timestep_routines()
+        self.pb0.pre_timestep_routines()
 
 
     def read_restart(self, sname, N):
 
         # solid + flow0d problem
         self.pbs.read_restart(sname, N)
-        self.pbf.read_restart(sname, N)
+        self.pb0.read_restart(sname, N)
 
         if self.pbs.restart_step > 0:
             if self.coupling_type == 'monolithic_lagrange':
-                self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
-                self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm_old)
+                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
+                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm_old)
 
 
     def evaluate_initial(self):
 
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.coupling_type == 'monolithic_direct':
-            self.pbf.cardvasc0D.set_pressure_fem(self.pbf.s_old, self.pbf.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
+            self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s_old, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
 
         if self.coupling_type == 'monolithic_lagrange':
-            self.pbf.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+            self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
 
         if self.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
-            self.pbf.c = []
+            self.pb0.c = []
             for i in range(self.num_coupling_surf):
                 cq = fem.assemble_scalar(fem.form(self.cq_old[i]))
                 cq = self.comm.allgather(cq)
-                self.pbf.c.append(sum(cq)*self.cq_factor[i])
+                self.pb0.c.append(sum(cq)*self.cq_factor[i])
 
         if self.coupling_type == 'monolithic_lagrange':
-            self.pbf.c, self.constr, self.constr_old = [], [], []
+            self.pb0.c, self.constr, self.constr_old = [], [], []
             for i in range(self.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
-                self.pbf.c.append(lm_sq[i])
+                self.pb0.c.append(lm_sq[i])
                 con = fem.assemble_scalar(fem.form(self.cq_old[i]))
                 con = self.comm.allgather(con)
                 self.constr.append(sum(con)*self.cq_factor[i])
                 self.constr_old.append(sum(con)*self.cq_factor[i])
 
-        if bool(self.pbf.chamber_models):
-            self.pbf.y = []
+        if bool(self.pb0.chamber_models):
+            self.pb0.y = []
             for ch in ['lv','rv','la','ra']:
-                if self.pbf.chamber_models[ch]['type']=='0D_elast': self.pbf.y.append(self.pbs.ti.timecurves(self.pbf.chamber_models[ch]['activation_curve'])(self.pbs.t_init))
-                if self.pbf.chamber_models[ch]['type']=='0D_elast_prescr': self.pbf.y.append(self.pbs.ti.timecurves(self.pbf.chamber_models[ch]['elastance_curve'])(self.pbs.t_init))
-                if self.pbf.chamber_models[ch]['type']=='0D_prescr': self.pbf.c.append(self.pbs.ti.timecurves(self.pbf.chamber_models[ch]['prescribed_curve'])(self.pbs.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbs.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbs.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbs.t_init))
 
         # initially evaluate 0D model at old state
-        self.pbf.cardvasc0D.evaluate(self.pbf.s_old, self.pbs.t_init, self.pbf.df_old, self.pbf.f_old, None, None, self.pbf.c, self.pbf.y, self.pbf.aux_old)
-        self.pbf.auxTc_old[:] = self.pbf.aux_old[:]
+        self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbs.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)
+        self.pb0.auxTc_old[:] = self.pb0.aux_old[:]
 
 
     def write_output_ini(self):
@@ -305,19 +318,19 @@ class SolidmechanicsFlow0DProblem():
 
     def get_time_offset(self):
 
-        return (self.pbf.ti.cycle[0]-1) * self.pbf.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
+        return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
     def evaluate_pre_solve(self, t):
 
         self.pbs.evaluate_pre_solve(t)
-        self.pbf.evaluate_pre_solve(t)
+        self.pb0.evaluate_pre_solve(t)
             
             
     def evaluate_post_solve(self, t, N):
         
         self.pbs.evaluate_post_solve(t, N)
-        self.pbf.evaluate_post_solve(t, N)
+        self.pb0.evaluate_post_solve(t, N)
     
         if self.have_multiscale_gandr:
             self.set_homeostatic_threshold(t), self.set_growth_trigger(t-t_off)
@@ -326,27 +339,27 @@ class SolidmechanicsFlow0DProblem():
     def set_output_state(self):
 
         self.pbs.set_output_state()
-        self.pbf.set_output_state()
+        self.pb0.set_output_state()
 
             
     def write_output(self, N, t, mesh=False): 
 
         self.pbs.write_output(N, t)
-        self.pbf.write_output(N, t)
+        self.pb0.write_output(N, t)
 
             
     def update(self):
 
         # update time step - solid and 0D model
         self.pbs.update()
-        self.pbf.update()
+        self.pb0.update()
 
         # update old pressures on solid
         if self.coupling_type == 'monolithic_direct':
-            self.pbf.cardvasc0D.set_pressure_fem(self.pbf.s_old, self.pbf.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
+            self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s_old, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
         if self.coupling_type == 'monolithic_lagrange':
             self.lm_old.axpby(1.0, 0.0, self.lm)
-            self.pbf.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+            self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
             # update old 3D fluxes
             self.constr_old[:] = self.constr[:]
 
@@ -354,13 +367,13 @@ class SolidmechanicsFlow0DProblem():
     def print_to_screen(self):
         
         self.pbs.print_to_screen()
-        self.pbf.print_to_screen()
+        self.pb0.print_to_screen()
     
     
     def induce_state_change(self):
         
         self.pbs.induce_state_change()
-        self.pbf.induce_state_change()
+        self.pb0.induce_state_change()
 
 
     def write_restart(self, sname, N):
@@ -368,14 +381,14 @@ class SolidmechanicsFlow0DProblem():
         self.pbs.io.write_restart(self.pbs, N)
 
         if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
-            self.pbf.writerestart(sname, N)
+            self.pb0.writerestart(sname, N)
             if self.coupling_type == 'monolithic_lagrange':
-                self.pbf.cardvasc0D.write_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
+                self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
         
         
     def check_abort(self, t):
 
-        self.pbf.check_abort(t)
+        self.pb0.check_abort(t)
 
 
 
@@ -428,10 +441,10 @@ class SolidmechanicsFlow0DSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
         
-        self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t, localdata=self.pb.pbs.localdata)
+        self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pb0.s, t, localdata=self.pb.pbs.localdata)
         
 
     def print_timestep_info(self, N, t, wt):
 
         # print time step info to screen
-        self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)

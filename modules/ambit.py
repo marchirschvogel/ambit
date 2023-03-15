@@ -40,15 +40,15 @@ class Ambit():
 
         elif problem_type == 'fluid_ale':
             
-            raise RuntimeError("Fluid-ALE coupling not yet implemented!")
+            raise RuntimeError("ALE fluid mechanics not yet fully implemented!")
             
-            import ale
+            import fluid_ale
             
             io = ioroutines.IO_ale(io_params, self.comm)
             io.readin_mesh()
             
-            self.mp = ale.AleProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
-            self.ms = ale.AleSolver(self.mp, solver_params)
+            self.mp = fluid_ale.FluidmechanicsAleProblem(io_params, time_params, fem_params, constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.ms = fluid_ale.FluidmechanicsAleSolver(self.mp, solver_params)
         
         elif problem_type == 'flow0d':
             

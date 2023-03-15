@@ -24,12 +24,14 @@ class variationalform:
     ### Kinetic virtual power
     
     # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\otimes\boldsymbol{v})^{\mathrm{T}}\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
-    def deltaP_kin(self, a, v, rho, ddomain, v_old=None):
+    def deltaP_kin(self, a, v, rho, ddomain, w=None):
         
-        if v_old is None:
+        if w is None:
+            # standard Eulerian fluid
             return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
         else:
-            return rho*ufl.dot(a + ufl.grad(v) * v_old, self.var_v)*ddomain
+            # ALE fluid, with domain velocity w
+            return rho*ufl.dot(a + ufl.grad(v) * (v - w), self.var_v)*ddomain
 
     ### Internal virtual power
 

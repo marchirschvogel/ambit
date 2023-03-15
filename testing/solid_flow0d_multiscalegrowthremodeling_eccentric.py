@@ -187,7 +187,7 @@ def main():
     s_corr[32]    = 2.8638179712861844E+00
     s_corr[33]    = 1.2057400362096410E+04
 
-    check1 = resultcheck.results_check_vec(problem.mp.pbsmall.pbf.s, s_corr, problem.mp.comm, tol=tol)
+    check1 = resultcheck.results_check_vec(problem.mp.pbsmall.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
     
     return success

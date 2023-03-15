@@ -125,6 +125,9 @@ class SolidmechanicsConstraintProblem():
         # add to solid Jacobian
         self.pbs.jac_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
+        # for naming/access convention in solver... TODO: should go away after solver restructuring!
+        self.jac_uu = self.pbs.jac_uu
+
 
     def set_pressure_fem(self, var, p0Da):
         
@@ -132,6 +135,16 @@ class SolidmechanicsConstraintProblem():
         for i in range(self.num_coupling_surf):
             self.pr0D.val = -allgather_vec_entry(var, i, self.comm)
             p0Da[i].interpolate(self.pr0D.evaluate)
+
+
+    def assemble_residual_stiffness_main(self):
+
+        return self.pbs.assemble_residual_stiffness_main()
+
+
+    def assemble_residual_stiffness_incompressible(self):
+        
+        return self.pbs.assemble_residual_stiffness_incompressible()
 
 
     ### now the base routines for this problem
