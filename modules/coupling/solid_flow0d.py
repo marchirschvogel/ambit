@@ -90,6 +90,29 @@ class SolidmechanicsFlow0DProblem():
         self.numstep_stop = self.pbs.numstep_stop
         self.dt = self.pbs.dt
 
+
+    def get_problem_var_list(self):
+        
+        if self.coupling_type == 'monolithic_lagrange':
+            if self.pbs.incompressible_2field:
+                return {'field1' : [self.pbs.u, self.pbs.p], 'field2' : [self.lm]}
+            else:
+                return {'field1' : [self.pbs.u], 'field2' : [self.lm]}
+
+        if self.coupling_type == 'monolithic_direct':
+            if self.pbs.incompressible_2field:
+                return {'field1' : [self.pbs.u, self.pbs.p], 'field2' : [self.pb0.s]}
+            else:
+                return {'field1' : [self.pbs.u], 'field2' : [self.pb0.s]}
+
+
+    def get_problem_functionspace_list(self):
+        
+        if self.pbs.incompressible_2field:
+            return {'field1' : [self.pbs.V_u, self.pbs.V_p], 'field2' : []}
+        else:
+            return {'field1' : [self.pbs.V_u], 'field2' : []}
+
         
     # defines the monolithic coupling forms for 0D flow and solid mechanics
     def set_variational_forms_and_jacobians(self):
@@ -242,14 +265,9 @@ class SolidmechanicsFlow0DProblem():
             self.pb0.s_set.axpby(1.0, 0.0, self.pb0.s)
 
 
-    def assemble_residual_stiffness_main(self):
+    def assemble_residual_stiffness(self):
 
-        return self.pbs.assemble_residual_stiffness_main()
-
-
-    def assemble_residual_stiffness_incompressible(self):
-        
-        return self.pbs.assemble_residual_stiffness_incompressible()
+        return self.pbs.assemble_residual_stiffness()
 
 
     ### now the base routines for this problem
@@ -407,7 +425,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
+        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.solver_params_solid, self.solver_params_flow0d)
 
         if self.pb.pbs.prestress_initial:
             # add coupling work to prestress weak form
@@ -441,7 +459,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
         
-        self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pb0.s, t, localdata=self.pb.pbs.localdata)
+        self.solnln.newton(t, localdata=self.pb.pbs.localdata)
         
 
     def print_timestep_info(self, N, t, wt):

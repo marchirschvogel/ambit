@@ -79,6 +79,16 @@ class FluidmechanicsFlow0DProblem():
         self.dt = self.pbs.dt
 
         
+    def get_problem_var_list(self):
+        
+        return {'field1' : [self.pbs.v, self.pbs.p], 'field2' : [self.lm]}
+
+
+    def get_problem_functionspace_list(self):
+        
+        return {'field1' : [self.pbs.V_v, self.pbs.V_p], 'field2' : []}
+        
+        
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms_and_jacobians(self):
 
@@ -153,14 +163,9 @@ class FluidmechanicsFlow0DProblem():
             self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
 
 
-    def assemble_residual_stiffness_main(self):
+    def assemble_residual_stiffness(self):
 
-        return self.pbs.assemble_residual_stiffness_main()
-
-
-    def assemble_residual_stiffness_incompressible(self):
-        
-        return self.pbs.assemble_residual_stiffness_incompressible()
+        return self.pbs.assemble_residual_stiffness()
 
 
     ### now the base routines for this problem
@@ -315,7 +320,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
         
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_v, self.pb.pbs.V_p, self.solver_params_fluid, self.solver_params_flow0d)
+        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.solver_params_fluid, self.solver_params_flow0d)
 
 
     def solve_initial_state(self):
@@ -333,7 +338,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
         
-        self.solnln.newton(self.pb.pbs.v, self.pb.pbs.p, self.pb.pb0.s, t)
+        self.solnln.newton(t)
         
 
     def print_timestep_info(self, N, t, wt):

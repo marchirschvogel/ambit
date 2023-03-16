@@ -321,6 +321,22 @@ class SolidmechanicsProblem(problem_base):
         self.set_variational_forms_and_jacobians()
 
 
+    def get_problem_var_list(self):
+        
+        if self.incompressible_2field:
+            return {'field1' : [self.u, self.p]}
+        else:
+            return {'field1' : [self.u]}
+
+
+    def get_problem_functionspace_list(self):
+        
+        if self.incompressible_2field:
+            return {'field1' : [self.V_u, self.V_p]}
+        else:
+            return {'field1' : [self.V_u]}
+
+
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms_and_jacobians(self):
 
@@ -680,7 +696,7 @@ class SolidmechanicsProblem(problem_base):
                 self.jac_pu_sol     = self.jac_prestress_pu
                 
                 
-    def assemble_residual_stiffness_main(self):
+    def assemble_residual_stiffness(self):
 
         # assemble rhs vector
         r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u_sol))
@@ -692,29 +708,30 @@ class SolidmechanicsProblem(problem_base):
         K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu_sol), self.bc.dbcs)
         K_uu.assemble()
         
-        return r_u, K_uu
-
-
-    def assemble_residual_stiffness_incompressible(self):
+        if self.incompressible_2field:
         
-        # assemble rhs vector
-        r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p_sol))
-        r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        
-        # assemble system matrices
-        K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up_sol), self.bc.dbcs)
-        K_up.assemble()
-        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu_sol), self.bc.dbcs)
-        K_pu.assemble()
-        
-        # for stress-mediated volumetric growth, K_pp is not zero!
-        if not isinstance(self.p11, ufl.constantvalue.Zero):
-            K_pp = fem.petsc.assemble_matrix(fem.form(self.p11), [])
-            K_pp.assemble()
-        else:
-            K_pp = None
+            # assemble pressure rhs vector
+            r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p_sol))
+            r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             
-        return r_p, K_pp, K_up, K_pu
+            # assemble system matrices
+            K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up_sol), self.bc.dbcs)
+            K_up.assemble()
+            K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu_sol), self.bc.dbcs)
+            K_pu.assemble()
+            
+            # for stress-mediated volumetric growth, K_pp is not zero!
+            if not isinstance(self.p11, ufl.constantvalue.Zero):
+                K_pp = fem.petsc.assemble_matrix(fem.form(self.p11), [])
+                K_pp.assemble()
+            else:
+                K_pp = None
+            
+            return [r_u, r_p], [[K_uu, K_up], [K_pu, K_pp]]
+        
+        else:
+            
+            return [r_u], [[K_uu]]
 
 
     ### now the base routines for this problem
@@ -806,7 +823,7 @@ class SolidmechanicsSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_u, self.pb.V_p, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
 
     def solve_initial_state(self):
@@ -832,7 +849,7 @@ class SolidmechanicsSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
         
-        self.solnln.newton(self.pb.u, self.pb.p, localdata=self.pb.localdata)
+        self.solnln.newton(t, localdata=self.pb.localdata)
 
 
     def print_timestep_info(self, N, t, wt):
@@ -848,7 +865,7 @@ class SolidmechanicsSolver(solver_base):
         # solve in 1 load step using PTC!
         self.solnln.PTC = True
 
-        self.solnln.newton(self.pb.u, self.pb.p)
+        self.solnln.newton(0.0)
 
         # MULF update
         self.pb.ki.prestress_update(self.pb.u)

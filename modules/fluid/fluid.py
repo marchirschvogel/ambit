@@ -156,6 +156,16 @@ class FluidmechanicsProblem(problem_base):
 
         self.set_variational_forms_and_jacobians()
             
+            
+    def get_problem_var_list(self):
+        
+        return {'field1' : [self.v, self.p]}
+
+
+    def get_problem_functionspace_list(self):
+        
+        return {'field1' : [self.V_v, self.V_p]}
+            
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms_and_jacobians(self):
@@ -231,41 +241,37 @@ class FluidmechanicsProblem(problem_base):
         
         for n in range(self.num_domains):
             self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
+
             
 
     def set_forms_solver(self):
         pass
 
 
-    def assemble_residual_stiffness_main(self):
+    def assemble_residual_stiffness(self):
 
-        # assemble rhs vector
-        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_v))
-        fem.apply_lifting(r_u, [fem.form(self.jac_vv)], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
-        r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(r_u, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
+        # assemble velocity rhs vector
+        r_v = fem.petsc.assemble_vector(fem.form(self.weakform_v))
+        fem.apply_lifting(r_v, [fem.form(self.jac_vv)], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
+        r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(r_v, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
 
         # assemble system matrix
         K_vv = fem.petsc.assemble_matrix(fem.form(self.jac_vv), self.bc.dbcs)
         K_vv.assemble()
         
-        return r_u, K_vv
-
-
-    def assemble_residual_stiffness_incompressible(self):
-        
-        # assemble rhs vector
+        # assemble pressure rhs vector
         r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p))
         r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # assemble system matrices
-        K_up = fem.petsc.assemble_matrix(fem.form(self.jac_vp), self.bc.dbcs)
-        K_up.assemble()
-        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pv), self.bc.dbcs)
-        K_pu.assemble()
+        K_vp = fem.petsc.assemble_matrix(fem.form(self.jac_vp), self.bc.dbcs)
+        K_vp.assemble()
+        K_pv = fem.petsc.assemble_matrix(fem.form(self.jac_pv), self.bc.dbcs)
+        K_pv.assemble()
         K_pp = None
-            
-        return r_p, K_pp, K_up, K_pu
+
+        return [r_v, r_p], [[K_vv, K_vp], [K_pv, K_pp]]
 
 
     ### now the base routines for this problem
@@ -346,7 +352,7 @@ class FluidmechanicsSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_v, self.pb.V_p, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
 
     def solve_initial_state(self):
@@ -364,7 +370,7 @@ class FluidmechanicsSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
 
-        self.solnln.newton(self.pb.v, self.pb.p)
+        self.solnln.newton(t)
 
 
     def print_timestep_info(self, N, t, wt):

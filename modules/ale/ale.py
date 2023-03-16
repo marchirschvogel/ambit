@@ -130,6 +130,16 @@ class AleProblem(problem_base):
 
         self.set_variational_forms_and_jacobians()
             
+            
+    def get_problem_var_list(self):
+
+        return {'field1' : [self.w]}
+
+
+    def get_problem_functionspace_list(self):
+        
+        return {'field1' : [self.V_w]}
+            
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms_and_jacobians(self):
@@ -163,7 +173,7 @@ class AleProblem(problem_base):
         pass
 
 
-    def assemble_residual_stiffness_main(self, dbcfluid=None):
+    def assemble_residual_stiffness(self, dbcfluid=None):
 
         if dbcfluid is not None:
             self.bc.dbcs.append(dbcfluid)
@@ -178,7 +188,7 @@ class AleProblem(problem_base):
         K_ww = fem.petsc.assemble_matrix(fem.form(self.jac_ww), self.bc.dbcs)
         K_ww.assemble()
         
-        return r_w, K_ww
+        return [r_w], [[K_ww]]
 
 
     ### now the base routines for this problem
@@ -232,7 +242,7 @@ class AleProblem(problem_base):
             
     def update(self):
         
-        self.ti.update_timestep(self.u, self.u_old)
+        self.ti.update_timestep(self.w, self.w_old)
 
 
     def print_to_screen(self):
@@ -258,7 +268,7 @@ class AleSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, self.pb.V_w, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
 
     def solve_initial_state(self):
@@ -267,7 +277,7 @@ class AleSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
 
-        self.solnln.newton(self.pb.u)
+        self.solnln.newton(t)
 
 
     def print_timestep_info(self, N, t, wt):

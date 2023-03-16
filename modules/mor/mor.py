@@ -12,6 +12,7 @@ from dolfinx import fem, io
 from petsc4py import PETSc
 from slepc4py import SLEPc
 import numpy as np
+from meshutils import gather_surface_dof_indices
 
 
 class ModelOrderReduction():
@@ -119,7 +120,7 @@ class ModelOrderReduction():
 
         # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
         if bool(self.surface_rom):
-            self.fd_set = self.gather_face_dof_indices(pb)
+            self.fd_set = set(gather_surface_dof_indices(pb, pb.V_u, self.surface_rom,self.comm))
             zero = S_d.createVecRight()
             # eliminate corresponding rows in S_d
             for i in range(ss, se):
@@ -329,40 +330,4 @@ class ModelOrderReduction():
             sys.stdout.flush()
         
         
-    def gather_face_dof_indices(self, pb):
 
-        # get boundary dofs which should be reduced
-        fn=[]
-        for i in range(len(self.surface_rom)):
-            
-            # these are local node indices!
-            fnode_indices_local = fem.locate_dofs_topological(pb.V_u, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == self.surface_rom[i]])
-
-            # get global indices
-            fnode_indices = pb.V_u.dofmap.index_map.local_to_global(fnode_indices_local)
-            
-            # gather indices
-            fnode_indices_gathered = self.comm.allgather(fnode_indices)
-            
-            # flatten indices from all the processes
-            fnode_indices_flat = [item for sublist in fnode_indices_gathered for item in sublist]
-
-            # remove duplicates
-            fnode_indices_unique = list(dict.fromkeys(fnode_indices_flat))
-
-            fn.append(fnode_indices_unique)
-            
-        # flatten list
-        fn_flat = [item for sublist in fn for item in sublist]
-
-        # remove duplicates
-        fn_unique = list(dict.fromkeys(fn_flat))
-        
-        # now make list of dof indices according to block size
-        fd=[]
-        for i in range(len(fn_unique)):
-            for j in range(pb.V_u.dofmap.index_map_bs):
-                fd.append(pb.V_u.dofmap.index_map_bs*fn_unique[i]+j)
-
-        # make set for faster checking
-        return set(fd)

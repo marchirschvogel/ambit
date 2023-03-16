@@ -379,7 +379,7 @@ class Flow0DSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
         
-        self.solnln.newton(self.pb.s, t)
+        self.solnln.newton(t)
 
 
     def print_timestep_info(self, N, t, wt):

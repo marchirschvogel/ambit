@@ -58,6 +58,22 @@ class SolidmechanicsConstraintProblem():
         self.numstep_stop = self.pbs.numstep_stop
         self.dt = self.pbs.dt
 
+
+    def get_problem_var_list(self):
+        
+        if self.pbs.incompressible_2field:
+            return {'field1' : [self.pbs.u, self.pbs.p], 'field2' : [self.lm]}
+        else:
+            return {'field1' : [self.pbs.u], 'field2' : [self.lm]}
+
+
+    def get_problem_functionspace_list(self):
+        
+        if self.pbs.incompressible_2field:
+            return {'field1' : [self.pbs.V_u, self.pbs.V_p], 'field2' : []}
+        else:
+            return {'field1' : [self.pbs.V_u], 'field2' : []}
+
         
     # defines the monolithic coupling forms for constraints and solid mechanics
     def set_variational_forms_and_jacobians(self):
@@ -137,14 +153,9 @@ class SolidmechanicsConstraintProblem():
             p0Da[i].interpolate(self.pr0D.evaluate)
 
 
-    def assemble_residual_stiffness_main(self):
+    def assemble_residual_stiffness(self):
 
-        return self.pbs.assemble_residual_stiffness_main()
-
-
-    def assemble_residual_stiffness_incompressible(self):
-        
-        return self.pbs.assemble_residual_stiffness_incompressible()
+        return self.pbs.assemble_residual_stiffness()
 
 
     ### now the base routines for this problem
@@ -262,7 +273,7 @@ class SolidmechanicsConstraintSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_constr)
+        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.solver_params_solid, self.solver_params_constr)
         
         if self.pb.pbs.prestress_initial:
             # add coupling work to prestress weak form
@@ -295,7 +306,7 @@ class SolidmechanicsConstraintSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
         
-        self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.lm, t, localdata=self.pb.pbs.localdata)
+        self.solnln.newton(t, localdata=self.pb.pbs.localdata)
 
 
     def print_timestep_info(self, N, t, wt):

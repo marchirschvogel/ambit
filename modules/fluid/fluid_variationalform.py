@@ -25,7 +25,7 @@ class variationalform:
     
     # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\otimes\boldsymbol{v})^{\mathrm{T}}\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
     def deltaP_kin(self, a, v, rho, ddomain, w=None):
-        
+
         if w is None:
             # standard Eulerian fluid
             return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
