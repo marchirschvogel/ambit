@@ -21,11 +21,8 @@ def main():
                             'results_to_write'      : [''],
                             'simname'               : 'test'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
+    SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8}
-    
-    SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
@@ -68,7 +65,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()

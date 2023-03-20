@@ -28,17 +28,14 @@ def main():
                             'results_to_write'      : ['displacement','pressure'],
                             'simname'               : 'test'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'iterative',
-                            'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8,
+    SOLVER_PARAMS        = {'solve_type'            : 'iterative',
+                            'tol_res'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
+                            'tol_inc'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_lin'               : 1.0e-7,
                             'print_liniter_every'   : 50,
                             'divergence_continue'   : None,
                             'ptc'                   : False,
                             'k_ptc_initial'         : 0.1}
-    
-    SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6,
-                            'tol_inc'               : 1.0e-6}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 100,
@@ -95,7 +92,7 @@ def main():
                                         {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
     
     # problem solve
     problem.solve_problem()

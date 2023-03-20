@@ -79,6 +79,8 @@ class SolidmechanicsProblem(problem_base):
             self.constitutive_models_prestr = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.dim = self.io.mesh.geometry.dim
+        
+        self.sub_solve = False
 
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
@@ -324,17 +326,11 @@ class SolidmechanicsProblem(problem_base):
     def get_problem_var_list(self):
         
         if self.incompressible_2field:
-            return {'field1' : [self.u, self.p]}
+            is_ghosted = [True]*2
+            return [self.u.vector, self.p.vector], is_ghosted
         else:
-            return {'field1' : [self.u]}
-
-
-    def get_problem_functionspace_list(self):
-        
-        if self.incompressible_2field:
-            return {'field1' : [self.V_u, self.V_p]}
-        else:
-            return {'field1' : [self.V_u]}
+            is_ghosted = [True]
+            return [self.u.vector], is_ghosted
 
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
@@ -696,7 +692,7 @@ class SolidmechanicsProblem(problem_base):
                 self.jac_pu_sol     = self.jac_prestress_pu
                 
                 
-    def assemble_residual_stiffness(self):
+    def assemble_residual_stiffness(self, t, subsolver=None):
 
         # assemble rhs vector
         r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u_sol))

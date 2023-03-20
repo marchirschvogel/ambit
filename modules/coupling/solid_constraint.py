@@ -57,22 +57,20 @@ class SolidmechanicsConstraintProblem():
         self.restart_step = self.pbs.restart_step
         self.numstep_stop = self.pbs.numstep_stop
         self.dt = self.pbs.dt
+        self.localsolve = self.pbs.localsolve
+        self.have_rom = self.pbs.have_rom
+        
+        self.sub_solve = False
 
 
     def get_problem_var_list(self):
         
         if self.pbs.incompressible_2field:
-            return {'field1' : [self.pbs.u, self.pbs.p], 'field2' : [self.lm]}
+            is_ghosted = [True, True, False]
+            return [self.pbs.u.vector, self.pbs.p.vector, self.lm], is_ghosted
         else:
-            return {'field1' : [self.pbs.u], 'field2' : [self.lm]}
-
-
-    def get_problem_functionspace_list(self):
-        
-        if self.pbs.incompressible_2field:
-            return {'field1' : [self.pbs.V_u, self.pbs.V_p], 'field2' : []}
-        else:
-            return {'field1' : [self.pbs.V_u], 'field2' : []}
+            is_ghosted = [True, False]
+            return [self.pbs.u.vector, self.lm], is_ghosted
 
         
     # defines the monolithic coupling forms for constraints and solid mechanics
@@ -153,9 +151,115 @@ class SolidmechanicsConstraintProblem():
             p0Da[i].interpolate(self.pr0D.evaluate)
 
 
-    def assemble_residual_stiffness(self):
+    def set_forms_solver(self):
+        pass
 
-        return self.pbs.assemble_residual_stiffness()
+
+    def assemble_residual_stiffness(self, t, subsolver=None):
+
+        if self.pbs.incompressible_2field:
+            off = 1
+        else:
+            off = 0
+
+        K_list = [[None]*(2+off) for _ in range(2+off)]
+        r_list = [None]*(2+off)
+
+        # add to solid momentum equation
+        self.set_pressure_fem(self.lm, self.coupfuncs)
+            
+        # solid main blocks
+        r_list_solid, K_list_solid = self.pbs.assemble_residual_stiffness(t)
+        
+        K_list[0][0] = K_list_solid[0][0]
+        r_list[0] = r_list_solid[0]
+        if self.pbs.incompressible_2field:
+            K_list[0][1] = K_list_solid[0][1]
+            K_list[1][0] = K_list_solid[1][0]
+            K_list[1][1] = K_list_solid[1][1] # should be only non-zero if we have stress-mediated growth...
+            r_list[1] = r_list_solid[1]
+        
+        ls, le = self.lm.getOwnershipRange()
+    
+        for i in range(len(self.surface_p_ids)):
+            cq = fem.assemble_scalar(fem.form(self.cq[i]))
+            cq = self.comm.allgather(cq)
+            self.constr[i] = sum(cq)*self.cq_factor[i]
+    
+        r_lm = self.K_lm.createVecLeft()
+
+        val, val_old = [], []
+        for n in range(self.num_coupling_surf):
+            curvenumber = self.prescribed_curve[n]
+            val.append(self.pbs.ti.timecurves(curvenumber)(t)), val_old.append(self.pbs.ti.timecurves(curvenumber)(t-self.dt))
+
+        # Lagrange multiplier coupling residual
+        for i in range(ls,le):
+            r_lm[i] = self.constr[i] - val[i]
+        
+        r_list[1+off] = r_lm
+
+        self.K_lm.assemble()
+        
+        K_list[1+off][1+off] = self.K_lm
+    
+        # rows and columns for offdiagonal matrices
+        row_ids = list(range(self.num_coupling_surf))
+        col_ids = list(range(self.num_coupling_surf))
+
+        # offdiagonal u-s columns
+        k_us_cols=[]
+        for i in range(len(col_ids)):
+            k_us_cols.append(fem.petsc.assemble_vector(fem.form(self.dforce[i]))) # already multiplied by time-integration factor
+    
+        # offdiagonal s-u rows
+        k_su_rows=[]
+        for i in range(len(row_ids)):
+            k_su_rows.append(fem.petsc.assemble_vector(fem.form(self.cq_factor[i]*self.dcq[i])))
+
+        # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
+        for i in range(len(col_ids)):
+            
+            fem.apply_lifting(k_us_cols[i], [fem.form(self.pbs.jac_uu)], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_us_cols[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
+        
+        for i in range(len(row_ids)):
+        
+            fem.apply_lifting(k_su_rows[i], [fem.form(self.pbs.jac_uu)], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_su_rows[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
+        
+        # setup offdiagonal matrices
+        locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
+        matsize = self.pbs.V_u.dofmap.index_map.size_global * self.pbs.V_u.dofmap.index_map_bs
+        # row ownership range of uu block
+        irs, ire = K_list[0][0].getOwnershipRange()
+
+        # derivative of fluid residual w.r.t. 0D pressures
+        K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.K_lm.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_us.setUp()
+
+        # set columns
+        for i in range(len(col_ids)):
+            K_us[irs:ire, col_ids[i]] = k_us_cols[i][irs:ire]
+
+        K_us.assemble()
+
+        # derivative of 0D residual w.r.t. solid displacements/fluid velocities
+        K_su = PETSc.Mat().createAIJ(size=((self.K_lm.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_su.setUp()
+
+        # set rows
+        for i in range(len(row_ids)):
+            K_su[row_ids[i], irs:ire] = k_su_rows[i][irs:ire]
+
+        K_su.assemble()
+        
+        K_list[0][1+off] = K_us
+        K_list[1+off][0] = K_su
+
+        return r_list, K_list
 
 
     ### now the base routines for this problem
@@ -260,12 +364,11 @@ class SolidmechanicsConstraintProblem():
 
 class SolidmechanicsConstraintSolver(solver_base):
 
-    def __init__(self, problem, solver_params_solid, solver_params_constr):
+    def __init__(self, problem, solver_params):
     
         self.pb = problem
         
-        self.solver_params_solid = solver_params_solid
-        self.solver_params_constr = solver_params_constr
+        self.solver_params = solver_params
 
         self.initialize_nonlinear_solver()
 
@@ -273,13 +376,13 @@ class SolidmechanicsConstraintSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.solver_params_solid, self.solver_params_constr)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
         
         if self.pb.pbs.prestress_initial:
             # add coupling work to prestress weak form
             self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            
             # initialize solid mechanics solver
-            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
+            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
 
 
     def solve_initial_state(self):
@@ -292,6 +395,7 @@ class SolidmechanicsConstraintSolver(solver_base):
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
+            self.pb.pbs.set_forms_solver()
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
@@ -311,4 +415,5 @@ class SolidmechanicsConstraintSolver(solver_base):
 
     def print_timestep_info(self, N, t, wt):
         
+        # print time step info to screen
         self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)

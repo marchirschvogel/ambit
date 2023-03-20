@@ -61,32 +61,32 @@ class FluidmechanicsFlow0DProblem():
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pbs = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+        self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
         self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
-        self.incompressible_2field = self.pbs.incompressible_2field
+        self.incompressible_2field = self.pbf.incompressible_2field
 
         self.set_variational_forms_and_jacobians()
         
-        self.numdof = self.pbs.numdof + self.pb0.numdof
+        self.numdof = self.pbf.numdof + self.pb0.numdof
         # fluid is 'master' problem - define problem variables based on its values
-        self.simname = self.pbs.simname
-        self.restart_step = self.pbs.restart_step
-        self.numstep_stop = self.pbs.numstep_stop
-        self.dt = self.pbs.dt
+        self.simname = self.pbf.simname
+        self.restart_step = self.pbf.restart_step
+        self.numstep_stop = self.pbf.numstep_stop
+        self.dt = self.pbf.dt
+        self.localsolve = self.pbf.localsolve
+        self.have_rom = self.pbf.have_rom
+        
+        self.sub_solve = True
 
         
     def get_problem_var_list(self):
         
-        return {'field1' : [self.pbs.v, self.pbs.p], 'field2' : [self.lm]}
-
-
-    def get_problem_functionspace_list(self):
-        
-        return {'field1' : [self.pbs.V_v, self.pbs.V_p], 'field2' : []}
+        is_ghosted = [True, True, False] 
+        return [self.pbf.v.vector, self.pbf.p.vector, self.lm], is_ghosted
         
         
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
@@ -114,48 +114,45 @@ class FluidmechanicsFlow0DProblem():
             
             self.pr0D = expression.template()
             
-            self.coupfuncs.append(fem.Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbs.Vd_scalar))
+            self.coupfuncs.append(fem.Function(self.pbf.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbf.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
 
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
+                ds_vq = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
           
                 if self.coupling_params['coupling_quantity'][n] == 'flux':
                     assert(self.coupling_type == 'monolithic_direct')
-                    cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
-                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq)
+                    cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq)
+                    cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq)
                 elif self.coupling_params['coupling_quantity'][n] == 'pressure':
                     assert(self.coupling_type == 'monolithic_lagrange' and self.coupling_params['variable_quantity'][n] == 'flux')
-                    cq_ += self.pbs.vf.flux(self.pbs.v, ds_vq)
-                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq)
+                    cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq)
+                    cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq)
                 else:
                     raise NameError("Unknown coupling quantity! Choose flux or pressure!")
             
             self.cq.append(cq_), self.cq_old.append(cq_old_)
-            self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.v, self.pbs.dv))
+            self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
 
             df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
                 
-                ds_p = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
-                df_ += self.pbs.timefac*self.pbs.vf.surface(ds_p)
+                ds_p = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
+                df_ += self.pbf.timefac*self.pbf.vf.surface(ds_p)
             
                 # add to fluid rhs contributions
-                self.power_coupling += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p)
-                self.power_coupling_old += self.pbs.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p)
+                self.power_coupling += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p)
+                self.power_coupling_old += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p)
         
             self.dforce.append(df_)
         
         # minus sign, since contribution to external power!
-        self.pbs.weakform_v += -self.pbs.timefac * self.power_coupling - (1.-self.pbs.timefac) * self.power_coupling_old
+        self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling - (1.-self.pbf.timefac) * self.power_coupling_old
         
         # add to fluid Jacobian
-        self.pbs.jac_vv += -self.pbs.timefac * ufl.derivative(self.power_coupling, self.pbs.v, self.pbs.dv)
-        
-        # for naming/access convention in solver... TODO: should go away after solver restructuring!
-        self.jac_uu = self.pbs.jac_vv
+        self.pbf.jac_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
         if self.coupling_type == 'monolithic_lagrange':
             # old Lagrange multipliers - initialize with initial pressures
@@ -163,26 +160,162 @@ class FluidmechanicsFlow0DProblem():
             self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
 
 
-    def assemble_residual_stiffness(self):
+    def set_forms_solver(self):
+        pass
 
-        return self.pbs.assemble_residual_stiffness()
+
+    def assemble_residual_stiffness(self, t, subsolver=None):
+
+        K_list = [[None]*3 for _ in range(3)]
+        r_list = [None]*3
+
+        for i in range(self.num_coupling_surf):
+            cq = fem.assemble_scalar(fem.form(self.cq[i]))
+            cq = self.comm.allgather(cq)
+            self.constr[i] = sum(cq)*self.cq_factor[i]
+
+        # Lagrange multipliers (pressures) to be passed to 0D model
+        lm_sq = allgather_vec(self.lm, self.comm)
+        self.pb0.c[:] = lm_sq[:]
+        subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+        
+        # add to fluid momentum equation
+        self.pb0.cardvasc0D.set_pressure_fem(self.lm, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
+        
+        # fluid main blocks
+        r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
+        
+        K_list[0][0] = K_list_fluid[0][0]
+        K_list[0][1] = K_list_fluid[0][1]
+        K_list[1][0] = K_list_fluid[1][0]
+        K_list[1][1] = K_list_fluid[1][1] # should be only non-zero if we have stabilization...
+
+        r_list[0] = r_list_fluid[0]
+        r_list[1] = r_list_fluid[1]
+        
+        s_sq = allgather_vec(self.pb0.s, self.comm)
+        
+        ls, le = self.lm.getOwnershipRange()
+        
+        # Lagrange multiplier coupling residual
+        r_lm = self.K_lm.createVecLeft()
+        for i in range(ls,le):
+            r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
+        
+        r_list[2] = r_lm
+        
+        # assemble 0D rhs contributions
+        self.pb0.df_old.assemble()
+        self.pb0.f_old.assemble()
+        self.pb0.df.assemble()
+        self.pb0.f.assemble()
+        self.pb0.s.assemble()
+        
+        # now the LM matrix - via finite differencing
+        # store df, f, and aux vectors prior to perturbation solves
+        df_tmp, f_tmp, aux_tmp = self.pb0.K.createVecLeft(), self.pb0.K.createVecLeft(), np.zeros(self.pb0.numdof)
+        df_tmp.axpby(1.0, 0.0, self.pb0.df)
+        f_tmp.axpby(1.0, 0.0, self.pb0.f)
+        aux_tmp[:] = self.pb0.aux[:]
+        # store 0D state variable prior to perturbation solves
+        s_tmp = self.pb0.K.createVecLeft()
+        s_tmp.axpby(1.0, 0.0, self.pb0.s)
+
+        # finite differencing for LM siffness matrix
+        for i in range(self.num_coupling_surf):
+            for j in range(self.num_coupling_surf):
+
+                self.pb0.c[j] = lm_sq[j] + self.eps_fd # perturbed LM
+                subsolver.newton(t, print_iter=False)
+                s_pert_sq = allgather_vec(self.pb0.s, self.comm)
+                self.K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                self.pb0.c[j] = lm_sq[j] # restore LM
+
+        # restore df, f, and aux vectors for correct time step update
+        self.pb0.df.axpby(1.0, 0.0, df_tmp)
+        self.pb0.f.axpby(1.0, 0.0, f_tmp)
+        self.pb0.aux[:] = aux_tmp[:]
+        # restore 0D state variable
+        self.pb0.s.axpby(1.0, 0.0, s_tmp)
+        
+        self.K_lm.assemble()
+        
+        K_list[2][2] = self.K_lm
+        
+        # now the offdiagonal matrices
+        row_ids = list(range(self.num_coupling_surf))
+        col_ids = list(range(self.num_coupling_surf))
+
+        # offdiagonal v-s columns
+        k_vs_cols=[]
+        for i in range(len(col_ids)):
+            k_vs_cols.append(fem.petsc.assemble_vector(fem.form(self.dforce[i]))) # already multiplied by time-integration factor
+    
+        # offdiagonal s-v rows
+        k_sv_rows=[]
+        for i in range(len(row_ids)):
+            k_sv_rows.append(fem.petsc.assemble_vector(fem.form(self.cq_factor[i]*self.dcq[i])))
+
+        # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
+        for i in range(len(col_ids)):
+            
+            fem.apply_lifting(k_vs_cols[i], [fem.form(self.pbf.jac_vv)], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
+            k_vs_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_vs_cols[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
+        
+        for i in range(len(row_ids)):
+        
+            fem.apply_lifting(k_sv_rows[i], [fem.form(self.pbf.jac_vv)], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
+            k_sv_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_sv_rows[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
+        
+        # setup offdiagonal matrices
+        locmatsize = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
+        matsize = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
+        # row ownership range of vv block
+        irs, ire = K_list[0][0].getOwnershipRange()
+
+        # derivative of fluid residual w.r.t. 0D pressures
+        K_vs = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.K_lm.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_vs.setUp()
+
+        # set columns
+        for i in range(len(col_ids)):
+            K_vs[irs:ire, col_ids[i]] = k_vs_cols[i][irs:ire]
+            
+        K_vs.assemble()
+
+        # derivative of 0D residual w.r.t. solid displacements/fluid velocities
+        K_sv = PETSc.Mat().createAIJ(size=((self.K_lm.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_sv.setUp()
+
+        # set rows
+        for i in range(len(row_ids)):
+            K_sv[row_ids[i], irs:ire] = k_sv_rows[i][irs:ire]
+
+        K_sv.assemble()
+        
+        K_list[0][2] = K_vs
+        K_list[2][0] = K_sv
+
+        return r_list, K_list
 
 
     ### now the base routines for this problem
                 
     def pre_timestep_routines(self):
 
-        self.pbs.pre_timestep_routines()
+        self.pbf.pre_timestep_routines()
         self.pb0.pre_timestep_routines()
 
 
     def read_restart(self, sname, N):
 
         # fluid + flow0d problem
-        self.pbs.read_restart(sname, N)
+        self.pbf.read_restart(sname, N)
         self.pb0.read_restart(sname, N)
 
-        if self.pbs.restart_step > 0:
+        if self.pbf.restart_step > 0:
             if self.coupling_type == 'monolithic_lagrange':
                 self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
                 self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm_old)
@@ -218,18 +351,18 @@ class FluidmechanicsFlow0DProblem():
         if bool(self.pb0.chamber_models):
             self.pb0.y = []
             for ch in ['lv','rv','la','ra']:
-                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbs.t_init))
-                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbs.t_init))
-                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbs.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y.append(self.pbf.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbf.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y.append(self.pbf.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbf.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pbf.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbf.t_init))
 
         # initially evaluate 0D model at old state
-        self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbs.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)
+        self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbf.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)
         self.pb0.auxTc_old[:] = self.pb0.aux_old[:]
 
 
     def write_output_ini(self):
 
-        self.pbs.write_output_ini()
+        self.pbf.write_output_ini()
 
 
     def get_time_offset(self):
@@ -239,32 +372,32 @@ class FluidmechanicsFlow0DProblem():
 
     def evaluate_pre_solve(self, t):
 
-        self.pbs.evaluate_pre_solve(t)
+        self.pbf.evaluate_pre_solve(t)
         self.pb0.evaluate_pre_solve(t)
             
             
     def evaluate_post_solve(self, t, N):
 
-        self.pbs.evaluate_post_solve(t, N)
+        self.pbf.evaluate_post_solve(t, N)
         self.pb0.evaluate_post_solve(t, N)
 
 
     def set_output_state(self):
 
-        self.pbs.set_output_state()
+        self.pbf.set_output_state()
         self.pb0.set_output_state()
 
             
     def write_output(self, N, t, mesh=False): 
 
-        self.pbs.write_output(N, t)
+        self.pbf.write_output(N, t)
         self.pb0.write_output(N, t)
 
             
     def update(self):
 
         # update time step - fluid and 0D model
-        self.pbs.update()
+        self.pbf.update()
         self.pb0.update()
         
         # update old pressures on fluid
@@ -279,21 +412,21 @@ class FluidmechanicsFlow0DProblem():
 
     def print_to_screen(self):
 
-        self.pbs.print_to_screen()
+        self.pbf.print_to_screen()
         self.pb0.print_to_screen()
     
     
     def induce_state_change(self):
         
-        self.pbs.induce_state_change()
+        self.pbf.induce_state_change()
         self.pb0.induce_state_change()
 
 
     def write_restart(self, sname, N):
 
-        self.pbs.io.write_restart(self.pbs, N)
+        self.pbf.io.write_restart(self.pbf, N)
         
-        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
+        if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
             self.pb0.writerestart(sname, N)
             if self.coupling_type == 'monolithic_lagrange':
                 self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
@@ -307,12 +440,11 @@ class FluidmechanicsFlow0DProblem():
 
 class FluidmechanicsFlow0DSolver(solver_base):
 
-    def __init__(self, problem, solver_params_fluid, solver_params_flow0d):
+    def __init__(self, problem, solver_params):
     
         self.pb = problem
         
-        self.solver_params_fluid = solver_params_fluid
-        self.solver_params_flow0d = solver_params_flow0d
+        self.solver_params = solver_params
         
         self.initialize_nonlinear_solver()
 
@@ -320,20 +452,20 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
         
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.solver_params_fluid, self.solver_params_flow0d)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
 
     def solve_initial_state(self):
 
         # consider consistent initial acceleration
-        if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
+        if self.pb.pbf.timint != 'static' and self.pb.pbf.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a = self.pb.pbs.deltaP_kin_old + self.pb.pbs.deltaP_int_old - self.pb.pbs.deltaP_ext_old - self.pb.power_coupling_old
+            weakform_a = self.pb.pbf.deltaP_kin_old + self.pb.pbf.deltaP_int_old - self.pb.pbf.deltaP_ext_old - self.pb.power_coupling_old
             
-            jac_a = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.dv) # actually linear in a_old
+            jac_a = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbf.a_old)
 
 
     def solve_nonlinear_problem(self, t):
@@ -344,4 +476,4 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def print_timestep_info(self, N, t, wt):
 
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbf.numstep, wt=wt)

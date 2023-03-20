@@ -24,12 +24,10 @@ def main():
                             'results_to_write'      : [],
                             'simname'               : 'fluid_flow0d_monolagr_taylorhood_cylinder'}
 
-    SOLVER_PARAMS_FLUID =  {'solve_type'            : 'direct',
+    SOLVER_PARAMS        =  {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8}
-
-    SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8}
+                            'tol_inc'               : 1.0e-8,
+                            'subsolver_params'      : {'tol_res' : 1.0e-8, 'tol_inc' : 1.0e-8}}
 
     TIME_PARAMS_FLUID   =  {'maxtime'               : 1.0,
                             'numstep'               : 10,
@@ -70,7 +68,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_FLUID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
 
     # solve time-dependent problem
@@ -92,8 +90,8 @@ def main():
 
     p_corr[0] = -2.9127423264346895E-04
 
-    check1 = resultcheck.results_check_node(problem.mp.pbs.v, check_node, v_corr, problem.mp.pbs.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
-    check2 = resultcheck.results_check_node(problem.mp.pbs.p, check_node, p_corr, problem.mp.pbs.V_p, problem.mp.comm, tol=tol, nm='p', readtol=1e-4)
+    check1 = resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
+    check2 = resultcheck.results_check_node(problem.mp.pbf.p, check_node, p_corr, problem.mp.pbf.V_p, problem.mp.comm, tol=tol, nm='p', readtol=1e-4)
 
     success = resultcheck.success_check([check1,check2], problem.mp.comm)
 

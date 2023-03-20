@@ -127,13 +127,13 @@ class sol_utils():
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
-                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
+                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
-                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
+                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif self.ptype=='fluid_flow0d':
-                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
+                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif self.ptype=='fluid_ale': 
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',ts,' ',te,' ',nkptc))
@@ -190,15 +190,15 @@ class sol_utils():
                 converged = True
                 
         elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res_0d'] <= tolerances['res_0d'] and incnorms['inc_0d'] <= tolerances['inc_0d']:
+            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2']:
                 converged = True
                 
         elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res_0d'] <= tolerances['res_0d'] and incnorms['inc_0d'] <= tolerances['inc_0d']:
+            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3']:
                 converged = True
                 
         elif ptype=='fluid_flow0d':
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res_0d'] <= tolerances['res_0d'] and incnorms['inc_0d'] <= tolerances['inc_0d']:
+            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3']:
                 converged = True
             
         elif ptype=='fluid_ale':

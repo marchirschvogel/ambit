@@ -67,6 +67,8 @@ class FluidmechanicsProblem(problem_base):
         self.prestress_initial = False # guess prestressing in fluid is somehow senseless...
         self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
 
+        self.sub_solve = False
+
         self.dim = self.io.mesh.geometry.dim
     
         # type of discontinuous function spaces
@@ -159,13 +161,9 @@ class FluidmechanicsProblem(problem_base):
             
     def get_problem_var_list(self):
         
-        return {'field1' : [self.v, self.p]}
+        is_ghosted = [True]*2
+        return [self.v.vector, self.p.vector], is_ghosted
 
-
-    def get_problem_functionspace_list(self):
-        
-        return {'field1' : [self.V_v, self.V_p]}
-            
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms_and_jacobians(self):
@@ -248,7 +246,7 @@ class FluidmechanicsProblem(problem_base):
         pass
 
 
-    def assemble_residual_stiffness(self):
+    def assemble_residual_stiffness(self, t, subsolver=None):
 
         # assemble velocity rhs vector
         r_v = fem.petsc.assemble_vector(fem.form(self.weakform_v))

@@ -28,17 +28,14 @@ def main():
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e'],
                             'simname'               : 'multiscale_eccentric_mr3'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
-                            'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8,
+    SOLVER_PARAMS        = {'solve_type'            : 'direct',
+                            'tol_res'               : [1.0e-8,1.0e-6],
+                            'tol_inc'               : [1.0e-8,1.0e-6],
                             'divergence_continue'   : 'PTC',
                             'k_ptc_initial'         : 10.0,
                             'print_local_iter'      : False,
                             'tol_res_local'         : 1.0e-10,
                             'tol_inc_local'         : 1.0e-10}
-    
-    SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6,
-                            'tol_inc'               : 1.0e-6}
 
     TIME_PARAMS_SOLID_SMALL = {'maxtime'            : 1.0*100,
                             'numstep'               : 50*100,
@@ -140,7 +137,7 @@ def main():
     BC_DICT              = { 'dirichlet' : [{'id' : [4], 'dir' : 'all', 'val' : 0.0}]}
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
     
     # solve time-dependent problem
     problem.solve_problem()

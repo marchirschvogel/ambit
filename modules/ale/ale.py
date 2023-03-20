@@ -59,6 +59,8 @@ class AleProblem(problem_base):
         self.prestress_initial = False # guess prestressing in ALE is somehow senseless...
         self.incompressible_2field = False # always False here...
 
+        self.sub_solve = False
+
         self.dim = self.io.mesh.geometry.dim
     
         # type of discontinuous function spaces
@@ -133,12 +135,7 @@ class AleProblem(problem_base):
             
     def get_problem_var_list(self):
 
-        return {'field1' : [self.w]}
-
-
-    def get_problem_functionspace_list(self):
-        
-        return {'field1' : [self.V_w]}
+        return [self.w.vector]
             
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
@@ -173,7 +170,7 @@ class AleProblem(problem_base):
         pass
 
 
-    def assemble_residual_stiffness(self, dbcfluid=None):
+    def assemble_residual_stiffness(self, t, dbcfluid=None, subsolver=None):
 
         if dbcfluid is not None:
             self.bc.dbcs.append(dbcfluid)

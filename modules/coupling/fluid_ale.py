@@ -60,12 +60,8 @@ class FluidmechanicsAleProblem():
         
     def get_problem_var_list(self):
         
-        return {'field1' : [self.pbf.v, self.pbf.p], 'field2' : [self.pba.w]}
-
-
-    def get_problem_functionspace_list(self):
-        
-        return {'field1' : [self.pbf.V_v, self.pbf.V_p], 'field2' : [self.pba.V_w]}
+        is_ghosted = [True]*3
+        return [self.pbf.v.vector, self.pbf.p.vector, self.pba.w.vector], is_ghosted
         
         
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
@@ -94,17 +90,25 @@ class FluidmechanicsAleProblem():
 
         # derivative of fluid w.r.t. ALE velocity
         self.jac_vw = ufl.derivative(self.pbf.weakform_v, self.pba.w, self.pba.dw)
+        
+        db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=self.fsi_interface[0], metadata={'quadrature_degree': self.pba.quad_degree})
+        
+        wbound = 100.*(ufl.dot((self.pba.w-self.pbf.v), self.pba.var_w)*db_)
+        self.pba.weakform_w += wbound
+        self.pba.jac_ww += ufl.derivative(wbound, self.pba.w, self.pba.dw)
+        self.jac_wv = ufl.derivative(wbound, self.pbf.v, self.pbf.dv)
 
 
     def set_forms_solver(self):
         pass
 
 
-    def assemble_residual_stiffness(self):
+    def assemble_residual_stiffness(self, t, subsolver=None):
 
-        r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness()
+        r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
         
-        r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(dbcfluid=self.dbcs_coup)
+        #r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(dbcfluid=self.dbcs_coup)
+        r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
         
         K_list = [[None]*3 for _ in range(3)]
         r_list = [None]*3
@@ -121,7 +125,11 @@ class FluidmechanicsAleProblem():
         K_list[1][1] = K_list_fluid[1][1]
         
         # derivate of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
-        K_list[2][0] = self.K_wv
+        K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pbf.bc.dbcs)
+        K_wv.assemble()
+        #K_list[2][0] = K_wv
+        
+        #K_list[2][0] = self.K_wv
         
         K_list[2][2] = K_list_ale[0][0]
 

@@ -21,11 +21,8 @@ def main():
                             'results_to_write'      : ['displacement','pressure'],
                             'simname'               : 'solid_constraint_volume_chamber'}
 
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
+    SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8}
-
-    SOLVER_PARAMS_CONSTR = {'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
@@ -61,7 +58,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_CONSTR], FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
     
     # solve time-dependent problem
     problem.solve_problem()

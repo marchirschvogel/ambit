@@ -33,9 +33,8 @@ class solver_nonlinear:
 
         self.pb = pb
         
-        # variables and function spaces
-        self.x = self.pb.get_problem_var_list()
-        self.V = self.pb.get_problem_functionspace_list()
+        # problem variables list
+        self.x, self.is_ghosted = self.pb.get_problem_var_list()
         
         self.nfields = len(self.x)
         
@@ -45,15 +44,23 @@ class solver_nonlinear:
         
         self.tolerances = {}
         for n in range(self.nfields):
-            numvar = len(self.x['field'+str(n+1)])
-            for m in range(numvar):
-                self.tolerances['res'+str(self.nfields*n+m+1)] = self.tolres
-                self.tolerances['inc'+str(self.nfields*n+m+1)] = self.tolinc
+            if len(self.tolres)>1: # if we have a list here, we need one tolerance per variable!
+                self.tolerances['res'+str(n+1)] = self.tolres[n]
+                self.tolerances['inc'+str(n+1)] = self.tolinc[n]
+            else:
+                self.tolerances['res'+str(n+1)] = self.tolres[0]
+                self.tolerances['inc'+str(n+1)] = self.tolinc[0]
 
         self.solutils = sol_utils(self.pb, self.ptype, solver_params)
         self.sepstring = self.solutils.timestep_separator(self.tolerances)
         
         self.initialize_petsc_solver()
+        
+        # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
+        if self.pb.sub_solve:
+            self.subsol = solver_nonlinear_ode(self.pb.pb0, solver_params['subsolver_params'])
+        else:
+            self.subsol = None
         
 
     def set_solver_params(self, solver_params):
@@ -98,8 +105,16 @@ class solver_nonlinear:
         except: self.tol_inc_local = 1.0e-10
 
         self.solvetype = solver_params['solve_type']
-        self.tolres = solver_params['tol_res']
-        self.tolinc = solver_params['tol_inc']
+        
+        # check if we have a list of tolerances (for coupled problems) or just one value
+        self.tolres, self.tolinc = [], []
+        if isinstance(solver_params['tol_res'], list):
+            for n in range(len(solver_params['tol_res'])):
+                self.tolres.append(solver_params['tol_res'][n])
+                self.tolinc.append(solver_params['tol_inc'][n])
+        else:
+            self.tolres.append(solver_params['tol_res'])
+            self.tolinc.append(solver_params['tol_inc'])            
 
 
     def initialize_petsc_solver(self):
@@ -109,19 +124,7 @@ class solver_nonlinear:
 
         # create solver
         self.ksp = PETSc.KSP().create(self.pb.comm)
-    
-        self.offsetarr = [0]
-        # offset for pressure block
-        if self.pb.incompressible_2field:
-            self.offsetp = self.V['field1'][0].dofmap.index_map.size_local * self.V['field1'][0].dofmap.index_map_bs
-        
-        off=0
-        for n in range(self.nfields):
-            numvar = len(self.x['field'+str(n+1)])
-            for m in range(numvar): 
-                off += self.V['field'+str(n+1)][m].dofmap.index_map.size_local * self.V['field'+str(n+1)][m].dofmap.index_map_bs
-                self.offsetarr.append(off)
-        
+
         if self.solvetype=='direct':
             
             self.ksp.setType("preonly")
@@ -131,7 +134,7 @@ class solver_nonlinear:
         elif self.solvetype=='iterative':
             
             # 2x2 block iterative method
-            if self.pb.incompressible_2field:
+            if self.nfields > 1:
 
                 self.ksp.setType("gmres")
                 self.ksp.getPC().setType("fieldsplit")
@@ -141,8 +144,8 @@ class solver_nonlinear:
                 #self.ksp.getPC().setFieldSplitSchurFactType(0)
 
                 # build "dummy" nested matrix in order to get the nested ISs (index sets)
-                locmatsize_u, locmatsize_p = self.V['field1'][0].dofmap.index_map.size_local * self.V['field1'][0].dofmap.index_map_bs, self.V['field1'][1].dofmap.index_map.size_local * self.V['field1'][1].dofmap.index_map_bs
-                matsize_u, matsize_p = self.V['field1'][0].dofmap.index_map.size_global * self.V['field1'][0].dofmap.index_map_bs, self.V['field1'][1].dofmap.index_map.size_global * self.V['field1'][1].dofmap.index_map_bs
+                locmatsize_u, locmatsize_p = self.pb.pbf.V_v.dofmap.index_map.size_local * self.pb.pbf.V_v.dofmap.index_map_bs, self.pb.pbf.V_p.dofmap.index_map.size_local * self.pb.pbf.V_p.dofmap.index_map_bs
+                matsize_u, matsize_p = self.pb.pbf.V_v.dofmap.index_map.size_global * self.pb.pbf.V_v.dofmap.index_map_bs, self.pb.pbf.V_p.dofmap.index_map.size_global * self.pb.pbf.V_p.dofmap.index_map_bs
                 K_uu = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
                 K_uu.setUp()
                 K_up = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_p,matsize_p)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
@@ -228,25 +231,30 @@ class solver_nonlinear:
 
     def newton(self, t, localdata={}):
 
-        del_x, del_x_func, x_start = {}, {}, {}
-
-        # iterate over fields to set solution increment for Newton         
+        # offset array for multi-field systems
+        self.offsetarr = [0]     
+        off=0
         for n in range(self.nfields):
-            
-            numvar = len(self.x['field'+str(n+1)])
-            
-            del_x['field'+str(n+1)], del_x_func['field'+str(n+1)] = [0]*numvar, [0]*numvar
-            x_start['field'+str(n+1)] = [0]*numvar
-            
-            for m in range(numvar):    
-                
-                # solution increment
-                del_x_func['field'+str(n+1)][m] = fem.Function(self.V['field'+str(n+1)][m])
-                del_x['field'+str(n+1)][m] = del_x_func['field'+str(n+1)][m].vector
-                
-                # start vector (needed for reset of Newton in case of divergence)
-                x_start['field'+str(n+1)][m] = self.x['field'+str(n+1)][m].vector.duplicate()
-                x_start['field'+str(n+1)][m].axpby(1.0, 0.0, self.x['field'+str(n+1)][m].vector)
+            if n==0:
+                if self.pb.have_rom: # currently, ROM is only implemented for the first variable in the system!
+                    off += self.pb.rom.V.getLocalSize()[1]
+                else:
+                    off += self.x[0].getLocalSize()
+            else:
+                off += self.x[n].getLocalSize()
+
+            self.offsetarr.append(off)
+
+        del_x, x_start = [[]]*self.nfields, [[]]*self.nfields
+      
+        for n in range(self.nfields):
+            # solution increments for Newton
+            del_x[n] = self.x[n].duplicate()
+            del_x[n].set(0.0)
+            # start vector (needed for reset of Newton in case of divergence)
+            x_start[n] = self.x[n].duplicate()
+            self.x[n].assemble()
+            x_start[n].axpby(1.0, 0.0, self.x[n])
 
         # Newton iteration index
         it = 0
@@ -264,38 +272,39 @@ class solver_nonlinear:
             if self.pb.localsolve:
                 self.solve_local(localdata)
 
-            r_list, K_list = self.pb.assemble_residual_stiffness()
+            r_list, K_list = self.pb.assemble_residual_stiffness(t, subsolver=self.subsol)
 
             if self.PTC:
                 # computes K_uu + k_PTC * I
                 K_list[0][0].shift(k_PTC)
 
             # model order reduction stuff - currently only on first mat in system...
-            if self.pb.have_rom and not self.pb.prestress_initial:
+            if self.pb.have_rom and not self.pb.get_prestress_initial():
+                
+                # projection of main block: system matrix, residual, and increment
                 tmp = K_list[0][0].matMult(self.pb.rom.V) # K_uu * V
                 K_list[0][0] = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_uu * V
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
-                self.pb.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
+                self.pb.rom.V.multTranspose(r_list[0], r_u_) # V^T * r_u
                 # deal with penalties that may be added to reduced residual to penalize certain modes
                 if bool(self.pb.rom.redbasisvec_penalties):
                     u_ = K_list[0][0].createVecRight()
-                    self.pb.rom.V.multTranspose(self.x['field1'][0].vector, u_) # V^T * u
+                    self.pb.rom.V.multTranspose(self.x[0], u_) # V^T * u
                     penterm_ = self.pb.rom.V.createVecRight()
                     self.pb.rom.Cpen.mult(u_, penterm_) # Cpen * V^T * u
                     r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
                     K_list[0][0].aypx(1.0, self.pb.rom.CpenVTV) # K_uu + Cpen * V^T * V
-                r_u, del_u = r_u_, del_u_
-                if self.pb.incompressible_2field:
-                    # offdiagonal pressure blocks
-                    offdg1 = self.pb.rom.V.transposeMatMult(K_up) # V^T * K_up
-                    offdg2 = K_pu.matMult(self.pb.rom.V) # K_pu * V
-                    K_up, K_pu = offdg1, offdg2
-                    # new offset for pressure block
-                    self.offsetp = self.pb.rom.V.getLocalSize()[1]
+                r_list[0], del_x[0] = r_u_, del_u_
+                # now the offdiagonal blocks
+                if self.nfields > 1:
+                    for n in range(self.nfields-1):
+                        K_list[0][n+1] = self.pb.rom.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
+                        K_list[n+1][0] = K_list[n+1][0].matMult(self.pb.rom.V) # K_{n+1,0} * V
 
             te = time.time() - tes
 
-            if self.pb.incompressible_2field:
+            # we use a block matrix (either with merge-into-one or for a nested iterative solver) if we have more than one field
+            if self.nfields > 1:
                 
                 tes = time.time()
 
@@ -330,7 +339,7 @@ class solver_nonlinear:
                     ts = time.time() - tss
                 
                 # for nested iterative solver
-                elif self.solvetype=='iterative': 
+                elif self.solvetype=='iterative': # TODO: Extend to n-x-n!
 
                     tes = time.time()
 
@@ -357,9 +366,7 @@ class solver_nonlinear:
                     raise NameError("Unknown solvetype!")
 
                 for n in range(self.nfields):
-                    numvar = len(self.x['field'+str(n+1)])
-                    for m in range(numvar):
-                        del_x['field'+str(n+1)][m].array[:] = del_full.array_r[self.offsetarr[self.nfields*n+m]:self.offsetarr[self.nfields*n+m+1]]
+                    del_x[n].array[:] = del_full.array_r[self.offsetarr[n]:self.offsetarr[n+1]]
                 
             else:
                     
@@ -367,7 +374,7 @@ class solver_nonlinear:
                 self.ksp.setOperators(K_list[0][0])
                 
                 tss = time.time()
-                self.ksp.solve(-r_list[0], del_x['field1'][0])
+                self.ksp.solve(-r_list[0], del_x[0])
                 ts = time.time() - tss
             
                 if self.solvetype=='iterative':
@@ -380,30 +387,26 @@ class solver_nonlinear:
             # get residual and increment norms
             resnorms, incnorms = {}, {}
             for n in range(self.nfields):
-                numvar = len(self.x['field'+str(n+1)])
-                for m in range(numvar):
-                    resnorms['res'+str(self.nfields*n+m+1)] = r_list[self.nfields*n+m].norm()
-                    incnorms['inc'+str(self.nfields*n+m+1)] = del_x['field'+str(n+1)][m].norm()
+                resnorms['res'+str(n+1)] = r_list[n].norm()
+                incnorms['inc'+str(n+1)] = del_x[n].norm()
 
-            # reconstruct full-length increment vector - currently only for first var of field1!
-            if self.pb.have_rom and not self.pb.prestress_initial:
-                del_x['field1'][0] = self.pb.rom.V.createVecLeft()
-                self.pb.rom.V.mult(del_u_, del_x['field1'][0]) # V * d_red
+            # reconstruct full-length increment vector - currently only for first var!
+            if self.pb.have_rom and not self.pb.get_prestress_initial():
+                del_x[0] = self.pb.rom.V.createVecLeft()
+                self.pb.rom.V.mult(del_u_, del_x[0]) # V * d_red
 
             # update variables
             for n in range(self.nfields):
-                numvar = len(self.x['field'+str(n+1)])
-                for m in range(numvar):
-                    self.x['field'+str(n+1)][m].vector.axpy(1.0, del_x['field'+str(n+1)][m])
-                    self.x['field'+str(n+1)][m].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                self.x[n].axpy(1.0, del_x[n])
+                if self.is_ghosted[n]: self.x[n].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
             
             it += 1
             
-            # for PTC
-            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= resnorms['res1']/struct_res_u_norm_last
-            struct_res_u_norm_last = resnorms['res1']
+            # for PTC - only applied to first main block so far...
+            if self.PTC and it > 1 and res_norm_main_last > 0.: k_PTC *= resnorms['res1']/res_norm_main_last
+            res_norm_main_last = resnorms['res1']
             
             # adaptive PTC (for 3D block K_uu only!)
             if self.divcont=='PTC':
@@ -416,8 +419,8 @@ class solver_nonlinear:
                     # reset Newton step
                     it, k_PTC = 0, self.k_PTC_initial
                     k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
-                    self.reset_step(self.x['field1'][0].vector, x_start['field1'][0], True)
-                    if self.pb.incompressible_2field: self.reset_step(self.x['field1'][1].vector, x_start['field1'][1], True)
+                    for n in range(self.nfields):
+                        self.reset_step(self.x[n], x_start[n], self.is_ghosted[n])
                     counter_adapt += 1
             
             # check if converged
@@ -497,599 +500,6 @@ class solver_nonlinear:
 
             raise RuntimeError("Local Newton did not converge after %i iterations!" % (it_local))
 
-
-
-# nonlinear solver for Lagrange multiplier constraints and 3D-0D coupled monolithic formulations
-class solver_nonlinear_constraint_monolithic(solver_nonlinear):
-    
-    def __init__(self, pb, solver_params_3D={}, solver_params_constr={}):
-        
-        # coupled problem
-        self.pb = pb
-        
-        # variables and function spaces
-        self.x = self.pb.get_problem_var_list()
-        self.V = self.pb.get_problem_functionspace_list()
-        
-        self.ptype = self.pb.problem_physics
-
-        self.set_solver_params(solver_params_3D)
-
-        self.solver_params_3D = solver_params_3D
-        self.solver_params_constr = solver_params_constr
-
-        self.ptype = self.pb.problem_physics
-        self.solutils = sol_utils(self.pb, self.ptype, solver_params_3D)
-
-        self.tolres0D = solver_params_constr['tol_res']
-        self.tolinc0D = solver_params_constr['tol_inc']
-
-        if self.pb.pbs.incompressible_2field:
-            self.tolerances = {'res1' : self.tolres, 'inc1' : self.tolinc, 'res2' : self.tolres, 'inc2' : self.tolinc, 'res_0d' : self.tolres0D, 'inc_0d' : self.tolinc0D}
-            # dof offset for pressure block and 0D model
-            self.V3D_map_u = self.V['field1'][0].dofmap.index_map
-            self.V3D_map_p = self.V['field1'][1].dofmap.index_map
-            self.offsetp = self.V3D_map_u.size_local * self.V['field1'][0].dofmap.index_map_bs
-            self.offset0D = self.V3D_map_u.size_local * self.V['field1'][0].dofmap.index_map_bs + self.V3D_map_p.size_local * self.V['field1'][1].dofmap.index_map_bs
-        else:
-            self.tolerances = {'res1' : self.tolres, 'inc1' : self.tolinc, 'res_0d' : self.tolres0D, 'inc_0d' : self.tolinc0D}
-            # dof offset for 0D model
-            self.V3D_map_u = self.V['field1'][0].dofmap.index_map
-            self.offset0D = self.V3D_map_u.size_local * self.V['field1'][0].dofmap.index_map_bs
-
-        # initialize 0D solver class for monolithic Lagrange multiplier coupling
-        if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-            self.snln0D = solver_nonlinear_ode(self.pb.pb0, self.solver_params_constr)
-
-        self.sepstring = self.solutils.timestep_separator(self.tolerances)
-        
-        self.initialize_petsc_solver()
-        
-        
-    def initialize_petsc_solver(self):
-
-        # set forms to use (differ in case of initial prestress)
-        self.pb.pbs.set_forms_solver()
-
-        # create solver
-        self.ksp = PETSc.KSP().create(self.pb.comm)
-        
-        # 0D flow, or Lagrange multiplier system matrix
-        if self.pb.coupling_type == 'monolithic_direct': self.K_ss = self.pb.pb0.K
-        if self.pb.coupling_type == 'monolithic_lagrange': self.K_ss = self.pb.K_lm
-        
-        if self.solvetype=='direct':
-            
-            self.ksp.setType("preonly")
-            self.ksp.getPC().setType("lu")
-            self.ksp.getPC().setFactorSolverType(self.direct_solver)
-        
-        elif self.solvetype=='iterative':
-
-            # 3x3 block iterative method
-            if self.pb.pbs.incompressible_2field:
-
-                self.ksp.setType("gmres")
-                self.ksp.getPC().setType("fieldsplit")
-                # TODO: What is the difference btw. ADDITIVE, MULTIPLICATIVE, SCHUR, SPECIAL?
-                self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.ADDITIVE)
-                #self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.SCHUR)
-                #self.ksp.getPC().setFieldSplitSchurFactType(0)
-
-                # build "dummy" nested matrix in order to get the nested ISs (index sets)
-                locmatsize_u, locmatsize_p = self.V['field1'][0].dofmap.index_map.size_local * self.V['field1'][0].dofmap.index_map_bs, self.V['field1'][1].dofmap.index_map.size_local * self.V['field1'][1].dofmap.index_map_bs
-                matsize_u, matsize_p = self.V['field1'][0].dofmap.index_map.size_global * self.V['field1'][0].dofmap.index_map_bs, self.V['field1'][1].dofmap.index_map.size_global * self.V['field1'][1].dofmap.index_map_bs
-                K_uu = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-                K_uu.setUp()
-                K_up = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_p,matsize_p)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-                K_up.setUp()                
-                K_pu = PETSc.Mat().createAIJ(size=((locmatsize_p,matsize_p),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-                K_pu.setUp()                   
-                
-                K_nest = PETSc.Mat().createNest([[K_uu, K_up, None], [K_pu, None, None], [None, None, self.K_ss]], isrows=None, iscols=None, comm=self.pb.comm)
-                
-                nested_IS = K_nest.getNestISs()
-                self.ksp.getPC().setFieldSplitIS(
-                    ("u", nested_IS[0][0]),
-                    ("p", nested_IS[0][1]),
-                    ("s", nested_IS[0][2]))
-
-                # set the preconditioners for each block
-                ksp_u, ksp_p, ksp_s = self.ksp.getPC().getFieldSplitSubKSP()
-                
-                # AMG for displacement/velocity block
-                ksp_u.setType("preonly")
-                ksp_u.getPC().setType("hypre")
-                ksp_u.getPC().setMGLevels(3)
-                ksp_u.getPC().setHYPREType("boomeramg")
-                
-                # AMG for pressure block
-                ksp_p.setType("preonly")
-                ksp_p.getPC().setType("hypre")
-                ksp_p.getPC().setMGLevels(3)
-                ksp_p.getPC().setHYPREType("boomeramg")
-                
-                # direct solve for 0D block
-                ksp_s.setType("preonly")
-                ksp_s.getPC().setType("lu")
-                
-            # 2x2 block iterative method
-            else:
-                
-                self.ksp.setType("gmres")
-                self.ksp.getPC().setType("fieldsplit")
-                # TODO: What is the difference btw. ADDITIVE, MULTIPLICATIVE, SCHUR, SPECIAL?
-                self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.ADDITIVE)
-                #self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.SCHUR)
-                #self.ksp.getPC().setFieldSplitSchurFactType(0)
-                
-                # build "dummy" nested matrix in order to get the nested ISs (index sets)
-                locmatsize = self.V['field1'][0].dofmap.index_map.size_local * self.V['field1'][0].dofmap.index_map_bs
-                matsize = self.V['field1'][0].dofmap.index_map.size_global * self.V['field1'][0].dofmap.index_map_bs
-                K_uu = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-                K_uu.setUp()
-                
-                K_nest = PETSc.Mat().createNest([[K_uu, None], [None, self.K_ss]], isrows=None, iscols=None, comm=self.pb.comm)
-                
-                nested_IS = K_nest.getNestISs()
-                self.ksp.getPC().setFieldSplitIS(
-                    ("u", nested_IS[0][0]),
-                    ("s", nested_IS[0][1]))
-
-                # set the preconditioners for each block
-                ksp_u, ksp_s = self.ksp.getPC().getFieldSplitSubKSP()
-                
-                # AMG for displacement/velocity block
-                ksp_u.setType("preonly")
-                ksp_u.getPC().setType("hypre")
-                ksp_u.getPC().setMGLevels(3)
-                ksp_u.getPC().setHYPREType("boomeramg")
-                
-                # direct solve for 0D block
-                ksp_s.setType("preonly")
-                ksp_s.getPC().setType("lu")
-
-            # set tolerances and print routine
-            self.ksp.setTolerances(rtol=self.tollin, atol=None, divtol=None, max_it=self.maxliniter)
-            self.ksp.setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its,rnorm))
-
-        else:
-            
-            raise NameError("Unknown solvetype!")
-
-
-    def newton(self, t, localdata={}):
-        
-        # 3D displacement/velocity increment
-        del_u_func = fem.Function(self.V['field1'][0])
-        del_u = del_u_func.vector
-        if self.pb.pbs.incompressible_2field:
-            # 3D pressure increment
-            del_p_func = fem.Function(self.V['field1'][1])
-            del_p = del_p_func.vector
-        # 0D/Lagrange multiplier increment
-        del_s = self.K_ss.createVecLeft()
-        
-        # get start vectors in case we need to reset the nonlinear solver
-        u_start = self.x['field1'][0].vector.duplicate()
-        s_start = self.x['field2'][0].duplicate()
-        u_start.axpby(1.0, 0.0, self.x['field1'][0].vector)
-        self.x['field2'][0].assemble(), s_start.axpby(1.0, 0.0, self.x['field2'][0])
-        if self.pb.pbs.incompressible_2field:
-            p_start = self.x['field1'][1].vector.duplicate()
-            p_start.axpby(1.0, 0.0, self.x['field1'][1].vector)
-
-        # Newton iteration index
-        it = 0
-        # for PTC
-        k_PTC = self.k_PTC_initial
-        counter_adapt, max_adapt = 0, 50
-        maxresval = 1.0e16
-        
-        self.solutils.print_nonlinear_iter(header=True)
-
-        while it < self.maxiter and counter_adapt < max_adapt:
-            
-            tes = time.time()
-            
-            if self.ptype == 'solid_constraint':
-                self.x['field2'][0].assemble()
-                ls, le = self.x['field2'][0].getOwnershipRange()
-            
-            if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-                self.x['field2'][0].assemble()
-                ls, le = self.x['field2'][0].getOwnershipRange()
-                # Lagrange multipliers (pressures) to be passed to 0D model
-                lm_sq = allgather_vec(self.x['field2'][0], self.pb.comm)
-                self.pb.pb0.c[:] = lm_sq[:]
-                self.snln0D.newton(t, print_iter=self.pb.print_subiter, sub=True)
-
-            if self.pb.pbs.localsolve:
-                self.solve_local(localdata)
-
-            # set the pressure functions for the load onto the 3D solid/fluid problem
-            if self.pb.coupling_type == 'monolithic_direct':
-                self.pb.pb0.cardvasc0D.set_pressure_fem(self.x['field2'][0], self.pb.pb0.cardvasc0D.v_ids, self.pb.pr0D, self.pb.coupfuncs)
-            if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-                self.pb.pb0.cardvasc0D.set_pressure_fem(self.x['field2'][0], list(range(self.pb.num_coupling_surf)), self.pb.pr0D, self.pb.coupfuncs)
-            if self.pb.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
-                self.pb.set_pressure_fem(self.x['field2'][0], self.pb.coupfuncs)
-            
-            r_list, K_list = self.pb.assemble_residual_stiffness()
-            r_u = r_list[0]
-            K_uu = K_list[0][0]
-
-            if self.PTC:
-                # computes K_uu + k_PTC * I
-                K_uu.shift(k_PTC)
-
-            if self.pb.pbs.incompressible_2field:
-                r_p = r_list[1]
-                K_up = K_list[0][1]
-                K_pu = K_list[1][0]
-                K_pp = K_list[1][1]
-
-            if self.pb.coupling_type == 'monolithic_direct':
-
-                # volumes/fluxes to be passed to 0D model
-                for i in range(len(self.pb.pb0.cardvasc0D.c_ids)):
-                    cq = fem.assemble_scalar(fem.form(self.pb.cq[i]))
-                    cq = self.pb.comm.allgather(cq)
-                    self.pb.pb0.c[i] = sum(cq)*self.pb.cq_factor[i]
-
-                # evaluate 0D model with current p and return df, f, K_ss
-                self.pb.pb0.cardvasc0D.evaluate(self.x['field2'][0], t, self.pb.pb0.df, self.pb.pb0.f, self.pb.pb0.dK, self.pb.pb0.K, self.pb.pb0.c, self.pb.pb0.y, self.pb.pb0.aux)
-
-                # 0D rhs vector and stiffness
-                r_s, self.K_ss = self.pb.pb0.assemble_residual_stiffness(t)
-
-            if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
-                # assemble 0D rhs contributions
-                self.pb.pb0.df_old.assemble()
-                self.pb.pb0.f_old.assemble()
-                self.pb.pb0.df.assemble()
-                self.pb.pb0.f.assemble()
-                self.pb.pb0.s.assemble()
-
-            if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-
-                for i in range(self.pb.num_coupling_surf):
-                    cq = fem.assemble_scalar(fem.form(self.pb.cq[i]))
-                    cq = self.pb.comm.allgather(cq)
-                    self.pb.constr[i] = sum(cq)*self.pb.cq_factor[i]
-                
-                s_sq = allgather_vec(self.pb.pb0.s, self.pb.comm)
-
-                # store df, f, and aux vectors prior to perturbation solves
-                df_tmp, f_tmp, aux_tmp = self.pb.pb0.K.createVecLeft(), self.pb.pb0.K.createVecLeft(), np.zeros(self.pb.pb0.numdof)
-                df_tmp.axpby(1.0, 0.0, self.pb.pb0.df)
-                f_tmp.axpby(1.0, 0.0, self.pb.pb0.f)
-                aux_tmp[:] = self.pb.pb0.aux[:]
-                # store 0D state variable prior to perturbation solves
-                s_tmp = self.pb.pb0.K.createVecLeft()
-                s_tmp.axpby(1.0, 0.0, self.pb.pb0.s)
-
-                # finite differencing for LM siffness matrix
-                for i in range(self.pb.num_coupling_surf):
-                    for j in range(self.pb.num_coupling_surf):
-
-                        self.pb.pb0.c[j] = lm_sq[j] + self.pb.eps_fd # perturbed LM
-                        self.snln0D.newton(t, print_iter=False)
-                        s_pert_sq = allgather_vec(self.pb.pb0.s, self.pb.comm)
-                        self.K_ss[i,j] = -(s_pert_sq[self.pb.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb.pb0.cardvasc0D.v_ids[i]])/self.pb.eps_fd
-                        self.pb.pb0.c[j] = lm_sq[j] # restore LM
-
-                # restore df, f, and aux vectors for correct time step update
-                self.pb.pb0.df.axpby(1.0, 0.0, df_tmp)
-                self.pb.pb0.f.axpby(1.0, 0.0, f_tmp)
-                self.pb.pb0.aux[:] = aux_tmp[:]
-                # restore 0D state variable
-                self.pb.pb0.s.axpby(1.0, 0.0, s_tmp)
-
-            if self.ptype == 'solid_constraint':
-                for i in range(len(self.pb.surface_p_ids)):
-                    cq = fem.assemble_scalar(fem.form(self.pb.cq[i]))
-                    cq = self.pb.comm.allgather(cq)
-                    self.pb.constr[i] = sum(cq)*self.pb.cq_factor[i]
-
-            if self.pb.coupling_type == 'monolithic_direct':
-            
-                # if we have prescribed variable values over time
-                if bool(self.pb.pb0.prescribed_variables):
-                    for a in self.pb.pb0.prescribed_variables:
-                        varindex = self.pb.pb0.cardvasc0D.varmap[a]
-                        curvenumber = self.pb.pb0.prescribed_variables[a]
-                        val = self.pb.pbs.ti.timecurves(curvenumber)(t)
-                        self.pb.pb0.cardvasc0D.set_prescribed_variables(self.x['field2'][0], r_s, self.K_ss, val, varindex)
-
-            if self.pb.coupling_type == 'monolithic_lagrange' and (self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d'):
-
-                r_s = self.K_ss.createVecLeft()
-
-                # Lagrange multiplier coupling residual
-                for i in range(ls,le):
-                    r_s[i] = self.pb.constr[i] - s_sq[self.pb.pb0.cardvasc0D.v_ids[i]]
-                
-            if self.pb.coupling_type == 'monolithic_lagrange' and self.ptype == 'solid_constraint':
-
-                r_s = self.K_ss.createVecLeft()
-
-                val, val_old = [], []
-                for n in range(self.pb.num_coupling_surf):
-                    curvenumber = self.pb.prescribed_curve[n]
-                    val.append(self.pb.pbs.ti.timecurves(curvenumber)(t)), val_old.append(self.pb.pbs.ti.timecurves(curvenumber)(t-self.pb.pbs.dt))
-    
-                # Lagrange multiplier coupling residual
-                for i in range(ls,le):
-                    r_s[i] = self.pb.constr[i] - val[i]
-
-            # 0D / Lagrange multiplier system matrix
-            self.K_ss.assemble()
-
-            if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d': 
-                if self.pb.coupling_type == 'monolithic_direct':
-                    row_ids = self.pb.pb0.cardvasc0D.c_ids
-                    col_ids = self.pb.pb0.cardvasc0D.v_ids
-                if self.pb.coupling_type == 'monolithic_lagrange':
-                    row_ids = list(range(self.pb.num_coupling_surf))
-                    col_ids = list(range(self.pb.num_coupling_surf))
-
-            if self.ptype == 'solid_constraint':    
-                row_ids = list(range(self.pb.num_coupling_surf))
-                col_ids = list(range(self.pb.num_coupling_surf))
-
-            # offdiagonal u-s columns
-            k_us_cols=[]
-            for i in range(len(col_ids)):
-                k_us_cols.append(fem.petsc.assemble_vector(fem.form(self.pb.dforce[i]))) # already multiplied by time-integration factor
-        
-            # offdiagonal s-u rows
-            k_su_rows=[]
-            for i in range(len(row_ids)):
-                
-                if self.ptype == 'solid_flow0d' or self.ptype == 'fluid_flow0d':
-                    # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
-                    if self.pb.pb0.cq[i] == 'volume':   timefac = 1./self.pb.pbs.dt
-                    if self.pb.pb0.cq[i] == 'flux':     timefac = -self.pb.pb0.theta0d_timint(t) # 0D model time-integration factor
-                    if self.pb.pb0.cq[i] == 'pressure': timefac = 1.
-
-                if self.ptype == 'solid_constraint': timefac = 1.
-                
-                k_su_rows.append(fem.petsc.assemble_vector(fem.form((timefac*self.pb.cq_factor[i])*self.pb.dcq[i])))
-
-            # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
-            for i in range(len(col_ids)):
-                
-                fem.apply_lifting(k_us_cols[i], [fem.form(self.pb.jac_uu)], [self.pb.pbs.bc.dbcs], x0=[self.x['field1'][0].vector], scale=0.0)
-                k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                fem.set_bc(k_us_cols[i], self.pb.pbs.bc.dbcs, x0=self.x['field1'][0].vector, scale=0.0)
-            
-            for i in range(len(row_ids)):
-            
-                fem.apply_lifting(k_su_rows[i], [fem.form(self.pb.jac_uu)], [self.pb.pbs.bc.dbcs], x0=[self.x['field1'][0].vector], scale=0.0)
-                k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                fem.set_bc(k_su_rows[i], self.pb.pbs.bc.dbcs, x0=self.x['field1'][0].vector, scale=0.0)
-            
-            # setup offdiagonal matrices
-            locmatsize = self.V3D_map_u.size_local * self.V['field1'][0].dofmap.index_map_bs
-            matsize = self.V3D_map_u.size_global * self.V['field1'][0].dofmap.index_map_bs
-            # row ownership range of uu block
-            irs, ire = K_uu.getOwnershipRange()
-
-            # derivative of solid/fluid residual w.r.t. 0D pressures
-            K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.K_ss.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-            K_us.setUp()
-
-            # set columns
-            for i in range(len(col_ids)):
-                K_us[irs:ire, col_ids[i]] = k_us_cols[i][irs:ire]
-                
-            K_us.assemble()
-
-            # derivative of 0D residual w.r.t. solid displacements/fluid velocities
-            K_su = PETSc.Mat().createAIJ(size=((self.K_ss.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-            K_su.setUp()
-
-            # set rows
-            for i in range(len(row_ids)):
-                K_su[row_ids[i], irs:ire] = k_su_rows[i][irs:ire]
-
-            K_su.assemble()
-
-            # model order reduction stuff
-            if self.pb.pbs.have_rom:
-                tmp = K_uu.matMult(self.pb.pbs.rom.V) # K_uu * V
-                K_uu = self.pb.pbs.rom.V.transposeMatMult(tmp) # V^T * K_uu * V
-                r_u_, del_u_ = self.pb.pbs.rom.V.createVecRight(), self.pb.pbs.rom.V.createVecRight()
-                self.pb.pbs.rom.V.multTranspose(r_u, r_u_) # V^T * r_u
-                # deal with penalties that may be added to reduced residual to penalize certain modes
-                if bool(self.pb.pbs.rom.redbasisvec_penalties):
-                    u_ = K_uu.createVecRight()
-                    self.pb.pbs.rom.V.multTranspose(self.x['field1'][0].vector, u_) # V^T * u
-                    penterm_ = self.pb.pbs.rom.V.createVecRight()
-                    self.pb.pbs.rom.Cpen.mult(u_, penterm_) # Cpen * V^T * u
-                    r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
-                    K_uu.aypx(1.0, self.pb.pbs.rom.CpenVTV) # K_uu + Cpen * V^T * V
-                r_u, del_u = r_u_, del_u_
-                # offdiagonal blocks
-                offdg1 = self.pb.pbs.rom.V.transposeMatMult(K_us) # V^T * K_us
-                offdg2 = K_su.matMult(self.pb.pbs.rom.V) # K_su * V
-                K_us, K_su = offdg1, offdg2
-                # set adequate offset for 0D/LM block
-                self.offset0D = self.pb.pbs.rom.V.getLocalSize()[1]
-                if self.pb.pbs.incompressible_2field:
-                    # offdiagonal pressure blocks
-                    offdg1 = self.pb.pbs.rom.V.transposeMatMult(K_up) # V^T * K_up
-                    offdg2 = K_pu.matMult(self.pb.pbs.rom.V) # K_pu * V
-                    K_up, K_pu = offdg1, offdg2
-                    # new offset for pressure and 0D/LM block
-                    self.offsetp = self.pb.pbs.rom.V.getLocalSize()[1]
-                    self.offset0D = self.offsetp + self.V['field1'][1].dofmap.index_map.size_local * self.V['field1'][1].dofmap.index_map_bs
-
-            if self.pb.pbs.incompressible_2field:
-                K_3D0D_nest = PETSc.Mat().createNest([[K_uu, K_up, K_us], [K_pu, K_pp, None], [K_su, None, self.K_ss]], isrows=None, iscols=None, comm=self.pb.comm)
-            else:
-                K_3D0D_nest = PETSc.Mat().createNest([[K_uu, K_us], [K_su, self.K_ss]], isrows=None, iscols=None, comm=self.pb.comm)
-
-            K_3D0D_nest.assemble()
-            
-            # 0D rhs vector
-            r_s.assemble()
-            
-            # nested 3D-0D vector
-            if self.pb.pbs.incompressible_2field:
-                r_3D0D_nest = PETSc.Vec().createNest([r_u, r_p, r_s])
-            else:
-                r_3D0D_nest = PETSc.Vec().createNest([r_u, r_s])
-            
-            te = time.time() - tes
-            
-            # solve linear system
-            
-            # for monolithic direct solver
-            if self.solvetype=='direct':
-                
-                tes = time.time()
-                
-                K_3D0D = PETSc.Mat()
-                K_3D0D_nest.convert("aij", out=K_3D0D)
-            
-                K_3D0D.assemble()
-
-                r_3D0D = PETSc.Vec().createWithArray(r_3D0D_nest.getArray())
-                r_3D0D.assemble()
-
-                del_sol = K_3D0D.createVecLeft()
-                self.ksp.setOperators(K_3D0D)
-                
-                te += time.time() - tes
-                
-                tss = time.time()
-                self.ksp.solve(-r_3D0D, del_sol)
-                ts = time.time() - tss
-                
-            # for nested iterative solver
-            elif self.solvetype=='iterative':
-                
-                tes = time.time()
-                
-                if self.pb.pbs.incompressible_2field:
-
-                    # SIMPLE/block diagonal preconditioner
-                    P_us = preconditioner.simple2x2(K_uu,K_us,K_su,self.K_ss)
-                    P_pp = fem.petsc.assemble_matrix(fem.form(self.pb.pbs.a_p11), [])
-                    P = PETSc.Mat().createNest([[P_us.getNestSubMatrix(0,0), None, P_us.getNestSubMatrix(0,1)], [P_us.getNestSubMatrix(1,0), P_pp, None], [None, None, P_us.getNestSubMatrix(1,1)]], isrows=None, iscols=None, comm=self.pb.comm)
-                    P.assemble()
-                    
-                    ## block diagonal preconditioner
-                    #P_pp = fem.petsc.assemble_matrix(fem.form(self.pb.pbs.a_p11), [])
-                    #P = PETSc.Mat().createNest([[K_uu, None, None], [None, P_pp, None], [None, None, self.K_ss]], isrows=None, iscols=None, comm=self.pb.comm)
-                    #P.assemble()
-                    
-                    del_sol = PETSc.Vec().createNest([del_u, del_p, del_s])
-                    self.ksp.setOperators(K_3D0D_nest, P)
-                
-                else:
-                    
-                    # SIMPLE preconditioner
-                    P = preconditioner.simple2x2(K_uu,K_us,K_su,self.K_ss)
-                    
-                    ## block diagonal preconditioner
-                    #P = PETSc.Mat().createNest([[K_uu, None], [None, self.K_ss]], isrows=None, iscols=None, comm=self.pb.comm)
-                    #P.assemble()
-                    
-                    del_sol = PETSc.Vec().createNest([del_u, del_s])
-                    self.ksp.setOperators(K_3D0D_nest, P)
-                
-                te += time.time() - tes
-                
-                tss = time.time()
-                self.ksp.solve(-r_3D0D_nest, del_sol)
-                ts = time.time() - tss
-
-                self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
-                
-                if self.adapt_linsolv_tol:
-                    self.solutils.adapt_linear_solver(r_u.norm())
-
-            else:
-                
-                raise NameError("Unknown solvetype!")
-
-            if self.pb.pbs.incompressible_2field:
-                del_u.array[:] = del_sol.array_r[:self.offsetp]
-                del_p.array[:] = del_sol.array_r[self.offsetp:self.offset0D]
-                del_s.array[:] = del_sol.array_r[self.offset0D:]
-            else:
-                del_u.array[:] = del_sol.array_r[:self.offset0D]
-                del_s.array[:] = del_sol.array_r[self.offset0D:]
-
-            # get solid/fluid residual and increment norms
-            resnorms = {'res1' : r_u.norm()}
-            incnorms = {'inc1' : del_u.norm()}
-
-            # reconstruct full-length increment vector
-            if self.pb.pbs.have_rom:
-                del_u = self.pb.pbs.rom.V.createVecLeft()
-                self.pb.pbs.rom.V.mult(del_u_, del_u) # V * d_red
-
-            if self.pb.pbs.incompressible_2field:
-                # get pressure residual and increment norms
-                resnorms['res2'] = r_p.norm()
-                incnorms['inc2'] = del_p.norm()
-
-            # get flow0d residual and increment norms
-            resnorms['res_0d'] = r_s.norm()
-            incnorms['inc_0d'] = del_s.norm()
-
-            # update solution - displacement/velocity
-            self.x['field1'][0].vector.axpy(1.0, del_u)
-            self.x['field1'][0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-            # update solution - pressure
-            if self.pb.pbs.incompressible_2field:
-                self.x['field1'][1].vector.axpy(1.0, del_p)
-                self.x['field1'][1].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-            # update solution - 0D variables (not ghosted!)
-            if self.pb.coupling_type == 'monolithic_direct': self.x['field2'][0].axpy(1.0, del_s)
-            # update solution - Lagrange multipliers (not ghosted!)
-            if self.pb.coupling_type == 'monolithic_lagrange': self.x['field2'][0].axpy(1.0, del_s)
-
-            self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
-            
-            it += 1
-            
-            # for PTC
-            if self.PTC and it > 1 and struct_res_u_norm_last > 0.: k_PTC *= resnorms['res1']/struct_res_u_norm_last
-            struct_res_u_norm_last = resnorms['res1']
-            
-            # adaptive PTC (for 3D block K_uu only!)
-            if self.divcont=='PTC':
-                
-                self.maxiter = 250
-                err = self.solutils.catch_solver_errors(resnorms['res1'], incnorm=incnorms['inc1'], maxval=maxresval)
-                
-                if err:
-                    self.PTC = True
-                    # reset Newton step
-                    it, k_PTC = 0, self.k_PTC_initial
-                    k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
-                    self.reset_step(self.x['field1'][0].vector,u_start,True), self.reset_step(self.x['field2'][0],s_start,False)
-                    if self.pb.pbs.incompressible_2field: self.reset_step(self.x['field1'][1].vector,p_start,True)
-                    counter_adapt += 1
-            
-            # check if converged
-            converged = self.solutils.check_converged(resnorms,incnorms,self.tolerances)
-            if converged:
-                if self.divcont=='PTC':
-                    self.PTC = False
-                    counter_adapt = 0
-                break
-
-        else:
-
-            raise RuntimeError("Monolithic 3D-0D Newton did not converge after %i iterations!" % (it))
 
 
 # solver for pure ODE (0D) problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)

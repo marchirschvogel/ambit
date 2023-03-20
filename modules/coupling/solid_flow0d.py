@@ -89,29 +89,33 @@ class SolidmechanicsFlow0DProblem():
         self.restart_step = self.pbs.restart_step
         self.numstep_stop = self.pbs.numstep_stop
         self.dt = self.pbs.dt
+        self.localsolve = self.pbs.localsolve
+        self.have_rom = self.pbs.have_rom
+        if self.have_rom: self.rom = self.pbs.rom
+        
+        if self.coupling_type == 'monolithic_lagrange':
+            self.sub_solve = True
+        else:
+            self.sub_solve = False
 
 
     def get_problem_var_list(self):
         
         if self.coupling_type == 'monolithic_lagrange':
             if self.pbs.incompressible_2field:
-                return {'field1' : [self.pbs.u, self.pbs.p], 'field2' : [self.lm]}
+                is_ghosted = [True, True, False]
+                return [self.pbs.u.vector, self.pbs.p.vector, self.lm], is_ghosted
             else:
-                return {'field1' : [self.pbs.u], 'field2' : [self.lm]}
+                is_ghosted = [True, False]
+                return [self.pbs.u.vector, self.lm], is_ghosted
 
         if self.coupling_type == 'monolithic_direct':
             if self.pbs.incompressible_2field:
-                return {'field1' : [self.pbs.u, self.pbs.p], 'field2' : [self.pb0.s]}
+                is_ghosted = [True, True, False]
+                return [self.pbs.u.vector, self.pbs.p.vector, self.pb0.s], is_ghosted
             else:
-                return {'field1' : [self.pbs.u], 'field2' : [self.pb0.s]}
-
-
-    def get_problem_functionspace_list(self):
-        
-        if self.pbs.incompressible_2field:
-            return {'field1' : [self.pbs.V_u, self.pbs.V_p], 'field2' : []}
-        else:
-            return {'field1' : [self.pbs.V_u], 'field2' : []}
+                is_ghosted = [True, False]
+                return [self.pbs.u.vector, self.pb0.s], is_ghosted
 
         
     # defines the monolithic coupling forms for 0D flow and solid mechanics
@@ -265,9 +269,193 @@ class SolidmechanicsFlow0DProblem():
             self.pb0.s_set.axpby(1.0, 0.0, self.pb0.s)
 
 
-    def assemble_residual_stiffness(self):
+    def set_forms_solver(self):
+        pass
 
-        return self.pbs.assemble_residual_stiffness()
+
+    def get_prestress_initial(self):
+        return self.pbs.prestress_initial
+
+
+    def assemble_residual_stiffness(self, t, subsolver=None):
+
+        if self.pbs.incompressible_2field:
+            off = 1
+        else:
+            off = 0
+
+        K_list = [[None]*(2+off) for _ in range(2+off)]
+        r_list = [None]*(2+off)
+
+        if self.coupling_type == 'monolithic_lagrange':
+
+            for i in range(self.num_coupling_surf):
+                cq = fem.assemble_scalar(fem.form(self.cq[i]))
+                cq = self.comm.allgather(cq)
+                self.constr[i] = sum(cq)*self.cq_factor[i]
+
+            # Lagrange multipliers (pressures) to be passed to 0D model
+            lm_sq = allgather_vec(self.lm, self.comm)
+            self.pb0.c[:] = lm_sq[:]
+            subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+            
+            # add to solid momentum equation
+            self.pb0.cardvasc0D.set_pressure_fem(self.lm, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
+
+        if self.coupling_type == 'monolithic_direct':
+            
+            # add to solid momentum equation
+            self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs)
+            
+            # volumes/fluxes to be passed to 0D model
+            for i in range(len(self.pb0.cardvasc0D.c_ids)):
+                cq = fem.assemble_scalar(fem.form(self.cq[i]))
+                cq = self.comm.allgather(cq)
+                self.pb0.c[i] = sum(cq)*self.cq_factor[i]
+
+            # evaluate 0D model with current p and return df, f, K_ss
+            self.pb0.cardvasc0D.evaluate(self.pb0.s, t, self.pb0.df, self.pb0.f, self.pb0.dK, self.pb0.K, self.pb0.c, self.pb0.y, self.pb0.aux)
+
+            # 0D rhs vector and stiffness
+            r_s, K_ss = self.pb0.assemble_residual_stiffness(t)
+            
+            r_list[1+off] = r_s
+            K_list[1+off][1+off] = K_ss
+            
+        # solid main blocks
+        r_list_solid, K_list_solid = self.pbs.assemble_residual_stiffness(t)
+        
+        K_list[0][0] = K_list_solid[0][0]
+        r_list[0] = r_list_solid[0]
+        if self.pbs.incompressible_2field:
+            K_list[0][1] = K_list_solid[0][1]
+            K_list[1][0] = K_list_solid[1][0]
+            K_list[1][1] = K_list_solid[1][1] # should be only non-zero if we have stress-mediated growth...
+            r_list[1] = r_list_solid[1]
+
+        if self.coupling_type == 'monolithic_lagrange':
+            
+            s_sq = allgather_vec(self.pb0.s, self.comm)
+            
+            ls, le = self.lm.getOwnershipRange()
+        
+            # Lagrange multiplier coupling residual
+            r_lm = self.K_lm.createVecLeft()
+            for i in range(ls,le):
+                r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
+            
+            r_list[1+off] = r_lm
+            
+            # assemble 0D rhs contributions
+            self.pb0.df_old.assemble()
+            self.pb0.f_old.assemble()
+            self.pb0.df.assemble()
+            self.pb0.f.assemble()
+            self.pb0.s.assemble()
+            
+            # now the LM matrix - via finite differencing
+            # store df, f, and aux vectors prior to perturbation solves
+            df_tmp, f_tmp, aux_tmp = self.pb0.K.createVecLeft(), self.pb0.K.createVecLeft(), np.zeros(self.pb0.numdof)
+            df_tmp.axpby(1.0, 0.0, self.pb0.df)
+            f_tmp.axpby(1.0, 0.0, self.pb0.f)
+            aux_tmp[:] = self.pb0.aux[:]
+            # store 0D state variable prior to perturbation solves
+            s_tmp = self.pb0.K.createVecLeft()
+            s_tmp.axpby(1.0, 0.0, self.pb0.s)
+
+            # finite differencing for LM siffness matrix
+            for i in range(self.num_coupling_surf):
+                for j in range(self.num_coupling_surf):
+
+                    self.pb0.c[j] = lm_sq[j] + self.eps_fd # perturbed LM
+                    subsolver.newton(t, print_iter=False)
+                    s_pert_sq = allgather_vec(self.pb0.s, self.comm)
+                    self.K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                    self.pb0.c[j] = lm_sq[j] # restore LM
+
+            # restore df, f, and aux vectors for correct time step update
+            self.pb0.df.axpby(1.0, 0.0, df_tmp)
+            self.pb0.f.axpby(1.0, 0.0, f_tmp)
+            self.pb0.aux[:] = aux_tmp[:]
+            # restore 0D state variable
+            self.pb0.s.axpby(1.0, 0.0, s_tmp)
+            
+            self.K_lm.assemble()
+            
+            K_list[1+off][1+off] = self.K_lm
+        
+            # rows and columns for offdiagonal matrices
+            row_ids = list(range(self.num_coupling_surf))
+            col_ids = list(range(self.num_coupling_surf))
+            
+            K_constr = self.K_lm
+
+        if self.coupling_type == 'monolithic_direct':
+            # rows and columns for offdiagonal matrices
+            row_ids = self.pb0.cardvasc0D.c_ids
+            col_ids = self.pb0.cardvasc0D.v_ids
+            
+            K_constr = K_ss
+
+        # offdiagonal u-s columns
+        k_us_cols=[]
+        for i in range(len(col_ids)):
+            k_us_cols.append(fem.petsc.assemble_vector(fem.form(self.dforce[i]))) # already multiplied by time-integration factor
+    
+        # offdiagonal s-u rows
+        k_su_rows=[]
+        for i in range(len(row_ids)):
+
+            # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
+            if self.pb0.cq[i] == 'volume':   timefac = 1./self.dt
+            if self.pb0.cq[i] == 'flux':     timefac = -self.pb0.theta0d_timint(t) # 0D model time-integration factor
+            if self.pb0.cq[i] == 'pressure': timefac = 1.
+            
+            k_su_rows.append(fem.petsc.assemble_vector(fem.form(timefac*self.cq_factor[i]*self.dcq[i])))
+
+        # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
+        for i in range(len(col_ids)):
+            
+            fem.apply_lifting(k_us_cols[i], [fem.form(self.pbs.jac_uu)], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_us_cols[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
+        
+        for i in range(len(row_ids)):
+        
+            fem.apply_lifting(k_su_rows[i], [fem.form(self.pbs.jac_uu)], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_su_rows[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
+        
+        # setup offdiagonal matrices
+        locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
+        matsize = self.pbs.V_u.dofmap.index_map.size_global * self.pbs.V_u.dofmap.index_map_bs
+        # row ownership range of uu block
+        irs, ire = K_list[0][0].getOwnershipRange()
+
+        # derivative of fluid residual w.r.t. 0D pressures
+        K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(K_constr.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_us.setUp()
+
+        # set columns
+        for i in range(len(col_ids)):
+            K_us[irs:ire, col_ids[i]] = k_us_cols[i][irs:ire]
+
+        K_us.assemble()
+
+        # derivative of 0D residual w.r.t. solid displacements/fluid velocities
+        K_su = PETSc.Mat().createAIJ(size=((K_constr.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_su.setUp()
+
+        # set rows
+        for i in range(len(row_ids)):
+            K_su[row_ids[i], irs:ire] = k_su_rows[i][irs:ire]
+
+        K_su.assemble()
+        
+        K_list[0][1+off] = K_us
+        K_list[1+off][0] = K_su
+
+        return r_list, K_list
 
 
     ### now the base routines for this problem
@@ -412,12 +600,11 @@ class SolidmechanicsFlow0DProblem():
 
 class SolidmechanicsFlow0DSolver(solver_base):
 
-    def __init__(self, problem, solver_params_solid, solver_params_flow0d):
+    def __init__(self, problem, solver_params):
         
         self.pb = problem
         
-        self.solver_params_solid = solver_params_solid
-        self.solver_params_flow0d = solver_params_flow0d
+        self.solver_params = solver_params
         
         self.initialize_nonlinear_solver()
 
@@ -425,13 +612,13 @@ class SolidmechanicsFlow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.solver_params_solid, self.solver_params_flow0d)
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
         if self.pb.pbs.prestress_initial:
             # add coupling work to prestress weak form
             self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            
             # initialize solid mechanics solver
-            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
+            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
 
 
     def solve_initial_state(self):
