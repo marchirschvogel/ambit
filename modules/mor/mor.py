@@ -75,7 +75,7 @@ class ModelOrderReduction():
         
     
     # Proper Orthogonal Decomposition
-    def POD(self, pb):
+    def POD(self, pb, Vspace):
         
         if self.comm.rank==0:
             print("Performing Proper Orthogonal Decomposition (POD) ...")
@@ -83,8 +83,8 @@ class ModelOrderReduction():
         
         ts = time.time()
         
-        locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
-        matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
+        locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
+        matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
 
         # snapshot matrix
         S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
@@ -97,10 +97,14 @@ class ModelOrderReduction():
             
             for i in range(self.numsnapshots):
                 
+                if self.comm.rank==0:
+                    print("Reading snapshot %i ..." % (i+1))
+                    sys.stdout.flush()
+                
                 step = self.snapshotoffset + (i+1)*self.snapshotincr
             
-                field = fem.Function(pb.V_u)
-                
+                field = fem.Function(Vspace)
+
                 if self.snapshotsource[h] == 'petscvector':
                     # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
                     viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
@@ -111,7 +115,7 @@ class ModelOrderReduction():
                 elif self.snapshotsource[h] == 'rawtxt':
                     
                     # own read function: requires plain txt format of type valx valy valz x z y
-                    pb.io.readfunction(field, pb.V_u, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
+                    pb.io.readfunction(field, Vspace, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
                     
                 else:
                     raise NameError("Unknown snapshotsource!")
@@ -120,12 +124,11 @@ class ModelOrderReduction():
 
         # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
         if bool(self.surface_rom):
-            self.fd_set = set(gather_surface_dof_indices(pb, pb.V_u, self.surface_rom,self.comm))
-            zero = S_d.createVecRight()
+            self.fd_set = set(gather_surface_dof_indices(pb, Vspace, self.surface_rom,self.comm))
             # eliminate corresponding rows in S_d
             for i in range(ss, se):
                 if i not in self.fd_set:
-                    S_d[i,:] = zero[:]
+                    S_d[i,:] = np.zeros(self.numsnapshots)
 
         S_d.assemble()
 
@@ -204,15 +207,15 @@ class ModelOrderReduction():
             for i in range(numredbasisvec_true):
                 outfile = io.XDMFFile(self.comm, pb.io.output_path+'/results_'+pb.simname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
                 outfile.write_mesh(pb.io.mesh)
-                podfunc = fem.Function(pb.V_u)
+                podfunc = fem.Function(Vspace)
                 podfunc.vector[ss:se] = self.Phi[ss:se,i]
                 outfile.write_function(podfunc)
         
         # build reduced basis - either only on designated surfaces or for the whole model
         if bool(self.surface_rom):
-            self.build_reduced_surface_basis(pb,numredbasisvec_true,ts)
+            self.build_reduced_surface_basis(Vspace,numredbasisvec_true,ts)
         else:
-            self.build_reduced_basis(pb,numredbasisvec_true,ts)
+            self.build_reduced_basis(Vspace,numredbasisvec_true,ts)
 
         if bool(self.redbasisvec_penalties):
             # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
@@ -221,10 +224,10 @@ class ModelOrderReduction():
             self.CpenVTV = self.Cpen.matMult(self.VTV) # Cpen * V^T * V
 
 
-    def build_reduced_basis(self, pb, rb, ts):
+    def build_reduced_basis(self, Vspace, rb, ts):
 
-        locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
-        matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
+        locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
+        matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
         self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb)), bsize=None, nnz=(rb,locmatsize_u), csr=None, comm=self.comm)
@@ -254,10 +257,10 @@ class ModelOrderReduction():
             sys.stdout.flush()
 
 
-    def build_reduced_surface_basis(self, pb, rb, ts):
+    def build_reduced_surface_basis(self, Vspace, rb, ts):
 
-        locmatsize_u = pb.V_u.dofmap.index_map.size_local * pb.V_u.dofmap.index_map_bs
-        matsize_u = pb.V_u.dofmap.index_map.size_global * pb.V_u.dofmap.index_map_bs
+        locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
+        matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
 
         # number of non-reduced "bulk" dofs
         ndof_bulk = matsize_u - len(self.fd_set)

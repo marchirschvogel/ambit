@@ -50,6 +50,10 @@ def print_problem(ptype, comm, numdof=0):
             print("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########")
             sys.stdout.flush()
 
+        elif ptype == 'fluid_ale_flow0d':
+            print("######## Welcome to monolithic coupling of 3D ALE fluid mechanics and 0D flow #########")
+            sys.stdout.flush()
+
         elif ptype == 'flow0d':
             print("######################### Welcome to lumped-parameter 0D flow #########################")
             sys.stdout.flush()

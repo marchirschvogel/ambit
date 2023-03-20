@@ -736,7 +736,7 @@ class SolidmechanicsProblem(problem_base):
 
         # perform Proper Orthogonal Decomposition
         if self.have_rom:
-            self.rom.POD(self)
+            self.rom.POD(self, self.V_u)
 
                 
     def read_restart(self, sname, N):

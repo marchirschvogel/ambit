@@ -17,40 +17,40 @@ import solver_nonlin
 import expression
 from mpiroutines import allgather_vec
 
-from fluid import FluidmechanicsProblem
+from fluid_flow0d import FluidmechanicsFlow0DProblem
 from ale import AleProblem
 from base import solver_base
 from meshutils import gather_surface_dof_indices
 
 
-class FluidmechanicsAleProblem():
+class FluidmechanicsAleFlow0DProblem():
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None):
+    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}, comm=None):
 
-        self.problem_physics = 'fluid_ale'
+        self.problem_physics = 'fluid_ale_flow0d'
         
         self.comm = comm
         
-        self.coupling_params = coupling_params
-        
-        self.fsi_interface = self.coupling_params['surface_ids']
+        # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
+        self.pba  = AleProblem(io_params, time_params_fluid, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
+        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, domainvel=[self.pba.w,self.pba.w_old])
 
-        # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, domainvel=[self.pba.w,self.pba.w_old])
+        self.pbf = self.pbf0.pbf
+        self.pb0 = self.pbf0.pb0
 
         self.io = io
+        
+        self.fsi_interface = coupling_params_fluid_ale['surface_ids']
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
-        self.incompressible_2field = self.pbf.incompressible_2field
         self.localsolve = False
         self.have_rom = False
 
         self.set_variational_forms_and_jacobians()
         
-        self.numdof = self.pbf.numdof + self.pba.numdof
+        self.numdof = self.pbf.numdof + self.pb0.numdof + self.pba.numdof
         # fluid is 'master' problem - define problem variables based on its values
         self.simname = self.pbf.simname
         self.restart_step = self.pbf.restart_step
@@ -59,13 +59,13 @@ class FluidmechanicsAleProblem():
         self.have_rom = self.pbf.have_rom
         if self.have_rom: self.rom = self.pbf.rom
 
-        self.sub_solve = False
+        self.sub_solve = True
 
         
     def get_problem_var_list(self):
         
-        is_ghosted = [True]*3
-        return [self.pbf.v.vector, self.pbf.p.vector, self.pba.w.vector], is_ghosted
+        is_ghosted = [True, True, True, False]
+        return [self.pbf0.pbf.v.vector, self.pbf0.pbf.p.vector, self.pba.w.vector, self.pbf0.lm], is_ghosted
         
         
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
@@ -112,24 +112,31 @@ class FluidmechanicsAleProblem():
 
     def assemble_residual_stiffness(self, t, subsolver=None):
 
-        r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
-        
+        r_list_fluidflow0d, K_list_fluidflow0d = self.pbf0.assemble_residual_stiffness(t, subsolver=subsolver)
+
         r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t, dbcfluid=self.dbcs_coup)
         #r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
         
-        K_list = [[None]*3 for _ in range(3)]
-        r_list = [None]*3
+        K_list = [[None]*4 for _ in range(4)]
+        r_list = [None]*4
         
-        K_list[0][0] = K_list_fluid[0][0]
-        K_list[0][1] = K_list_fluid[0][1]
+        K_list[0][0] = K_list_fluidflow0d[0][0]
+        K_list[0][1] = K_list_fluidflow0d[0][1]
+        
+        K_list[0][3] = K_list_fluidflow0d[0][2]
+
+        K_list[1][0] = K_list_fluidflow0d[1][0]
+        K_list[1][1] = K_list_fluidflow0d[1][1]
+        K_list[1][3] = K_list_fluidflow0d[1][2]
+        
+        K_list[3][0] = K_list_fluidflow0d[2][0]
+        K_list[3][1] = K_list_fluidflow0d[2][1]
+        K_list[3][3] = K_list_fluidflow0d[2][2]
         
         # derivate of fluid residual w.r.t. ALE velocity (appears in convective term)
         K_vw = fem.petsc.assemble_matrix(fem.form(self.jac_vw), [])
         K_vw.assemble()
         #K_list[0][2] = K_vw
-
-        K_list[1][0] = K_list_fluid[1][0]
-        K_list[1][1] = K_list_fluid[1][1]
         
         # derivate of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
         #K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pbf.bc.dbcs)
@@ -140,9 +147,13 @@ class FluidmechanicsAleProblem():
         
         K_list[2][2] = K_list_ale[0][0]
 
-        r_list[0] = r_list_fluid[0]
-        r_list[1] = r_list_fluid[1]
+        # fluid
+        r_list[0] = r_list_fluidflow0d[0]
+        r_list[1] = r_list_fluidflow0d[1]
+        # ALE
         r_list[2] = r_list_ale[0]
+        # flow0d
+        r_list[3] = r_list_fluidflow0d[2]
         
         return r_list, K_list
 
@@ -158,14 +169,14 @@ class FluidmechanicsAleProblem():
 
     def read_restart(self, sname, N):
 
-        # fluid + ALE problem
+        # fluid+flow0d + ALE problem
         self.pbf.read_restart(sname, N)
         self.pba.read_restart(sname, N)
 
 
     def evaluate_initial(self):
 
-        pass
+        self.pbf0.evaluate_initial()
 
 
     def write_output_ini(self):
@@ -204,7 +215,7 @@ class FluidmechanicsAleProblem():
             
     def update(self):
 
-        # update time step - fluid and ALE
+        # update time step - fluid+flow0d and ALE
         self.pbf.update()
         self.pba.update()
 
@@ -233,7 +244,7 @@ class FluidmechanicsAleProblem():
 
 
 
-class FluidmechanicsAleSolver(solver_base):
+class FluidmechanicsAleFlow0DSolver(solver_base):
 
     def __init__(self, problem, solver_params):
     

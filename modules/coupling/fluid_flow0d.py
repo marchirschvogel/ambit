@@ -24,7 +24,7 @@ from base import solver_base
 
 class FluidmechanicsFlow0DProblem():
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None):
+    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, domainvel=[None,None]):
         
         self.problem_physics = 'fluid_flow0d'
         
@@ -41,9 +41,6 @@ class FluidmechanicsFlow0DProblem():
         try: self.cq_factor = self.coupling_params['cq_factor']
         except: self.cq_factor = [1.]*self.num_coupling_surf
 
-        try: self.coupling_type = self.coupling_params['coupling_type']
-        except: self.coupling_type = 'monolithic_direct'
-
         try: self.eps_fd = self.coupling_params['eps_fd']
         except: self.eps_fd = 1.0e-5
 
@@ -55,13 +52,16 @@ class FluidmechanicsFlow0DProblem():
 
         try: self.Nmax_periodicref = self.coupling_params['Nmax_periodicref']
         except: self.Nmax_periodicref = 10
+        
+        # only option in fluid mechanics!
+        self.coupling_type = 'monolithic_lagrange'
 
         # assert that we do not have conflicting timings
         time_params_flow0d['maxtime'] = time_params_fluid['maxtime']
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+        self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm, domainvel=domainvel)
         self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
         # indicator for no periodic reference state estimation
@@ -94,18 +94,16 @@ class FluidmechanicsFlow0DProblem():
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old = [], []
-
-        if self.coupling_type == 'monolithic_lagrange':
             
-            # Lagrange multiplier stiffness matrix (currently treated with FD!)
-            self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
-            self.K_lm.setUp()
+        # Lagrange multiplier stiffness matrix (currently treated with FD!)
+        self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_lm.setUp()
 
-            # Lagrange multipliers
-            self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
-            
-            # 3D fluxes
-            self.constr, self.constr_old = [], []
+        # Lagrange multipliers
+        self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
+        
+        # 3D fluxes
+        self.constr, self.constr_old = [], []
 
         self.power_coupling, self.power_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
     
@@ -121,18 +119,9 @@ class FluidmechanicsFlow0DProblem():
             for i in range(len(self.surface_vq_ids[n])):
 
                 ds_vq = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
-          
-                if self.coupling_params['coupling_quantity'][n] == 'flux':
-                    assert(self.coupling_type == 'monolithic_direct')
-                    cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq)
-                    cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq)
-                elif self.coupling_params['coupling_quantity'][n] == 'pressure':
-                    assert(self.coupling_type == 'monolithic_lagrange' and self.coupling_params['variable_quantity'][n] == 'flux')
-                    cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq)
-                    cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq)
-                else:
-                    raise NameError("Unknown coupling quantity! Choose flux or pressure!")
-            
+                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq)
+                cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq)
+
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
 
@@ -154,14 +143,17 @@ class FluidmechanicsFlow0DProblem():
         # add to fluid Jacobian
         self.pbf.jac_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
-        if self.coupling_type == 'monolithic_lagrange':
-            # old Lagrange multipliers - initialize with initial pressures
-            self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
-            self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
+        # old Lagrange multipliers - initialize with initial pressures
+        self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
+        self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
 
 
     def set_forms_solver(self):
         pass
+
+
+    def get_presolve_state(self):
+        return False
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -316,37 +308,22 @@ class FluidmechanicsFlow0DProblem():
         self.pb0.read_restart(sname, N)
 
         if self.pbf.restart_step > 0:
-            if self.coupling_type == 'monolithic_lagrange':
-                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
-                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm_old)
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm_old)
 
 
     def evaluate_initial(self):
 
-        # set pressure functions for old state - s_old already initialized by 0D flow problem
-        if self.coupling_type == 'monolithic_direct':
-            self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s_old, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
-        
-        if self.coupling_type == 'monolithic_lagrange':
-            self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+        self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
 
-        if self.coupling_type == 'monolithic_direct':
-            # old 3D coupling quantities (volumes or fluxes)
-            self.pb0.c = []
-            for i in range(self.num_coupling_surf):
-                cq = fem.assemble_scalar(fem.form(self.cq_old[i]))
-                cq = self.comm.allgather(cq)
-                self.pb0.c.append(sum(cq)*self.cq_factor[i])
-        
-        if self.coupling_type == 'monolithic_lagrange':
-            self.pb0.c, self.constr, self.constr_old = [], [], []
-            for i in range(self.num_coupling_surf):
-                lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
-                self.pb0.c.append(lm_sq[i])
-                con = fem.assemble_scalar(fem.form(self.cq_old[i]))
-                con = self.comm.allgather(con)
-                self.constr.append(sum(con)*self.cq_factor[i])
-                self.constr_old.append(sum(con)*self.cq_factor[i])
+        self.pb0.c, self.constr, self.constr_old = [], [], []
+        for i in range(self.num_coupling_surf):
+            lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
+            self.pb0.c.append(lm_sq[i])
+            con = fem.assemble_scalar(fem.form(self.cq_old[i]))
+            con = self.comm.allgather(con)
+            self.constr.append(sum(con)*self.cq_factor[i])
+            self.constr_old.append(sum(con)*self.cq_factor[i])
 
         if bool(self.pb0.chamber_models):
             self.pb0.y = []
@@ -400,14 +377,11 @@ class FluidmechanicsFlow0DProblem():
         self.pbf.update()
         self.pb0.update()
         
-        # update old pressures on fluid
-        if self.coupling_type == 'monolithic_direct':
-            self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s_old, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
-        if self.coupling_type == 'monolithic_lagrange':
-            self.lm_old.axpby(1.0, 0.0, self.lm)
-            self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
-            # update old 3D fluxes
-            self.constr_old[:] = self.constr[:]
+        # update old LMs
+        self.lm_old.axpby(1.0, 0.0, self.lm)
+        self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+        # update old 3D fluxes
+        self.constr_old[:] = self.constr[:]
 
 
     def print_to_screen(self):
@@ -428,8 +402,7 @@ class FluidmechanicsFlow0DProblem():
         
         if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
             self.pb0.writerestart(sname, N)
-            if self.coupling_type == 'monolithic_lagrange':
-                self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
+            self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
         
         
     def check_abort(self, t):

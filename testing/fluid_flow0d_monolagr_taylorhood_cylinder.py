@@ -49,7 +49,6 @@ def main():
     COUPLING_PARAMS      = {'surface_ids'           : [[3]],
                             'coupling_quantity'     : ['pressure'],
                             'variable_quantity'     : ['flux'],
-                            'coupling_type'         : 'monolithic_lagrange',
                             'print_subiter'         : True}
 
     MATERIALS         = { 'MAT1' : {'newtonian' : {'eta' : 4.0e-6},

@@ -102,6 +102,9 @@ class sol_utils():
                 elif self.ptype=='fluid_ale':
                     print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ale res 2-norm','ale inc 2-norm','ts','te'))
                     sys.stdout.flush()
+                elif self.ptype=='fluid_ale_flow0d':
+                    print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ale res 2-norm','ale inc 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
+                    sys.stdout.flush()
                 else:
                     raise NameError("Unknown problem type!")
             return
@@ -137,6 +140,9 @@ class sol_utils():
                 sys.stdout.flush()
             elif self.ptype=='fluid_ale': 
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',ts,' ',te,' ',nkptc))
+                sys.stdout.flush()
+            elif self.ptype=='fluid_ale_flow0d': 
+                print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',resnorms['res4'],' ',incnorms['inc4'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             else:
                 raise NameError("Unknown problem type!")
@@ -205,6 +211,10 @@ class sol_utils():
             if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3']:
                 converged = True
             
+        elif ptype=='fluid_ale_flow0d':
+            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3'] and resnorms['res4'] <= tolerances['res4'] and incnorms['inc4'] <= tolerances['inc4']:
+                converged = True
+            
         else:
             raise NameError("Unknown problem type!")
         
@@ -246,7 +256,10 @@ class sol_utils():
             return "------------------------------------------------------------------------------------------------------------"
 
         elif len(tolerances)==6:
-            return "------------------------------------------------------------------------------------------------------------"
+            return "--------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        elif len(tolerances)==8:
+            return "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
         
         else:
             raise ValueError("Unknown size of tolerances!")

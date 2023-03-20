@@ -132,48 +132,6 @@ class IO:
             self.writecheckpoint(pb, N)
 
 
-class IO_solid(IO):
-
-    # read in fibers defined at nodes (nodal fiber and coordiante files have to be present)
-    def readin_fibers(self, fibarray, V_fib, dx_):
-
-        # V_fib_input is function space the fiber vector is defined on (only CG1 or DG0 supported, add further depending on your input...)
-        if list(self.fiber_data.keys())[0] == 'nodal':
-            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", 1))
-        elif list(self.fiber_data.keys())[0] == 'elemental':
-            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("DG", 0))
-        else:
-            raise AttributeError("Specify 'nodal' or 'elemental' for the fiber data input!")
-
-        try: readin_tol = self.fiber_data['readin_tol']
-        except: readin_tol = 1.0e-8
-        
-        fib_func = []
-        fib_func_input = []
-
-        si = 0
-        for s in fibarray:
-            
-            fib_func_input.append(fem.Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
-            
-            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si], normalize=True, tol=readin_tol)
-            
-            # project to output fiber function space
-            ff = project(fib_func_input[si], V_fib, dx_, bcs=[], nm='fib_'+s)
-
-            # assure that projected field still has unit length (not always necessarily the case)
-            fib_func.append(ff / ufl.sqrt(ufl.dot(ff,ff)))
-
-            ## write input fiber field for checking...
-            #outfile = io.XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputNEW.xdmf', 'w')
-            #outfile.write_mesh(self.mesh)
-            #outfile.write_function(fib_func_input[si])
-
-            si+=1
-
-        return fib_func
-
-
     def readfunction(self, f, V, datafile, normalize=False, tol=1.0e-8):
         
         # block size of vector
@@ -220,6 +178,49 @@ class IO_solid(IO):
         
         # update ghosts
         f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+
+class IO_solid(IO):
+
+    # read in fibers defined at nodes (nodal fiber and coordiante files have to be present)
+    def readin_fibers(self, fibarray, V_fib, dx_):
+
+        # V_fib_input is function space the fiber vector is defined on (only CG1 or DG0 supported, add further depending on your input...)
+        if list(self.fiber_data.keys())[0] == 'nodal':
+            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", 1))
+        elif list(self.fiber_data.keys())[0] == 'elemental':
+            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("DG", 0))
+        else:
+            raise AttributeError("Specify 'nodal' or 'elemental' for the fiber data input!")
+
+        try: readin_tol = self.fiber_data['readin_tol']
+        except: readin_tol = 1.0e-8
+        
+        fib_func = []
+        fib_func_input = []
+
+        si = 0
+        for s in fibarray:
+            
+            fib_func_input.append(fem.Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
+            
+            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si], normalize=True, tol=readin_tol)
+            
+            # project to output fiber function space
+            ff = project(fib_func_input[si], V_fib, dx_, bcs=[], nm='fib_'+s)
+
+            # assure that projected field still has unit length (not always necessarily the case)
+            fib_func.append(ff / ufl.sqrt(ufl.dot(ff,ff)))
+
+            ## write input fiber field for checking...
+            #outfile = io.XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputNEW.xdmf', 'w')
+            #outfile.write_mesh(self.mesh)
+            #outfile.write_function(fib_func_input[si])
+
+            si+=1
+
+        return fib_func
         
 
     def write_output(self, pb, writemesh=False, N=1, t=0):

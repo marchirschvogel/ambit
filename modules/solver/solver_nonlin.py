@@ -279,7 +279,7 @@ class solver_nonlinear:
                 K_list[0][0].shift(k_PTC)
 
             # model order reduction stuff - currently only on first mat in system...
-            if self.pb.have_rom and not self.pb.get_prestress_initial():
+            if self.pb.have_rom and not self.pb.get_presolve_state():
                 
                 # projection of main block: system matrix, residual, and increment
                 tmp = K_list[0][0].matMult(self.pb.rom.V) # K_uu * V
@@ -298,8 +298,10 @@ class solver_nonlinear:
                 # now the offdiagonal blocks
                 if self.nfields > 1:
                     for n in range(self.nfields-1):
-                        K_list[0][n+1] = self.pb.rom.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
-                        K_list[n+1][0] = K_list[n+1][0].matMult(self.pb.rom.V) # K_{n+1,0} * V
+                        if K_list[0][n+1] is not None:
+                            K_list[0][n+1] = self.pb.rom.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
+                        if K_list[n+1][0] is not None:
+                            K_list[n+1][0] = K_list[n+1][0].matMult(self.pb.rom.V) # K_{n+1,0} * V
 
             te = time.time() - tes
 
@@ -391,9 +393,9 @@ class solver_nonlinear:
                 incnorms['inc'+str(n+1)] = del_x[n].norm()
 
             # reconstruct full-length increment vector - currently only for first var!
-            if self.pb.have_rom and not self.pb.get_prestress_initial():
+            if self.pb.have_rom and not self.pb.get_presolve_state():
                 del_x[0] = self.pb.rom.V.createVecLeft()
-                self.pb.rom.V.mult(del_u_, del_x[0]) # V * d_red
+                self.pb.rom.V.mult(del_u_, del_x[0]) # V * dx_red
 
             # update variables
             for n in range(self.nfields):

@@ -273,7 +273,7 @@ class SolidmechanicsFlow0DProblem():
         pass
 
 
-    def get_prestress_initial(self):
+    def get_presolve_state(self):
         return self.pbs.prestress_initial
 
 
