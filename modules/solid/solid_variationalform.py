@@ -204,7 +204,7 @@ class variationalform:
         # exponential isotropic strain energy
         Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-3.)) - 1.)
         # viscous pseudo-potential
-        Psi_v = (eta/8.) * eta * ufl.tr(Cmoddot_*Cmoddot_)
+        Psi_v = (eta/8.) * ufl.tr(Cmoddot_*Cmoddot_)
         
         dPsi_dIc = ufl.diff(Psi,Ic_)
         dPsi_dIIc = ufl.diff(Psi,IIc_)

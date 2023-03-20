@@ -150,7 +150,7 @@ class variationalform:
         # exponential isotropic strain energy
         Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-3.)) - 1.)
         # viscous pseudo-potential
-        Psi_v = (eta/8.) * eta * ufl.tr(Cmoddot_*Cmoddot_)
+        Psi_v = (eta/8.) * ufl.tr(Cmoddot_*Cmoddot_)
         
         dPsi_dIc = ufl.diff(Psi,Ic_)
         dPsi_dIIc = ufl.diff(Psi,IIc_)
@@ -173,13 +173,13 @@ class variationalform:
         # boundary inner virtual power
         dPb_int = h0*ufl.inner(P,var_F)*dboundary
 
-        # boundary kinetic virtual work
+        # boundary kinetic virtual power
         if not isinstance(a, ufl.constantvalue.Zero):
             dPb_kin = h0*rho0*ufl.dot(a,self.var_v)*dboundary
         else:
             dPb_kin = ufl.as_ufl(0)
 
-        # minus signs, since this sums into external virtual work!
+        # minus signs, since this sums into external virtual power!
         return -dPb_int - dPb_kin
 
 
