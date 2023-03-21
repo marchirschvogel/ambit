@@ -10,9 +10,11 @@ import ufl
 
 class materiallaw:
     
-    def __init__(self, u):
-        self.u = u
-        self.dim = len(self.u)
+    def __init__(self, w):
+        self.w = w
+        self.dim = len(self.w)
+        
+        self.I = ufl.Identity(self.dim)
     
 
     def helmholtz(self, params):
@@ -20,12 +22,23 @@ class materiallaw:
         k = params['k']
 
         # s_grad (tensor), s_div (scalar), s_ident (vector)
-        return (k**2.)*ufl.grad(self.u), 0, self.u
+        return (k**2.)*ufl.grad(self.w), 0, self.w
     
-    
-    def ale_element_dependent_stiffness(self, params):
+
+    def linelast(self, params):
         
-        kappa, alpha = params['kappa'], params['alpha']
+        Emod = params['Emod']
+        kappa = params['kappa']
 
         # s_grad (tensor), s_div (scalar), s_ident (vector)
-        return kappa*ufl.sym(ufl.grad(self.u)), kappa*alpha*ufl.div(self.u), ufl.constantvalue.zero(self.dim)
+        #return Emod*ufl.sym(ufl.grad(self.w)), kappa*ufl.div(self.w), ufl.constantvalue.zero(self.dim)
+        return Emod*ufl.sym(ufl.grad(self.w)) + kappa*ufl.div(self.w)*self.I, 0, ufl.constantvalue.zero(self.dim)
+    
+    
+    def element_dependent_stiffness(self, params, metric):
+        
+        alpha = params['alpha']
+        kappa = metric
+
+        # s_grad (tensor), s_div (scalar), s_ident (vector)
+        return kappa*ufl.sym(ufl.grad(self.w)), kappa*alpha*ufl.div(self.w), ufl.constantvalue.zero(self.dim)

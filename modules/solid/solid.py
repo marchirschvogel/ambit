@@ -96,9 +96,11 @@ class SolidmechanicsProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
+        self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
+
         # make sure that we use the correct displacement order in case of a higher-order mesh
-        if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() > 1:
-            if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() != self.order_disp:
+        if self.Vex.degree() > 1:
+            if self.Vex.degree() != self.order_disp:
                 raise ValueError("Order of displacement field not compatible with degree of finite element!")
         
         # check if we want to use model order reduction and if yes, initialize MOR class

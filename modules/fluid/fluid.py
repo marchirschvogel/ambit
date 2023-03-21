@@ -31,7 +31,7 @@ from base import problem_base, solver_base
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, domainvel=[None,None]):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, aleproblem=None):
         problem_base.__init__(self, io_params, time_params, comm)
         
         self.problem_physics = 'fluid'
@@ -83,9 +83,11 @@ class FluidmechanicsProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
+        self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
+
         # make sure that we use the correct velocity order in case of a higher-order mesh
-        if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() > 1:
-            if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() != self.order_vel:
+        if self.Vex.degree() > 1:
+            if self.Vex.degree() != self.order_vel:
                 raise ValueError("Order of velocity field not compatible with degree of finite element!")
 
         if self.order_vel == self.order_pres:
@@ -99,8 +101,8 @@ class FluidmechanicsProblem(problem_base):
             import mor
             self.rom = mor.ModelOrderReduction(mor_params, self.comm)
 
-        # domain velocity in case of ALE fluid problem
-        self.domainvel = domainvel
+        # ALE fluid problem
+        self.aleproblem = aleproblem
 
         # create finite element objects for v and p
         P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
@@ -145,7 +147,13 @@ class FluidmechanicsProblem(problem_base):
             self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)]))
         
         # initialize fluid variational form class
-        self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+        if self.aleproblem is None:
+            self.w, self.w_old, self.Fale, self.Fale_old = None, None, None, None
+            self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+        else:
+            self.w, self.w_old = self.aleproblem.w, self.aleproblem.w_old
+            self.Fale, self.Fale_old = self.aleproblem.ki.F(self.w), self.aleproblem.ki.F(self.w_old)
+            self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_fluid(bc_dict, fem_params, self.io, self.vf, self.ti, ki=self.ki)
@@ -183,16 +191,16 @@ class FluidmechanicsProblem(problem_base):
 
             if self.timint != 'static':
                 # kinetic virtual power
-                self.deltaP_kin     += self.vf.deltaP_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.domainvel[0])
-                self.deltaP_kin_old += self.vf.deltaP_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.domainvel[1])
+                self.deltaP_kin     += self.vf.deltaP_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.w, Fale=self.Fale)
+                self.deltaP_kin_old += self.vf.deltaP_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.w_old, Fale=self.Fale_old)
             
             # internal virtual power
-            self.deltaP_int     += self.vf.deltaP_int(self.ma[n].sigma(self.v, self.p), self.dx_[n])
-            self.deltaP_int_old += self.vf.deltaP_int(self.ma[n].sigma(self.v_old, self.p_old), self.dx_[n])
+            self.deltaP_int     += self.vf.deltaP_int(self.ma[n].sigma(self.v, self.p), self.dx_[n], Fale=self.Fale)
+            self.deltaP_int_old += self.vf.deltaP_int(self.ma[n].sigma(self.v_old, self.p_old), self.dx_[n], Fale=self.Fale_old)
             
             # pressure virtual power
-            self.deltaP_p       += self.vf.deltaP_int_pres(self.v, self.dx_[n])
-            self.deltaP_p_old   += self.vf.deltaP_int_pres(self.v_old, self.dx_[n])
+            self.deltaP_p       += self.vf.deltaP_int_pres(self.v, self.dx_[n], Fale=self.Fale)
+            self.deltaP_p_old   += self.vf.deltaP_int_pres(self.v_old, self.dx_[n], Fale=self.Fale_old)
             
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)

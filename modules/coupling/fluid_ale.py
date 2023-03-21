@@ -37,7 +37,7 @@ class FluidmechanicsAleProblem():
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, domainvel=[self.pba.w,self.pba.w_old])
+        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, aleproblem=self.pba)
 
         self.io = io
 
@@ -72,6 +72,7 @@ class FluidmechanicsAleProblem():
     def set_variational_forms_and_jacobians(self):
     
         self.dbcs_coup = fem.dirichletbc(self.pbf.v, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[0]]))
+        #self.dbcs_coup = fem.dirichletbc(self.pbf.uf, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[0]]))
 
         fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_w, self.fsi_interface, self.comm))
 
@@ -92,7 +93,7 @@ class FluidmechanicsAleProblem():
                 
         self.K_wv.assemble()
 
-        # derivative of fluid w.r.t. ALE velocity
+        # derivative of fluid momentum w.r.t. ALE displacement
         self.jac_vw = ufl.derivative(self.pbf.weakform_v, self.pba.w, self.pba.dw)
         
         #db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=self.fsi_interface[0], metadata={'quadrature_degree': self.pba.quad_degree})
@@ -114,8 +115,8 @@ class FluidmechanicsAleProblem():
 
         r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
         
-        r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t, dbcfluid=self.dbcs_coup)
-        #r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
+        #r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t, dbcfluid=self.dbcs_coup)
+        r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
         
         K_list = [[None]*3 for _ in range(3)]
         r_list = [None]*3
@@ -126,7 +127,7 @@ class FluidmechanicsAleProblem():
         # derivate of fluid residual w.r.t. ALE velocity (appears in convective term)
         K_vw = fem.petsc.assemble_matrix(fem.form(self.jac_vw), [])
         K_vw.assemble()
-        #K_list[0][2] = K_vw
+        K_list[0][2] = K_vw
 
         K_list[1][0] = K_list_fluid[1][0]
         K_list[1][1] = K_list_fluid[1][1]

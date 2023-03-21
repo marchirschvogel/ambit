@@ -70,6 +70,9 @@ class sol_utils():
                 elif self.ptype=='fluid':
                     print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ts','te'))
                     sys.stdout.flush()
+                elif self.ptype=='ale':
+                    print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','ale res 2-norm','ale inc 2-norm','ts','te'))
+                    sys.stdout.flush()
                 elif self.ptype=='flow0d':
                     if not sub:
                         print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
@@ -119,6 +122,9 @@ class sol_utils():
                 sys.stdout.flush()
             elif self.ptype=='fluid':
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',ts,' ',te,' ',nkptc))
+                sys.stdout.flush()
+            elif self.ptype=='ale': 
+                print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             elif self.ptype=='flow0d':
                 if not sub:
@@ -189,6 +195,10 @@ class sol_utils():
                 
         elif ptype=='fluid':
             if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2']:
+                converged = True
+        
+        elif ptype=='ale':
+            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1']:
                 converged = True
         
         elif ptype=='flow0d':

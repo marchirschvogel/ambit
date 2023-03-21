@@ -27,6 +27,10 @@ def print_problem(ptype, comm, numdof=0):
             print("############### Welcome to incompressible Navier-Stokes fluid mechanics ###############")
             sys.stdout.flush()
         
+        elif ptype == 'ale':
+            print("############################## Welcome to ALE mechanics ###############################")
+            sys.stdout.flush()
+        
         elif ptype == 'fluid_ale':
             print("#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###")
             sys.stdout.flush()

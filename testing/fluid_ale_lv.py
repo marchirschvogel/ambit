@@ -14,7 +14,7 @@ def main():
     
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS            = {'problem_type'          : 'fluid_ale',
+    IO_PARAMS            = {'problem_type'          : 'fluid_ale', # fluid_ale
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/../../../sim/lv2/fsi/h01q/__data__/input-quad-fluid_domain.xdmf',
@@ -41,7 +41,8 @@ def main():
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'eta' : 4.0e-6},
                                       'inertia' : {'rho' : 1.025e-6}} }
 
-    MATERIALS_ALE        = { 'MAT1' : {'helmholtz' : {'k' : 1.0}} }
+    #MATERIALS_ALE        = { 'MAT1' : {'helmholtz' : {'k' : 1.0}} }
+    MATERIALS_ALE        = { 'MAT1' : {'linelast' : {'Emod' : 100.0, 'kappa' : 10000.}} }
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
@@ -60,6 +61,7 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS_FLUID, BC_DICT_FLUID, time_curves=time_curves())
     
     # problem solve
     problem.solve_problem()

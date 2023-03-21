@@ -57,6 +57,7 @@ class IO:
         # read in xdmf mesh - domain
         with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
             self.mesh = infile.read_mesh(name=self.gridname_domain)
+            self.mesh2 = infile.read_mesh(name=self.gridname_domain)
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
 
@@ -109,13 +110,9 @@ class IO:
 
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
-
-        # useful fields - currently only set for first mesh:
         
         # facet normal
         self.n0 = ufl.FacetNormal(self.mesh)
-        # cell diameter
-        self.h0 = ufl.CellDiameter(self.mesh)
 
 
     def write_output_pre(self, pb, func, name):
@@ -526,15 +523,15 @@ class IO_ale(IO):
                 # save solution to XDMF format
                 for res in self.results_to_write:
                     
-                    if res=='displacement':
-                        self.resultsfiles[res].write_function(pb.u, t)
+                    if res=='alevariable':
+                        self.resultsfiles[res].write_function(pb.w, t)
                     else:
-                        raise NameError("Unknown output to write for fluid mechanics!")
+                        raise NameError("Unknown output to write for ALE mechanics!")
 
 
     def readcheckpoint(self, pb):
 
-        vecs_to_read = {'u' : pb.u}
+        vecs_to_read = {'w' : pb.w}
         
         for key in vecs_to_read:
 
@@ -548,7 +545,7 @@ class IO_ale(IO):
 
     def writecheckpoint(self, pb, N):
 
-        vecs_to_write = {'u' : pb.u}
+        vecs_to_write = {'w' : pb.w}
         
         for key in vecs_to_write:
 

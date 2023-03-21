@@ -33,7 +33,7 @@ class FluidmechanicsAleFlow0DProblem():
         
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
         self.pba  = AleProblem(io_params, time_params_fluid, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, domainvel=[self.pba.w,self.pba.w_old])
+        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, aleproblem=self.pba)
 
         self.pbf = self.pbf0.pbf
         self.pb0 = self.pbf0.pb0
@@ -114,8 +114,8 @@ class FluidmechanicsAleFlow0DProblem():
 
         r_list_fluidflow0d, K_list_fluidflow0d = self.pbf0.assemble_residual_stiffness(t, subsolver=subsolver)
 
-        r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t, dbcfluid=self.dbcs_coup)
-        #r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
+        #r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t, dbcfluid=self.dbcs_coup)
+        r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
         
         K_list = [[None]*4 for _ in range(4)]
         r_list = [None]*4
@@ -133,10 +133,10 @@ class FluidmechanicsAleFlow0DProblem():
         K_list[3][1] = K_list_fluidflow0d[2][1]
         K_list[3][3] = K_list_fluidflow0d[2][2]
         
-        # derivate of fluid residual w.r.t. ALE velocity (appears in convective term)
+        # derivate of fluid residual w.r.t. ALE displacement
         K_vw = fem.petsc.assemble_matrix(fem.form(self.jac_vw), [])
         K_vw.assemble()
-        #K_list[0][2] = K_vw
+        K_list[0][2] = K_vw
         
         # derivate of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
         #K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pbf.bc.dbcs)

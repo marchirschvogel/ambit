@@ -24,7 +24,7 @@ from base import solver_base
 
 class FluidmechanicsFlow0DProblem():
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, domainvel=[None,None]):
+    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, aleproblem=None):
         
         self.problem_physics = 'fluid_flow0d'
         
@@ -61,7 +61,7 @@ class FluidmechanicsFlow0DProblem():
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm, domainvel=domainvel)
+        self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm, aleproblem=aleproblem)
         self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
         # indicator for no periodic reference state estimation
@@ -119,8 +119,8 @@ class FluidmechanicsFlow0DProblem():
             for i in range(len(self.surface_vq_ids[n])):
 
                 ds_vq = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq)
-                cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq)
+                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.w, Fale=self.pbf.Fale)
+                cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.w_old, Fale=self.pbf.Fale_old)
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
@@ -129,11 +129,11 @@ class FluidmechanicsFlow0DProblem():
             for i in range(len(self.surface_p_ids[n])):
                 
                 ds_p = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                df_ += self.pbf.timefac*self.pbf.vf.surface(ds_p)
+                df_ += self.pbf.timefac*self.pbf.vf.surface(ds_p, Fale=self.pbf.Fale)
             
                 # add to fluid rhs contributions
-                self.power_coupling += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p)
-                self.power_coupling_old += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p)
+                self.power_coupling += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p, Fale=self.pbf.Fale)
+                self.power_coupling_old += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p, Fale=self.pbf.Fale_old)
         
             self.dforce.append(df_)
         

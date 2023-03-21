@@ -13,7 +13,7 @@ from ale_material import materiallaw
 
 class constitutive:
     
-    def __init__(self, materials):
+    def __init__(self, kin, materials, msh):
 
         self.matmodels = []
         for i in range(len(materials.keys())):
@@ -23,14 +23,25 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
+        # some mesh metrics
+        # cell diameter
+        self.hd0 = ufl.CellDiameter(msh)
+        # cell circumradius
+        self.ro0 = ufl.Circumradius(msh)
+        # min and max cell edge lengths
+        self.emin0 = ufl.MinCellEdgeLength(msh)
+        self.emax0 = ufl.MaxCellEdgeLength(msh)
+        # jacobian determinant
+        self.detj0 = ufl.JacobianDeterminant(msh)
 
-    def stress(self, u_):
+
+    def stress(self, w_):
         
-        dim = len(u_)
+        dim = len(w_)
 
         s_grad, s_div, s_ident = ufl.constantvalue.zero((dim,dim)), 0, ufl.constantvalue.zero(dim)
             
-        mat = materiallaw(u_)
+        mat = materiallaw(w_)
         
         m = 0
         for matlaw in self.matmodels:
@@ -45,10 +56,21 @@ class constitutive:
                 s_grad += sg
                 s_div += sd
                 s_ident += si
-        
-            elif matlaw == 'ale_element_dependent_stiffness': # not quite there yet... we need to add the element metrics!
+
+            elif matlaw == 'linelast':
                 
-                sg, sd, si = mat.ale_element_dependent_stiffness(matparams_m)
+                sg, sd, si = mat.linelast(matparams_m)
+
+                s_grad += sg
+                s_div += sd
+                s_ident += si
+        
+            elif matlaw == 'element_dependent_stiffness':
+                
+                #metric = (ufl.min_value(10.,self.emax0/self.emin0))**4. # doesn't seem to work for quadratic cells...
+                metric = 1
+                
+                sg, sd, si = mat.element_dependent_stiffness(matparams_m, metric)
 
                 s_grad += sg
                 s_div += sd
@@ -61,3 +83,19 @@ class constitutive:
             m += 1
 
         return s_grad, s_div, s_ident
+
+
+class kinematics:
+    
+    def __init__(self, dim):
+        
+        self.dim = dim
+
+        # identity tensor
+        self.I = ufl.Identity(self.dim)
+
+
+    # ALE deformation gradient
+    def F(self, w_):
+
+        return self.I + ufl.grad(w_)

@@ -30,7 +30,7 @@ class AleProblem(problem_base):
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
         problem_base.__init__(self, io_params, time_params, comm)
 
-        self.problem_physics = 'fluid_ale'
+        self.problem_physics = 'ale'
         
         self.simname = io_params['simname']
         
@@ -46,7 +46,7 @@ class AleProblem(problem_base):
         self.quad_degree = fem_params['quad_degree']
         
         # collect domain data
-        self.dx_, self.rho = [], []
+        self.dx_ = []
         for n in range(self.num_domains):
             # integration domains
             self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
@@ -75,9 +75,11 @@ class AleProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
+        self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
+
         # make sure that we use the correct velocity order in case of a higher-order mesh
-        if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() > 1:
-            if self.io.mesh.ufl_domain().ufl_coordinate_element().degree() != self.order_disp:
+        if self.Vex.degree() > 1:
+            if self.Vex.degree() != self.order_disp:
                 raise ValueError("Order of velocity field not compatible with degree of finite element!")
 
         # check if we want to use model order reduction and if yes, initialize MOR class
@@ -88,9 +90,9 @@ class AleProblem(problem_base):
             import mor
             self.rom = mor.ModelOrderReduction(mor_params, self.comm)
 
-        # create finite element objects for v and p
+        # create finite element objects
         P_w = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        # function spaces for v and p
+        # function space
         self.V_w = fem.FunctionSpace(self.io.mesh, P_w)
         # tensor finite element and function space
         P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -101,10 +103,13 @@ class AleProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
 
+        # coordinate element function space
+        self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+
         # functions
         self.dw    = ufl.TrialFunction(self.V_w)            # Incremental displacement
         self.var_w = ufl.TestFunction(self.V_w)             # Test function
-        self.w     = fem.Function(self.V_w, name="AleDisplacement")
+        self.w     = fem.Function(self.V_w, name="AleVariable")
         # old state
         self.w_old = fem.Function(self.V_w)
 
@@ -113,10 +118,13 @@ class AleProblem(problem_base):
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(time_params, time_curves, self.t_init, comm=self.comm)
         
+        # initialize kinematics_constitutive class
+        self.ki = ale_kinematics_constitutive.kinematics(self.dim)
+        
         # initialize material/constitutive classes (one per domain)
         self.ma = []
         for n in range(self.num_domains):
-            self.ma.append(ale_kinematics_constitutive.constitutive(self.constitutive_models['MAT'+str(n+1)]))
+            self.ma.append(ale_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)], self.io.mesh))
         
         # initialize ALE variational form class
         self.vf = ale_variationalform.variationalform(self.var_w, self.io.n0)
@@ -135,7 +143,8 @@ class AleProblem(problem_base):
             
     def get_problem_var_list(self):
 
-        return [self.w.vector]
+        is_ghosted = [True]
+        return [self.w.vector], is_ghosted
             
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
@@ -186,6 +195,15 @@ class AleProblem(problem_base):
         K_ww.assemble()
         
         return [r_w], [[K_ww]]
+
+
+    # DEPRECATED: This is something we should actually not do! It will mess with gradients we need w.r.t. the reference (e.g. for FrSI)
+    # Instead of moving the mesh, we formulate Navier-Stokes w.r.t. a reference state using the ALE kinematics
+    def move_mesh(self):
+        
+        u = fem.Function(self.Vcoord)
+        u.interpolate(self.w)
+        self.io.mesh.geometry.x[:,:self.dim] += u.x.array.reshape((-1, self.dim))
 
 
     ### now the base routines for this problem

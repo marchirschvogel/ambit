@@ -38,9 +38,19 @@ class Ambit():
             self.mp = fluid.FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
             self.ms = fluid.FluidmechanicsSolver(self.mp, solver_params)
 
+        elif problem_type == 'ale':
+            
+            import ale
+            
+            io = ioroutines.IO_ale(io_params, self.comm)
+            io.readin_mesh()
+            
+            self.mp = ale.AleProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+            self.ms = ale.AleSolver(self.mp, solver_params)
+
         elif problem_type == 'fluid_ale':
             
-            raise RuntimeError("ALE fluid mechanics not yet fully implemented!")
+            #raise RuntimeError("ALE fluid mechanics not yet fully implemented!")
             
             import fluid_ale
             
@@ -52,7 +62,7 @@ class Ambit():
 
         elif problem_type == 'fluid_ale_flow0d':
             
-            raise RuntimeError("ALE fluid mechanics + flow0d not yet fully implemented!")
+            #raise RuntimeError("ALE fluid mechanics + flow0d not yet fully implemented!")
             
             import fluid_ale_flow0d
             

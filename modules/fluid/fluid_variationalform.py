@@ -20,30 +20,24 @@ class variationalform:
         self.dp = dp
         
         self.n = n
+        # for convenience, use naming n0 for ALE (it's a normal determined by the initial mesh!)
+        self.n0 = self.n
     
     ### Kinetic virtual power
     
-    # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\otimes\boldsymbol{v})^{\mathrm{T}}\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
-    def deltaP_kin(self, a, v, rho, ddomain, w=None):
-
-        if w is None:
-            # standard Eulerian fluid
-            return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
-        else:
-            # ALE fluid, with domain velocity w
-            return rho*ufl.dot(a + ufl.grad(v) * (v - w), self.var_v)*ddomain
+    # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+    def deltaP_kin(self, a, v, rho, ddomain, w=None, Fale=None):
+        # standard Eulerian fluid
+        return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
 
     ### Internal virtual power
 
-    # TeX: \delta \mathcal{P}_{\mathrm{int}} := \int\limits_{\Omega} \boldsymbol{\sigma} : \delta\boldsymbol{\gamma} \,\mathrm{d}v
-    def deltaP_int(self, sig, ddomain):
-        
-        # TeX: \int\limits_{\Omega}\boldsymbol{\sigma} : \delta \boldsymbol{\gamma}\,\mathrm{d}v
-        var_gamma = 0.5*(ufl.grad(self.var_v).T + ufl.grad(self.var_v))
-        return ufl.inner(sig, var_gamma)*ddomain
+    # TeX: \delta \mathcal{P}_{\mathrm{int}} := \int\limits_{\Omega}\boldsymbol{\sigma} : \boldsymbol{\nabla}(\delta\boldsymbol{v})\,\mathrm{d}v
+    def deltaP_int(self, sig, ddomain, Fale=None):
+        return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
-    def deltaP_int_pres(self, v, ddomain):
-        # TeX: \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v
+    # TeX: \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v
+    def deltaP_int_pres(self, v, ddomain, Fale=None):
         return ufl.div(v)*self.var_p*ddomain
 
     def residual_v_strong(self, a, v, rho, sig):
@@ -72,7 +66,7 @@ class variationalform:
     
     # Neumann load in normal direction (Cauchy traction)
     # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def deltaP_ext_neumann_normal(self, func, dboundary):
+    def deltaP_ext_neumann_normal(self, func, dboundary, Fale=None):
 
         return func*ufl.dot(self.n, self.var_v)*dboundary
     
@@ -92,9 +86,6 @@ class variationalform:
     # Visco-elastic membrane potential on surface
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
     def deltaP_ext_membrane(self, F, Fdot, a, params, dboundary):
-        
-        # use n0 naming for convenience
-        self.n0 = self.n
         
         C = F.T*F
         
@@ -187,12 +178,71 @@ class variationalform:
 
     # flux
     # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\boldsymbol{v}\;\mathrm{d}a
-    def flux(self, v, dboundary):
+    def flux(self, v, dboundary, w=None, Fale=None):
         
         return ufl.dot(self.n, v)*dboundary
         
     # surface - derivative of pressure load w.r.t. pressure
     # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def surface(self, dboundary):
+    def surface(self, dboundary, Fale=None):
         
         return ufl.dot(self.n, self.var_v)*dboundary
+
+
+
+
+# ALE fluid mechanics variational forms class (cf. https://w3.onera.fr/erc-aeroflex/project/strategies-for-coupling-the-fluid-and-solid-dynamics)
+# Principle of Virtual Power
+# TeX: \delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
+class variationalform_ale(variationalform):
+    
+    ### Kinetic virtual power
+    
+    # TeX: \delta \mathcal{P}_{\mathrm{kin}} := 
+    # \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v =
+    # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+    def deltaP_kin(self, a, v, rho, ddomain, w=None, Fale=None):
+        J = ufl.det(Fale)
+        return J*rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v)*ddomain
+
+    ### Internal virtual power
+
+    # TeX: \delta \mathcal{P}_{\mathrm{int}} :=
+    # \int\limits_{\Omega}\boldsymbol{\sigma} : \boldsymbol{\nabla}(\delta\boldsymbol{v})\,\mathrm{d}v = 
+    # \int\limits_{\Omega_0}J\boldsymbol{\sigma} : \boldsymbol{\nabla}_{0}(\delta\boldsymbol{v})\boldsymbol{F}^{-\mathrm{T}}\,\mathrm{d}V
+    def deltaP_int(self, sig, ddomain, Fale=None):
+        J = ufl.det(Fale)
+        return ufl.inner(J*sig, ufl.grad(self.var_v)*ufl.inv(Fale).T)*ddomain
+
+    # TeX:
+    # \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v = 
+    # \int\limits_{\Omega_0}\mathrm{Div}(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V
+    def deltaP_int_pres(self, v, ddomain, Fale=None):
+        J = ufl.det(Fale)
+        return ufl.div(J*ufl.inv(Fale)*v)*self.var_p*ddomain
+    
+    ### External virtual power
+    
+    # Neumann load in normal direction (Cauchy traction)
+    # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
+    #      \int\limits_{\Gamma_0} p\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\cdot\delta\boldsymbol{v}\;\mathrm{d}A
+    def deltaP_ext_neumann_normal(self, func, dboundary, Fale=None):
+        J = ufl.det(Fale)
+        return func*J*ufl.dot(ufl.dot(ufl.inv(Fale).T,self.n0), self.var_v)*dboundary
+    
+    
+    ### Flux coupling conditions
+
+    # flux
+    # TeX: \int\limits_{\Gamma} (\boldsymbol{v}-\boldsymbol{w})\cdot\boldsymbol{n}\;\mathrm{d}a = 
+    #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\boldsymbol{w})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\;\mathrm{d}A
+    def flux(self, v, dboundary, w=None, Fale=None):
+        J = ufl.det(Fale)
+        return J*ufl.dot(ufl.dot(ufl.inv(Fale).T,self.n0), (v-w))*dboundary
+        
+    # surface - derivative of pressure load w.r.t. pressure
+    # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
+    #      \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0 \cdot\delta\boldsymbol{v}\;\mathrm{d}A
+    def surface(self, dboundary, Fale=None):
+        J = ufl.det(Fale)
+        return J*ufl.dot(ufl.dot(ufl.inv(Fale).T,self.n0), self.var_v)*dboundary
