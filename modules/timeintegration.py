@@ -322,10 +322,10 @@ class timeintegration_fluid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, v, v_old, a_old, p, p_old, funcs, funcs_old, funcsvec, funcsvec_old, uf=None, uf_old=None):
+    def update_timestep(self, v, v_old, a_old, p, p_old, funcs, funcs_old, funcsvec, funcsvec_old, uf_old=None):
     
         # update old fields with new quantities
-        self.update_fields_ost(v, v_old, a_old, uf=uf, uf_old=uf_old)
+        self.update_fields_ost(v, v_old, a_old, uf_old=uf_old)
         
         # update pressure variable
         p_old.vector.axpby(1.0, 0.0, p.vector)
@@ -357,7 +357,7 @@ class timeintegration_fluid(timeintegration):
         return theta_*dt_ * v + (1.-theta_)*dt_ * v_old + uf_old
 
 
-    def update_fields_ost(self, v, v_old, a_old, uf=None, uf_old=None):
+    def update_fields_ost(self, v, v_old, a_old, uf_old=None):
         # update fields at the end of each time step 
         # get vectors (references)
         v_vec, v0_vec  = v.vector, v_old.vector
@@ -375,12 +375,12 @@ class timeintegration_fluid(timeintegration):
         v_old.vector.axpby(1.0, 0.0, v_vec)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
-        if uf is not None:
+        if uf_old is not None:
 
             uf0_vec = uf_old.vector
             # use update functions using vector arguments
             uf_vec = self.update_uf_ost(v_vec, v0_vec, uf0_vec, ufl=False)
-        
+
             # update fluid displacement: uf_old <- uf
             uf_old.vector.axpby(1.0, 0.0, uf_vec)
             uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

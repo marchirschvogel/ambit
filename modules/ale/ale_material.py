@@ -10,11 +10,30 @@ import ufl
 
 class materiallaw:
     
-    def __init__(self, w):
+    def __init__(self, w, F):
         self.w = w
-        self.dim = len(self.w)
+        self.F = F
         
+        self.dim = len(self.w)
         self.I = ufl.Identity(self.dim)
+    
+
+    def neohooke(self, params):
+        
+        # shear modulus and Poisson's ratio
+        mu, nu = params['mu'], params['nu']
+        
+        beta = nu/(1.-2.*nu)
+        
+        # first invariant and determinant of right Cauchy-Green tensor
+        Ic = ufl.tr(self.F.T*self.F)
+        J = ufl.det(self.F)
+        
+        # compressible NeoHookean material (Holzapfel eq. 6.148)
+        Psi = (mu/2.) * (Ic - 3.) + mu/(2.*beta)*(J**(-2.*beta) - 1.)
+        
+        # s_grad (tensor - PK1), s_div (scalar), s_ident (vector)
+        return ufl.diff(Psi,self.F), 0, ufl.constantvalue.zero(self.dim)
     
 
     def helmholtz(self, params):

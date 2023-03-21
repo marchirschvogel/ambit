@@ -19,6 +19,7 @@ import timeintegration
 import utilities
 import solver_nonlin
 import boundaryconditions
+from projection import project
 
 from base import problem_base, solver_base
 
@@ -37,6 +38,7 @@ class FluidmechanicsProblem(problem_base):
         self.problem_physics = 'fluid'
         
         self.simname = io_params['simname']
+        self.results_to_write = io_params['results_to_write']
         
         self.io = io
 
@@ -131,6 +133,7 @@ class FluidmechanicsProblem(problem_base):
         self.a_old  = fem.Function(self.V_v)
         self.p_old  = fem.Function(self.V_p)
         # a fluid displacement
+        self.uf     = fem.Function(self.V_v)
         self.uf_old = fem.Function(self.V_v)
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
@@ -180,7 +183,7 @@ class FluidmechanicsProblem(problem_base):
         self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
 
         # set form for fluid displacement (needed for FrSI)
-        self.uf = self.ti.set_uf(self.v, self.v_old, self.uf_old)
+        self.ufluid = self.ti.set_uf(self.v, self.v_old, self.uf_old)
 
         # kinetic, internal, and pressure virtual power
         self.deltaP_kin, self.deltaP_kin_old = ufl.as_ufl(0), ufl.as_ufl(0)
@@ -206,12 +209,12 @@ class FluidmechanicsProblem(problem_base):
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann, w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar)
+            w_neumann, w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.Fale, Fale_old=self.Fale_old)
         if 'robin' in self.bc_dict.keys():
             w_robin, w_robin_old = self.bc.robin_bcs(self.v, self.v_old)
         # reduced-solid for FrSI problem
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.uf, self.v, self.acc, self.uf_old, self.v_old, self.a_old)
+            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.ufluid, self.v, self.acc, self.uf_old, self.v_old, self.a_old)
 
         # TODO: Body forces!
         self.deltaP_ext     = w_neumann + w_robin + w_membrane
@@ -276,6 +279,15 @@ class FluidmechanicsProblem(problem_base):
         K_pv = fem.petsc.assemble_matrix(fem.form(self.jac_pv), self.bc.dbcs)
         K_pv.assemble()
         K_pp = None
+        
+        # we need a vector representation of ufluid to apply in ALE BCs
+        uf_vec = self.ti.update_uf_ost(self.v.vector, self.v_old.vector, self.uf_old.vector, ufl=False)
+        self.uf.vector.axpby(1.0, 0.0, uf_vec)
+        self.uf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        #uf_proj = project(self.ufluid, self.V_v, self.dx_)
+        #self.uf.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        #self.uf.interpolate(uf_proj)
 
         return [r_v, r_p], [[K_vv, K_vp], [K_pv, K_pp]]
 
@@ -332,7 +344,7 @@ class FluidmechanicsProblem(problem_base):
     def update(self):
         
         # update - velocity, acceleration, pressure, all internal variables, all time functions
-        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old, uf=self.uf, uf_old=self.uf_old)
+        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old, uf_old=self.uf_old)
 
 
     def print_to_screen(self):

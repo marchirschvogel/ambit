@@ -158,6 +158,21 @@ class materiallaw:
         
         return S
 
+
+    def neohooke_compressible(self, params, C):
+        
+        # shear modulus and Poisson's ratio
+        mu, nu = params['mu'], params['nu']
+        
+        beta = nu/(1.-2.*nu)
+        
+        # compressible NeoHookean material (Holzapfel eq. 6.148)
+        Psi = (mu/2.) * (self.Ic - 3.) + mu/(2.*beta)*(self.IIIc**(-beta) - 1.)
+        
+        S = 2.*ufl.diff(Psi,C)
+        
+        return S
+
     
     def stvenantkirchhoff(self, params, C):
     

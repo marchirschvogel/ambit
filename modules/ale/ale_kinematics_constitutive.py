@@ -15,6 +15,8 @@ class constitutive:
     
     def __init__(self, kin, materials, msh):
 
+        self.kin = kin
+
         self.matmodels = []
         for i in range(len(materials.keys())):
             self.matmodels.append(list(materials.keys())[i])
@@ -37,19 +39,29 @@ class constitutive:
 
     def stress(self, w_):
         
+        F_ = ufl.variable(self.kin.F(w_))
+        
         dim = len(w_)
 
         s_grad, s_div, s_ident = ufl.constantvalue.zero((dim,dim)), 0, ufl.constantvalue.zero(dim)
             
-        mat = materiallaw(w_)
+        mat = materiallaw(w_,F_)
         
         m = 0
         for matlaw in self.matmodels:
             
             # extract associated material parameters
             matparams_m = self.matparams[m]
+
+            if matlaw == 'neohooke':
+                
+                sg, sd, si = mat.neohooke(matparams_m)
+
+                s_grad += sg
+                s_div += sd
+                s_ident += si
         
-            if matlaw == 'helmholtz':
+            elif matlaw == 'helmholtz':
                 
                 sg, sd, si = mat.helmholtz(matparams_m)
 
@@ -97,5 +109,4 @@ class kinematics:
 
     # ALE deformation gradient
     def F(self, w_):
-
         return self.I + ufl.grad(w_)

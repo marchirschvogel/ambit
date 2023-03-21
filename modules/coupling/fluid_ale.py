@@ -39,6 +39,10 @@ class FluidmechanicsAleProblem():
         self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, aleproblem=self.pba)
 
+        # modify results to write...
+        self.pbf.results_to_write = io_params['results_to_write'][0]
+        self.pba.results_to_write = io_params['results_to_write'][1]
+
         self.io = io
 
         # indicator for no periodic reference state estimation
@@ -71,9 +75,11 @@ class FluidmechanicsAleProblem():
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms_and_jacobians(self):
     
-        self.dbcs_coup = fem.dirichletbc(self.pbf.v, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[0]]))
-        #self.dbcs_coup = fem.dirichletbc(self.pbf.uf, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[0]]))
-
+        dbcs_coup = fem.dirichletbc(self.pbf.uf, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[0]]))
+        
+        # append to ALE DBCs
+        #self.pba.bc.dbcs.append(dbcs_coup)
+        
         fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_w, self.fsi_interface, self.comm))
 
         # fluid and ALE actually should have same sizes...
@@ -89,18 +95,20 @@ class FluidmechanicsAleProblem():
         
         for i in range(matsize_w):
             if i in fdi:
-                self.K_wv[i,i] = -1.0
+                self.K_wv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
                 
         self.K_wv.assemble()
 
         # derivative of fluid momentum w.r.t. ALE displacement
         self.jac_vw = ufl.derivative(self.pbf.weakform_v, self.pba.w, self.pba.dw)
         
-        #db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=self.fsi_interface[0], metadata={'quadrature_degree': self.pba.quad_degree})
-        #wbound = 100.*(ufl.dot((self.pba.w-self.pbf.v), self.pba.var_w)*db_)
-        #self.pba.weakform_w += wbound
-        #self.pba.jac_ww += ufl.derivative(wbound, self.pba.w, self.pba.dw)
-        #self.jac_wv = ufl.derivative(wbound, self.pbf.v, self.pbf.dv)
+        # preliminary Robin-like form to set w=uf on the ALE boundary via penalty
+        epen = 1e3
+        db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=self.fsi_interface[0], metadata={'quadrature_degree': self.pba.quad_degree})
+        wbound = epen*(ufl.dot((self.pba.w-self.pbf.uf), self.pba.var_w)*db_)
+        self.pba.weakform_w += wbound
+        self.pba.jac_ww += ufl.derivative(wbound, self.pba.w, self.pba.dw)
+        self.jac_wv = ufl.derivative(wbound, self.pbf.v, self.pbf.dv)
 
 
     def set_forms_solver(self):
@@ -115,7 +123,6 @@ class FluidmechanicsAleProblem():
 
         r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
         
-        #r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t, dbcfluid=self.dbcs_coup)
         r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
         
         K_list = [[None]*3 for _ in range(3)]
@@ -133,9 +140,9 @@ class FluidmechanicsAleProblem():
         K_list[1][1] = K_list_fluid[1][1]
         
         # derivate of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
-        #K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pbf.bc.dbcs)
-        #K_wv.assemble()
-        #K_list[2][0] = K_wv
+        K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pbf.bc.dbcs)
+        K_wv.assemble()
+        K_list[2][0] = K_wv
         
         #K_list[2][0] = self.K_wv
         
@@ -171,7 +178,7 @@ class FluidmechanicsAleProblem():
 
     def write_output_ini(self):
 
-        self.pbf.write_output_ini()
+        self.io.write_output(self, writemesh=True)
 
 
     def get_time_offset(self):
@@ -199,8 +206,7 @@ class FluidmechanicsAleProblem():
             
     def write_output(self, N, t, mesh=False): 
 
-        self.pbf.write_output(N, t)
-        self.pba.write_output(N, t)
+        self.io.write_output(self, N=N, t=t)
 
             
     def update(self):
@@ -225,12 +231,13 @@ class FluidmechanicsAleProblem():
     def write_restart(self, sname, N):
 
         self.pbf.io.write_restart(self.pbf, N)
-
+        self.pba.io.write_restart(self.pbf, N)
         
         
     def check_abort(self, t):
         
         self.pbf.check_abort(t)
+        self.pba.check_abort(t)
 
 
 

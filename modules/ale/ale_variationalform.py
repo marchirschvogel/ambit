@@ -34,7 +34,7 @@ class variationalform:
     
     # Neumann load
     # TeX: \int\limits_{\Gamma_0} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
-    def deltaW_ext_neumann(self, func, dboundary):
+    def deltaW_ext_neumann_ref(self, func, dboundary):
 
         return ufl.dot(func, self.var_u)*dboundary
 

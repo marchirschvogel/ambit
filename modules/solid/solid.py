@@ -41,9 +41,10 @@ class SolidmechanicsProblem(problem_base):
         self.problem_physics = 'solid'
 
         self.simname = io_params['simname']
+        self.results_to_write = io_params['results_to_write']
 
         self.io = io
-        
+
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         
@@ -879,5 +880,5 @@ class SolidmechanicsSolver(solver_base):
         utilities.print_prestress('end', self.pb.comm)
 
         # write prestress displacement (given that we want to write the displacement)
-        if 'displacement' in self.pb.io.results_to_write:
+        if 'displacement' in self.pb.results_to_write:
             self.pb.io.write_output_pre(self.pb, self.pb.u_pre, 'displacement_pre')

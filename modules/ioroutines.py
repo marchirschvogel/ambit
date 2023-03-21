@@ -22,7 +22,6 @@ class IO:
 
         self.write_results_every = io_params['write_results_every']
         self.output_path = io_params['output_path']
-        self.results_to_write = io_params['results_to_write']
         
         self.mesh_domain = io_params['mesh_domain']
         self.mesh_boundary = io_params['mesh_boundary']
@@ -41,6 +40,9 @@ class IO:
 
         try: self.gridname_boundary = io_params['gridname_boundary']
         except: self.gridname_boundary = 'Grid'
+        
+        # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
+        self.resultsfiles = {}
         
         self.comm = comm
 
@@ -225,9 +227,8 @@ class IO_solid(IO):
         if writemesh:
             
             if self.write_results_every > 0:
-            
-                self.resultsfiles = {}
-                for res in self.results_to_write:
+
+                for res in pb.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
@@ -240,7 +241,7 @@ class IO_solid(IO):
             if self.write_results_every > 0 and N % self.write_results_every == 0:
                 
                 # save solution to XDMF format
-                for res in self.results_to_write:
+                for res in pb.results_to_write:
                     
                     if res=='displacement':
                         self.resultsfiles[res].write_function(pb.u, t)
@@ -335,9 +336,6 @@ class IO_solid(IO):
                         raise NameError("Unknown output to write for solid mechanics!")
 
 
-
-
-
     def readcheckpoint(self, pb, N_rest):
 
         vecs_to_read = {pb.u : 'u'}
@@ -420,14 +418,13 @@ class IO_solid(IO):
 
 class IO_fluid(IO):
     
-    def write_output(self, pb=None, writemesh=False, N=1, t=0):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
         
         if writemesh:
             
             if self.write_results_every > 0:
-            
-                self.resultsfiles = {}
-                for res in self.results_to_write:
+
+                for res in pb.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
@@ -440,7 +437,7 @@ class IO_fluid(IO):
             if self.write_results_every > 0 and N % self.write_results_every == 0:
                 
                 # save solution to XDMF format
-                for res in self.results_to_write:
+                for res in pb.results_to_write:
                     
                     if res=='velocity':
                         self.resultsfiles[res].write_function(pb.v, t)
@@ -501,14 +498,13 @@ class IO_fluid(IO):
 
 class IO_ale(IO):
     
-    def write_output(self, pb=None, writemesh=False, N=1, t=0):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
         
         if writemesh:
             
             if self.write_results_every > 0:
-            
-                self.resultsfiles = {}
-                for res in self.results_to_write:
+
+                for res in pb.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
@@ -521,9 +517,9 @@ class IO_ale(IO):
             if self.write_results_every > 0 and N % self.write_results_every == 0:
                 
                 # save solution to XDMF format
-                for res in self.results_to_write:
+                for res in pb.results_to_write:
                     
-                    if res=='alevariable':
+                    if res=='aledisplacement':
                         self.resultsfiles[res].write_function(pb.w, t)
                     else:
                         raise NameError("Unknown output to write for ALE mechanics!")
@@ -552,3 +548,21 @@ class IO_ale(IO):
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
             viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+
+
+class IO_fluid_ale(IO_fluid,IO_ale):
+    
+    def write_output(self, pb, writemesh=False, N=1, t=0):
+
+        IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)
+        IO_ale.write_output(self, pb.pba, writemesh=writemesh, N=N, t=t)
+        
+    def readcheckpoint(self, pb):
+        
+        IO_fluid.readcheckpoint(self, pb)
+        IO_ale.readcheckpoint(self, pb)
+        
+    def writecheckpoint(self, pb, N):
+        
+        IO_fluid.writecheckpoint(self, pb, N)
+        IO_ale.writecheckpoint(self, pb, N)

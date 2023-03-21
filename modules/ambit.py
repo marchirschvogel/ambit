@@ -54,7 +54,7 @@ class Ambit():
             
             import fluid_ale
             
-            io = ioroutines.IO_ale(io_params, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, self.comm)
             io.readin_mesh()
             
             self.mp = fluid_ale.FluidmechanicsAleProblem(io_params, time_params, fem_params, constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
@@ -66,7 +66,7 @@ class Ambit():
             
             import fluid_ale_flow0d
             
-            io = ioroutines.IO_ale(io_params, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, self.comm)
             io.readin_mesh()
             
             self.mp = fluid_ale_flow0d.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm)

@@ -162,6 +162,10 @@ class constitutive:
 
             return self.mat.guccione_dev(mparams,self.kin.fib_funcs[0],self.kin.fib_funcs[1],C_)
             
+        elif matlaw == 'neohooke_compressible':
+            
+            return self.mat.neohooke_compressible(mparams,C_)
+            
         elif matlaw == 'stvenantkirchhoff':
             
             return self.mat.stvenantkirchhoff(mparams,C_)

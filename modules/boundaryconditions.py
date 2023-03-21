@@ -290,7 +290,7 @@ class boundary_cond_solid(boundary_cond):
 class boundary_cond_fluid(boundary_cond):
 
     # set Neumann BCs
-    def neumann_bcs(self, V, V_real):
+    def neumann_bcs(self, V, V_real, Fale=None, Fale_old=None):
         
         w, w_old = ufl.as_ufl(0), ufl.as_ufl(0)
         
@@ -343,8 +343,8 @@ class boundary_cond_fluid(boundary_cond):
                     
                     db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                    w     += self.vf.deltaP_ext_neumann_normal(func, db_)
-                    w_old += self.vf.deltaP_ext_neumann_normal(func_old, db_)
+                    w     += self.vf.deltaP_ext_neumann_normal(func, db_, Fale=Fale)
+                    w_old += self.vf.deltaP_ext_neumann_normal(func_old, db_, Fale=Fale_old)
                 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
@@ -436,27 +436,32 @@ class boundary_cond_ale(boundary_cond):
             if bdim_r==1: mdata = self.io.mt_b1
             if bdim_r==2: mdata = self.io.mt_b2
             if bdim_r==3: mdata = self.io.mt_b3
-
-            if n['dir'] == 'xyz':
             
-                func = fem.Function(V)
+            if n['type'] == 'pk1':
+
+                if n['dir'] == 'xyz':
                 
-                if 'curve' in n.keys():
-                    load = expression.template_vector()
-                    load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
-                    func.interpolate(load.evaluate)
-                    self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
-                else:
-                    func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
-                
-                for i in range(len(n['id'])):
+                    func = fem.Function(V)
                     
-                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-                
-                    w += self.vf.deltaW_ext_neumann(func, db_)
-                
+                    if 'curve' in n.keys():
+                        load = expression.template_vector()
+                        load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
+                        func.interpolate(load.evaluate)
+                        self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
+                    else:
+                        func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
+                    
+                    for i in range(len(n['id'])):
+                        
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    
+                        w += self.vf.deltaW_ext_neumann_ref(func, db_)
+                    
+                else:
+                    raise NameError("Unknown dir option for Neumann BC!")
+
             else:
-                raise NameError("Unknown dir option for Neumann BC!")
+                raise NameError("Unknown type option for Neumann BC!")
 
         return w
 

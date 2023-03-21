@@ -33,6 +33,7 @@ class AleProblem(problem_base):
         self.problem_physics = 'ale'
         
         self.simname = io_params['simname']
+        self.results_to_write = io_params['results_to_write']
         
         self.io = io
 
@@ -109,7 +110,7 @@ class AleProblem(problem_base):
         # functions
         self.dw    = ufl.TrialFunction(self.V_w)            # Incremental displacement
         self.var_w = ufl.TestFunction(self.V_w)             # Test function
-        self.w     = fem.Function(self.V_w, name="AleVariable")
+        self.w     = fem.Function(self.V_w, name="AleDisplacement")
         # old state
         self.w_old = fem.Function(self.V_w)
 
@@ -179,12 +180,9 @@ class AleProblem(problem_base):
         pass
 
 
-    def assemble_residual_stiffness(self, t, dbcfluid=None, subsolver=None):
+    def assemble_residual_stiffness(self, t, subsolver=None):
 
-        if dbcfluid is not None:
-            self.bc.dbcs.append(dbcfluid)
-
-        # assemble rhs vector
+        # assemble rhs vector - in case of fluid_ale problem, self.bc.dbcs has DBCs from fluid problem appended
         r_w = fem.petsc.assemble_vector(fem.form(self.weakform_w))
         fem.apply_lifting(r_w, [fem.form(self.jac_ww)], [self.bc.dbcs], x0=[self.w.vector], scale=-1.0)
         r_w.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
