@@ -12,7 +12,7 @@ def main():
 
     # all possible input parameters
 
-    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_flow0d_multiscale_gandr, solid_constraint
+    IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, fluid_ale, flow0d, solid_flow0d, fluid_flow0d, fluid_ale_flow0d, solid_flow0d_multiscale_gandr, solid_constraint
                             'use_model_order_red'   : False, # Model Order Reduction via Proper Orthogonal Decomposition (POD), for solid or fluid mechanics and 3D0D coupled problems (default: False); specify parameters in ROM_PARAMS (see below)
                             'mesh_domain'           : basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
@@ -28,10 +28,10 @@ def main():
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
                             'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
 
-    # for solid*, fluid* problem types
-    SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct', # direct, iterative
-                            'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver
-                            'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver
+    # for all problem types
+    SOLVER_PARAMS         = {'solve_type'            : 'direct', # direct, iterative
+                            'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
+                            'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
                             'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, 'PTC' ('ptc' can stay False) (default: None)
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
@@ -48,10 +48,6 @@ def main():
                             'print_local_iter'      : False, # OPTIONAL: if we want to print iterations of local Newton (default: False)
                             'tol_res_local'         : 1.0e-10, # OPTIONAL: local Newton residual inf-norm tolerance (default: 1.0e-10)
                             'tol_inc_local'         : 1.0e-10} # OPTIONAL: local Newton increment inf-norm tolerance (default: 1.0e-10)
-    
-    # for flow0d, solid_flow0d, or fluid_flow0d problem types
-    SOLVER_PARAMS_FLOW0D = {'tol_res'               : 1.0e-6, # residual tolerance for nonlinear solver
-                            'tol_inc'               : 1.0e-6} # increment tolerance for nonlinear solver
 
     # for solid*, fluid* problem types
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0, # maximum simulation time
@@ -215,7 +211,7 @@ def main():
                                             {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz', 'visc' : 0.005}] }
 
     # problem setup - exemplary for 3D-0D coupling of solid (fluid) to flow0d
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLOW0D], FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
     
     # problem setup for solid (fluid) only: just pass parameters related to solid (fluid) instead of lists, so:
     #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)

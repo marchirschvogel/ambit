@@ -59,7 +59,6 @@ class IO:
         # read in xdmf mesh - domain
         with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
             self.mesh = infile.read_mesh(name=self.gridname_domain)
-            self.mesh2 = infile.read_mesh(name=self.gridname_domain)
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
 
@@ -456,7 +455,7 @@ class IO_fluid(IO):
                         reynolds = project(pb.Re, pb.Vd_scalar, pb.dx_, nm="Reynolds")
                         self.resultsfiles[res].write_function(reynolds, t)
                     elif res=='fluiddisplacement': # passed in uf is not a function but form, so we have to project
-                        uf_proj = project(pb.uf, pb.V_v, pb.dx_, nm="FluidDisplacement")
+                        uf_proj = project(pb.ufluid, pb.V_v, pb.dx_, nm="FluidDisplacement")
                         self.resultsfiles[res].write_function(uf_proj, t)
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")

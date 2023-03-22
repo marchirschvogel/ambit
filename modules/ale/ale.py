@@ -161,9 +161,11 @@ class AleProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_robin = ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.V_w, self.Vd_scalar)
+            w_neumann = self.bc.neumann_bcs(self.V_w, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
         if 'robin' in self.bc_dict.keys():
             w_robin = self.bc.robin_bcs(self.w)
+        if 'dirichlet_weak' in self.bc_dict.keys():
+            raise RuntimeError("Cannot use weak Dirichlet BCs for ALE mechanics currently!")
 
         self.deltaW_ext = w_neumann + w_robin
 
@@ -174,7 +176,7 @@ class AleProblem(problem_base):
        
         ### Jacobian
         self.jac_ww = ufl.derivative(self.weakform_w, self.w, self.dw)
-            
+
 
     def set_forms_solver(self):
         pass

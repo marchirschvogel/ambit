@@ -29,6 +29,13 @@ class variationalform:
         # TeX: \int\limits_{\Omega_0} \kappa\,[\mathrm{sym}(\nabla_{0}\boldsymbol{u}) : \nabla_{0}\delta\boldsymbol{u} + \alpha (\nabla\cdot\boldsymbol{u}) \,(\nabla_0\cdot\delta\boldsymbol{u})] \,\mathrm{d}V
         return ( ufl.inner(s_grad,ufl.grad(self.var_u)) + ufl.dot(s_ident,self.var_u) + s_div*ufl.div(self.var_u) ) * ddomain
 
+    # Nitsche term for weak imposition of Dirichlet condition
+    # TeX: \int\limits_{\Gamma_0} \beta\,(\boldsymbol{u}-\boldsymbol{u}_{\mathrm{D}})\cdot\delta\boldsymbol{u}\,\mathrm{d}A - \int\limits_{\Gamma_0} \boldsymbol{P}(\delta\boldsymbol{u})\boldsymbol{n}_{0}\cdot (\boldsymbol{u}-\boldsymbol{u}_{\mathrm{D}})\,\mathrm{d}A
+    def deltaW_int_nitsche_dirichlet(self, u, uD, var_stress, beta, dboundary):
+
+        # TODO: Check out why the latter term does not work for nonlinear problems (e.g. a NeoHookean solid)
+        return ( beta*ufl.dot((u-uD), self.var_u) - ufl.dot(ufl.dot(var_stress,self.n),(u-uD)) )*dboundary
+
 
     ### External virtual work
     
@@ -50,3 +57,4 @@ class variationalform:
     def deltaW_ext_robin_spring_normal(self, u, k_n, dboundary):
 
         return -k_n*(ufl.dot(u, self.n)*ufl.dot(self.n, self.var_u)*dboundary)
+

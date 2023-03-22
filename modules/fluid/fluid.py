@@ -133,7 +133,6 @@ class FluidmechanicsProblem(problem_base):
         self.a_old  = fem.Function(self.V_v)
         self.p_old  = fem.Function(self.V_p)
         # a fluid displacement
-        self.uf     = fem.Function(self.V_v)
         self.uf_old = fem.Function(self.V_v)
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
@@ -186,53 +185,57 @@ class FluidmechanicsProblem(problem_base):
         self.ufluid = self.ti.set_uf(self.v, self.v_old, self.uf_old)
 
         # kinetic, internal, and pressure virtual power
-        self.deltaP_kin, self.deltaP_kin_old = ufl.as_ufl(0), ufl.as_ufl(0)
-        self.deltaP_int, self.deltaP_int_old = ufl.as_ufl(0), ufl.as_ufl(0)
-        self.deltaP_p,   self.deltaP_p_old   = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaW_kin, self.deltaW_kin_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaW_int, self.deltaW_int_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaW_p,   self.deltaW_p_old   = ufl.as_ufl(0), ufl.as_ufl(0)
         
         for n in range(self.num_domains):
 
             if self.timint != 'static':
                 # kinetic virtual power
-                self.deltaP_kin     += self.vf.deltaP_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.w, Fale=self.Fale)
-                self.deltaP_kin_old += self.vf.deltaP_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.w_old, Fale=self.Fale_old)
+                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.w, Fale=self.Fale)
+                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.w_old, Fale=self.Fale_old)
             
             # internal virtual power
-            self.deltaP_int     += self.vf.deltaP_int(self.ma[n].sigma(self.v, self.p), self.dx_[n], Fale=self.Fale)
-            self.deltaP_int_old += self.vf.deltaP_int(self.ma[n].sigma(self.v_old, self.p_old), self.dx_[n], Fale=self.Fale_old)
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p), self.dx_[n], Fale=self.Fale)
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old), self.dx_[n], Fale=self.Fale_old)
             
             # pressure virtual power
-            self.deltaP_p       += self.vf.deltaP_int_pres(self.v, self.dx_[n], Fale=self.Fale)
-            self.deltaP_p_old   += self.vf.deltaP_int_pres(self.v_old, self.dx_[n], Fale=self.Fale_old)
-            
+            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.Fale)
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.Fale_old)
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann, w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.Fale, Fale_old=self.Fale_old)
+            w_neumann     = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.Fale, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.Fale_old, funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'robin' in self.bc_dict.keys():
-            w_robin, w_robin_old = self.bc.robin_bcs(self.v, self.v_old)
+            w_robin     = self.bc.robin_bcs(self.v)
+            w_robin_old = self.bc.robin_bcs(self.v_old)
         # reduced-solid for FrSI problem
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.ufluid, self.v, self.acc, self.uf_old, self.v_old, self.a_old)
+            w_membrane     = self.bc.membranesurf_bcs(self.ufluid, self.v, self.acc)
+            w_membrane_old = self.bc.membranesurf_bcs(self.uf_old, self.v_old, self.a_old)
+        if 'dirichlet_weak' in self.bc_dict.keys():
+            raise RuntimeError("Cannot use weak Dirichlet BCs for fluid mechanics currently!")
 
         # TODO: Body forces!
-        self.deltaP_ext     = w_neumann + w_robin + w_membrane
-        self.deltaP_ext_old = w_neumann_old + w_robin_old + w_membrane_old
+        self.deltaW_ext     = w_neumann + w_robin + w_membrane
+        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_membrane_old
         
         self.timefac_m, self.timefac = self.ti.timefactors()
 
         ### full weakforms 
         
         # kinetic plus internal minus external virtual power
-        self.weakform_v = self.timefac_m * self.deltaP_kin + (1.-self.timefac_m) * self.deltaP_kin_old + \
-                          self.timefac   * self.deltaP_int + (1.-self.timefac)   * self.deltaP_int_old - \
-                          self.timefac   * self.deltaP_ext - (1.-self.timefac)   * self.deltaP_ext_old
+        self.weakform_v = self.timefac_m * self.deltaW_kin + (1.-self.timefac_m) * self.deltaW_kin_old + \
+                          self.timefac   * self.deltaW_int + (1.-self.timefac)   * self.deltaW_int_old - \
+                          self.timefac   * self.deltaW_ext - (1.-self.timefac)   * self.deltaW_ext_old
         
         if self.pressure_at_midpoint:
-            self.weakform_p = self.timefac   * self.deltaP_p   + (1.-self.timefac)   * self.deltaP_p_old
+            self.weakform_p = self.timefac   * self.deltaW_p   + (1.-self.timefac)   * self.deltaW_p_old
         else:
-            self.weakform_p = self.deltaP_p
+            self.weakform_p = self.deltaW_p
         
         # Reynolds number: ratio of inertial to viscous forces
         self.Re = ufl.as_ufl(0)
@@ -279,15 +282,6 @@ class FluidmechanicsProblem(problem_base):
         K_pv = fem.petsc.assemble_matrix(fem.form(self.jac_pv), []) # currently, we do not consider pressure DBCs
         K_pv.assemble()
         K_pp = None
-        
-        # we need a vector representation of ufluid to apply in ALE BCs
-        uf_vec = self.ti.update_uf_ost(self.v.vector, self.v_old.vector, self.uf_old.vector, ufl=False)
-        self.uf.vector.axpby(1.0, 0.0, uf_vec)
-        self.uf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-        #uf_proj = project(self.ufluid, self.V_v, self.dx_)
-        #self.uf.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        #self.uf.interpolate(uf_proj)
 
         return [r_v, r_p], [[K_vv, K_vp], [K_pv, K_pp]]
 
@@ -378,7 +372,7 @@ class FluidmechanicsSolver(solver_base):
         # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a = self.pb.deltaP_kin_old + self.pb.deltaP_int_old - self.pb.deltaP_ext_old
+            weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
             
             jac_a = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 

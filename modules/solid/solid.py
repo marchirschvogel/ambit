@@ -368,11 +368,16 @@ class SolidmechanicsProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann, w_neumann_old = self.bc.neumann_bcs(self.V_u, self.Vd_scalar, self.u, self.u_old)
+            w_neumann     = self.bc.neumann_bcs(self.V_u, self.Vd_scalar, self.u, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.V_u, self.Vd_scalar, self.u_old, funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'robin' in self.bc_dict.keys():
-            w_robin, w_robin_old = self.bc.robin_bcs(self.u, self.vel, self.u_old, self.v_old, self.u_pre)
+            w_robin     = self.bc.robin_bcs(self.u, self.vel, self.u_pre)
+            w_robin_old = self.bc.robin_bcs(self.u_old, self.v_old, self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, w_membrane_old = self.bc.membranesurf_bcs(self.u, self.vel, self.acc, self.u_old, self.v_old, self.a_old)
+            w_membrane     = self.bc.membranesurf_bcs(self.u, self.vel, self.acc)
+            w_membrane_old = self.bc.membranesurf_bcs(self.u_old, self.v_old, self.a_old)
+        if 'dirichlet_weak' in self.bc_dict.keys():
+            raise RuntimeError("Cannot use weak Dirichlet BCs for nonlinear solid mechanics currently!")
 
         # for (quasi-static) prestressing, we need to eliminate dashpots and replace true with reference Neumann loads in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
@@ -393,9 +398,9 @@ class SolidmechanicsProblem(problem_base):
                     if n['type'] == 'true': n['type'] = 'pk1'
             bc_prestr = boundaryconditions.boundary_cond_solid(bc_dict_prestr, self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
             if 'neumann' in bc_dict_prestr.keys():
-                w_neumann_prestr, _ = bc_prestr.neumann_bcs(self.V_u, self.Vd_scalar, self.u, self.u_old)
+                w_neumann_prestr = bc_prestr.neumann_bcs(self.V_u, self.Vd_scalar, self.u, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
             if 'robin' in bc_dict_prestr.keys():
-                w_robin_prestr, _ = bc_prestr.robin_bcs(self.u, self.vel, self.u_old, self.v_old, self.u_pre)
+                w_robin_prestr = bc_prestr.robin_bcs(self.u, self.vel, self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
 
         # TODO: Body forces!

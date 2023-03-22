@@ -127,13 +127,13 @@ class FluidmechanicsFlow0DProblem():
 
             df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
-                
+
                 ds_p = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
                 df_ += self.pbf.timefac*self.pbf.vf.surface(ds_p, Fale=self.pbf.Fale)
             
                 # add to fluid rhs contributions
-                self.power_coupling += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs[-1], ds_p, Fale=self.pbf.Fale)
-                self.power_coupling_old += self.pbf.vf.deltaP_ext_neumann_normal(self.coupfuncs_old[-1], ds_p, Fale=self.pbf.Fale_old)
+                self.power_coupling += self.pbf.vf.deltaW_ext_neumann_normal(self.coupfuncs[-1], ds_p, Fale=self.pbf.Fale)
+                self.power_coupling_old += self.pbf.vf.deltaW_ext_neumann_normal(self.coupfuncs_old[-1], ds_p, Fale=self.pbf.Fale_old)
         
             self.dforce.append(df_)
         
@@ -427,7 +427,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
         # consider consistent initial acceleration
         if self.pb.pbf.timint != 'static' and self.pb.pbf.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a = self.pb.pbf.deltaP_kin_old + self.pb.pbf.deltaP_int_old - self.pb.pbf.deltaP_ext_old - self.pb.power_coupling_old
+            weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.power_coupling_old
             
             jac_a = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 

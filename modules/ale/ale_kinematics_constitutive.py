@@ -80,7 +80,7 @@ class constitutive:
             elif matlaw == 'element_dependent_stiffness':
                 
                 #metric = (ufl.min_value(10.,self.emax0/self.emin0))**4. # doesn't seem to work for quadratic cells...
-                metric = 1
+                metric = 1*self.ro0
                 
                 sg, sd, si = mat.element_dependent_stiffness(matparams_m, metric)
 

@@ -26,18 +26,18 @@ class variationalform:
     ### Kinetic virtual power
     
     # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
-    def deltaP_kin(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
         # standard Eulerian fluid
         return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
 
     ### Internal virtual power
 
     # TeX: \delta \mathcal{P}_{\mathrm{int}} := \int\limits_{\Omega}\boldsymbol{\sigma} : \boldsymbol{\nabla}(\delta\boldsymbol{v})\,\mathrm{d}v
-    def deltaP_int(self, sig, ddomain, Fale=None):
+    def deltaW_int(self, sig, ddomain, Fale=None):
         return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
     # TeX: \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v
-    def deltaP_int_pres(self, v, ddomain, Fale=None):
+    def deltaW_int_pres(self, v, ddomain, Fale=None):
         return ufl.div(v)*self.var_p*ddomain
 
     def residual_v_strong(self, a, v, rho, sig):
@@ -60,32 +60,32 @@ class variationalform:
     
     # Neumann load (Cauchy traction)
     # TeX: \int\limits_{\Gamma} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{v} \,\mathrm{d}a
-    def deltaP_ext_neumann(self, func, dboundary):
+    def deltaW_ext_neumann(self, func, dboundary):
 
         return ufl.dot(func, self.var_v)*dboundary
     
     # Neumann load in normal direction (Cauchy traction)
     # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def deltaP_ext_neumann_normal(self, func, dboundary, Fale=None):
+    def deltaW_ext_neumann_normal(self, func, dboundary, Fale=None):
 
         return func*ufl.dot(self.n, self.var_v)*dboundary
     
     # Robin condition (dashpot)
     # TeX: \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def deltaP_ext_robin_dashpot(self, v, c, dboundary):
+    def deltaW_ext_robin_dashpot(self, v, c, dboundary):
 
         return -c*(ufl.dot(v, self.var_v)*dboundary)
     
     # Robin condition (dashpot) in normal direction
     # TeX: \int\limits_{\Gamma} (\boldsymbol{n}\otimes \boldsymbol{n})\,c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def deltaP_ext_robin_dashpot_normal(self, v, c_n, dboundary):
+    def deltaW_ext_robin_dashpot_normal(self, v, c_n, dboundary):
 
         return -c_n*(ufl.dot(v, self.n)*ufl.dot(self.n, self.var_v)*dboundary)
 
 
     # Visco-elastic membrane potential on surface
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
-    def deltaP_ext_membrane(self, F, Fdot, a, params, dboundary):
+    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary):
         
         C = F.T*F
         
@@ -201,7 +201,7 @@ class variationalform_ale(variationalform):
     # TeX: \delta \mathcal{P}_{\mathrm{kin}} := 
     # \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v =
     # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
-    def deltaP_kin(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
         return J*rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v)*ddomain
 
@@ -210,14 +210,14 @@ class variationalform_ale(variationalform):
     # TeX: \delta \mathcal{P}_{\mathrm{int}} :=
     # \int\limits_{\Omega}\boldsymbol{\sigma} : \boldsymbol{\nabla}(\delta\boldsymbol{v})\,\mathrm{d}v = 
     # \int\limits_{\Omega_0}J\boldsymbol{\sigma} : \boldsymbol{\nabla}_{0}(\delta\boldsymbol{v})\boldsymbol{F}^{-\mathrm{T}}\,\mathrm{d}V
-    def deltaP_int(self, sig, ddomain, Fale=None):
+    def deltaW_int(self, sig, ddomain, Fale=None):
         J = ufl.det(Fale)
         return ufl.inner(J*sig, ufl.grad(self.var_v)*ufl.inv(Fale).T)*ddomain
 
     # TeX:
     # \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v = 
     # \int\limits_{\Omega_0}\mathrm{Div}(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V
-    def deltaP_int_pres(self, v, ddomain, Fale=None):
+    def deltaW_int_pres(self, v, ddomain, Fale=None):
         J = ufl.det(Fale)
         return ufl.div(J*ufl.inv(Fale)*v)*self.var_p*ddomain
     
@@ -226,7 +226,7 @@ class variationalform_ale(variationalform):
     # Neumann load in normal direction (Cauchy traction)
     # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
     #      \int\limits_{\Gamma_0} p\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\cdot\delta\boldsymbol{v}\;\mathrm{d}A
-    def deltaP_ext_neumann_normal(self, func, dboundary, Fale=None):
+    def deltaW_ext_neumann_normal(self, func, dboundary, Fale=None):
         J = ufl.det(Fale)
         return func*J*ufl.dot(ufl.dot(ufl.inv(Fale).T,self.n0), self.var_v)*dboundary
     
