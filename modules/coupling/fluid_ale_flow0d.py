@@ -71,7 +71,10 @@ class FluidmechanicsAleFlow0DProblem():
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms_and_jacobians(self):
     
-        self.dbcs_coup = fem.dirichletbc(self.pbf.v, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[0]]))
+        dbcs_coup = fem.dirichletbc(self.pbf.uf, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[0]]))
+
+        # append to ALE DBCs
+        #self.pba.bc.dbcs.append(dbcs_coup)
 
         fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_w, self.fsi_interface, self.comm))
 
@@ -88,12 +91,15 @@ class FluidmechanicsAleFlow0DProblem():
         
         for i in range(matsize_w):
             if i in fdi:
-                self.K_wv[i,i] = -1.0
+                self.K_wv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
                 
         self.K_wv.assemble()
 
-        # derivative of fluid w.r.t. ALE velocity
+        # derivative of fluid momentum w.r.t. ALE displacement
         self.jac_vw = ufl.derivative(self.pbf.weakform_v, self.pba.w, self.pba.dw)
+        
+        # derivative of fluid continuity w.r.t. ALE displacement
+        self.jac_pw = ufl.derivative(self.pbf.weakform_p, self.pba.w, self.pba.dw)
         
         #db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=self.fsi_interface[0], metadata={'quadrature_degree': self.pba.quad_degree})
         #wbound = 100.*(ufl.dot((self.pba.w-self.pbf.v), self.pba.var_w)*db_)
@@ -133,12 +139,17 @@ class FluidmechanicsAleFlow0DProblem():
         K_list[3][1] = K_list_fluidflow0d[2][1]
         K_list[3][3] = K_list_fluidflow0d[2][2]
         
-        # derivate of fluid residual w.r.t. ALE displacement
+        # derivative of fluid residual w.r.t. ALE displacement
         K_vw = fem.petsc.assemble_matrix(fem.form(self.jac_vw), [])
         K_vw.assemble()
         K_list[0][2] = K_vw
         
-        # derivate of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
+        # derivative of fluid continuity w.r.t. ALE velocity
+        K_pw = fem.petsc.assemble_matrix(fem.form(self.jac_pw), [])
+        K_pw.assemble()
+        K_list[1][2] = K_pw
+        
+        # derivative of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
         #K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pbf.bc.dbcs)
         #K_wv.assemble()
         #K_list[2][0] = K_wv

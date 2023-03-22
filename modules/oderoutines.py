@@ -118,7 +118,7 @@ class ode:
 
         # modification of stiffness matrix - all off-columns associated to index_prescribed = 0
         # diagonal entry associated to index_prescribed = 1
-        K[index_prescribed,index_prescribed] = 0.
+        K[index_prescribed,index_prescribed] = 1.
         for j in range(self.numdof):
             if j!=index_prescribed: K[index_prescribed,j] = 0.
 

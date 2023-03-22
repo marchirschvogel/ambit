@@ -276,7 +276,7 @@ class FluidmechanicsProblem(problem_base):
         # assemble system matrices
         K_vp = fem.petsc.assemble_matrix(fem.form(self.jac_vp), self.bc.dbcs)
         K_vp.assemble()
-        K_pv = fem.petsc.assemble_matrix(fem.form(self.jac_pv), self.bc.dbcs)
+        K_pv = fem.petsc.assemble_matrix(fem.form(self.jac_pv), []) # currently, we do not consider pressure DBCs
         K_pv.assemble()
         K_pp = None
         

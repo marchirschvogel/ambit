@@ -248,18 +248,12 @@ class FluidmechanicsFlow0DProblem():
         for i in range(len(row_ids)):
             k_sv_rows.append(fem.petsc.assemble_vector(fem.form(self.cq_factor[i]*self.dcq[i])))
 
-        # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
+        # apply velocity dbcs to matrix entries k_vs - basically since these are offdiagonal we want a zero there!
         for i in range(len(col_ids)):
             
             fem.apply_lifting(k_vs_cols[i], [fem.form(self.pbf.jac_vv)], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
             k_vs_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(k_vs_cols[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
-        
-        for i in range(len(row_ids)):
-        
-            fem.apply_lifting(k_sv_rows[i], [fem.form(self.pbf.jac_vv)], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
-            k_sv_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(k_sv_rows[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
         
         # setup offdiagonal matrices
         locmatsize = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs

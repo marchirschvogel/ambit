@@ -102,10 +102,13 @@ class FluidmechanicsAleProblem():
         # derivative of fluid momentum w.r.t. ALE displacement
         self.jac_vw = ufl.derivative(self.pbf.weakform_v, self.pba.w, self.pba.dw)
         
+        # derivative of fluid continuity w.r.t. ALE displacement
+        self.jac_pw = ufl.derivative(self.pbf.weakform_p, self.pba.w, self.pba.dw)
+        
         # preliminary Robin-like form to set w=uf on the ALE boundary via penalty
         epen = 1e3
         db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=self.fsi_interface[0], metadata={'quadrature_degree': self.pba.quad_degree})
-        wbound = epen*(ufl.dot((self.pba.w-self.pbf.uf), self.pba.var_w)*db_)
+        wbound = epen*(ufl.dot((self.pba.w-self.pbf.ufluid), self.pba.var_w)*db_)
         self.pba.weakform_w += wbound
         self.pba.jac_ww += ufl.derivative(wbound, self.pba.w, self.pba.dw)
         self.jac_wv = ufl.derivative(wbound, self.pbf.v, self.pbf.dv)
@@ -131,16 +134,21 @@ class FluidmechanicsAleProblem():
         K_list[0][0] = K_list_fluid[0][0]
         K_list[0][1] = K_list_fluid[0][1]
         
-        # derivate of fluid residual w.r.t. ALE velocity (appears in convective term)
-        K_vw = fem.petsc.assemble_matrix(fem.form(self.jac_vw), [])
+        # derivative of fluid momentum w.r.t. ALE velocity
+        K_vw = fem.petsc.assemble_matrix(fem.form(self.jac_vw), self.pbf.bc.dbcs)
         K_vw.assemble()
         K_list[0][2] = K_vw
 
         K_list[1][0] = K_list_fluid[1][0]
         K_list[1][1] = K_list_fluid[1][1]
         
-        # derivate of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
-        K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pbf.bc.dbcs)
+        # derivative of fluid continuity w.r.t. ALE velocity
+        K_pw = fem.petsc.assemble_matrix(fem.form(self.jac_pw), [])
+        K_pw.assemble()
+        K_list[1][2] = K_pw
+        
+        # derivative of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
+        K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pba.bc.dbcs)
         K_wv.assemble()
         K_list[2][0] = K_wv
         

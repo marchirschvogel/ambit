@@ -716,7 +716,7 @@ class SolidmechanicsProblem(problem_base):
             # assemble system matrices
             K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up_sol), self.bc.dbcs)
             K_up.assemble()
-            K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu_sol), self.bc.dbcs)
+            K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu_sol), []) # currently, we do not consider pressure DBCs
             K_pu.assemble()
             
             # for stress-mediated volumetric growth, K_pp is not zero!
