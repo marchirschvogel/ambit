@@ -32,12 +32,17 @@ class FluidmechanicsAleProblem():
         self.comm = comm
         
         self.coupling_params = coupling_params
-        
+
         self.fsi_interface = self.coupling_params['surface_ids']
+        try: self.coupling_type = self.coupling_params['coupling_fluid_ale']
+        except: self.coupling_type = 'strong_dirichlet'
+
+        try: self.fluid_on_deformed = self.coupling_params['fluid_on_deformed']
+        except: self.fluid_on_deformed = 'consistent'
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, aleproblem=self.pba)
+        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, aleproblem=[self.pba,self.fluid_on_deformed])
 
         # modify results to write...
         self.pbf.results_to_write = io_params['results_to_write'][0]
@@ -77,33 +82,56 @@ class FluidmechanicsAleProblem():
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms_and_jacobians(self):
 
-        dbcs_coup = []
-        for i in range(len(self.fsi_interface)):
-            dbcs_coup.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_u, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[i]])) )
+        if self.coupling_type == 'strong_dirichlet':
+
+            dbcs_coup = []
+            for i in range(len(self.fsi_interface)):
+                dbcs_coup.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_u, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[i]])) )
+            
+            # pay attention to order... first u=uf, then the others... hence re-set!
+            self.pba.bc.dbcs = []
+            self.pba.bc.dbcs += dbcs_coup
+            # Dirichlet boundary conditions
+            if 'dirichlet' in self.pba.bc_dict.keys():
+                self.pba.bc.dirichlet_bcs(self.pba.V_u)
         
-        # pay attention to order... first u=uf, then the others... hence re-set!
-        self.pba.bc.dbcs = []
-        self.pba.bc.dbcs += dbcs_coup
-        # Dirichlet boundary conditions
-        if 'dirichlet' in self.pba.bc_dict.keys():
-            self.pba.bc.dirichlet_bcs(self.pba.V_u)
+            fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_u, self.fsi_interface, self.comm))
+
+            # fluid and ALE actually should have same sizes...
+            locmatsize_u = self.pba.V_u.dofmap.index_map.size_local * self.pba.V_u.dofmap.index_map_bs
+            matsize_u = self.pba.V_u.dofmap.index_map.size_global * self.pba.V_u.dofmap.index_map_bs
+
+            locmatsize_v = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
+            matsize_v = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
+
+            ## now we have to assemble the offdiagonal stiffness due to the DBCs u=uf set on the ALE surface - cannot be treated with "derivative" since DBCs are not present in form
+            #self.K_uv = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_v,matsize_v)), bsize=None, nnz=None, csr=None, comm=self.comm)
+            #self.K_uv.setUp()
+            #for i in range(matsize_u):
+                #if i in fdi:
+                    #self.K_uv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
+            #self.K_uv.assemble()
+
+        elif self.coupling_type == 'weak_dirichlet':
+            
+            beta = self.coupling_params['beta']
+            
+            work_dbc_nitsche = ufl.as_ufl(0)
+            for i in range(len(self.fsi_interface)):
+            
+                db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=self.fsi_interface[i], metadata={'quadrature_degree': self.pba.quad_degree})
+                for n in range(self.pba.num_domains): # TODO: Does this work in case of multiple subdomains? I guess so, since self.pba.ma[n].stress should be only non-zero for the respective subdomain...
+                    work_dbc_nitsche += self.pba.vf.deltaW_int_nitsche_dirichlet(self.pba.u, self.pbf.ufluid, self.pba.ma[n].stress(self.pba.var_u)[0], beta, db_) # here, ufluid as form is used!
         
-        fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_u, self.fsi_interface, self.comm))
+            # add to ALE internal virtual work
+            self.pba.weakform_u += work_dbc_nitsche
+            # add to ALE jacobian form and define offdiagonal derivative w.r.t. fluid
+            self.pba.jac_uu += ufl.derivative(work_dbc_nitsche, self.pba.u, self.pba.du)
+            self.jac_uv = ufl.derivative(work_dbc_nitsche, self.pbf.v, self.pbf.dv)
+        
+        else:
+            raise ValueError("Unkown coupling_type for fluid to ALE!")
 
-        # fluid and ALE actually should have same sizes...
-        locmatsize_u = self.pba.V_u.dofmap.index_map.size_local * self.pba.V_u.dofmap.index_map_bs
-        matsize_u = self.pba.V_u.dofmap.index_map.size_global * self.pba.V_u.dofmap.index_map_bs
-
-        locmatsize_v = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
-        matsize_v = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
-
-        ## now we have to assemble the offdiagonal stiffness due to the DBCs u=uf set on the ALE surface - cannot be treated with "derivative" since DBCs are not present in form
-        #self.K_uv = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_v,matsize_v)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        #self.K_uv.setUp()
-        #for i in range(matsize_u):
-            #if i in fdi:
-                #self.K_uv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
-        #self.K_uv.assemble()
 
         # derivative of fluid momentum w.r.t. ALE displacement
         self.jac_vu = ufl.derivative(self.pbf.weakform_v, self.pba.u, self.pba.du)
@@ -123,9 +151,10 @@ class FluidmechanicsAleProblem():
     def assemble_residual_stiffness(self, t, subsolver=None):
 
         # we need a vector representation of ufluid to apply in ALE BCs
-        uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
-        self.ufa.vector.axpby(1.0, 0.0, uf_vec)
-        self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.coupling_type == 'strong_dirichlet':
+            uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
+            self.ufa.vector.axpby(1.0, 0.0, uf_vec)
+            self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
         
@@ -151,8 +180,14 @@ class FluidmechanicsAleProblem():
         K_list[1][2] = K_pu
         
         # derivative of ALE residual w.r.t. fluid velocities - needed due to DBCs u=uf added on the ALE surfaces
-        # TODO: How to form this matrix efficiently?
-        #K_list[2][0] = self.K_uv
+        #if self.coupling_type == 'strong_dirichlet':
+            # TODO: How to form this matrix efficiently?
+            #K_list[2][0] = self.K_uv
+        
+        if self.coupling_type == 'weak_dirichlet':
+            K_uv = fem.petsc.assemble_matrix(fem.form(self.jac_uv), self.pba.bc.dbcs)
+            K_uv.assemble()
+            K_list[2][0] = K_uv
         
         K_list[2][2] = K_list_ale[0][0]
 

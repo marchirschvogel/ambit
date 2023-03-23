@@ -30,9 +30,9 @@ class constitutive:
 
 
     # Cauchy stress core routine
-    def sigma(self, v_, p_):
+    def sigma(self, v_, p_, Fale=None):
         
-        gamma_ = self.kin.gamma(v_)
+        gamma_ = self.kin.gamma(v_,Fale=Fale)
 
         stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
             
@@ -81,10 +81,14 @@ class kinematics:
 
 
     # velocity gradient: gamma = 0.5(dv/dx + (dv/dx)^T)
-    def gamma(self, v_):
+    def gamma(self, v_, Fale=None):
         
-        return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
-
+        if Fale is not None:
+            #mm=ufl.det(Fale)*ufl.inv(Fale)
+            return 0.5*(ufl.grad(v_)*ufl.inv(Fale) + ufl.inv(Fale).T*ufl.grad(v_).T)
+            #return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
+        else:
+            return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
 
     # fluid deformation gradient (relevant on boundary for FrSI): F = I + duf/dx0
     def F(self, uf_):

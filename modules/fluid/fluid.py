@@ -32,7 +32,7 @@ from base import problem_base, solver_base
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, aleproblem=None):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, aleproblem=[None,None]):
         problem_base.__init__(self, io_params, time_params, comm)
         
         self.problem_physics = 'fluid'
@@ -149,14 +149,42 @@ class FluidmechanicsProblem(problem_base):
             self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)]))
         
         # initialize fluid variational form class
-        if self.aleproblem is None:
+        if self.aleproblem[0] is None:
             self.u, self.u_old, self.wel, self.w_old, self.Fale, self.Fale_old = None, None, None, None, None, None
             self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
         else:
-            self.u, self.u_old = self.aleproblem.u, self.aleproblem.u_old
-            self.wel, self.w_old = self.aleproblem.wel, self.aleproblem.w_old
-            self.Fale, self.Fale_old = self.aleproblem.ki.F(self.u), self.aleproblem.ki.F(self.u_old)
-            self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+            if self.aleproblem[1] == 'consistent':
+                self.u, self.u_old = self.aleproblem[0].u, self.aleproblem[0].u_old
+                self.wel, self.w_old = self.aleproblem[0].wel, self.aleproblem[0].w_old
+                self.Fale, self.Fale_old = self.aleproblem[0].ki.F(self.u), self.aleproblem[0].ki.F(self.u_old)
+                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+                
+            elif self.aleproblem[1] == 'from_last_step':
+                if self.comm.rank == 0:
+                    print(' ')
+                    print('*********************************************************************************************************************')
+                    print('*** Warning: You are solving Navier-Stokes by only updating the frame after each time step! This is inconsistent! ***')
+                    print('*********************************************************************************************************************')
+                    print(' ')
+                    sys.stdout.flush()
+                self.u, self.u_old = self.aleproblem[0].u_old, self.aleproblem[0].u_old
+                self.wel, self.w_old = self.aleproblem[0].w_old, self.aleproblem[0].w_old
+                self.Fale, self.Fale_old = self.aleproblem[0].ki.F(self.u), self.aleproblem[0].ki.F(self.u_old)
+                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+                
+            elif self.aleproblem[1] == 'no':
+                if self.comm.rank == 0:
+                    print(' ')
+                    print('***********************************************************************************')
+                    print('*** Warning: You are solving Navier-Stokes on the non-moving reference frame!!! ***')
+                    print('***********************************************************************************')
+                    print(' ')
+                    sys.stdout.flush()
+                self.u, self.u_old, self.wel, self.w_old, self.Fale, self.Fale_old = None, None, None, None, None, None
+                self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+                
+            else:
+                raise ValueError("Unkown fluid_on_deformed option!")
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_fluid(bc_dict, fem_params, self.io, self.vf, self.ti, ki=self.ki)
@@ -198,8 +226,8 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.w_old, Fale=self.Fale_old)
             
             # internal virtual power
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p), self.dx_[n], Fale=self.Fale)
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old), self.dx_[n], Fale=self.Fale_old)
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p, Fale=self.Fale), self.dx_[n], Fale=self.Fale)
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.Fale_old), self.dx_[n], Fale=self.Fale_old)
             
             # pressure virtual power
             self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.Fale)
@@ -217,6 +245,8 @@ class FluidmechanicsProblem(problem_base):
         if 'membrane' in self.bc_dict.keys():
             w_membrane     = self.bc.membranesurf_bcs(self.ufluid, self.v, self.acc)
             w_membrane_old = self.bc.membranesurf_bcs(self.uf_old, self.v_old, self.a_old)
+            #w_membrane     = self.bc.membranesurf_bcs(self.u, self.wel, self.acc)
+            #w_membrane_old = self.bc.membranesurf_bcs(self.u_old, self.w_old, self.a_old)
         if 'dirichlet_weak' in self.bc_dict.keys():
             raise RuntimeError("Cannot use weak Dirichlet BCs for fluid mechanics currently!")
 

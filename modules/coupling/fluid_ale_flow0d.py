@@ -31,9 +31,12 @@ class FluidmechanicsAleFlow0DProblem():
         
         self.comm = comm
         
+        try: self.coupling_type = coupling_params_fluid_ale['fluid_on_deformed']
+        except: self.coupling_type = 'consistent'
+        
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
         self.pba  = AleProblem(io_params, time_params_fluid, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, aleproblem=self.pba)
+        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, aleproblem=[self.pba,self.coupling_type])
 
         self.pbf = self.pbf0.pbf
         self.pb0 = self.pbf0.pb0

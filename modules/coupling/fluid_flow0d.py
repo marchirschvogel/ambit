@@ -24,7 +24,7 @@ from base import solver_base
 
 class FluidmechanicsFlow0DProblem():
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, aleproblem=None):
+    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, aleproblem=[None,None]):
         
         self.problem_physics = 'fluid_flow0d'
         

@@ -36,7 +36,7 @@ class variationalform:
     def deltaW_int(self, sig, ddomain, Fale=None):
         return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
-    # TeX: \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v
+    # TeX: \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v
     def deltaW_int_pres(self, v, ddomain, Fale=None):
         return ufl.div(v)*self.var_p*ddomain
 
@@ -166,7 +166,7 @@ class variationalform:
 
         # boundary kinetic virtual power
         if not isinstance(a, ufl.constantvalue.Zero):
-            dPb_kin = h0*rho0*ufl.dot(a,self.var_v)*dboundary
+            dPb_kin = rho0*(h0*ufl.dot(a,self.var_v)*dboundary)
         else:
             dPb_kin = ufl.as_ufl(0)
 
@@ -194,6 +194,7 @@ class variationalform:
 # ALE fluid mechanics variational forms class (cf. https://w3.onera.fr/erc-aeroflex/project/strategies-for-coupling-the-fluid-and-solid-dynamics)
 # Principle of Virtual Power
 # TeX: \delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
+# all integrals transform according to \int\limits_{\Omega} (\bullet)\,\mathrm{d}v = \int\limits_{\Omega_0} J(\bullet)\,\mathrm{d}V
 class variationalform_ale(variationalform):
     
     ### Kinetic virtual power
@@ -203,23 +204,26 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
     def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
+        #mm=J*ufl.inv(Fale)
         return J*rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v)*ddomain
 
     ### Internal virtual power
 
     # TeX: \delta \mathcal{P}_{\mathrm{int}} :=
     # \int\limits_{\Omega}\boldsymbol{\sigma} : \boldsymbol{\nabla}(\delta\boldsymbol{v})\,\mathrm{d}v = 
-    # \int\limits_{\Omega_0}J\boldsymbol{\sigma}\boldsymbol{F}^{-\mathrm{T}} : \boldsymbol{\nabla}_{0}(\delta\boldsymbol{v})\boldsymbol{F}^{-1}\,\mathrm{d}V
+    # \int\limits_{\Omega_0}J\boldsymbol{\sigma} : \boldsymbol{\nabla}_{0}(\delta\boldsymbol{v})\boldsymbol{F}^{-1}\,\mathrm{d}V (Holzapfel eq. (8.43))
     def deltaW_int(self, sig, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return ufl.inner(J*sig*ufl.inv(Fale).T, ufl.grad(self.var_v)*ufl.inv(Fale))*ddomain
+        return ufl.inner(J*sig, ufl.grad(self.var_v)*ufl.inv(Fale))*ddomain
 
     # TeX:
-    # \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v = 
-    # \int\limits_{\Omega_0}\mathrm{Div}(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V
+    # \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v = 
+    # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V TODO: Is this really true???
+    # \int\limits_{\Omega_0}J\,\boldsymbol{\nabla}_0\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}}\,\delta p\,\mathrm{d}V (cf. Holzapfel eq. (2.56))
     def deltaW_int_pres(self, v, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return ufl.div(J*ufl.inv(Fale)*v)*self.var_p*ddomain
+        return ufl.div(J*ufl.inv(Fale)*v)*self.var_p*ddomain # TODO: Is this really true???
+        #return J*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p*ddomain
     
     ### External virtual power
     

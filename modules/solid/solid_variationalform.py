@@ -229,7 +229,7 @@ class variationalform:
 
         # boundary kinetic virtual work
         if not isinstance(a, ufl.constantvalue.Zero):
-            dWb_kin = h0*rho0*ufl.dot(a,self.var_u)*dboundary
+            dWb_kin = rho0*(h0*ufl.dot(a,self.var_u)*dboundary)
         else:
             dWb_kin = ufl.as_ufl(0)
 
