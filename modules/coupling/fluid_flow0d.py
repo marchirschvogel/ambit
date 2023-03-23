@@ -119,7 +119,7 @@ class FluidmechanicsFlow0DProblem():
             for i in range(len(self.surface_vq_ids[n])):
 
                 ds_vq = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.w, Fale=self.pbf.Fale)
+                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.wel, Fale=self.pbf.Fale)
                 cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.w_old, Fale=self.pbf.Fale_old)
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)

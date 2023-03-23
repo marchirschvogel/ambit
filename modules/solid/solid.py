@@ -191,7 +191,7 @@ class SolidmechanicsProblem(problem_base):
             self.numdof = self.u.vector.getSize()
 
         # initialize solid time-integration class
-        self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.dx_, self.comm)
+        self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         have_fiber1, have_fiber2 = False, False

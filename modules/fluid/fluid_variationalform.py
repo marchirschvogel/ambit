@@ -199,8 +199,8 @@ class variationalform_ale(variationalform):
     ### Kinetic virtual power
     
     # TeX: \delta \mathcal{P}_{\mathrm{kin}} := 
-    # \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v =
-    # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+    # \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v =
+    # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
     def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
         return J*rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v)*ddomain
@@ -209,10 +209,10 @@ class variationalform_ale(variationalform):
 
     # TeX: \delta \mathcal{P}_{\mathrm{int}} :=
     # \int\limits_{\Omega}\boldsymbol{\sigma} : \boldsymbol{\nabla}(\delta\boldsymbol{v})\,\mathrm{d}v = 
-    # \int\limits_{\Omega_0}J\boldsymbol{\sigma} : \boldsymbol{\nabla}_{0}(\delta\boldsymbol{v})\boldsymbol{F}^{-\mathrm{T}}\,\mathrm{d}V
+    # \int\limits_{\Omega_0}J\boldsymbol{\sigma}\boldsymbol{F}^{-\mathrm{T}} : \boldsymbol{\nabla}_{0}(\delta\boldsymbol{v})\boldsymbol{F}^{-1}\,\mathrm{d}V
     def deltaW_int(self, sig, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return ufl.inner(J*sig, ufl.grad(self.var_v)*ufl.inv(Fale).T)*ddomain
+        return ufl.inner(J*sig*ufl.inv(Fale).T, ufl.grad(self.var_v)*ufl.inv(Fale))*ddomain
 
     # TeX:
     # \int\limits_{\Omega}\mathrm{div}\boldsymbol{v}\,\delta p\,\mathrm{d}v = 

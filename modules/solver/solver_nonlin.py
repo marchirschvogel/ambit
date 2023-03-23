@@ -423,7 +423,6 @@ class solver_nonlinear:
                     k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
                     for n in range(self.nfields):
                         self.reset_step(self.x[n], x_start[n], self.is_ghosted[n])
-                        del_x[n].set(0.0)
                     counter_adapt += 1
             
             # check if converged

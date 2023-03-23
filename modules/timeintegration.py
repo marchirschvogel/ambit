@@ -15,7 +15,7 @@ import expression
 
 class timeintegration():
     
-    def __init__(self, time_params, time_curves, t_init, domain=[], comm=None):
+    def __init__(self, time_params, time_curves, t_init, comm=None):
         
         try: self.timint = time_params['timint']
         except: self.timint = 'static'
@@ -27,8 +27,6 @@ class timeintegration():
         
         self.time_curves = time_curves
         self.t_init = t_init
-        
-        self.domain = domain
 
         self.comm = comm
         
@@ -94,8 +92,8 @@ class timeintegration():
 # Solid mechanics time integration class
 class timeintegration_solid(timeintegration):
     
-    def __init__(self, time_params, fem_params, time_curves, t_init, dx_, comm):
-        timeintegration.__init__(self, time_params, time_curves, t_init, dx_, comm)
+    def __init__(self, time_params, fem_params, time_curves, t_init, comm):
+        timeintegration.__init__(self, time_params, time_curves, t_init, comm)
         
         if self.timint == 'genalpha':
             
@@ -130,10 +128,10 @@ class timeintegration_solid(timeintegration):
         # set forms for acc and vel
         if self.timint == 'genalpha':
             acc = self.update_a_newmark(u, u_old, v_old, a_old, ufl=True)
-            vel = self.update_v_newmark(acc, u, u_old, v_old, a_old, ufl=True)
+            vel = self.update_v_newmark(u, u_old, v_old, a_old, ufl=True)
         elif self.timint == 'ost':
             acc = self.update_a_ost(u, u_old, v_old, a_old, ufl=True)
-            vel = self.update_v_ost(acc, u, u_old, v_old, a_old, ufl=True)
+            vel = self.update_v_ost(u, u_old, v_old, a_old, ufl=True)
         elif self.timint == 'static':
             acc = ufl.constantvalue.zero(3)
             vel = ufl.constantvalue.zero(3)
@@ -196,7 +194,7 @@ class timeintegration_solid(timeintegration):
         return 1./(theta_*theta_*dt_*dt_) * (u - u_old) - 1./(theta_*theta_*dt_) * v_old - (1.-theta_)/theta_ * a_old
 
 
-    def update_v_newmark(self, a, u, u_old, v_old, a_old, ufl=True):
+    def update_v_newmark(self, u, u_old, v_old, a_old, ufl=True):
         # update formula for velocity
         if ufl:
             dt_ = self.dt
@@ -209,7 +207,7 @@ class timeintegration_solid(timeintegration):
         return gamma_/(beta_*dt_) * (u - u_old) - (gamma_ - beta_)/beta_ * v_old - (gamma_-2.*beta_)/(2.*beta_) * dt_*a_old
 
 
-    def update_v_ost(self, a, u, u_old, v_old, a_old, ufl=True):
+    def update_v_ost(self, u, u_old, v_old, a_old, ufl=True):
         # update formula for velocity
         if ufl:
             dt_ = self.dt
@@ -229,7 +227,7 @@ class timeintegration_solid(timeintegration):
         
         # use update functions using vector arguments
         a_vec = self.update_a_newmark(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
-        v_vec = self.update_v_newmark(a_vec, u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        v_vec = self.update_v_newmark(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
         
         # update acceleration: a_old <- a
         a_old.vector.axpby(1.0, 0.0, a_vec)
@@ -253,7 +251,7 @@ class timeintegration_solid(timeintegration):
         
         # use update functions using vector arguments
         a_vec = self.update_a_ost(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
-        v_vec = self.update_v_ost(a_vec, u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        v_vec = self.update_v_ost(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
         
         # update acceleration: a_old <- a
         a_old.vector.axpby(1.0, 0.0, a_vec)
@@ -388,12 +386,57 @@ class timeintegration_fluid(timeintegration):
 
 
 # ALE time integration class
-class timeintegration_ale(timeintegration):
+class timeintegration_ale(timeintegration_fluid):
 
-    def update_timestep(self, u, u_old):
-        # update state variable
-        u_old.vector.axpby(1.0, 0.0, u.vector)
+    def update_timestep(self, u, u_old, w_old, funcs, funcs_old, funcsvec, funcsvec_old):
+        
+        # update old fields with new quantities
+        self.update_fields(u, u_old, w_old)
+        
+        # update time dependent load curves
+        self.update_time_funcs(funcs, funcs_old, funcsvec, funcsvec_old)
+
+
+    def set_wel(self, u, u_old, w_old):
+        
+        # set form for domain velocity wel
+        if self.timint == 'ost':
+            wel = self.update_w_ost(u, u_old, w_old, ufl=True)
+        else:
+            raise NameError("Unknown time scheme for ALE mechanics!")
+        
+        return wel
+
+
+    def update_w_ost(self, u, u_old, w_old, ufl=True):
+        # update formula for domain velocity
+        if ufl:
+            dt_ = self.dt
+            theta_ = self.theta_ost
+        else:
+            dt_ = float(self.dt)
+            theta_ = float(self.theta_ost)
+        return 1./(theta_*dt_) * (u - u_old) - (1.-theta_)/theta_ * w_old
+
+
+    def update_fields(self, u, u_old, w_old):
+        # update fields at the end of each time step 
+        # get vectors (references)
+        u_vec, u0_vec  = u.vector, u_old.vector
+        w0_vec = w_old.vector
+        u_vec.assemble(), u0_vec.assemble(), w0_vec.assemble()
+        
+        # use update functions using vector arguments
+        w_vec = self.update_w_ost(u_vec, u0_vec, w0_vec, ufl=False)
+        
+        # update velocity: w_old <- w
+        w_old.vector.axpby(1.0, 0.0, w_vec)
+        w_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # update displacement: u_old <- u
+        u_old.vector.axpby(1.0, 0.0, u_vec)
         u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
 
 
 # Flow0d time integration class

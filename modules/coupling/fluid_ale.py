@@ -52,7 +52,7 @@ class FluidmechanicsAleProblem():
         self.localsolve = False
         self.have_rom = False
         
-        self.ufa = fem.Function(self.pba.V_w)
+        self.ufa = fem.Function(self.pba.V_u)
 
         self.set_variational_forms_and_jacobians()
         
@@ -71,45 +71,45 @@ class FluidmechanicsAleProblem():
     def get_problem_var_list(self):
         
         is_ghosted = [True]*3
-        return [self.pbf.v.vector, self.pbf.p.vector, self.pba.w.vector], is_ghosted
+        return [self.pbf.v.vector, self.pbf.p.vector, self.pba.u.vector], is_ghosted
         
         
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms_and_jacobians(self):
-        #self.io.mesh.topology.create_connectivity(2, self.io.mesh.topology.dim)
+
         dbcs_coup = []
         for i in range(len(self.fsi_interface)):
-            dbcs_coup.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_w, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[i]])) )
+            dbcs_coup.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_u, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.fsi_interface[i]])) )
         
-        # pay attention to order... first w=uf, then the others... hence re-set!
+        # pay attention to order... first u=uf, then the others... hence re-set!
         self.pba.bc.dbcs = []
         self.pba.bc.dbcs += dbcs_coup
         # Dirichlet boundary conditions
         if 'dirichlet' in self.pba.bc_dict.keys():
-            self.pba.bc.dirichlet_bcs(self.pba.V_w)
+            self.pba.bc.dirichlet_bcs(self.pba.V_u)
         
-        fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_w, self.fsi_interface, self.comm))
+        fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_u, self.fsi_interface, self.comm))
 
         # fluid and ALE actually should have same sizes...
-        locmatsize_w = self.pba.V_w.dofmap.index_map.size_local * self.pba.V_w.dofmap.index_map_bs
-        matsize_w = self.pba.V_w.dofmap.index_map.size_global * self.pba.V_w.dofmap.index_map_bs
+        locmatsize_u = self.pba.V_u.dofmap.index_map.size_local * self.pba.V_u.dofmap.index_map_bs
+        matsize_u = self.pba.V_u.dofmap.index_map.size_global * self.pba.V_u.dofmap.index_map_bs
 
         locmatsize_v = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
         matsize_v = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
 
-        ## now we have to assemble the offdiagonal stiffness due to the DBCs w=v set on the ALE surface - cannot be treated with "derivative" since DBCs are not present in form
-        #self.K_wv = PETSc.Mat().createAIJ(size=((locmatsize_w,matsize_w),(locmatsize_v,matsize_v)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        #self.K_wv.setUp()
-        #for i in range(matsize_w):
+        ## now we have to assemble the offdiagonal stiffness due to the DBCs u=uf set on the ALE surface - cannot be treated with "derivative" since DBCs are not present in form
+        #self.K_uv = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_v,matsize_v)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        #self.K_uv.setUp()
+        #for i in range(matsize_u):
             #if i in fdi:
-                #self.K_wv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
-        #self.K_wv.assemble()
+                #self.K_uv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
+        #self.K_uv.assemble()
 
         # derivative of fluid momentum w.r.t. ALE displacement
-        self.jac_vw = ufl.derivative(self.pbf.weakform_v, self.pba.w, self.pba.dw)
+        self.jac_vu = ufl.derivative(self.pbf.weakform_v, self.pba.u, self.pba.du)
         
         # derivative of fluid continuity w.r.t. ALE displacement
-        self.jac_pw = ufl.derivative(self.pbf.weakform_p, self.pba.w, self.pba.dw)
+        self.jac_pu = ufl.derivative(self.pbf.weakform_p, self.pba.u, self.pba.du)
 
 
     def set_forms_solver(self):
@@ -138,22 +138,21 @@ class FluidmechanicsAleProblem():
         K_list[0][1] = K_list_fluid[0][1]
         
         # derivative of fluid momentum w.r.t. ALE velocity
-        K_vw = fem.petsc.assemble_matrix(fem.form(self.jac_vw), self.pbf.bc.dbcs)
-        K_vw.assemble()
-        K_list[0][2] = K_vw
+        K_vu = fem.petsc.assemble_matrix(fem.form(self.jac_vu), self.pbf.bc.dbcs)
+        K_vu.assemble()
+        K_list[0][2] = K_vu
 
         K_list[1][0] = K_list_fluid[1][0]
         K_list[1][1] = K_list_fluid[1][1]
         
         # derivative of fluid continuity w.r.t. ALE velocity
-        K_pw = fem.petsc.assemble_matrix(fem.form(self.jac_pw), [])
-        K_pw.assemble()
-        K_list[1][2] = K_pw
+        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu), [])
+        K_pu.assemble()
+        K_list[1][2] = K_pu
         
-        ### derivative of ALE residual w.r.t. fluid velocities - needed due to DBCs w=v added on the ALE surfaces
-        #K_wv = fem.petsc.assemble_matrix(fem.form(self.jac_wv), self.pba.bc.dbcs)
-        #K_wv.assemble()
-        #K_list[2][0] = K_wv
+        # derivative of ALE residual w.r.t. fluid velocities - needed due to DBCs u=uf added on the ALE surfaces
+        # TODO: How to form this matrix efficiently?
+        #K_list[2][0] = self.K_uv
         
         K_list[2][2] = K_list_ale[0][0]
 

@@ -150,11 +150,12 @@ class FluidmechanicsProblem(problem_base):
         
         # initialize fluid variational form class
         if self.aleproblem is None:
-            self.w, self.w_old, self.Fale, self.Fale_old = None, None, None, None
+            self.u, self.u_old, self.wel, self.w_old, self.Fale, self.Fale_old = None, None, None, None, None, None
             self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
         else:
-            self.w, self.w_old = self.aleproblem.w, self.aleproblem.w_old
-            self.Fale, self.Fale_old = self.aleproblem.ki.F(self.w), self.aleproblem.ki.F(self.w_old)
+            self.u, self.u_old = self.aleproblem.u, self.aleproblem.u_old
+            self.wel, self.w_old = self.aleproblem.wel, self.aleproblem.w_old
+            self.Fale, self.Fale_old = self.aleproblem.ki.F(self.u), self.aleproblem.ki.F(self.u_old)
             self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
 
         # initialize boundary condition class
@@ -193,7 +194,7 @@ class FluidmechanicsProblem(problem_base):
 
             if self.timint != 'static':
                 # kinetic virtual power
-                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.w, Fale=self.Fale)
+                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.wel, Fale=self.Fale)
                 self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.w_old, Fale=self.Fale_old)
             
             # internal virtual power
