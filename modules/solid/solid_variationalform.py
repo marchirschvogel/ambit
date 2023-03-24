@@ -96,7 +96,7 @@ class variationalform:
     # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def deltaW_ext_neumann_true(self, J, F, func, dboundary):
 
-        return func*J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), self.var_u)*dboundary
+        return func*J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary
     
     # Neumann load on reference configuration (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} \hat{\boldsymbol{t}}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
@@ -242,16 +242,16 @@ class variationalform:
     # volume
     def volume(self, u, J, F, dboundary):
         
-        return -(1./3.)*J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), self.x_ref + u)*dboundary
+        return -(1./3.)*J*ufl.dot(ufl.inv(F).T*self.n0, self.x_ref + u)*dboundary
         
     # flux: Q = -dV/dt
     # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\boldsymbol{v}\;\mathrm{d}A
     def flux(self, v, J, F, dboundary):
         
-        return J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), v)*dboundary
+        return J*ufl.dot(ufl.inv(F).T*self.n0, v)*dboundary
         
     # surface - derivative of pressure load w.r.t. pressure
     # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
     def surface(self, J, F, dboundary):
         
-        return J*ufl.dot(ufl.dot(ufl.inv(F).T,self.n0), self.var_u)*dboundary
+        return J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary

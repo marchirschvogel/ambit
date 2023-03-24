@@ -83,6 +83,7 @@ def main():
                             'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
                             'quad_degree'           : 1, # quadrature degree q (number of integration points: n(q) = ((q+2)//2)**dim) --> can be 1 for linear tets, should be >= 3 for linear hexes, should be >= 5 for quadratic tets/hexes
                             'incompressible_2field' : False, # if we want to use a 2-field functional for pressure dofs (always applies for fluid, optional for solid mechanics)
+                            'fluid_formulation'     : 'nonconservative', # OPTIONAL: formulation for Navier-Stokes advective term: 'nonconservative', 'conservative' (default: 'nonconservative')
                             'prestress_initial'     : False, # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
                             'pressure_at_midpoint'  : False} # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
     

@@ -65,6 +65,9 @@ class FluidmechanicsProblem(problem_base):
         try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
         except: self.pressure_at_midpoint = False
         
+        try: self.fluid_formulation = fem_params['fluid_formulation']
+        except: self.fluid_formulation = 'nonconservative'
+        
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in fluid is somehow senseless...
         self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
@@ -87,10 +90,10 @@ class FluidmechanicsProblem(problem_base):
 
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
-        # make sure that we use the correct velocity order in case of a higher-order mesh
-        if self.Vex.degree() > 1:
-            if self.Vex.degree() != self.order_vel:
-                raise ValueError("Order of velocity field not compatible with degree of finite element!")
+        ## make sure that we use the correct velocity order in case of a higher-order mesh
+        #if self.Vex.degree() > 1:
+            #if self.Vex.degree() != self.order_vel:
+                #raise ValueError("Order of velocity field not compatible with degree of finite element!")
 
         if self.order_vel == self.order_pres:
             raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
@@ -151,13 +154,13 @@ class FluidmechanicsProblem(problem_base):
         # initialize fluid variational form class
         if self.aleproblem[0] is None:
             self.u, self.u_old, self.wel, self.w_old, self.Fale, self.Fale_old = None, None, None, None, None, None
-            self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+            self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
         else:
             if self.aleproblem[1] == 'consistent':
                 self.u, self.u_old = self.aleproblem[0].u, self.aleproblem[0].u_old
                 self.wel, self.w_old = self.aleproblem[0].wel, self.aleproblem[0].w_old
                 self.Fale, self.Fale_old = self.aleproblem[0].ki.F(self.u), self.aleproblem[0].ki.F(self.u_old)
-                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
                 
             elif self.aleproblem[1] == 'from_last_step':
                 if self.comm.rank == 0:
@@ -170,18 +173,27 @@ class FluidmechanicsProblem(problem_base):
                 self.u, self.u_old = self.aleproblem[0].u_old, self.aleproblem[0].u_old
                 self.wel, self.w_old = self.aleproblem[0].w_old, self.aleproblem[0].w_old
                 self.Fale, self.Fale_old = self.aleproblem[0].ki.F(self.u), self.aleproblem[0].ki.F(self.u_old)
-                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
                 
-            elif self.aleproblem[1] == 'no':
-                if self.comm.rank == 0:
-                    print(' ')
-                    print('***********************************************************************************')
-                    print('*** Warning: You are solving Navier-Stokes on the non-moving reference frame!!! ***')
-                    print('***********************************************************************************')
-                    print(' ')
-                    sys.stdout.flush()
+            elif self.aleproblem[1] == 'no' or self.aleproblem[1] == 'mesh_move':
+                if self.aleproblem[1] == 'no':
+                    if self.comm.rank == 0:
+                        print(' ')
+                        print('***********************************************************************************')
+                        print('*** Warning: You are solving Navier-Stokes on the non-moving reference frame!!! ***')
+                        print('***********************************************************************************')
+                        print(' ')
+                        sys.stdout.flush()
+                if self.aleproblem[1] == 'mesh_move':
+                    if self.comm.rank == 0:
+                        print(' ')
+                        print('*********************************************************************************************************************')
+                        print('*** Warning: You are solving Navier-Stokes by only updating the frame after each time step! This is inconsistent! ***')
+                        print('*********************************************************************************************************************')
+                        print(' ')
+                        sys.stdout.flush()
                 self.u, self.u_old, self.wel, self.w_old, self.Fale, self.Fale_old = None, None, None, None, None, None
-                self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0)
+                self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
                 
             else:
                 raise ValueError("Unkown fluid_on_deformed option!")
@@ -230,8 +242,8 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.Fale_old), self.dx_[n], Fale=self.Fale_old)
             
             # pressure virtual power
-            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.Fale)
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.Fale_old)
+            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], w=self.wel, Fale=self.Fale)
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], w=self.w_old, Fale=self.Fale_old)
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)

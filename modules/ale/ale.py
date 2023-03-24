@@ -78,10 +78,10 @@ class AleProblem(problem_base):
 
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
-        # make sure that we use the correct velocity order in case of a higher-order mesh
-        if self.Vex.degree() > 1:
-            if self.Vex.degree() != self.order_disp:
-                raise ValueError("Order of velocity field not compatible with degree of finite element!")
+        ## make sure that we use the correct velocity order in case of a higher-order mesh
+        #if self.Vex.degree() > 1:
+            #if self.Vex.degree() != self.order_disp:
+                #raise ValueError("Order of velocity field not compatible with degree of finite element!")
 
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']
@@ -199,15 +199,6 @@ class AleProblem(problem_base):
         K_ww.assemble()
         
         return [r_w], [[K_ww]]
-
-
-    # DEPRECATED: This is something we should actually not do! It will mess with gradients we need w.r.t. the reference (e.g. for FrSI)
-    # Instead of moving the mesh, we formulate Navier-Stokes w.r.t. a reference state using the ALE kinematics
-    def move_mesh(self):
-        
-        u = fem.Function(self.Vcoord)
-        u.interpolate(self.u)
-        self.io.mesh.geometry.x[:,:self.dim] += u.x.array.reshape((-1, self.dim))
 
 
     ### now the base routines for this problem

@@ -34,7 +34,7 @@ class variationalform:
     def deltaW_int_nitsche_dirichlet(self, u, uD, var_stress, beta, dboundary):
 
         # TODO: Check out why the latter term does not work for nonlinear problems (e.g. a NeoHookean solid)
-        return ( beta*ufl.dot((u-uD), self.var_u) - ufl.dot(ufl.dot(var_stress,self.n),(u-uD)) )*dboundary
+        return ( beta*ufl.dot((u-uD), self.var_u) - ufl.dot(var_stress*self.n,(u-uD)) )*dboundary
 
 
     ### External virtual work

@@ -13,22 +13,37 @@ import ufl
 # TeX: \delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
 class variationalform:
     
-    def __init__(self, var_v, dv, var_p, dp, n=None):
+    def __init__(self, var_v, dv, var_p, dp, n, formulation='nonconservative'):
         self.var_v = var_v
         self.var_p = var_p
         self.dv = dv
         self.dp = dp
         
         self.n = n
+        self.formulation = formulation
         # for convenience, use naming n0 for ALE (it's a normal determined by the initial mesh!)
         self.n0 = self.n
     
     ### Kinetic virtual power
     
-    # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
     def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
         # standard Eulerian fluid
-        return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
+        if self.formulation=='nonconservative':
+            # non-conservative form for Navier-Stokes:
+            # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+            
+            return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
+        
+        elif self.formulation=='conservative':
+            # conservative form for Navier-Stokes
+            # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \boldsymbol{\nabla}\cdot(\boldsymbol{v}\otimes\boldsymbol{v})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+
+            # note that we have div(v o v) = (grad v) v + v (div v), where the latter term is the divergence condition (Holzapfel eq. (1.292))
+            return rho*ufl.dot(a + ufl.div(ufl.outer(v,v)), self.var_v)*ddomain
+            #return rho*ufl.dot(a,self.var_v)*ddomain - rho*ufl.inner(ufl.outer(v,v), ufl.grad(self.var_v))*ddomain
+        
+        else:
+            raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
     ### Internal virtual power
 
@@ -37,7 +52,7 @@ class variationalform:
         return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
     # TeX: \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v
-    def deltaW_int_pres(self, v, ddomain, Fale=None):
+    def deltaW_int_pres(self, v, ddomain, w=None, Fale=None):
         return ufl.div(v)*self.var_p*ddomain
 
     def residual_v_strong(self, a, v, rho, sig):
@@ -199,13 +214,29 @@ class variationalform_ale(variationalform):
     
     ### Kinetic virtual power
     
-    # TeX: \delta \mathcal{P}_{\mathrm{kin}} := 
-    # \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v =
-    # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
     def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
-        #mm=J*ufl.inv(Fale)
-        return J*rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v)*ddomain
+
+        i, j, k = ufl.indices(3)
+
+        if self.formulation=='nonconservative':
+            # non-conservative form for ALE Navier-Stokes:
+            # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+            
+            return J*rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v)*ddomain
+        
+        elif self.formulation=='conservative':
+            # conservative form for ALE Navier-Stokes
+            # TeX: \delta \mathcal{P}_{\mathrm{kin}} := \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \boldsymbol{\nabla}\cdot(\boldsymbol{v}\otimes(\boldsymbol{v}-\boldsymbol{w}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+
+            # note that we have div(v o (v-w)) = (grad v) (v-w) + v (div (v-w)), where the latter term is the divergence condition (Holzapfel eq. (1.292))
+            #return rho*ufl.dot(J*a + ufl.div(J*ufl.inv(Fale)*ufl.outer(v,v-w)), self.var_v)*ddomain # TODO: Is this a problem that we have a second derivative on Fale??
+            
+            Tvec = ufl.as_tensor(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], (i)) # Holzapfel eq. (2.56)
+            return J*rho*ufl.dot(a + Tvec, self.var_v)*ddomain
+        
+        else:
+            raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
     ### Internal virtual power
 
@@ -218,12 +249,12 @@ class variationalform_ale(variationalform):
 
     # TeX:
     # \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v = 
-    # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V TODO: Is this really true???
+    # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V TODO: Is this a problem that we have a second derivative on Fale??
     # \int\limits_{\Omega_0}J\,\boldsymbol{\nabla}_0\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}}\,\delta p\,\mathrm{d}V (cf. Holzapfel eq. (2.56))
-    def deltaW_int_pres(self, v, ddomain, Fale=None):
+    def deltaW_int_pres(self, v, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
-        return ufl.div(J*ufl.inv(Fale)*v)*self.var_p*ddomain # TODO: Is this really true???
-        #return J*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p*ddomain
+        #return ufl.div(J*ufl.inv(Fale)*(v-w))*self.var_p*ddomain # TODO: Is this a problem that we have a second derivative on Fale??
+        return J*ufl.inner(ufl.grad(v-w), ufl.inv(Fale).T)*self.var_p*ddomain
     
     ### External virtual power
     
@@ -232,7 +263,7 @@ class variationalform_ale(variationalform):
     #      \int\limits_{\Gamma_0} p\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\cdot\delta\boldsymbol{v}\;\mathrm{d}A
     def deltaW_ext_neumann_normal(self, func, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return func*J*ufl.dot(ufl.dot(ufl.inv(Fale).T,self.n0), self.var_v)*dboundary
+        return func*J*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary
     
     
     ### Flux coupling conditions
@@ -242,11 +273,11 @@ class variationalform_ale(variationalform):
     #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\boldsymbol{w})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\;\mathrm{d}A
     def flux(self, v, dboundary, w=None, Fale=None):
         J = ufl.det(Fale)
-        return J*ufl.dot(ufl.dot(ufl.inv(Fale).T,self.n0), (v-w))*dboundary
+        return J*ufl.dot(ufl.inv(Fale).T*self.n0, (v-w))*dboundary
         
     # surface - derivative of pressure load w.r.t. pressure
     # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
     #      \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0 \cdot\delta\boldsymbol{v}\;\mathrm{d}A
     def surface(self, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return J*ufl.dot(ufl.dot(ufl.inv(Fale).T,self.n0), self.var_v)*dboundary
+        return J*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary

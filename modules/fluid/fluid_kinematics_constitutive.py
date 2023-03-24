@@ -84,9 +84,7 @@ class kinematics:
     def gamma(self, v_, Fale=None):
         
         if Fale is not None:
-            #mm=ufl.det(Fale)*ufl.inv(Fale)
             return 0.5*(ufl.grad(v_)*ufl.inv(Fale) + ufl.inv(Fale).T*ufl.grad(v_).T)
-            #return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
         else:
             return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
 
