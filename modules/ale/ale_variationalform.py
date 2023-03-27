@@ -48,13 +48,13 @@ class variationalform:
     
     # Robin condition
     # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
-    def deltaW_ext_robin_spring(self, u, k, dboundary):
+    def deltaW_ext_robin_spring(self, u, k, dboundary, upre=None):
 
         return -k*(ufl.dot(u, self.var_u)*dboundary)
     
     # Robin condition in normal direction
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}\otimes \boldsymbol{n})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
-    def deltaW_ext_robin_spring_normal(self, u, k_n, dboundary):
+    def deltaW_ext_robin_spring_normal(self, u, k_n, dboundary, upre=None):
 
         return -k_n*(ufl.dot(u, self.n)*ufl.dot(self.n, self.var_u)*dboundary)
 

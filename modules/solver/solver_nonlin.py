@@ -268,7 +268,7 @@ class solver_nonlinear:
         while it < self.maxiter and counter_adapt < max_adapt:
 
             tes = time.time()
-            
+
             if self.pb.localsolve:
                 self.solve_local(localdata)
 

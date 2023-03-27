@@ -9,6 +9,7 @@
 import numpy as np
 from dolfinx import fem, mesh
 import ufl
+from petsc4py import PETSc
 
 import expression
 
@@ -60,24 +61,30 @@ class boundary_cond():
             
             elif d['dir'] == 'x':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    dofs_x = fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])
+                    self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
 
             elif d['dir'] == 'y':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    dofs_y = fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])
+                    self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
 
             elif d['dir'] == 'z':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    dofs_z = fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])
+                    self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
 
             elif d['dir'] == '2dimX':
-                self.dbcs.append( fem.dirichletbc(func.sub(0), fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX))) )
+                dofs_x = fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX))
+                self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
 
             elif d['dir'] == '2dimY':
-                self.dbcs.append( fem.dirichletbc(func.sub(1), fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY))) )
+                dofs_y = fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY))
+                self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
 
             elif d['dir'] == '2dimZ':
-                self.dbcs.append( fem.dirichletbc(func.sub(2), fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ))) )
+                dofs_z = fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ))
+                self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
@@ -350,6 +357,49 @@ class boundary_cond_fluid(boundary_cond):
                 raise NameError("Unknown dir option for Neumann BC!")
 
         return w
+
+
+    # set Robin BCs
+    def robin_bcs(self, v):
+        
+        w = ufl.as_ufl(0)
+        
+        for r in self.bc_dict['robin']:
+            
+            try: bdim_r = r['bdim_reduction']
+            except: bdim_r = 1
+
+            if bdim_r==1: mdata = self.io.mt_b1
+            if bdim_r==2: mdata = self.io.mt_b2
+            if bdim_r==3: mdata = self.io.mt_b3
+
+            if r['type'] == 'dashpot':
+                
+                if r['dir'] == 'xyz':
+                    
+                    for i in range(len(r['id'])):
+                        
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    
+                        w     += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], db_)
+
+                elif r['dir'] == 'normal': # current normal
+                    
+                    for i in range(len(r['id'])):
+                        
+                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                        w     += self.vf.deltaW_ext_robin_dashpot_normal(v, r['visc'], db_)
+
+                else:
+                    raise NameError("Unknown dir option for Robin BC!")
+
+
+            else:
+                raise NameError("Unknown type option for Robin BC!")
+            
+        return w
+
 
 
 class boundary_cond_ale(boundary_cond):

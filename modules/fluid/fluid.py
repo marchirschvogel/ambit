@@ -32,7 +32,7 @@ from base import problem_base, solver_base
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, aleproblem=[None,None]):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, alevar={}):
         problem_base.__init__(self, io_params, time_params, comm)
         
         self.problem_physics = 'fluid'
@@ -79,24 +79,19 @@ class FluidmechanicsProblem(problem_base):
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
-            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 3:
-                raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
+            #if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 3:
+                #raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
-            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 5:
-                raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
+            #if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 5:
+                #raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
 
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
-        ## make sure that we use the correct velocity order in case of a higher-order mesh
-        #if self.Vex.degree() > 1:
-            #if self.Vex.degree() != self.order_vel:
-                #raise ValueError("Order of velocity field not compatible with degree of finite element!")
-
-        if self.order_vel == self.order_pres:
-            raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
+        #if self.order_vel == self.order_pres:
+            #raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
 
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']
@@ -106,8 +101,8 @@ class FluidmechanicsProblem(problem_base):
             import mor
             self.rom = mor.ModelOrderReduction(mor_params, self.comm)
 
-        # ALE fluid problem
-        self.aleproblem = aleproblem
+        # ALE fluid problem variables
+        self.alevar = alevar
 
         # create finite element objects for v and p
         P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
@@ -141,7 +136,7 @@ class FluidmechanicsProblem(problem_base):
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
         # initialize fluid time-integration class
-        self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves, self.t_init, self.comm)
+        self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)
 
         # initialize kinematics_constitutive class
         self.ki = fluid_kinematics_constitutive.kinematics(self.dim)
@@ -152,17 +147,14 @@ class FluidmechanicsProblem(problem_base):
             self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)]))
         
         # initialize fluid variational form class
-        if self.aleproblem[0] is None:
-            self.u, self.u_old, self.wel, self.w_old, self.Fale, self.Fale_old = None, None, None, None, None, None
+        if not bool(self.alevar):
+            self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None}
             self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
         else:
-            if self.aleproblem[1] == 'consistent':
-                self.u, self.u_old = self.aleproblem[0].u, self.aleproblem[0].u_old
-                self.wel, self.w_old = self.aleproblem[0].wel, self.aleproblem[0].w_old
-                self.Fale, self.Fale_old = self.aleproblem[0].ki.F(self.u), self.aleproblem[0].ki.F(self.u_old)
+            if self.alevar['fluid_on_deformed'] == 'consistent':
                 self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
-                
-            elif self.aleproblem[1] == 'from_last_step':
+            elif self.alevar['fluid_on_deformed'] == 'from_last_step':
+                self.alevar['Fale'], self.alevar['w'] = self.alevar['Fale_old'], self.alevar['w_old']
                 if self.comm.rank == 0:
                     print(' ')
                     print('*********************************************************************************************************************')
@@ -170,13 +162,10 @@ class FluidmechanicsProblem(problem_base):
                     print('*********************************************************************************************************************')
                     print(' ')
                     sys.stdout.flush()
-                self.u, self.u_old = self.aleproblem[0].u_old, self.aleproblem[0].u_old
-                self.wel, self.w_old = self.aleproblem[0].w_old, self.aleproblem[0].w_old
-                self.Fale, self.Fale_old = self.aleproblem[0].ki.F(self.u), self.aleproblem[0].ki.F(self.u_old)
                 self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
                 
-            elif self.aleproblem[1] == 'no' or self.aleproblem[1] == 'mesh_move':
-                if self.aleproblem[1] == 'no':
+            elif self.alevar['fluid_on_deformed'] == 'no' or self.alevar['fluid_on_deformed'] == 'mesh_move':
+                if self.alevar['fluid_on_deformed'] == 'no':
                     if self.comm.rank == 0:
                         print(' ')
                         print('***********************************************************************************')
@@ -184,7 +173,7 @@ class FluidmechanicsProblem(problem_base):
                         print('***********************************************************************************')
                         print(' ')
                         sys.stdout.flush()
-                if self.aleproblem[1] == 'mesh_move':
+                if self.alevar['fluid_on_deformed'] == 'mesh_move':
                     if self.comm.rank == 0:
                         print(' ')
                         print('*********************************************************************************************************************')
@@ -192,7 +181,7 @@ class FluidmechanicsProblem(problem_base):
                         print('*********************************************************************************************************************')
                         print(' ')
                         sys.stdout.flush()
-                self.u, self.u_old, self.wel, self.w_old, self.Fale, self.Fale_old = None, None, None, None, None, None
+                self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None}
                 self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
                 
             else:
@@ -234,22 +223,22 @@ class FluidmechanicsProblem(problem_base):
 
             if self.timint != 'static':
                 # kinetic virtual power
-                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.wel, Fale=self.Fale)
-                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.w_old, Fale=self.Fale_old)
+                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
             
             # internal virtual power
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p, Fale=self.Fale), self.dx_[n], Fale=self.Fale)
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.Fale_old), self.dx_[n], Fale=self.Fale_old)
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), self.dx_[n], Fale=self.alevar['Fale'])
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), self.dx_[n], Fale=self.alevar['Fale_old'])
             
             # pressure virtual power
-            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], w=self.wel, Fale=self.Fale)
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], w=self.w_old, Fale=self.Fale_old)
+            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.alevar['Fale'])
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.alevar['Fale_old'])
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.Fale, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.Fale_old, funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+            w_neumann     = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.v)
             w_robin_old = self.bc.robin_bcs(self.v_old)
@@ -257,8 +246,8 @@ class FluidmechanicsProblem(problem_base):
         if 'membrane' in self.bc_dict.keys():
             w_membrane     = self.bc.membranesurf_bcs(self.ufluid, self.v, self.acc)
             w_membrane_old = self.bc.membranesurf_bcs(self.uf_old, self.v_old, self.a_old)
-            #w_membrane     = self.bc.membranesurf_bcs(self.u, self.wel, self.acc)
-            #w_membrane_old = self.bc.membranesurf_bcs(self.u_old, self.w_old, self.a_old)
+            #w_membrane     = self.bc.membranesurf_bcs(self.alevar['u'], self.alevar['w'], self.acc)
+            #w_membrane_old = self.bc.membranesurf_bcs(self.alevar['u_old'], self.alevar['w_old'], self.a_old)
         if 'dirichlet_weak' in self.bc_dict.keys():
             raise RuntimeError("Cannot use weak Dirichlet BCs for fluid mechanics currently!")
 

@@ -21,6 +21,7 @@ from fluid import FluidmechanicsProblem
 from ale import AleProblem
 from base import solver_base
 from meshutils import gather_surface_dof_indices
+from projection import project
 
 
 class FluidmechanicsAleProblem():
@@ -44,7 +45,9 @@ class FluidmechanicsAleProblem():
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, aleproblem=[self.pba,self.fluid_on_deformed])
+        # ALE variables that are handed to fluid problem
+        alevariables = {'Fale' : self.pba.ki.F(self.pba.u), 'Fale_old' : self.pba.ki.F(self.pba.u_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
+        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevariables)
 
         # modify results to write...
         self.pbf.results_to_write = io_params['results_to_write'][0]
@@ -149,23 +152,21 @@ class FluidmechanicsAleProblem():
                 if 'dirichlet' in self.pbf.bc_dict.keys():
                     self.pbf.bc.dirichlet_bcs(self.pbf.V_v)
                     
-                # NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
+                #NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
 
-            elif self.coupling_ale_fluid['type'] == 'weak_dirichlet':
+            elif self.coupling_ale_fluid['type'] == 'robin':
                 
                 beta = self.coupling_ale_fluid['beta']
                 
-                work_dbc_nitsche_ale_fluid = ufl.as_ufl(0)
+                work_robin_ale_fluid = ufl.as_ufl(0)
                 for i in range(len(ids_ale_fluid)):
-                
                     db_ = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=ids_ale_fluid[i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                    for n in range(self.pba.num_domains): # TODO: Does this work in case of multiple subdomains? I guess so, since self.pba.ma[n].stress should be only non-zero for the respective subdomain...
-                        work_dbc_nitsche_ale_fluid += self.pbf.vf.deltaW_int_nitsche_dirichlet(self.pbf.w, self.pba.wel, self.pbf.ma[n].sigma(self.pbf.var_v), beta, db_) # here, wel as form is used!
+                    work_robin_ale_fluid += self.pbf.vf.deltaW_int_robin(self.pbf.v, self.pba.wel, beta, db_, Fale=self.pba.ki.F(self.pba.u)) # here, wel as form is used!
             
                 # add to fluid internal virtual power
-                self.pbf.weakform_v += work_dbc_nitsche_ale_fluid
+                self.pbf.weakform_v += work_robin_ale_fluid
                 # add to fluid jacobian form and define offdiagonal derivative w.r.t. ALE
-                self.pbf.jac_vv += ufl.derivative(work_dbc_nitsche_ale_fluid, self.pbf.v, self.pbf.dv)
+                self.pbf.jac_vv += ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
 
             else:
                 raise ValueError("Unkown coupling_ale_fluid option for ALE to fluid!")
@@ -187,34 +188,40 @@ class FluidmechanicsAleProblem():
 
     def assemble_residual_stiffness(self, t, subsolver=None):
 
+        K_list = [[None]*3 for _ in range(3)]
+        r_list = [None]*3
+
         if bool(self.coupling_fluid_ale):
-            # we need a vector representation of ufluid to apply in ALE DBCs
-            if self.coupling_fluid_ale == 'strong_dirichlet':
+            if self.coupling_fluid_ale['type'] == 'strong_dirichlet':
+                # we need a vector representation of ufluid to apply in ALE DBCs
                 uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
                 self.ufa.vector.axpby(1.0, 0.0, uf_vec)
                 self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            if self.coupling_fluid_ale == 'weak_dirichlet':
+            if self.coupling_fluid_ale['type'] == 'weak_dirichlet':
                 K_uv = fem.petsc.assemble_matrix(fem.form(self.jac_uv), self.pba.bc.dbcs)
                 K_uv.assemble()
                 K_list[2][0] = K_uv
         
         if bool(self.coupling_ale_fluid):
-            # we need a vector representation of w to apply in fluid DBCs
-            w_vec = self.pba.ti.update_w_ost(self.pba.u.vector, self.pba.u_old.vector, self.pba.w_old.vector, ufl=False)
-            self.wf.vector.axpby(1.0, 0.0, w_vec)
-            self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
+                #we need a vector representation of w to apply in fluid DBCs
+
+                w_vec = self.pba.ti.update_w_ost(self.pba.u.vector, self.pba.u_old.vector, self.pba.w_old.vector, ufl=False)
+                self.wf.vector.axpby(1.0, 0.0, w_vec)
+                self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                
+                #w_proj = project(self.pba.wel, self.pbf.V_v, self.pbf.dx_)
+                #self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                #self.wf.interpolate(w_proj)
 
         r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
         
         r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
-        
-        K_list = [[None]*3 for _ in range(3)]
-        r_list = [None]*3
-        
+
         K_list[0][0] = K_list_fluid[0][0]
         K_list[0][1] = K_list_fluid[0][1]
         
-        # derivative of fluid momentum w.r.t. ALE velocity
+        # derivative of fluid momentum w.r.t. ALE displacement
         K_vu = fem.petsc.assemble_matrix(fem.form(self.jac_vu), self.pbf.bc.dbcs)
         K_vu.assemble()
         K_list[0][2] = K_vu
@@ -222,7 +229,7 @@ class FluidmechanicsAleProblem():
         K_list[1][0] = K_list_fluid[1][0]
         K_list[1][1] = K_list_fluid[1][1]
         
-        # derivative of fluid continuity w.r.t. ALE velocity
+        # derivative of fluid continuity w.r.t. ALE displacement
         K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu), [])
         K_pu.assemble()
         K_list[1][2] = K_pu
