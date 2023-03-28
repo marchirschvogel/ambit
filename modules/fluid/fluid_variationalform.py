@@ -237,9 +237,8 @@ class variationalform_ale(variationalform):
             # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \boldsymbol{\nabla}_{0}(\boldsymbol{v}\otimes(\boldsymbol{v}-\boldsymbol{w})) : \boldsymbol{F}^{-\mathrm{T}}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
 
             # note that we have div(v o (v-w)) = (grad v) (v-w) + v (div (v-w)) (Holzapfel eq. (1.292))
-            #return rho*ufl.dot(J*a + ufl.div(J*ufl.inv(Fale)*ufl.outer(v,v-w)), self.var_v)*ddomain # TODO: Is this a problem that we have a second derivative on Fale??
-
-            return J*rho*ufl.dot(a + ufl.as_tensor(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v)*ddomain # Holzapfel eq. (2.56)
+            # then use Holzapfel eq. (2.56)
+            return J*rho*ufl.dot(a + ufl.as_tensor(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v)*ddomain
         
         else:
             raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
@@ -255,14 +254,13 @@ class variationalform_ale(variationalform):
 
     # TeX:
     # \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v = 
-    # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V TODO: Is this a problem that we have a second derivative on Fale??
+    # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V
     # \int\limits_{\Omega_0}J\,\boldsymbol{\nabla}_0\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}}\,\delta p\,\mathrm{d}V (cf. Holzapfel eq. (2.56))
-    def deltaW_int_pres(self, v, ddomain, Fale=None): # ATTENTION: J or Fale in this form seem to cause problems at least for Q2-Q1 interpolation!!
+    def deltaW_int_pres(self, v, ddomain, Fale=None):
         J = ufl.det(Fale)
-        #return ufl.div(J*ufl.inv(Fale)*(v))*self.var_p*ddomain # TODO: Is this a problem that we have a second derivative on Fale??
-        return J*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p*ddomain 
-        #return ufl.inner(ufl.grad(v), ufl.Identity(3))*self.var_p*ddomain
+        return J*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p*ddomain
     
+    # TeX: 
     def deltaW_int_robin(self, v, vD, beta, dboundary, Fale=None):
         J = ufl.det(Fale)
         return J*beta*ufl.dot((v-vD), self.var_v)*dboundary
@@ -275,6 +273,22 @@ class variationalform_ale(variationalform):
     def deltaW_ext_neumann_normal(self, func, dboundary, Fale=None):
         J = ufl.det(Fale)
         return func*J*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary
+    
+    # Robin condition (dashpot)
+    # TeX:
+    # \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
+    # \int\limits_{\Gamma_0} J c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}A
+    def deltaW_ext_robin_dashpot(self, v, c, dboundary, Fale=None):
+        J = ufl.det(Fale)
+        return -J*c*(ufl.dot(v, self.var_v)*dboundary)
+    
+    # Robin condition (dashpot) in (reference!) normal direction
+    # TeX:
+    # \int\limits_{\Gamma} (\boldsymbol{n}\otimes \boldsymbol{n})\,c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
+    # \int\limits_{\Gamma_0} J(\boldsymbol{n}_0\otimes \boldsymbol{n}_0)\,c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}A
+    def deltaW_ext_robin_dashpot_normal(self, v, c_n, dboundary, Fale=None):
+        J = ufl.det(Fale)
+        return -J*c_n*(ufl.dot(v, self.n)*ufl.dot(self.n, self.var_v)*dboundary)
     
     
     ### Flux coupling conditions

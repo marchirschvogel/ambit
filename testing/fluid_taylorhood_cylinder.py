@@ -28,6 +28,7 @@ def main():
                            'simname'               : 'fluid_taylorhood_cylinder'}
 
     SOLVER_PARAMS_FLUID = {'solve_type'            : 'direct',
+                           'direct_solver'         : 'superlu_dist', # no idea why, but mumps does not seem to like this system in parallel...
                            'tol_res'               : 1.0e-8,
                            'tol_inc'               : 1.0e-8}
 

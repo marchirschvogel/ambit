@@ -273,10 +273,6 @@ class SolidmechanicsFlow0DProblem():
         pass
 
 
-    def get_presolve_state(self):
-        return self.pbs.prestress_initial
-
-
     def assemble_residual_stiffness(self, t, subsolver=None):
 
         if self.pbs.incompressible_2field:

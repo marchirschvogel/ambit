@@ -81,7 +81,7 @@ class solver_nonlinear:
         except: self.PTC_randadapt_range = [0.85, 1.35]
         
         try: self.direct_solver = solver_params['direct_solver']
-        except: self.direct_solver = 'superlu_dist'
+        except: self.direct_solver = 'mumps'
         
         try: self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
         except: self.adapt_linsolv_tol = False
@@ -279,7 +279,7 @@ class solver_nonlinear:
                 K_list[0][0].shift(k_PTC)
 
             # model order reduction stuff - currently only on first mat in system...
-            if self.pb.have_rom and not self.pb.get_presolve_state():
+            if self.pb.have_rom:
                 
                 # projection of main block: system matrix, residual, and increment
                 tmp = K_list[0][0].matMult(self.pb.rom.V) # K_uu * V
@@ -393,7 +393,7 @@ class solver_nonlinear:
                 incnorms['inc'+str(n+1)] = del_x[n].norm()
 
             # reconstruct full-length increment vector - currently only for first var!
-            if self.pb.have_rom and not self.pb.get_presolve_state():
+            if self.pb.have_rom:
                 del_x[0] = self.pb.rom.V.createVecLeft()
                 self.pb.rom.V.mult(del_u_, del_x[0]) # V * dx_red
 
@@ -517,7 +517,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         except: self.maxiter = 25
         
         try: self.direct_solver = solver_params['direct_solver']
-        except: self.direct_solver = 'superlu_dist'        
+        except: self.direct_solver = 'mumps'        
 
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']

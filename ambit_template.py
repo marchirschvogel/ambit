@@ -37,7 +37,7 @@ def main():
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
                             'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence continues to occur (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
                             # direct linear solver settings (only apply for solve_type 'direct')
-                            'direct_solver'         : 'superlu_dist', # OPTIONAL: type of direct solver: 'superlu_dist' or 'mumps' (default: 'superlu_dist')
+                            'direct_solver'         : 'mumps', # OPTIONAL: type of direct solver: 'mumps' or 'superlu_dist' (default: 'mumps' - seems to be faster and more robust in case of saddle point problems)
                             # iterative linear solver settings (only apply for solve_type 'iterative')
                             'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
@@ -135,7 +135,7 @@ def main():
                             # - for dynamics, you need to specify a mat called 'inertia' and set the density ('rho0' in solid, 'rho' in fluid dynamics)
                             # - material can also be inelastic and growth ('growth')
                             # - see solid_material.py or fluid_material.py for material laws available (and their parameters), and feel free to implement/add new strain energy functions or laws fairly quickly
-    MATERIALS            = {'MAT1' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436, 'fiber_comp' : False},
+    MATERIALS_SOLID      = {'MAT1' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436, 'fiber_comp' : False},
                                       'sussmanbathe_vol'   : {'kappa' : 1.0e3},
                                       'visco_green'        : {'eta' : 0.001},
                                       'active_fiber'       : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 4, 'frankstarling' : True, 'amp_min' : 1., 'amp_max' : 1.7, 'lam_threslo' : 1.01, 'lam_maxlo' : 1.15, 'lam_threshi' : 999., 'lam_maxhi' : 9999.},
@@ -156,6 +156,9 @@ def main():
                                                               'gamma_gr_rev' : 2.0, # reverse growth nonlinearity
                                                               'remodeling_mat' : {'neohooke_dev' : {'mu' : 3.}, # remodeling material
                                                                                   'ogden_vol'    : {'kappa' : 3./(1.-2.*0.49)}}}}}
+
+    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'eta' : 4.0e-6},
+                                      'inertia'   : {'rho' : 1.025e-6}}}
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)

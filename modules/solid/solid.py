@@ -164,7 +164,7 @@ class SolidmechanicsProblem(problem_base):
         self.amp_old, self.amp_old_set = fem.Function(self.Vd_scalar), fem.Function(self.Vd_scalar)
         self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
         self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        # prestressing history defgrad and spring prestress
+        # prestress displacement
         if self.prestress_initial:
             self.u_pre = fem.Function(self.V_u, name="Displacement_prestress")
         else:
@@ -693,8 +693,8 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_p_sol = self.weakform_prestress_p
                 self.jac_up_sol     = self.jac_prestress_up
                 self.jac_pu_sol     = self.jac_prestress_pu
-                
-                
+
+
     def assemble_residual_stiffness(self, t, subsolver=None):
 
         # assemble rhs vector

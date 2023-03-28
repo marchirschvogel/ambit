@@ -7,6 +7,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
+from petsc4py import PETSc
+
 from fluid_material import materiallaw
 
 # fluid kinematics and constitutive class
@@ -104,3 +106,11 @@ class kinematics:
             return ufl.grad(v_)
         else:
             return ufl.constantvalue.zero((self.dim,self.dim))
+
+
+    # prestressing update for FrSI (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010,
+    # displacement formulation according to Schein and Gee 2021)
+    def prestress_update(self, uf_vec):
+
+        self.uf_pre.vector.axpy(1.0, uf_vec)
+        self.uf_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

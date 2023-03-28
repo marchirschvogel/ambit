@@ -68,8 +68,10 @@ class FluidmechanicsProblem(problem_base):
         try: self.fluid_formulation = fem_params['fluid_formulation']
         except: self.fluid_formulation = 'nonconservative'
         
+        try: self.prestress_initial = fem_params['prestress_initial']
+        except: self.prestress_initial = False
+        
         self.localsolve = False # no idea what might have to be solved locally...
-        self.prestress_initial = False # guess prestressing in fluid is somehow senseless...
         self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
 
         self.sub_solve = False
@@ -132,6 +134,11 @@ class FluidmechanicsProblem(problem_base):
         self.p_old  = fem.Function(self.V_p)
         # a fluid displacement
         self.uf_old = fem.Function(self.V_v)
+        # prestress displacement for FrSI
+        if self.prestress_initial:
+            self.uf_pre = fem.Function(self.V_v, name="Displacement_prestress")
+        else:
+            self.uf_pre = None
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
@@ -139,7 +146,7 @@ class FluidmechanicsProblem(problem_base):
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)
 
         # initialize kinematics_constitutive class
-        self.ki = fluid_kinematics_constitutive.kinematics(self.dim)
+        self.ki = fluid_kinematics_constitutive.kinematics(self.dim, uf_pre=self.uf_pre)
         
         # initialize material/constitutive classes (one per domain)
         self.ma = []
@@ -148,40 +155,24 @@ class FluidmechanicsProblem(problem_base):
         
         # initialize fluid variational form class
         if not bool(self.alevar):
-            self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None}
+            # standard Eulerian fluid
+            self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None, 'fluid_on_deformed' : 'no'}
             self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
+        
         else:
             if self.alevar['fluid_on_deformed'] == 'consistent':
-                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
-            elif self.alevar['fluid_on_deformed'] == 'from_last_step':
-                self.alevar['Fale'], self.alevar['w'] = self.alevar['Fale_old'], self.alevar['w_old']
-                if self.comm.rank == 0:
-                    print(' ')
-                    print('*********************************************************************************************************************')
-                    print('*** Warning: You are solving Navier-Stokes by only updating the frame after each time step! This is inconsistent! ***')
-                    print('*********************************************************************************************************************')
-                    print(' ')
-                    sys.stdout.flush()
+                # fully consistent ALE formulation of Navier-Stokes
                 self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
                 
-            elif self.alevar['fluid_on_deformed'] == 'no' or self.alevar['fluid_on_deformed'] == 'mesh_move':
-                if self.alevar['fluid_on_deformed'] == 'no':
-                    if self.comm.rank == 0:
-                        print(' ')
-                        print('***********************************************************************************')
-                        print('*** Warning: You are solving Navier-Stokes on the non-moving reference frame!!! ***')
-                        print('***********************************************************************************')
-                        print(' ')
-                        sys.stdout.flush()
-                if self.alevar['fluid_on_deformed'] == 'mesh_move':
-                    if self.comm.rank == 0:
-                        print(' ')
-                        print('*********************************************************************************************************************')
-                        print('*** Warning: You are solving Navier-Stokes by only updating the frame after each time step! This is inconsistent! ***')
-                        print('*********************************************************************************************************************')
-                        print(' ')
-                        sys.stdout.flush()
-                self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None}
+            elif self.alevar['fluid_on_deformed'] == 'from_last_step':
+                # ALE formulation of Navier-Stokes using metrics (Fale, w) from the last converged step... more efficient but not fully consistent
+                self.alevar['Fale'], self.alevar['w'] = self.alevar['Fale_old'], self.alevar['w_old']
+                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
+                
+            elif self.alevar['fluid_on_deformed'] == 'mesh_move':
+                # Navier-Stokes formulated w.r.t. the current, moved frame... more efficient than 'consistent' approach but not fully consistent
+                # WARNING: This is unsuitable for FrSI, as we need gradients w.r.t. the reference frame on the reduced boundary!
+                self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None, 'fluid_on_deformed' : 'mesh_move'}
                 self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
                 
             else:
@@ -197,8 +188,8 @@ class FluidmechanicsProblem(problem_base):
             self.bc.dirichlet_bcs(self.V_v)
 
         self.set_variational_forms_and_jacobians()
-            
-            
+
+
     def get_problem_var_list(self):
         
         is_ghosted = [True]*2
@@ -240,17 +231,16 @@ class FluidmechanicsProblem(problem_base):
             w_neumann     = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
             w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.v)
-            w_robin_old = self.bc.robin_bcs(self.v_old)
+            w_robin     = self.bc.robin_bcs(self.v, Fale=self.alevar['Fale'])
+            w_robin_old = self.bc.robin_bcs(self.v_old, Fale=self.alevar['Fale_old'])
         # reduced-solid for FrSI problem
         if 'membrane' in self.bc_dict.keys():
+            assert(self.alevar['fluid_on_deformed']!='mesh_move')
             w_membrane     = self.bc.membranesurf_bcs(self.ufluid, self.v, self.acc)
             w_membrane_old = self.bc.membranesurf_bcs(self.uf_old, self.v_old, self.a_old)
-            #w_membrane     = self.bc.membranesurf_bcs(self.alevar['u'], self.alevar['w'], self.acc)
-            #w_membrane_old = self.bc.membranesurf_bcs(self.alevar['u_old'], self.alevar['w_old'], self.a_old)
         if 'dirichlet_weak' in self.bc_dict.keys():
             raise RuntimeError("Cannot use weak Dirichlet BCs for fluid mechanics currently!")
-
+            
         # TODO: Body forces!
         self.deltaW_ext     = w_neumann + w_robin + w_membrane
         self.deltaW_ext_old = w_neumann_old + w_robin_old + w_membrane_old
@@ -285,7 +275,6 @@ class FluidmechanicsProblem(problem_base):
         
         for n in range(self.num_domains):
             self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
-
             
 
     def set_forms_solver(self):
@@ -421,3 +410,30 @@ class FluidmechanicsSolver(solver_base):
     
         # print time step info to screen
         self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
+        
+        
+    def solve_initial_prestress(self):
+        
+        utilities.print_prestress('start', self.pb.comm)
+
+        # solve in 1 load step using PTC!
+        self.solnln.PTC = True
+
+        self.solnln.newton(0.0)
+
+        # MULF update
+        uf_vec = self.pb.ti.update_uf_ost(self.pb.v.vector, self.pb.v_old.vector, self.pb.uf_old.vector, ufl=False)
+        self.pb.ki.prestress_update(uf_vec)
+
+        # set flag to false again
+        self.pb.prestress_initial = False
+
+        # reset PTC flag to what it was
+        try: self.solnln.PTC = self.solver_params['ptc']
+        except: self.solnln.PTC = False
+
+        utilities.print_prestress('end', self.pb.comm)
+
+        # write prestress displacement (given that we want to write the displacement)
+        if 'fluiddisplacement' in self.pb.results_to_write:
+            self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, 'fluiddisplacement_pre')

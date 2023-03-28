@@ -25,7 +25,7 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
-        # some mesh metrics
+        # some mesh metrics - might be needed if we use sophisticated ALE models depending on the mesh distortion...
         # cell diameter
         self.hd0 = ufl.CellDiameter(msh)
         # cell circumradius
@@ -37,15 +37,15 @@ class constitutive:
         self.detj0 = ufl.JacobianDeterminant(msh)
 
 
-    def stress(self, w_):
+    def stress(self, u_):
         
-        F_ = ufl.variable(self.kin.F(w_))
+        F_ = ufl.variable(self.kin.F(u_))
         
-        dim = len(w_)
+        dim = len(u_)
 
         s_grad, s_div, s_ident = ufl.constantvalue.zero((dim,dim)), 0, ufl.constantvalue.zero(dim)
             
-        mat = materiallaw(w_,F_)
+        mat = materiallaw(u_,F_)
         
         m = 0
         for matlaw in self.matmodels:
@@ -80,7 +80,7 @@ class constitutive:
             elif matlaw == 'element_dependent_stiffness':
                 
                 #metric = (ufl.min_value(10.,self.emax0/self.emin0))**4. # doesn't seem to work for quadratic cells...
-                metric = 1*self.ro0
+                metric = 1.
                 
                 sg, sd, si = mat.element_dependent_stiffness(matparams_m, metric)
 
@@ -108,5 +108,5 @@ class kinematics:
 
 
     # ALE deformation gradient
-    def F(self, w_):
-        return self.I + ufl.grad(w_)
+    def F(self, u_):
+        return self.I + ufl.grad(u_)

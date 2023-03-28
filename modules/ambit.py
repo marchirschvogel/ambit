@@ -50,8 +50,6 @@ class Ambit():
 
         elif problem_type == 'fluid_ale':
             
-            raise RuntimeError("ALE fluid mechanics not yet fully implemented!")
-            
             import fluid_ale
             
             io = ioroutines.IO_fluid_ale(io_params, self.comm)
@@ -61,8 +59,6 @@ class Ambit():
             self.ms = fluid_ale.FluidmechanicsAleSolver(self.mp, solver_params)
 
         elif problem_type == 'fluid_ale_flow0d':
-            
-            raise RuntimeError("ALE fluid mechanics + flow0d not yet fully implemented!")
             
             import fluid_ale_flow0d
             

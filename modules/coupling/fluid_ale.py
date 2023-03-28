@@ -17,7 +17,7 @@ import solver_nonlin
 import expression
 from mpiroutines import allgather_vec
 
-from fluid import FluidmechanicsProblem
+from fluid import FluidmechanicsProblem, FluidmechanicsSolver
 from ale import AleProblem
 from base import solver_base
 from meshutils import gather_surface_dof_indices
@@ -62,8 +62,8 @@ class FluidmechanicsAleProblem():
         self.localsolve = False
         self.have_rom = False
         
-        # NOTE: Fluid and ALE function spaces have to be of the same type, but are different objects
-        # for some reason, applying a function from one funtion space as DBC to another function space,
+        # NOTE: Fluid and ALE function spaces should be of the same type, but are different objects.
+        # For some reason, when applying a function from one funtion space as DBC to another function space,
         # errors occur. Therefore, we define these auxiliary variables and interpolate respectively...
 
         # fluid displacement, but defined within ALE function space
@@ -183,7 +183,7 @@ class FluidmechanicsAleProblem():
 
 
     def get_presolve_state(self):
-        return False
+        return self.pbf.prestress_initial
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -205,14 +205,9 @@ class FluidmechanicsAleProblem():
         if bool(self.coupling_ale_fluid):
             if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
                 #we need a vector representation of w to apply in fluid DBCs
-
                 w_vec = self.pba.ti.update_w_ost(self.pba.u.vector, self.pba.u_old.vector, self.pba.w_old.vector, ufl=False)
                 self.wf.vector.axpby(1.0, 0.0, w_vec)
                 self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                
-                #w_proj = project(self.pba.wel, self.pbf.V_v, self.pbf.dx_)
-                #self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-                #self.wf.interpolate(w_proj)
 
         r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
         
@@ -250,6 +245,19 @@ class FluidmechanicsAleProblem():
         u = fem.Function(self.pba.Vcoord)
         u.interpolate(self.pba.u)
         self.io.mesh.geometry.x[:,:self.pba.dim] += u.x.array.reshape((-1, self.pba.dim))
+        if self.comm.rank == 0:
+            print('Updating mesh...')
+            sys.stdout.flush()
+
+
+    def print_warning_ale(self):
+        if self.comm.rank == 0:
+            print(' ')
+            print('*********************************************************************************************************************')
+            print('*** Warning: You are solving Navier-Stokes by only updating the frame after each time step! This is inconsistent! ***')
+            print('*********************************************************************************************************************')
+            print(' ')
+            sys.stdout.flush()
 
 
     ### now the base routines for this problem
@@ -270,7 +278,10 @@ class FluidmechanicsAleProblem():
 
     def evaluate_initial(self):
 
-        pass
+        # issue a warning to the user in case of inconsistent fluid-ALE coupling
+        # (might though be wanted in some cases for efficiency increases...)
+        if self.fluid_on_deformed=='from_last_step' or self.fluid_on_deformed=='mesh_move':
+            self.print_warning_ale()
 
 
     def write_output_ini(self):
@@ -357,8 +368,22 @@ class FluidmechanicsAleSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
+        if self.pb.pbf.prestress_initial:          
+            # initialize fluid mechanics solver
+            self.solverprestr = FluidmechanicsSolver(self.pb.pbf, self.solver_params)
+
 
     def solve_initial_state(self):
+
+        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the FrSI problem
+        if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
+            # solve solid prestress problem
+            self.solverprestr.solve_initial_prestress()
+            self.solverprestr.solnln.ksp.destroy()
+        else:
+            # set flag definitely to False if we're restarting
+            self.pb.pbf.prestress_initial = False
+            self.pb.pbf.set_forms_solver()
 
         # consider consistent initial acceleration
         if self.pb.pbf.timint != 'static' and self.pb.pbf.restart_step == 0:

@@ -67,12 +67,12 @@ class AleProblem(problem_base):
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
-            #if (self.order_disp > 1) and self.quad_degree < 3:
-                #raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
+            if (self.order_disp > 1) and self.quad_degree < 3:
+                raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
-            #if (self.order_disp > 1) and self.quad_degree < 5:
-                #raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
+            if (self.order_disp > 1) and self.quad_degree < 5:
+                raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
 
@@ -183,7 +183,7 @@ class AleProblem(problem_base):
 
     def assemble_residual_stiffness(self, t, subsolver=None):
 
-        # assemble rhs vector - in case of fluid_ale problem, self.bc.dbcs has DBCs from fluid problem appended
+        # assemble rhs vector
         r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u))
         fem.apply_lifting(r_u, [fem.form(self.jac_uu)], [self.bc.dbcs], x0=[self.u.vector], scale=-1.0)
         r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
