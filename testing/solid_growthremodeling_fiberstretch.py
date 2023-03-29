@@ -67,7 +67,7 @@ def main():
     BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'x', 'val' : 0.},
                                          {'id' : [2], 'dir' : 'y', 'val' : 0.},
                                          {'id' : [3], 'dir' : 'z', 'val' : 0.}],
-                            'neumann' : [{'type' : 'pk1', 'id' : [4], 'dir' : 'xyz', 'curve' : [1,0,0]}] }
+                            'neumann' : [{'id' : [4], 'dir' : 'xyz_ref', 'curve' : [1,0,0]}] }
 
 
     # problem setup

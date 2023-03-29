@@ -118,21 +118,21 @@ class boundary_cond():
 
             if r['type'] == 'spring':
                 
-                if r['dir'] == 'xyz':
+                if r['dir'] == 'xyz_ref': # reference xyz
                     
                     for i in range(len(r['id'])):
                     
                         db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                         
-                        w     += self.vf.deltaW_ext_robin_spring(u, r['stiff'], db_, u_pre)
+                        w += self.vf.deltaW_ext_robin_spring(u, r['stiff'], db_, u_pre)
 
-                elif r['dir'] == 'normal': # reference normal
+                elif r['dir'] == 'normal_ref': # reference normal
                     
                     for i in range(len(r['id'])):
                         
                         db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                        w     += self.vf.deltaW_ext_robin_spring_normal(u, r['stiff'], db_, u_pre)
+                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, r['stiff'], db_, u_pre)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -140,7 +140,7 @@ class boundary_cond():
 
             elif r['type'] == 'dashpot':
                 
-                if r['dir'] == 'xyz':
+                if r['dir'] == 'xyz_ref':
                     
                     for i in range(len(r['id'])):
                         
@@ -148,13 +148,13 @@ class boundary_cond():
                     
                         w     += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], db_)
 
-                elif r['dir'] == 'normal': # reference normal
+                elif r['dir'] == 'normal_ref': # reference normal
                     
                     for i in range(len(r['id'])):
                         
                         db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                        w     += self.vf.deltaW_ext_robin_dashpot_normal(v, r['visc'], db_)
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], db_)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -209,7 +209,7 @@ class boundary_cond():
             
                 db_ = ufl.ds(subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                w     += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], db_)
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], db_)
 
         return w
 
@@ -229,74 +229,63 @@ class boundary_cond_solid(boundary_cond):
             if bdim_r==1: mdata = self.io.mt_b1
             if bdim_r==2: mdata = self.io.mt_b2
             if bdim_r==3: mdata = self.io.mt_b3
+
+            if n['dir'] == 'xyz_ref': # reference xyz
             
-            if n['type'] == 'pk1':
+                func = fem.Function(V)
                 
-                if n['dir'] == 'xyz':
-                
-                    func = fem.Function(V)
-                    
-                    if 'curve' in n.keys():
-                        load = expression.template_vector()
-                        load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
-                        func.interpolate(load.evaluate)
-                        funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
-                    else:
-                        func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
-                    
-                    for i in range(len(n['id'])):
-                        
-                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-                    
-                        w += self.vf.deltaW_ext_neumann_ref(func, db_)
-                    
-                elif n['dir'] == 'normal': # reference normal
-                    
-                    func = fem.Function(V_real)
-                    
-                    if 'curve' in n.keys():
-                        load = expression.template()
-                        load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
-                        func.interpolate(load.evaluate)
-                        funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
-                    else:
-                        func.vector.set(n['val'])
-                    
-                    for i in range(len(n['id'])):
-                        
-                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-                    
-                        w += self.vf.deltaW_ext_neumann_refnormal(func, db_)
-                    
+                if 'curve' in n.keys():
+                    load = expression.template_vector()
+                    load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
+                    func.interpolate(load.evaluate)
+                    funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                 else:
-                    raise NameError("Unknown dir option for Neumann BC!")
-
-
-            elif n['type'] == 'true':
+                    func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
                 
-                if n['dir'] == 'normal': # true normal
+                for i in range(len(n['id'])):
                     
-                    func = fem.Function(V_real)
-                    
-                    if 'curve' in n.keys():
-                        load = expression.template()
-                        load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
-                        func.interpolate(load.evaluate)
-                        funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
-                    else:
-                        func.vector.set(n['val'])
-
-                    for i in range(len(n['id'])):
-                        
-                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                        w += self.vf.deltaW_ext_neumann_true(self.ki.J(u,ext=True), self.ki.F(u,ext=True), func, db_)
-                    
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                    w += self.vf.deltaW_ext_neumann_ref(func, db_)
+                
+            elif n['dir'] == 'normal_ref': # reference normal
+                
+                func = fem.Function(V_real)
+                
+                if 'curve' in n.keys():
+                    load = expression.template()
+                    load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
+                    func.interpolate(load.evaluate)
+                    funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                 else:
-                    raise NameError("Unknown dir option for Neumann BC!")
+                    func.vector.set(n['val'])
+                
+                for i in range(len(n['id'])):
+                    
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
 
+            elif n['dir'] == 'normal_cur': # current normal
+                
+                func = fem.Function(V_real)
+                
+                if 'curve' in n.keys():
+                    load = expression.template()
+                    load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
+                    func.interpolate(load.evaluate)
+                    funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
+                else:
+                    func.vector.set(n['val'])
+
+                for i in range(len(n['id'])):
+                    
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+
+                    w += self.vf.deltaW_ext_neumann_normal_cur(self.ki.J(u,ext=True), self.ki.F(u,ext=True), func, db_)
+                
             else:
-                raise NameError("Unknown type option for Neumann BC!")
+                raise NameError("Unknown dir option for Neumann BC!")
 
         return w
 
@@ -317,7 +306,7 @@ class boundary_cond_fluid(boundary_cond):
             if bdim_r==2: mdata = self.io.mt_b2
             if bdim_r==3: mdata = self.io.mt_b3
 
-            if n['dir'] == 'xyz':
+            if n['dir'] == 'xyz_cur': # current xyz
             
                 func = fem.Function(V)
                 
@@ -333,9 +322,10 @@ class boundary_cond_fluid(boundary_cond):
                     
                     db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                    w += self.vf.deltaW_ext_neumann(func, db_)
-                
-            elif n['dir'] == 'normal': # reference normal
+                    w += self.vf.deltaW_ext_neumann(func, db_, Fale=Fale)
+
+
+            elif n['dir'] == 'normal_cur': # current normal
                 
                 func = fem.Function(V_real)
                 
@@ -351,7 +341,7 @@ class boundary_cond_fluid(boundary_cond):
                     
                     db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                    w += self.vf.deltaW_ext_neumann_normal(func, db_, Fale=Fale)
+                    w += self.vf.deltaW_ext_neumann_normal_cur(func, db_, Fale=Fale)
                 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
@@ -375,7 +365,7 @@ class boundary_cond_fluid(boundary_cond):
 
             if r['type'] == 'dashpot':
                 
-                if r['dir'] == 'xyz':
+                if r['dir'] == 'xyz_ref': # reference xyz
                     
                     for i in range(len(r['id'])):
                         
@@ -383,13 +373,13 @@ class boundary_cond_fluid(boundary_cond):
                     
                         w += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], db_, Fale=Fale)
 
-                elif r['dir'] == 'normal': # current normal
+                elif r['dir'] == 'normal_ref': # reference normal
                     
                     for i in range(len(r['id'])):
                         
                         db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                        w += self.vf.deltaW_ext_robin_dashpot_normal(v, r['visc'], db_, Fale=Fale)
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], db_, Fale=Fale)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -398,50 +388,4 @@ class boundary_cond_fluid(boundary_cond):
             else:
                 raise NameError("Unknown type option for Robin BC!")
             
-        return w
-
-
-
-class boundary_cond_ale(boundary_cond):
-
-    # set Neumann BCs
-    def neumann_bcs(self, V, V_real, funcs_to_update=None, funcs_to_update_vec=None):
-        
-        w = ufl.as_ufl(0)
-        
-        for n in self.bc_dict['neumann']:
-            
-            try: bdim_r = r['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
-            
-            if n['type'] == 'pk1':
-
-                if n['dir'] == 'xyz':
-                
-                    func = fem.Function(V)
-                    
-                    if 'curve' in n.keys():
-                        load = expression.template_vector()
-                        load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
-                        func.interpolate(load.evaluate)
-                        funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
-                    else:
-                        func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
-                    
-                    for i in range(len(n['id'])):
-                        
-                        db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-                    
-                        w += self.vf.deltaW_ext_neumann_ref(func, db_)
-                    
-                else:
-                    raise NameError("Unknown dir option for Neumann BC!")
-
-            else:
-                raise NameError("Unknown type option for Neumann BC!")
-
         return w

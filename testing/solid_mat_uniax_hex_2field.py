@@ -123,9 +123,9 @@ def main():
                                          {'id' : [14], 'dir' : 'y', 'val' : 0.},
                                          {'id' : [15], 'dir' : 'z', 'val' : 0.}],
                                          #{'id' : [16], 'dir' : 'x', 'curve' : [3]}]}
-                            'neumann' : [{'type' : 'pk1', 'id' : [4], 'dir' : 'xyz', 'curve' : [4,0,0]},
-                                         {'type' : 'pk1', 'id' : [10], 'dir' : 'xyz', 'curve' : [5,0,0]},
-                                         {'type' : 'pk1', 'id' : [16], 'dir' : 'xyz', 'curve' : [6,0,0]}] }
+                            'neumann' : [{'id' : [4], 'dir' : 'xyz_ref', 'curve' : [4,0,0]},
+                                         {'id' : [10], 'dir' : 'xyz_ref', 'curve' : [5,0,0]},
+                                         {'id' : [16], 'dir' : 'xyz_ref', 'curve' : [6,0,0]}] }
 
 
     # problem setup

@@ -45,8 +45,8 @@ def main():
             return 3.
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1,2,3], 'dir' : 'z', 'val' : 0.}],
-                            'neumann' : [{'type' : 'pk1', 'id' : [3], 'dir' : 'xyz', 'curve' : [1,0,0]}],
-                            'robin' : [{'type' : 'spring', 'id' : [1,2], 'dir' : 'normal', 'stiff' : 5.0}] }
+                            'neumann' : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [1,0,0]}],
+                            'robin' : [{'type' : 'spring', 'id' : [1,2], 'dir' : 'normal_ref', 'stiff' : 5.0}] }
 
 
     # problem setup

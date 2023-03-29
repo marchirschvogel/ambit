@@ -390,7 +390,8 @@ class SolidmechanicsProblem(problem_base):
             # replace true Neumann loads by reference ones
             if 'neumann' in bc_dict_prestr.keys():
                 for n in bc_dict_prestr['neumann']:
-                    if n['type'] == 'true': n['type'] = 'pk1'
+                    if n['dir'] == 'xyz_cur': n['dir'] = 'xyz_ref'
+                    if n['dir'] == 'normal_cur': n['dir'] = 'normal_ref'
             bc_prestr = boundaryconditions.boundary_cond_solid(bc_dict_prestr, self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
             if 'neumann' in bc_dict_prestr.keys():
                 w_neumann_prestr = bc_prestr.neumann_bcs(self.V_u, self.Vd_scalar, self.u, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)

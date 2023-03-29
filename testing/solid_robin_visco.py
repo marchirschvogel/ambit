@@ -48,8 +48,8 @@ def main():
         def tc1(self, t):
             return 3.*t
 
-    BC_DICT           = { 'neumann' : [{'type' : 'pk1', 'id' : [3], 'dir' : 'xyz', 'curve' : [0,0,1]}],
-                            'robin' : [{'type' : 'spring', 'id' : [1,6], 'dir' : 'normal', 'stiff' : 5.0}] }
+    BC_DICT           = { 'neumann' : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [0,0,1]}],
+                            'robin' : [{'type' : 'spring', 'id' : [1,6], 'dir' : 'normal_ref', 'stiff' : 5.0}] }
 
 
     # problem setup

@@ -127,12 +127,12 @@ def main():
                 return 0.0
 
 
-    #BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
-                                        #{'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},
-                                        #{'type' : 'spring',  'id' : [4], 'dir' : 'normal', 'stiff' : 10.0}, # 2.5, 1.25
-                                        #{'type' : 'dashpot', 'id' : [4], 'dir' : 'normal', 'visc'  : 0.0005},
-                                        #{'type' : 'spring',  'id' : [4], 'dir' : 'xyz', 'stiff' : 0.25},
-                                        #{'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
+    #BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
+                                        #{'type' : 'dashpot', 'id' : [3], 'dir' : 'normal_ref', 'visc'  : 0.005},
+                                        #{'type' : 'spring',  'id' : [4], 'dir' : 'normalv', 'stiff' : 10.0}, # 2.5, 1.25
+                                        #{'type' : 'dashpot', 'id' : [4], 'dir' : 'normal_ref', 'visc'  : 0.0005},
+                                        #{'type' : 'spring',  'id' : [4], 'dir' : 'xyz_ref', 'stiff' : 0.25},
+                                        #{'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz_ref', 'visc'  : 0.0005}] }
 
     BC_DICT              = { 'dirichlet' : [{'id' : [4], 'dir' : 'all', 'val' : 0.0}]}
 

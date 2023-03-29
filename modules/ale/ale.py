@@ -126,8 +126,8 @@ class AleProblem(problem_base):
         # initialize ALE variational form class
         self.vf = ale_variationalform.variationalform(self.var_u, self.io.n0)
 
-        # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_ale(bc_dict, fem_params, self.io, self.vf, self.ti)
+        # initialize boundary condition class - same as solid
+        self.bc = boundaryconditions.boundary_cond_solid(bc_dict, fem_params, self.io, self.vf, self.ti)
         
         self.bc_dict = bc_dict
 

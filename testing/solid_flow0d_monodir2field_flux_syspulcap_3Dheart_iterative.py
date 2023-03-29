@@ -84,12 +84,12 @@ def main():
                 return 0.0
         
 
-    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
-                                        {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal', 'visc'  : 0.005},
-                                        {'type' : 'spring',  'id' : [4], 'dir' : 'normal', 'stiff' : 2.5},
-                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'normal', 'visc'  : 0.0005},
-                                        {'type' : 'spring',  'id' : [4], 'dir' : 'xyz', 'stiff' : 0.25},
-                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz', 'visc'  : 0.0005}] }
+    BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
+                                        {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal_ref', 'visc'  : 0.005},
+                                        {'type' : 'spring',  'id' : [4], 'dir' : 'normal_ref', 'stiff' : 2.5},
+                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'normal_ref', 'visc'  : 0.0005},
+                                        {'type' : 'spring',  'id' : [4], 'dir' : 'xyz_ref', 'stiff' : 0.25},
+                                        {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz_ref', 'visc'  : 0.0005}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)

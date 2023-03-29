@@ -91,12 +91,6 @@ class variationalform:
         return ufl.inner(Jtang, ufl.derivative(C, u, self.du)) * self.var_p*ddomain
 
     ### External virtual work
-
-    # Neumann follower load
-    # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
-    def deltaW_ext_neumann_true(self, J, F, func, dboundary):
-
-        return func*J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary
     
     # Neumann load on reference configuration (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} \hat{\boldsymbol{t}}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
@@ -104,14 +98,20 @@ class variationalform:
 
         return ufl.dot(func, self.var_u)*dboundary
     
+    # Neumann follower load
+    # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
+    def deltaW_ext_neumann_normal_cur(self, J, F, func, dboundary):
+
+        return func*J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary
+    
     # Neumann load in reference normal (1st Piola-Kirchhoff traction)
-    # TeX: \int\limits_{\Gamma_{0}} p\,\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
-    def deltaW_ext_neumann_refnormal(self, func, dboundary):
+    # TeX: \int\limits_{\Gamma_{0}} p\,\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
+    def deltaW_ext_neumann_normal_ref(self, func, dboundary):
 
         return func*ufl.dot(self.n0, self.var_u)*dboundary
     
     # Robin condition (spring)
-    # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
+    # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring(self, u, k, dboundary, u_prestr=None):
         
         if u_prestr is not None:
@@ -120,8 +120,8 @@ class variationalform:
             return -k*(ufl.dot(u, self.var_u)*dboundary)
     
     # Robin condition (spring) in reference normal direction
-    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
-    def deltaW_ext_robin_spring_normal(self, u, k_n, dboundary, u_prestr=None):
+    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
+    def deltaW_ext_robin_spring_normal_ref(self, u, k_n, dboundary, u_prestr=None):
 
         if u_prestr is not None:
             return -k_n*(ufl.dot(u + u_prestr, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
@@ -129,7 +129,7 @@ class variationalform:
             return -k_n*(ufl.dot(u, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
     
     # Robin condition (dashpot)
-    # TeX: \int\limits_{\Gamma_0} c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
+    # TeX: \int\limits_{\Gamma_0} c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot(self, v, c, dboundary):
         
         if not isinstance(v, ufl.constantvalue.Zero):
@@ -138,8 +138,8 @@ class variationalform:
             return ufl.as_ufl(0)
     
     # Robin condition (dashpot) in reference normal direction
-    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
-    def deltaW_ext_robin_dashpot_normal(self, v, c_n, dboundary):
+    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
+    def deltaW_ext_robin_dashpot_normal_ref(self, v, c_n, dboundary):
         
         if not isinstance(v, ufl.constantvalue.Zero):
             return -c_n*(ufl.dot(v, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
@@ -147,7 +147,7 @@ class variationalform:
             return ufl.as_ufl(0)
 
     # Visco-elastic membrane potential on surface
-    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
+    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\,\mathrm{d}A
     def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary):
         
         C = F.T*F
@@ -245,13 +245,7 @@ class variationalform:
         return -(1./3.)*J*ufl.dot(ufl.inv(F).T*self.n0, self.x_ref + u)*dboundary
         
     # flux: Q = -dV/dt
-    # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\boldsymbol{v}\;\mathrm{d}A
+    # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\boldsymbol{v}\,\mathrm{d}A
     def flux(self, v, J, F, dboundary):
         
         return J*ufl.dot(ufl.inv(F).T*self.n0, v)*dboundary
-        
-    # surface - derivative of pressure load w.r.t. pressure
-    # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\;\mathrm{d}A
-    def surface(self, J, F, dboundary):
-        
-        return J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary

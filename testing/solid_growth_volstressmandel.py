@@ -60,7 +60,7 @@ def main():
                                          {'id' : [2], 'dir' : 'y', 'val' : 0.},
                                          {'id' : [3], 'dir' : 'z', 'val' : 0.}],
                             # hydrostatic Neumann on all faces
-                            'neumann' : [{'type' : 'true', 'id' : [1,2,3,4,5,6], 'dir' : 'normal', 'curve' : 1}] }
+                            'neumann' : [{'id' : [1,2,3,4,5,6], 'dir' : 'normal_cur', 'curve' : 1}] }
 
 
     # problem setup

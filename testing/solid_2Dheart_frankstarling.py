@@ -84,9 +84,9 @@ def main():
 
 
     BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],
-                            'neumann' : [{'type' : 'true', 'id' : [1], 'dir' : 'normal', 'curve' : 1},
-                                         {'type' : 'true', 'id' : [2], 'dir' : 'normal', 'curve' : 2}],
-                            'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal', 'stiff' : 0.075}] }
+                            'neumann' : [{'id' : [1], 'dir' : 'normal_cur', 'curve' : 1},
+                                         {'id' : [2], 'dir' : 'normal_cur', 'curve' : 2}],
+                            'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())

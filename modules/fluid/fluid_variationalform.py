@@ -79,31 +79,32 @@ class variationalform:
     
     # Neumann load (Cauchy traction)
     # TeX: \int\limits_{\Gamma} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{v} \,\mathrm{d}a
-    def deltaW_ext_neumann(self, func, dboundary):
+    def deltaW_ext_neumann(self, func, dboundary, Fale=None):
 
         return ufl.dot(func, self.var_v)*dboundary
-    
-    # Neumann load in normal direction (Cauchy traction)
-    # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def deltaW_ext_neumann_normal(self, func, dboundary, Fale=None):
+
+    # Neumann load in current normal direction (Cauchy traction) - coincides with reference normal in Eulerian fluid mechanics
+    # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
+    def deltaW_ext_neumann_normal_cur(self, func, dboundary, Fale=None):
 
         return func*ufl.dot(self.n, self.var_v)*dboundary
     
     # Robin condition (dashpot)
-    # TeX: \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def deltaW_ext_robin_dashpot(self, v, c, dboundary):
+    # TeX: \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
+    def deltaW_ext_robin_dashpot(self, v, c, dboundary, Fale=None):
 
         return -c*(ufl.dot(v, self.var_v)*dboundary)
     
     # Robin condition (dashpot) in normal direction
-    # TeX: \int\limits_{\Gamma} (\boldsymbol{n}\otimes \boldsymbol{n})\,c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def deltaW_ext_robin_dashpot_normal(self, v, c_n, dboundary):
+    # TeX: \int\limits_{\Gamma} c\,(\boldsymbol{n}\otimes \boldsymbol{n})\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
+    #       \int\limits_{\Gamma} c\,(\boldsymbol{v}\cdot \boldsymbol{n})\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
+    def deltaW_ext_robin_dashpot_normal_cur(self, v, c_n, dboundary, Fale=None):
 
         return -c_n*(ufl.dot(v, self.n)*ufl.dot(self.n, self.var_v)*dboundary)
 
 
     # Visco-elastic membrane potential on surface
-    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\;\mathrm{d}A
+    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\,\mathrm{d}A
     def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary):
         
         C = F.T*F
@@ -196,17 +197,10 @@ class variationalform:
     ### Flux coupling conditions
 
     # flux
-    # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\boldsymbol{v}\;\mathrm{d}a
+    # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\boldsymbol{v}\,\mathrm{d}a
     def flux(self, v, dboundary, w=None, Fale=None):
         
         return ufl.dot(self.n, v)*dboundary
-        
-    # surface - derivative of pressure load w.r.t. pressure
-    # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    def surface(self, dboundary, Fale=None):
-        
-        return ufl.dot(self.n, self.var_v)*dboundary
-
 
 
 
@@ -267,42 +261,36 @@ class variationalform_ale(variationalform):
     
     ### External virtual power \delta \mathcal{P}_{\mathrm{ext}}
     
-    # Neumann load in normal direction (Cauchy traction)
-    # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
-    #      \int\limits_{\Gamma_0} p\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\cdot\delta\boldsymbol{v}\;\mathrm{d}A
-    def deltaW_ext_neumann_normal(self, func, dboundary, Fale=None):
+    # Neumann load in current normal direction (Cauchy traction)
+    # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
+    #      \int\limits_{\Gamma_0} p\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\cdot\delta\boldsymbol{v}\,\mathrm{d}A
+    def deltaW_ext_neumann_normal_cur(self, func, dboundary, Fale=None):
         J = ufl.det(Fale)
         return func*J*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary
     
     # Robin condition (dashpot)
     # TeX:
-    # \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
-    # \int\limits_{\Gamma_0} J c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}A
+    # \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
+    # \int\limits_{\Gamma_0} J c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot(self, v, c, dboundary, Fale=None):
         J = ufl.det(Fale)
         return -J*c*(ufl.dot(v, self.var_v)*dboundary)
     
-    # Robin condition (dashpot) in (reference!) normal direction
+    # Robin condition (dashpot) in normal direction
     # TeX:
-    # \int\limits_{\Gamma} (\boldsymbol{n}\otimes \boldsymbol{n})\,c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}a
-    # \int\limits_{\Gamma_0} J(\boldsymbol{n}_0\otimes \boldsymbol{n}_0)\,c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\;\mathrm{d}A
-    def deltaW_ext_robin_dashpot_normal(self, v, c_n, dboundary, Fale=None):
+    # \int\limits_{\Gamma} c\,(\boldsymbol{n}\otimes \boldsymbol{n})\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
+    # \int\limits_{\Gamma} c\,(\boldsymbol{v}\cdot \boldsymbol{n})\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
+    # \int\limits_{\Gamma_0} J c\,(\boldsymbol{v}\cdot \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n})\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
+    def deltaW_ext_robin_dashpot_normal_cur(self, v, c_n, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return -J*c_n*(ufl.dot(v, self.n)*ufl.dot(self.n, self.var_v)*dboundary)
+        return -J*c_n*(ufl.dot(v, ufl.inv(Fale).T*self.n0)*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary)
     
     
     ### Flux coupling conditions
 
     # flux
-    # TeX: \int\limits_{\Gamma} (\boldsymbol{v}-\boldsymbol{w})\cdot\boldsymbol{n}\;\mathrm{d}a = 
-    #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\boldsymbol{w})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\;\mathrm{d}A
-    def flux(self, v, dboundary, w=None, Fale=None):
+    # TeX: \int\limits_{\Gamma} (\boldsymbol{v}-\boldsymbol{w})\cdot\boldsymbol{n}\,\mathrm{d}a = 
+    #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\boldsymbol{w})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
+    def flux(self, v, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return J*ufl.dot(ufl.inv(Fale).T*self.n0, (v-w))*dboundary
-        
-    # surface - derivative of pressure load w.r.t. pressure
-    # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\delta\boldsymbol{v}\;\mathrm{d}a = 
-    #      \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0 \cdot\delta\boldsymbol{v}\;\mathrm{d}A
-    def surface(self, dboundary, Fale=None):
-        J = ufl.det(Fale)
-        return J*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary
+        return J*ufl.dot(ufl.inv(Fale).T*self.n0, v)*dboundary

@@ -54,7 +54,7 @@ def main():
 
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}], # lateral surf
-                          'neumann' : [{'id' : [4], 'dir' : 'xyz', 'curve' : [0,0,1]}]} # inflow; 2,3 are outflows
+                          'neumann' : [{'id' : [4], 'dir' : 'xyz_cur', 'curve' : [0,0,1]}]} # inflow; 2,3 are outflows
 
 
     # problem setup
