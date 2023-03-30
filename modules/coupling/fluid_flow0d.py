@@ -280,7 +280,7 @@ class FluidmechanicsFlow0DProblem():
             
         K_vs.assemble()
 
-        # derivative of 0D residual w.r.t. solid displacements/fluid velocities
+        # derivative of 0D residual w.r.t. fluid velocities
         K_sv = PETSc.Mat().createAIJ(size=((self.K_lm.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_sv.setUp()
 

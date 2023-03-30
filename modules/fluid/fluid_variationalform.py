@@ -55,10 +55,6 @@ class variationalform:
     def deltaW_int_pres(self, v, ddomain, w=None, Fale=None):
         return ufl.div(v)*self.var_p*ddomain
 
-    def deltaW_int_robin(self, v, vD, beta, dboundary, Fale=None):
-
-        return beta*ufl.dot((v-vD), self.var_v)*dboundary
-
     def residual_v_strong(self, a, v, rho, sig):
         
         return rho*(a + ufl.grad(v) * v) - ufl.div(sig)
@@ -254,10 +250,10 @@ class variationalform_ale(variationalform):
         J = ufl.det(Fale)
         return J*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p*ddomain
     
-    # TeX: 
-    def deltaW_int_robin(self, v, vD, beta, dboundary, Fale=None):
+    # TeX: Nitsche DBC currently only with Robin term! TODO: Add stress term!
+    def deltaW_int_nitsche_dirichlet(self, v, vD, varv, beta, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return J*beta*ufl.dot((v-vD), self.var_v)*dboundary
+        return J*beta*ufl.dot((v-vD), varv)*dboundary
     
     ### External virtual power \delta \mathcal{P}_{\mathrm{ext}}
     
@@ -274,7 +270,7 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Gamma_0} J c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot(self, v, c, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return -J*c*(ufl.dot(v, self.var_v)*dboundary)
+        return -c*(J*ufl.dot(v, self.var_v)*dboundary)
     
     # Robin condition (dashpot) in normal direction
     # TeX:
@@ -283,7 +279,7 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Gamma_0} J c\,(\boldsymbol{v}\cdot \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n})\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot_normal_cur(self, v, c_n, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return -J*c_n*(ufl.dot(v, ufl.inv(Fale).T*self.n0)*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary)
+        return -c_n*(J*ufl.dot(v, ufl.inv(Fale).T*self.n0)*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary)
     
     
     ### Flux coupling conditions

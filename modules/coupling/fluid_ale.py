@@ -91,7 +91,7 @@ class FluidmechanicsAleProblem():
         return [self.pbf.v.vector, self.pbf.p.vector, self.pba.u.vector], is_ghosted
         
         
-    # defines the monolithic coupling forms for 0D flow and fluid mechanics
+    # defines the monolithic coupling forms for fluid mechanics in ALE reference frame
     def set_variational_forms_and_jacobians(self):
 
         # any DBC conditions that we want to set from fluid to ALE (mandatory for FSI or FrSI)
@@ -154,15 +154,29 @@ class FluidmechanicsAleProblem():
                     
                 #NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
 
-            elif self.coupling_ale_fluid['type'] == 'robin':
+            elif self.coupling_ale_fluid['type'] == 'weak_dirichlet':
                 
                 beta = self.coupling_ale_fluid['beta']
                 
                 work_robin_ale_fluid = ufl.as_ufl(0)
                 for i in range(len(ids_ale_fluid)):
                     db_ = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=ids_ale_fluid[i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                    work_robin_ale_fluid += self.pbf.vf.deltaW_int_robin(self.pbf.v, self.pba.wel, beta, db_, Fale=self.pba.ki.F(self.pba.u)) # here, wel as form is used!
-            
+                    work_robin_ale_fluid += self.pbf.vf.deltaW_int_nitsche_dirichlet(self.pbf.v, self.pba.wel, self.pbf.var_v, beta, db_, Fale=self.pba.ki.F(self.pba.u)) # here, wel as form is used!
+
+                # add to fluid internal virtual power
+                self.pbf.weakform_v += work_robin_ale_fluid
+                # add to fluid jacobian form and define offdiagonal derivative w.r.t. ALE
+                self.pbf.jac_vv += ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
+
+            elif self.coupling_ale_fluid['type'] == 'weak_dirichlet_internal':
+                
+                beta = self.coupling_ale_fluid['beta']
+                
+                work_robin_ale_fluid = ufl.as_ufl(0)
+                for i in range(len(ids_ale_fluid)):
+                    db_ = ufl.dS(subdomain_data=self.pbf.io.mt_b1, subdomain_id=ids_ale_fluid[i], metadata={'quadrature_degree': self.pbf.quad_degree})
+                    work_robin_ale_fluid += self.pbf.vf.deltaW_int_nitsche_dirichlet(self.pbf.v('+'), self.pba.wel('+'), self.pbf.var_v('+'), beta, db_, Fale=self.pba.ki.F(self.pba.u)('+')) # here, wel as form is used!
+
                 # add to fluid internal virtual power
                 self.pbf.weakform_v += work_robin_ale_fluid
                 # add to fluid jacobian form and define offdiagonal derivative w.r.t. ALE
@@ -201,10 +215,10 @@ class FluidmechanicsAleProblem():
                 K_uv = fem.petsc.assemble_matrix(fem.form(self.jac_uv), self.pba.bc.dbcs)
                 K_uv.assemble()
                 K_list[2][0] = K_uv
-        
+
         if bool(self.coupling_ale_fluid):
             if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
-                #we need a vector representation of w to apply in fluid DBCs
+                # we need a vector representation of w to apply in fluid DBCs
                 w_vec = self.pba.ti.update_w_ost(self.pba.u.vector, self.pba.u_old.vector, self.pba.w_old.vector, ufl=False)
                 self.wf.vector.axpby(1.0, 0.0, w_vec)
                 self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

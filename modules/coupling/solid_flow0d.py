@@ -426,7 +426,7 @@ class SolidmechanicsFlow0DProblem():
         # row ownership range of uu block
         irs, ire = K_list[0][0].getOwnershipRange()
 
-        # derivative of fluid residual w.r.t. 0D pressures
+        # derivative of solid residual w.r.t. 0D pressures
         K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(K_constr.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_us.setUp()
 
@@ -436,7 +436,7 @@ class SolidmechanicsFlow0DProblem():
 
         K_us.assemble()
 
-        # derivative of 0D residual w.r.t. solid displacements/fluid velocities
+        # derivative of 0D residual w.r.t. solid displacements
         K_su = PETSc.Mat().createAIJ(size=((K_constr.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_su.setUp()
 

@@ -365,7 +365,7 @@ class boundary_cond_fluid(boundary_cond):
 
             if r['type'] == 'dashpot':
                 
-                if r['dir'] == 'xyz_ref': # reference xyz
+                if r['dir'] == 'xyz_cur': # current xyz
                     
                     for i in range(len(r['id'])):
                         
@@ -373,13 +373,13 @@ class boundary_cond_fluid(boundary_cond):
                     
                         w += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], db_, Fale=Fale)
 
-                elif r['dir'] == 'normal_ref': # reference normal
+                elif r['dir'] == 'normal_cur': # current normal
                     
                     for i in range(len(r['id'])):
                         
                         db_ = ufl.ds(subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], db_, Fale=Fale)
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_cur(v, r['visc'], db_, Fale=Fale)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
