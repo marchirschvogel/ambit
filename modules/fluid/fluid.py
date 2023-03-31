@@ -187,7 +187,7 @@ class FluidmechanicsProblem(problem_base):
         if 'dirichlet' in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.V_v)
 
-        self.set_variational_forms_and_jacobians()
+        self.set_variational_forms()
 
 
     def get_problem_var_list(self):
@@ -197,7 +197,7 @@ class FluidmechanicsProblem(problem_base):
 
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
-    def set_variational_forms_and_jacobians(self):
+    def set_variational_forms(self):
 
         # set form for acceleration
         self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
@@ -264,18 +264,26 @@ class FluidmechanicsProblem(problem_base):
         for n in range(self.num_domains):
             self.Re += ufl.sqrt(ufl.dot(self.vf.f_inert(self.acc,self.v,self.rho[n]), self.vf.f_inert(self.acc,self.v,self.rho[n]))) / ufl.sqrt(ufl.dot(self.vf.f_viscous(self.ma[n].sigma(self.v, self.p)), self.vf.f_viscous(self.ma[n].sigma(self.v, self.p))))
         
-        ### Jacobians
-        
-        self.jac_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
-        self.jac_vp = ufl.derivative(self.weakform_v, self.p, self.dp)
-        self.jac_pv = ufl.derivative(self.weakform_p, self.v, self.dv)
+        self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
+        self.weakform_lin_vp = ufl.derivative(self.weakform_v, self.p, self.dp)
+        self.weakform_lin_pv = ufl.derivative(self.weakform_p, self.v, self.dv)
 
         # for saddle-point block-diagonal preconditioner - TODO: Doesn't work very well...
         self.a_p11 = ufl.as_ufl(0)
         
         for n in range(self.num_domains):
             self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
-            
+    
+
+    def set_problem_residual_jacobian_forms(self):
+
+        self.res_v = fem.form(self.weakform_v)
+        self.res_p = fem.form(self.weakform_p)
+
+        self.jac_vv = fem.form(self.weakform_lin_vv)
+        self.jac_vp = fem.form(self.weakform_lin_vp)
+        self.jac_pv = fem.form(self.weakform_lin_pv)
+
 
     def set_forms_solver(self):
         pass
@@ -284,23 +292,23 @@ class FluidmechanicsProblem(problem_base):
     def assemble_residual_stiffness(self, t, subsolver=None):
 
         # assemble velocity rhs vector
-        r_v = fem.petsc.assemble_vector(fem.form(self.weakform_v))
-        fem.apply_lifting(r_v, [fem.form(self.jac_vv)], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
+        r_v = fem.petsc.assemble_vector(self.res_v)
+        fem.apply_lifting(r_v, [self.jac_vv], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
         r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         fem.set_bc(r_v, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
 
         # assemble system matrix
-        K_vv = fem.petsc.assemble_matrix(fem.form(self.jac_vv), self.bc.dbcs)
+        K_vv = fem.petsc.assemble_matrix(self.jac_vv, self.bc.dbcs)
         K_vv.assemble()
         
         # assemble pressure rhs vector
-        r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p))
+        r_p = fem.petsc.assemble_vector(self.res_p)
         r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # assemble system matrices
-        K_vp = fem.petsc.assemble_matrix(fem.form(self.jac_vp), self.bc.dbcs)
+        K_vp = fem.petsc.assemble_matrix(self.jac_vp, self.bc.dbcs)
         K_vp.assemble()
-        K_pv = fem.petsc.assemble_matrix(fem.form(self.jac_pv), []) # currently, we do not consider pressure DBCs
+        K_pv = fem.petsc.assemble_matrix(self.jac_pv, []) # currently, we do not consider pressure DBCs
         K_pv.assemble()
         K_pp = None
 
@@ -384,6 +392,8 @@ class FluidmechanicsSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
+        self.pb.set_problem_residual_jacobian_forms()
+
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
@@ -395,10 +405,10 @@ class FluidmechanicsSolver(solver_base):
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
             
-            jac_a = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
+            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.a_old)
 
 
     def solve_nonlinear_problem(self, t):

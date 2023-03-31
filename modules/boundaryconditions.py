@@ -166,31 +166,6 @@ class boundary_cond():
         return w
 
 
-    # set weak Dirichlet BCs
-    def weak_dirichlet_bcs(self, u, uD, var_stress):
-
-        w = ufl.as_ufl(0)
-        
-        for n in self.bc_dict['dirichlet_weak']:
-
-            try: bdim_r = n['bdim_reduction']
-            except: bdim_r = 1
-            
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
-            
-            for i in range(len(n['id'])):
-                
-                db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-                
-                beta = n['beta']
-                
-                w += self.vf.deltaW_int_nitsche_dirichlet(u, uD, var_stress, beta, db_)
-
-        return w
-
-
     # set membrane surface BCs
     def membranesurf_bcs(self, u, v, a):
         
@@ -266,6 +241,24 @@ class boundary_cond_solid(boundary_cond):
                 
                     w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
 
+            elif n['dir'] == 'xyz_cur': # current xyz
+            
+                func = fem.Function(V)
+                
+                if 'curve' in n.keys():
+                    load = expression.template_vector()
+                    load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
+                    func.interpolate(load.evaluate)
+                    funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
+                else:
+                    func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
+                
+                for i in range(len(n['id'])):
+                    
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                    w += self.vf.deltaW_ext_neumann_cur(self.ki.J(u,ext=True), self.ki.F(u,ext=True), func, db_)
+
             elif n['dir'] == 'normal_cur': # current normal
                 
                 func = fem.Function(V_real)
@@ -322,7 +315,7 @@ class boundary_cond_fluid(boundary_cond):
                     
                     db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                    w += self.vf.deltaW_ext_neumann(func, db_, Fale=Fale)
+                    w += self.vf.deltaW_ext_neumann_cur(func, db_, Fale=Fale)
 
 
             elif n['dir'] == 'normal_cur': # current normal

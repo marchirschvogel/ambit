@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
+from mathutils import get_eigenval_eigenvec
 
 # solid mechanics variational base class
 # Principle of Virtual Work
@@ -97,19 +98,25 @@ class variationalform:
     def deltaW_ext_neumann_ref(self, func, dboundary):
 
         return ufl.dot(func, self.var_u)*dboundary
-    
-    # Neumann follower load
-    # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_neumann_normal_cur(self, J, F, func, dboundary):
 
-        return func*J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary
-    
     # Neumann load in reference normal (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} p\,\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_neumann_normal_ref(self, func, dboundary):
 
         return func*ufl.dot(self.n0, self.var_u)*dboundary
+
+    # Neumann follower load on current configuration (Cauchy traction)
+    # TeX: \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
+    def deltaW_ext_neumann_cur(self, J, F, func, dboundary):
+
+        return J*ufl.dot(ufl.inv(Fale).T*func, self.var_u)*dboundary
     
+    # Neumann follower load in current normal direction
+    # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
+    def deltaW_ext_neumann_normal_cur(self, J, F, func, dboundary):
+
+        return func*J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary
+
     # Robin condition (spring)
     # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring(self, u, k, dboundary, u_prestr=None):
@@ -161,29 +168,37 @@ class variationalform:
         # wall thickness
         h0 = params['h0']
         
+        # only components in normal direction (F_nn, F_t1n, F_t2n)
+        Fn = F*n0n0
+        Fdotn = Fdot*n0n0
+        # rank-deficient deformation gradient and Cauchy-Green tensor (phased-out normal components)
+        F0 = F - Fn
+        C0 = F0.T*F0
+        # plane strain deformation tensor where deformation is "1" in normal direction
+        Cplane = C0 + n0n0
+        # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
+        IIIplane = ufl.det(Cplane)
+        # deformation tensor where normal stretch is dependent on in-plane stretches
+        Cmod = C0 + (1./IIIplane) * n0n0
+        # rates of deformation: in-plane time derivatives of deformation gradient and Cauchy-Green tensor
+        Fdotmod = Fdot - Fdotn
+        Cplanedot = Fdotmod.T*F0 + F0.T*Fdotmod
+        # Jacobi's formula: d(detA)/dt = detA * tr(A^-1 * dA/dt)
+        IIIplanedot = IIIplane * ufl.tr(ufl.inv(Cplane) * Cplanedot)
+        # time derivative of Cmod
+        Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
+
         if model=='membrane_f':
-            # only components in normal direction (F_nn, F_t1n, F_t2n)
-            Fn = F*n0n0
-            Fdotn = Fdot*n0n0
-            # rank-deficient deformation gradient and Cauchy-Green tensor (phased-out normal components)
-            F0 = F - Fn
-            C0 = F0.T*F0
-            # plane strain deformation tensor where deformation is "1" in normal direction
-            Cplane = C0 + n0n0
-            # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
-            IIIplane = ufl.det(Cplane)
-            # deformation tensor where normal stretch is dependent on in-plane stretches
-            Cmod = C0 + (1./IIIplane) * n0n0
-            # rates of deformation: in-plane time derivatives of deformation gradient and Cauchy-Green tensor
-            Fdotmod = Fdot - Fdotn
-            Cplanedot = Fdotmod.T*F0 + F0.T*Fdotmod
-            # Jacobi's formula: d(detA)/dt = detA * tr(A^-1 * dA/dt)
-            IIIplanedot = IIIplane * ufl.tr(ufl.inv(Cplane) * Cplanedot)
-            # time derivative of Cmod
-            Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
-            # TODO: Need to recover an Fmod corresponding to Cmod!
-            # Can this be done in ufl? See e.g. https://fenicsproject.org/qa/13600/possible-perform-spectral-decomposition-current-operators
             Fmod = F
+        elif model=='membrane':
+            # get eigenvalues and eigenvectors of C
+            evalC, evecC = get_eigenval_eigenvec(C)
+            U = ufl.sqrt(evalC[0])*ufl.outer(evecC[0],evecC[0]) + ufl.sqrt(evalC[1])*ufl.outer(evecC[1],evecC[1]) + ufl.sqrt(evalC[2])*ufl.outer(evecC[2],evecC[2])
+            R = F*ufl.inv(U)
+            # get eigenvalues and eigenvectors of modified C
+            evalCmod, evecCmod = get_eigenval_eigenvec(Cmod)
+            Umod = ufl.sqrt(evalCmod[0])*ufl.outer(evecCmod[0],evecCmod[0]) + ufl.sqrt(evalCmod[1])*ufl.outer(evecCmod[1],evecCmod[1]) + ufl.sqrt(evalCmod[2])*ufl.outer(evecCmod[2],evecCmod[2])
+            Fmod = R*Umod
         else:
             raise NameError("Unkown membrane model type!")
         

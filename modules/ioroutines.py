@@ -519,9 +519,9 @@ class IO_ale(IO):
                 for res in pb.results_to_write:
                     
                     if res=='aledisplacement':
-                        self.resultsfiles[res].write_function(pb.u, t)
+                        self.resultsfiles[res].write_function(pb.d, t)
                     elif res=='alevelocity':
-                        w_proj = project(pb.wel, pb.V_u, pb.dx_, nm="AleVelocity")
+                        w_proj = project(pb.wel, pb.V_d, pb.dx_, nm="AleVelocity")
                         self.resultsfiles[res].write_function(w_proj, t)
                     else:
                         raise NameError("Unknown output to write for ALE mechanics!")
@@ -529,7 +529,7 @@ class IO_ale(IO):
 
     def readcheckpoint(self, pb):
 
-        vecs_to_read = {'u' : pb.u}
+        vecs_to_read = {'u' : pb.d}
         
         for key in vecs_to_read:
 
@@ -543,7 +543,7 @@ class IO_ale(IO):
 
     def writecheckpoint(self, pb, N):
 
-        vecs_to_write = {'u' : pb.u}
+        vecs_to_write = {'u' : pb.d}
         
         for key in vecs_to_write:
 

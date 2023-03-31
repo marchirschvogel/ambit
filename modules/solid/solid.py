@@ -318,7 +318,7 @@ class SolidmechanicsProblem(problem_base):
         if 'dirichlet' in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.V_u)
 
-        self.set_variational_forms_and_jacobians()
+        self.set_variational_forms()
 
 
     def get_problem_var_list(self):
@@ -332,7 +332,7 @@ class SolidmechanicsProblem(problem_base):
 
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
-    def set_variational_forms_and_jacobians(self):
+    def set_variational_forms(self):
 
         # set forms for acceleration and velocity
         self.acc, self.vel = self.ti.set_acc_vel(self.u, self.u_old, self.v_old, self.a_old)
@@ -459,7 +459,7 @@ class SolidmechanicsProblem(problem_base):
         ### Jacobians
         
         # kinetic virtual work linearization (deltaW_kin already has contributions from all domains)
-        self.jac_uu = self.timefac_m * ufl.derivative(self.deltaW_kin, self.u, self.du)
+        self.weakform_lin_uu = self.timefac_m * ufl.derivative(self.deltaW_kin, self.u, self.du)
         
         # internal virtual work linearization treated differently: since we want to be able to account for nonlinear materials at Gauss
         # point level with deformation-dependent internal variables (i.e. growth or plasticity), we make use of a more explicit formulation
@@ -482,15 +482,15 @@ class SolidmechanicsProblem(problem_base):
             else:
                 Ctang = Cmat
             
-            self.jac_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx_[n])
+            self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx_[n])
         
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
-        self.jac_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
+        self.weakform_lin_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
 
         # pressure contributions
         if self.incompressible_2field:
             
-            self.jac_up, self.jac_pu, self.a_p11, self.p11 = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            self.weakform_lin_up, self.weakform_lin_pu, self.a_p11, self.p11 = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             
             for n in range(self.num_domains):
                 # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
@@ -529,11 +529,11 @@ class SolidmechanicsProblem(problem_base):
                     Ctang_p = Cmat_p
                     Jtang = Jmat
                 
-                self.jac_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx_[n])
+                self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx_[n])
                 if self.pressure_at_midpoint:
-                    self.jac_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
+                    self.weakform_lin_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
                 else:
-                    self.jac_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
+                    self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
                 
                 # for saddle-point block-diagonal preconditioner
                 self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
@@ -541,11 +541,11 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial:
             # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
             self.weakform_prestress_u = self.deltaW_prestr_int - self.deltaW_prestr_ext
-            self.jac_prestress_uu = ufl.derivative(self.weakform_prestress_u, self.u, self.du)
+            self.weakform_lin_prestress_uu = ufl.derivative(self.weakform_prestress_u, self.u, self.du)
             if self.incompressible_2field:
                 self.weakform_prestress_p = self.deltaW_p
-                self.jac_prestress_up = ufl.derivative(self.weakform_prestress_u, self.p, self.dp)
-                self.jac_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
+                self.weakform_lin_prestress_up = ufl.derivative(self.weakform_prestress_u, self.p, self.dp)
+                self.weakform_lin_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
 
         
     # reference coordinates
@@ -676,48 +676,59 @@ class SolidmechanicsProblem(problem_base):
                 f = open(fl, mode)
                 f.write('%.16E %.16E\n' % (t,volume))
                 f.close()
-                
-                
+
+
+    def set_problem_residual_jacobian_forms(self):
+
+        self.res_u = fem.form(self.weakform_u)
+        self.jac_uu = fem.form(self.weakform_lin_uu)
+        
+        if self.incompressible_2field:
+            self.res_p = fem.form(self.weakform_p)
+            self.jac_up = fem.form(self.weakform_lin_up)
+            self.jac_pu = fem.form(self.weakform_lin_pu)
+
+
     def set_forms_solver(self):
 
         if not self.prestress_initial:
-            self.weakform_u_sol = self.weakform_u
-            self.jac_uu_sol     = self.jac_uu
+            self.res_u_sol  = fem.form(self.weakform_u)
+            self.jac_uu_sol = fem.form(self.jac_uu)
             if self.incompressible_2field:
-                self.weakform_p_sol = self.weakform_p
-                self.jac_up_sol     = self.jac_up
-                self.jac_pu_sol     = self.jac_pu
+                self.res_p_sol  = fem.form(self.weakform_p)
+                self.jac_up_sol = fem.form(self.weakform_lin_up)
+                self.jac_pu_sol = fem.form(self.weakform_lin_pu)
         else:
-            self.weakform_u_sol = self.weakform_prestress_u
-            self.jac_uu_sol     = self.jac_prestress_uu
+            self.res_u_sol  = fem.form(self.weakform_prestress_u)
+            self.jac_uu_sol = fem.form(self.weakform_lin_prestress_uu)
             if self.incompressible_2field:
-                self.weakform_p_sol = self.weakform_prestress_p
-                self.jac_up_sol     = self.jac_prestress_up
-                self.jac_pu_sol     = self.jac_prestress_pu
+                self.res_p_sol  = fem.form(self.weakform_prestress_p)
+                self.jac_up_sol = fem.form(self.weakform_lin_prestress_up)
+                self.jac_pu_sol = fem.form(self.weakform_lin_prestress_pu)
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
 
         # assemble rhs vector
-        r_u = fem.petsc.assemble_vector(fem.form(self.weakform_u_sol))
-        fem.apply_lifting(r_u, [fem.form(self.jac_uu_sol)], [self.bc.dbcs], x0=[self.u.vector], scale=-1.0)
+        r_u = fem.petsc.assemble_vector(self.res_u_sol)
+        fem.apply_lifting(r_u, [self.jac_uu_sol], [self.bc.dbcs], x0=[self.u.vector], scale=-1.0)
         r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         fem.set_bc(r_u, self.bc.dbcs, x0=self.u.vector, scale=-1.0)
 
         # assemble system matrix
-        K_uu = fem.petsc.assemble_matrix(fem.form(self.jac_uu_sol), self.bc.dbcs)
+        K_uu = fem.petsc.assemble_matrix(self.jac_uu_sol, self.bc.dbcs)
         K_uu.assemble()
         
         if self.incompressible_2field:
         
             # assemble pressure rhs vector
-            r_p = fem.petsc.assemble_vector(fem.form(self.weakform_p_sol))
+            r_p = fem.petsc.assemble_vector(self.res_p_sol)
             r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             
             # assemble system matrices
-            K_up = fem.petsc.assemble_matrix(fem.form(self.jac_up_sol), self.bc.dbcs)
+            K_up = fem.petsc.assemble_matrix(self.jac_up_sol, self.bc.dbcs)
             K_up.assemble()
-            K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu_sol), []) # currently, we do not consider pressure DBCs
+            K_pu = fem.petsc.assemble_matrix(self.jac_pu_sol, []) # currently, we do not consider pressure DBCs
             K_pu.assemble()
             
             # for stress-mediated volumetric growth, K_pp is not zero!
@@ -822,6 +833,8 @@ class SolidmechanicsSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
+        self.pb.set_problem_residual_jacobian_forms()
+
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
@@ -841,10 +854,10 @@ class SolidmechanicsSolver(solver_base):
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
             
-            jac_a = ufl.derivative(weakform_a, self.pb.a_old, self.pb.du) # actually linear in a_old
+            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.a_old)
 
 
     def solve_nonlinear_problem(self, t):

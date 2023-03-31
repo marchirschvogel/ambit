@@ -131,16 +131,13 @@ class SolidmechanicsConstraintProblem():
                 if self.pbs.prestress_initial:
                     self.work_coupling_prestr += self.pbs.vf.deltaW_ext_neumann_refnormal(self.coupfuncs_old[-1], ds_p)
 
-            self.dforce.append(df_)
+            self.dforce.append(fem.form(df_))
 
         # minus sign, since contribution to external work!
         self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
         
         # add to solid Jacobian
-        self.pbs.jac_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
-
-        # for naming/access convention in solver... TODO: should go away after solver restructuring!
-        self.jac_uu = self.pbs.jac_uu
+        self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
 
     def set_pressure_fem(self, var, p0Da):
@@ -151,12 +148,19 @@ class SolidmechanicsConstraintProblem():
             p0Da[i].interpolate(self.pr0D.evaluate)
 
 
+    def set_problem_residual_jacobian_forms(self):
+
+        self.pbs.res_u = fem.form(self.pbs.weakform_u)
+        self.pbs.jac_uu = fem.form(self.pbs.weakform_lin_uu)
+        
+        if self.incompressible_2field:
+            self.pbs.res_p = fem.form(self.pbs.weakform_p)
+            self.pbs.jac_up = fem.form(self.pbs.weakform_lin_up)
+            self.pbs.jac_pu = fem.form(self.pbs.weakform_lin_pu)
+
+
     def set_forms_solver(self):
         pass
-
-
-    def get_presolve_state(self):
-        return self.pbs.prestress_initial
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -189,8 +193,6 @@ class SolidmechanicsConstraintProblem():
             cq = fem.assemble_scalar(fem.form(self.cq[i]))
             cq = self.comm.allgather(cq)
             self.constr[i] = sum(cq)*self.cq_factor[i]
-    
-        r_lm = self.K_lm.createVecLeft()
 
         val, val_old = [], []
         for n in range(self.num_coupling_surf):
@@ -198,14 +200,11 @@ class SolidmechanicsConstraintProblem():
             val.append(self.pbs.ti.timecurves(curvenumber)(t)), val_old.append(self.pbs.ti.timecurves(curvenumber)(t-self.dt))
 
         # Lagrange multiplier coupling residual
+        r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
         for i in range(ls,le):
             r_lm[i] = self.constr[i] - val[i]
         
         r_list[1+off] = r_lm
-
-        self.K_lm.assemble()
-        
-        K_list[1+off][1+off] = self.K_lm
     
         # rows and columns for offdiagonal matrices
         row_ids = list(range(self.num_coupling_surf))
@@ -214,7 +213,7 @@ class SolidmechanicsConstraintProblem():
         # offdiagonal u-s columns
         k_us_cols=[]
         for i in range(len(col_ids)):
-            k_us_cols.append(fem.petsc.assemble_vector(fem.form(self.dforce[i]))) # already multiplied by time-integration factor
+            k_us_cols.append(fem.petsc.assemble_vector(self.dforce[i])) # already multiplied by time-integration factor
     
         # offdiagonal s-u rows
         k_su_rows=[]
@@ -224,15 +223,13 @@ class SolidmechanicsConstraintProblem():
         # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
         for i in range(len(col_ids)):
             
-            fem.apply_lifting(k_us_cols[i], [fem.form(self.pbs.jac_uu)], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            fem.apply_lifting(k_us_cols[i], [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
             k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(k_us_cols[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
         
+        # ghost update on k_su_rows
         for i in range(len(row_ids)):
-        
-            fem.apply_lifting(k_su_rows[i], [fem.form(self.pbs.jac_uu)], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
             k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(k_su_rows[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
         
         # setup offdiagonal matrices
         locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
@@ -241,7 +238,7 @@ class SolidmechanicsConstraintProblem():
         irs, ire = K_list[0][0].getOwnershipRange()
 
         # derivative of fluid residual w.r.t. 0D pressures
-        K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.K_lm.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.num_coupling_surf)), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_us.setUp()
 
         # set columns
@@ -251,7 +248,7 @@ class SolidmechanicsConstraintProblem():
         K_us.assemble()
 
         # derivative of 0D residual w.r.t. solid displacements/fluid velocities
-        K_su = PETSc.Mat().createAIJ(size=((self.K_lm.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_su = PETSc.Mat().createAIJ(size=((self.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_su.setUp()
 
         # set rows
@@ -379,6 +376,8 @@ class SolidmechanicsConstraintSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
+        self.pb.set_problem_residual_jacobian_forms()
+
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
         
@@ -406,10 +405,10 @@ class SolidmechanicsConstraintSolver(solver_base):
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
 
-            jac_a = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
+            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.pbs.a_old)
 
 
     def solve_nonlinear_problem(self, t):

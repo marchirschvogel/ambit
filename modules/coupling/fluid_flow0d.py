@@ -69,7 +69,7 @@ class FluidmechanicsFlow0DProblem():
 
         self.incompressible_2field = self.pbf.incompressible_2field
 
-        self.set_variational_forms_and_jacobians()
+        self.set_variational_forms()
         
         self.numdof = self.pbf.numdof + self.pb0.numdof
         # fluid is 'master' problem - define problem variables based on its values
@@ -90,23 +90,19 @@ class FluidmechanicsFlow0DProblem():
         
         
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
-    def set_variational_forms_and_jacobians(self):
+    def set_variational_forms(self):
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old = [], []
-            
-        # Lagrange multiplier stiffness matrix (currently treated with FD!)
-        self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.K_lm.setUp()
 
         # Lagrange multipliers
-        self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
+        self.lm, self.lm_old = PETSc.Vec().createMPI(size=self.num_coupling_surf), PETSc.Vec().createMPI(size=self.num_coupling_surf)
         
         # 3D fluxes
         self.constr, self.constr_old = [], []
 
         self.power_coupling, self.power_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
-    
+
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
             
@@ -140,25 +136,31 @@ class FluidmechanicsFlow0DProblem():
                 self.power_coupling += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, Fale=self.pbf.alevar['Fale'])
                 self.power_coupling_old += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_old[-1], ds_p, Fale=self.pbf.alevar['Fale_old'])
         
-            self.dforce.append(df_)
+            self.dforce.append(fem.form(df_))
         
         # minus sign, since contribution to external power!
         self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling - (1.-self.pbf.timefac) * self.power_coupling_old
         
         # add to fluid Jacobian
-        self.pbf.jac_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
+        self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
         # old Lagrange multipliers - initialize with initial pressures
         self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
         self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
 
 
+    def set_problem_residual_jacobian_forms(self):
+
+        # fluid
+        self.pbf.res_v = fem.form(self.pbf.weakform_v)
+        self.pbf.res_p = fem.form(self.pbf.weakform_p)
+        self.pbf.jac_vv = fem.form(self.pbf.weakform_lin_vv)
+        self.pbf.jac_vp = fem.form(self.pbf.weakform_lin_vp)
+        self.pbf.jac_pv = fem.form(self.pbf.weakform_lin_pv)
+
+
     def set_forms_solver(self):
         pass
-
-
-    def get_presolve_state(self):
-        return False
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -195,7 +197,7 @@ class FluidmechanicsFlow0DProblem():
         ls, le = self.lm.getOwnershipRange()
         
         # Lagrange multiplier coupling residual
-        r_lm = self.K_lm.createVecLeft()
+        r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
         for i in range(ls,le):
             r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
         
@@ -218,6 +220,10 @@ class FluidmechanicsFlow0DProblem():
         s_tmp = self.pb0.K.createVecLeft()
         s_tmp.axpby(1.0, 0.0, self.pb0.s)
 
+        # Lagrange multiplier stiffness matrix (currently treated with FD!)
+        K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_lm.setUp()
+
         # finite differencing for LM siffness matrix
         for i in range(self.num_coupling_surf):
             for j in range(self.num_coupling_surf):
@@ -225,7 +231,7 @@ class FluidmechanicsFlow0DProblem():
                 self.pb0.c[j] = lm_sq[j] + self.eps_fd # perturbed LM
                 subsolver.newton(t, print_iter=False)
                 s_pert_sq = allgather_vec(self.pb0.s, self.comm)
-                self.K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
                 self.pb0.c[j] = lm_sq[j] # restore LM
 
         # restore df, f, and aux vectors for correct time step update
@@ -235,9 +241,9 @@ class FluidmechanicsFlow0DProblem():
         # restore 0D state variable
         self.pb0.s.axpby(1.0, 0.0, s_tmp)
         
-        self.K_lm.assemble()
+        K_lm.assemble()
         
-        K_list[2][2] = self.K_lm
+        K_list[2][2] = K_lm
         
         # now the offdiagonal matrices
         row_ids = list(range(self.num_coupling_surf))
@@ -246,7 +252,7 @@ class FluidmechanicsFlow0DProblem():
         # offdiagonal v-s columns
         k_vs_cols=[]
         for i in range(len(col_ids)):
-            k_vs_cols.append(fem.petsc.assemble_vector(fem.form(self.dforce[i]))) # already multiplied by time-integration factor
+            k_vs_cols.append(fem.petsc.assemble_vector(self.dforce[i])) # already multiplied by time-integration factor
     
         # offdiagonal s-v rows
         k_sv_rows=[]
@@ -256,7 +262,7 @@ class FluidmechanicsFlow0DProblem():
         # apply velocity dbcs to matrix entries k_vs - basically since these are offdiagonal we want a zero there!
         for i in range(len(col_ids)):
             
-            fem.apply_lifting(k_vs_cols[i], [fem.form(self.pbf.jac_vv)], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
+            fem.apply_lifting(k_vs_cols[i], [self.pbf.jac_vv], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
             k_vs_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(k_vs_cols[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
         
@@ -271,7 +277,7 @@ class FluidmechanicsFlow0DProblem():
         irs, ire = K_list[0][0].getOwnershipRange()
 
         # derivative of fluid residual w.r.t. 0D pressures
-        K_vs = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.K_lm.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_vs = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(K_lm.getSize()[0])), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_vs.setUp()
 
         # set columns
@@ -281,7 +287,7 @@ class FluidmechanicsFlow0DProblem():
         K_vs.assemble()
 
         # derivative of 0D residual w.r.t. fluid velocities
-        K_sv = PETSc.Mat().createAIJ(size=((self.K_lm.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_sv = PETSc.Mat().createAIJ(size=((K_lm.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_sv.setUp()
 
         # set rows
@@ -427,6 +433,8 @@ class FluidmechanicsFlow0DSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
         
+        self.pb.set_problem_residual_jacobian_forms()
+        
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
@@ -438,10 +446,10 @@ class FluidmechanicsFlow0DSolver(solver_base):
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.power_coupling_old
             
-            jac_a = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
+            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbf.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.pbf.a_old)
 
 
     def solve_nonlinear_problem(self, t):

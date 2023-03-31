@@ -81,7 +81,7 @@ class SolidmechanicsFlow0DProblem():
         if self.pbs.problem_type == 'solid_flow0d_multiscale_gandr': self.have_multiscale_gandr = True
         else: self.have_multiscale_gandr = False
 
-        self.set_variational_forms_and_jacobians()
+        self.set_variational_forms()
         
         self.numdof = self.pbs.numdof + self.pb0.numdof
         # solid is 'master' problem - define problem variables based on its values
@@ -119,19 +119,15 @@ class SolidmechanicsFlow0DProblem():
 
         
     # defines the monolithic coupling forms for 0D flow and solid mechanics
-    def set_variational_forms_and_jacobians(self):
+    def set_variational_forms(self):
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old = [], []
         
         if self.coupling_type == 'monolithic_lagrange':
-            
-            # Lagrange multiplier stiffness matrix (currently treated with FD!)
-            self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
-            self.K_lm.setUp()
 
             # Lagrange multipliers
-            self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
+            self.lm, self.lm_old = PETSc.Vec().createMPI(size=self.num_coupling_surf), PETSc.Vec().createMPI(size=self.num_coupling_surf)
             
             # 3D fluxes
             self.constr, self.constr_old = [], []
@@ -189,16 +185,13 @@ class SolidmechanicsFlow0DProblem():
                 if self.pbs.prestress_initial:
                     self.work_coupling_prestr += self.pbs.vf.deltaW_ext_neumann_normal_ref(self.coupfuncs_old[-1], ds_p)
             
-            self.dforce.append(df_)
+            self.dforce.append(fem.form(df_))
         
         # minus sign, since contribution to external work!
         self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
         
         # add to solid Jacobian
-        self.pbs.jac_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
-
-        # for naming/access convention in solver... TODO: should go away after solver restructuring!
-        self.jac_uu = self.pbs.jac_uu
+        self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
         if self.coupling_type == 'monolithic_lagrange':
             # old Lagrange multipliers - initialize with initial pressures
@@ -269,6 +262,17 @@ class SolidmechanicsFlow0DProblem():
             self.pb0.s_set.axpby(1.0, 0.0, self.pb0.s)
 
 
+    def set_problem_residual_jacobian_forms(self):
+
+        self.pbs.res_u = fem.form(self.pbs.weakform_u)
+        self.pbs.jac_uu = fem.form(self.pbs.weakform_lin_uu)
+        
+        if self.incompressible_2field:
+            self.pbs.res_p = fem.form(self.pbs.weakform_p)
+            self.pbs.jac_up = fem.form(self.pbs.weakform_lin_up)
+            self.pbs.jac_pu = fem.form(self.pbs.weakform_lin_pu)
+
+
     def set_forms_solver(self):
         pass
 
@@ -336,7 +340,7 @@ class SolidmechanicsFlow0DProblem():
             ls, le = self.lm.getOwnershipRange()
         
             # Lagrange multiplier coupling residual
-            r_lm = self.K_lm.createVecLeft()
+            r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
             for i in range(ls,le):
                 r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
             
@@ -359,6 +363,10 @@ class SolidmechanicsFlow0DProblem():
             s_tmp = self.pb0.K.createVecLeft()
             s_tmp.axpby(1.0, 0.0, self.pb0.s)
 
+            # Lagrange multiplier stiffness matrix (currently treated with FD!)
+            K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
+            K_lm.setUp()
+
             # finite differencing for LM siffness matrix
             for i in range(self.num_coupling_surf):
                 for j in range(self.num_coupling_surf):
@@ -366,7 +374,7 @@ class SolidmechanicsFlow0DProblem():
                     self.pb0.c[j] = lm_sq[j] + self.eps_fd # perturbed LM
                     subsolver.newton(t, print_iter=False)
                     s_pert_sq = allgather_vec(self.pb0.s, self.comm)
-                    self.K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                    K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
                     self.pb0.c[j] = lm_sq[j] # restore LM
 
             # restore df, f, and aux vectors for correct time step update
@@ -376,15 +384,15 @@ class SolidmechanicsFlow0DProblem():
             # restore 0D state variable
             self.pb0.s.axpby(1.0, 0.0, s_tmp)
             
-            self.K_lm.assemble()
+            K_lm.assemble()
             
-            K_list[1+off][1+off] = self.K_lm
+            K_list[1+off][1+off] = K_lm
         
             # rows and columns for offdiagonal matrices
             row_ids = list(range(self.num_coupling_surf))
             col_ids = list(range(self.num_coupling_surf))
             
-            K_constr = self.K_lm
+            K_constr = K_lm
 
         if self.coupling_type == 'monolithic_direct':
             # rows and columns for offdiagonal matrices
@@ -396,7 +404,7 @@ class SolidmechanicsFlow0DProblem():
         # offdiagonal u-s columns
         k_us_cols=[]
         for i in range(len(col_ids)):
-            k_us_cols.append(fem.petsc.assemble_vector(fem.form(self.dforce[i]))) # already multiplied by time-integration factor
+            k_us_cols.append(fem.petsc.assemble_vector(self.dforce[i])) # already multiplied by time-integration factor
     
         # offdiagonal s-u rows
         k_su_rows=[]
@@ -412,7 +420,7 @@ class SolidmechanicsFlow0DProblem():
         # apply displacement dbcs to matrix entries k_us - basically since these are offdiagonal we want a zero there!
         for i in range(len(col_ids)):
             
-            fem.apply_lifting(k_us_cols[i], [fem.form(self.pbs.jac_uu)], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            fem.apply_lifting(k_us_cols[i], [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
             k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(k_us_cols[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
         
@@ -605,6 +613,8 @@ class SolidmechanicsFlow0DSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
+        self.pb.set_problem_residual_jacobian_forms()
+
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
@@ -632,10 +642,10 @@ class SolidmechanicsFlow0DSolver(solver_base):
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
             
-            jac_a = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
+            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbs.a_old)
+            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.pbs.a_old)
 
 
     def solve_nonlinear_problem(self, t):

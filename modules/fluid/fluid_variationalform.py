@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
+from mathutils import get_eigenval_eigenvec
 
 # fluid mechanics variational forms class
 # Principle of Virtual Power
@@ -75,7 +76,7 @@ class variationalform:
     
     # Neumann load (Cauchy traction)
     # TeX: \int\limits_{\Gamma} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{v} \,\mathrm{d}a
-    def deltaW_ext_neumann(self, func, dboundary, Fale=None):
+    def deltaW_ext_neumann_cur(self, func, dboundary, Fale=None):
 
         return ufl.dot(func, self.var_v)*dboundary
 
@@ -113,30 +114,38 @@ class variationalform:
         
         # wall thickness
         h0 = params['h0']
-        
+
+        # only components in normal direction (F_nn, F_t1n, F_t2n)
+        Fn = F*n0n0
+        Fdotn = Fdot*n0n0
+        # rank-deficient deformation gradient and Cauchy-Green tensor (phased-out normal components)
+        F0 = F - Fn
+        C0 = F0.T*F0
+        # plane strain deformation tensor where deformation is "1" in normal direction
+        Cplane = C0 + n0n0
+        # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
+        IIIplane = ufl.det(Cplane)
+        # deformation tensor where normal stretch is dependent on in-plane stretches
+        Cmod = C0 + (1./IIIplane) * n0n0
+        # rates of deformation: in-plane time derivatives of deformation gradient and Cauchy-Green tensor
+        Fdotmod = Fdot - Fdotn
+        Cplanedot = Fdotmod.T*F0 + F0.T*Fdotmod
+        # Jacobi's formula: d(detA)/dt = detA * tr(A^-1 * dA/dt)
+        IIIplanedot = IIIplane * ufl.tr(ufl.inv(Cplane) * Cplanedot)
+        # time derivative of Cmod
+        Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
+
         if model=='membrane_f':
-            # only components in normal direction (F_nn, F_t1n, F_t2n)
-            Fn = F*n0n0
-            Fdotn = Fdot*n0n0
-            # rank-deficient deformation gradient and Cauchy-Green tensor (phased-out normal components)
-            F0 = F - Fn
-            C0 = F0.T*F0
-            # plane strain deformation tensor where deformation is "1" in normal direction
-            Cplane = C0 + n0n0
-            # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
-            IIIplane = ufl.det(Cplane)
-            # deformation tensor where normal stretch is dependent on in-plane stretches
-            Cmod = C0 + (1./IIIplane) * n0n0
-            # rates of deformation: in-plane time derivatives of deformation gradient and Cauchy-Green tensor
-            Fdotmod = Fdot - Fdotn
-            Cplanedot = Fdotmod.T*F0 + F0.T*Fdotmod
-            # Jacobi's formula: d(detA)/dt = detA * tr(A^-1 * dA/dt)
-            IIIplanedot = IIIplane * ufl.tr(ufl.inv(Cplane) * Cplanedot)
-            # time derivative of Cmod
-            Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
-            # TODO: Need to recover an Fmod corresponding to Cmod!
-            # Can this be done in ufl? See e.g. https://fenicsproject.org/qa/13600/possible-perform-spectral-decomposition-current-operators
             Fmod = F
+        elif model=='membrane':
+            # get eigenvalues and eigenvectors of C
+            evalC, evecC = get_eigenval_eigenvec(C)
+            U = ufl.sqrt(evalC[0])*ufl.outer(evecC[0],evecC[0]) + ufl.sqrt(evalC[1])*ufl.outer(evecC[1],evecC[1]) + ufl.sqrt(evalC[2])*ufl.outer(evecC[2],evecC[2])
+            R = F*ufl.inv(U)
+            # get eigenvalues and eigenvectors of modified C
+            evalCmod, evecCmod = get_eigenval_eigenvec(Cmod)
+            Umod = ufl.sqrt(evalCmod[0])*ufl.outer(evecCmod[0],evecCmod[0]) + ufl.sqrt(evalCmod[1])*ufl.outer(evecCmod[1],evecCmod[1]) + ufl.sqrt(evalCmod[2])*ufl.outer(evecCmod[2],evecCmod[2])
+            Fmod = R*Umod
         else:
             raise NameError("Unkown membrane model type!")
         
@@ -178,7 +187,7 @@ class variationalform:
         var_F = ufl.grad(self.var_v) - ufl.dot(ufl.grad(self.var_v),n0n0)
 
         # boundary inner virtual power
-        dPb_int = h0*ufl.inner(P,var_F)*dboundary
+        dPb_int = (h0*ufl.inner(P,var_F))*dboundary
 
         # boundary kinetic virtual power
         if not isinstance(a, ufl.constantvalue.Zero):
@@ -203,7 +212,13 @@ class variationalform:
 # ALE fluid mechanics variational forms class (cf. https://w3.onera.fr/erc-aeroflex/project/strategies-for-coupling-the-fluid-and-solid-dynamics)
 # Principle of Virtual Power
 # TeX: \delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
-# all integrals transform according to \int\limits_{\Omega} (\bullet)\,\mathrm{d}v = \int\limits_{\Omega_0} J(\bullet)\,\mathrm{d}V
+# all infinitesimal volume elements transform according to
+# \mathrm{d}v = J\,\mathrm{d}V
+# a normal vector times surface element transforms according to Nanson's formula:
+# \boldsymbol{n}\,\mathrm{d}a = J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
+# hence, all infinitesimal surface elements transform according to
+# \mathrm{d}a = J\sqrt{\boldsymbol{n}_0 \cdot (\boldsymbol{F}^{-1}\boldsymbol{F}^{-\mathrm{T}})\boldsymbol{n}_0}\,\mathrm{d}A
+
 class variationalform_ale(variationalform):
     
     ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
@@ -218,7 +233,7 @@ class variationalform_ale(variationalform):
             # TeX:
             # \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v = 
             # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
-            return J*rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v)*ddomain
+            return rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v) * J*ddomain
         
         elif self.formulation=='conservative':
             # conservative form for ALE Navier-Stokes
@@ -228,7 +243,7 @@ class variationalform_ale(variationalform):
 
             # note that we have div(v o (v-w)) = (grad v) (v-w) + v (div (v-w)) (Holzapfel eq. (1.292))
             # then use Holzapfel eq. (2.56)
-            return J*rho*ufl.dot(a + ufl.as_tensor(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v)*ddomain
+            return rho*ufl.dot(a + ufl.as_tensor(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
         
         else:
             raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
@@ -240,7 +255,7 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Omega_0}J\boldsymbol{\sigma} : \boldsymbol{\nabla}_{0}(\delta\boldsymbol{v})\boldsymbol{F}^{-1}\,\mathrm{d}V (Holzapfel eq. (8.43))
     def deltaW_int(self, sig, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return ufl.inner(J*sig, ufl.grad(self.var_v)*ufl.inv(Fale))*ddomain
+        return ufl.inner(sig, ufl.grad(self.var_v)*ufl.inv(Fale)) * J*ddomain
 
     # TeX:
     # \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v = 
@@ -248,14 +263,28 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Omega_0}J\,\boldsymbol{\nabla}_0\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}}\,\delta p\,\mathrm{d}V (cf. Holzapfel eq. (2.56))
     def deltaW_int_pres(self, v, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return J*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p*ddomain
+        return ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p * J*ddomain
     
-    # TeX: Nitsche DBC currently only with Robin term! TODO: Add stress term!
-    def deltaW_int_nitsche_dirichlet(self, v, vD, varv, beta, dboundary, Fale=None):
+    # Robin term for weak imposition of Dirichlet condition
+    # TeX:
+    # \int\limits_{\Gamma} \beta\,(\boldsymbol{v}-\boldsymbol{v}_{\mathrm{D}})\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
+    # \int\limits_{\Gamma_0} J\beta\,(\boldsymbol{v}-\boldsymbol{v}_{\mathrm{D}})\cdot\delta\boldsymbol{v}\sqrt{\boldsymbol{n}_0 \cdot (\boldsymbol{F}^{-1}\boldsymbol{F}^{-\mathrm{T}})\boldsymbol{n}_0}\,\mathrm{d}A
+    def deltaW_int_robin_cur(self, v, vD, beta, dboundary, Fale=None, fcts=None):
         J = ufl.det(Fale)
-        return J*beta*ufl.dot((v-vD), varv)*dboundary
+        if fcts is None:
+            return beta*ufl.dot((v-vD), self.var_v) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.n0))*dboundary
+        else:
+            return (beta*ufl.dot((v-vD), self.var_v) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.n0)))(fcts)*dboundary
     
     ### External virtual power \delta \mathcal{P}_{\mathrm{ext}}
+    
+    # Neumann load (Cauchy traction)
+    # TeX:
+    # \int\limits_{\Gamma} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{v} \,\mathrm{d}a = 
+    # \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}} \cdot \delta\boldsymbol{v} \,\mathrm{d}A
+    def deltaW_ext_neumann_cur(self, func, dboundary, Fale=None):
+        J = ufl.det(Fale)
+        return J*ufl.dot(ufl.inv(Fale).T*func, self.var_v)*dboundary
     
     # Neumann load in current normal direction (Cauchy traction)
     # TeX: \int\limits_{\Gamma} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
@@ -267,21 +296,16 @@ class variationalform_ale(variationalform):
     # Robin condition (dashpot)
     # TeX:
     # \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
-    # \int\limits_{\Gamma_0} J c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
+    # \int\limits_{\Gamma_0} J c\,\boldsymbol{v}\cdot\delta\boldsymbol{v} \sqrt{\boldsymbol{n}_0 \cdot (\boldsymbol{F}^{-1}\boldsymbol{F}^{-\mathrm{T}})\boldsymbol{n}_0}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot(self, v, c, dboundary, Fale=None):
         J = ufl.det(Fale)
-        return -c*(J*ufl.dot(v, self.var_v)*dboundary)
+        return -c*(ufl.dot(v, self.var_v) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.n0))*dboundary)
     
     # Robin condition (dashpot) in normal direction
-    # TeX:
-    # \int\limits_{\Gamma} c\,(\boldsymbol{n}\otimes \boldsymbol{n})\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
-    # \int\limits_{\Gamma} c\,(\boldsymbol{v}\cdot \boldsymbol{n})\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
-    # \int\limits_{\Gamma_0} J c\,(\boldsymbol{v}\cdot \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n})\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot_normal_cur(self, v, c_n, dboundary, Fale=None):
-        J = ufl.det(Fale)
-        return -c_n*(J*ufl.dot(v, ufl.inv(Fale).T*self.n0)*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary)
-    
-    
+        raise ValueError("Robin condition in current normal direction not implemented")
+        
+
     ### Flux coupling conditions
 
     # flux

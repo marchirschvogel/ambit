@@ -192,7 +192,7 @@ class solver_nonlinear:
         
 
     # solve for consistent initial acceleration a_old
-    def solve_consistent_ini_acc(self, weakform_old, jac_a, a_old):
+    def solve_consistent_ini_acc(self, weakform_old, weakform_lin_old, a_old):
 
         # create solver
         ksp = PETSc.KSP().create(self.pb.comm)
@@ -209,7 +209,7 @@ class solver_nonlinear:
             raise NameError("Unknown solvetype!")
             
         # solve for consistent initial acceleration a_old
-        M_a = fem.petsc.assemble_matrix(fem.form(jac_a), [])
+        M_a = fem.petsc.assemble_matrix(fem.form(weakform_lin_old), [])
         M_a.assemble()
         
         r_a = fem.petsc.assemble_vector(fem.form(weakform_old))
@@ -275,15 +275,15 @@ class solver_nonlinear:
             r_list, K_list = self.pb.assemble_residual_stiffness(t, subsolver=self.subsol)
 
             if self.PTC:
-                # computes K_uu + k_PTC * I
+                # computes K_00 + k_PTC * I
                 K_list[0][0].shift(k_PTC)
 
             # model order reduction stuff - currently only on first mat in system...
             if self.pb.have_rom:
                 
                 # projection of main block: system matrix, residual, and increment
-                tmp = K_list[0][0].matMult(self.pb.rom.V) # K_uu * V
-                K_list[0][0] = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_uu * V
+                tmp = K_list[0][0].matMult(self.pb.rom.V) # K_00 * V
+                K_list[0][0] = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_00 * V
                 r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
                 self.pb.rom.V.multTranspose(r_list[0], r_u_) # V^T * r_u
                 # deal with penalties that may be added to reduced residual to penalize certain modes
@@ -293,7 +293,7 @@ class solver_nonlinear:
                     penterm_ = self.pb.rom.V.createVecRight()
                     self.pb.rom.Cpen.mult(u_, penterm_) # Cpen * V^T * u
                     r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
-                    K_list[0][0].aypx(1.0, self.pb.rom.CpenVTV) # K_uu + Cpen * V^T * V
+                    K_list[0][0].aypx(1.0, self.pb.rom.CpenVTV) # K_00 + Cpen * V^T * V
                 r_list[0], del_x[0] = r_u_, del_u_
                 # now the offdiagonal blocks
                 if self.nfields > 1:
@@ -404,13 +404,25 @@ class solver_nonlinear:
 
             self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
             
+            # destroy PETSc stuff...
+            if self.nfields > 1:
+                r_full.destroy(), r_full_nest.destroy()
+                K_full.destroy(), K_full_nest.destroy()
+                del_full.destroy()
+            if self.pb.have_rom:
+                r_u_.destroy(), del_u_.destroy(), tmp.destroy()
+            for n in range(self.nfields):
+                r_list[n].destroy()
+                for m in range(self.nfields):
+                    if K_list[n][m] is not None: K_list[n][m].destroy()
+            
             it += 1
             
             # for PTC - only applied to first main block so far...
             if self.PTC and it > 1 and res_norm_main_last > 0.: k_PTC *= resnorms['res1']/res_norm_main_last
             res_norm_main_last = resnorms['res1']
             
-            # adaptive PTC (for 3D block K_uu only!)
+            # adaptive PTC (for 3D block K_00 only!)
             if self.divcont=='PTC':
                 
                 self.maxiter = 250
@@ -428,6 +440,10 @@ class solver_nonlinear:
             # check if converged
             converged = self.solutils.check_converged(resnorms,incnorms,self.tolerances)
             if converged:
+                # destroy PETSc vectors
+                for n in range(self.nfields):
+                    del_x[n].destroy(), x_start[n].destroy()
+                # reset to normal Newton if PTC was used in a divcont action
                 if self.divcont=='PTC':
                     self.PTC = False
                     counter_adapt = 0

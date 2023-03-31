@@ -44,7 +44,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
         self.pba  = AleProblem(io_params, time_params_fluid, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
-        alevariables = {'Fale' : self.pba.ki.F(self.pba.u), 'Fale_old' : self.pba.ki.F(self.pba.u_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
+        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
         self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, alevar=alevariables)
 
         self.pbf = self.pbf0.pbf
@@ -65,7 +65,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         # errors occur. Therefore, we define these auxiliary variables and interpolate respectively...
 
         # fluid displacement, but defined within ALE function space
-        self.ufa = fem.Function(self.pba.V_u)
+        self.ufa = fem.Function(self.pba.V_d)
         # ALE velocity, but defined within fluid function space
         self.wf = fem.Function(self.pbf.V_v)
 
@@ -86,7 +86,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
     def get_problem_var_list(self):
         
         is_ghosted = [True, True, True, False]
-        return [self.pbf0.pbf.v.vector, self.pbf0.pbf.p.vector, self.pba.u.vector, self.pbf0.lm], is_ghosted
+        return [self.pbf0.pbf.v.vector, self.pbf0.pbf.p.vector, self.pba.d.vector, self.pbf0.lm], is_ghosted
         
 
     def set_forms_solver(self):
@@ -116,7 +116,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         if bool(self.coupling_ale_fluid):
             if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
                 #we need a vector representation of w to apply in fluid DBCs
-                w_vec = self.pba.ti.update_w_ost(self.pba.u.vector, self.pba.u_old.vector, self.pba.w_old.vector, ufl=False)
+                w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
                 self.wf.vector.axpby(1.0, 0.0, w_vec)
                 self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
@@ -138,12 +138,12 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         K_list[3][3] = K_list_fluidflow0d[2][2]
         
         # derivative of fluid momentum w.r.t. ALE displacement
-        K_vu = fem.petsc.assemble_matrix(fem.form(self.jac_vu), self.pbf.bc.dbcs)
+        K_vu = fem.petsc.assemble_matrix(self.jac_vd, self.pbf.bc.dbcs)
         K_vu.assemble()
         K_list[0][2] = K_vu
         
         # derivative of fluid continuity w.r.t. ALE velocity
-        K_pu = fem.petsc.assemble_matrix(fem.form(self.jac_pu), [])
+        K_pu = fem.petsc.assemble_matrix(self.jac_pd, [])
         K_pu.assemble()
         K_list[1][2] = K_pu
         
