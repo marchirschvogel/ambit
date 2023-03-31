@@ -35,10 +35,15 @@ def get_eigenval_eigenvec(T, tol=1e-8):
     lambda1 = (1./3.)*(ufl.sqrt(p)*2.*ufl.cos(phi)+I1)
     lambda2 = (1./3.)*(-ufl.sqrt(p)*(ufl.cos(phi)+ufl.sqrt(3.)*ufl.sin(phi))+I1)
     lambda3 = (1./3.)*(-ufl.sqrt(p)*(ufl.cos(phi)-ufl.sqrt(3.)*ufl.sin(phi))+I1)
-    
+
     # eigenvectors: eq. 39 of Kopp (2008):
     v1 = ufl.cross(T[:,1] - lambda1 * ufl.as_vector([1.,0.,0.]), T[:,2] - lambda1 * ufl.as_vector([0.,1.,0.]))
     v2 = ufl.cross(T[:,1] - lambda2 * ufl.as_vector([1.,0.,0.]), T[:,2] - lambda2 * ufl.as_vector([0.,1.,0.]))
     v3 = ufl.cross(v1,v2)
-    
+
+    # normalize eigenvectors
+    v1 /= ufl.sqrt(ufl.dot(v1,v1))
+    v2 /= ufl.sqrt(ufl.dot(v2,v2))
+    v3 /= ufl.sqrt(ufl.dot(v3,v3))
+
     return [lambda1,lambda2,lambda3], [v1,v2,v3]
