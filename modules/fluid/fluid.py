@@ -91,19 +91,19 @@ class FluidmechanicsProblem(problem_base):
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
-            #if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 3:
-                #raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
+            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 3:
+                raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
             dg_type = "DQ"
-            #if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 5:
-                #raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
+            if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 5:
+                raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
         else:
             raise NameError("Unknown cell/element type!")
 
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
-        #if self.order_vel == self.order_pres:
-            #raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
+        if self.order_vel == self.order_pres:
+            raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
 
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']

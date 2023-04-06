@@ -24,10 +24,10 @@ def main():
     IO_PARAMS         = {'problem_type'          : 'solid',
                          'mesh_domain'           : basepath+'/input/blockshex_domain.xdmf',
                          'mesh_boundary'         : basepath+'/input/blockshex_boundary.xdmf',
-                         'fiber_data'            : {'nodal' : [basepath+'/input/fib1_blockshex.txt',basepath+'/input/fib2_blockshex.txt']},
+                         'fiber_data'            : [np.array([1.0,0.0,0.0]),np.array([0.0,1.0,0.0])],
                          'write_results_every'   : 1,
                          'output_path'           : basepath+'/tmp/',
-                         'results_to_write'      : ['displacement','cauchystress','vonmises_cauchystress','pk1stress','pk2stress','glstrain','eastrain','jacobian','fiber1','fiber2'],
+                         'results_to_write'      : ['displacement','cauchystress','vonmises_cauchystress','pk1stress','pk2stress','glstrain','eastrain','jacobian','fibers'],
                          'simname'               : 'solid_mat_uniax_hex_2field'}
 
     SOLVER_PARAMS     = {'solve_type'            : 'direct',

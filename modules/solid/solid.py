@@ -293,9 +293,12 @@ class SolidmechanicsProblem(problem_base):
             fibarray = ['fiber']
             if have_fiber2: fibarray.append('sheet')
 
-            # fiber function space - vector defined on quadrature points
-            V_fib = self.Vd_vector # self.V_u
-            self.fib_func = self.io.readin_fibers(fibarray, V_fib, self.dx_)
+            self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.dx_)
+
+            if 'fibers' in self.results_to_write:
+                for i in range(len(fibarray)):
+                    fib_proj = project(self.fib_func[i], self.V_u, self.dx_, nm='Fiber'+str(i+1))
+                    self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
 
         else:
             self.fib_func = None

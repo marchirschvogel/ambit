@@ -54,17 +54,16 @@ def main():
                             'fluid_formulation'     : 'nonconservative',
                             'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt'}
     
-    COUPLING_PARAMS      = {'coupling_fluid_ale'    : {'surface_ids' : [1], 'type' : 'strong_dirichlet', 'beta' : 1e6}, # strong_dirichlet (default), robin
-                            'fluid_on_deformed'     : 'consistent'} # 'consistent', 'from_last_step', 'mesh_move'
+    COUPLING_PARAMS      = {'coupling_fluid_ale'    : {'surface_ids' : [1], 'type' : 'strong_dirichlet'},
+                            'fluid_on_deformed'     : 'consistent'}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'eta' : 4.0e-6},
-                                      'inertia' : {'rho' : 1.025e-6}} }
+                                       'inertia'   : {'rho' : 1.025e-6}} }
 
     MATERIALS_ALE        = { 'MAT1' : {'linelast' : {'Emod' : 10.0, 'kappa' : 100.}} }
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    # some examples... up to 9 possible (tc1 until tc9 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves():
         
         def tc1(self, t):
@@ -73,11 +72,6 @@ def main():
             pinfl = 10.0
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
-        def tc2(self, t): # prestress
-            t_ramp = 2.0
-            ppre = 0.3
-            return 0.5*(-ppre)*(1.-np.cos(np.pi*t/t_ramp)) * (t<t_ramp) + (-ppre)*(t>=t_ramp)
-
 
     BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
                                             {'id' : [4], 'dir' : 'y', 'val' : 0.},
@@ -85,7 +79,6 @@ def main():
 
     BC_DICT_FLUID        = { 'membrane' :  [{'id' : [1], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : 0.1}}],
                              'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
-                             'neumann_prestress' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 2}],
                              'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}]}
 

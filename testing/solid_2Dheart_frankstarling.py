@@ -21,7 +21,7 @@ def main():
     IO_PARAMS            = {'problem_type'          : 'solid',
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
-                            'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_2D.txt']},
+                            'fiber_data'            : [basepath+'/input/fib_fiber_coords_nodal_2D.txt'],
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement','pressure','fiberstretch'],
@@ -104,8 +104,8 @@ def main():
     u_corr = np.zeros(3*len(check_node))
 
     ## correct results
-    u_corr[0] = 4.9482773318905533E+00 # x
-    u_corr[1] = 2.4915248104317373E+00 # y
+    u_corr[0] = 4.8618566665479603E+00 # x
+    u_corr[1] = 2.4742500989247733E+00 # y
     u_corr[2] = 0.0 # z
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')

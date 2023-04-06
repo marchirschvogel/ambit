@@ -14,6 +14,7 @@ import ufl
 
 from projection import project
 from mpiroutines import allgather_vec
+import expression
 
 
 class IO:
@@ -27,7 +28,7 @@ class IO:
         self.mesh_boundary = io_params['mesh_boundary']
         
         try: self.fiber_data = io_params['fiber_data']
-        except: self.fiber_data = {}
+        except: self.fiber_data = []
         
         try: self.write_restart_every = io_params['write_restart_every']
         except: self.write_restart_every = -1
@@ -40,6 +41,10 @@ class IO:
 
         try: self.gridname_boundary = io_params['gridname_boundary']
         except: self.gridname_boundary = 'Grid'
+        
+        # readin tolerance for own read function that uses coordinate values to properly read in a field
+        try: self.readin_tol = io_params['readin_tol']
+        except: self.readin_tol = 1.0e-8
         
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
@@ -130,6 +135,13 @@ class IO:
             self.writecheckpoint(pb, N)
 
 
+    def set_func_const(self, func, array):
+        
+        load = expression.template_vector()
+        load.val_x, load.val_y, load.val_z = array[0], array[1], array[2]
+        func.interpolate(load.evaluate)
+
+
     def readfunction(self, f, V, datafile, normalize=False, tol=1.0e-8):
         
         # block size of vector
@@ -181,40 +193,23 @@ class IO:
 
 class IO_solid(IO):
 
-    # read in fibers defined at nodes (nodal fiber and coordiante files have to be present)
+    # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
     def readin_fibers(self, fibarray, V_fib, dx_):
-
-        # V_fib_input is function space the fiber vector is defined on (only CG1 or DG0 supported, add further depending on your input...)
-        if list(self.fiber_data.keys())[0] == 'nodal':
-            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", 1))
-        elif list(self.fiber_data.keys())[0] == 'elemental':
-            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("DG", 0))
-        else:
-            raise AttributeError("Specify 'nodal' or 'elemental' for the fiber data input!")
-
-        try: readin_tol = self.fiber_data['readin_tol']
-        except: readin_tol = 1.0e-8
         
-        fib_func = []
-        fib_func_input = []
+        fib_func, fib_func_disc = [], []
 
         si = 0
         for s in fibarray:
             
-            fib_func_input.append(fem.Function(V_fib_input, name='Fiber'+str(si+1)+'_input'))
-            
-            self.readfunction(fib_func_input[si], V_fib_input, list(self.fiber_data.values())[0][si], normalize=True, tol=readin_tol)
-            
-            # project to output fiber function space
-            ff = project(fib_func_input[si], V_fib, dx_, bcs=[], nm='fib_'+s)
+            fib_func.append(fem.Function(V_fib, name='Fiber'+str(si+1)))
 
-            # assure that projected field still has unit length (not always necessarily the case)
-            fib_func.append(ff / ufl.sqrt(ufl.dot(ff,ff)))
+            if isinstance(self.fiber_data[si], str):
+                self.readfunction(fib_func[si], V_fib, self.fiber_data[si], normalize=True, tol=self.readin_tol)
+            else: # assume a constant-in-space list or array
+                self.set_func_const(fib_func[si], self.fiber_data[si])
 
-            ## write input fiber field for checking...
-            #outfile = io.XDMFFile(self.comm, self.output_path+'/fiber'+str(si+1)+'_inputNEW.xdmf', 'w')
-            #outfile.write_mesh(self.mesh)
-            #outfile.write_function(fib_func_input[si])
+            # assert that field is actually always normalized!
+            fib_func[si] /= ufl.sqrt(ufl.dot(fib_func[si],fib_func[si]))
 
             si+=1
 
@@ -325,12 +320,9 @@ class IO_solid(IO):
                         self.resultsfiles[res].write_function(phiremod, t)
                     elif res=='tau_a':
                         self.resultsfiles[res].write_function(pb.tau_a, t)
-                    elif res=='fiber1':
-                        fiber1 = project(pb.fib_func[0], pb.Vd_vector, pb.dx_, nm="Fiber1")
-                        self.resultsfiles[res].write_function(fiber1, t)
-                    elif res=='fiber2':
-                        fiber2 = project(pb.fib_func[1], pb.Vd_vector, pb.dx_, nm="Fiber2")
-                        self.resultsfiles[res].write_function(fiber2, t)
+                    elif res=='fibers':
+                        # written only once at the beginning, not after each time step (since constant in time)
+                        pass
                     else:
                         raise NameError("Unknown output to write for solid mechanics!")
 

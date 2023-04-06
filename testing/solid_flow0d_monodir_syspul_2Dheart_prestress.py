@@ -27,7 +27,7 @@ def main():
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d',
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
-                            'fiber_data'            : {'nodal' : [basepath+'/input/fib_fiber_coords_nodal_2D.txt',basepath+'/input/fib_sheet_coords_nodal_2D.txt']},
+                            'fiber_data'            : [basepath+'/input/fib_fiber_coords_nodal_2D.txt',basepath+'/input/fib_sheet_coords_nodal_2D.txt'],
                             'write_results_every'   : 1,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement'],
@@ -127,24 +127,24 @@ def main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = -2.0562262199494176E-02
-    s_corr[1] = 3.9870496492787205E-01
-    s_corr[2] = -1.0270303505192462E+00
-    s_corr[3] = 6.0432758755946026E-01
-    s_corr[4] = 1.0874631092751919E+01
-    s_corr[5] = -7.2239293113424006E+04
-    s_corr[6] = 1.0874643586545181E+01
-    s_corr[7] = 7.1802421963091751E+04
-    s_corr[8] = 2.2872621884286861E+00
-    s_corr[9] = 8.4721618474559902E+04
-    s_corr[10] = -1.0756389813024281E-02
-    s_corr[11] = 2.5394334503925192E-01
-    s_corr[12] = -1.8506443357170146E-01
-    s_corr[13] = 3.6150724258741812E-01
-    s_corr[14] = 2.2121515783044319E+00
-    s_corr[15] = 3.5710856529204415E+04
-    s_corr[16] = 1.6764887303663674E+00
-    s_corr[17] = 8.5185584362566486E+04
+    s_corr[0] = -2.0609392507033138E-02
+    s_corr[1] = 3.9870472166300924E-01
+    s_corr[2] = -1.0269832445372131E+00
+    s_corr[3] = 6.0479864766102520E-01
+    s_corr[4] = 1.0874631093033155E+01
+    s_corr[5] = -7.2239293066318016E+04
+    s_corr[6] = 1.0874643586543776E+01
+    s_corr[7] = 7.1802421959996922E+04
+    s_corr[8] = 2.2872621896811238E+00
+    s_corr[9] = 8.4721436364024717E+04
+    s_corr[10] = -1.0736412732508079E-02
+    s_corr[11] = 2.5394771694453383E-01
+    s_corr[12] = -1.8508397343866737E-01
+    s_corr[13] = 3.6131184390581672E-01
+    s_corr[14] = 2.2121515782924912E+00
+    s_corr[15] = 3.5710856656459517E+04
+    s_corr[16] = 1.6764887284455989E+00
+    s_corr[17] = 8.5185600452172759E+04
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)

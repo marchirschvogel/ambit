@@ -17,7 +17,7 @@ def main():
                             'mesh_domain'           : basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
-                            'fiber_data'            : {'nodal' : [basepath+'/file1.txt',basepath+'/file2.txt'], 'readin_tol' : 1.0e-8}, # OPTIONAL: only for anisotropic solid materials - nodal: fiber input data is stored at node coordinates, elemental: fiber input data is stored at element center; readin_tol - tolerance for readin (OPTIONAL: default is 1.0e-8, but depending on units, should be adapted)
+                            'fiber_data'            : [basepath+'/file1.txt',basepath+'/file2.txt'], # OPTIONAL: only for anisotropic solid materials
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
                             'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (default: -1)
@@ -26,7 +26,8 @@ def main():
                             'output_path_0D'        : basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
-                            'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
+                            'restart_step'          : 0, # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
+                            'readin_tol'            : 1.0e-8} # OPTIONAL: read-in tolerance for own read-in function that uses node coordinates (default: 1.0e-8)
 
     # for all problem types
     SOLVER_PARAMS         = {'solve_type'            : 'direct', # direct, iterative
