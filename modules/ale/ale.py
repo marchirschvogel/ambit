@@ -127,13 +127,13 @@ class AleProblem(problem_base):
         self.vf = ale_variationalform.variationalform(self.var_d, self.io.n0)
 
         # initialize boundary condition class - same as solid
-        self.bc = boundaryconditions.boundary_cond_solid(bc_dict, fem_params, self.io, self.vf, self.ti)
+        self.bc = boundaryconditions.boundary_cond_solid(fem_params, self.io, self.vf, self.ti)
         
         self.bc_dict = bc_dict
 
         # Dirichlet boundary conditions
         if 'dirichlet' in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.V_d)
+            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_d)
 
         self.set_variational_forms()
             
@@ -160,11 +160,9 @@ class AleProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_robin = ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.V_d, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
         if 'robin' in self.bc_dict.keys():
-            w_robin = self.bc.robin_bcs(self.d, self.wel)
-        if 'dirichlet_weak' in self.bc_dict.keys():
-            raise RuntimeError("Cannot use weak Dirichlet BCs for ALE mechanics currently!")
+            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel)
 
         self.deltaW_ext = w_neumann + w_robin
         
@@ -177,10 +175,6 @@ class AleProblem(problem_base):
         
         self.res_d = fem.form(self.weakform_d)
         self.jac_dd = fem.form(self.weakform_lin_dd)
-
-
-    def set_forms_solver(self):
-        pass
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -231,7 +225,7 @@ class AleProblem(problem_base):
     def evaluate_pre_solve(self, t):
 
         # set time-dependent functions
-        self.ti.set_time_funcs(self.ti.funcs_to_update, self.ti.funcs_to_update_vec, t)
+        self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
             
             
     def evaluate_post_solve(self, t, N):
@@ -249,7 +243,7 @@ class AleProblem(problem_base):
             
     def update(self):
         
-        self.ti.update_timestep(self.d, self.d_old, self.w_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old)
+        self.ti.update_timestep(self.d, self.d_old, self.w_old)
 
 
     def print_to_screen(self):

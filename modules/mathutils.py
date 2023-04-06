@@ -8,42 +8,47 @@
 
 import ufl
 
-def get_eigenval_eigenvec(T, tol=1e-8):
-    # analytical calulation of eigenvalues and eigenvectors for 2nd order (3x3) tensor
-    # cf. Koop (2008), "Efficient numerical diagonalization of hermitian 3 x 3 matrices"
+def spectral_decomposition_3x3(A):
+    """Eigenvalues and eigenprojectors of the 3x3 (real-valued) tensor A.
+    Provides the spectral decomposition A = sum_{a=0}^{3} lambda_a * E_a
+    with eigenvalues lambda_a and their associated eigenprojectors E_a = n_a \otimes n_a
+    ordered by magnitude.
+    The eigenprojectors of eigenvalues with multiplicity n are returned as 1/n-fold projector.
+    Note: Tensor A must not have complex eigenvalues!
+    cf. https://github.com/michalhabera/dolfiny/blob/master/dolfiny/invariants.py
+    """
+    if ufl.shape(A) != (3,3):
+        raise RuntimeError("Tensor A of shape {ufl.shape(A)} != (3,3) is not supported!")
 
-    # perturbation
-    pert = 2.*tol
+    eps = 1.0e-10
 
-    # principal invariants
-    I1 = ufl.tr(T)
-    I2 = 0.5*(ufl.tr(T)**2. - ufl.inner(T,T))
-    I3 = ufl.det(T)
+    A = ufl.variable(A)
 
-    # determination of terms p and q (cf. paper)
-    p = I1**2. - 3.*I2                                                           # preliminary value for p
-    p = ufl.conditional(ufl.lt(p,tol), abs(p)+pert, p)                           # numerical perturbation to p, if close to zero - ensures positiveness of p
-    q = (27./2.)*I3 + I1**3. - (9./2.)*I1*I2                                     # preliminary value for q
-    q = ufl.conditional(ufl.lt(abs(q),tol), q+ufl.sign(q)*pert, q)               # add numerical perturbation (with sign) to value of q, if close to zero
+    # determine eigenvalues lambda1, lambda2, lambda3
+    # additively decompose: A = tr(A) / 3 * I + dev(A) = q * I + B
+    q = ufl.tr(A)/3.
+    B = A - q * ufl.Identity(3)
+    # observe: det(lambda I - A) = 0  with shift  lambda = q + omega --> det(ωI - B) = 0 = omega**3 - j * omega - b
+    j = ufl.tr(B*B)/2.  # == -I2(B) for trace-free B, j < 0 indicates A has complex eigenvalues
+    b = ufl.tr(B*B*B)/3.  # == I3(B) for trace-free B
+    # solve: 0 = omega**3 - j * omega - b  by substitution  omega = p * cos(phi)
+    #        0 = p**3 * cos**3(phi) - j * p * cos(phi) - b  | * 4 / p**3
+    #        0 = 4 * cos**3(phi) - 3 * cos(phi) - 4 * b / p**3  | --> p := sqrt(j * 4/3)
+    #        0 = cos(3 * phi) - 4 * b / p**3
+    #        0 = cos(3 * phi) - r                  with  -1 <= r <= +1
+    #    phi_k = [acos(r) + (k + 1) * 2 * pi] / 3  for  k = 0, 1, 2
+    p = 2. / ufl.sqrt(3.) * ufl.sqrt(j + eps**2.)  # eps: MMM
+    r = 4.*b/(p**3.)
+    r = ufl.max_value(ufl.min_value(r, +1. - eps), -1. + eps)  # eps: LMM, MMH
+    phi = ufl.acos(r)/3.
+    # sorted eigenvalues: lambda1 <= lambda2 <= lambda3
+    lambda1 = q + p * ufl.cos(phi + (2./3.) * ufl.pi)  # low
+    lambda2 = q + p * ufl.cos(phi + (4./3.) * ufl.pi)  # middle
+    lambda3 = q + p * ufl.cos(phi)                     # high
 
-    # determination of angle phi for calculation of roots
-    phiNom2 = 27.*((1./4.)*(I2**2.)*(p-I2) + I3*((27./4.)*I3 - q))               # preliminary value for squared nominator of expression for phi
-    phiNom2 = ufl.conditional(ufl.lt(phiNom2,tol), abs(phiNom2)+pert, phiNom2)   # numerical perturbation in order to guarantee non-zero nominator expression for phi
-    phi = (1./3.)*ufl.atan_2(ufl.sqrt(phiNom2),q)                                # angle phi
+    # determine eigenprojectors E0, E1, E2
+    E0 = ufl.diff(lambda1, A).T
+    E1 = ufl.diff(lambda2, A).T
+    E2 = ufl.diff(lambda3, A).T
 
-    # polynomial roots
-    lambda1 = (1./3.)*(ufl.sqrt(p)*2.*ufl.cos(phi)+I1)
-    lambda2 = (1./3.)*(-ufl.sqrt(p)*(ufl.cos(phi)+ufl.sqrt(3.)*ufl.sin(phi))+I1)
-    lambda3 = (1./3.)*(-ufl.sqrt(p)*(ufl.cos(phi)-ufl.sqrt(3.)*ufl.sin(phi))+I1)
-
-    # eigenvectors: eq. 39 of Kopp (2008):
-    v1 = ufl.cross(T[:,1] - lambda1 * ufl.as_vector([1.,0.,0.]), T[:,2] - lambda1 * ufl.as_vector([0.,1.,0.]))
-    v2 = ufl.cross(T[:,1] - lambda2 * ufl.as_vector([1.,0.,0.]), T[:,2] - lambda2 * ufl.as_vector([0.,1.,0.]))
-    v3 = ufl.cross(v1,v2)
-
-    # normalize eigenvectors
-    v1 /= ufl.sqrt(ufl.dot(v1,v1))
-    v2 /= ufl.sqrt(ufl.dot(v2,v2))
-    v3 /= ufl.sqrt(ufl.dot(v3,v3))
-
-    return [lambda1,lambda2,lambda3], [v1,v2,v3]
+    return [lambda1, lambda2, lambda3], [E0, E1, E2]

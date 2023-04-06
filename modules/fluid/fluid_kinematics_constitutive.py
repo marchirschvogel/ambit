@@ -68,7 +68,6 @@ class constitutive:
 
 
 
-
 class kinematics:
     
     def __init__(self, dim, uf_pre=None):

@@ -116,11 +116,11 @@ class IO:
         self.n0 = ufl.FacetNormal(self.mesh)
 
 
-    def write_output_pre(self, pb, func, name):
+    def write_output_pre(self, pb, func, t, name):
 
         outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+name+'.xdmf', 'w')
         outfile.write_mesh(self.mesh)
-        outfile.write_function(func, 0)
+        outfile.write_function(func, t)
 
 
     def write_restart(self, pb, N):

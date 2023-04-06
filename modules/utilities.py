@@ -89,12 +89,18 @@ def print_prestress(inst, comm):
     
     if inst=='start':
         if comm.rank == 0:
-            print("Prestressing solid in one load step...")
+            print("Started prestressing...")
+            sys.stdout.flush()
+
+    if inst=='updt':
+        if comm.rank == 0:
+            print("Performed MULF update...")
             sys.stdout.flush()
 
     if inst=='end':
         if comm.rank == 0:
-            print("Performed MULF update, finished prestressing.")
+            print("Finished prestressing.")
+            print("   ")
             sys.stdout.flush()
 
 

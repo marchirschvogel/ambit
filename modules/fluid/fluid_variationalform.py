@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
-from mathutils import get_eigenval_eigenvec
+from mathutils import spectral_decomposition_3x3
 
 # fluid mechanics variational forms class
 # Principle of Virtual Power
@@ -27,12 +27,11 @@ class variationalform:
     
     ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
     
-    def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin_navierstokes(self, a, v, rho, ddomain, w=None, Fale=None):
         # standard Eulerian fluid
         if self.formulation=='nonconservative':
             # non-conservative form for Navier-Stokes:
             # TeX: \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
-            
             return rho*ufl.dot(a + ufl.grad(v) * v, self.var_v)*ddomain
         
         elif self.formulation=='conservative':
@@ -41,10 +40,17 @@ class variationalform:
 
             # note that we have div(v o v) = (grad v) v + v (div v), where the latter term is the divergence condition (Holzapfel eq. (1.292))
             return rho*ufl.dot(a + ufl.div(ufl.outer(v,v)), self.var_v)*ddomain
-            #return rho*ufl.dot(a,self.var_v)*ddomain - rho*ufl.inner(ufl.outer(v,v), ufl.grad(self.var_v))*ddomain
         
         else:
             raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
+
+    def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, Fale=None):
+        
+        return rho*ufl.dot(ufl.grad(v) * v, self.var_v)*ddomain
+
+    def deltaW_kin_transient_stokes(self, a, v, rho, ddomain, w=None, Fale=None):
+
+        return rho*ufl.dot(a, self.var_v) * J*ddomain
 
     ### Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
 
@@ -139,12 +145,12 @@ class variationalform:
             Fmod = F
         elif model=='membrane':
             # get eigenvalues and eigenvectors of C
-            evalC, evecC = get_eigenval_eigenvec(C)
-            U = ufl.sqrt(evalC[0])*ufl.outer(evecC[0],evecC[0]) + ufl.sqrt(evalC[1])*ufl.outer(evecC[1],evecC[1]) + ufl.sqrt(evalC[2])*ufl.outer(evecC[2],evecC[2])
+            evalC, EprojC = spectral_decomposition_3x3(C)
+            U = ufl.sqrt(evalC[0])*EprojC[0] + ufl.sqrt(evalC[1])*EprojC[1] + ufl.sqrt(evalC[2])*EprojC[2]
             R = F*ufl.inv(U)
             # get eigenvalues and eigenvectors of modified C
-            evalCmod, evecCmod = get_eigenval_eigenvec(Cmod)
-            Umod = ufl.sqrt(evalCmod[0])*ufl.outer(evecCmod[0],evecCmod[0]) + ufl.sqrt(evalCmod[1])*ufl.outer(evecCmod[1],evecCmod[1]) + ufl.sqrt(evalCmod[2])*ufl.outer(evecCmod[2],evecCmod[2])
+            evalCmod, EprojCmod = spectral_decomposition_3x3(Cmod)
+            Umod = ufl.sqrt(evalCmod[0])*EprojCmod[0] + ufl.sqrt(evalCmod[1])*EprojCmod[1] + ufl.sqrt(evalCmod[2])*EprojCmod[2]
             Fmod = R*Umod
         else:
             raise NameError("Unkown membrane model type!")
@@ -223,7 +229,7 @@ class variationalform_ale(variationalform):
     
     ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
     
-    def deltaW_kin(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin_navierstokes(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
 
         i, j, k = ufl.indices(3)
@@ -247,6 +253,14 @@ class variationalform_ale(variationalform):
         
         else:
             raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
+
+    def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, Fale=None):
+        J = ufl.det(Fale)
+        return rho*ufl.dot(ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v) * J*ddomain
+
+    def deltaW_kin_transient_stokes(self, a, v, rho, ddomain, w=None, Fale=None):
+        J = ufl.det(Fale)
+        return rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (-w), self.var_v) * J*ddomain
 
     ### Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
 

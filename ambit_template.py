@@ -85,6 +85,9 @@ def main():
                             'incompressible_2field' : False, # if we want to use a 2-field functional for pressure dofs (always applies for fluid, optional for solid mechanics)
                             'fluid_formulation'     : 'nonconservative', # OPTIONAL: formulation for Navier-Stokes advective term: 'nonconservative', 'conservative' (default: 'nonconservative')
                             'prestress_initial'     : False, # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
+                            'prestress_numstep'     : 100, # OPTIONAL: number of load steps for prestress (default: 1)
+                            'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
+                            'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt' # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             'pressure_at_midpoint'  : False} # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
     
     # for solid_flow0d or fluid_flow0d problem type
@@ -162,7 +165,7 @@ def main():
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    # some examples... up to 9 possible (tc1 until tc9 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
+    # some examples... up to 20 possible (tc1 until tc20 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves():
         
         def tc1(self, t):

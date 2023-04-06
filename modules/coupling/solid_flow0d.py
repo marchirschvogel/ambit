@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys, math
+import time, sys
 import numpy as np
 from dolfinx import fem
 import ufl
@@ -122,7 +122,7 @@ class SolidmechanicsFlow0DProblem():
     def set_variational_forms(self):
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
-        self.coupfuncs, self.coupfuncs_old = [], []
+        self.coupfuncs, self.coupfuncs_old, coupfuncs_pre = [], [], []
         
         if self.coupling_type == 'monolithic_lagrange':
 
@@ -132,7 +132,7 @@ class SolidmechanicsFlow0DProblem():
             # 3D fluxes
             self.constr, self.constr_old = [], []
         
-        self.work_coupling, self.work_coupling_old, self.work_coupling_prestr = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        self.work_coupling, self.work_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
         
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
@@ -180,10 +180,6 @@ class SolidmechanicsFlow0DProblem():
                 # add to solid rhs contributions
                 self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), self.coupfuncs[-1], ds_p)
                 self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), self.coupfuncs_old[-1], ds_p)
-                
-                # for prestressing, true loads should act on the reference, not the current configuration
-                if self.pbs.prestress_initial:
-                    self.work_coupling_prestr += self.pbs.vf.deltaW_ext_neumann_normal_ref(self.coupfuncs_old[-1], ds_p)
             
             self.dforce.append(fem.form(df_))
         
@@ -264,6 +260,11 @@ class SolidmechanicsFlow0DProblem():
 
     def set_problem_residual_jacobian_forms(self):
 
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation...')
+            sys.stdout.flush()
+
         self.pbs.res_u = fem.form(self.pbs.weakform_u)
         self.pbs.jac_uu = fem.form(self.pbs.weakform_lin_uu)
         
@@ -272,9 +273,10 @@ class SolidmechanicsFlow0DProblem():
             self.pbs.jac_up = fem.form(self.pbs.weakform_lin_up)
             self.pbs.jac_pu = fem.form(self.pbs.weakform_lin_pu)
 
-
-    def set_forms_solver(self):
-        pass
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -618,9 +620,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
-        if self.pb.pbs.prestress_initial:
-            # add coupling work to prestress weak form
-            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr            
+        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:     
             # initialize solid mechanics solver
             self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
 
@@ -635,8 +635,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbs.prestress_initial = False
-            self.pb.pbs.set_forms_solver()
-        
+
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
             # weak form at initial state for consistent initial acceleration solve

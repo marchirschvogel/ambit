@@ -110,7 +110,7 @@ class FluidmechanicsAleProblem():
                 self.pba.bc.dbcs += dbcs_coup_fluid_ale
                 # Dirichlet boundary conditions
                 if 'dirichlet' in self.pba.bc_dict.keys():
-                    self.pba.bc.dirichlet_bcs(self.pba.V_d)
+                    self.pba.bc.dirichlet_bcs(self.pba.bc_dict['dirichlet'], self.pba.V_d)
 
                 # NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
 
@@ -167,7 +167,7 @@ class FluidmechanicsAleProblem():
                 self.pbf.bc.dbcs += dbcs_coup_ale_fluid
                 # Dirichlet boundary conditions
                 if 'dirichlet' in self.pbf.bc_dict.keys():
-                    self.pbf.bc.dirichlet_bcs(self.pbf.V_v)
+                    self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict['dirichlet'], self.pbf.V_v)
                     
                 #NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
 
@@ -202,6 +202,11 @@ class FluidmechanicsAleProblem():
 
     def set_problem_residual_jacobian_forms(self):
 
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation...')
+            sys.stdout.flush()
+
         # fluid
         self.pbf.res_v = fem.form(self.pbf.weakform_v)
         self.pbf.res_p = fem.form(self.pbf.weakform_p)
@@ -218,10 +223,11 @@ class FluidmechanicsAleProblem():
         self.jac_pd = fem.form(self.weakform_lin_pd)
         if self.coupling_fluid_ale['type'] == 'robin':
             self.jac_dv = fem.form(self.weakform_lin_dv)
-
-
-    def set_forms_solver(self):
-        pass
+        
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -424,7 +430,6 @@ class FluidmechanicsAleSolver(solver_base):
         else:
             # set flag definitely to False if we're restarting
             self.pb.pbf.prestress_initial = False
-            self.pb.pbf.set_forms_solver()
 
         # consider consistent initial acceleration
         if self.pb.pbf.timint != 'static' and self.pb.pbf.restart_step == 0:

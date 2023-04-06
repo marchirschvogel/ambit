@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys, math
+import time, sys
 import numpy as np
 from dolfinx import fem
 import ufl
@@ -151,6 +151,11 @@ class FluidmechanicsFlow0DProblem():
 
     def set_problem_residual_jacobian_forms(self):
 
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation...')
+            sys.stdout.flush()
+
         # fluid
         self.pbf.res_v = fem.form(self.pbf.weakform_v)
         self.pbf.res_p = fem.form(self.pbf.weakform_p)
@@ -158,9 +163,10 @@ class FluidmechanicsFlow0DProblem():
         self.pbf.jac_vp = fem.form(self.pbf.weakform_lin_vp)
         self.pbf.jac_pv = fem.form(self.pbf.weakform_lin_pv)
 
-
-    def set_forms_solver(self):
-        pass
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):

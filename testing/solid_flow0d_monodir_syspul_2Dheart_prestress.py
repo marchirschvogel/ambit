@@ -58,7 +58,9 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 4,
                             'incompressible_2field' : False,
-                            'prestress_initial'     : True}
+                            'prestress_initial'     : True,
+                            'prestress_numstep'     : 1,
+                            'prestress_ptc'         : True}
     
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'cq_factor'             : [80.,80.],
@@ -98,11 +100,19 @@ def main():
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
                 return 0.0
+            
+        def tc3(self, t): # prestress LV
+            return -init()['p_v_l_0']*t
+
+        def tc4(self, t): # prestress RV
+            return -init()['p_v_r_0']*t        
 
 
     BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],
-                            'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
-                                       {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal_ref', 'visc' : 0.005}] }
+                             'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
+                                       {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal_ref', 'visc' : 0.005}],
+                             'neumann_prestress' : [{'id' : [1], 'dir' : 'normal_ref', 'curve' : 3},
+                                                    {'id' : [2], 'dir' : 'normal_ref', 'curve' : 4}] }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)

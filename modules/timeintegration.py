@@ -44,7 +44,17 @@ class timeintegration():
             sys.stdout.flush()
 
 
-    def set_time_funcs(self, funcs, funcs_vec, t):
+    # print prestress step info
+    def print_prestress_step(self, N, t, Nmax, separator, wt=0):
+        
+        if self.comm.rank == 0:
+
+            print("### PRESTRESS STEP %i / %i successfully completed | PSEUDO TIME: %.4f | wt = %.2e" % (N,Nmax,t,wt))
+            print(separator)
+            sys.stdout.flush()
+
+
+    def set_time_funcs(self, t, funcs, funcs_vec):
 
         for m in funcs_vec:
             load = expression.template_vector()
@@ -59,16 +69,16 @@ class timeintegration():
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     
-    def update_time_funcs(self, funcs, funcs_old, funcsvec, funcsvec_old):
+    def update_time_funcs(self):
         
         # update time-dependent functions
-        for m in range(len(funcs_old)):
-            list(funcs_old[m].keys())[0].vector.axpby(1.0, 0.0, list(funcs[m].keys())[0].vector)
-            list(funcs_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        for m in range(len(self.funcs_to_update_old)):
+            list(self.funcs_to_update_old[m].keys())[0].vector.axpby(1.0, 0.0, list(self.funcs_to_update[m].keys())[0].vector)
+            list(self.funcs_to_update_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        for m in range(len(funcsvec_old)):
-            list(funcsvec_old[m].keys())[0].vector.axpby(1.0, 0.0, list(funcsvec[m].keys())[0].vector)
-            list(funcsvec_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        for m in range(len(self.funcs_to_update_vec_old)):
+            list(self.funcs_to_update_vec_old[m].keys())[0].vector.axpby(1.0, 0.0, list(self.funcs_to_update_vec[m].keys())[0].vector)
+            list(self.funcs_to_update_vec_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     # zero
@@ -77,16 +87,27 @@ class timeintegration():
 
     def timecurves(self, cnum):
         
-        if cnum==0: return self.zero
-        if cnum==1: return self.time_curves.tc1
-        if cnum==2: return self.time_curves.tc2
-        if cnum==3: return self.time_curves.tc3
-        if cnum==4: return self.time_curves.tc4
-        if cnum==5: return self.time_curves.tc5
-        if cnum==6: return self.time_curves.tc6
-        if cnum==7: return self.time_curves.tc7
-        if cnum==8: return self.time_curves.tc8
-        if cnum==9: return self.time_curves.tc9
+        if cnum==0:  return self.zero
+        if cnum==1:  return self.time_curves.tc1
+        if cnum==2:  return self.time_curves.tc2
+        if cnum==3:  return self.time_curves.tc3
+        if cnum==4:  return self.time_curves.tc4
+        if cnum==5:  return self.time_curves.tc5
+        if cnum==6:  return self.time_curves.tc6
+        if cnum==7:  return self.time_curves.tc7
+        if cnum==8:  return self.time_curves.tc8
+        if cnum==9:  return self.time_curves.tc9
+        if cnum==10: return self.time_curves.tc10
+        if cnum==11: return self.time_curves.tc11
+        if cnum==12: return self.time_curves.tc12
+        if cnum==13: return self.time_curves.tc13
+        if cnum==14: return self.time_curves.tc14
+        if cnum==15: return self.time_curves.tc15
+        if cnum==16: return self.time_curves.tc16
+        if cnum==17: return self.time_curves.tc17
+        if cnum==18: return self.time_curves.tc18
+        if cnum==19: return self.time_curves.tc19
+        if cnum==20: return self.time_curves.tc20
 
 
 # Solid mechanics time integration class
@@ -150,7 +171,7 @@ class timeintegration_solid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old, funcs, funcs_old, funcsvec, funcsvec_old):
+    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old):
     
         # now update old kinematic fields with new quantities
         if self.timint == 'genalpha':
@@ -169,7 +190,7 @@ class timeintegration_solid(timeintegration):
             list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update time dependent load curves
-        self.update_time_funcs(funcs, funcs_old, funcsvec, funcsvec_old)
+        self.update_time_funcs()
 
 
     def update_a_newmark(self, u, u_old, v_old, a_old, ufl=True):
@@ -320,7 +341,7 @@ class timeintegration_fluid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, v, v_old, a_old, p, p_old, funcs, funcs_old, funcsvec, funcsvec_old, uf_old=None):
+    def update_timestep(self, v, v_old, a_old, p, p_old, uf_old=None):
     
         # update old fields with new quantities
         self.update_fields_ost(v, v_old, a_old, uf_old=uf_old)
@@ -330,7 +351,7 @@ class timeintegration_fluid(timeintegration):
         p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
         # update time dependent load curves
-        self.update_time_funcs(funcs, funcs_old, funcsvec, funcsvec_old)
+        self.update_time_funcs()
 
 
     def update_a_ost(self, v, v_old, a_old, ufl=True):
@@ -388,13 +409,13 @@ class timeintegration_fluid(timeintegration):
 # ALE time integration class
 class timeintegration_ale(timeintegration_fluid):
 
-    def update_timestep(self, u, u_old, w_old, funcs, funcs_old, funcsvec, funcsvec_old):
+    def update_timestep(self, u, u_old, w_old):
         
         # update old fields with new quantities
         self.update_fields(u, u_old, w_old)
         
         # update time dependent load curves
-        self.update_time_funcs(funcs, funcs_old, funcsvec, funcsvec_old)
+        self.update_time_funcs()
 
 
     def set_wel(self, u, u_old, w_old):

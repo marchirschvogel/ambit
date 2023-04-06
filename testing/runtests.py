@@ -18,19 +18,21 @@ except:
     pass
 
 if category=='all':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = True, True, True, True, True, True
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = True, True, True, True, True, True, True
 elif category=='solid':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = True, False, False, False, False, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = True, False, False, False, False, False, False
 elif category=='fluid':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, True, False, False, False, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, True, False, False, False, False, False
 elif category=='flow0d':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, True, False, False, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, True, False, False, False, False
 elif category=='solid_flow0d':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, False, True, False, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, True, False, False, False
 elif category=='fluid_flow0d':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, False, False, True, False
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, False, True, False, False
 elif category=='solid_constraint':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint = False, False, False, False, False, True
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, False, False, True, False
+elif category=='frsi':
+    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, False, False, False, True
 else:
     raise NameError("Unknown test category!")
 
@@ -114,7 +116,10 @@ if solid_flow0d:
 if solid_constraint:
     errs['solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_constraint_volume_chamber.py'])
     errs['solid_constraint_volume_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_constraint_volume_chamber.py'])
-     
+
+if frsi:
+    errs['frsi_artseg_prefile 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_prefile.py'])
+    errs['frsi_artseg_prefile 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'frsi_artseg_prefile.py'])    
 
 err = 0
 for e in range(len(errs)):

@@ -70,6 +70,16 @@ class FluidmechanicsProblem(problem_base):
         
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
+        try: self.prestress_numstep = fem_params['prestress_numstep']
+        except: self.prestress_numstep = 1
+        try: self.prestress_maxtime = fem_params['prestress_maxtime']
+        except: self.prestress_maxtime = 1.0
+        try: self.prestress_ptc = fem_params['prestress_ptc']
+        except: self.prestress_ptc = False
+        try: self.prestress_from_file = fem_params['prestress_from_file']
+        except: self.prestress_from_file = False
+        
+        if self.prestress_from_file: self.prestress_initial = False
         
         self.localsolve = False # no idea what might have to be solved locally...
         self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
@@ -135,10 +145,14 @@ class FluidmechanicsProblem(problem_base):
         # a fluid displacement
         self.uf_old = fem.Function(self.V_v)
         # prestress displacement for FrSI
-        if self.prestress_initial:
+        if self.prestress_initial or self.prestress_from_file:
             self.uf_pre = fem.Function(self.V_v, name="Displacement_prestress")
         else:
             self.uf_pre = None
+
+        # own read function: requires plain txt format of type valx valy valz x z y
+        if self.prestress_from_file:
+            self.io.readfunction(self.uf_pre, self.V_v, self.prestress_from_file)
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
@@ -179,13 +193,13 @@ class FluidmechanicsProblem(problem_base):
                 raise ValueError("Unkown fluid_on_deformed option!")
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_fluid(bc_dict, fem_params, self.io, self.vf, self.ti, ki=self.ki)
+        self.bc = boundaryconditions.boundary_cond_fluid(fem_params, self.io, self.vf, self.ti, ki=self.ki)
         
         self.bc_dict = bc_dict
 
         # Dirichlet boundary conditions
         if 'dirichlet' in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.V_v)
+            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_v)
 
         self.set_variational_forms()
 
@@ -212,10 +226,9 @@ class FluidmechanicsProblem(problem_base):
         
         for n in range(self.num_domains):
 
-            if self.timint != 'static':
-                # kinetic virtual power
-                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
-                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+            # kinetic virtual power
+            self.deltaW_kin     += self.vf.deltaW_kin_navierstokes(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+            self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
             
             # internal virtual power
             self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), self.dx_[n], Fale=self.alevar['Fale'])
@@ -228,18 +241,27 @@ class FluidmechanicsProblem(problem_base):
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.v, Fale=self.alevar['Fale'])
-            w_robin_old = self.bc.robin_bcs(self.v_old, Fale=self.alevar['Fale_old'])
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, Fale=self.alevar['Fale'])
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, Fale=self.alevar['Fale_old'])
         # reduced-solid for FrSI problem
         if 'membrane' in self.bc_dict.keys():
             assert(self.alevar['fluid_on_deformed']!='mesh_move')
-            w_membrane     = self.bc.membranesurf_bcs(self.ufluid, self.v, self.acc)
-            w_membrane_old = self.bc.membranesurf_bcs(self.uf_old, self.v_old, self.a_old)
-        if 'dirichlet_weak' in self.bc_dict.keys():
-            raise RuntimeError("Cannot use weak Dirichlet BCs for fluid mechanics currently!")
+            w_membrane     = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc)
+            w_membrane_old = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old)
+            
+        w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
+        if self.prestress_initial:
+            self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
+            # Stokes kinetic virtual power
+            for n in range(self.num_domains):
+                #self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                self.deltaW_prestr_kin += self.vf.deltaW_kin_transient_stokes(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+            if 'neumann_prestress' in self.bc_dict.keys():
+                w_neumann_prestr = self.bc.neumann_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_membrane
             
         # TODO: Body forces!
         self.deltaW_ext     = w_neumann + w_robin + w_membrane
@@ -274,19 +296,39 @@ class FluidmechanicsProblem(problem_base):
         for n in range(self.num_domains):
             self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
     
+        if self.prestress_initial:
+            # prestressing weak forms
+            self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
+            self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
+            self.weakform_prestress_p = self.deltaW_p
+            self.weakform_lin_prestress_vp = ufl.derivative(self.weakform_prestress_v, self.p, self.dp)
+            self.weakform_lin_prestress_pv = ufl.derivative(self.weakform_prestress_p, self.v, self.dv)
+    
 
     def set_problem_residual_jacobian_forms(self):
 
-        self.res_v = fem.form(self.weakform_v)
-        self.res_p = fem.form(self.weakform_p)
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation...')
+            sys.stdout.flush()
 
-        self.jac_vv = fem.form(self.weakform_lin_vv)
-        self.jac_vp = fem.form(self.weakform_lin_vp)
-        self.jac_pv = fem.form(self.weakform_lin_pv)
+        if not self.prestress_initial:
+            self.res_v = fem.form(self.weakform_v)
+            self.res_p = fem.form(self.weakform_p)
+            self.jac_vv = fem.form(self.weakform_lin_vv)
+            self.jac_vp = fem.form(self.weakform_lin_vp)
+            self.jac_pv = fem.form(self.weakform_lin_pv)
+        else:
+            self.res_v  = fem.form(self.weakform_prestress_v)
+            self.jac_vv = fem.form(self.weakform_lin_prestress_vv)
+            self.res_p  = fem.form(self.weakform_prestress_p)
+            self.jac_vp = fem.form(self.weakform_lin_prestress_vp)
+            self.jac_pv = fem.form(self.weakform_lin_prestress_pv)
 
-
-    def set_forms_solver(self):
-        pass
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -348,7 +390,7 @@ class FluidmechanicsProblem(problem_base):
     def evaluate_pre_solve(self, t):
 
         # set time-dependent functions
-        self.ti.set_time_funcs(self.ti.funcs_to_update, self.ti.funcs_to_update_vec, t)
+        self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
             
             
     def evaluate_post_solve(self, t, N):
@@ -367,7 +409,7 @@ class FluidmechanicsProblem(problem_base):
     def update(self):
         
         # update - velocity, acceleration, pressure, all internal variables, all time functions
-        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.ti.funcs_to_update, self.ti.funcs_to_update_old, self.ti.funcs_to_update_vec, self.ti.funcs_to_update_vec_old, uf_old=self.uf_old)
+        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, uf_old=self.uf_old)
 
 
     def print_to_screen(self):
@@ -420,30 +462,65 @@ class FluidmechanicsSolver(solver_base):
     
         # print time step info to screen
         self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
-        
-        
+
+
     def solve_initial_prestress(self):
         
         utilities.print_prestress('start', self.pb.comm)
 
-        # solve in 1 load step using PTC!
-        self.solnln.PTC = True
+        if self.pb.prestress_ptc: self.solnln.PTC = True
+        
+        dt_prestr = self.pb.prestress_maxtime/self.pb.prestress_numstep
 
-        self.solnln.newton(0.0)
+        for N in range(1,self.pb.prestress_numstep+1):
 
-        # MULF update
-        uf_vec = self.pb.ti.update_uf_ost(self.pb.v.vector, self.pb.v_old.vector, self.pb.uf_old.vector, ufl=False)
-        self.pb.ki.prestress_update(uf_vec)
+            wts = time.time()
 
-        # set flag to false again
-        self.pb.prestress_initial = False
+            tprestr = N * dt_prestr
+
+            self.pb.ti.set_time_funcs(tprestr, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
+
+            self.solnln.newton(0.0)
+
+            # MULF update - use backward scheme to calculate uf
+            uf_vec = float(dt_prestr) * self.pb.v.vector + self.pb.uf_old.vector
+            self.pb.ki.prestress_update(uf_vec)
+            utilities.print_prestress('updt', self.pb.comm)
+
+            wt = time.time() - wts
+
+            # update fluid displacement: uf_old <- uf
+            self.pb.uf_old.vector.axpby(1.0, 0.0, uf_vec)
+            self.pb.uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            # update fluid velocity: v_old <- v
+            self.pb.v_old.vector.axpby(1.0, 0.0, self.pb.v.vector)
+            self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+            # print time step info to screen
+            self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.sepstring, wt=wt)
+
+            # write prestress displacement (given that we want to write the fluid displacement)
+            if 'fluiddisplacement' in self.pb.results_to_write:
+                self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, tprestr, 'fluiddisplacement_pre')
+                
+        utilities.print_prestress('end', self.pb.comm)
+        
+        # reset state
+        self.pb.uf_old.vector.set(0.0)
+        self.pb.uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.v.vector.set(0.0)
+        self.pb.v.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.v_old.vector.set(0.0)
+        self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.a_old.vector.set(0.0)
+        self.pb.a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # reset PTC flag to what it was
-        try: self.solnln.PTC = self.solver_params['ptc']
-        except: self.solnln.PTC = False
+        if self.pb.prestress_ptc:
+            try: self.solnln.PTC = self.solver_params['ptc']
+            except: self.solnln.PTC = False
+        
+        # set flag to false again
+        self.pb.prestress_initial = False
+        self.pb.set_problem_residual_jacobian_forms()
 
-        utilities.print_prestress('end', self.pb.comm)
-
-        # write prestress displacement (given that we want to write the displacement)
-        if 'fluiddisplacement' in self.pb.results_to_write:
-            self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, 'fluiddisplacement_pre')

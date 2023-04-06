@@ -118,9 +118,6 @@ class solver_nonlinear:
 
 
     def initialize_petsc_solver(self):
-        
-        # set forms to use (differ in case of initial prestress)
-        self.pb.set_forms_solver()
 
         # create solver
         self.ksp = PETSc.KSP().create(self.pb.comm)

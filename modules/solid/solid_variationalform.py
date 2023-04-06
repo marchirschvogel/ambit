@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
-from mathutils import get_eigenval_eigenvec
+from mathutils import spectral_decomposition_3x3
 
 # solid mechanics variational base class
 # Principle of Virtual Work

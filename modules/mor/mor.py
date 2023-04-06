@@ -59,6 +59,9 @@ class ModelOrderReduction():
         try: self.redbasisvec_penalties = params['redbasisvec_penalties']
         except: self.redbasisvec_penalties = []
         
+        try: self.modes_from_files = params['modes_from_files']
+        except: self.modes_from_files = False
+        
         # some sanity checks
         if self.numhdms <= 0:
             raise ValueError('Number of HDMs has to be > 0!')
@@ -77,131 +80,152 @@ class ModelOrderReduction():
     # Proper Orthogonal Decomposition
     def POD(self, pb, Vspace):
         
-        if self.comm.rank==0:
-            print("Performing Proper Orthogonal Decomposition (POD) ...")
-            sys.stdout.flush()
-        
-        ts = time.time()
-        
         locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
         matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
-
+        
         # snapshot matrix
         S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
         S_d.setUp()
-        
+            
         ss, se = S_d.getOwnershipRange()
         
-        # gather snapshots (mostly displacements or velocities)
-        for h in range(self.numhdms):
-            
-            for i in range(self.numsnapshots):
-                
-                if self.comm.rank==0:
-                    print("Reading snapshot %i ..." % (i+1))
-                    sys.stdout.flush()
-                
-                step = self.snapshotoffset + (i+1)*self.snapshotincr
-            
-                field = fem.Function(Vspace)
-
-                if self.snapshotsource[h] == 'petscvector':
-                    # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
-                    viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
-                    field.vector.load(viewer)
-                    
-                    field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                
-                elif self.snapshotsource[h] == 'rawtxt':
-                    
-                    # own read function: requires plain txt format of type valx valy valz x z y
-                    pb.io.readfunction(field, Vspace, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
-                    
-                else:
-                    raise NameError("Unknown snapshotsource!")
-
-                S_d[ss:se, self.numhdms*h+i] = field.vector[ss:se]
-
-        # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
         if bool(self.surface_rom):
             self.fd_set = set(gather_surface_dof_indices(pb, Vspace, self.surface_rom,self.comm))
-            # eliminate corresponding rows in S_d
-            for i in range(ss, se):
-                if i not in self.fd_set:
-                    S_d[i,:] = np.zeros(self.numsnapshots)
-
-        S_d.assemble()
-
-        # covariance matrix
-        C_d = S_d.transposeMatMult(S_d) # S^T * S
         
-        # setup eigenvalue problem
-        eigsolver = SLEPc.EPS()
-        eigsolver.create()
-        eigsolver.setOperators(C_d)
-        eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # Hermitian problem
-        eigsolver.setType(SLEPc.EPS.Type.LAPACK)
-        eigsolver.setFromOptions()
-
-        # solve eigenvalue problem
-        eigsolver.solve()
-
-        nconv = eigsolver.getConverged()
+        ts = time.time()
         
-        if self.print_eigenproblem:
+        if not self.modes_from_files:
+
             if self.comm.rank==0:
-                print("Number of converged eigenpairs: %d" % nconv)
+                print("Performing Proper Orthogonal Decomposition (POD) ...")
                 sys.stdout.flush()
 
-        evecs, evals = [], []
-        numredbasisvec_true = 0
+            # gather snapshots (mostly displacements or velocities)
+            for h in range(self.numhdms):
+                
+                for i in range(self.numsnapshots):
+                    
+                    if self.comm.rank==0:
+                        print("Reading snapshot %i ..." % (i+1))
+                        sys.stdout.flush()
+                    
+                    step = self.snapshotoffset + (i+1)*self.snapshotincr
+                
+                    field = fem.Function(Vspace)
 
-        if nconv > 0:
-            # create the results vectors
-            vr, _ = C_d.getVecs()
-            vi, _ = C_d.getVecs()
+                    if self.snapshotsource[h] == 'petscvector':
+                        # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
+                        viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
+                        field.vector.load(viewer)
+                        
+                        field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                    
+                    elif self.snapshotsource[h] == 'rawtxt':
+                        
+                        # own read function: requires plain txt format of type valx valy valz x z y
+                        pb.io.readfunction(field, Vspace, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
+                        
+                    else:
+                        raise NameError("Unknown snapshotsource!")
+
+                    S_d[ss:se, self.numhdms*h+i] = field.vector[ss:se]
+
+            # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
+            if bool(self.surface_rom):
+                # eliminate corresponding rows in S_d
+                for i in range(ss, se):
+                    if i not in self.fd_set:
+                        S_d[i,:] = np.zeros(self.numsnapshots)
+
+            S_d.assemble()
+
+            # covariance matrix
+            C_d = S_d.transposeMatMult(S_d) # S^T * S
+            
+            # setup eigenvalue problem
+            eigsolver = SLEPc.EPS()
+            eigsolver.create()
+            eigsolver.setOperators(C_d)
+            eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # Hermitian problem
+            eigsolver.setType(SLEPc.EPS.Type.LAPACK)
+            eigsolver.setFromOptions()
+
+            # solve eigenvalue problem
+            eigsolver.solve()
+
+            nconv = eigsolver.getConverged()
             
             if self.print_eigenproblem:
                 if self.comm.rank==0:
-                    print("   k                        ||Ax-kx||/||kx||")
-                    print("   ----------------------   ----------------")
+                    print("Number of converged eigenpairs: %d" % nconv)
+                    sys.stdout.flush()
+
+            evecs, evals = [], []
+            numredbasisvec_true = 0
+
+            if nconv > 0:
+                # create the results vectors
+                vr, _ = C_d.getVecs()
+                vi, _ = C_d.getVecs()
+                
+                if self.print_eigenproblem:
+                    if self.comm.rank==0:
+                        print("   k                        ||Ax-kx||/||kx||")
+                        print("   ----------------------   ----------------")
+                        sys.stdout.flush()
+                
+                for i in range(len(self.redbasisvec_indices)):
+                    k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
+                    error = eigsolver.computeError(self.redbasisvec_indices[i])
+                    if self.print_eigenproblem:
+                        if k.imag != 0.0:
+                            if self.comm.rank==0:
+                                print('{:<3s}{:<4.4e}{:<1s}{:<4.4e}{:<1s}{:<3s}{:<4.4e}'.format(' ',k.real,'+',k.imag,'j',' ',error))
+                                sys.stdout.flush()
+                        else:
+                            if self.comm.rank==0:
+                                print('{:<3s}{:<4.4e}{:<15s}{:<4.4e}'.format(' ',k.real,' ',error))
+                                sys.stdout.flush()
+
+                    # store
+                    evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
+                    evals.append(k.real)
+                    
+                    if k.real > self.eigenvalue_cutoff: numredbasisvec_true += 1
+
+            if len(self.redbasisvec_indices) != numredbasisvec_true:
+                if self.comm.rank==0:
+                    print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),numredbasisvec_true))
                     sys.stdout.flush()
             
-            for i in range(len(self.redbasisvec_indices)):
-                k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
-                error = eigsolver.computeError(self.redbasisvec_indices[i])
-                if self.print_eigenproblem:
-                    if k.imag != 0.0:
-                        if self.comm.rank==0:
-                            print('{:<3s}{:<4.4e}{:<1s}{:<4.4e}{:<1s}{:<3s}{:<4.4e}'.format(' ',k.real,'+',k.imag,'j',' ',error))
-                            sys.stdout.flush()
-                    else:
-                        if self.comm.rank==0:
-                            print('{:<3s}{:<4.4e}{:<15s}{:<4.4e}'.format(' ',k.real,' ',error))
-                            sys.stdout.flush()
+            # pop out undesired ones
+            for i in range(len(self.redbasisvec_indices)-numredbasisvec_true):
+                evecs.pop(-1)
+                evals.pop(-1)
 
-                # store
-                evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
-                evals.append(k.real)
+            # eigenvectors, scaled with 1 / sqrt(eigenval)
+            # calculate first numredbasisvec_true POD modes
+            self.Phi = np.zeros((matsize_u, numredbasisvec_true))
+            for i in range(numredbasisvec_true):
+                self.Phi[ss:se,i] = S_d * evecs[i] / math.sqrt(evals[i])       
+        
+        else:
+            
+            numredbasisvec_true = self.numredbasisvec
+            
+            self.Phi = np.zeros((matsize_u, numredbasisvec_true))
+            # read modes from files
+            # own read function: requires plain txt format of type valx valy valz x z y
+            for i in range(numredbasisvec_true):
                 
-                if k.real > self.eigenvalue_cutoff: numredbasisvec_true += 1
+                if self.comm.rank==0:
+                    print("Reading mode %i ..." % (i+1))
+                    sys.stdout.flush()
+                
+                field = fem.Function(Vspace)
+                pb.io.readfunction(field, Vspace, self.modes_from_files.replace('*',str(i+1)), tol=self.snapshotreadin_tol)
+                self.Phi[ss:se,i] = field.vector[ss:se]
 
-        if len(self.redbasisvec_indices) != numredbasisvec_true:
-            if self.comm.rank==0:
-                print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),numredbasisvec_true))
-                sys.stdout.flush()
-        
-        # pop out undesired ones
-        for i in range(len(self.redbasisvec_indices)-numredbasisvec_true):
-            evecs.pop(-1)
-            evals.pop(-1)
-
-        # eigenvectors, scaled with 1 / sqrt(eigenval)
-        # calculate first numredbasisvec_true POD modes
-        self.Phi = np.zeros((matsize_u, numredbasisvec_true))
-        for i in range(numredbasisvec_true):
-            self.Phi[ss:se,i] = S_d * evecs[i] / math.sqrt(evals[i])       
-        
         # write out POD modes
         if self.write_pod_modes:
             for i in range(numredbasisvec_true):

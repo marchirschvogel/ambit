@@ -33,7 +33,8 @@ def main():
                          'order_pres'            : 1,
                          'quad_degree'           : 1,
                          'incompressible_2field' : False,
-                         'prestress_initial'     : True}
+                         'prestress_initial'     : True,
+                         'prestress_numstep'     : 1}
 
     MATERIALS         = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 1000., 'nu' : 0.3}}}
 
@@ -41,12 +42,16 @@ def main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
         
-        def tc1(self, t):
+        def tc1(self, t): # prestress
+            return 3.*t
+
+        def tc2(self, t): # poststress
             return 3.
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1,2,3], 'dir' : 'z', 'val' : 0.}],
-                            'neumann' : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [1,0,0]}],
-                            'robin' : [{'type' : 'spring', 'id' : [1,2], 'dir' : 'normal_ref', 'stiff' : 5.0}] }
+                          'neumann_prestress' : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [1,0,0]}],
+                          'neumann' : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [2,0,0]}],
+                          'robin' : [{'type' : 'spring', 'id' : [1,2], 'dir' : 'normal_ref', 'stiff' : 5.0}] }
 
 
     # problem setup

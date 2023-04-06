@@ -16,9 +16,8 @@ import expression
 
 class boundary_cond():
     
-    def __init__(self, bc_dict, fem_params, io, vf, ti, ki=None):
-        
-        self.bc_dict = bc_dict
+    def __init__(self, fem_params, io, vf, ti, ki=None):
+
         self.io = io
         self.vf = vf
         self.ti = ti
@@ -30,9 +29,9 @@ class boundary_cond():
 
     
     # set Dirichlet BCs (should probably be overloaded for problems that do not have vector variables...)
-    def dirichlet_bcs(self, V):
+    def dirichlet_bcs(self, bcdict, V):
         
-        for d in self.bc_dict['dirichlet']:
+        for d in bcdict:
             
             try: bdim_r = d['bdim_reduction']
             except: bdim_r = 1
@@ -103,11 +102,11 @@ class boundary_cond():
 
 
     # set Robin BCs
-    def robin_bcs(self, u, v, u_pre=None):
+    def robin_bcs(self, bcdict, u, v, u_pre=None):
         
         w = ufl.as_ufl(0)
         
-        for r in self.bc_dict['robin']:
+        for r in bcdict:
             
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
@@ -167,11 +166,11 @@ class boundary_cond():
 
 
     # set membrane surface BCs
-    def membranesurf_bcs(self, u, v, a):
+    def membranesurf_bcs(self, bcdict, u, v, a):
         
         w = ufl.as_ufl(0)
         
-        for m in self.bc_dict['membrane']:
+        for m in bcdict:
             
             try: bdim_r = m['bdim_reduction']
             except: bdim_r = 1
@@ -192,11 +191,11 @@ class boundary_cond():
 class boundary_cond_solid(boundary_cond):
 
     # set Neumann BCs
-    def neumann_bcs(self, V, V_real, u, funcs_to_update=None, funcs_to_update_vec=None):
+    def neumann_bcs(self, bcdict, V, V_real, u, funcs_to_update=None, funcs_to_update_vec=None):
         
         w = ufl.as_ufl(0)
         
-        for n in self.bc_dict['neumann']:
+        for n in bcdict:
             
             try: bdim_r = n['bdim_reduction']
             except: bdim_r = 1
@@ -283,14 +282,70 @@ class boundary_cond_solid(boundary_cond):
         return w
 
 
-class boundary_cond_fluid(boundary_cond):
-
-    # set Neumann BCs
-    def neumann_bcs(self, V, V_real, Fale=None, funcs_to_update=None, funcs_to_update_vec=None):
+    # set Neumann BCs for prestress
+    def neumann_prestress_bcs(self, bcdict, V, V_real, u, funcs_to_update=None, funcs_to_update_vec=None):
         
         w = ufl.as_ufl(0)
         
-        for n in self.bc_dict['neumann']:
+        for n in bcdict:
+            
+            try: bdim_r = n['bdim_reduction']
+            except: bdim_r = 1
+            
+            if bdim_r==1: mdata = self.io.mt_b1
+            if bdim_r==2: mdata = self.io.mt_b2
+            if bdim_r==3: mdata = self.io.mt_b3
+
+            if n['dir'] == 'xyz_ref': # reference xyz
+            
+                func = fem.Function(V)
+                
+                if 'curve' in n.keys():
+                    load = expression.template_vector()
+                    load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
+                    func.interpolate(load.evaluate)
+                    funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
+                else:
+                    func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
+                
+                for i in range(len(n['id'])):
+                    
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                    w += self.vf.deltaW_ext_neumann_ref(func, db_)
+                
+            elif n['dir'] == 'normal_ref': # reference normal
+                
+                func = fem.Function(V_real)
+                
+                if 'curve' in n.keys():
+                    load = expression.template()
+                    load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
+                    func.interpolate(load.evaluate)
+                    funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
+                else:
+                    func.vector.set(n['val'])
+                
+                for i in range(len(n['id'])):
+                    
+                    db_ = ufl.ds(subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
+
+            else:
+                raise NameError("Unknown dir option for Neumann prestress BC!")
+
+        return w
+
+
+class boundary_cond_fluid(boundary_cond):
+
+    # set Neumann BCs
+    def neumann_bcs(self, bcdict, V, V_real, Fale=None, funcs_to_update=None, funcs_to_update_vec=None):
+        
+        w = ufl.as_ufl(0)
+        
+        for n in bcdict:
             
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
@@ -343,11 +398,11 @@ class boundary_cond_fluid(boundary_cond):
 
 
     # set Robin BCs
-    def robin_bcs(self, v, Fale=None):
+    def robin_bcs(self, bcdict, v, Fale=None):
         
         w = ufl.as_ufl(0)
         
-        for r in self.bc_dict['robin']:
+        for r in bcdict:
             
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1

@@ -32,13 +32,13 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         
         self.comm = comm
         
-        try: self.coupling_fluid_ale = self.coupling_params_fluid_ale['coupling_fluid_ale']
+        try: self.coupling_fluid_ale = coupling_params_fluid_ale['coupling_fluid_ale']
         except: self.coupling_fluid_ale = {}
 
-        try: self.coupling_ale_fluid = self.coupling_params_fluid_ale['coupling_ale_fluid']
+        try: self.coupling_ale_fluid = coupling_params_fluid_ale['coupling_ale_fluid']
         except: self.coupling_ale_fluid = {}
         
-        try: self.fluid_on_deformed = self.coupling_params_fluid_ale['fluid_on_deformed']
+        try: self.fluid_on_deformed = coupling_params_fluid_ale['fluid_on_deformed']
         except: self.fluid_on_deformed = 'consistent'
         
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
@@ -51,8 +51,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         self.pb0 = self.pbf0.pb0
 
         self.io = io
-        
-        self.fsi_interface = coupling_params_fluid_ale['surface_ids']
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
@@ -69,7 +67,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         # ALE velocity, but defined within fluid function space
         self.wf = fem.Function(self.pbf.V_v)
 
-        self.set_variational_forms_and_jacobians()
+        self.set_variational_forms()
         
         self.numdof = self.pbf.numdof + self.pb0.numdof + self.pba.numdof
         # fluid is 'master' problem - define problem variables based on its values
@@ -87,14 +85,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         
         is_ghosted = [True, True, True, False]
         return [self.pbf0.pbf.v.vector, self.pbf0.pbf.p.vector, self.pba.d.vector, self.pbf0.lm], is_ghosted
-        
-
-    def set_forms_solver(self):
-        pass
-
-
-    def get_presolve_state(self):
-        return False
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -261,6 +251,8 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
 
 
     def initialize_nonlinear_solver(self):
+        
+        self.pb.set_problem_residual_jacobian_forms()
         
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
