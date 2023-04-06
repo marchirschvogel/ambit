@@ -36,10 +36,7 @@ def main():
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
-                            'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1],
-                            'ptc'                   : False,
-                            'divergence_continue'   : 'PTC',
-                            'k_ptc_initial'         : 0.1}
+                            'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 
     TIME_PARAMS          = {'maxtime'               : 3.0,
                             'numstep'               : 150,

@@ -413,10 +413,10 @@ class FluidmechanicsFlow0DProblem():
 
     def write_restart(self, sname, N):
 
-        self.pbf.io.write_restart(self.pbf, N)
+        self.pbf.write_restart(sname, N)
+        self.pb0.write_restart(sname, N)
         
         if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
-            self.pb0.writerestart(sname, N)
             self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
         
         

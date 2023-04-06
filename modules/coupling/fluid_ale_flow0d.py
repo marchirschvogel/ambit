@@ -166,13 +166,14 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
     def read_restart(self, sname, N):
 
         # fluid+flow0d + ALE problem
-        self.pbf.read_restart(sname, N)
+        self.pbf0.read_restart(sname, N)
         self.pba.read_restart(sname, N)
 
 
     def evaluate_initial(self):
 
         self.pbf0.evaluate_initial()
+        self.pba.evaluate_initial()
 
 
     def write_output_ini(self):
@@ -187,19 +188,19 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
     def evaluate_pre_solve(self, t):
 
-        self.pbf.evaluate_pre_solve(t)
+        self.pbf0.evaluate_pre_solve(t)
         self.pba.evaluate_pre_solve(t)
             
             
     def evaluate_post_solve(self, t, N):
 
-        self.pbf.evaluate_post_solve(t, N)
+        self.pbf0.evaluate_post_solve(t, N)
         self.pba.evaluate_post_solve(t, N)
 
 
     def set_output_state(self):
 
-        self.pbf.set_output_state()
+        self.pbf0.set_output_state()
         self.pba.set_output_state()
 
             
@@ -211,31 +212,32 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
     def update(self):
 
         # update time step - fluid+flow0d and ALE
-        self.pbf.update()
+        self.pbf0.update()
         self.pba.update()
 
 
     def print_to_screen(self):
 
-        self.pbf.print_to_screen()
+        self.pbf0.print_to_screen()
         self.pba.print_to_screen()
     
     
     def induce_state_change(self):
         
-        self.pbf.induce_state_change()
+        self.pbf0.induce_state_change()
         self.pba.induce_state_change()
 
 
     def write_restart(self, sname, N):
 
-        self.pbf.io.write_restart(self.pbf, N)
+        self.pbf0.write_restart(sname, N)
+        self.pba.write_restart(sname, N)
 
-        
-        
+
     def check_abort(self, t):
         
-        self.pbf.check_abort(t)
+        self.pbf0.check_abort(t)
+        self.pba.check_abort(t)
 
 
 

@@ -331,7 +331,11 @@ class ModelOrderReduction():
         for col in range(rb+ndof_bulk):
             # set Phi column
             if col in col_fd_set:
-                self.V[vrs:vre,col] = self.Phi[vrs:vre,n]
+                # NOTE: We actually do not want to set the columns at once like this, since PETSc may treat close-zero entries as non-zeros
+                #self.V[vrs:vre,col] = self.Phi[vrs:vre,n]
+                # instead, set like this:
+                for k in range(vrs,vre): # TODO: Find out why setting this way yields to initial NaNs in FrSI testcase, only when run with 2 or 3 cores!
+                    if not np.isclose(self.Phi[k,n],0.0): self.V[k,col] = self.Phi[k,n]
                 n += 1
 
         self.V.assemble()

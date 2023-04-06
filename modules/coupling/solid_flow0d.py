@@ -588,11 +588,11 @@ class SolidmechanicsFlow0DProblem():
 
     def write_restart(self, sname, N):
 
-        self.pbs.io.write_restart(self.pbs, N)
+        self.pbs.write_restart(sname, N)
+        self.pb0.write_restart(sname, N)
 
-        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
-            self.pb0.writerestart(sname, N)
-            if self.coupling_type == 'monolithic_lagrange':
+        if self.coupling_type == 'monolithic_lagrange':
+            if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
                 self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
         
         
