@@ -108,7 +108,7 @@ class variationalform:
 
     # Visco-elastic membrane potential on surface
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary):
+    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None):
         
         C = F.T*F
         
@@ -118,6 +118,14 @@ class variationalform:
         
         model = params['model']
         
+        try: active = params['active_stress']
+        except: active = None
+        
+        if active is not None:
+            tau = ivar['tau_a']
+            c0, l0 = fibfnc[0], fibfnc[1]
+            omega, iota, gamma = params['active_stress']['omega'], params['active_stress']['iota'], params['active_stress']['gamma']
+
         # wall thickness
         h0 = params['h0']
 
@@ -186,11 +194,15 @@ class variationalform:
         p = 2.*(dPsi_dIc/(IIIplane) - IIIplane*dPsi_dIIc)
         S += -p * ufl.inv(Cmod).T
         
+        # add active stress
+        if active is not None:
+            S += tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
+        
         # 1st PK stress P = FS
         P = Fmod * S
         
         # only in-plane components of test function derivatives should be used!
-        var_F = ufl.grad(self.var_v) - ufl.dot(ufl.grad(self.var_v),n0n0)
+        var_F = ufl.grad(self.var_v) - ufl.grad(self.var_v)*n0n0
 
         # boundary inner virtual power
         dPb_int = (h0*ufl.inner(P,var_F))*dboundary

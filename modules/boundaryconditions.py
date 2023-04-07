@@ -16,12 +16,13 @@ import expression
 
 class boundary_cond():
     
-    def __init__(self, fem_params, io, vf, ti, ki=None):
+    def __init__(self, fem_params, io, vf, ti, ki=None, ff=None):
 
         self.io = io
         self.vf = vf
         self.ti = ti
         self.ki = ki
+        self.ff = ff
         
         self.quad_degree = fem_params['quad_degree']
         
@@ -166,10 +167,10 @@ class boundary_cond():
 
 
     # set membrane surface BCs
-    def membranesurf_bcs(self, bcdict, u, v, a):
+    def membranesurf_bcs(self, bcdict, u, v, a, ivar=None):
         
         w = ufl.as_ufl(0)
-        
+
         for m in bcdict:
             
             try: bdim_r = m['bdim_reduction']
@@ -183,7 +184,7 @@ class boundary_cond():
             
                 db_ = ufl.ds(subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 
-                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], db_)
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], db_, ivar=ivar, fibfnc=self.ff)
 
         return w
 

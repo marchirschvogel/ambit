@@ -190,9 +190,6 @@ class IO:
         f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-
-class IO_solid(IO):
-
     # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
     def readin_fibers(self, fibarray, V_fib, dx_):
         
@@ -214,7 +211,10 @@ class IO_solid(IO):
             si+=1
 
         return fib_func
-        
+
+
+
+class IO_solid(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
         
@@ -449,6 +449,9 @@ class IO_fluid(IO):
                     elif res=='fluiddisplacement': # passed in uf is not a function but form, so we have to project
                         uf_proj = project(pb.ufluid, pb.V_v, pb.dx_, nm="FluidDisplacement")
                         self.resultsfiles[res].write_function(uf_proj, t)
+                    elif res=='fibers':
+                        # written only once at the beginning, not after each time step (since constant in time)
+                        pass
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
 

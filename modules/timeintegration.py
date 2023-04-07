@@ -341,7 +341,7 @@ class timeintegration_fluid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, v, v_old, a_old, p, p_old, uf_old=None):
+    def update_timestep(self, v, v_old, a_old, p, p_old, internalvars, internalvars_old, uf_old=None):
     
         # update old fields with new quantities
         self.update_fields_ost(v, v_old, a_old, uf_old=uf_old)
@@ -349,6 +349,11 @@ class timeintegration_fluid(timeintegration):
         # update pressure variable
         p_old.vector.axpby(1.0, 0.0, p.vector)
         p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        
+        # update internal variables (e.g. active stress for reduced solid)
+        for i in range(len(internalvars_old)):
+            list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
+            list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         
         # update time dependent load curves
         self.update_time_funcs()

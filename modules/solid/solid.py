@@ -203,7 +203,6 @@ class SolidmechanicsProblem(problem_base):
         self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
-        have_fiber1, have_fiber2 = False, False
         self.have_active_stress, self.active_stress_trig, self.have_frank_starling, self.have_growth, self.have_plasticity = False, 'ode', False, False, False
         self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
 
@@ -212,10 +211,10 @@ class SolidmechanicsProblem(problem_base):
         for n in range(self.num_domains):
             
             if 'holzapfelogden_dev' in self.constitutive_models['MAT'+str(n+1)].keys() or 'guccione_dev' in self.constitutive_models['MAT'+str(n+1)].keys():
-                have_fiber1, have_fiber2 = True, True
+                assert(len(self.io.fiber_data)>1)
             
             if 'active_fiber' in self.constitutive_models['MAT'+str(n+1)].keys():
-                have_fiber1 = True
+                assert(bool(self.io.fiber_data))
                 self.mat_active_stress[n], self.have_active_stress = True, True
                 # if one mat has a prescribed active stress, all have to be!
                 if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
@@ -250,9 +249,9 @@ class SolidmechanicsProblem(problem_base):
                 self.mat_growth_trig[n] = self.constitutive_models['MAT'+str(n+1)]['growth']['growth_trig']
                 # need to have fiber fields for the following growth options
                 if self.mat_growth_dir[n] == 'fiber' or self.mat_growth_trig[n] == 'fibstretch':
-                    have_fiber1 = True
+                    assert(bool(self.io.fiber_data))
                 if self.mat_growth_dir[n] == 'radial':
-                    have_fiber1, have_fiber2 = True, True
+                    assert(len(self.io.fiber_data)>1)
                 # in this case, we have a theta that is (nonlinearly) dependent on the deformation, theta = theta(C(u)),
                 # therefore we need a local Newton iteration to solve for equilibrium theta (return mapping) prior to entering
                 # the global Newton scheme - so flag localsolve to true
@@ -288,10 +287,10 @@ class SolidmechanicsProblem(problem_base):
             self.growth_thres.interpolate(growth_thres_proj)
 
         # read in fiber data
-        if have_fiber1:
+        if bool(self.io.fiber_data):
 
             fibarray = ['fiber']
-            if have_fiber2: fibarray.append('sheet')
+            if len(self.io.fiber_data)>1: fibarray.append('sheet')
 
             self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.dx_)
 

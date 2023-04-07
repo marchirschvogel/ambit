@@ -50,6 +50,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         self.pbf = self.pbf0.pbf
         self.pb0 = self.pbf0.pb0
 
+        # modify results to write...
+        self.pbf.results_to_write = io_params['results_to_write'][0]
+        self.pba.results_to_write = io_params['results_to_write'][1]
+
         self.io = io
 
         # indicator for no periodic reference state estimation

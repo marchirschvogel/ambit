@@ -20,13 +20,14 @@ import utilities
 import solver_nonlin
 import boundaryconditions
 from projection import project
+from solid_material import activestress_activation
 
 from base import problem_base, solver_base
 
 # fluid mechanics, governed by incompressible Navier-Stokes equations:
 
 #\begin{align}
-#\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \left(\boldsymbol{\nabla} \otimes \boldsymbol{v}\right)^{\mathrm{T}} \boldsymbol{v}\right) = \boldsymbol{\nabla} \cdot \boldsymbol{\sigma} + \hat{\boldsymbol{b}} \quad \text{in} \; \Omega \times [0, T] \\
+#\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \left(\boldsymbol{\nabla}\boldsymbol{v}\right) \boldsymbol{v}\right) = \boldsymbol{\nabla} \cdot \boldsymbol{\sigma} + \hat{\boldsymbol{b}} \quad \text{in} \; \Omega \times [0, T] \\
 #\boldsymbol{\nabla} \cdot \boldsymbol{v} = 0 \quad \text{in} \; \Omega \times [0, T]
 #\end{align}
 
@@ -144,6 +145,9 @@ class FluidmechanicsProblem(problem_base):
         self.p_old  = fem.Function(self.V_p)
         # a fluid displacement
         self.uf_old = fem.Function(self.V_v)
+        # active stress for reduced solid
+        self.tau_a  = fem.Function(self.Vd_scalar, name="tau_a")
+        self.tau_a_old = fem.Function(self.Vd_scalar)
         # prestress displacement for FrSI
         if self.prestress_initial or self.prestress_from_file:
             self.uf_pre = fem.Function(self.V_v, name="Displacement_prestress")
@@ -153,6 +157,9 @@ class FluidmechanicsProblem(problem_base):
         # own read function: requires plain txt format of type valx valy valz x z y
         if self.prestress_from_file:
             self.io.readfunction(self.uf_pre, self.V_v, self.prestress_from_file)
+
+        # dictionaries of internal variables
+        self.internalvars, self.internalvars_old = {}, {}
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
@@ -192,8 +199,24 @@ class FluidmechanicsProblem(problem_base):
             else:
                 raise ValueError("Unkown fluid_on_deformed option!")
 
+        # read in fiber data - for reduced solid (FrSI)
+        if bool(self.io.fiber_data):
+
+            fibarray = ['circ']
+            if len(self.io.fiber_data)>1: fibarray.append('long')
+
+            self.fib_func = self.io.readin_fibers(fibarray, self.V_v, self.dx_)
+
+            if 'fibers' in self.results_to_write:
+                for i in range(len(fibarray)):
+                    fib_proj = project(self.fib_func[i], self.V_v, self.dx_, nm='Fiber'+str(i+1))
+                    self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
+
+        else:
+            self.fib_func = None
+
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_fluid(fem_params, self.io, self.vf, self.ti, ki=self.ki)
+        self.bc = boundaryconditions.boundary_cond_fluid(fem_params, self.io, self.vf, self.ti, ki=self.ki, ff=self.fib_func)
         
         self.bc_dict = bc_dict
 
@@ -247,10 +270,31 @@ class FluidmechanicsProblem(problem_base):
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, Fale=self.alevar['Fale'])
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, Fale=self.alevar['Fale_old'])
         # reduced-solid for FrSI problem
+        self.have_active_stress, self.active_stress_trig = False, 'ode'
         if 'membrane' in self.bc_dict.keys():
             assert(self.alevar['fluid_on_deformed']!='mesh_move')
-            w_membrane     = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc)
-            w_membrane_old = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old)
+            
+            self.mem_active_stress = [False]*len(self.bc_dict['membrane'])
+            
+            self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
+            
+            # NOTE: The number of reduced solids currently has to be equal to the number of domains, since any internal variables can only have
+            # different governing parameters per subdomain, not per surface. So, reduced (surface) solid 1 should be entirely within domain 1, etc.
+            assert(len(self.bc_dict['membrane'])==len(self.dx_))
+            
+            self.actstress = []
+            for nm in range(len(self.bc_dict['membrane'])):
+
+                if 'active_stress' in self.bc_dict['membrane'][nm]['params'].keys():
+                    self.mem_active_stress[nm], self.have_active_stress = True, True
+
+                    act_curve = self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])
+                    self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], act_curve))
+            
+            w_membrane     = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, ivar=self.internalvars)
+            w_membrane_old = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, ivar=self.internalvars_old)
+            
+
             
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial:
@@ -303,6 +347,32 @@ class FluidmechanicsProblem(problem_base):
             self.weakform_prestress_p = self.deltaW_p
             self.weakform_lin_prestress_vp = ufl.derivative(self.weakform_prestress_v, self.p, self.dp)
             self.weakform_lin_prestress_pv = ufl.derivative(self.weakform_prestress_p, self.v, self.dv)
+    
+    
+    # active stress ODE evaluation - for reduced solid model
+    def evaluate_active_stress_ode(self, t):
+
+        tau_a_, na = [], 0
+        for nm in range(len(self.bc_dict['membrane'])):
+
+            if self.mem_active_stress[nm]:
+                tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, t, self.dt))
+                na+=1
+            else:
+                tau_a_.append(ufl.as_ufl(0))
+                
+        # project and interpolate to quadrature function space
+        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_)
+        self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        self.tau_a.interpolate(tau_a_proj)
+    
+
+    # rate equations
+    def evaluate_rate_equations(self, t_abs, t_off=0):
+
+        # take care of active stress
+        if self.have_active_stress and self.active_stress_trig == 'ode':
+            self.evaluate_active_stress_ode(t_abs-t_off)
     
 
     def set_problem_residual_jacobian_forms(self):
@@ -392,6 +462,9 @@ class FluidmechanicsProblem(problem_base):
         # set time-dependent functions
         self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
             
+        # evaluate rate equations
+        self.evaluate_rate_equations(t)
+            
             
     def evaluate_post_solve(self, t, N):
         pass
@@ -409,7 +482,7 @@ class FluidmechanicsProblem(problem_base):
     def update(self):
         
         # update - velocity, acceleration, pressure, all internal variables, all time functions
-        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, uf_old=self.uf_old)
+        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, uf_old=self.uf_old)
 
 
     def print_to_screen(self):
