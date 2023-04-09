@@ -398,6 +398,33 @@ class boundary_cond_fluid(boundary_cond):
         return w
 
 
+    # set stabilized Neumann BCs
+    def stabilized_neumann_bcs(self, bcdict, v, wel=None, Fale=None):
+        
+        w = ufl.as_ufl(0)
+        
+        for sn in bcdict:
+            
+            try: bdim_r = r['bdim_reduction']
+            except: bdim_r = 1
+
+            if bdim_r==1: mdata = self.io.mt_b1
+            if bdim_r==2: mdata = self.io.mt_b2
+            if bdim_r==3: mdata = self.io.mt_b3
+            
+            for i in range(len(sn['id'])):
+                
+                db_ = ufl.ds(subdomain_data=mdata, subdomain_id=sn['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                
+                par1 = sn['par1']
+                try: par2 = sn['par2']
+                except: par2 = 0.
+
+                w += self.vf.deltaW_ext_stabilized_neumann_cur(v, par1, par2, db_, w=wel, Fale=Fale)
+
+        return w
+
+
     # set Robin BCs
     def robin_bcs(self, bcdict, v, Fale=None):
         

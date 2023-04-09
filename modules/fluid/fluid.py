@@ -262,13 +262,16 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.alevar['Fale_old'])
         
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
             w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, Fale=self.alevar['Fale'])
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, Fale=self.alevar['Fale_old'])
+        if 'stabilized_neumann' in self.bc_dict.keys():
+            w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, wel=self.alevar['w'], Fale=self.alevar['Fale'])
+            w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, wel=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
         # reduced-solid for FrSI problem
         self.have_active_stress, self.active_stress_trig = False, 'ode'
         if 'membrane' in self.bc_dict.keys():
@@ -293,9 +296,7 @@ class FluidmechanicsProblem(problem_base):
             
             w_membrane     = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, ivar=self.internalvars)
             w_membrane_old = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, ivar=self.internalvars_old)
-            
 
-            
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial:
             self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
@@ -305,11 +306,11 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_prestr_kin += self.vf.deltaW_kin_transient_stokes(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
             if 'neumann_prestress' in self.bc_dict.keys():
                 w_neumann_prestr = self.bc.neumann_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
-            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_membrane
+            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane
             
         # TODO: Body forces!
-        self.deltaW_ext     = w_neumann + w_robin + w_membrane
-        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_membrane_old
+        self.deltaW_ext     = w_neumann + w_robin + w_stabneumann + w_membrane
+        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_stabneumann_old + w_membrane_old
         
         self.timefac_m, self.timefac = self.ti.timefactors()
 

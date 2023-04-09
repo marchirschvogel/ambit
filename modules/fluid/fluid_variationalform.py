@@ -92,12 +92,18 @@ class variationalform:
 
         return func*ufl.dot(self.n, self.var_v)*dboundary
     
+    # stabilized Neumann BC - Esmaily Moghadam et al. 2011
+    def deltaW_ext_stabilized_neumann_cur(self, v, par1, par2, dboundary, w=None, Fale=None):
+
+        vn = ufl.dot(v,self.n)
+        return par1*(vn**2.)/(vn**2. + 0.01*par2**2.) * ufl.min_value(vn,0.) * ufl.dot(v,self.var_v)*dboundary # version from Esmaily Moghadam et al. 2011 if param2 = 0
+
     # Robin condition (dashpot)
     # TeX: \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
     def deltaW_ext_robin_dashpot(self, v, c, dboundary, Fale=None):
 
         return -c*(ufl.dot(v, self.var_v)*dboundary)
-    
+
     # Robin condition (dashpot) in normal direction
     # TeX: \int\limits_{\Gamma} c\,(\boldsymbol{n}\otimes \boldsymbol{n})\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
     #       \int\limits_{\Gamma} c\,(\boldsymbol{v}\cdot \boldsymbol{n})\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
@@ -319,6 +325,12 @@ class variationalform_ale(variationalform):
         J = ufl.det(Fale)
         return func*J*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary
     
+    # stabilized Neumann BC - Esmaily Moghadam et al. 2011
+    def deltaW_ext_stabilized_neumann_cur(self, v, par1, par2, dboundary, w=None, Fale=None):
+        J = ufl.det(Fale)
+        vwn = ufl.dot(v-w, J*ufl.inv(Fale).T*self.n)
+        return par1*(vwn**2.)/(vwn**2. + 0.01*par2**2.) * ufl.min_value(vwn,0.) * ufl.dot(v,self.var_v)*dboundary # version from Esmaily Moghadam et al. 2011 if param2 = 0
+
     # Robin condition (dashpot)
     # TeX:
     # \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a = 
