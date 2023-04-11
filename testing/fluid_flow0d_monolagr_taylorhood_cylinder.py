@@ -13,7 +13,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fluid_flow0d',
@@ -35,14 +35,14 @@ def main():
                             'numstep_stop'          : 2,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
-    
+
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 1.0,
                             'initial_conditions'    : {'Q_0' : 0.0, 'p_0' : 0.0}}
-    
+
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : '2elwindkessel',
                             'parameters'            : {'C' : 1.0e3, 'R' : 1.0e-2, 'p_ref' : 0.1}}
-    
+
     FEM_PARAMS           = {'order_vel'             : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
@@ -58,7 +58,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
             return -0.001*np.sin(2.*np.pi*t/TIME_PARAMS_FLUID['maxtime'])
 
@@ -82,7 +82,7 @@ def main():
     check_node.append(np.array([0.0170342, 2.99995, 13.4645]))
 
     v_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
-    
+
     # correct results
     v_corr[0] = -1.7208654619616248E-02 # x
     v_corr[1] = -5.9053964448523599E-01 # y
@@ -100,14 +100,14 @@ def main():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

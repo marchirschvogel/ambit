@@ -10,7 +10,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'signet',
@@ -28,21 +28,21 @@ def main():
                          'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init()}
-    
+
     MODEL_PARAMS      = {'modeltype'             : 'hypertrophy',
                          'parameters'            : param(),
                          'excitation_curve'      : 1}
-    
+
 
     # define your time curves here (syntax: tcX refers to curve X)
     class time_curves():
-        
+
         def tc1(self, t):
             return 0.5*(1.-np.cos(2.*np.pi*(t)/0.1)) + 1.0
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
@@ -57,35 +57,35 @@ def main():
     #s_corr[1] = -7.3138173135468898E-01
     #s_corr[2] = 0.0
     #s_corr[3] = 0.0
-    
+
     #check1 = resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     #success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     #return success
 
 
 
 def init():
-    
+
     return {'var1_0' : 0.0}
 
 
 def param():
-    
+
     return {'p1' : 1.}
 
 
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

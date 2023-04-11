@@ -16,7 +16,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d_multiscale_gandr',
@@ -65,11 +65,11 @@ def main():
                             'incompressible_2field' : False,
                             'prestress_initial'     : False,#True,
                             'lin_remodeling_full'   : False}
-    
+
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'coupling_quantity'     : ['volume','volume'],
                             'coupling_type'         : 'monolithic_direct'}
-    
+
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # end_diastole, end_systole
                             'numcycles'             : 2,#10,
                             'tol_small'             : 0.08, # cycle error tolerance: overrides eps_periodic from TIME_PARAMS_FLOW0D
@@ -101,26 +101,26 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
-            
+
             K = 5.
             t_contr, t_relax = 0.2, 0.53
-            
+
             alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
             alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
-            
+
             c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-            
+
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
         def tc2(self, t): # atrial activation
-            
+
             act_dur = 2.*param()['t_ed']
             t0 = 0.
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
@@ -138,14 +138,14 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
 
     # --- results check
     tol = 1.0e-6
-        
+
     s_corr = np.zeros(problem.mp.pbsmall.pbf.cardvasc0D.numdof)
 
     # correct 0D results
@@ -186,7 +186,7 @@ def main():
 
     check1 = resultcheck.results_check_vec(problem.mp.pbsmall.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
@@ -196,7 +196,7 @@ def param():
     R_ar_sys = 120.0e-6
     tau_ar_sys = 1.65242332
     tau_ar_pul = 0.3
-    
+
     # Diss Hirschvogel tab. 2.7
     C_ar_sys = tau_ar_sys/R_ar_sys
     Z_ar_sys = R_ar_sys/20.
@@ -207,16 +207,16 @@ def param():
     Z_ar_pul = 0.
     R_ven_pul = R_ar_pul
     C_ven_pul = 2.5*C_ar_pul
-    
+
     L_ar_sys = 0.667e-6
     L_ven_sys = 0.
     L_ar_pul = 0.
     L_ven_pul = 0.
-    
+
     # atrial elastances (only for 0D atria)
     E_at_A_l, E_at_min_l = 20.0e-6, 9.0e-6
     E_at_A_r, E_at_min_r = 10.0e-6, 8.0e-6
-    
+
     # timings
     t_ed = 0.2
     t_es = 0.53
@@ -342,7 +342,7 @@ def param():
             'R_cap_pul' : R_cap_pul,
             'C_cap_pul' : C_cap_pul,
             'R_ven_sys' : R_ven_sys,
-            'C_ven_sys' : C_ven_sys, 
+            'C_ven_sys' : C_ven_sys,
             'L_ven_sys' : L_ven_sys,
             'R_ven_pul' : R_ven_pul,
             'C_ven_pul' : C_ven_pul,
@@ -394,14 +394,14 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

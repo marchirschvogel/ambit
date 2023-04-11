@@ -30,10 +30,10 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
     def __init__(self, params, cq, vq, comm=None):
         # initialize base class
         cardiovascular0Dbase.__init__(self, comm=comm)
-        
+
         # number of degrees of freedom
         self.numdof = 3
-        
+
         # parameters
         self.R = params['R']
         self.C = params['C']
@@ -66,33 +66,33 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
         # set up symbolic equations
         self.equation_map()
-        
+
         # symbolic stiffness matrix
         self.set_stiffness()
 
         # make Lambda functions out of symbolic expressions
         self.lambdify_expressions()
-    
-    
+
+
     def setup_arrays(self):
 
         # number of degrees of freedom
         self.numdof = 3
-        
+
         self.set_solve_arrays()
-    
-    
+
+
     def equation_map(self):
-        
+
         self.varmap = {self.vname : 0, 'q' : 1, 's' : 2}
         self.auxmap = {self.cname : 1}
-        
+
         self.t_ = sp.Symbol('t_')
         p_ = sp.Symbol('p_')
         q_ = sp.Symbol('q_')
         s_ = sp.Symbol('s_')
         VQ_ = sp.Symbol('VQ_')
-        
+
         # dofs to differentiate w.r.t.
         self.x_[0] = p_
         self.x_[1] = q_
@@ -102,7 +102,7 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         if self.cq[0] == 'pressure': # switch Q <--> p for pressure coupling
             self.x_[0] = VQ_
             self.c_[0] = p_
-        
+
         # df part of rhs contribution (df - df_old)/dt
         self.df_[0] = self.C * p_ + self.L*self.C * s_
         self.df_[1] = VQ_ * self.switch_V
@@ -112,13 +112,13 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         self.f_[0] = (p_-self.p_ref)/self.R + (1.+self.Z/self.R) * q_ + (self.C*self.Z + self.L/self.R) * s_
         self.f_[1] = -q_ - (1-self.switch_V) * VQ_
         self.f_[2] = -s_
-        
+
         # populate auxiliary variable vector
         self.a_[0] = self.c_[0]
-    
+
 
     def initialize(self, x, iniparam):
-        
+
         x[0] = iniparam[self.vname+'_0']
         x[1] = iniparam['q_0']
         x[2] = iniparam['s_0']
@@ -130,16 +130,16 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
 
     def print_to_screen(self, x, a):
-        
+
         if isinstance(x, np.ndarray): x_sq = x
         else: x_sq = allgather_vec(x, self.comm)
 
         if self.comm.rank == 0:
-            
+
             print("Output of 0D model (4elwindkesselLsZ):")
-            
+
             print('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',a[0]))
-            
+
             print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',x_sq[0]))
             print('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',x_sq[1]))
 

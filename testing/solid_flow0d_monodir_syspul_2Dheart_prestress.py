@@ -17,7 +17,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     # reads in restart step from the command line
@@ -45,7 +45,7 @@ def main():
                             'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
-    
+
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
                             'initial_conditions'    : init()}
@@ -61,7 +61,7 @@ def main():
                             'prestress_initial'     : True,
                             'prestress_numstep'     : 1,
                             'prestress_ptc'         : True}
-    
+
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'cq_factor'             : [80.,80.],
                             'coupling_quantity'     : ['volume','volume','volume','volume'],
@@ -76,36 +76,36 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
-            
+
             K = 5.
             t_contr, t_relax = 0.0, 0.53
-            
+
             alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
             alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
-            
+
             c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-            
+
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
         def tc2(self, t): # atrial activation
-            
+
             act_dur = 2.*param()['t_ed']
             t0 = 0.
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
                 return 0.0
-            
+
         def tc3(self, t): # prestress LV
             return -init()['p_v_l_0']*t
 
         def tc4(self, t): # prestress RV
-            return -init()['p_v_r_0']*t        
+            return -init()['p_v_r_0']*t
 
 
     BC_DICT              = { 'dirichlet' : [{'dir' : '2dimZ', 'val' : 0.}],
@@ -116,14 +116,14 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
 
     # --- results check
     tol = 1.0e-6
-        
+
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
@@ -148,13 +148,13 @@ def main():
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
 def init():
-    
+
     return {'q_vin_l_0' : 1.1549454594333263E+04,
             'p_at_l_0' : 3.8580961077622145E-01,
             'q_vout_l_0' : -1.0552685263595845E+00,
@@ -174,7 +174,7 @@ def init():
 
 
 def param():
-    
+
     R_ar_sys = 120.0e-6
     tau_ar_sys = 1.65242332
     tau_ar_pul = 0.3
@@ -254,14 +254,14 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

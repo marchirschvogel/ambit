@@ -11,7 +11,7 @@ from pathlib import Path
 import resultcheck
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fluid_ale', # fluid_ale
@@ -32,10 +32,10 @@ def main():
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
-    FEM_PARAMS           = {'order_vel'             : 2, 
+    FEM_PARAMS           = {'order_vel'             : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
-    
+
     COUPLING_PARAMS      = {'surface_ids'           : [1]}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'eta' : 4.0e-6},
@@ -48,7 +48,7 @@ def main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # some examples... up to 9 possible (tc1 until tc9 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves():
-        
+
         def tc1(self, t):
             pmax = 1.0
             return -pmax*t/TIME_PARAMS['maxtime']
@@ -62,13 +62,13 @@ def main():
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
     #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS_FLUID, BC_DICT_FLUID, time_curves=time_curves())
-    
+
     # problem solve
     problem.solve_problem()
 
     ## --- results check
     #tol = 1.0e-6
-        
+
     #s_corr = np.zeros(problem.mp.pbf.cardvasc0D.numdof)
 
     ## correct 0D results
@@ -111,7 +111,7 @@ def main():
 
     #check1 = resultcheck.results_check_vec(problem.mp.pbf.s, s_corr, problem.mp.comm, tol=tol)
     #success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     #return success
 
 
@@ -120,14 +120,14 @@ def main():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

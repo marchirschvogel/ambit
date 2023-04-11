@@ -17,7 +17,7 @@ class template:
         return np.full(x.shape[1], self.val)
 
 
-# template vector expression class    
+# template vector expression class
 class template_vector:
     def __init__(self):
         self.val_x = 0.0

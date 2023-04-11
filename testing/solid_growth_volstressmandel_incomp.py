@@ -12,7 +12,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'solid',
@@ -30,7 +30,7 @@ def main():
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 5,
                          'timint'                : 'static'}
-    
+
     FEM_PARAMS        = {'order_disp'            : 2,
                          'order_pres'            : 1,
                          'quad_degree'           : 5,
@@ -46,11 +46,11 @@ def main():
                                                      'gamma_gr' : 2.0,
                                                      'tau_gr_rev' : 10000.0,
                                                      'gamma_gr_rev' : 2.0}}}
-                                   
+
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
             pmax = -10.
             return pmax*t/TIME_PARAMS['maxtime']
@@ -65,7 +65,7 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
@@ -77,32 +77,32 @@ def main():
     check_node.append(np.array([1.00000000e+00, 1.00000000e+00, 1.00000000e+00]))
 
     u_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
-    
+
     # correct results
     u_corr[0] = 1.8222579446973952E-01 # x
     u_corr[1] = 1.8222579446973952E-01 # y
     u_corr[2] = 1.8222579446973952E-01 # z
-    
+
     p_corr[0] = 1.6523471374159470E+01
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
     check2 = resultcheck.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p')
-    
+
     success = resultcheck.success_check([check1,check2], problem.mp.comm)
-    
+
     return success
 
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

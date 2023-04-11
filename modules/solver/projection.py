@@ -16,15 +16,15 @@ def project(v, V, dx_, bcs=[], nm=None):
 
     a, L = ufl.as_ufl(0), ufl.as_ufl(0)
     zerofnc = fem.Function(V)
-    
+
     for n in range(len(dx_)):
-        
+
         # check if we have passed in a list of functions or a function
         if isinstance(v, list):
             fnc = v[n]
         else:
             fnc = v
-        
+
         if not isinstance(fnc, ufl.constantvalue.Zero):
             a += ufl.inner(w, Pv) * dx_[n]
             L += ufl.inner(w, fnc) * dx_[n]
@@ -34,8 +34,8 @@ def project(v, V, dx_, bcs=[], nm=None):
 
     # solve linear system for projection
     function = fem.Function(V, name=nm)
-    
+
     lp = fem.petsc.LinearProblem(a, L, bcs=bcs, u=function)
     lp.solve()
-    
+
     return function

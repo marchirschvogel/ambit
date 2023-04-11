@@ -10,7 +10,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'solid',
@@ -28,7 +28,7 @@ def main():
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 1,
                          'timint'                : 'static'}
-    
+
     FEM_PARAMS        = {'order_disp'            : 1,
                          'order_pres'            : 1,
                          'quad_degree'           : 1,
@@ -41,7 +41,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t): # prestress
             return 3.*t
 
@@ -56,7 +56,7 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
@@ -68,7 +68,7 @@ def main():
     check_node.append(np.array([-1.0000000000000000e+00, -1.0000000000000000e+00, 1.0000000000000000e+01]))
 
     u_corr = np.zeros(3*len(check_node))
-    
+
     ## correct results
     u_corr[0] = 0.0 # x
     u_corr[1] = 0.0 # y
@@ -76,20 +76,20 @@ def main():
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

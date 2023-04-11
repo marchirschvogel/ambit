@@ -16,7 +16,7 @@ from pathlib import Path
 import resultcheck
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
 
@@ -42,7 +42,7 @@ def main():
                             'numstep_stop'          : 1,
                             'timint'                : 'ost',
                             'theta_ost'             : 0.5}
-    
+
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
                             'initial_conditions'    : init(),
@@ -53,11 +53,11 @@ def main():
                             'parameters'            : param(),
                             'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_solid'}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
 
-    FEM_PARAMS           = {'order_disp'            : 2, 
+    FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'incompressible_2field' : True}
-    
+
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'surface_p_ids'         : [[1],[2]],
                             'coupling_quantity'     : ['flux','flux'],
@@ -72,17 +72,17 @@ def main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # some examples... up to 9 possible (tc1 until tc9 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves():
-        
+
         def tc1(self, t): # atrial activation
-            
+
             act_dur = 2.*param()['t_ed']
             t0 = 0.
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
                 return 0.0
-        
+
 
     BC_DICT              = { 'robin' : [{'type' : 'spring',  'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
                                         {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal_ref', 'visc'  : 0.005},
@@ -93,13 +93,13 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
-    
+
     # problem solve
     problem.solve_problem()
 
     # --- results check
     tol = 1.0e-6
-        
+
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
@@ -142,7 +142,7 @@ def main():
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
@@ -151,7 +151,7 @@ def main():
 # syspulcap circulation model initial condition and parameter dicts...
 
 def init():
-    
+
     factor_kPa_mmHg = 7.500615
 
     return {'q_vin_l_0' : 0.0,
@@ -198,7 +198,7 @@ def param():
     R_ar_sys = 120.0e-6
     tau_ar_sys = 1.65242332
     tau_ar_pul = 0.3
-    
+
     # Diss Hirschvogel tab. 2.7
     C_ar_sys = tau_ar_sys/R_ar_sys
     Z_ar_sys = R_ar_sys/20.
@@ -209,16 +209,16 @@ def param():
     Z_ar_pul = 0.
     R_ven_pul = R_ar_pul
     C_ven_pul = 2.5*C_ar_pul
-    
+
     L_ar_sys = 0.667e-6
     L_ven_sys = 0.
     L_ar_pul = 0.
     L_ven_pul = 0.
-    
+
     # atrial elastances
     E_at_A_l, E_at_min_l = 20.0e-6, 9.0e-6
     E_at_A_r, E_at_min_r = 10.0e-6, 8.0e-6
-    
+
     # timings
     t_ed = 0.2
     t_es = 0.53
@@ -346,7 +346,7 @@ def param():
             'R_cap_pul' : R_cap_pul,
             'C_cap_pul' : C_cap_pul,
             'R_ven_sys' : R_ven_sys,
-            'C_ven_sys' : C_ven_sys, 
+            'C_ven_sys' : C_ven_sys,
             'L_ven_sys' : L_ven_sys,
             'R_ven_pul' : R_ven_pul,
             'C_ven_pul' : C_ven_pul,
@@ -399,14 +399,14 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     # all possible input parameters
@@ -55,12 +55,12 @@ def main():
                             'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
                             'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
                             'timint'                : 'genalpha', # time-integration algorithm: 'genalpha', 'ost', 'static'
-                            'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor 
+                            'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor
                             'rho_inf_genalpha'      : 0.8} # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
-    
+
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: 'ost'
-                            'theta_ost'             : 0.5, # One-Step-Theta time integration factor 
+                            'theta_ost'             : 0.5, # One-Step-Theta time integration factor
                             'initial_conditions'    : init(), # initial condition dictionary (here defined as function, see below)
                             'initial_file'          : None, # OPTIONAL: if we want to read initial conditions from a file (overwrites above specified dict)
                             'eps_periodic'          : 1.0e-3, # OPTIONAL: cardiac cycle periodicity tolerance (default: 1.0e-20)
@@ -90,7 +90,7 @@ def main():
                             'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
                             'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt' # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             'pressure_at_midpoint'  : False} # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
-    
+
     # for solid_flow0d or fluid_flow0d problem type
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
@@ -107,7 +107,7 @@ def main():
     # for solid_constraint problem type
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[1],[2]], # coupling surfaces for volume or flux constraint
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
-                            'constraint_quantity'   : ['volume','volume'], # 'volume', 'flux' (default: volume) 
+                            'constraint_quantity'   : ['volume','volume'], # 'volume', 'flux' (default: volume)
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
     # for model order reduction
@@ -131,7 +131,7 @@ def main():
                             'write_checkpoints'     : False, # OPTIONAL: to write checkpoints after each small or large scale run to restart from there (default: False)
                             'restart_cycle'         : 0, # OPTIONAL: at which multiscale cycle to restart (default: 0)
                             'restart_from_small'    : False} # OPTIONAL: if the multiscale sim should be restarted from a previous small scale run (small scale of restart_cycle needs to be computed already) (default: False)
-                            
+
                             # - MATn has to correspond to subdomain id n (set by the flags in Attribute section of *_domain.xdmf file - so if you have x mats, you need ids ranging from 1,...,x)
                             # - one MAT can be decomposed into submats, see examples below (additive stress contributions)
                             # - for solid: if you use a deviatoric (_dev) mat, you should also use EITHER a volumetric (_vol) mat, too, OR set incompressible_2field in FEM_PARAMS to 'True' and then only use a _dev mat and MUST NOT use a _vol mat! (if incompressible_2field is 'True', then all materials have to be treated perfectly incompressible currently)
@@ -168,10 +168,10 @@ def main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # some examples... up to 20 possible (tc1 until tc20 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves():
-        
+
         def tc1(self, t):
             return 3.*t
-        
+
         def tc2(self, t):
             return -5000.0*np.sin(2.*np.pi*t/TIME_PARAMS_SOLID['maxtime'])
 
@@ -179,24 +179,24 @@ def main():
             return 5.
 
         def tc4(self, t): # for active stress activation
-            
+
             K = 5.
             t_contr, t_relax = 0.2, 0.53
-            
+
             alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
             alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
-            
+
             c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-            
+
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
         def tc5(self, t): # 0D elastance activation function
-            
+
             act_dur = 0.4
             t0 = 0.
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 y = 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
@@ -220,7 +220,7 @@ def main():
 
     # problem setup - exemplary for 3D-0D coupling of solid (fluid) to flow0d
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
-    
+
     # problem setup for solid (fluid) only: just pass parameters related to solid (fluid) instead of lists, so:
     #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
 
@@ -231,7 +231,7 @@ def main():
 # syspul circulation model initial condition and parameter dicts...
 
 def init():
-    
+
     return {'q_vin_l_0' : 1.1549454594333263E+04,
             'p_at_l_0' : 3.8580961077622145E-01,
             'q_vout_l_0' : -1.0552685263595845E+00,
@@ -255,7 +255,7 @@ def init():
             'p_cord_sys_0' : 0.}
 
 def param():
-    
+
     R_ar_sys = 120.0e-6
     tau_ar_sys = 1.65242332
     tau_ar_pul = 0.3
@@ -348,5 +348,5 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     main()

@@ -35,7 +35,7 @@ parser.add_argument('-plt', '--genplots', dest='plt', action='store', type=lambd
 parser.add_argument('-ext', '--extplot', dest='ext', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False) # whether some external data should be added to some plots (needs to be specified...)
 
 def main():
-    
+
     args = parser.parse_args()
 
     postprocess0D(args.p, args.s, args.n, args.T, args.ted, args.tes, args.m, args.mc, args.ip, calc_func_params=args.cf, V0=args.V0, multiscalegandr=args.mgr, lastgandrcycl=args.lgr, export_png=args.png, generate_plots=args.plt, ext_plot=args.ext)
@@ -44,56 +44,56 @@ def main():
 def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymodel, indpertaftercyl=0, calc_func_params=False, V0=[113.25e3,150e3,50e3,50e3, 0e3], multiscalegandr=False, lastgandrcycl=1, export_png=True, generate_plots=True, ext_plot=False):
 
     fpath = Path(__file__).parent.absolute()
-    
+
     # return the groups we want to plot
     groups = []
-    
+
     if model == 'syspul':
-        
+
         import cardiovascular0D_syspul
         cardiovascular0D_syspul.postprocess_groups_syspul(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcap':
-        
+
         import cardiovascular0D_syspulcap
         cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
-        
+
     elif model == 'syspulcapcor':
-        
+
         import cardiovascular0D_syspulcap
         cardiovascular0D_syspulcap.postprocess_groups_syspulcapcor(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
-        
+
     elif model == 'syspulcaprespir':
-        
+
         import cardiovascular0D_syspulcaprespir
         cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
-    
+
     elif model == '4elwindkesselLsZ':
-    
+
         # TODO: Should we implement this?
         iscirculation = False
         pass
-    
+
     elif model == '4elwindkesselLpZ':
-    
+
         # TODO: Should we implement this?
         iscirculation = False
         pass
-    
+
     elif model == '2elwindkessel':
-    
+
         import cardiovascular0D_2elwindkessel
         cardiovascular0D_2elwindkessel.postprocess_groups(groups,indpertaftercyl)
         iscirculation = False
-    
+
     else:
 
         raise NameError("Unknown 0D model!")
@@ -106,7 +106,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         # get the data and check its length
         tmp = np.loadtxt(path+'/results_'+sname+'_p_ar_pul.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
-        
+
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
         for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort_sys']):
             # test if volume file exists
@@ -139,7 +139,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 # safety check - volume file should exist in case of missing flux file!
                 test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
                 if test_V == 0:
-                    
+
                     if ch=='v_l':
                         flux_i = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', usecols=1)
                         flux_o = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', usecols=1)
@@ -157,7 +157,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                         flux_o = np.loadtxt(path+'/results_'+sname+'_q_arp_sys.txt', usecols=1)
                     else:
                         raise NameError("Unknown chamber/compartment!")
-                    
+
                     flux = -flux_i + flux_o # -Q_ch = q_ch_in - q_ch_out
                     file_flx = open(path+'/results_'+sname+'_Q_'+ch+'.txt', 'wt')
                     for n in range(len(flux)):
@@ -215,7 +215,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', path+'/results_'+sname+'_V_'+ch+'_tmp.txt'])
             # paste files together
             os.system('paste '+path+'/results_'+sname+'_V_'+ch+'_tmp.txt '+path+'/results_'+sname+'_p_'+ch+'_tmp.txt > '+path+'/results_'+sname+'_pV_'+ch+'.txt')
-            # isolate last cycle                
+            # isolate last cycle
             os.system('tail -n '+str(nstep_cycl)+' '+path+'/results_'+sname+'_pV_'+ch+'.txt > '+path+'/results_'+sname+'_pV_'+ch+'_last.txt')
             if multiscalegandr and indpertaftercyl > 0:
                 subprocess.call(['cp', path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_p_'+ch+'.txt', path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_p_'+ch+'_tmp.txt'])
@@ -225,7 +225,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 subprocess.call(['sed', '-r', '-i', 's/(\s+)?\S+//1', path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_V_'+ch+'_tmp.txt'])
                 # paste files together
                 os.system('paste '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_V_'+ch+'_tmp.txt '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_p_'+ch+'_tmp.txt > '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_pV_'+ch+'.txt')
-                # isolate last cycle                
+                # isolate last cycle
                 os.system('tail -n '+str(nstep_cycl)+' '+path+'/results_'+sname.replace('small1','small'+str(lastgandrcycl))+'_pV_'+ch+'.txt > '+path+'/results_'+sname+'_pV_'+ch+'_gandr.txt')
             # isolate healthy/baseline cycle
             if indpertaftercyl > 0:
@@ -250,24 +250,24 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         for i in range(len(volall)):
             fva.write('%.16E %.16E\n' % (tmp[i], volall[i]))
         fva.close()
-        
+
         # compute integral data
         file_integral = path+'/results_'+sname+'_data_integral.txt'
         fi = open(file_integral, 'wt')
-        
+
         fi.write('T_cycl ' +str(T_cycl) + '\n')
         fi.write('N_step ' +str(nstep_cycl) + '\n')
-        
+
         # function parameters of left and right ventricle
         if calculate_function_params:
-        
+
             # number of heart cycles
             n_cycl = int(numdata/nstep_cycl)
             t_off = tmp[0]-T_cycl/nstep_cycl
-        
+
             sw, sv, co, ef, edv, esv, vmin, vmax, vend, edp, esp, sv_net, co_net, ef_net, v_reg, f_reg = [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
             for ch in ['v_l','v_r']:
-                
+
                 # stroke work
                 pv = np.loadtxt(path+'/results_'+sname+'_pV_'+ch+'_last.txt') # this is already last (periodic) cycle pv data!
                 val = 0.0
@@ -275,7 +275,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                     # we need the negative sign since we go counter-clockwise around the loop!
                     val -= 0.5*(pv[k+1,1]+pv[k,1]) * (pv[k+1,0] - pv[k,0])
                 sw.append(val)
-                
+
                 # stroke volume, cardiac output, end-diastolic and end-systolic volume, ejection fraction
                 vol = np.loadtxt(path+'/results_'+sname+'_V_'+ch+'.txt', skiprows=max(0,numdata-nstep_cycl))
                 vmin.append(min(vol[:,1]))
@@ -294,7 +294,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
 
                 # end-systolic pressure
                 esp.append(np.interp(t_es+(n_cycl-1)*T_cycl+t_off, pres[:,0], pres[:,1]))
-                
+
                 # net values (in case of regurgitation of valves, for example), computed by integrating in- and out-fluxes
                 if ch=='v_l':
                     fluxout = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', skiprows=max(0,numdata-nstep_cycl))
@@ -307,21 +307,21 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 val = 0.0
                 for i in range(len(fluxout)-1):
                     # mid-point rule
-                    val += 0.5*(fluxout[i+1,1]+fluxout[i,1]) * (fluxout[i+1,0]-fluxout[i,0])  
+                    val += 0.5*(fluxout[i+1,1]+fluxout[i,1]) * (fluxout[i+1,0]-fluxout[i,0])
                 sv_net.append(val)
                 co_net.append(val/T_cycl)
-                
+
                 # true (net) ejection fraction
                 ef_net.append(sv_net[-1]/edv[-1])
-                
+
                 # regurgitant volume
                 val = 0.0
                 for i in range(len(fluxin)-1):
                     # mid-point rule
                     if fluxin[i+1,1] < 0.:
-                        val += 0.5*(fluxin[i+1,1]+fluxin[i,1]) * (fluxin[i+1,0]-fluxin[i,0]) 
+                        val += 0.5*(fluxin[i+1,1]+fluxin[i,1]) * (fluxin[i+1,0]-fluxin[i,0])
                 v_reg.append(abs(val))
-                
+
                 # regurgitant fraction
                 f_reg.append(v_reg[-1]/sv[-1])
 
@@ -343,7 +343,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                     val += 0.5*(pr[k+1,1]+pr[k,1]) * (pr[k+1,0] - pr[k,0])
                 val /= (pr[-1,0]-pr[0,0])
                 marp.append(val)
-            
+
             # systolic and diastolic blood pressures
             p_ar_dias, p_ar_syst = [], []
             for pc in ['ar_sys','ar_pul']:
@@ -408,9 +408,9 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             fi.write('f_reg_lv %.16f\n' % (f_reg[0]))
             fi.write('f_reg_rv %.16f\n' % (f_reg[1]))
             fi.write('p_ard_sys_dias %.16f\n' % (p_ard_dias))
-            fi.write('p_ard_sys_syst %.16f\n' % (p_ard_syst)) 
+            fi.write('p_ard_sys_syst %.16f\n' % (p_ard_syst))
             fi.write('p_ar_sys_dias %.16f\n' % (p_ar_dias[0]))
-            fi.write('p_ar_sys_syst %.16f\n' % (p_ar_syst[0])) 
+            fi.write('p_ar_sys_syst %.16f\n' % (p_ar_syst[0]))
             fi.write('p_ar_pul_dias %.16f\n' % (p_ar_dias[1]))
             fi.write('p_ar_pul_syst %.16f\n' % (p_ar_syst[1]))
             fi.write('mpat_l %.16f\n' % (mpat[0]))
@@ -449,22 +449,22 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             groups[grind]['lines'].append(301)
 
         for g in range(len(groups)):
-            
+
             numitems = len(list(groups[g].values())[0])
-            
+
             # safety (and sanity...) check
             if numitems > 18:
                 print("More than 18 items to plot in one graph! Adjust plotfile template or consider if this is sane...")
                 sys.exit()
-            
+
             subprocess.call(['cp', str(fpath)+'/flow0d_gnuplot_template.p', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             subprocess.call(['sed', '-i', 's#__OUTDIR__#'+path+'/plot0d_'+sname+'/#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             subprocess.call(['sed', '-i', 's#__FILEDIR__#'+path+'#', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-            
+
             subprocess.call(['sed', '-i', 's/__OUTNAME__/'+list(groups[g].keys())[0]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-            
+
             factor_kPa_mmHg = 7.500615
-            
+
             if 'pres_time' in list(groups[g].keys())[0]:
                 x1value, x2value     = 't', ''
                 x1unit, x2unit       = 's', ''
@@ -556,34 +556,34 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 if 'sys_l' in list(groups[g].keys())[0]:
                     xextend, yextend     = 1.0, 1.3
                     maxrows, maxcols, sl, swd = 3, 5, 10, 50
-            
+
             data = []
             x_s_all, x_e_all = [], []
             y_s_all, y_e_all = [], []
-            
+
             for q in range(numitems):
-                
+
                 prfx = 'results_'+sname+'_'
-                
+
                 # continue if file does not exist
                 if os.system('test -e '+path+'/'+prfx+list(groups[g].values())[0][q]+'.txt') > 0:
                     continue
-                
+
                 # get the data and check its length
                 tmp = np.loadtxt(path+'/'+prfx+list(groups[g].values())[0][q]+'.txt') # could be another file - all should have the same length!
                 numdata = len(tmp)
-                
+
                 # set quantity, title, and plotting line
                 subprocess.call(['sed', '-i', 's/__QTY'+str(q+1)+'__/'+prfx+list(groups[g].values())[0][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
                 subprocess.call(['sed', '-i', 's/__TIT'+str(q+1)+'__/'+list(groups[g].values())[1][q]+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
                 subprocess.call(['sed', '-i', 's/__LIN'+str(q+1)+'__/'+str(list(groups[g].values())[2][q])+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-                
+
                 # adjust the plotting command to include all the files to plot in one graph
                 if q!=0: subprocess.call(['sed', '-i', 's/#__'+str(q+1)+'__//g', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-                
+
                 if 'PERIODIC' in list(groups[g].keys())[0]: skip = max(0,numdata-nstep_cycl)
                 else: skip = 0
-                
+
                 # get the x,y range on which to plot
                 data.append(np.loadtxt(path+'/'+prfx+list(groups[g].values())[0][q]+'.txt', skiprows=skip))
 
@@ -593,15 +593,15 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 else: # start plots from x=0 even if data is larger than zero
                     if min(data[q][:,0]) > 0.0: x_s_all.append(0.0)
                     else: x_s_all.append(min(data[q][:,0]))
-                
+
                 x_e_all.append(max(data[q][:,0]))
-                
+
                 # start plots from y=0 even if data is larger than zero
                 if min(data[q][:,1]) > 0.0: y_s_all.append(0.0)
                 else: y_s_all.append(min(data[q][:,1]))
-                
+
                 y_e_all.append(max(data[q][:,1]))
-            
+
             # get the min and the max of all x's and y's
             x_s, x_e = xscale*min(x_s_all), xscale*max(x_e_all)
             #x_s, x_e = 0.0, xscale*max(x_e_all)
@@ -614,7 +614,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             # if we want to use a x2 or y2 axis
             if x2value != '': subprocess.call(['sed', '-i', 's/#__HAVEX2__//', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             if y2value != '': subprocess.call(['sed', '-i', 's/#__HAVEY2__//', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
-            
+
             # axis segments - x
             subprocess.call(['sed', '-i', 's/__X1S__/'+str(x_s)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
             subprocess.call(['sed', '-i', 's/__X1E__/'+str(x_e*xextend)+'/', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
@@ -655,7 +655,7 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 subprocess.call(['mv', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-1.png', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.png']) # output has -1, so rename
                 # delete PDFs
                 subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.pdf'])
-                
+
             # clean up
             subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.aux', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'.log'])
             # guess we do not need these files anymore since we have the final PDF...
@@ -667,5 +667,5 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
 
 
 if __name__ == "__main__":
-    
+
     main()

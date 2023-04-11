@@ -15,7 +15,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'solid',
@@ -53,7 +53,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
             pmax = -16.
             if t <= 0.2:
@@ -69,16 +69,16 @@ def main():
                 return pmax
 
         def tc3(self, t):
-            
+
             K = 5.
             t_contr, t_relax = 0.2, 1000.
-            
+
             alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
             alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
-            
+
             c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-            
+
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
@@ -90,14 +90,14 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
 
     # --- results check
     tol = 1.0e-6
-        
+
     check_node = []
     check_node.append(np.array([-21.089852094479845, -26.26308841783208, 9.227760327944651e-16]))
 
@@ -110,20 +110,20 @@ def main():
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

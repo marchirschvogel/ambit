@@ -12,7 +12,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
 
@@ -46,7 +46,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
             thetamax = 2.0
             gr = thetamax-1.
@@ -57,7 +57,7 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
@@ -69,17 +69,17 @@ def main():
     check_node.append(np.array([3.475149154663086, -3.17646312713623, -74.3183364868164]))
 
     u_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
-    
+
     ## correct results (apex node)
     u_corr[0] = -9.3743445617845182E+00 # x
     u_corr[1] = 1.0877463102123736E+01 # y
     u_corr[2] = -1.0954897338860498E+02 # z
-    
+
     p_corr[0] = -9.3006817518134621E+00
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
     check2 = resultcheck.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p')
-    
+
     success = resultcheck.success_check([check1,check2], problem.mp.comm)
 
     return success
@@ -88,14 +88,14 @@ def main():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

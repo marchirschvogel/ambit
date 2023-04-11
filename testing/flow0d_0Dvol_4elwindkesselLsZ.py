@@ -10,7 +10,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'flow0d',
@@ -28,22 +28,22 @@ def main():
                          'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init()}
-    
+
     MODEL_PARAMS      = {'modeltype'             : '4elwindkesselLsZ',
                          'parameters'            : param(),
                          'excitation_curve'      : 1}
-    
+
 
     # define your time curves here (syntax: tcX refers to curve X)
     class time_curves():
-        
+
         def tc1(self, t):
             return 0.5*(1.-np.cos(2.*np.pi*(t)/0.1)) + 1.0
 
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
@@ -57,7 +57,7 @@ def main():
     s_corr[0] = 1.0608252198133588E+00
     s_corr[1] = 0.0
     s_corr[2] = 0.0
-    
+
     check1 = resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
 
@@ -66,14 +66,14 @@ def main():
 
 
 def init():
-    
+
     return {'p_0' : 10.0,
             'q_0' : 0.0,
             's_0' : 0.0}
 
 
 def param():
-    
+
     return {'R' : 100e-6,
             'C' : 2000.0,
             'Z' : 5.0e-6,
@@ -84,14 +84,14 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

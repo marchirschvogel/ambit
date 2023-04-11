@@ -22,25 +22,25 @@ class Flow0DProblem(problem_base):
 
     def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None):
         problem_base.__init__(self, io_params, time_params, comm)
-        
+
         self.problem_physics = 'flow0d'
-        
+
         self.simname = io_params['simname']
-        
+
         self.time_params = time_params
-        
+
         # only relevant to syspul* models
         try:
             self.chamber_models = model_params['chamber_models']
             if 'ao' not in self.chamber_models.keys(): self.chamber_models['ao'] = {'type' : '0D_rigid'} # add aortic root model
         except: self.chamber_models = {}
-        
+
         try: self.coronary_model = model_params['coronary_model']
         except: self.coronary_model = None
-        
+
         try: self.vad_model = model_params['vad_model']
         except: self.vad_model = None
-        
+
         try: self.excitation_curve = model_params['excitation_curve']
         except: self.excitation_curve = None
 
@@ -58,29 +58,29 @@ class Flow0DProblem(problem_base):
         # could use extra output path setting for 0D model (i.e. for coupled problem)
         try: self.output_path_0D = io_params['output_path_0D']
         except: self.output_path_0D = io_params['output_path']
-        
+
         # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
         try: self.output_midpoint = io_params['output_midpoint_0D']
         except: self.output_midpoint = True
-        
+
         try: valvelaws = model_params['valvelaws']
         except: valvelaws = {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}
 
         try: self.cq = coupling_params['coupling_quantity']
         except: self.cq = ['volume']
-        
+
         try: self.vq = coupling_params['variable_quantity']
         except: self.vq = ['pressure']
-        
+
         try: self.eps_periodic = time_params['eps_periodic']
         except: self.eps_periodic = 1.0e-20
-        
+
         try: self.periodic_checktype = time_params['periodic_checktype']
         except: self.periodic_checktype = ['allvar']
-        
+
         try: self.prescribed_variables = model_params['prescribed_variables']
         except: self.prescribed_variables = {}
-        
+
         try: self.perturb_type = model_params['perturb_type'][0]
         except: self.perturb_type = None
 
@@ -89,15 +89,15 @@ class Flow0DProblem(problem_base):
 
         try: self.perturb_id = model_params['perturb_type'][2]
         except: self.perturb_id = -1
-        
+
         try: self.initial_backwardeuler = time_params['initial_backwardeuler']
         except: self.initial_backwardeuler = False
-        
+
         try: self.perturb_after_cylce = model_params['perturb_after_cylce']
         except: self.perturb_after_cylce = -1
         # definitely set to -1 if we don't have a perturb type
         if self.perturb_type is None: self.perturb_after_cylce = -1
-        
+
         self.have_induced_pert = False
 
         # initialize 0D model class
@@ -130,21 +130,21 @@ class Flow0DProblem(problem_base):
         # vectors and matrices
         self.dK = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.dK.setUp()
-        
+
         self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K.setUp()
 
         self.s, self.s_old, self.s_mid = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft()
         self.sTc, self.sTc_old = self.K.createVecLeft(), self.K.createVecLeft()
-        
+
         self.df, self.df_old = self.K.createVecLeft(), self.K.createVecLeft()
         self.f, self.f_old   = self.K.createVecLeft(), self.K.createVecLeft()
 
         self.aux, self.aux_old, self.aux_mid = np.zeros(self.numdof), np.zeros(self.numdof), np.zeros(self.numdof)
         self.auxTc, self.auxTc_old = np.zeros(self.numdof), np.zeros(self.numdof)
-        
+
         self.s_set = self.K.createVecLeft() # set point for multiscale analysis
-        
+
         self.c, self.y = [], []
 
         # initialize flow0d time-integration class
@@ -160,7 +160,8 @@ class Flow0DProblem(problem_base):
         self.cardvasc0D.initialize(self.sTc_old, self.initialconditions)
 
         self.theta_ost = time_params['theta_ost']
-        
+
+        # for solver access
         self.odemodel = self.cardvasc0D
 
 
@@ -170,15 +171,15 @@ class Flow0DProblem(problem_base):
 
         K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         K.setUp()
-        
+
         # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         r = K.createVecLeft()
 
         r.axpy(1./self.dt, self.df)
         r.axpy(-1./self.dt, self.df_old)
-        
+
         r.axpy(theta, self.f)
-        r.axpy(1.-theta, self.f_old)     
+        r.axpy(1.-theta, self.f_old)
 
         self.dK.assemble()
         self.K.assemble()
@@ -186,6 +187,14 @@ class Flow0DProblem(problem_base):
 
         K.axpy(1./self.dt, self.dK)
         K.axpy(theta, self.K)
+
+        # if we have prescribed variable values over time
+        if bool(self.prescribed_variables):
+            for a in self.prescribed_variables:
+                varindex = self.cardvasc0D.varmap[a]
+                curvenumber = self.prescribed_variables[a]
+                val = self.ti.timecurves(curvenumber)(t)
+                self.cardvasc0D.set_prescribed_variables(self.s, r, K, val, varindex)
 
         return r, K
 
@@ -199,17 +208,17 @@ class Flow0DProblem(problem_base):
                 theta = self.theta_ost
         else:
             theta = self.theta_ost
-            
+
         return theta
 
 
     def writerestart(self, sname, N, ms=False):
-        
+
         self.cardvasc0D.write_restart(self.output_path_0D, sname+'_s', N, self.s)
         self.cardvasc0D.write_restart(self.output_path_0D, sname+'_aux', N, self.aux)
         self.cardvasc0D.write_restart(self.output_path_0D, sname+'_sTc_old', N, self.sTc_old)
         if ms: self.cardvasc0D.write_restart(self.output_path_0D, sname+'_s_set', N, self.s_set)
-        
+
         if self.cardvasc0D.T_cycl > 0: # write heart cycle info
             if self.comm.rank == 0:
                 filename = self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(N)+'.txt'
@@ -234,34 +243,37 @@ class Flow0DProblem(problem_base):
 
 
     def evaluate_activation(self, t):
-        
+
         # activation curves
         if bool(self.chamber_models):
             ci=0
             for ch in ['lv','rv','la','ra']:
-                if self.chamber_models[ch]['type']=='0D_elast': 
+                if self.chamber_models[ch]['type']=='0D_elast':
                     self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(t)
                     ci+=1
-                if self.chamber_models[ch]['type']=='0D_elast_prescr': 
+                if self.chamber_models[ch]['type']=='0D_elast_prescr':
                     self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(t)
+                    ci+=1
+                if self.chamber_models[ch]['type']=='0D_prescr':
+                    self.c[self.len_c_3d0d+ci] = self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(t)
                     ci+=1
 
 
     def induce_perturbation(self):
-        
+
         if self.perturb_after_cylce > 0: # at least run through one healthy cycle
-            
+
             if self.ti.cycle[0] > self.perturb_after_cylce:
 
                 if self.comm.rank == 0:
                     print(">>> Induced cardiovascular disease type: %s" % (self.perturb_type))
                     sys.stdout.flush()
-        
+
                 self.cardvasc0D.induce_perturbation(self.perturb_type, self.perturb_factor)
                 self.have_induced_pert = True
 
     ### now the base routines for this problem
-    
+
     def pre_timestep_routines(self):
         pass
 
@@ -275,7 +287,7 @@ class Flow0DProblem(problem_base):
 
 
     def evaluate_initial(self):
-        
+
         # evaluate old state
         if self.excitation_curve is not None:
             self.c = []
@@ -296,12 +308,12 @@ class Flow0DProblem(problem_base):
 
 
     def get_time_offset(self):
-        
+
         return (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
 
 
     def evaluate_pre_solve(self, t):
-        
+
         # external volume/flux from time curve
         if self.excitation_curve is not None:
             self.c[0] = self.ti.timecurves(self.excitation_curve)(t)
@@ -314,39 +326,39 @@ class Flow0DProblem(problem_base):
 
 
     def set_output_state(self):
-        
+
         # get midpoint dof values for post-processing (has to be called before update!)
         self.cardvasc0D.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=self.output_midpoint)
         self.cardvasc0D.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=self.output_midpoint)
 
 
     def write_output(self, N, t):
-        
+
         # raw txt file output of 0D model quantities
         if self.write_results_every_0D > 0 and N % self.write_results_every_0D == 0:
             self.cardvasc0D.write_output(self.output_path_0D, t, self.s_mid, self.aux_mid, self.simname)
-        
-        
+
+
     def update(self):
-        
+
         # update timestep
         self.cardvasc0D.update(self.s, self.df, self.f, self.s_old, self.df_old, self.f_old, self.aux, self.aux_old)
 
 
     def print_to_screen(self):
-        
+
         self.cardvasc0D.print_to_screen(self.s_mid,self.aux_mid)
-        
-        
+
+
     def induce_state_change(self):
-    
+
         # induce some disease/perturbation for cardiac cycle (i.e. valve stenosis or leakage)
         if self.perturb_type is not None and not self.have_induced_pert:
             self.induce_perturbation()
 
 
     def write_restart(self, sname, N):
-        
+
         # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
         if self.write_restart_every > 0 and N % self.write_restart_every == 0:
             self.writerestart(sname, N)
@@ -378,11 +390,11 @@ class Flow0DSolver(solver_base):
 
 
     def solve_nonlinear_problem(self, t):
-        
+
         self.solnln.newton(t)
 
 
     def print_timestep_info(self, N, t, wt):
-    
+
         # print time step info to screen
         self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, wt=wt)

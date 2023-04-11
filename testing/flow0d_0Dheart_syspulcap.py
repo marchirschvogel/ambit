@@ -10,7 +10,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'flow0d',
@@ -28,30 +28,30 @@ def main():
                          'initial_conditions'    : init(),
                          'eps_periodic'          : 0.03,
                          'periodic_checktype'    : ['pQvar']}
-    
+
     MODEL_PARAMS      = {'modeltype'             : 'syspulcap',
                          'parameters'            : param(),
                          'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
-    
+
 
     # define your time curves here (syntax: tcX refers to curve X)
     class time_curves():
-        
+
         def tc1(self, t): # atrial activation
-            
+
             act_dur = 2.*param()['t_ed']
             t0 = 0.
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
                 return 0.0
 
         def tc2(self, t): # ventricular activation
-            
+
             act_dur = 1.8*(param()['t_es'] - param()['t_ed'])
             t0 = param()['t_ed']
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
@@ -60,7 +60,7 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
@@ -107,16 +107,16 @@ def main():
     s_corr[33] = -8.4133350626452477E+04
     s_corr[34] = 1.6151509582279193E+00
     s_corr[35] = -5.9085665923784400E+03
-    
+
     check1 = resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
-def init(): 
-    
+def init():
+
     return {'q_vin_l_0' : 2.9122879355134799E+04,
             'p_at_l_0' : 6.8885657594702698E-01,
             'q_vout_l_0' : 4.4126414250284074E-01,
@@ -156,13 +156,13 @@ def init():
 
 
 def param():
-    
+
     # parameters in kg-mm-s unit system
-    
+
     R_ar_sys = 120.0e-6
     tau_ar_sys = 1.0311433159
     tau_ar_pul = 0.3
-    
+
     # Diss Hirschvogel tab. 2.7
     C_ar_sys = tau_ar_sys/R_ar_sys
     Z_ar_sys = R_ar_sys/20.
@@ -172,17 +172,17 @@ def param():
     C_ar_pul = tau_ar_pul/R_ar_pul
     R_ven_pul = R_ar_pul
     C_ven_pul = 2.5*C_ar_pul
-    
+
     L_ar_sys = 0.667e-6
     L_ven_sys = 0.
     L_ar_pul = 0.
     L_ven_pul = 0.
-    
+
     # timings
     t_ed = 0.2
     t_es = 0.53
     T_cycl = 1.0
-    
+
     # atrial elastances
     E_at_max_l = 2.9e-5
     E_at_min_l = 9.0e-6
@@ -193,7 +193,7 @@ def param():
     E_v_min_l = 12.0e-6
     E_v_max_r = 20.0e-5
     E_v_min_r = 10.0e-6
-    
+
 
     ## systemic arterial
     # now we have to separate the resistance into a proximal and a peripheral part
@@ -255,7 +255,7 @@ def param():
     frac_Cprox_Ctotal = 0.5#0.12  # Ursino et al. factor: 0.12 - XXX?: gives shitty p_puls... - stick with 0.5
     C_cap_pul = (1.-frac_Cprox_Ctotal)*C_ar_pul
     C_ar_pul *= frac_Cprox_Ctotal # now C_ar_pul(prox)
-    
+
     ### unstressed compartment volumes, diffult to estimate - use literature values!
     # these volumes only become relevant for the gas transport models as they determine the capacity of each
     # compartment to store constituents - however, they are also used for postprocessing of the flow models...
@@ -313,7 +313,7 @@ def param():
             'R_cap_pul' : R_cap_pul,
             'C_cap_pul' : C_cap_pul,
             'R_ven_sys' : R_ven_sys,
-            'C_ven_sys' : C_ven_sys, 
+            'C_ven_sys' : C_ven_sys,
             'L_ven_sys' : L_ven_sys,
             'R_ven_pul' : R_ven_pul,
             'C_ven_pul' : C_ven_pul,
@@ -366,14 +366,14 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

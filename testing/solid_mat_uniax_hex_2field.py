@@ -18,7 +18,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'solid',
@@ -39,7 +39,7 @@ def main():
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 1,
                          'timint'                : 'static'}
-    
+
     FEM_PARAMS        = {'order_disp'            : 2, # hex27 elements
                          'order_pres'            : 1, # hex8 elements
                          'quad_degree'           : 6, # should yield 27 Gauss points
@@ -52,7 +52,7 @@ def main():
 
 
     # analytical incompressible P_11 solutions for stretch in 1-direction (= x-direction):
-    
+
     # constraint is lam_1 * lam_2 * lam_3 = 1
     # strain in 1-direction: lam := lam_1 ---> lam_2 = lam_3 = lam_q ---> lam_q = 1 / sqrt(lam)
 
@@ -81,7 +81,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
             umax = 1.0
             return umax*t/TIME_PARAMS['maxtime']
@@ -89,21 +89,21 @@ def main():
         def tc2(self, t):
             umax = 1.0
             return umax*t/TIME_PARAMS['maxtime']
-        
+
         def tc3(self, t):
             umax = 0.1
             return umax*t/TIME_PARAMS['maxtime']
-        
+
         # PK1 stress that yields to a x-displacement of 1.0 for NH material
         def tc4(self, t):
             tmax = 17.5
             return tmax*t/TIME_PARAMS['maxtime']
-        
+
         # PK1 stress that yields to a x-displacement of 1.0 for MR material
         def tc5(self, t):
             tmax = 13.125
             return tmax*t/TIME_PARAMS['maxtime']
-        
+
         # PK1 stress that yields to a x-displacement of 0.1 for HO material
         def tc6(self, t):
             tmax = 17.32206451195601
@@ -130,11 +130,11 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
-    
+
     # --- results check
     tol = 1.0e-6
 
@@ -144,36 +144,36 @@ def main():
     check_node.append(np.array([1.0, 5.0, 1.0]))
 
     u_corr = np.zeros(3*len(check_node))
-    
+
     ## correct results
     u_corr[0] = 1.0 # x
     u_corr[1] = -2.9289321881345320E-01 # y
     u_corr[2] = -2.9289321881345320E-01 # z
-    
+
     u_corr[3] = 1.0 # x
     u_corr[4] = -2.9289321881345320E-01 # y
     u_corr[5] = -2.9289321881345320E-01 # z
-    
+
     u_corr[6] = 0.1 # x
     u_corr[7] = -4.6537410754407753E-02 # y
     u_corr[8] = -4.6537410754407753E-02 # z
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

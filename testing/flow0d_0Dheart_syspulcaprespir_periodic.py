@@ -10,7 +10,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'flow0d',
@@ -28,59 +28,59 @@ def main():
                          'initial_conditions'    : init(),
                          'eps_periodic'          : 0.05,
                          'periodic_checktype'    : ['pvar']}
-    
+
     MODEL_PARAMS      = {'modeltype'             : 'syspulcaprespir',
                          'parameters'            : param(),
                          'chamber_models'        : {'lv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 1}, 'rv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 2}, 'la' : {'type' : '0D_elast_prescr', 'elastance_curve' : 3}, 'ra' : {'type' : '0D_elast_prescr', 'elastance_curve' : 4}}}
-    
+
 
     # define your time curves here (syntax: tcX refers to curve X)
     class time_curves():
 
         def tc1(self, t):
-            
+
             elastinterp = np.loadtxt(str(basepath)+'/input/elastances_lv.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
                 equidist_time_array[i] = (i+1)/len(equidist_time_array)
-                
+
             return np.interp(t, equidist_time_array, elastinterp)
 
         def tc2(self, t):
-            
+
             elastinterp = np.loadtxt(str(basepath)+'/input/elastances_rv.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
                 equidist_time_array[i] = (i+1)/len(equidist_time_array)
-                
+
             return np.interp(t, equidist_time_array, elastinterp)
 
         def tc3(self, t):
-            
+
             elastinterp = np.loadtxt(str(basepath)+'/input/elastances_la.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
                 equidist_time_array[i] = (i+1)/len(equidist_time_array)
-                
+
             return np.interp(t, equidist_time_array, elastinterp)
 
         def tc4(self, t):
-            
+
             elastinterp = np.loadtxt(str(basepath)+'/input/elastances_ra.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
                 equidist_time_array[i] = (i+1)/len(equidist_time_array)
-                
+
             return np.interp(t, equidist_time_array, elastinterp)
 
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
@@ -176,18 +176,18 @@ def main():
     s_corr[82] = 1.5885890316909363E+01
     s_corr[83] = 5.0617824599158974E+00
 
-    
+
     check1 = resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
 def init():
-    
+
     factor_kPa_mmHg = 7.500615
-    
+
     return {'q_vin_l_0' : 74632.1588103,
             'p_at_l_0' : 0.48051281,
             'q_vout_l_0' : -0.93068153,
@@ -222,11 +222,11 @@ def init():
             'q_cap_pul_0' : 38454.403139,
             'p_ven_pul_0' : 2.07296324,
             'q_ven_pul_0' : 106163.362138,
-            
+
             'V_alv_0' : 1.0e6,
             'q_alv_0' : 0.0,
             'p_alv_0' : 100.0,
-            
+
             'fCO2_alv_0' : 0.03259099, # 0.05263 # Ben-Tal, J Theor Biol (2006) p. 491
             'fO2_alv_0' : 0.14908848, # 0.1368 # Ben-Tal, J Theor Biol (2006) p. 491
             # initial systemic arterial organ in-fluxes
@@ -277,9 +277,9 @@ def init():
 
 
 def param():
-    
+
     # parameters in kg-mm-s-mmol unit system
-    
+
     C_ar_sys = 13081.684615
     R_ar_sys = 7.2e-06
     L_ar_sys = 6.67e-07
@@ -321,10 +321,10 @@ def param():
     C_ven_pul = 50000.0
     R_ven_pul = 1.5e-05
     L_ven_pul = 0.0
-    
+
     t_ed = 0.2
     t_es = 0.53
-    
+
     ### unstressed compartment volumes, diffult to estimate - use literature values!
     # these volumes only become relevant for the gas transport models as they determine the capacity of each
     # compartment to store constituents - however, they are also used for postprocessing of the flow models...
@@ -357,7 +357,7 @@ def param():
     #external gas fractions
     fCO2_ext = 0.0004
     fO2_ext = 0.21
-    
+
     # 0D lung
     R_airw = 1.33e-7 # overall resistance of the conducting airways (airways resistance to flow), kPa s/mm^3, Ben-Tal, J Theor Biol (2006) p. 492
     L_alv = 9.87e-10 # alveolar inertance, kPa s^2/mm^3, Rodarte and Rehder (1986)
@@ -366,9 +366,9 @@ def param():
     V_lung_dead = 150.0e3 # dead lung volume, mm^3, Ben-Tal, J Theor Biol (2006) p. 492
     V_lung_u = 0.0 # unstressed lung volume, mm^3, Ben-Tal, J Theor Biol (2006) p. 492
     V_lung_total = 5.0e6#2.5e6 # total alveolar lung volume, mm^3
-    
+
     V_lung_tidal = 600.0e3 # lung tidal volume, mm^3, Ben-Tal, J Theor Biol (2006) p. 492
-    
+
     T_breath = 4.5 # period of one breath, in s
     T_breath = 2.5
 
@@ -390,7 +390,7 @@ def param():
 
     M_CO2_total = M_CO2_total_base
     M_O2_total = M_O2_total_base
-    
+
     ### well, some assumption that rates distribute according to tissue volumes...
     M_CO2_arspl = M_CO2_total_base * V_tissspl/V_tiss_total
     M_O2_arspl = M_O2_total_base * V_tissspl/V_tiss_total
@@ -413,16 +413,16 @@ def param():
     # lung diffusion capacities
     kappa_CO2 = 23.7e-2 # lung diffusion capacity of CO2, mmol/(s kPa), Ben-Tal, J Theor Biol (2006) p. 492
     kappa_O2 = 11.7e-2 # lung diffusion capacity of O2, mmol/(s kPa), Ben-Tal, J Theor Biol (2006) p. 492
-    
+
     # oxygen concentration when the metabolic rate is half of the maximum value (Christiansen (1996), p. 52)
     beta_O2 = 1.0e-8
-    
+
     # vapor pressure of water at 37 °C
     # should be 47.1 mmHg = 6.279485 kPa !
     # however we specify it as an input parameter since its decimal power depends on the system of units your whole model is specified in!
     # i.e. if you have kg - mm - s - mmol, it's 6.279485 kPa
     p_vap_water_37 = 6.279485
-    
+
     # molar volume of an ideal gas
     # should be 22.4 liters per mol !
     # however we specify it as an input parameter since its decimal power depends on the system of units your whole model is specified in!
@@ -460,7 +460,7 @@ def param():
             'R_cap_pul' : R_cap_pul,
             'C_cap_pul' : C_cap_pul,
             'R_ven_sys' : R_ven_sys,
-            'C_ven_sys' : C_ven_sys, 
+            'C_ven_sys' : C_ven_sys,
             'L_ven_sys' : L_ven_sys,
             'R_ven_pul' : R_ven_pul,
             'C_ven_pul' : C_ven_pul,
@@ -513,23 +513,23 @@ def param():
             'L_alv' : L_alv,
             'R_alv' : R_alv,
             'E_alv' : E_alv,
-            
+
             'U_m' : U_m,
             'V_lung_dead' : V_lung_dead,
             'V_lung_u' : V_lung_u,
             'V_lung_total' : V_lung_total,
-            
+
             'V_lung_tidal' : V_lung_tidal,
-            
+
             'omega_breath' : omega_breath,
-            
+
             # gas fractions in the atmosphere
             'fCO2_ext' : fCO2_ext,
             'fO2_ext' : fO2_ext,
-            
+
             'V_m_gas' : V_m_gas,
             'p_vap_water_37' : p_vap_water_37,
-            
+
             'kappa_CO2' : kappa_CO2,
             'kappa_O2' : kappa_O2,
             'alpha_CO2' : alpha_CO2,
@@ -549,7 +549,7 @@ def param():
             'M_O2_arcor' : M_O2_arcor,
 
             'beta_O2' :  beta_O2,
-            
+
             # tissue volumes
             'V_tissspl' : V_tissspl,
             'V_tissespl' : V_tissespl,
@@ -560,14 +560,14 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

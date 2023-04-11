@@ -26,44 +26,44 @@ from base import solver_base
 class SolidmechanicsFlow0DProblem():
 
     def __init__(self, io_params, time_params_solid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None):
-        
+
         self.problem_physics = 'solid_flow0d'
-        
+
         self.comm = comm
-        
+
         self.coupling_params = coupling_params
 
         self.surface_vq_ids = self.coupling_params['surface_ids']
         try: self.surface_p_ids = self.coupling_params['surface_p_ids']
         except: self.surface_p_ids = self.surface_vq_ids
-        
+
         self.num_coupling_surf = len(self.surface_vq_ids)
-        
+
         try: self.cq_factor = self.coupling_params['cq_factor']
         except: self.cq_factor = [1.]*self.num_coupling_surf
-        
+
         try: self.coupling_type = self.coupling_params['coupling_type']
         except: self.coupling_type = 'monolithic_direct'
-        
+
         try: self.eps_fd = self.coupling_params['eps_fd']
         except: self.eps_fd = 1.0e-5
 
         try: self.print_subiter = self.coupling_params['print_subiter']
         except: self.print_subiter = False
-        
+
         try: self.write_checkpoints_periodicref = self.coupling_params['write_checkpoints_periodicref']
         except: self.write_checkpoints_periodicref = False
-        
+
         try: self.restart_periodicref = self.coupling_params['restart_periodicref']
         except: self.restart_periodicref = 0
 
         try: self.Nmax_periodicref = self.coupling_params['Nmax_periodicref']
         except: self.Nmax_periodicref = 10
-        
+
         # assert that we do not have conflicting timings
         time_params_flow0d['maxtime'] = time_params_solid['maxtime']
         time_params_flow0d['numstep'] = time_params_solid['numstep']
-        
+
         # initialize problem instances (also sets the variational forms for the solid problem)
         self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
         self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
@@ -74,7 +74,7 @@ class SolidmechanicsFlow0DProblem():
         self.t_prev = 0
         self.t_gandr_setpoint = 0
         self.restart_multiscale = False
-        
+
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
@@ -82,7 +82,7 @@ class SolidmechanicsFlow0DProblem():
         else: self.have_multiscale_gandr = False
 
         self.set_variational_forms()
-        
+
         self.numdof = self.pbs.numdof + self.pb0.numdof
         # solid is 'master' problem - define problem variables based on its values
         self.simname = self.pbs.simname
@@ -92,7 +92,7 @@ class SolidmechanicsFlow0DProblem():
         self.localsolve = self.pbs.localsolve
         self.have_rom = self.pbs.have_rom
         if self.have_rom: self.rom = self.pbs.rom
-        
+
         if self.coupling_type == 'monolithic_lagrange':
             self.sub_solve = True
         else:
@@ -100,7 +100,7 @@ class SolidmechanicsFlow0DProblem():
 
 
     def get_problem_var_list(self):
-        
+
         if self.coupling_type == 'monolithic_lagrange':
             if self.pbs.incompressible_2field:
                 is_ghosted = [True, True, False]
@@ -117,36 +117,36 @@ class SolidmechanicsFlow0DProblem():
                 is_ghosted = [True, False]
                 return [self.pbs.u.vector, self.pb0.s], is_ghosted
 
-        
+
     # defines the monolithic coupling forms for 0D flow and solid mechanics
     def set_variational_forms(self):
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old, coupfuncs_pre = [], [], []
-        
+
         if self.coupling_type == 'monolithic_lagrange':
 
             # Lagrange multipliers
             self.lm, self.lm_old = PETSc.Vec().createMPI(size=self.num_coupling_surf), PETSc.Vec().createMPI(size=self.num_coupling_surf)
-            
+
             # 3D fluxes
             self.constr, self.constr_old = [], []
-        
+
         self.work_coupling, self.work_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
-        
+
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
-            
+
             self.pr0D = expression.template()
-            
+
             self.coupfuncs.append(fem.Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
-            
+
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
-                
+
                 ds_vq = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
-                
+
                 if self.coupling_params['coupling_quantity'][n] == 'volume':
                     assert(self.coupling_type == 'monolithic_direct')
                     cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
@@ -167,25 +167,25 @@ class SolidmechanicsFlow0DProblem():
                         raise NameError("Unknown variable quantity! Choose either volume or flux!")
                 else:
                     raise NameError("Unknown coupling quantity! Choose either volume, flux, or pressure!")
-            
+
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
-            
+
             df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
-            
+
                 ds_p = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
                 df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_p)
-            
+
                 # add to solid rhs contributions
                 self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), self.coupfuncs[-1], ds_p)
                 self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), self.coupfuncs_old[-1], ds_p)
-            
+
             self.dforce.append(fem.form(df_))
-        
+
         # minus sign, since contribution to external work!
         self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
-        
+
         # add to solid Jacobian
         self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
@@ -197,7 +197,7 @@ class SolidmechanicsFlow0DProblem():
 
     # for multiscale G&R analysis
     def set_homeostatic_threshold(self, t):
-        
+
         # time is absolute time (should only be set in first cycle)
         eps = 1.0e-14
         if t >= self.t_gandr_setpoint-eps and t < self.t_gandr_setpoint+self.pbs.dt-eps:
@@ -206,25 +206,25 @@ class SolidmechanicsFlow0DProblem():
                 print('Set homeostatic growth thresholds...')
                 sys.stdout.flush()
             time.sleep(1)
-            
+
             growth_thresolds = []
             for n in range(self.pbs.num_domains):
-                
+
                 if self.pbs.mat_growth[n]:
-                    
+
                     growth_settrig = self.pbs.constitutive_models['MAT'+str(n+1)+'']['growth']['growth_settrig']
-                    
+
                     if growth_settrig == 'fibstretch':
                         growth_thresolds.append(self.pbs.ma[n].fibstretch_e(self.pbs.ki.C(self.pbs.u), self.pbs.theta, self.pbs.fib_func[0]))
                     elif growth_settrig == 'volstress':
                         growth_thresolds.append(tr(self.pbs.ma[n].M_e(self.pbs.u, self.pbs.p, self.pbs.ki.C(self.pbs.u), ivar=self.pbs.internalvars)))
                     else:
                         raise NameError("Unknown growth trigger to be set as homeostatic threshold!")
-                
+
                 else:
-                    
+
                     growth_thresolds.append(ufl.as_ufl(0))
-                
+
             growth_thres_proj = project(growth_thresolds, self.pbs.Vd_scalar, self.pbs.dx_)
             self.pbs.growth_param_funcs['growth_thres'].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.pbs.growth_param_funcs['growth_thres'].interpolate(growth_thres_proj)
@@ -241,7 +241,7 @@ class SolidmechanicsFlow0DProblem():
                 print('Set growth triggers...')
                 sys.stdout.flush()
             time.sleep(1)
-            
+
             self.pbs.u_set.vector.axpby(1.0, 0.0, self.pbs.u.vector)
             self.pbs.u_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             if self.pbs.incompressible_2field:
@@ -267,7 +267,7 @@ class SolidmechanicsFlow0DProblem():
 
         self.pbs.res_u = fem.form(self.pbs.weakform_u)
         self.pbs.jac_uu = fem.form(self.pbs.weakform_lin_uu)
-        
+
         if self.incompressible_2field:
             self.pbs.res_p = fem.form(self.pbs.weakform_p)
             self.pbs.jac_up = fem.form(self.pbs.weakform_lin_up)
@@ -300,15 +300,15 @@ class SolidmechanicsFlow0DProblem():
             lm_sq = allgather_vec(self.lm, self.comm)
             self.pb0.c[:] = lm_sq[:]
             subsolver.newton(t, print_iter=self.print_subiter, sub=True)
-            
+
             # add to solid momentum equation
             self.pb0.cardvasc0D.set_pressure_fem(self.lm, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
 
         if self.coupling_type == 'monolithic_direct':
-            
+
             # add to solid momentum equation
             self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs)
-            
+
             # volumes/fluxes to be passed to 0D model
             for i in range(len(self.pb0.cardvasc0D.c_ids)):
                 cq = fem.assemble_scalar(fem.form(self.cq[i]))
@@ -320,13 +320,13 @@ class SolidmechanicsFlow0DProblem():
 
             # 0D rhs vector and stiffness
             r_s, K_ss = self.pb0.assemble_residual_stiffness(t)
-            
+
             r_list[1+off] = r_s
             K_list[1+off][1+off] = K_ss
-            
+
         # solid main blocks
         r_list_solid, K_list_solid = self.pbs.assemble_residual_stiffness(t)
-        
+
         K_list[0][0] = K_list_solid[0][0]
         r_list[0] = r_list_solid[0]
         if self.pbs.incompressible_2field:
@@ -336,25 +336,25 @@ class SolidmechanicsFlow0DProblem():
             r_list[1] = r_list_solid[1]
 
         if self.coupling_type == 'monolithic_lagrange':
-            
+
             s_sq = allgather_vec(self.pb0.s, self.comm)
-            
+
             ls, le = self.lm.getOwnershipRange()
-        
+
             # Lagrange multiplier coupling residual
             r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
             for i in range(ls,le):
                 r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
-            
+
             r_list[1+off] = r_lm
-            
+
             # assemble 0D rhs contributions
             self.pb0.df_old.assemble()
             self.pb0.f_old.assemble()
             self.pb0.df.assemble()
             self.pb0.f.assemble()
             self.pb0.s.assemble()
-            
+
             # now the LM matrix - via finite differencing
             # store df, f, and aux vectors prior to perturbation solves
             df_tmp, f_tmp, aux_tmp = self.pb0.K.createVecLeft(), self.pb0.K.createVecLeft(), np.zeros(self.pb0.numdof)
@@ -385,29 +385,29 @@ class SolidmechanicsFlow0DProblem():
             self.pb0.aux[:] = aux_tmp[:]
             # restore 0D state variable
             self.pb0.s.axpby(1.0, 0.0, s_tmp)
-            
+
             K_lm.assemble()
-            
+
             K_list[1+off][1+off] = K_lm
-        
+
             # rows and columns for offdiagonal matrices
             row_ids = list(range(self.num_coupling_surf))
             col_ids = list(range(self.num_coupling_surf))
-            
+
             K_constr = K_lm
 
         if self.coupling_type == 'monolithic_direct':
             # rows and columns for offdiagonal matrices
             row_ids = self.pb0.cardvasc0D.c_ids
             col_ids = self.pb0.cardvasc0D.v_ids
-            
+
             K_constr = K_ss
 
         # offdiagonal u-s columns
         k_us_cols=[]
         for i in range(len(col_ids)):
             k_us_cols.append(fem.petsc.assemble_vector(self.dforce[i])) # already multiplied by time-integration factor
-    
+
         # offdiagonal s-u rows
         k_su_rows=[]
         for i in range(len(row_ids)):
@@ -416,20 +416,20 @@ class SolidmechanicsFlow0DProblem():
             if self.pb0.cq[i] == 'volume':   timefac = 1./self.dt
             if self.pb0.cq[i] == 'flux':     timefac = -self.pb0.theta0d_timint(t) # 0D model time-integration factor
             if self.pb0.cq[i] == 'pressure': timefac = 1.
-            
+
             k_su_rows.append(fem.petsc.assemble_vector(fem.form(timefac*self.cq_factor[i]*self.dcq[i])))
 
         # apply displacement dbcs to matrix entries k_us - basically since these are offdiagonal we want a zero there!
         for i in range(len(col_ids)):
-            
+
             fem.apply_lifting(k_us_cols[i], [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
             k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(k_us_cols[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
-        
+
         # ghost update on k_su_rows
         for i in range(len(row_ids)):
             k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        
+
         # setup offdiagonal matrices
         locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
         matsize = self.pbs.V_u.dofmap.index_map.size_global * self.pbs.V_u.dofmap.index_map_bs
@@ -455,7 +455,7 @@ class SolidmechanicsFlow0DProblem():
             K_su[row_ids[i], irs:ire] = k_su_rows[i][irs:ire]
 
         K_su.assemble()
-        
+
         K_list[0][1+off] = K_us
         K_list[1+off][0] = K_su
 
@@ -463,9 +463,9 @@ class SolidmechanicsFlow0DProblem():
 
 
     ### now the base routines for this problem
-                
+
     def pre_timestep_routines(self):
-        
+
         self.pbs.pre_timestep_routines()
         self.pb0.pre_timestep_routines()
 
@@ -509,6 +509,9 @@ class SolidmechanicsFlow0DProblem():
                 self.constr.append(sum(con)*self.cq_factor[i])
                 self.constr_old.append(sum(con)*self.cq_factor[i])
 
+        # length of c from 3D-0D coupling
+        self.pb0.len_c_3d0d = len(self.pb0.c)
+
         if bool(self.pb0.chamber_models):
             self.pb0.y = []
             for ch in ['lv','rv','la','ra']:
@@ -535,13 +538,13 @@ class SolidmechanicsFlow0DProblem():
 
         self.pbs.evaluate_pre_solve(t)
         self.pb0.evaluate_pre_solve(t)
-            
-            
+
+
     def evaluate_post_solve(self, t, N):
-        
+
         self.pbs.evaluate_post_solve(t, N)
         self.pb0.evaluate_post_solve(t, N)
-    
+
         if self.have_multiscale_gandr:
             self.set_homeostatic_threshold(t), self.set_growth_trigger(t-t_off)
 
@@ -551,13 +554,13 @@ class SolidmechanicsFlow0DProblem():
         self.pbs.set_output_state()
         self.pb0.set_output_state()
 
-            
-    def write_output(self, N, t, mesh=False): 
+
+    def write_output(self, N, t, mesh=False):
 
         self.pbs.write_output(N, t)
         self.pb0.write_output(N, t)
 
-            
+
     def update(self):
 
         # update time step - solid and 0D model
@@ -575,13 +578,13 @@ class SolidmechanicsFlow0DProblem():
 
 
     def print_to_screen(self):
-        
+
         self.pbs.print_to_screen()
         self.pb0.print_to_screen()
-    
-    
+
+
     def induce_state_change(self):
-        
+
         self.pbs.induce_state_change()
         self.pb0.induce_state_change()
 
@@ -594,8 +597,8 @@ class SolidmechanicsFlow0DProblem():
         if self.coupling_type == 'monolithic_lagrange':
             if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
                 self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
-        
-        
+
+
     def check_abort(self, t):
 
         self.pb0.check_abort(t)
@@ -605,11 +608,11 @@ class SolidmechanicsFlow0DProblem():
 class SolidmechanicsFlow0DSolver(solver_base):
 
     def __init__(self, problem, solver_params):
-        
+
         self.pb = problem
-        
+
         self.solver_params = solver_params
-        
+
         self.initialize_nonlinear_solver()
 
 
@@ -620,7 +623,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
-        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:     
+        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # initialize solid mechanics solver
             self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
 
@@ -640,7 +643,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
-            
+
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
@@ -648,9 +651,9 @@ class SolidmechanicsFlow0DSolver(solver_base):
 
 
     def solve_nonlinear_problem(self, t):
-        
+
         self.solnln.newton(t, localdata=self.pb.pbs.localdata)
-        
+
 
     def print_timestep_info(self, N, t, wt):
 

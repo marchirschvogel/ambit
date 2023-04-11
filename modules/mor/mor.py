@@ -18,50 +18,50 @@ from meshutils import gather_surface_dof_indices
 class ModelOrderReduction():
 
     def __init__(self, params, comm):
-        
+
         self.numhdms = params['numhdms']
         self.numsnapshots = params['numsnapshots']
-        
+
         try: self.snapshotincr = params['snapshotincr']
         except: self.snapshotincr = 1
-        
+
         try: self.snapshotoffset = params['snapshotoffset']
         except: self.snapshotoffset = 0
-        
+
         try: self.numredbasisvec = params['numredbasisvec']
         except: self.numredbasisvec = self.numsnapshots
-        
+
         try: self.print_eigenproblem = params['print_eigenproblem']
         except: self.print_eigenproblem = False
-        
+
         try: self.eigenvalue_cutoff = params['eigenvalue_cutoff']
         except: self.eigenvalue_cutoff = 0.0
-        
+
         try: self.surface_rom = params['surface_rom']
         except: self.surface_rom = []
-        
+
         try: self.snapshotsource = params['snapshotsource']
         except:
             self.snapshotsource = []
             for h in range(self.numhdms): self.snapshotsource.append('petscvector')
-        
+
         try: self.snapshotreadin_tol = params['snapshotreadin_tol']
         except: self.snapshotreadin_tol = 1.0e-5
-        
+
         try: self.write_pod_modes = params['write_pod_modes']
         except: self.write_pod_modes = False
-        
+
         try: self.redbasisvec_indices = params['redbasisvec_indices']
         except:
             self.redbasisvec_indices = []
             for i in range(self.numredbasisvec): self.redbasisvec_indices.append(i)
-        
+
         try: self.redbasisvec_penalties = params['redbasisvec_penalties']
         except: self.redbasisvec_penalties = []
-        
+
         try: self.modes_from_files = params['modes_from_files']
         except: self.modes_from_files = False
-        
+
         # some sanity checks
         if self.numhdms <= 0:
             raise ValueError('Number of HDMs has to be > 0!')
@@ -71,29 +71,29 @@ class ModelOrderReduction():
             raise ValueError('Snapshot increment has to be > 0!')
         if len(self.redbasisvec_indices) <= 0 or len(self.redbasisvec_indices) > self.numhdms*self.numsnapshots:
             raise ValueError('Number of reduced-basis vectors has to be > 0 and <= number of HDMs times number of snapshots!')
-        
+
         self.hdmfilenames = params['hdmfilenames']
 
         self.comm = comm
-        
-    
+
+
     # Proper Orthogonal Decomposition
     def POD(self, pb, Vspace):
-        
+
         locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
         matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
-        
+
         # snapshot matrix
         S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
         S_d.setUp()
-            
+
         ss, se = S_d.getOwnershipRange()
-        
+
         if bool(self.surface_rom):
             self.fd_set = set(gather_surface_dof_indices(pb, Vspace, self.surface_rom,self.comm))
-        
+
         ts = time.time()
-        
+
         if not self.modes_from_files:
 
             if self.comm.rank==0:
@@ -102,29 +102,29 @@ class ModelOrderReduction():
 
             # gather snapshots (mostly displacements or velocities)
             for h in range(self.numhdms):
-                
+
                 for i in range(self.numsnapshots):
-                    
+
                     if self.comm.rank==0:
                         print("Reading snapshot %i ..." % (i+1))
                         sys.stdout.flush()
-                    
+
                     step = self.snapshotoffset + (i+1)*self.snapshotincr
-                
+
                     field = fem.Function(Vspace)
 
                     if self.snapshotsource[h] == 'petscvector':
                         # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
                         viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
                         field.vector.load(viewer)
-                        
+
                         field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                    
+
                     elif self.snapshotsource[h] == 'rawtxt':
-                        
+
                         # own read function: requires plain txt format of type valx valy valz x z y
                         pb.io.readfunction(field, Vspace, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
-                        
+
                     else:
                         raise NameError("Unknown snapshotsource!")
 
@@ -141,7 +141,7 @@ class ModelOrderReduction():
 
             # covariance matrix
             C_d = S_d.transposeMatMult(S_d) # S^T * S
-            
+
             # setup eigenvalue problem
             eigsolver = SLEPc.EPS()
             eigsolver.create()
@@ -154,7 +154,7 @@ class ModelOrderReduction():
             eigsolver.solve()
 
             nconv = eigsolver.getConverged()
-            
+
             if self.print_eigenproblem:
                 if self.comm.rank==0:
                     print("Number of converged eigenpairs: %d" % nconv)
@@ -167,13 +167,13 @@ class ModelOrderReduction():
                 # create the results vectors
                 vr, _ = C_d.getVecs()
                 vi, _ = C_d.getVecs()
-                
+
                 if self.print_eigenproblem:
                     if self.comm.rank==0:
                         print("   k                        ||Ax-kx||/||kx||")
                         print("   ----------------------   ----------------")
                         sys.stdout.flush()
-                
+
                 for i in range(len(self.redbasisvec_indices)):
                     k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
                     error = eigsolver.computeError(self.redbasisvec_indices[i])
@@ -190,14 +190,14 @@ class ModelOrderReduction():
                     # store
                     evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
                     evals.append(k.real)
-                    
+
                     if k.real > self.eigenvalue_cutoff: numredbasisvec_true += 1
 
             if len(self.redbasisvec_indices) != numredbasisvec_true:
                 if self.comm.rank==0:
                     print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),numredbasisvec_true))
                     sys.stdout.flush()
-            
+
             # pop out undesired ones
             for i in range(len(self.redbasisvec_indices)-numredbasisvec_true):
                 evecs.pop(-1)
@@ -207,21 +207,21 @@ class ModelOrderReduction():
             # calculate first numredbasisvec_true POD modes
             self.Phi = np.zeros((matsize_u, numredbasisvec_true))
             for i in range(numredbasisvec_true):
-                self.Phi[ss:se,i] = S_d * evecs[i] / math.sqrt(evals[i])       
-        
+                self.Phi[ss:se,i] = S_d * evecs[i] / math.sqrt(evals[i])
+
         else:
-            
+
             numredbasisvec_true = self.numredbasisvec
-            
+
             self.Phi = np.zeros((matsize_u, numredbasisvec_true))
             # read modes from files
             # own read function: requires plain txt format of type valx valy valz x z y
             for i in range(numredbasisvec_true):
-                
+
                 if self.comm.rank==0:
                     print("Reading mode %i ..." % (i+1))
                     sys.stdout.flush()
-                
+
                 field = fem.Function(Vspace)
                 pb.io.readfunction(field, Vspace, self.modes_from_files.replace('*',str(i+1)), tol=self.snapshotreadin_tol)
                 self.Phi[ss:se,i] = field.vector[ss:se]
@@ -234,7 +234,7 @@ class ModelOrderReduction():
                 podfunc = fem.Function(Vspace)
                 podfunc.vector[ss:se] = self.Phi[ss:se,i]
                 outfile.write_function(podfunc)
-        
+
         # build reduced basis - either only on designated surfaces or for the whole model
         if bool(self.surface_rom):
             self.build_reduced_surface_basis(Vspace,numredbasisvec_true,ts)
@@ -244,7 +244,7 @@ class ModelOrderReduction():
         if bool(self.redbasisvec_penalties):
             # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
             # V^T * V - normally I, but for badly converged eigenvalues may have non-zero off-diagonal terms...
-            self.VTV = self.V.transposeMatMult(self.V) 
+            self.VTV = self.V.transposeMatMult(self.V)
             self.CpenVTV = self.Cpen.matMult(self.VTV) # Cpen * V^T * V
 
 
@@ -256,26 +256,26 @@ class ModelOrderReduction():
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
         self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb)), bsize=None, nnz=(rb,locmatsize_u), csr=None, comm=self.comm)
         self.V.setUp()
-        
+
         vrs, vre = self.V.getOwnershipRange()
-        
+
         # set Phi columns
         self.V[vrs:vre,:] = self.Phi[vrs:vre,:]
-  
+
         self.V.assemble()
-       
+
         # set penalties
         if bool(self.redbasisvec_penalties):
             self.Cpen = PETSc.Mat().createAIJ(size=((rb),(rb)), bsize=None, nnz=(rb), csr=None, comm=self.comm)
             self.Cpen.setUp()
-            
+
             for i in range(len(self.redbasisvec_penalties)):
                 self.Cpen[i,i] = self.redbasisvec_penalties[i]
-                
+
             self.Cpen.assemble()
 
         te = time.time() - ts
-        
+
         if self.comm.rank==0:
             print("POD done... Created reduced-order basis for ROM. Time: %.4f s" % (te))
             sys.stdout.flush()
@@ -294,7 +294,7 @@ class ModelOrderReduction():
         row_1, col_1, col_fd = [], [], []
 
         for row in range(matsize_u):
-            
+
             if row in self.fd_set:
                 # increase counter for number of reduced dofs
                 nr += 1
@@ -307,14 +307,14 @@ class ModelOrderReduction():
                 # store
                 row_1.append(row)
                 col_1.append(col_id)
-        
+
         # make set for faster checking
         col_fd_set = set(col_fd)
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
         self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, nnz=(2*rb,locmatsize_u), csr=None, comm=self.comm)
         self.V.setUp()
-        
+
         vrs, vre = self.V.getOwnershipRange()
 
         # Phi should not have any non-zero rows that do not belong to a surface dof which is reduced
@@ -339,26 +339,23 @@ class ModelOrderReduction():
                 n += 1
 
         self.V.assemble()
-        
+
         # set penalties
         if bool(self.redbasisvec_penalties):
-            
+
             self.Cpen = PETSc.Mat().createAIJ(size=((rb+ndof_bulk),(rb+ndof_bulk)), bsize=None, nnz=(rb), csr=None, comm=self.comm)
             self.Cpen.setUp()
-                
+
             n=0
             for col in range(rb+ndof_bulk):
                 if col in col_fd_set:
                     self.Cpen[col,col] = self.redbasisvec_penalties[n]
                     n += 1
-                    
+
             self.Cpen.assemble()
 
         te = time.time() - ts
-        
+
         if self.comm.rank==0:
             print("POD done... Created reduced-order basis for surface ROM on boundary id(s) "+str(self.surface_rom)+". Time: %.4f s" % (te))
             sys.stdout.flush()
-        
-        
-

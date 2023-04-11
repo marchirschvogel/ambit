@@ -11,18 +11,17 @@ import ufl
 # returns the Cauchy stress sigma for different material laws
 
 class materiallaw:
-    
+
     def __init__(self, gamma, I):
         self.gamma = gamma
         self.I = I
-    
+
 
     def newtonian(self, params):
-        
+
         eta = params['eta'] # dynamic viscosity
 
         # classical Newtonian fluid
         sigma = 2.*eta*self.gamma
-        
-        return sigma
 
+        return sigma

@@ -35,23 +35,23 @@ class FluidmechanicsProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, alevar={}):
         problem_base.__init__(self, io_params, time_params, comm)
-        
+
         self.problem_physics = 'fluid'
-        
+
         self.simname = io_params['simname']
         self.results_to_write = io_params['results_to_write']
-        
+
         self.io = io
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
-        
+
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_vel = fem_params['order_vel']
         self.order_pres = fem_params['order_pres']
         self.quad_degree = fem_params['quad_degree']
-        
+
         # collect domain data
         self.dx_, self.rho = [], []
         for n in range(self.num_domains):
@@ -59,16 +59,16 @@ class FluidmechanicsProblem(problem_base):
             self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             self.rho.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
-        
+
         self.incompressible_2field = True # always true!
-        
+
         # whether to enforce continuity of mass at midpoint or not
         try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
         except: self.pressure_at_midpoint = False
-        
+
         try: self.fluid_formulation = fem_params['fluid_formulation']
         except: self.fluid_formulation = 'nonconservative'
-        
+
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
         try: self.prestress_numstep = fem_params['prestress_numstep']
@@ -79,16 +79,16 @@ class FluidmechanicsProblem(problem_base):
         except: self.prestress_ptc = False
         try: self.prestress_from_file = fem_params['prestress_from_file']
         except: self.prestress_from_file = False
-        
+
         if self.prestress_from_file: self.prestress_initial = False
-        
+
         self.localsolve = False # no idea what might have to be solved locally...
         self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
 
         self.sub_solve = False
 
         self.dim = self.io.mesh.geometry.dim
-    
+
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
             dg_type = "DG"
@@ -168,34 +168,34 @@ class FluidmechanicsProblem(problem_base):
 
         # initialize kinematics_constitutive class
         self.ki = fluid_kinematics_constitutive.kinematics(self.dim, uf_pre=self.uf_pre)
-        
+
         # initialize material/constitutive classes (one per domain)
         self.ma = []
         for n in range(self.num_domains):
             self.ma.append(fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)]))
-        
+
         # initialize fluid variational form class
         if not bool(self.alevar):
             # standard Eulerian fluid
             self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None, 'fluid_on_deformed' : 'no'}
             self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
-        
+
         else:
             if self.alevar['fluid_on_deformed'] == 'consistent':
                 # fully consistent ALE formulation of Navier-Stokes
                 self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
-                
+
             elif self.alevar['fluid_on_deformed'] == 'from_last_step':
                 # ALE formulation of Navier-Stokes using metrics (Fale, w) from the last converged step... more efficient but not fully consistent
                 self.alevar['Fale'], self.alevar['w'] = self.alevar['Fale_old'], self.alevar['w_old']
                 self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
-                
+
             elif self.alevar['fluid_on_deformed'] == 'mesh_move':
                 # Navier-Stokes formulated w.r.t. the current, moved frame... more efficient than 'consistent' approach but not fully consistent
                 # WARNING: This is unsuitable for FrSI, as we need gradients w.r.t. the reference frame on the reduced boundary!
                 self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None, 'fluid_on_deformed' : 'mesh_move'}
                 self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
-                
+
             else:
                 raise ValueError("Unkown fluid_on_deformed option!")
 
@@ -217,7 +217,7 @@ class FluidmechanicsProblem(problem_base):
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_fluid(fem_params, self.io, self.vf, self.ti, ki=self.ki, ff=self.fib_func)
-        
+
         self.bc_dict = bc_dict
 
         # Dirichlet boundary conditions
@@ -228,7 +228,7 @@ class FluidmechanicsProblem(problem_base):
 
 
     def get_problem_var_list(self):
-        
+
         is_ghosted = [True]*2
         return [self.v.vector, self.p.vector], is_ghosted
 
@@ -246,21 +246,21 @@ class FluidmechanicsProblem(problem_base):
         self.deltaW_kin, self.deltaW_kin_old = ufl.as_ufl(0), ufl.as_ufl(0)
         self.deltaW_int, self.deltaW_int_old = ufl.as_ufl(0), ufl.as_ufl(0)
         self.deltaW_p,   self.deltaW_p_old   = ufl.as_ufl(0), ufl.as_ufl(0)
-        
+
         for n in range(self.num_domains):
 
             # kinetic virtual power
             self.deltaW_kin     += self.vf.deltaW_kin_navierstokes(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
             self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes(self.a_old, self.v_old, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
-            
+
             # internal virtual power
             self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), self.dx_[n], Fale=self.alevar['Fale'])
             self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), self.dx_[n], Fale=self.alevar['Fale_old'])
-            
+
             # pressure virtual power
             self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.alevar['Fale'])
             self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.alevar['Fale_old'])
-        
+
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
@@ -276,15 +276,15 @@ class FluidmechanicsProblem(problem_base):
         self.have_active_stress, self.active_stress_trig = False, 'ode'
         if 'membrane' in self.bc_dict.keys():
             assert(self.alevar['fluid_on_deformed']!='mesh_move')
-            
+
             self.mem_active_stress = [False]*len(self.bc_dict['membrane'])
-            
+
             self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
-            
+
             # NOTE: The number of reduced solids currently has to be equal to the number of domains, since any internal variables can only have
             # different governing parameters per subdomain, not per surface. So, reduced (surface) solid 1 should be entirely within domain 1, etc.
             assert(len(self.bc_dict['membrane'])==len(self.dx_))
-            
+
             self.actstress = []
             for nm in range(len(self.bc_dict['membrane'])):
 
@@ -293,7 +293,7 @@ class FluidmechanicsProblem(problem_base):
 
                     act_curve = self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])
                     self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], act_curve))
-            
+
             w_membrane     = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, ivar=self.internalvars)
             w_membrane_old = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, ivar=self.internalvars_old)
 
@@ -307,40 +307,40 @@ class FluidmechanicsProblem(problem_base):
             if 'neumann_prestress' in self.bc_dict.keys():
                 w_neumann_prestr = self.bc.neumann_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane
-            
+
         # TODO: Body forces!
         self.deltaW_ext     = w_neumann + w_robin + w_stabneumann + w_membrane
         self.deltaW_ext_old = w_neumann_old + w_robin_old + w_stabneumann_old + w_membrane_old
-        
+
         self.timefac_m, self.timefac = self.ti.timefactors()
 
-        ### full weakforms 
-        
+        ### full weakforms
+
         # kinetic plus internal minus external virtual power
         self.weakform_v = self.timefac_m * self.deltaW_kin + (1.-self.timefac_m) * self.deltaW_kin_old + \
                           self.timefac   * self.deltaW_int + (1.-self.timefac)   * self.deltaW_int_old - \
                           self.timefac   * self.deltaW_ext - (1.-self.timefac)   * self.deltaW_ext_old
-        
+
         if self.pressure_at_midpoint:
             self.weakform_p = self.timefac   * self.deltaW_p   + (1.-self.timefac)   * self.deltaW_p_old
         else:
             self.weakform_p = self.deltaW_p
-        
+
         # Reynolds number: ratio of inertial to viscous forces
         self.Re = ufl.as_ufl(0)
         for n in range(self.num_domains):
             self.Re += ufl.sqrt(ufl.dot(self.vf.f_inert(self.acc,self.v,self.rho[n]), self.vf.f_inert(self.acc,self.v,self.rho[n]))) / ufl.sqrt(ufl.dot(self.vf.f_viscous(self.ma[n].sigma(self.v, self.p)), self.vf.f_viscous(self.ma[n].sigma(self.v, self.p))))
-        
+
         self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
         self.weakform_lin_vp = ufl.derivative(self.weakform_v, self.p, self.dp)
         self.weakform_lin_pv = ufl.derivative(self.weakform_p, self.v, self.dv)
 
         # for saddle-point block-diagonal preconditioner - TODO: Doesn't work very well...
         self.a_p11 = ufl.as_ufl(0)
-        
+
         for n in range(self.num_domains):
             self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
-    
+
         if self.prestress_initial:
             # prestressing weak forms
             self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
@@ -348,8 +348,8 @@ class FluidmechanicsProblem(problem_base):
             self.weakform_prestress_p = self.deltaW_p
             self.weakform_lin_prestress_vp = ufl.derivative(self.weakform_prestress_v, self.p, self.dp)
             self.weakform_lin_prestress_pv = ufl.derivative(self.weakform_prestress_p, self.v, self.dv)
-    
-    
+
+
     # active stress ODE evaluation - for reduced solid model
     def evaluate_active_stress_ode(self, t):
 
@@ -361,12 +361,12 @@ class FluidmechanicsProblem(problem_base):
                 na+=1
             else:
                 tau_a_.append(ufl.as_ufl(0))
-                
+
         # project and interpolate to quadrature function space
         tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_)
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
-    
+
 
     # rate equations
     def evaluate_rate_equations(self, t_abs, t_off=0):
@@ -374,7 +374,7 @@ class FluidmechanicsProblem(problem_base):
         # take care of active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
             self.evaluate_active_stress_ode(t_abs-t_off)
-    
+
 
     def set_problem_residual_jacobian_forms(self):
 
@@ -413,7 +413,7 @@ class FluidmechanicsProblem(problem_base):
         # assemble system matrix
         K_vv = fem.petsc.assemble_matrix(self.jac_vv, self.bc.dbcs)
         K_vv.assemble()
-        
+
         # assemble pressure rhs vector
         r_p = fem.petsc.assemble_vector(self.res_p)
         r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
@@ -429,14 +429,14 @@ class FluidmechanicsProblem(problem_base):
 
 
     ### now the base routines for this problem
-                
+
     def pre_timestep_routines(self):
 
         # perform Proper Orthogonal Decomposition
         if self.have_rom:
             self.rom.POD(self, self.V_v)
 
-                
+
     def read_restart(self, sname, N):
 
         # read restart information
@@ -444,13 +444,13 @@ class FluidmechanicsProblem(problem_base):
             self.io.readcheckpoint(self, N)
             self.simname += '_r'+str(N)
 
-    
+
     def evaluate_initial(self):
         pass
 
 
     def write_output_ini(self):
-        
+
         self.io.write_output(self, writemesh=True)
 
 
@@ -462,11 +462,11 @@ class FluidmechanicsProblem(problem_base):
 
         # set time-dependent functions
         self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
-            
+
         # evaluate rate equations
         self.evaluate_rate_equations(t)
-            
-            
+
+
     def evaluate_post_solve(self, t, N):
         pass
 
@@ -474,22 +474,22 @@ class FluidmechanicsProblem(problem_base):
     def set_output_state(self):
         pass
 
-            
-    def write_output(self, N, t, mesh=False): 
+
+    def write_output(self, N, t, mesh=False):
 
         self.io.write_output(self, N=N, t=t)
 
-            
+
     def update(self):
-        
+
         # update - velocity, acceleration, pressure, all internal variables, all time functions
         self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, uf_old=self.uf_old)
 
 
     def print_to_screen(self):
         pass
-    
-    
+
+
     def induce_state_change(self):
         pass
 
@@ -497,8 +497,8 @@ class FluidmechanicsProblem(problem_base):
     def write_restart(self, sname, N):
 
         self.io.write_restart(self, N)
-        
-        
+
+
     def check_abort(self, t):
         pass
 
@@ -520,7 +520,7 @@ class FluidmechanicsSolver(solver_base):
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
-            
+
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
@@ -533,17 +533,17 @@ class FluidmechanicsSolver(solver_base):
 
 
     def print_timestep_info(self, N, t, wt):
-    
+
         # print time step info to screen
         self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
 
 
     def solve_initial_prestress(self):
-        
+
         utilities.print_prestress('start', self.pb.comm)
 
         if self.pb.prestress_ptc: self.solnln.PTC = True
-        
+
         dt_prestr = self.pb.prestress_maxtime/self.pb.prestress_numstep
 
         for N in range(1,self.pb.prestress_numstep+1):
@@ -576,9 +576,9 @@ class FluidmechanicsSolver(solver_base):
             # write prestress displacement (given that we want to write the fluid displacement)
             if 'fluiddisplacement' in self.pb.results_to_write:
                 self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, tprestr, 'fluiddisplacement_pre')
-                
+
         utilities.print_prestress('end', self.pb.comm)
-        
+
         # reset state
         self.pb.uf_old.vector.set(0.0)
         self.pb.uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -593,8 +593,7 @@ class FluidmechanicsSolver(solver_base):
         if self.pb.prestress_ptc:
             try: self.solnln.PTC = self.solver_params['ptc']
             except: self.solnln.PTC = False
-        
+
         # set flag to false again
         self.pb.prestress_initial = False
         self.pb.set_problem_residual_jacobian_forms()
-

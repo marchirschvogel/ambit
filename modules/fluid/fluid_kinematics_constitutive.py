@@ -14,7 +14,7 @@ from fluid_material import materiallaw
 # fluid kinematics and constitutive class
 
 class constitutive:
-    
+
     def __init__(self, kin, materials):
 
         self.kin = kin
@@ -22,32 +22,32 @@ class constitutive:
         self.matmodels = []
         for i in range(len(materials.keys())):
             self.matmodels.append(list(materials.keys())[i])
-        
+
         self.matparams = []
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
-        
+
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
 
 
     # Cauchy stress core routine
     def sigma(self, v_, p_, Fale=None):
-        
+
         gamma_ = self.kin.gamma(v_,Fale=Fale)
 
         stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
-            
+
         mat = materiallaw(gamma_,self.I)
-        
+
         m = 0
         for matlaw in self.matmodels:
-            
+
             # extract associated material parameters
             matparams_m = self.matparams[m]
-        
+
             if matlaw == 'newtonian':
-                
+
                 stress += mat.newtonian(matparams_m)
 
             elif matlaw == 'inertia':
@@ -55,9 +55,9 @@ class constitutive:
                 pass
 
             else:
-                
+
                 raise NameError('Unknown fluid material law!')
-            
+
             m += 1
 
         # TeX: S_{\mathrm{vol}} = -p\boldsymbol{I}
@@ -69,21 +69,21 @@ class constitutive:
 
 
 class kinematics:
-    
+
     def __init__(self, dim, uf_pre=None):
-        
+
         self.dim = dim
-        
+
         # prestress displacement
         self.uf_pre = uf_pre
-        
+
         # identity tensor
         self.I = ufl.Identity(self.dim)
 
 
     # velocity gradient: gamma = 0.5(dv/dx + (dv/dx)^T)
     def gamma(self, v_, Fale=None):
-        
+
         if Fale is not None:
             return 0.5*(ufl.grad(v_)*ufl.inv(Fale) + ufl.inv(Fale).T*ufl.grad(v_).T)
         else:

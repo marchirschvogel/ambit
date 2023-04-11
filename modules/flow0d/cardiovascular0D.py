@@ -15,41 +15,41 @@ from oderoutines import ode
 
 
 class cardiovascular0Dbase(ode):
-    
+
     def __init__(self, init=True, comm=None):
-        
+
         # initialize base class
         ode.__init__(self, init=init, comm=comm)
-        
+
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
 
-       
-    # check for cardiac cycle periodicity 
+
+    # check for cardiac cycle periodicity
     def cycle_check(self, var, varTc, varTc_old, aux, auxTc, auxTc_old, t, cycle, cyclerr, eps_periodic, check=['allvar'], inioutpath=None, nm='', induce_pert_after_cycl=-1):
-        
+
         if isinstance(varTc, np.ndarray): vs, ve = 0, len(varTc)
         else: vs, ve = var.getOwnershipRange()
 
         is_periodic = False
 
         if self.T_cycl > 0. and np.isclose(t, self.T_cycl):
-            
+
             varTc[vs:ve] = var[vs:ve]
             auxTc[:] = aux[:]
-            
+
             if check[0] is not None: is_periodic = self.check_periodic(varTc, varTc_old, auxTc, auxTc_old, eps_periodic, check, cyclerr)
-            
+
             # definitely should not be True if we've not yet surpassed the "disease induction" cycle
             if cycle[0] <= induce_pert_after_cycl:
                 is_periodic = False
-            
+
             # write "periodic" initial conditions in case we want to restart from this model in another simulation
             if is_periodic and inioutpath is not None:
                 self.write_initial(inioutpath, nm, varTc_old, varTc, auxTc_old, auxTc)
-            
+
             varTc_old[vs:ve] = varTc[vs:ve]
             auxTc_old[:] = auxTc[:]
-                
+
             # update cycle counter
             cycle[0] += 1
 
@@ -68,10 +68,10 @@ class cardiovascular0Dbase(ode):
         self.setup_arrays(), self.set_compartment_interfaces()
         self.equation_map(), self.set_stiffness(), self.lambdify_expressions()
 
-    
+
     # set pressure function for 3D FEM model
     def set_pressure_fem(self, var, ids, pr0D, p0Da):
-        
+
         # set pressure functions
         for i in range(len(ids)):
             pr0D.val = -allgather_vec_entry(var, ids[i], self.comm)
@@ -90,7 +90,7 @@ class cardiovascular0Dbase(ode):
             vl = (popen - p) / R
         elif vparams[0]=='smooth_pres_resistance': # smooth resistance value
             R = 0.5*(Rmax - Rmin)*(sp.tanh((popen - p)/vparams[-1]) + 1.) + Rmin
-            vl = (popen - p) / R            
+            vl = (popen - p) / R
         elif vparams[0]=='smooth_pres_momentum': # smooth q(p) relationship
             # interpolation by cubic spline in epsilon interval
             p0 = (popen-vparams[-1]/2. - popen)/Rmax
@@ -110,13 +110,13 @@ class cardiovascular0Dbase(ode):
             vl = sp.Piecewise( (vparams[1]*vparams[2]*sp.sqrt(popen - p), p < popen), ((popen - p) / Rmin, p >= popen) )
         else:
             raise NameError("Unknown valve law %s!" % (vparams[0]))
-        
+
         vlaw = vl
         if popen is not sp.S.Zero:
             res = 1./sp.diff(vl,popen)
         else:
             res = sp.S.One
-        
+
         return vlaw, res
 
 
@@ -130,17 +130,17 @@ class cardiovascular0Dbase(ode):
             except: num_3dinfl[i] = 0
             try: num_3doutfl[i] = self.chmodels[ch]['num_outflows']
             except: num_3doutfl[i] = 0
-        
+
         # loop over chambers
         for i, ch in enumerate(['lv','rv','la','ra', 'ao']):
-            
+
             # name mapping
             if ch == 'lv': chn = 'v_l'
             if ch == 'rv': chn = 'v_r'
             if ch == 'la': chn = 'at_l'
             if ch == 'ra': chn = 'at_r'
             if ch == 'ao': chn = 'aort_sys'
-            
+
             # now the in- and out-flow indices in case of 3D-0D fluid coupling
             if ch == 'lv': # allow 1 in-flow, 1 ouf-flow for now...
                 ind_i = [0] # q_vin_l
@@ -162,20 +162,29 @@ class cardiovascular0Dbase(ode):
 
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i] = 1
-                
+
             elif self.chmodels[ch]['type']=='0D_rigid':
                 self.switch_V[i] = 0
-            
-            elif self.chmodels[ch]['type']=='prescribed':
+
+            elif self.chmodels[ch]['type']=='0D_prescr':
                 if self.cq[i] == 'volume':
                     self.switch_V[i] = 1
                     self.cname.append('V_'+chn)
                 elif self.cq[i] == 'flux':
                     self.switch_V[i] = 0
                     self.cname.append('Q_'+chn)
+                elif self.cq[i] == 'pressure':
+                    self.switch_V[i] = 0
+                    self.cname.append('p_'+chn)
+                    if self.vq[i] == 'volume':
+                        self.vname[i] = 'V_'+chn
+                    elif self.vq[i] == 'flux':
+                        self.vname[i] = 'Q_'+chn
+                    else:
+                        raise ValueError("Variable quantity has to be volume or flux!")
                 else:
                     raise NameError("Unknown coupling quantity!")
-            
+
             elif self.chmodels[ch]['type']=='3D_solid':
                 if self.cq[i] == 'volume':
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
@@ -212,20 +221,20 @@ class cardiovascular0Dbase(ode):
                 for m in range(self.chmodels[ch]['num_outflows']):
                     self.cname.append('p_'+chn+'_o'+str(m+1))
                     self.v_ids.append(ind_o[m])
-                
+
             else:
                 raise NameError("Unknown chamber model for chamber %s!" % (ch))
 
 
     # set coupling state (populate x and c vectors with Sympy symbols) according to case and coupling quantity (can be volume, flux, or pressure)
     def set_coupling_state(self, ch, chvars, chfncs=[]):
-        
+
         if ch == 'lv': V_unstressed, i = self.V_v_l_u,  0
         if ch == 'rv': V_unstressed, i = self.V_v_r_u,  1
         if ch == 'la': V_unstressed, i = self.V_at_l_u, 2
         if ch == 'ra': V_unstressed, i = self.V_at_r_u, 3
         if ch == 'ao': V_unstressed, i = self.V_ar_sys_u, 4
-   
+
         # "distributed" p variables
         num_pdist = len(chvars)-1
 
@@ -233,7 +242,7 @@ class cardiovascular0Dbase(ode):
         if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
             chvars['VQ'] = chvars['pi1']/chfncs[0] + V_unstressed # V = p/E(t) + V_u
             self.fnc_.append(chfncs[0])
-            
+
             # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
                 if 'pi'+str(k+1) in chvars.keys(): chvars['pi'+str(k+1)] = chvars['pi1']
@@ -242,14 +251,14 @@ class cardiovascular0Dbase(ode):
         # rigid
         elif self.chmodels[ch]['type']=='0D_rigid':
             chvars['VQ'] = 0
-            
+
             # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
                 if 'pi'+str(k+1) in chvars.keys(): chvars['pi'+str(k+1)] = chvars['pi1']
                 if 'po'+str(k+1) in chvars.keys(): chvars['po'+str(k+1)] = chvars['pi1']
 
         # 3D solid mechanics model, or 0D prescribed volume/flux/pressure (non-primary variables!)
-        elif self.chmodels[ch]['type']=='3D_solid' or self.chmodels[ch]['type']=='prescribed':
+        elif self.chmodels[ch]['type']=='3D_solid' or self.chmodels[ch]['type']=='0D_prescr':
 
             # all "distributed" p are equal to "main" p of chamber (= pi1)
             for k in range(10): # no more than 10 distributed p's allowed
@@ -264,7 +273,7 @@ class cardiovascular0Dbase(ode):
 
         # 3D fluid mechanics model
         elif self.chmodels[ch]['type']=='3D_fluid': # also for 2D FEM models
-            
+
             assert(self.cq[i] == 'pressure' and self.vq[i] == 'flux')
 
             self.x_[self.vindex_ch[i]-self.si[i]] = chvars['VQ'] # Q of chamber is now variable
@@ -279,11 +288,11 @@ class cardiovascular0Dbase(ode):
             # now add inflow pressures to coupling array
             for m in range(self.chmodels[ch]['num_inflows']):
                 self.c_.append(chvars['pi'+str(m+1)])
-            
+
             # all "distributed" p that are not coupled are set to first outflow p
             for k in range(self.chmodels[ch]['num_outflows'],10):
                 if 'po'+str(k+1) in chvars.keys(): chvars['po'+str(k+1)] = chvars['po1']
-            
+
             # if no outflow is present, set to zero
             if self.chmodels[ch]['num_outflows']==0: chvars['po1'] = sp.S.Zero
 
@@ -293,18 +302,18 @@ class cardiovascular0Dbase(ode):
 
         else:
             raise NameError("Unknown chamber model for chamber %s!" % (ch))
-        
+
 
     # evaluate time-dependent state of chamber (for 0D elastance models)
     def evaluate_chamber_state(self, y, t):
-        
+
         chamber_funcs=[]
 
         ci=0
         for ch in ['lv','rv','la','ra']:
 
             if self.chmodels[ch]['type']=='0D_elast':
-                
+
                 if ch == 'lv': E_max, E_min = self.E_v_max_l,  self.E_v_min_l
                 if ch == 'rv': E_max, E_min = self.E_v_max_r,  self.E_v_min_r
                 if ch == 'la': E_max, E_min = self.E_at_max_l, self.E_at_min_l
@@ -312,51 +321,51 @@ class cardiovascular0Dbase(ode):
 
                 # time-varying elastance model (y should be normalized activation function provided by user)
                 E_ch_t = (E_max - E_min) * y[ci] + E_min
-                
+
                 chamber_funcs.append(E_ch_t)
-                
+
                 ci+=1
 
             elif self.chmodels[ch]['type']=='0D_elast_prescr':
-                
+
                 E_ch_t = y[ci]
-                
+
                 chamber_funcs.append(E_ch_t)
-                
+
                 ci+=1
-                
+
             else:
-                
+
                 pass
-            
+
         return chamber_funcs
 
 
     # initialize Lagrange multipliers for monolithic Lagrange-type coupling
     def initialize_lm(self, var, iniparam):
-        
+
         ci=0
         for ch in ['lv','rv','la','ra', 'ao']:
-            
+
             # name mapping
             if ch == 'lv': chn = 'v_l'
             if ch == 'rv': chn = 'v_r'
             if ch == 'la': chn = 'at_l'
             if ch == 'ra': chn = 'at_r'
             if ch == 'ao': chn = 'aort_sys'
-            
+
             if self.chmodels[ch]['type']=='3D_solid':
-                
+
                 if 'p_'+chn+'_0' in iniparam.keys(): var[ci] = iniparam['p_'+chn+'_0']
                 ci+=1
 
             if self.chmodels[ch]['type']=='3D_fluid':
-                
+
                 # in-flow pressures
                 for m in range(self.chmodels[ch]['num_inflows']):
                     if 'p_'+chn+'_i'+str(m+1) in iniparam.keys(): var[ci] = iniparam['p_'+chn+'_i'+str(m+1)]
                     ci+=1
-                
+
                 # out-flow pressures
                 for m in range(self.chmodels[ch]['num_outflows']):
                     if 'p_'+chn+'_o'+str(m+1) in iniparam.keys(): var[ci] = iniparam['p_'+chn+'_o'+str(m+1)]

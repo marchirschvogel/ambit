@@ -18,27 +18,27 @@ def print_problem(ptype, comm, numdof=0):
         sys.stdout.flush()
         print("#################### A FEniCS-based cardiovascular physics solver #####################")
         sys.stdout.flush()
-        
+
         if ptype == 'solid':
             print("###################### Welcome to finite strain solid mechanics #######################")
             sys.stdout.flush()
-            
+
         elif ptype == 'fluid':
             print("############### Welcome to incompressible Navier-Stokes fluid mechanics ###############")
             sys.stdout.flush()
-        
+
         elif ptype == 'ale':
             print("############################## Welcome to ALE mechanics ###############################")
             sys.stdout.flush()
-        
+
         elif ptype == 'fluid_ale':
             print("#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###")
             sys.stdout.flush()
-        
+
         elif ptype == 'solid_flow0d':
             print("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########")
             sys.stdout.flush()
-            
+
         elif ptype == 'solid_flow0d_multiscale_gandr':
             print("################# Welcome to multiscale growth and remodeling (G & R) #################")
             print("############## Small time scale: Monolithic 3D-0D coupled solid-flow0d ################")
@@ -69,24 +69,24 @@ def print_problem(ptype, comm, numdof=0):
         else:
             raise NameError("Unknown problem type!")
 
-            
+
         print("#######################################################################################")
         sys.stdout.flush()
-        
+
         print("Number of degrees of freedom: %i" % (numdof))
         sys.stdout.flush()
         print("Number of cores: %i" % (comm.size))
         sys.stdout.flush()
         print("File name: %s" % (sys.argv[0]))
         sys.stdout.flush()
-        
+
         print("#######################################################################################")
         sys.stdout.flush()
 
 
 # print prestress info
 def print_prestress(inst, comm):
-    
+
     if inst=='start':
         if comm.rank == 0:
             print("Started prestressing...")
@@ -106,7 +106,7 @@ def print_prestress(inst, comm):
 
 # copies material parameters to be represented as a dolfinx constant (avoids re-compilation upon parameter change)
 def mat_params_to_dolfinx_constant(matparams, msh):
-    
+
     matparams_new = copy.deepcopy(matparams)
     for k1 in matparams.keys():
         for k2 in matparams[k1].keys():
@@ -119,5 +119,5 @@ def mat_params_to_dolfinx_constant(matparams, msh):
                         for k5 in matparams[k1][k2][k3][k4].keys():
                             if isinstance(matparams[k1][k2][k3][k4][k5], float):
                                 matparams_new[k1][k2][k3][k4][k5] = fem.Constant(msh, matparams[k1][k2][k3][k4][k5])
-                                
+
     return matparams_new

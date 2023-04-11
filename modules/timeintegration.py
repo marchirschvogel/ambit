@@ -14,29 +14,29 @@ from projection import project
 import expression
 
 class timeintegration():
-    
+
     def __init__(self, time_params, time_curves=None, t_init=0., comm=None):
-        
+
         try: self.timint = time_params['timint']
         except: self.timint = 'static'
-        
+
         if 'numstep' in time_params.keys(): self.numstep = time_params['numstep']
-        if 'maxtime' in time_params.keys(): self.maxtime = time_params['maxtime'] 
-        
+        if 'maxtime' in time_params.keys(): self.maxtime = time_params['maxtime']
+
         if 'maxtime' in time_params.keys(): self.dt = self.maxtime/self.numstep
-        
+
         self.time_curves = time_curves
         self.t_init = t_init
 
         self.comm = comm
-        
+
         # time-dependent functions to update
         self.funcs_to_update, self.funcs_to_update_old, self.funcs_to_update_vec, self.funcs_to_update_vec_old = [], [], [], []
 
 
     # print timestep info
     def print_timestep(self, N, t, separator, wt=0):
-        
+
         if self.comm.rank == 0:
 
             print("### TIME STEP %i / %i successfully completed | TIME: %.4f | wt = %.2e" % (N,self.numstep,t,wt))
@@ -46,7 +46,7 @@ class timeintegration():
 
     # print prestress step info
     def print_prestress_step(self, N, t, Nmax, separator, wt=0):
-        
+
         if self.comm.rank == 0:
 
             print("### PRESTRESS STEP %i / %i successfully completed | PSEUDO TIME: %.4f | wt = %.2e" % (N,Nmax,t,wt))
@@ -68,9 +68,9 @@ class timeintegration():
             list(m.keys())[0].interpolate(load.evaluate)
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-    
+
     def update_time_funcs(self):
-        
+
         # update time-dependent functions
         for m in range(len(self.funcs_to_update_old)):
             list(self.funcs_to_update_old[m].keys())[0].vector.axpby(1.0, 0.0, list(self.funcs_to_update[m].keys())[0].vector)
@@ -86,7 +86,7 @@ class timeintegration():
         return 0.0
 
     def timecurves(self, cnum):
-        
+
         if cnum==0:  return self.zero
         if cnum==1:  return self.time_curves.tc1
         if cnum==2:  return self.time_curves.tc2
@@ -112,12 +112,12 @@ class timeintegration():
 
 # Solid mechanics time integration class
 class timeintegration_solid(timeintegration):
-    
+
     def __init__(self, time_params, fem_params, time_curves=None, t_init=0., comm=None):
         timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
-        
+
         if self.timint == 'genalpha':
-            
+
             # if the spectral radius, rho_inf_genalpha, is specified, the parameters are computed from it
             try:
                 self.rho_inf_genalpha = time_params['rho_inf_genalpha']
@@ -129,23 +129,23 @@ class timeintegration_solid(timeintegration):
 
                 try: self.alpha_f = time_params['alpha_f']
                 except: raise AttributeError("Need to specify alpha_f if rho_inf_genalpha is not sepcified!")
-            
+
                 try: self.beta = time_params['beta']
                 except: raise AttributeError("Need to specify beta if rho_inf_genalpha is not sepcified!")
-            
+
                 try: self.gamma = time_params['gamma']
                 except: raise AttributeError("Need to specify gamma if rho_inf_genalpha is not sepcified!")
 
-            
+
         if self.timint == 'ost':
-            
+
             self.theta_ost = time_params['theta_ost']
-        
+
         self.incompressible_2field = fem_params['incompressible_2field']
 
 
     def set_acc_vel(self, u, u_old, v_old, a_old):
-        
+
         # set forms for acc and vel
         if self.timint == 'genalpha':
             acc = self.update_a_newmark(u, u_old, v_old, a_old, ufl=True)
@@ -158,32 +158,32 @@ class timeintegration_solid(timeintegration):
             vel = ufl.constantvalue.zero(3)
         else:
             raise NameError("Unknown time-integration algorithm for solid mechanics!")
-        
+
         return acc, vel
 
 
     def timefactors(self):
-        
+
         if self.timint=='genalpha': timefac_m, timefac = 1.-self.alpha_m, 1.-self.alpha_f
         if self.timint=='ost':      timefac_m, timefac = self.theta_ost, self.theta_ost
         if self.timint=='static':   timefac_m, timefac = 1., 1.
-        
+
         return timefac_m, timefac
 
 
     def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old):
-    
+
         # now update old kinematic fields with new quantities
         if self.timint == 'genalpha':
             self.update_fields_newmark(u, u_old, v_old, a_old)
         if self.timint == 'ost':
             self.update_fields_ost(u, u_old, v_old, a_old)
-        
+
         # update pressure variable
         if self.incompressible_2field:
             p_old.vector.axpby(1.0, 0.0, p.vector)
             p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update internal variables (e.g. active stress, growth stretch, plastic strains, ...)
         for i in range(len(internalvars_old)):
             list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
@@ -240,55 +240,55 @@ class timeintegration_solid(timeintegration):
 
 
     def update_fields_newmark(self, u, u_old, v_old, a_old):
-        # update fields at the end of each time step 
+        # update fields at the end of each time step
         # get vectors (references)
         u_vec, u0_vec  = u.vector, u_old.vector
         v0_vec, a0_vec = v_old.vector, a_old.vector
         u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
-        
+
         # use update functions using vector arguments
         a_vec = self.update_a_newmark(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
         v_vec = self.update_v_newmark(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
-        
+
         # update acceleration: a_old <- a
         a_old.vector.axpby(1.0, 0.0, a_vec)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update velocity: v_old <- v
         v_old.vector.axpby(1.0, 0.0, v_vec)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update displacement: u_old <- u
         u_old.vector.axpby(1.0, 0.0, u_vec)
         u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def update_fields_ost(self, u, u_old, v_old, a_old):
-        # update fields at the end of each time step 
+        # update fields at the end of each time step
         # get vectors (references)
         u_vec, u0_vec  = u.vector, u_old.vector
         v0_vec, a0_vec = v_old.vector, a_old.vector
         u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
-        
+
         # use update functions using vector arguments
         a_vec = self.update_a_ost(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
         v_vec = self.update_v_ost(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
-        
+
         # update acceleration: a_old <- a
         a_old.vector.axpby(1.0, 0.0, a_vec)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update velocity: v_old <- v
         v_old.vector.axpby(1.0, 0.0, v_vec)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update displacement: u_old <- u
         u_old.vector.axpby(1.0, 0.0, u_vec)
         u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def compute_genalpha_params(self, rho_inf):
-        
+
         alpha_m = (2.*rho_inf-1.)/(rho_inf+1.)
         alpha_f = rho_inf/(rho_inf+1.)
         beta    = 0.25*(1.-alpha_m+alpha_f)**2.
@@ -300,7 +300,7 @@ class timeintegration_solid(timeintegration):
 
 # Fluid mechanics time integration class
 class timeintegration_fluid(timeintegration):
-    
+
     def __init__(self, time_params, fem_params, time_curves=None, t_init=0., comm=None):
         timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
 
@@ -308,7 +308,7 @@ class timeintegration_fluid(timeintegration):
 
 
     def set_acc(self, v, v_old, a_old):
-        
+
         # set forms for acc and vel
         if self.timint == 'ost':
             acc = self.update_a_ost(v, v_old, a_old, ufl=True)
@@ -316,12 +316,12 @@ class timeintegration_fluid(timeintegration):
             acc = ufl.constantvalue.zero(3)
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
-        
+
         return acc
 
 
     def set_uf(self, v, v_old, uf_old):
-        
+
         # set forms for acc and vel
         if self.timint == 'ost':
             uf = self.update_uf_ost(v, v_old, uf_old, ufl=True)
@@ -329,32 +329,32 @@ class timeintegration_fluid(timeintegration):
             uf = ufl.constantvalue.zero(3)
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
-        
+
         return uf
 
 
     def timefactors(self):
-        
+
         if self.timint=='ost':    timefac_m, timefac = self.theta_ost, self.theta_ost
         if self.timint=='static': timefac_m, timefac = 1., 1.
-        
+
         return timefac_m, timefac
 
 
     def update_timestep(self, v, v_old, a_old, p, p_old, internalvars, internalvars_old, uf_old=None):
-    
+
         # update old fields with new quantities
         self.update_fields_ost(v, v_old, a_old, uf_old=uf_old)
-        
+
         # update pressure variable
         p_old.vector.axpby(1.0, 0.0, p.vector)
         p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update internal variables (e.g. active stress for reduced solid)
         for i in range(len(internalvars_old)):
             list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
             list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update time dependent load curves
         self.update_time_funcs()
 
@@ -382,23 +382,23 @@ class timeintegration_fluid(timeintegration):
 
 
     def update_fields_ost(self, v, v_old, a_old, uf_old=None):
-        # update fields at the end of each time step 
+        # update fields at the end of each time step
         # get vectors (references)
         v_vec, v0_vec  = v.vector, v_old.vector
         a0_vec = a_old.vector
         v_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
-        
+
         # use update functions using vector arguments
         a_vec = self.update_a_ost(v_vec, v0_vec, a0_vec, ufl=False)
-        
+
         # update acceleration: a_old <- a
         a_old.vector.axpby(1.0, 0.0, a_vec)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         # update velocity: v_old <- v
         v_old.vector.axpby(1.0, 0.0, v_vec)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         if uf_old is not None:
 
             uf0_vec = uf_old.vector
@@ -408,29 +408,29 @@ class timeintegration_fluid(timeintegration):
             # update fluid displacement: uf_old <- uf
             uf_old.vector.axpby(1.0, 0.0, uf_vec)
             uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            
+
 
 
 # ALE time integration class
 class timeintegration_ale(timeintegration_fluid):
 
     def update_timestep(self, u, u_old, w_old):
-        
+
         # update old fields with new quantities
         self.update_fields(u, u_old, w_old)
-        
+
         # update time dependent load curves
         self.update_time_funcs()
 
 
     def set_wel(self, u, u_old, w_old):
-        
+
         # set form for domain velocity wel
         if self.timint == 'ost':
             wel = self.update_w_ost(u, u_old, w_old, ufl=True)
         else:
             raise NameError("Unknown time scheme for ALE mechanics!")
-        
+
         return wel
 
 
@@ -446,15 +446,15 @@ class timeintegration_ale(timeintegration_fluid):
 
 
     def update_fields(self, u, u_old, w_old):
-        # update fields at the end of each time step 
+        # update fields at the end of each time step
         # get vectors (references)
         u_vec, u0_vec  = u.vector, u_old.vector
         w0_vec = w_old.vector
         u_vec.assemble(), u0_vec.assemble(), w0_vec.assemble()
-        
+
         # use update functions using vector arguments
         w_vec = self.update_w_ost(u_vec, u0_vec, w0_vec, ufl=False)
-        
+
         # update velocity: w_old <- w
         w_old.vector.axpby(1.0, 0.0, w_vec)
         w_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -467,14 +467,14 @@ class timeintegration_ale(timeintegration_fluid):
 
 # Flow0d time integration class
 class timeintegration_flow0d(timeintegration):
-    
+
     # initialize base class
     def __init__(self, time_params, time_curves=None, t_init=0., comm=None, cycle=[1], cycleerror=[1]):
         timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
-    
+
         self.cycle = cycle
         self.cycleerror = cycleerror
-        
+
 
     # print time step info
     def print_timestep(self, N, t, separator, Nmax, wt=0):
@@ -492,7 +492,7 @@ class timeintegration_flow0d(timeintegration):
 
 # SignallingNetwork time integration class
 class timeintegration_signet(timeintegration):
-    
+
     # initialize base class
     def __init__(self, time_params, time_curves=None, t_init=0., comm=None):
         timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)

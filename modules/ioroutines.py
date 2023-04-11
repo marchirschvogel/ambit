@@ -18,21 +18,21 @@ import expression
 
 
 class IO:
-    
+
     def __init__(self, io_params, comm):
 
         self.write_results_every = io_params['write_results_every']
         self.output_path = io_params['output_path']
-        
+
         self.mesh_domain = io_params['mesh_domain']
         self.mesh_boundary = io_params['mesh_boundary']
-        
+
         try: self.fiber_data = io_params['fiber_data']
         except: self.fiber_data = []
-        
+
         try: self.write_restart_every = io_params['write_restart_every']
         except: self.write_restart_every = -1
-        
+
         try: self.meshfile_type = io_params['meshfile_type']
         except: self.meshfile_type = 'ASCII'
 
@@ -41,14 +41,14 @@ class IO:
 
         try: self.gridname_boundary = io_params['gridname_boundary']
         except: self.gridname_boundary = 'Grid'
-        
+
         # readin tolerance for own read function that uses coordinate values to properly read in a field
         try: self.readin_tol = io_params['readin_tol']
         except: self.readin_tol = 1.0e-8
-        
+
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
-        
+
         self.comm = comm
 
 
@@ -60,7 +60,7 @@ class IO:
             encoding = io.XDMFFile.Encoding.HDF5
         else:
             raise NameError('Choose either ASCII or HDF5 as meshfile_type, or add a different encoding!')
-            
+
         # read in xdmf mesh - domain
         with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
             self.mesh = infile.read_mesh(name=self.gridname_domain)
@@ -68,22 +68,22 @@ class IO:
             except: self.mt_d = None
 
         # read in xdmf mesh - boundary
-        
+
         # here, we define b1 BCs as BCs associated to a topology one dimension less than the problem (most common),
         # b2 BCs two dimensions less, and b3 BCs three dimensions less
         # for a 3D problem - b1: surface BCs, b2: edge BCs, b3: point BCs
         # for a 2D problem - b1: edge BCs, b2: point BCs
         # 1D problems not supported (currently...)
-        
+
         if self.mesh.topology.dim == 3:
-            
+
             try:
                 self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
-            
+
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
@@ -99,14 +99,14 @@ class IO:
                 pass
 
         elif self.mesh.topology.dim == 2:
-            
+
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
-            
+
             try:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
@@ -116,7 +116,7 @@ class IO:
 
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
-        
+
         # facet normal
         self.n0 = ufl.FacetNormal(self.mesh)
 
@@ -129,28 +129,28 @@ class IO:
 
 
     def write_restart(self, pb, N):
-        
+
         if self.write_restart_every > 0 and N % self.write_restart_every == 0:
-            
+
             self.writecheckpoint(pb, N)
 
 
     def set_func_const(self, func, array):
-        
+
         load = expression.template_vector()
         load.val_x, load.val_y, load.val_z = array[0], array[1], array[2]
         func.interpolate(load.evaluate)
 
 
     def readfunction(self, f, V, datafile, normalize=False, tol=1.0e-8):
-        
+
         # block size of vector
         bs = f.vector.getBlockSize()
-        
+
         # load data and coordinates
         data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2)
         coords = np.loadtxt(datafile,usecols=(-3,-2,-1)) # last three always are the coordinates
-        
+
         # new node coordinates (dofs might be re-ordered in parallel)
         # in case of DG fields, these are the Gauss point coordinates
         co = V.tabulate_dof_coordinates()
@@ -165,12 +165,12 @@ class IO:
         # mapping between original and new id via the coordinates
         ci = 0
         for i in im:
-            
+
             ind = np.where((np.round(coords,tolerance) == np.round(co[ci],tolerance)).all(axis=1))[0]
 
             # only write if we've found the index
             if len(ind):
-                
+
                 if normalize:
                     norm_sq = 0.
                     for j in range(bs):
@@ -178,26 +178,26 @@ class IO:
                     norm = np.sqrt(norm_sq)
                 else:
                     norm = 1.
-                
+
                 for j in range(bs):
                     f.vector[bs*i+j] = data[ind[0],j] / norm
-            
+
             ci+=1
 
         f.vector.assemble()
-        
+
         # update ghosts
         f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
     def readin_fibers(self, fibarray, V_fib, dx_):
-        
+
         fib_func, fib_func_disc = [], []
 
         si = 0
         for s in fibarray:
-            
+
             fib_func.append(fem.Function(V_fib, name='Fiber'+str(si+1)))
 
             if isinstance(self.fiber_data[si], str):
@@ -217,26 +217,26 @@ class IO:
 class IO_solid(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        
+
         if writemesh:
-            
+
             if self.write_results_every > 0:
 
                 for res in pb.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
-                
+
             return
-        
+
         else:
 
             # write results every write_results_every steps
             if self.write_results_every > 0 and N % self.write_results_every == 0:
-                
+
                 # save solution to XDMF format
                 for res in pb.results_to_write:
-                    
+
                     if res=='displacement':
                         self.resultsfiles[res].write_function(pb.u, t)
                     elif res=='velocity': # passed in v is not a function but form, so we have to project
@@ -342,7 +342,7 @@ class IO_solid(IO):
                 vecs_to_read[pb.amp_old] = 'amp_old'
         if pb.u_pre is not None:
             vecs_to_read[pb.u_pre] = 'u_pre'
-        
+
         if pb.timint != 'static':
             vecs_to_read[pb.u_old] = 'u'
             vecs_to_read[pb.v_old] = 'v_old'
@@ -366,7 +366,7 @@ class IO_solid(IO):
             # and for safety reasons, include the number of cores in the dat file name
             viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
             key.vector.load(viewer)
-            
+
             key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
@@ -383,7 +383,7 @@ class IO_solid(IO):
                 vecs_to_write[pb.amp_old] = 'amp_old'
         if pb.u_pre is not None:
             vecs_to_write[pb.u_pre] = 'u_pre'
-        
+
         if pb.timint != 'static':
             vecs_to_write[pb.v_old] = 'v_old'
             vecs_to_write[pb.a_old] = 'a_old'
@@ -399,7 +399,7 @@ class IO_solid(IO):
                     vecs_to_write[pb.amp_old_set] = 'amp_old_set'
 
         for key in vecs_to_write:
-            
+
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
             viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
@@ -408,28 +408,28 @@ class IO_solid(IO):
 
 
 class IO_fluid(IO):
-    
+
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        
+
         if writemesh:
-            
+
             if self.write_results_every > 0:
 
                 for res in pb.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
-            
+
             return
-        
+
         else:
-            
+
             # write results every write_results_every steps
             if self.write_results_every > 0 and N % self.write_results_every == 0:
-                
+
                 # save solution to XDMF format
                 for res in pb.results_to_write:
-                    
+
                     if res=='velocity':
                         self.resultsfiles[res].write_function(pb.v, t)
                     elif res=='acceleration': # passed in a is not a function but form, so we have to project
@@ -463,14 +463,14 @@ class IO_fluid(IO):
         vecs_to_read = {'v_old' : pb.v_old}
         vecs_to_read = {'a_old' : pb.a_old}
         vecs_to_read = {'p_old' : pb.p_old}
-        
+
         for key in vecs_to_read:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
             viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
             vecs_to_read[key].vector.load(viewer)
-            
+
             vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
@@ -481,7 +481,7 @@ class IO_fluid(IO):
         vecs_to_write = {'v_old' : pb.v_old}
         vecs_to_write = {'a_old' : pb.a_old}
         vecs_to_write = {'p_old' : pb.p_old}
-        
+
         for key in vecs_to_write:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
@@ -491,28 +491,28 @@ class IO_fluid(IO):
 
 
 class IO_ale(IO):
-    
+
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        
+
         if writemesh:
-            
+
             if self.write_results_every > 0:
 
                 for res in pb.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                     outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
-            
+
             return
-        
+
         else:
-            
+
             # write results every write_results_every steps
             if self.write_results_every > 0 and N % self.write_results_every == 0:
-                
+
                 # save solution to XDMF format
                 for res in pb.results_to_write:
-                    
+
                     if res=='aledisplacement':
                         self.resultsfiles[res].write_function(pb.d, t)
                     elif res=='alevelocity':
@@ -525,21 +525,21 @@ class IO_ale(IO):
     def readcheckpoint(self, pb):
 
         vecs_to_read = {'u' : pb.d}
-        
+
         for key in vecs_to_read:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
             viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
             vecs_to_read[key].vector.load(viewer)
-            
+
             vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def writecheckpoint(self, pb, N):
 
         vecs_to_write = {'u' : pb.d}
-        
+
         for key in vecs_to_write:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
@@ -548,18 +548,18 @@ class IO_ale(IO):
 
 
 class IO_fluid_ale(IO_fluid,IO_ale):
-    
+
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
         IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)
         IO_ale.write_output(self, pb.pba, writemesh=writemesh, N=N, t=t)
-        
+
     def readcheckpoint(self, pb):
-        
+
         IO_fluid.readcheckpoint(self, pb)
         IO_ale.readcheckpoint(self, pb)
-        
+
     def writecheckpoint(self, pb, N):
-        
+
         IO_fluid.writecheckpoint(self, pb, N)
         IO_ale.writecheckpoint(self, pb, N)

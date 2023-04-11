@@ -11,7 +11,7 @@ from pathlib import Path
 import resultcheck
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fsi',
@@ -33,7 +33,7 @@ def main():
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
-    
+
     SOLVER_PARAMS_FLUID  = {'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
 
@@ -42,22 +42,22 @@ def main():
                             'numstep_stop'          : 1,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
-    
+
     TIME_PARAMS_FLUID    = {'maxtime'               : 1.0,
                             'numstep'               : 100,
                             'numstep_stop'          : 1,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
-    FEM_PARAMS_SOLID     = {'order_disp'            : 2, 
+    FEM_PARAMS_SOLID     = {'order_disp'            : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'incompressible_2field' : True}
 
-    FEM_PARAMS_FLUID     = {'order_vel'             : 2, 
+    FEM_PARAMS_FLUID     = {'order_vel'             : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
-    
+
     COUPLING_PARAMS      = {'surface_ids'           : [1]}
 
     MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 10.},
@@ -71,30 +71,30 @@ def main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # some examples... up to 9 possible (tc1 until tc9 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves():
-        
+
         def tc1(self, t): # atrial activation
-            
+
             act_dur = 2.*param()['t_ed']
             t0 = 0.
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
                 return 0.0
-    
+
     BC_DICT_SOLID          = { 'dirichlet' : [{'id' : [2], 'dir' : 'all', 'val' : 0.}]}
 
     BC_DICT_FLUID          = { }
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], [SOLVER_PARAMS_SOLID, SOLVER_PARAMS_FLUID], [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID], [MATERIALS_SOLID, MATERIALS_FLUID], [BC_DICT_SOLID, BC_DICT_FLUID], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
-    
+
     # problem solve
     problem.solve_problem()
 
     ## --- results check
     #tol = 1.0e-6
-        
+
     #s_corr = np.zeros(problem.mp.pbf.cardvasc0D.numdof)
 
     ## correct 0D results
@@ -137,7 +137,7 @@ def main():
 
     #check1 = resultcheck.results_check_vec(problem.mp.pbf.s, s_corr, problem.mp.comm, tol=tol)
     #success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     #return success
 
 
@@ -146,14 +146,14 @@ def main():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

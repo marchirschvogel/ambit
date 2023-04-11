@@ -17,7 +17,7 @@ import resultcheck
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     # reads in restart step from the command line
@@ -53,7 +53,7 @@ def main():
                             'numstep_stop'          : 5,
                             'timint'                : 'genalpha',
                             'rho_inf_genalpha'      : 0.8}
-    
+
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
                             'initial_conditions'    : init()}
@@ -67,7 +67,7 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 2,
                             'incompressible_2field' : False}
-    
+
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'cq_factor'             : [80.,80.],
                             'coupling_quantity'     : ['volume']*2,
@@ -82,26 +82,26 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
-            
+
             K = 5.
             t_contr, t_relax = 0.0, 0.53
-            
+
             alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
             alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
-            
+
             c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-            
+
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
         def tc2(self, t): # atrial activation
-            
+
             act_dur = 2.*param()['t_ed']
             t0 = 0.
-            
+
             if t >= t0 and t <= t0 + act_dur:
                 return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
             else:
@@ -114,16 +114,16 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
 
     # --- results check
     tol = 1.0e-6
-        
+
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
-    
+
     # correct 0D results
     s_corr[0] = 1.0164622985583151E+05
     s_corr[1] = 3.8516455080275669E-01
@@ -155,13 +155,13 @@ def main():
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
 def init():
-    
+
     return {'q_vin_l_0' : 1.1549454594333263E+04,
             'p_at_l_0' : 3.8580961077622145E-01,
             'q_vout_l_0' : -1.0552685263595845E+00,
@@ -190,7 +190,7 @@ def init():
 
 
 def param():
-    
+
     R_ar_sys = 120.0e-6
     tau_ar_sys = 1.65242332
     tau_ar_pul = 0.3
@@ -272,14 +272,14 @@ def param():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

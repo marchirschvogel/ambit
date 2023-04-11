@@ -11,7 +11,7 @@ import resultcheck
 # purely viscous block testing basic rate-dependent solid material
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS         = {'problem_type'          : 'solid',
@@ -33,7 +33,7 @@ def main():
                          'numstep_stop'          : 5,
                          'timint'                : 'genalpha',
                          'rho_inf_genalpha'      : 1.0}
-    
+
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 2,
                          'incompressible_2field' : False}
@@ -44,7 +44,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
             return 3.*t
 
@@ -54,11 +54,11 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
-    
+
     # solve time-dependent problem
     problem.solve_problem()
 
-    
+
     # --- results check
     tol = 1.0e-6
 
@@ -74,20 +74,20 @@ def main():
 
     check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
     success = resultcheck.success_check([check1], problem.mp.comm)
-    
+
     return success
 
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

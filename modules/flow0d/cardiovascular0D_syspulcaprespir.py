@@ -17,7 +17,7 @@ from mpiroutines import allgather_vec
 # builds upon syspulcap model
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
-    
+
     def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, comm=None):
 
         self.R_airw = params['R_airw']
@@ -77,19 +77,19 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
         # number of degrees of freedom
         self.numdof = 84
-        
+
         self.elastarrays = [[]]*4
-        
+
         self.si, self.switch_V = [0]*5, [1]*5 # default values
 
         self.varindex_ch = [3,29,1,27] # coupling variable indices (decreased by 1 for pressure coupling!)
         self.vname, self.cname = ['p_v_l','p_v_r','p_at_l','p_at_r'], []
-        
+
         self.set_solve_arrays()
 
 
     def equation_map(self):
-        
+
         cardiovascular0Dsyspulcap.equation_map(self)
 
         # add to varmap
@@ -145,7 +145,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         # add to auxmap
         self.auxmap['SO2_ar_pul'] = 51
         self.auxmap['SO2_ar_sys'] = 61
-        
+
         # variables from the mechanics model
         q_vin_l_       = self.x_[0]
         p_at_l_        = self.x_[1]
@@ -312,7 +312,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
         self.df_[39] = fCO2_alv_
         self.df_[40] = fO2_alv_
-        
+
         self.df_[41] = self.C_arspl_sys * p_arperi_sys_
         self.df_[42] = self.C_arespl_sys * p_arperi_sys_
         self.df_[43] = self.C_armsc_sys * p_arperi_sys_
@@ -558,7 +558,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
 
     def initialize(self, var, iniparam):
-        
+
         cardiovascular0Dsyspulcap.initialize(self, var, iniparam)
 
         # initial value of time-varying pleural pressure
@@ -664,7 +664,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         dcbO2_dppCO2_val = 0.
 
         return dcbO2_dppCO2_val
-    
+
 
     # cbCO2 and its derivatives
     def cbCO2(self, ppCO2, ppO2):
@@ -727,9 +727,9 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
         # could get critical here since the respiratory cycle may differ from the heart cycle! So the oscillatory lung dofs should be excluded
         oscillatory_lung_dofs=[36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55]
-        
+
         if check[0]=='allvar':
-            
+
             var_ids, aux_ids = list(self.varmap.values()), []
 
         elif check[0]=='allvaraux':
@@ -737,12 +737,12 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             var_ids, aux_ids = list(self.varmap.values()), list(self.auxmap.values())
 
         elif check[0]=='pvar':
-            
+
             var_ids, aux_ids = [1,3,4,6,8,14,16,18,20,22,24,27,29,30,32,34,
                         46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83], []
 
         elif check[0]=='specific':
-            
+
             var_ids = []
             for k in range(len(self.varmap)):
                 if list(self.varmap.keys())[k] in check[1]:
@@ -771,23 +771,23 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             is_periodic = True
         else:
             is_periodic = False
-            
+
         return is_periodic
 
 
     def print_to_screen(self, var, aux):
-        
+
         cardiovascular0Dsyspulcap.print_to_screen(self, var, aux)
-        
+
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
         if self.comm.rank == 0:
-            
+
             print("Output of 0D respiratory model (syspulcaprespir):")
-            
+
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('SO2_ar_sys',' = ',aux[self.auxmap['SO2_ar_sys']],'   ','SO2_ar_pul',' = ',aux[self.auxmap['SO2_ar_pul']]))
-            
+
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppO2_ar_sys',' = ',var_sq[self.varmap['ppO2_ar_sys']],'   ','ppO2_ar_pul',' = ',var_sq[self.varmap['ppO2_ar_pul']]))
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_sq[self.varmap['ppCO2_ar_sys']],'   ','ppCO2_ar_pul',' = ',var_sq[self.varmap['ppCO2_ar_pul']]))
 
@@ -797,11 +797,11 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
 
 def postprocess_groups_syspulcaprespir(groups, coronarymodel=None, indpertaftercyl=0,multiscalegandr=False):
-    
+
     import cardiovascular0D_syspulcap
-    
+
     cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,indpertaftercyl,multiscalegandr)
-    
+
     # index 14
     groups.append({'ppO2_time_sys_l'  : ['ppO2_at_l', 'ppO2_v_l', 'ppO2_ar_sys', 'ppO2_arspl_sys', 'ppO2_arespl_sys', 'ppO2_armsc_sys', 'ppO2_arcer_sys', 'ppO2_arcor_sys', 'ppO2_venspl_sys', 'ppO2_venespl_sys', 'ppO2_venmsc_sys', 'ppO2_vencer_sys', 'ppO2_vencor_sys', 'ppO2_ven_sys'],
                    'tex'              : ['$p_{\\\mathrm{O}_2,\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{O}_2,\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
@@ -818,24 +818,23 @@ def postprocess_groups_syspulcaprespir(groups, coronarymodel=None, indpertafterc
     groups.append({'ppCO2_time_pul_r' : ['ppCO2_at_r', 'ppCO2_v_r', 'ppCO2_ar_pul', 'ppCO2_ven_pul', 'ppCO2_cap_pul'],
                    'tex'              : ['$p_{\\\mathrm{CO}_2,\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{cap}}^{\\\mathrm{pul}}$'],
                    'lines'            : [16, 17, 18, 19, 20]})
-    
+
     # now append all the values again but with suffix PERIODIC, since we want to plot both:
     # values over all heart cycles as well as only for the periodic cycle
-    
+
     # index 18
     groups.append({'ppO2_time_sys_l_PERIODIC'  : list(groups[14].values())[0],
                    'tex'                       : list(groups[14].values())[1],
                    'lines'                     : list(groups[14].values())[2]})
-    # index 19    
+    # index 19
     groups.append({'ppCO2_time_sys_l_PERIODIC' : list(groups[15].values())[0],
                    'tex'                       : list(groups[15].values())[1],
                    'lines'                     : list(groups[15].values())[2]})
-    # index 20        
+    # index 20
     groups.append({'ppO2_time_pul_r_PERIODIC'  : list(groups[16].values())[0],
                    'tex'                       : list(groups[16].values())[1],
                    'lines'                     : list(groups[16].values())[2]})
-    # index 21            
+    # index 21
     groups.append({'ppCO2_time_pul_r_PERIODIC' : list(groups[17].values())[0],
                    'tex'                       : list(groups[17].values())[1],
                    'lines'                     : list(groups[17].values())[2]})
-

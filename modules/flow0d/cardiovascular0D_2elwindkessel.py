@@ -28,13 +28,13 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         self.C = params['C']
         self.R = params['R']
         self.p_ref = params['p_ref']
-        
+
         self.cq = cq
         self.vq = vq
-        
+
         self.v_ids = [0]
         self.c_ids = [0]
-        
+
         if self.cq[0] == 'volume':
             self.switch_V, self.cname, self.vname = 1, 'V', 'p'
         elif self.cq[0] == 'flux':
@@ -54,31 +54,31 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
         # set up symbolic equations
         self.equation_map()
-        
+
         # symbolic stiffness matrix
         self.set_stiffness()
 
         # make Lambda functions out of symbolic expressions
         self.lambdify_expressions()
 
-    
+
     def setup_arrays(self):
 
         # number of degrees of freedom
         self.numdof = 1
-        
+
         self.set_solve_arrays()
 
 
     def equation_map(self):
-        
+
         self.varmap = {self.vname : 0}
         self.auxmap = {self.cname : 0}
-        
+
         self.t_ = sp.Symbol('t_')
         p_ = sp.Symbol('p_')
         VQ_ = sp.Symbol('VQ_')
-        
+
         # dofs to differentiate w.r.t.
         self.x_[0] = p_
         # coupling variables
@@ -89,10 +89,10 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
         # df part of rhs contribution (df - df_old)/dt
         self.df_[0] = self.C * p_ + VQ_ * self.switch_V
-        
+
         # f part of rhs contribution theta * f + (1-theta) * f_old
         self.f_[0] = (p_-self.p_ref)/self.R - (1-self.switch_V) * VQ_
-        
+
         # populate auxiliary variable vector
         self.a_[0] = self.c_[0]
 
@@ -108,24 +108,24 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
 
     def print_to_screen(self, var, aux):
-        
+
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
         if self.comm.rank == 0:
-            
+
             print("Output of 0D model (2elwindkessel):")
-            
+
             print('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]))
             print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]))
-                
+
             sys.stdout.flush()
 
 
 
 
 def postprocess_groups(groups, indpertaftercyl=0):
-    
+
     # index 0
     groups.append({'pres_time'        : ['p'],
                    'tex'              : ['$p$'],

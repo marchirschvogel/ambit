@@ -36,18 +36,18 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec', rea
     # re-ordered local co array and then grep out the corresponding dof index from the index map
     dof_indices, dof_indices_gathered = {}, []
     for i in range(len(check_node)):
-        
+
         ind = np.where((np.round(check_node[i],readtolerance) == np.round(co,readtolerance)).all(axis=1))[0]
-        
+
         if len(ind): dof_indices[i] = im[ind[0]]
-    
+
     # gather indices
     dof_indices_gathered = comm.allgather(dof_indices)
 
     # make a flat and ordered list of indices (may still have duplicates)
     dof_indices_flat = []
     for i in range(len(check_node)):
-        
+
         for l in range(len(dof_indices_gathered)):
             if i in dof_indices_gathered[l].keys():
                 dof_indices_flat.append(dof_indices_gathered[l][i])
@@ -79,21 +79,21 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec', rea
 
 # return the final success bool
 def success_check(succ, comm):
-    
+
     success = True
-    
+
     for b in succ:
         if b == False:
             success = False
 
     if success:
-        
+
         if comm.rank == 0:
             print("Test passed. :-)")
             sys.stdout.flush()
-        
+
     else:
-        
+
         if comm.rank == 0:
             print("!!!Test failed!!!")
             sys.stdout.flush()
@@ -103,11 +103,11 @@ def success_check(succ, comm):
 
 # check the results of a full parallel (non-ghosted) vector
 def results_check_vec(vec, vec_corr, comm, tol=1.0e-6):
-    
+
     success = True
-    
+
     vec_sq = allgather_vec(vec, comm)
-    
+
     errs = np.zeros(len(vec_sq))
 
     for i in range(len(vec_sq)):
@@ -119,5 +119,5 @@ def results_check_vec(vec, vec_corr, comm, tol=1.0e-6):
         if comm.rank == 0:
             print("vec[%i]    = %.16E,    CORR = %E,    err = %E" % (i,vec_sq[i], vec_corr[i], errs[i]))
             sys.stdout.flush()
-            
+
     return success

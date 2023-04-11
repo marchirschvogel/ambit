@@ -15,18 +15,18 @@ from solid_flow0d import SolidmechanicsFlow0DSolver
 class SolidmechanicsFlow0DPeriodicRefSolver():
 
     def __init__(self, problem, solver_params_solid, solver_params_flow0d):
-    
+
         self.pb = problem
-        
+
         # set indicator to zero (no temporal offsets)
         self.pb.noperiodicref = 0
-        
+
         # initialize solver instance
         self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params_solid, solver_params_flow0d)
-        
+
         # store prestress flag (because flag is set to False after one prestress run)
         self.prestress_initial = self.pb.pbs.prestress_initial
-        
+
         # store simname
         self.simname = self.pb.pbs.simname
 
@@ -37,12 +37,12 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
 
     def solve_problem(self):
-        
+
         start = time.time()
-        
+
         # outer heart cycle loop
         for N in range(self.pb.restart_periodicref+1, self.pb.Nmax_periodicref+1):
-            
+
             wts = time.time()
 
             # change output names
@@ -52,15 +52,15 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
             # solve one heart cycle
             self.solver.solve_problem()
-            
+
             # set prestress and re-initialize solid petsc solver
             if self.prestress_initial:
                 self.pb.pbs.prestress_initial = True
                 self.solver.solverprestr.solnln.initialize_petsc_solver()
-            
+
             if self.pb.write_checkpoints_periodicref:
                 self.pb.write_restart(self.pb.pbs.simname, N)
-            
+
             # check if below tolerance
             if abs(self.pb.pbf.ti.cycleerror[0]) <= self.pb.pbf.eps_periodic:
                 if self.pb.comm.rank == 0:
@@ -80,7 +80,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         self.pb.pbs.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self.pb.pbs.u_old.vector.set(0.0)
         self.pb.pbs.u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        
+
         self.pb.pbs.v_old.vector.set(0.0)
         self.pb.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self.pb.pbs.a_old.vector.set(0.0)

@@ -11,7 +11,7 @@ from pathlib import Path
 import resultcheck
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fluid_ale',
@@ -50,7 +50,7 @@ def main():
                             'quad_degree'           : 6,
                             'fluid_formulation'     : 'nonconservative',
                             'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt'}
-    
+
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : {'surface_ids' : [1], 'type' : 'strong_dirichlet'},
                             'fluid_on_deformed'     : 'consistent'}
 
@@ -62,7 +62,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
-        
+
         def tc1(self, t):
             t_ramp = 2.0
             p0 = 0.3
@@ -81,7 +81,7 @@ def main():
 
     # problem setup
     problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
- 
+
     # problem solve
     problem.solve_problem()
 
@@ -93,7 +93,7 @@ def main():
     check_node.append(np.array([7.071068, 7.071068, 2.500000]))
 
     v_corr = np.zeros(3*len(check_node))
-    
+
     # correct results
     v_corr[0] = 9.7132901929643700E-01 # x
     v_corr[1] = 9.7132901929643722E-01 # y
@@ -108,14 +108,14 @@ def main():
 
 
 if __name__ == "__main__":
-    
+
     success = False
-    
+
     try:
         success = main()
     except:
         print(traceback.format_exc())
-    
+
     if success:
         sys.exit(0)
     else:

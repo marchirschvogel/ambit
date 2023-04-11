@@ -14,13 +14,13 @@ from mpiroutines import allgather_vec, allgather_vec_entry
 
 
 class ode:
-    
+
     def __init__(self, init=True, comm=None):
         self.init = init # for output
         self.varmap, self.auxmap = {}, {} # maps for primary and auxiliary variables
         if comm is not None: self.comm = comm # MPI communicator
-       
-    
+
+
     # evaluate model at current nonlinear iteration
     def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None, fnc=[]):
 
@@ -29,43 +29,43 @@ class ode:
 
         # ODE lhs (time derivative) residual part df
         if df is not None:
-            
+
             for i in range(self.numdof):
                 df[i] = self.df__[i](x_sq, c, t, fnc)
-            
-        # ODE rhs residual part f 
+
+        # ODE rhs residual part f
         if f is not None:
-            
+
             for i in range(self.numdof):
                 f[i] = self.f__[i](x_sq, c, t, fnc)
 
         # ODE lhs (time derivative) stiffness part dK (ddf/dx)
         if dK is not None:
-            
+
             for i in range(self.numdof):
                 for j in range(self.numdof):
                     dK[i,j] = self.dK__[i][j](x_sq, c, t, fnc)
 
         # ODE rhs stiffness part K (df/dx)
         if K is not None:
-            
+
             for i in range(self.numdof):
                 for j in range(self.numdof):
                     K[i,j] = self.K__[i][j](x_sq, c, t, fnc)
 
         # auxiliary variable vector a (for post-processing or periodic state check)
         if a is not None:
-            
+
             for i in range(self.numdof):
                 a[i] = self.a__[i](x_sq, c, t, fnc)
 
 
     # symbolic stiffness matrix contributions ddf_/dx, df_/dx
     def set_stiffness(self):
-        
+
         for i in range(self.numdof):
             for j in range(self.numdof):
-        
+
                 self.dK_[i][j] = sp.diff(self.df_[i],self.x_[j])
                 self.K_[i][j]  = sp.diff(self.f_[i],self.x_[j])
 
@@ -76,14 +76,14 @@ class ode:
         if self.comm.rank == 0:
             print("Calling lambdify for expressions...")
             sys.stdout.flush()
-        
+
         ts = time.time()
 
         for i in range(self.numdof):
             self.df__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.df_[i], 'numpy')
             self.f__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.f_[i], 'numpy')
-            self.a__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.a_[i], 'numpy')     
-        
+            self.a__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.a_[i], 'numpy')
+
         te = time.time() - ts
 
         if self.comm.rank == 0:
@@ -91,7 +91,7 @@ class ode:
             sys.stdout.flush()
 
         ts = time.time()
-        
+
         for i in range(self.numdof):
             for j in range(self.numdof):
                 if self.dK_[i][j] is not sp.S.Zero: self.dK__[i][j] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.dK_[i][j], 'numpy')
@@ -104,7 +104,7 @@ class ode:
         if self.comm.rank == 0:
             print("Finished lambdify for stiffness expressions, %.4f s" % (te))
             sys.stdout.flush()
-            
+
 
     # set prescribed variable values
     def set_prescribed_variables(self, x, r, K, val, index_prescribed):
@@ -122,6 +122,8 @@ class ode:
         for j in range(self.numdof):
             if j!=index_prescribed: K[index_prescribed,j] = 0.
 
+        r.assemble(), K.assemble()
+
 
     # time step update
     def update(self, var, df, f, var_old, df_old, f_old, aux, aux_old):
@@ -135,11 +137,11 @@ class ode:
 
         # aux vector is always a numpy array
         aux_old[:] = aux[:]
-            
-            
+
+
     # midpoint-averaging of state variables (for post-processing)
     def set_output_state(self, var, var_old, var_out, theta, midpoint=True):
-        
+
         if isinstance(var, np.ndarray): vs, ve = 0, len(var)
         else: vs, ve = var.getOwnershipRange()
 
@@ -154,7 +156,7 @@ class ode:
 
         self.x_, self.a_, self.a__ = [0]*self.numdof, [0]*self.numdof, [0]*self.numdof
         self.c_, self.fnc_ = [], []
-        
+
         self.df_, self.f_, self.df__, self.f__ = [0]*self.numdof, [0]*self.numdof, [0]*self.numdof, [0]*self.numdof
         self.dK_,  self.K_  = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
         self.dK__, self.K__ = [[0]*self.numdof for _ in range(self.numdof)], [[0]*self.numdof for _ in range(self.numdof)]
@@ -169,45 +171,45 @@ class ode:
         # mode: 'wt' generates new file, 'a' appends to existing one
         if self.init: mode = 'wt'
         else: mode = 'a'
-        
+
         self.init = False
 
         if self.comm.rank == 0:
 
             for i in range(len(self.varmap)):
-                
+
                 filename = path+'/results_'+nm+'_'+list(self.varmap.keys())[i]+'.txt'
                 f = open(filename, mode)
-                
+
                 f.write('%.16E %.16E\n' % (t,var_sq[list(self.varmap.values())[i]]))
-                
+
                 f.close()
 
             for i in range(len(self.auxmap)):
-                
+
                 filename = path+'/results_'+nm+'_'+list(self.auxmap.keys())[i]+'.txt'
                 f = open(filename, mode)
-                
+
                 f.write('%.16E %.16E\n' % (t,aux[list(self.auxmap.values())[i]]))
-                
+
                 f.close()
 
 
     # write restart routine for ODE models
     def write_restart(self, path, nm, N, var):
-        
+
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
         if self.comm.rank == 0:
-        
+
             filename = path+'/checkpoint_'+nm+'_'+str(N)+'.txt'
             f = open(filename, 'wt')
-            
+
             for i in range(len(var_sq)):
-                
+
                 f.write('%.16E\n' % (var_sq[i]))
-                
+
             f.close()
 
 
@@ -249,11 +251,11 @@ class ode:
 
     # if we want to set the initial conditions from a txt file
     def set_initial_from_file(self, initialdata):
-    
+
         pini0D = {}
         with open(initialdata) as fh:
             for line in fh:
                 (key, val) = line.split()
                 pini0D[key] = float(val)
-                
+
         return pini0D
