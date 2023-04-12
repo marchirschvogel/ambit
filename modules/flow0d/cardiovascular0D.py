@@ -174,14 +174,14 @@ class cardiovascular0Dbase(ode):
                     self.switch_V[i] = 0
                     self.cname.append('Q_'+chn)
                 elif self.cq[i] == 'pressure':
-                    self.switch_V[i] = 0
-                    self.cname.append('p_'+chn)
                     if self.vq[i] == 'volume':
-                        self.vname[i] = 'V_'+chn
+                        self.switch_V[i], self.vname[i] = 1, 'V_'+chn
                     elif self.vq[i] == 'flux':
-                        self.vname[i] = 'Q_'+chn
+                        self.switch_V[i], self.vname[i] = 0, 'Q_'+chn
                     else:
                         raise ValueError("Variable quantity has to be volume or flux!")
+                    self.cname.append('p_'+chn)
+                    self.si[i] = 1 # switch indices of pressure / outflux
                 else:
                     raise NameError("Unknown coupling quantity!")
 

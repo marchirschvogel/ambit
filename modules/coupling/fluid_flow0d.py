@@ -349,9 +349,17 @@ class FluidmechanicsFlow0DProblem():
         if bool(self.pb0.chamber_models):
             self.pb0.y = []
             for ch in ['lv','rv','la','ra']:
-                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y.append(self.pbf.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbf.t_init))
-                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y.append(self.pbf.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbf.t_init))
-                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pbf.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbf.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y.append(self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbf.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y.append(self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbf.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbf.t_init))
+
+        # if we have prescribed variable values over time
+        if bool(self.pb0.prescribed_variables):
+            for a in self.pb0.prescribed_variables:
+                varindex = self.pb0.cardvasc0D.varmap[a]
+                curvenumber = self.pb0.prescribed_variables[a]
+                val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
 
         # initially evaluate 0D model at old state
         self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbf.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)

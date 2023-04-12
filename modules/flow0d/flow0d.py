@@ -299,6 +299,14 @@ class Flow0DProblem(problem_base):
                 if self.chamber_models[ch]['type']=='0D_elast_prescr': self.y.append(self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(self.t_init))
                 if self.chamber_models[ch]['type']=='0D_prescr': self.c.append(self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(self.t_init))
 
+        # if we have prescribed variable values over time
+        if bool(self.prescribed_variables):
+            for a in self.prescribed_variables:
+                varindex = self.cardvasc0D.varmap[a]
+                curvenumber = self.prescribed_variables[a]
+                val = self.ti.timecurves(curvenumber)(self.t_init)
+                self.s[varindex], self.s_old[varindex] = val, val
+
         self.cardvasc0D.evaluate(self.s_old, self.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)
         self.auxTc_old[:] = self.aux_old[:]
 
