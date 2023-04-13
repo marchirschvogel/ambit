@@ -155,23 +155,24 @@ class variationalform:
         # time derivative of Cmod
         Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
 
-        if model=='membrane_f':
-            Fmod = F
-        elif model=='membrane':
+        if model=='membrane':
+            Fmod = F0
+        elif model=='membrane_fmod':
+            raise RuntimeError("Model 'membrane_fmod' seems incompatible and gives erroneous results. To be investigated...")
             # get eigenvalues and eigenvectors of C
-            evalC, EprojC = spectral_decomposition_3x3(C)
-            U = ufl.sqrt(evalC[0])*EprojC[0] + ufl.sqrt(evalC[1])*EprojC[1] + ufl.sqrt(evalC[2])*EprojC[2]
+            evalC, evecC = get_eigenval_eigenvec(C)
+            U = ufl.sqrt(evalC[0])*ufl.outer(evecC[0],evecC[0]) + ufl.sqrt(evalC[1])*ufl.outer(evecC[1],evecC[1]) + ufl.sqrt(evalC[2])*ufl.outer(evecC[2],evecC[2])
             R = F*ufl.inv(U)
             # get eigenvalues and eigenvectors of modified C
-            evalCmod, EprojCmod = spectral_decomposition_3x3(Cmod)
-            Umod = ufl.sqrt(evalCmod[0])*EprojCmod[0] + ufl.sqrt(evalCmod[1])*EprojCmod[1] + ufl.sqrt(evalCmod[2])*EprojCmod[2]
+            evalCmod, evecCmod = get_eigenval_eigenvec(Cmod)
+            Umod = ufl.sqrt(evalCmod[0])*ufl.outer(evecCmod[0],evecCmod[0]) + ufl.sqrt(evalCmod[1])*ufl.outer(evecCmod[1],evecCmod[1]) + ufl.sqrt(evalCmod[2])*ufl.outer(evecCmod[2],evecCmod[2])
             Fmod = R*Umod
         else:
             raise NameError("Unkown membrane model type!")
 
         # first and second invariant
         Ic = ufl.tr(Cmod)
-        IIc  = 0.5*(ufl.tr(Cmod)**2. - ufl.tr(Cmod*Cmod))
+        IIc = 0.5*(ufl.tr(Cmod)**2. - ufl.tr(Cmod*Cmod))
         # declare variables for diff
         Ic_ = ufl.variable(Ic)
         IIc_ = ufl.variable(IIc)
@@ -198,7 +199,7 @@ class variationalform:
 
         # pressure contribution of plane stress model: -p C^(-1), with p = 2 (1/(lambda_t1^2 lambda_t2^2) dW/dIc - lambda_t1^2 lambda_t2^2 dW/dIIc) (cf. Holzapfel eq. (6.75) - we don't have an IIc term here)
         p = 2.*(dPsi_dIc/(IIIplane) - IIIplane*dPsi_dIIc)
-        S += -p * ufl.inv(Cmod).T
+        S += -p * ufl.inv(Cmod)
 
         # add active stress
         if active is not None:
@@ -211,7 +212,7 @@ class variationalform:
         var_F = ufl.grad(self.var_v) - ufl.grad(self.var_v)*n0n0
 
         # boundary inner virtual power
-        dPb_int = (h0*ufl.inner(P,var_F))*dboundary
+        dPb_int = h0*ufl.inner(P,var_F)*dboundary
 
         # boundary kinetic virtual power
         if not isinstance(a, ufl.constantvalue.Zero):

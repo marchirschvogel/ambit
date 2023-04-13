@@ -188,9 +188,10 @@ class variationalform:
         # time derivative of Cmod
         Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
 
-        if model=='membrane_f':
-            Fmod = F
-        elif model=='membrane':
+        if model=='membrane':
+            Fmod = F0
+        elif model=='membrane_fmod':
+            raise RuntimeError("Model 'membrane_fmod' seems incompatible and gives erroneous results. To be investigated...")
             # get eigenvalues and eigenvectors of C
             evalC, evecC = get_eigenval_eigenvec(C)
             U = ufl.sqrt(evalC[0])*ufl.outer(evecC[0],evecC[0]) + ufl.sqrt(evalC[1])*ufl.outer(evecC[1],evecC[1]) + ufl.sqrt(evalC[2])*ufl.outer(evecC[2],evecC[2])
@@ -204,7 +205,7 @@ class variationalform:
 
         # first and second invariant
         Ic = ufl.tr(Cmod)
-        IIc  = 0.5*(ufl.tr(Cmod)**2. - ufl.tr(Cmod*Cmod))
+        IIc = 0.5*(ufl.tr(Cmod)**2. - ufl.tr(Cmod*Cmod))
         # declare variables for diff
         Ic_ = ufl.variable(Ic)
         IIc_ = ufl.variable(IIc)
@@ -231,7 +232,7 @@ class variationalform:
 
         # pressure contribution of plane stress model: -p C^(-1), with p = 2 (1/(lambda_t1^2 lambda_t2^2) dW/dIc - lambda_t1^2 lambda_t2^2 dW/dIIc) (cf. Holzapfel eq. (6.75) - we don't have an IIc term here)
         p = 2.*(dPsi_dIc/(IIIplane) - IIIplane*dPsi_dIIc)
-        S += -p * ufl.inv(Cmod).T
+        S += -p * ufl.inv(Cmod)
 
         # 1st PK stress P = FS
         P = Fmod * S

@@ -95,8 +95,8 @@ def main():
     v_corr = np.zeros(3*len(check_node))
 
     # correct results
-    v_corr[0] = 9.7132901929643700E-01 # x
-    v_corr[1] = 9.7132901929643722E-01 # y
+    v_corr[0] = 9.7145272096246937E-01 # x
+    v_corr[1] = 9.7145272096246937E-01 # y
     v_corr[2] = 0.0 # z
 
     check1 = resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)

@@ -277,7 +277,6 @@ class solver_nonlinear:
 
             # model order reduction stuff - currently only on first mat in system...
             if self.pb.have_rom:
-
                 # projection of main block: system matrix, residual, and increment
                 tmp = K_list[0][0].matMult(self.pb.rom.V) # K_00 * V
                 K_list[0][0] = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_00 * V
@@ -307,7 +306,7 @@ class solver_nonlinear:
 
                 tes = time.time()
 
-                # nested u-p vector
+                # nested variable vector
                 r_full_nest = PETSc.Vec().createNest(r_list)
 
                 # nested uu-up,pu-zero matrix

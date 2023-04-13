@@ -231,7 +231,7 @@ class ModelOrderReduction():
             for i in range(numredbasisvec_true):
                 outfile = io.XDMFFile(self.comm, pb.io.output_path+'/results_'+pb.simname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
                 outfile.write_mesh(pb.io.mesh)
-                podfunc = fem.Function(Vspace)
+                podfunc = fem.Function(Vspace, name="POD_Mode_"+str(i+1))
                 podfunc.vector[ss:se] = self.Phi[ss:se,i]
                 outfile.write_function(podfunc)
 
