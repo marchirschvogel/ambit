@@ -160,12 +160,12 @@ class variationalform:
         elif model=='membrane_fmod':
             raise RuntimeError("Model 'membrane_fmod' seems incompatible and gives erroneous results. To be investigated...")
             # get eigenvalues and eigenvectors of C
-            evalC, evecC = get_eigenval_eigenvec(C)
-            U = ufl.sqrt(evalC[0])*ufl.outer(evecC[0],evecC[0]) + ufl.sqrt(evalC[1])*ufl.outer(evecC[1],evecC[1]) + ufl.sqrt(evalC[2])*ufl.outer(evecC[2],evecC[2])
+            evalC, EprojC = spectral_decomposition_3x3(C)
+            U = ufl.sqrt(evalC[0])*EprojC[0] + ufl.sqrt(evalC[1])*EprojC[1] + ufl.sqrt(evalC[2])*EprojC[2]
             R = F*ufl.inv(U)
             # get eigenvalues and eigenvectors of modified C
-            evalCmod, evecCmod = get_eigenval_eigenvec(Cmod)
-            Umod = ufl.sqrt(evalCmod[0])*ufl.outer(evecCmod[0],evecCmod[0]) + ufl.sqrt(evalCmod[1])*ufl.outer(evecCmod[1],evecCmod[1]) + ufl.sqrt(evalCmod[2])*ufl.outer(evecCmod[2],evecCmod[2])
+            evalCmod, EprojCmod = spectral_decomposition_3x3(Cmod)
+            Umod = ufl.sqrt(evalCmod[0])*EprojCmod[0] + ufl.sqrt(evalCmod[1])*EprojCmod[1] + ufl.sqrt(evalCmod[2])*EprojCmod[2]
             Fmod = R*Umod
         else:
             raise NameError("Unkown membrane model type!")
