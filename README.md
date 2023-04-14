@@ -2,23 +2,39 @@
 
 * AMBIT - A FEniCS-based cardiovascular physics solver
 
-3D nonlinear solid (and fluid) mechanics Python code using FEniCS and PETSc libraries, supporting
+3D nonlinear solid and fluid mechanics finite element Python code using FEniCS and PETSc libraries, supporting
 
-- Hyperelastic isotropic and anisotropic materials
-- Inelastic constitutive laws (growth & remodeling, G&R)
-- Dynamics
-- Incompressibility in solid mechanics (2-field functional with displacement and pressure dofs)
-- 0D lumped systemic and pulmonary circulation flow, Windkessel models
-- Monolithic coupling of 3D solid (and fluid) mechanics with lumped 0D flow models
-- Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid-flow0d and G&R solid problem)
+* Solid mechanics
+  - Finite strain elastodynamics, implementing a range of hyperelastic isotropic and anisotropic as well as viscous constitutive laws
+  - Active stress for modeling of cardiac contraction mechanics
+  - Quasi-static, generalized-alpha, or one-step theta time integration
+  - Nearly incompressible as well as fully incompressible formulations (latter using pressure dofs)
+  - Prestressing using MULF method in displacement formulation
+  - Volumetric growth & remodeling
+* Fluid dynamics (only in Q2Q1/P2P1 Taylor-Hood space)
+  - Incompressible Navier-Stokes equations, either in nonconservative or conservative formulation
+  - Navier-Stokes in an Arbitrary Lagrangian Eulerian (ALE) reference frame
+  - One-step theta time integration
+* Lumped (0D) models
+  - Systemic and pulmonary circulation flow models
+  - 2-element as well as 4-element Windkessel models
+  - Signalling network model
+* Monolithic coupling
+  - Monolithic coupling of 3D solid/fluid/ALE fluid with lumped 0D flow models
+  - Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid-flow0d and G&R solid problem)
+* Fluid-reduced-solid interaction (FrSI)
+  - Boundary subspace-projected physics-reduced solid model (incl. hyperelastic, viscous, and active parts) in an ALE fluid reference frame
+* POD-based model order reduction (MOR)
+  - Projection-based model order reduction applicable to main fluid or solid field (also in a coupled problem), by either projecting
+    the full problem or a boundary to a lower dimensional subspace spanned by POD modes
 
 - author: Dr.-Ing. Marc Hirschvogel, marc.hirschvogel@deepambit.com
 
 Still experimental / to-do:
 
 - Inf-sup stable equal order fluid mechanics formulation for Navier Stokes (SUPG/PSPG stabilization)
-- ALE fluid / FSI / FrSI
-- Linear solvers and preconditioners (working, but best choices for specific problems still need investigation)
+- Fluid-solid interaction (FSI) (started)
+- Plugging PETSc linear solvers and preconditioners, optimal choices for coupled problems
 - Finite strain plasticity
 - ... whatever might be wanted in some future ...
 
@@ -31,7 +47,7 @@ Still experimental / to-do:
 
 * RECOMMENDED: FEniCS should run in a Docker container unless one wants to run through installation from source (see https://github.com/FEniCS/dolfinx if needed)
 
-* best, use rootless Docker (https://docs.docker.com/engine/security/rootless)
+* Best, use rootless Docker (https://docs.docker.com/engine/security/rootless)
 if not present, install: (seems that uidmap needs to be installed, which requires to be root... :-/)
 
 ``sudo apt install uidmap``\
@@ -45,20 +61,20 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 ``docker pull dolfinx/dolfinx:nightly``
 
-* put the following shortcut in .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
+* Put the following shortcut in .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
 
 ``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:d5cb0d496e963786a401637cdf5c84258efd557a11d2f19d101da07318b279a0'``
 
-* if 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
+* If 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
 
 ``cd ambit && mkdir modules/ext && pip3 install --system --target=modules/ext mpmath --no-deps --no-cache-dir && pip3 install --system --target=modules/ext sympy --no-deps --no-cache-dir && cd ..``
 
-* then launch the container in a konsole/terminal window by simply typing
+* Launch the container in a konsole/terminal window by simply typing
 
 ``fenicsdocker``
 
-* have a look at example input files in ambit/testing and the file ambit_template.py in the main folder as example of all available input options
+* Have a look at example input files in ambit/testing and the file ambit_template.py in the main folder as example of all available input options
 
-* launch your input file with
+* Launch your input file with
 
 ``mpiexec -n <NUMBER_OF_CORES> python3 your_file.py``

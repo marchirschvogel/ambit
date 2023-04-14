@@ -129,7 +129,12 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                         vol_n = vol_np
                     file_vol.close()
                 else:
-                    if ch!='aort_sys': raise AttributeError("No flux file available for chamber %s!" % (ch))
+                    if ch!='aort_sys':
+                        print(">>> WARNING: No flux file available for chamber %s! Writing dummy file." % (ch))
+                        file_dummy = open(path+'/results_'+sname+'_Q_'+ch+'.txt', 'wt')
+                        for n in range(numdata):
+                            file_dummy.write('%.16E %.16E\n' % (tmp[n], 0.0))
+                        file_dummy.close()
 
         # in case our coupling quantity was not flux or pressure, but volume, we could calculate the chamber fluxes Q
         for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort_sys']):
@@ -165,7 +170,12 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                     file_flx.close()
 
                 else:
-                    if ch!='aort_sys': raise AttributeError("No volume file available for chamber %s!" % (ch))
+                    if ch!='aort_sys':
+                        print(">>> WARNING: No volume file available for chamber %s! Writing dummy file." % (ch))
+                        file_dummy = open(path+'/results_'+sname+'_V_'+ch+'.txt', 'wt')
+                        for n in range(numdata):
+                            file_dummy.write('%.16E %.16E\n' % (tmp[n], 0.0))
+                        file_dummy.close()
 
         # check number of veins
         sysveins, pulveins = 0, 0
