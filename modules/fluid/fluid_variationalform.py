@@ -50,7 +50,7 @@ class variationalform:
 
     def deltaW_kin_transient_stokes(self, a, v, rho, ddomain, w=None, Fale=None):
 
-        return rho*ufl.dot(a, self.var_v) * J*ddomain
+        return rho*ufl.dot(a, self.var_v)*ddomain
 
     ### Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
 
@@ -153,7 +153,7 @@ class variationalform:
         # Jacobi's formula: d(detA)/dt = detA * tr(A^-1 * dA/dt)
         IIIplanedot = IIIplane * ufl.tr(ufl.inv(Cplane) * Cplanedot)
         # time derivative of Cmod
-        Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane*IIIplane)) * n0n0
+        Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane**2.)) * n0n0
 
         if model=='membrane':
             Fmod = F0
@@ -199,6 +199,9 @@ class variationalform:
 
         # pressure contribution of plane stress model: -p C^(-1), with p = 2 (1/(lambda_t1^2 lambda_t2^2) dW/dIc - lambda_t1^2 lambda_t2^2 dW/dIIc) (cf. Holzapfel eq. (6.75) - we don't have an IIc term here)
         p = 2.*(dPsi_dIc/(IIIplane) - IIIplane*dPsi_dIIc)
+        # balance viscous normal stresses
+        p -= (eta/2.) * (IIIplanedot/(IIIplane**3.))
+
         S += -p * ufl.inv(Cmod)
 
         # add active stress
