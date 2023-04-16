@@ -350,8 +350,15 @@ class SolidmechanicsProblem(problem_base):
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
 
+        self.timefac_m, self.timefac = self.ti.timefactors()
+
         # set forms for acceleration and velocity
         self.acc, self.vel = self.ti.set_acc_vel(self.u, self.u_old, self.v_old, self.a_old)
+
+        # set mid-point representations (if needed...)
+        self.acc_mid = self.timefac_m * self.acc + (1.-self.timefac_m) * self.a_old
+        self.vel_mid = self.timefac   * self.vel + (1.-self.timefac)   * self.v_old
+        self.us_mid  = self.timefac   * self.u   + (1.-self.timefac)   * self.u_old
 
         # kinetic, internal, and pressure virtual work
         self.deltaW_kin,  self.deltaW_kin_old  = ufl.as_ufl(0), ufl.as_ufl(0)
@@ -412,8 +419,6 @@ class SolidmechanicsProblem(problem_base):
         # TODO: Body forces!
         self.deltaW_ext     = w_neumann + w_robin + w_membrane
         self.deltaW_ext_old = w_neumann_old + w_robin_old + w_membrane_old
-
-        self.timefac_m, self.timefac = self.ti.timefactors()
 
         ### full weakforms
 
@@ -695,7 +700,7 @@ class SolidmechanicsProblem(problem_base):
             print('FEM form compilation...')
             sys.stdout.flush()
 
-        if not self.prestress_initial:
+        if not self.prestress_initial or self.restart_step > 0:
             self.res_u  = fem.form(self.weakform_u)
             self.jac_uu = fem.form(self.weakform_lin_uu)
             if self.incompressible_2field:
@@ -853,10 +858,6 @@ class SolidmechanicsSolver(solver_base):
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
         if self.pb.prestress_initial and self.pb.restart_step == 0:
             self.solve_initial_prestress()
-        else:
-            # set flag definitely to False if we're restarting
-            self.pb.prestress_initial = False
-            self.pb.set_problem_residual_jacobian_forms()
 
         # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:

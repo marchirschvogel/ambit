@@ -117,8 +117,18 @@ class IO:
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
 
+        # some mesh data that we might wanna use in some problems...
         # facet normal
         self.n0 = ufl.FacetNormal(self.mesh)
+        # cell diameter
+        self.hd0 = ufl.CellDiameter(self.mesh)
+        # cell circumradius
+        self.ro0 = ufl.Circumradius(self.mesh)
+        # min and max cell edge lengths
+        self.emin0 = ufl.MinCellEdgeLength(self.mesh)
+        self.emax0 = ufl.MaxCellEdgeLength(self.mesh)
+        # jacobian determinant
+        self.detj0 = ufl.JacobianDeterminant(self.mesh)
 
 
     def write_output_pre(self, pb, func, t, name):

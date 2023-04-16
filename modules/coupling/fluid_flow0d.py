@@ -67,8 +67,6 @@ class FluidmechanicsFlow0DProblem():
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
-        self.incompressible_2field = self.pbf.incompressible_2field
-
         self.set_variational_forms()
 
         self.numdof = self.pbf.numdof + self.pb0.numdof
@@ -151,22 +149,7 @@ class FluidmechanicsFlow0DProblem():
 
     def set_problem_residual_jacobian_forms(self):
 
-        tes = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation...')
-            sys.stdout.flush()
-
-        # fluid
-        self.pbf.res_v = fem.form(self.pbf.weakform_v)
-        self.pbf.res_p = fem.form(self.pbf.weakform_p)
-        self.pbf.jac_vv = fem.form(self.pbf.weakform_lin_vv)
-        self.pbf.jac_vp = fem.form(self.pbf.weakform_lin_vp)
-        self.pbf.jac_pv = fem.form(self.pbf.weakform_lin_pv)
-
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('FEM form compilation finished, te = %.2f s' % (tee))
-            sys.stdout.flush()
+        self.pbf.set_problem_residual_jacobian_forms()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -462,7 +445,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def solve_initial_state(self):
 
         # consider consistent initial acceleration
-        if self.pb.pbf.timint != 'static' and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.power_coupling_old
 

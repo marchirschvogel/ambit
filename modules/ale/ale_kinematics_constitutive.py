@@ -25,17 +25,6 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
-        # some mesh metrics - might be needed if we use sophisticated ALE models depending on the mesh distortion...
-        # cell diameter
-        self.hd0 = ufl.CellDiameter(msh)
-        # cell circumradius
-        self.ro0 = ufl.Circumradius(msh)
-        # min and max cell edge lengths
-        self.emin0 = ufl.MinCellEdgeLength(msh)
-        self.emax0 = ufl.MaxCellEdgeLength(msh)
-        # jacobian determinant
-        self.detj0 = ufl.JacobianDeterminant(msh)
-
 
     def stress(self, u_):
 
@@ -43,7 +32,7 @@ class constitutive:
 
         dim = len(u_)
 
-        s_grad, s_div, s_ident = ufl.constantvalue.zero((dim,dim)), 0, ufl.constantvalue.zero(dim)
+        stress = ufl.constantvalue.zero((dim,dim))
 
         mat = materiallaw(u_,F_)
 
@@ -53,40 +42,13 @@ class constitutive:
             # extract associated material parameters
             matparams_m = self.matparams[m]
 
-            if matlaw == 'neohooke':
+            if matlaw == 'linelast':
 
-                sg, sd, si = mat.neohooke(matparams_m)
+                stress += mat.linelast(matparams_m)
 
-                s_grad += sg
-                s_div += sd
-                s_ident += si
+            elif matlaw == 'neohooke':
 
-            elif matlaw == 'helmholtz':
-
-                sg, sd, si = mat.helmholtz(matparams_m)
-
-                s_grad += sg
-                s_div += sd
-                s_ident += si
-
-            elif matlaw == 'linelast':
-
-                sg, sd, si = mat.linelast(matparams_m)
-
-                s_grad += sg
-                s_div += sd
-                s_ident += si
-
-            elif matlaw == 'element_dependent_stiffness':
-
-                #metric = (ufl.min_value(10.,self.emax0/self.emin0))**4. # doesn't seem to work for quadratic cells...
-                metric = 1.
-
-                sg, sd, si = mat.element_dependent_stiffness(matparams_m, metric)
-
-                s_grad += sg
-                s_div += sd
-                s_ident += si
+                stress += mat.neohooke(matparams_m)
 
             else:
 
@@ -94,7 +56,7 @@ class constitutive:
 
             m += 1
 
-        return s_grad, s_div, s_ident
+        return stress
 
 
 class kinematics:

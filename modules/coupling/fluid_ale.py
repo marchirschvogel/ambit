@@ -58,7 +58,6 @@ class FluidmechanicsAleProblem():
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
-        self.incompressible_2field = self.pbf.incompressible_2field
         self.localsolve = False
         self.have_rom = False
 
@@ -202,21 +201,14 @@ class FluidmechanicsAleProblem():
 
     def set_problem_residual_jacobian_forms(self):
 
+        # fluid + ALE
+        self.pbf.set_problem_residual_jacobian_forms()
+        self.pba.set_problem_residual_jacobian_forms()
+
         tes = time.time()
         if self.comm.rank == 0:
-            print('FEM form compilation...')
+            print('FEM form compilation for coupling...')
             sys.stdout.flush()
-
-        # fluid
-        self.pbf.res_v = fem.form(self.pbf.weakform_v)
-        self.pbf.res_p = fem.form(self.pbf.weakform_p)
-        self.pbf.jac_vv = fem.form(self.pbf.weakform_lin_vv)
-        self.pbf.jac_vp = fem.form(self.pbf.weakform_lin_vp)
-        self.pbf.jac_pv = fem.form(self.pbf.weakform_lin_pv)
-
-        # ALE
-        self.pba.res_d = fem.form(self.pba.weakform_d)
-        self.pba.jac_dd = fem.form(self.pba.weakform_lin_dd)
 
         # coupling
         self.jac_vd = fem.form(self.weakform_lin_vd)
@@ -226,7 +218,7 @@ class FluidmechanicsAleProblem():
 
         tee = time.time() - tes
         if self.comm.rank == 0:
-            print('FEM form compilation finished, te = %.2f s' % (tee))
+            print('FEM form compilation for coupling finished, te = %.2f s' % (tee))
             sys.stdout.flush()
 
 
@@ -415,7 +407,7 @@ class FluidmechanicsAleSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
-        if self.pb.pbf.prestress_initial:
+        if self.pb.pbf.prestress_initial and self.pb.pbs.restart_step == 0:
             # initialize fluid mechanics solver
             self.solverprestr = FluidmechanicsSolver(self.pb.pbf, self.solver_params)
 
@@ -427,12 +419,9 @@ class FluidmechanicsAleSolver(solver_base):
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
             self.solverprestr.solnln.ksp.destroy()
-        else:
-            # set flag definitely to False if we're restarting
-            self.pb.pbf.prestress_initial = False
 
         # consider consistent initial acceleration
-        if self.pb.pbf.timint != 'static' and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
 

@@ -260,23 +260,7 @@ class SolidmechanicsFlow0DProblem():
 
     def set_problem_residual_jacobian_forms(self):
 
-        tes = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation...')
-            sys.stdout.flush()
-
-        self.pbs.res_u = fem.form(self.pbs.weakform_u)
-        self.pbs.jac_uu = fem.form(self.pbs.weakform_lin_uu)
-
-        if self.incompressible_2field:
-            self.pbs.res_p = fem.form(self.pbs.weakform_p)
-            self.pbs.jac_up = fem.form(self.pbs.weakform_lin_up)
-            self.pbs.jac_pu = fem.form(self.pbs.weakform_lin_pu)
-
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('FEM form compilation finished, te = %.2f s' % (tee))
-            sys.stdout.flush()
+        self.pbs.set_problem_residual_jacobian_forms()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -643,9 +627,6 @@ class SolidmechanicsFlow0DSolver(solver_base):
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
             self.solverprestr.solnln.ksp.destroy()
-        else:
-            # set flag definitely to False if we're restarting
-            self.pb.pbs.prestress_initial = False
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:

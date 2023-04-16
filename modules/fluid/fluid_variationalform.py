@@ -7,12 +7,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
-from mathutils import spectral_decomposition_3x3
+from variationalform import variationalform_base
 
 # fluid mechanics variational forms class
 # Principle of Virtual Power
 # TeX: \delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
-class variationalform:
+class variationalform(variationalform_base):
 
     def __init__(self, var_v, dv, var_p, dp, n, formulation='nonconservative'):
         self.var_v = var_v
@@ -27,7 +27,7 @@ class variationalform:
 
     ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
 
-    def deltaW_kin_navierstokes(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, Fale=None):
         # standard Eulerian fluid
         if self.formulation=='nonconservative':
             # non-conservative form for Navier-Stokes:
@@ -45,10 +45,14 @@ class variationalform:
             raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
     def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, Fale=None):
+        if self.formulation=='nonconservative':
+            return rho*ufl.dot(ufl.grad(v) * v, self.var_v)*ddomain
+        elif self.formulation=='conservative':
+            return rho*ufl.dot(ufl.div(ufl.outer(v,v)), self.var_v)*ddomain
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
-        return rho*ufl.dot(ufl.grad(v) * v, self.var_v)*ddomain
-
-    def deltaW_kin_transient_stokes(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, Fale=None):
 
         return rho*ufl.dot(a, self.var_v)*ddomain
 
@@ -62,11 +66,23 @@ class variationalform:
     def deltaW_int_pres(self, v, ddomain, w=None, Fale=None):
         return ufl.div(v)*self.var_p*ddomain
 
-    def residual_v_strong(self, a, v, rho, sig):
+    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
 
         return rho*(a + ufl.grad(v) * v) - ufl.div(sig)
 
-    def residual_p_strong(self, v):
+    def res_v_strong_navierstokes_steady(self, a, v, rho, sig, w=None, Fale=None):
+
+        return rho*(ufl.grad(v) * v) - ufl.div(sig)
+
+    def res_v_strong_stokes_transient(self, a, rho, sig, w=None, Fale=None):
+
+        return rho*a - ufl.div(sig)
+
+    def res_v_strong_stokes_steady(self, rho, sig, Fale=None):
+
+        return -ufl.div(sig)
+
+    def res_p_strong(self, v):
 
         return ufl.div(v)
 
@@ -112,119 +128,31 @@ class variationalform:
         return -c_n*(ufl.dot(v, self.n)*ufl.dot(self.n, self.var_v)*dboundary)
 
 
-    # Visco-elastic membrane potential on surface
-    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None):
+    ### SUPG/PSPG stabilization
+    def stab_supg(self, a, v, p, sig, tau_supg, rho, ddomain, Fale=None):
 
-        C = F.T*F
+        # return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, self.res_v_strong_navierstokes_transient(a, v, rho, sig)) * ddomain
+        return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, rho*ufl.grad(v)*v + ufl.grad(p)) * ddomain
 
-        n0n0 = ufl.outer(self.n0,self.n0)
+    def stab_pspg(self, a, v, p, sig, tau_pspg, rho, ddomain, Fale=None):
 
-        I = ufl.Identity(3)
+        # return (1./rho) * ufl.dot(tau_pspg*ufl.grad(self.var_p), self.res_v_strong_navierstokes_transient(a, v, rho, sig)) * ddomain
+        return (1./rho) * ufl.dot(tau_pspg*ufl.grad(self.var_p), rho*ufl.grad(v)*v + ufl.grad(p)) * ddomain
 
-        model = params['model']
+    def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
 
-        try: active = params['active_stress']
-        except: active = None
+        return tau_lsic*ufl.div(self.var_v)*rho*self.res_p_strong(v) * ddomain
 
-        if active is not None:
-            tau = ivar['tau_a']
-            c0, l0 = fibfnc[0], fibfnc[1]
-            omega, iota, gamma = params['active_stress']['omega'], params['active_stress']['iota'], params['active_stress']['gamma']
+    def stab_v(self, delta1, delta2, delta3, v, p, ddomain):
 
-        # wall thickness
-        h0 = params['h0']
+        return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_v)*v) + \
+                 delta2 * ufl.div(v)*ufl.div(self.var_v) + \
+                 delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_v)*v) ) * ddomain
 
-        # only components in normal direction (F_nn, F_t1n, F_t2n)
-        Fn = F*n0n0
-        Fdotn = Fdot*n0n0
-        # rank-deficient deformation gradient and Cauchy-Green tensor (phased-out normal components)
-        F0 = F - Fn
-        C0 = F0.T*F0
-        # plane strain deformation tensor where deformation is "1" in normal direction
-        Cplane = C0 + n0n0
-        # determinant: corresponds to product of in-plane stretches lambda_t1^2 * lambda_t2^2
-        IIIplane = ufl.det(Cplane)
-        # deformation tensor where normal stretch is dependent on in-plane stretches
-        Cmod = C0 + (1./IIIplane) * n0n0
-        # rates of deformation: in-plane time derivatives of deformation gradient and Cauchy-Green tensor
-        Fdotmod = Fdot - Fdotn
-        Cplanedot = Fdotmod.T*F0 + F0.T*Fdotmod
-        # Jacobi's formula: d(detA)/dt = detA * tr(A^-1 * dA/dt)
-        IIIplanedot = IIIplane * ufl.tr(ufl.inv(Cplane) * Cplanedot)
-        # time derivative of Cmod
-        Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane**2.)) * n0n0
+    def stab_p(self, delta1, delta3, v, p, ddomain):
 
-        if model=='membrane':
-            Fmod = F0
-        elif model=='membrane_fmod':
-            raise RuntimeError("Model 'membrane_fmod' seems incompatible and gives erroneous results. To be investigated...")
-            # get eigenvalues and eigenvectors of C
-            evalC, EprojC = spectral_decomposition_3x3(C)
-            U = ufl.sqrt(evalC[0])*EprojC[0] + ufl.sqrt(evalC[1])*EprojC[1] + ufl.sqrt(evalC[2])*EprojC[2]
-            R = F*ufl.inv(U)
-            # get eigenvalues and eigenvectors of modified C
-            evalCmod, EprojCmod = spectral_decomposition_3x3(Cmod)
-            Umod = ufl.sqrt(evalCmod[0])*EprojCmod[0] + ufl.sqrt(evalCmod[1])*EprojCmod[1] + ufl.sqrt(evalCmod[2])*EprojCmod[2]
-            Fmod = R*Umod
-        else:
-            raise NameError("Unkown membrane model type!")
-
-        # first and second invariant
-        Ic = ufl.tr(Cmod)
-        IIc = 0.5*(ufl.tr(Cmod)**2. - ufl.tr(Cmod*Cmod))
-        # declare variables for diff
-        Ic_ = ufl.variable(Ic)
-        IIc_ = ufl.variable(IIc)
-        Cmoddot_ = ufl.variable(Cmoddot)
-
-        a_0, b_0 = params['a_0'], params['b_0']
-        try: eta = params['eta']
-        except: eta = 0.
-        try: rho0 = params['rho0']
-        except: rho0 = 0.
-
-        # exponential isotropic strain energy
-        Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-3.)) - 1.)
-        # viscous pseudo-potential
-        Psi_v = (eta/8.) * ufl.tr(Cmoddot_*Cmoddot_)
-
-        dPsi_dIc = ufl.diff(Psi,Ic_)
-        dPsi_dIIc = ufl.diff(Psi,IIc_)
-
-        # elastic 2nd PK stress
-        S = 2.*(dPsi_dIc + Ic*dPsi_dIIc) * I - 2.*dPsi_dIIc * Cmod
-        # viscous 2nd PK stress
-        S += 2.*ufl.diff(Psi_v,Cmoddot_)
-
-        # pressure contribution of plane stress model: -p C^(-1), with p = 2 (1/(lambda_t1^2 lambda_t2^2) dW/dIc - lambda_t1^2 lambda_t2^2 dW/dIIc) (cf. Holzapfel eq. (6.75) - we don't have an IIc term here)
-        p = 2.*(dPsi_dIc/(IIIplane) - IIIplane*dPsi_dIIc)
-        # balance viscous normal stresses
-        p -= (eta/2.) * (IIIplanedot/(IIIplane**3.))
-
-        S += -p * ufl.inv(Cmod)
-
-        # add active stress
-        if active is not None:
-            S += tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
-
-        # 1st PK stress P = FS
-        P = Fmod * S
-
-        # only in-plane components of test function derivatives should be used!
-        var_F = ufl.grad(self.var_v) - ufl.grad(self.var_v)*n0n0
-
-        # boundary inner virtual power
-        dPb_int = h0*ufl.inner(P,var_F)*dboundary
-
-        # boundary kinetic virtual power
-        if not isinstance(a, ufl.constantvalue.Zero):
-            dPb_kin = rho0*(h0*ufl.dot(a,self.var_v)*dboundary)
-        else:
-            dPb_kin = ufl.as_ufl(0)
-
-        # minus signs, since this sums into external virtual power!
-        return -dPb_int - dPb_kin
+        return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_p)) + \
+                 delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_p)) ) * ddomain
 
 
     ### Flux coupling conditions
@@ -251,10 +179,8 @@ class variationalform_ale(variationalform):
 
     ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
 
-    def deltaW_kin_navierstokes(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
-
-        i, j, k = ufl.indices(3)
 
         if self.formulation=='nonconservative':
             # non-conservative form for ALE Navier-Stokes:
@@ -271,18 +197,31 @@ class variationalform_ale(variationalform):
 
             # note that we have div(v o (v-w)) = (grad v) (v-w) + v (div (v-w)) (Holzapfel eq. (1.292))
             # then use Holzapfel eq. (2.56)
-            return rho*ufl.dot(a + ufl.as_tensor(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
+            i, j, k = ufl.indices(3)
+            return rho*ufl.dot(a + ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
 
         else:
             raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
     def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
-        return rho*ufl.dot(ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v) * J*ddomain
+        if self.formulation=='nonconservative':
+            return rho*ufl.dot(ufl.grad(v)*ufl.inv(Fale) * (v - w), self.var_v) * J*ddomain
+        elif self.formulation=='conservative':
+            i, j, k = ufl.indices(3)
+            return rho*ufl.dot(ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
-    def deltaW_kin_transient_stokes(self, a, v, rho, ddomain, w=None, Fale=None):
+    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
-        return rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (-w), self.var_v) * J*ddomain
+        if self.formulation=='nonconservative':
+            return rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (-w), self.var_v) * J*ddomain
+        elif self.formulation=='conservative':
+            i, j, k = ufl.indices(3)
+            return rho*ufl.dot(ufl.as_vector(ufl.grad(ufl.outer(v,-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
     ### Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
 
@@ -311,6 +250,26 @@ class variationalform_ale(variationalform):
             return beta*ufl.dot((v-vD), self.var_v) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.n0))*dboundary
         else:
             return (beta*ufl.dot((v-vD), self.var_v) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.n0)))(fcts)*dboundary
+
+    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
+        J = ufl.det(Fale)
+        i, j, k = ufl.indices(3)
+        return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (v-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+
+    def res_v_strong_navierstokes_steady(self, a, v, rho, sig, w=None, Fale=None):
+        J = ufl.det(Fale)
+        i, j, k = ufl.indices(3)
+        return rho*(ufl.grad(v)*ufl.inv(Fale) * v) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+
+    def res_v_strong_stokes_transient(self, a, rho, sig, w=None, Fale=None):
+        J = ufl.det(Fale)
+        i, j, k = ufl.indices(3)
+        return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+
+    def res_v_strong_stokes_steady(self, rho, sig, Fale=None):
+        J = ufl.det(Fale)
+        i, j, k = ufl.indices(3)
+        return -ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
 
     ### External virtual power \delta \mathcal{P}_{\mathrm{ext}}
 

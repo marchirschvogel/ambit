@@ -146,23 +146,7 @@ class SolidmechanicsConstraintProblem():
 
     def set_problem_residual_jacobian_forms(self):
 
-        tes = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation...')
-            sys.stdout.flush()
-
-        self.pbs.res_u = fem.form(self.pbs.weakform_u)
-        self.pbs.jac_uu = fem.form(self.pbs.weakform_lin_uu)
-
-        if self.incompressible_2field:
-            self.pbs.res_p = fem.form(self.pbs.weakform_p)
-            self.pbs.jac_up = fem.form(self.pbs.weakform_lin_up)
-            self.pbs.jac_pu = fem.form(self.pbs.weakform_lin_pu)
-
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('FEM form compilation finished, te = %.2f s' % (tee))
-            sys.stdout.flush()
+        self.pbs.set_problem_residual_jacobian_forms()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -383,9 +367,7 @@ class SolidmechanicsConstraintSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
-        if self.pb.pbs.prestress_initial:
-            # add coupling work to prestress weak form
-            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr
+        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # initialize solid mechanics solver
             self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
 
@@ -397,9 +379,6 @@ class SolidmechanicsConstraintSolver(solver_base):
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
             self.solverprestr.solnln.ksp.destroy()
-        else:
-            # set flag definitely to False if we're restarting
-            self.pb.pbs.prestress_initial = False
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:

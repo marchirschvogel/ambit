@@ -51,12 +51,13 @@ def main():
                             'tol_inc_local'         : 1.0e-10} # OPTIONAL: local Newton increment inf-norm tolerance (default: 1.0e-10)
 
     # for solid*, fluid* problem types
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0, # maximum simulation time
+    TIME_PARAMS_3D       = {'maxtime'               : 1.0, # maximum simulation time
                             'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
                             'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
                             'timint'                : 'genalpha', # time-integration algorithm: 'genalpha', 'ost', 'static'
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor
-                            'rho_inf_genalpha'      : 0.8} # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
+                            'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
+                            'fluid_governing_type'  : 'navierstokes_transient'} # OPTIONAL: governing equation type for fluid mechanics: 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'stokes_steady' (default: 'navierstokes_transient')
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: 'ost'

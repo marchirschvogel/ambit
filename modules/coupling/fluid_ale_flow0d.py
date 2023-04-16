@@ -268,7 +268,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
     def solve_initial_state(self):
 
         # consider consistent initial acceleration
-        if self.pb.pbf.timint != 'static' and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
 
