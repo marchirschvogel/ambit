@@ -10,11 +10,11 @@ import ufl
 
 class materiallaw:
 
-    def __init__(self, w, F):
-        self.w = w
+    def __init__(self, d, F):
+        self.d = d
         self.F = F
 
-        self.dim = len(self.w)
+        self.dim = len(self.d)
         self.I = ufl.Identity(self.dim)
 
 
@@ -24,7 +24,7 @@ class materiallaw:
         kappa = params['kappa']
 
         # stress
-        return Emod*ufl.sym(ufl.grad(self.w)) + kappa*ufl.div(self.w)*self.I
+        return Emod*ufl.sym(ufl.grad(self.d)) + kappa*ufl.div(self.d)*self.I
 
 
     def neohooke(self, params):

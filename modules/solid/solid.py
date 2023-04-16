@@ -202,6 +202,9 @@ class SolidmechanicsProblem(problem_base):
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
 
+        # get time factors
+        self.timefac_m, self.timefac = self.ti.timefactors()
+
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         self.have_active_stress, self.active_stress_trig, self.have_frank_starling, self.have_growth, self.have_plasticity = False, 'ode', False, False, False
         self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
@@ -349,8 +352,6 @@ class SolidmechanicsProblem(problem_base):
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
-
-        self.timefac_m, self.timefac = self.ti.timefactors()
 
         # set forms for acceleration and velocity
         self.acc, self.vel = self.ti.set_acc_vel(self.u, self.u_old, self.v_old, self.a_old)

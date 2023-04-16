@@ -70,11 +70,11 @@ class variationalform(variationalform_base):
 
         return rho*(a + ufl.grad(v) * v) - ufl.div(sig)
 
-    def res_v_strong_navierstokes_steady(self, a, v, rho, sig, w=None, Fale=None):
+    def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, Fale=None):
 
         return rho*(ufl.grad(v) * v) - ufl.div(sig)
 
-    def res_v_strong_stokes_transient(self, a, rho, sig, w=None, Fale=None):
+    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, Fale=None):
 
         return rho*a - ufl.div(sig)
 
@@ -129,15 +129,13 @@ class variationalform(variationalform_base):
 
 
     ### SUPG/PSPG stabilization
-    def stab_supg(self, a, v, p, sig, tau_supg, rho, ddomain, Fale=None):
+    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, Fale=None):
 
-        # return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, self.res_v_strong_navierstokes_transient(a, v, rho, sig)) * ddomain
-        return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, rho*ufl.grad(v)*v + ufl.grad(p)) * ddomain
+        return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, res_v_strong) * ddomain
 
-    def stab_pspg(self, a, v, p, sig, tau_pspg, rho, ddomain, Fale=None):
+    def stab_pspg(self, a, v, p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
 
-        # return (1./rho) * ufl.dot(tau_pspg*ufl.grad(self.var_p), self.res_v_strong_navierstokes_transient(a, v, rho, sig)) * ddomain
-        return (1./rho) * ufl.dot(tau_pspg*ufl.grad(self.var_p), rho*ufl.grad(v)*v + ufl.grad(p)) * ddomain
+        return (1./rho) * ufl.dot(tau_pspg*ufl.grad(self.var_p), res_v_strong) * ddomain
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
 
@@ -256,12 +254,12 @@ class variationalform_ale(variationalform):
         i, j, k = ufl.indices(3)
         return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (v-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
 
-    def res_v_strong_navierstokes_steady(self, a, v, rho, sig, w=None, Fale=None):
+    def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, Fale=None):
         J = ufl.det(Fale)
         i, j, k = ufl.indices(3)
         return rho*(ufl.grad(v)*ufl.inv(Fale) * v) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
 
-    def res_v_strong_stokes_transient(self, a, rho, sig, w=None, Fale=None):
+    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, Fale=None):
         J = ufl.det(Fale)
         i, j, k = ufl.indices(3)
         return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)

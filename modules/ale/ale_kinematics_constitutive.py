@@ -26,15 +26,15 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
 
 
-    def stress(self, u_):
+    def stress(self, d_):
 
-        F_ = ufl.variable(self.kin.F(u_))
+        F_ = ufl.variable(self.kin.F(d_))
 
-        dim = len(u_)
+        dim = len(d_)
 
         stress = ufl.constantvalue.zero((dim,dim))
 
-        mat = materiallaw(u_,F_)
+        mat = materiallaw(d_,F_)
 
         m = 0
         for matlaw in self.matmodels:
@@ -70,5 +70,5 @@ class kinematics:
 
 
     # ALE deformation gradient
-    def F(self, u_):
-        return self.I + ufl.grad(u_)
+    def F(self, d_):
+        return self.I + ufl.grad(d_)

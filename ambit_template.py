@@ -80,7 +80,7 @@ def main():
                             'valvelaws'             : {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}} # OPTIONAL: valve laws for aortic (av), mitral (mv), pulmonary (pv), and tricuspid valve (tv) (pwlin_pres: piecewise-linear pressure-governed, pwlin_time: piecewise-linear time-governed, smooth_pres_momentum: , smooth p-q relationship, smooth_pres_resistance: smooth resistance pressure-governed with number being amount of smoothness) (default: {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]})
 
     # for solid*, fluid* problem types
-    FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid mechanics)
+    FEM_PARAMS           = {'order_disp'            : 1, # order of displacement interpolation (solid or ALE mechanics)
                             'order_vel'             : 1, # order of velocity interpolation (fluid mechanics)
                             'order_pres'            : 1, # order of pressure interpolation (solid, fluid mechanics)
                             'quad_degree'           : 1, # quadrature degree q (number of integration points: n(q) = ((q+2)//2)**dim) --> can be 1 for linear tets, should be >= 3 for linear hexes, should be >= 5 for quadratic tets/hexes
@@ -93,7 +93,7 @@ def main():
                             'pressure_at_midpoint'  : False} # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
 
     # for solid_flow0d or fluid_flow0d problem type
-    COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)
+    COUPLING_PARAMS_3D0D = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)
                             'surface_p_ids'         : [[1],[2]], # OPTIONAL: if pressure should be applied to different surface than that from which the volume/flux is measured from... (default: surface_ids)
                             'cq_factor'             : [1.,1.], # OPTIONAL: if we want to scale the 3D volume or flux (e.g. for 2D solid models) (default: [1.] * number of surfaces)
                             'coupling_quantity'     : ['volume','volume'], # 'volume', 'flux', 'pressure' (former two need 'monolithic_direct', latter needs 'monolithic_lagrange' as coupling_type)
@@ -209,20 +209,19 @@ def main():
     BC_DICT              = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}, # either curve or val
                                             {'id' : [2,4,5], 'dir' : 'y', 'val' : 0.}, # either curve or val
                                             {'id' : [3], 'dir' : 'z', 'curve' : 1}], # either curve or val
-                            # Neumann can be - pk1 with dir xyz (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero),
-                            #                - pk1 with dir normal (then use 'curve' : curve-num with 0 meaning zero)
-                            #                - true with dir normal (then use 'curve' : curve-num with 0 meaning zero) = follower load in current normal direction
-                            'neumann'    : [{'type' : 'pk1', 'id' : [3], 'dir' : 'xyz', 'curve' : [1,0,0]},
-                                            {'type' : 'pk1', 'id' : [2], 'dir' : 'normal', 'curve' : 1},
-                                            {'type' : 'true', 'id' : [2], 'dir' : 'normal', 'curve' : 1}],
-                            # Robib BC can be either spring or dashpot, both either in xyz or normal direction
-                            'robin'      : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal', 'stiff' : 0.075},
-                                            {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz', 'visc' : 0.005}] }
+                            # Neumann can be - dir xyz_ref or xyz_cur for reference or current coordinate directions (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero),
+                            #                - dir normal_ref or normal_cur for reference or current normal direction (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero)
+                            'neumann'    : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [1,0,0]},
+                                            {'id' : [2], 'dir' : 'normal_ref', 'curve' : 1},
+                                            {'id' : [2], 'dir' : 'normal_cur', 'curve' : 1}],
+                            # Robib BC can be either spring or dashpot, both either in xyz_ref or normal_ref reference directions
+                            'robin'      : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
+                                            {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz_ref', 'visc' : 0.005}] }
 
-    # problem setup - exemplary for 3D-0D coupling of solid (fluid) to flow0d
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
+    # problem setup - exemplary for 3D-0D coupling of solid/fluid to flow0d
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS_3D0D, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
 
-    # problem setup for solid (fluid) only: just pass parameters related to solid (fluid) instead of lists, so:
+    # problem setup for solid/fluid only: just pass parameters related to solid (fluid) instead of lists, so:
     #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
 
     # problem solve
@@ -332,7 +331,7 @@ def param():
             'C_corp_sys' : 4.5e0,
             'R_corp_sys' : 6.55e-3,
             'C_cord_sys' : 2.7e1,
-            'R_cord_sys' : 1.45e-1
+            'R_cord_sys' : 1.45e-1,
             # unstressed compartment volumes (for post-processing)
             'V_at_l_u' : 0.0,
             'V_at_r_u' : 0.0,

@@ -172,6 +172,9 @@ class FluidmechanicsProblem(problem_base):
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)
 
+        # get time factors
+        self.timefac_m, self.timefac = self.ti.timefactors()
+
         # initialize kinematics_constitutive class
         self.ki = fluid_kinematics_constitutive.kinematics(self.dim, uf_pre=self.uf_pre)
 
@@ -187,6 +190,11 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
 
         else:
+            # mid-point representation of ALE velocity
+            self.alevar['w_mid']    = self.timefac * self.alevar['w']    + (1.-self.timefac) * self.alevar['w_old']
+            # mid-point representation of ALE deformation gradient - linear in ALE displacement, hence we can combine it like this
+            self.alevar['Fale_mid'] = self.timefac * self.alevar['Fale'] + (1.-self.timefac) * self.alevar['Fale_old']
+
             if self.alevar['fluid_on_deformed'] == 'consistent':
                 # fully consistent ALE formulation of Navier-Stokes
                 self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
@@ -241,8 +249,6 @@ class FluidmechanicsProblem(problem_base):
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
-
-        self.timefac_m, self.timefac = self.ti.timefactors()
 
         # set form for acceleration
         self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
@@ -343,34 +349,54 @@ class FluidmechanicsProblem(problem_base):
         # stabilization
         if self.stabilization=='supg_pspg':
             assert(self.order_vel==self.order_pres)
-            raise RuntimeError("Stabilization not yet fully implemented!")
+            raise RuntimeError("Stabilization not yet working as expected!")
             vscale = 1e3
-            h = self.io.emax0
+            h = self.io.hd0 # self.io.emax0
 
             tau_supg = h / vscale
             tau_pspg = self.rho[n] * h / vscale
-            tau_lsic = self.rho[n] * h * vscale
+            tau_lsic = h * vscale
 
+            ####
             delta1 = self.rho[n] * h / vscale
             delta2 = self.rho[n] * h * vscale
             delta3 = h / vscale
 
             for n in range(self.num_domains):
-                # # SUPG (streamline-upwind Petrov-Galerkin)
-                # self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p, self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                # self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old, self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
-                # # PSPG (pressure-stabilizing Petrov-Galerkin)
-                # self.deltaW_p       += self.vf.stab_pspg(self.acc, self.v, self.p, self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                # self.deltaW_p_old   += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old, self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
-                # # LSIC (least-squares on incompressibility constraint)
-                # self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                # self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
 
-                self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p, self.dx_[n])
-                self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old, self.dx_[n])
+                # strong momentum residuals
+                if self.fluid_governing_type=='navierstokes_transient':
+                    residual_v_strong     = self.vf.res_v_strong_navierstokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                    residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                elif self.fluid_governing_type=='navierstokes_steady':
+                    residual_v_strong     = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                    residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                elif self.fluid_governing_type=='stokes_transient':
+                    residual_v_strong     = self.vf.res_v_strong_stokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                    residual_v_strong_old = self.vf.res_v_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                elif self.fluid_governing_type=='stokes_steady':
+                    residual_v_strong     = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), Fale=self.alevar['Fale'])
+                    residual_v_strong_old = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), Fale=self.alevar['Fale_old'])
+                else:
+                    raise ValueError("Unknown fluid_governing_type!")
 
-                self.deltaW_p       += self.vf.stab_p(delta1, delta3, self.v, self.p, self.dx_[n])
-                self.deltaW_p_old   += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old, self.dx_[n])
+                # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
+                if self.fluid_governing_type=='navierstokes_transient' or self.fluid_governing_type=='navierstokes_steady':
+                    self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p, residual_v_strong, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+                    self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+                # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
+                self.deltaW_p       += self.vf.stab_pspg(self.acc, self.v, self.p, residual_v_strong, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+                self.deltaW_p_old   += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+                # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
+                self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+                self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+
+                #### yields same result as above for navierstokes_steady
+                # self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p, self.dx_[n])
+                # self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old, self.dx_[n])
+                #
+                # self.deltaW_p       += self.vf.stab_p(delta1, delta3, self.v, self.p, self.dx_[n])
+                # self.deltaW_p_old   += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old, self.dx_[n])
 
         ### full weakforms
 
