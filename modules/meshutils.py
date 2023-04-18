@@ -10,14 +10,14 @@ import sys, copy
 from dolfinx import fem
 
 
-def gather_surface_dof_indices(pb, Vspace, surflist, comm):
+def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     # get boundary dofs which should be reduced
     fn=[]
     for i in range(len(surflist)):
 
         # these are local node indices!
-        fnode_indices_local = fem.locate_dofs_topological(Vspace, pb.io.mesh.topology.dim-1, pb.io.mt_b1.indices[pb.io.mt_b1.values == surflist[i]])
+        fnode_indices_local = fem.locate_dofs_topological(Vspace, io.mesh.topology.dim-1, io.mt_b1.indices[io.mt_b1.values == surflist[i]])
 
         # get global indices
         fnode_indices = Vspace.dofmap.index_map.local_to_global(fnode_indices_local)

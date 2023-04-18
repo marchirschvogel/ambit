@@ -164,7 +164,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
         # perform Proper Orthogonal Decomposition
         if self.have_rom:
-            self.rom.POD(self, self.pbf.V_v)
+            self.rom.prepare_rob()
 
 
     def read_restart(self, sname, N):

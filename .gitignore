@@ -2,7 +2,10 @@ testing/tmp/
 __pycache__/
 modules/__pycache__/
 modules/ext/
+*.tex
 *.aux
 *.log
 *.synctex.gz
 *.toc
+*.blg
+*.bbl

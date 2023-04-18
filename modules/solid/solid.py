@@ -113,10 +113,6 @@ class SolidmechanicsProblem(problem_base):
         try: self.have_rom = io_params['use_model_order_red']
         except: self.have_rom = False
 
-        if self.have_rom:
-            import mor
-            self.rom = mor.ModelOrderReduction(mor_params, self.comm)
-
         # create finite element objects for u and p
         P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
         P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
@@ -198,6 +194,10 @@ class SolidmechanicsProblem(problem_base):
             self.numdof = self.u.vector.getSize() + self.p.vector.getSize()
         else:
             self.numdof = self.u.vector.getSize()
+
+        if self.have_rom:
+            import mor
+            self.rom = mor.ModelOrderReduction(mor_params, self.V_u, self.io, self.comm)
 
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
@@ -766,7 +766,7 @@ class SolidmechanicsProblem(problem_base):
 
         # perform Proper Orthogonal Decomposition
         if self.have_rom:
-            self.rom.POD(self, self.V_u)
+            self.rom.prepare_rob()
 
 
     def read_restart(self, sname, N):

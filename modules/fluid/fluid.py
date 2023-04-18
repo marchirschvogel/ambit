@@ -116,10 +116,6 @@ class FluidmechanicsProblem(problem_base):
         try: self.have_rom = io_params['use_model_order_red']
         except: self.have_rom = False
 
-        if self.have_rom:
-            import mor
-            self.rom = mor.ModelOrderReduction(mor_params, self.comm)
-
         # ALE fluid problem variables
         self.alevar = alevar
 
@@ -168,6 +164,10 @@ class FluidmechanicsProblem(problem_base):
         self.internalvars, self.internalvars_old = {}, {}
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
+
+        if self.have_rom:
+            import mor
+            self.rom = mor.ModelOrderReduction(mor_params, self.V_v, self.io, self.comm)
 
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)
@@ -524,7 +524,7 @@ class FluidmechanicsProblem(problem_base):
 
         # perform Proper Orthogonal Decomposition
         if self.have_rom:
-            self.rom.POD(self, self.V_v)
+            self.rom.prepare_rob()
 
 
     def read_restart(self, sname, N):

@@ -27,9 +27,9 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
 
-    def __init__(self, params, cq, vq, comm=None):
+    def __init__(self, params, cq, vq, init=True, comm=None):
         # initialize base class
-        cardiovascular0Dbase.__init__(self, comm=comm)
+        cardiovascular0Dbase.__init__(self, init=init, comm=comm)
 
         # number of degrees of freedom
         self.numdof = 4

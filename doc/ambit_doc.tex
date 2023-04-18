@@ -21,7 +21,6 @@
 \usepackage{amsfonts}
 \usepackage{framed}
 \usepackage{color}
-\usepackage{xcolor}
 \usepackage{enumitem}
 %\usepackage{wasysym}
 \usepackage{marvosym}
@@ -41,12 +40,80 @@
 \usepackage{tikz}
 \usepackage{pifont}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{xcolor}
+
+\newcommand{\fS}{\text{s}}
+\newcommand{\fF}{\text{f}}
+
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+
+\newcommand{\Om}{\mathit{\Omega}}
+\newcommand{\Gm}{\mathit{\Gamma}}
+
+% zero matrix entry
+\newcommand{\zerom}{\textcolor{lightgray}{\bs{\mathsf{0}}}}
+
+\newcommand{\rop}{r}
+
+\newcommand{\ROP}{\bs{\mathsf{r}}}
+
+% continuous variables
+\newcommand{\vf}{\bs{v}_{\fF}} % fluid vel
+\newcommand{\domvf}{\bs{w}} % ALE vel
+\newcommand{\vs}{\bs{v}_{\fS}} % solid vel
+\newcommand{\us}{\bs{u}_{\fS}} % solid disp
+\newcommand{\uf}{\bs{u}_{\fF}} % fluid domain disp
+\newcommand{\pf}{p_{\fF}} % fluid pres
+\newcommand{\ps}{p_{\fS}} % solid pres
+\newcommand{\lm}{\bs{\mathit{\lambda}}} % LM FSI
+\newcommand{\lmz}{\mathit{\Lambda}} % LM 0D
+% \newcommand{\zd}{\bs{\mathrm{y}}} % 0D
+\newcommand{\zd}{\bs{\mathsf{y}}} % 0D
+\newcommand{\zdf}{\bs{\mathsf{f}}} % 0D f
+% MH: definition of test functions
+% either this way (all with delta and subscript)
+\newcommand{\vft}{\delta\vf} % fluid vel test fcn
+\newcommand{\domvft}{\delta\domvf} % ALE vel test fcn
+\newcommand{\vst}{\delta\vs} % solid vel test fcn
+\newcommand{\ust}{\delta\us} % solid disp test fcn
+\newcommand{\pft}{\delta\pf} % fluid pres test fcn
+\newcommand{\pst}{\delta\ps} % solid pres test fcn
+\newcommand{\lmt}{\delta\lm} % LM FSI test fcn
+\newcommand{\lmzt}{\delta\lmz} % LM 0D test fcn
+\newcommand{\zdt}{\delta\zd} % 0D test fcn
+
+% discrete unknowns
+\newcommand{\VF}{\bs{\mathsf{v}}^{\fF}} 
+\newcommand{\VS}{\bs{\mathsf{v}}^{\fS}}
+\newcommand{\PF}{\bs{\mathsf{p}}^{\fF}}
+\newcommand{\PS}{\bs{\mathsf{p}}^{\fS}}
+\newcommand{\DOMVF}{\bs{\mathsf{w}}}
+\newcommand{\LM}{\bs{\mathsf{\lambda}}}
+\newcommand{\LMZ}{\bs{\mathsf{\Lambda}}}
+\newcommand{\Y}{\bs{\mathsf{y}}} % same as \zd - already spatially discrete...
+
+% reduced discrete unknowns
+\newcommand{\VSr}{\tilde{\bs{\mathsf{v}}}^{\fS}}
+\newcommand{\PSr}{\tilde{\bs{\mathsf{p}}}^{\fS}}
+\newcommand{\VFr}{\tilde{\bs{\mathsf{v}}}^{\fF}}
+
+% non-bold variable indicators
+\newcommand{\lmi}{\lambda} % LM FSI (index)
+\newcommand{\lmzi}{\mathit{\Lambda}} % LM FSI (index)
+
+\mathchardef\mhyphen="2D
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setcounter{secnumdepth}{3}
+
 \setlength{\parindent}{0cm}
 
 \renewcommand{\thesection}{\arabic{section}}
 
-\begin{document}
+\bibliographystyle{abbrv}
 
+\begin{document}
 
 \title{Ambit -- A FEniCS-based cardiovascular physics solver}
 \author{Dr.-Ing. Marc Hirschvogel}
@@ -59,44 +126,280 @@
 
 - solid mechanics are formulated in a Total Lagrangian frame\\
 
-- displacement-based strong form: primary variable $\boldsymbol{u}$
+- displacement-based strong form: primary variable $\bs{u}$
 
 \begin{alignat}{3}
-\boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a} \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
-\boldsymbol{u} &= \hat{\boldsymbol{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
-\boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
-\boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
-\boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a} \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
+\bs{u} &= \hat{\bs{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
+\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
+\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
+\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
 \end{alignat}
 
-- strong form for incompressible solid mechanics: primary variables $\boldsymbol{u}$ and $p$
+- strong form for incompressible solid mechanics: primary variables $\bs{u}$ and $p$
 
 \begin{alignat}{3}
-\boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a} \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a} \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
 J-1 &= 0 \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
-\boldsymbol{u} &= \hat{\boldsymbol{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
-\boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
-\boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
-\boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
+\bs{u} &= \hat{\bs{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
+\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
+\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
+\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
 \end{alignat}
 
-with velocity and acceleration $\boldsymbol{v}=\frac{\mathrm{d}\boldsymbol{u}}{\mathrm{d}t}$ and $\boldsymbol{a}=\frac{\mathrm{d}^2\boldsymbol{u}}{\mathrm{d}t^2}$, respectively
+with velocity and acceleration $\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}$ and $\bs{a}=\frac{\mathrm{d}^2\bs{u}}{\mathrm{d}t^2}$, respectively
 
 \section{Fluid mechanics}
 
+\subsection{Eulerian reference frame}
+
 - incompressible Navier-Stokes equations in Eulerian reference frame\\
 
-- strong form with primary variables velocity $\boldsymbol{v}$ and pressure $p$
+- strong form with primary variables velocity $\bs{v}$ and pressure $p$
 
 \begin{alignat}{3}
-\boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho \boldsymbol{a} \quad &&\text{in} \; \mathit{\Omega} \times [0, T], \label{eq:divsigma_ns} \\
-\boldsymbol{\nabla}\cdot \boldsymbol{v} &= 0 \quad &&\text{in} \; \mathit{\Omega} \times [0, T],\label{eq:divv_ns}\\
-\boldsymbol{v} &= \hat{\boldsymbol{v}} \quad &&\text{on} \; \mathit{\Gamma}^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
-\boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} \quad &&\text{on} \; \mathit{\Gamma}^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
-\boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) \quad &&\text{in} \; \mathit{\Omega}, \label{eq:ini_v_ns}
+\bs{\nabla} \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\,\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\bs{v}\right) \quad &&\text{in} \; \mathit{\Omega} \times [0, T], \label{eq:divsigma_ns} \\
+\bs{\nabla}\cdot \bs{v} &= 0 \quad &&\text{in} \; \mathit{\Omega} \times [0, T],\label{eq:divv_ns}\\
+\bs{v} &= \hat{\bs{v}} \quad &&\text{on} \; \mathit{\Gamma}^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} \quad &&\text{on} \; \mathit{\Gamma}^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
+\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) \quad &&\text{in} \; \mathit{\Omega}, \label{eq:ini_v_ns}
 \end{alignat}
 
-with acceleration $\boldsymbol{a}=\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}$
+\subsection{ALE reference frame}
+- to be written...
+
+
+\section{Fluid-reduced-solid-interaction (FrSI)}
+
+\subsection{Physics-reduced solid}
+
+\begin{align}
+    \Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\mhyphen\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V_0 = \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A_0, \label{eq:omega_to_gamma}
+\end{align}
+$h_{0}$: reduced solid's wall thickness parameter
+
+\subsubsection{Kinematics}
+\begin{align}
+    \bs{F} = \nabla_{\bs{X}}\bs{x} = \bs{I} + \nabla_{\bs{X}}\uf, \quad \dot{\bs{F}} = \nabla_{\bs{X}}\vf, \quad \bs{C} = \bs{F}^{\mathrm{T}}\bs{F}, \label{eq:defgrad_mem}
+\end{align}
+- fluid domain displacement:
+\begin{align}
+\uf = \int\limits_{0}^{t} \vf(\bs{X},t)\,\mathrm{d}t \label{eq:ufluid}
+\end{align}
+
+- in-plane deformation and rate of deformation gradient:
+\begin{align}
+    \bs{F}^{0} = \bs{F}-\bs{F}\bs{n}_0\otimes\bs{n}_0 \quad \text{and} \quad \dot{\bs{F}}^{0} = \dot{\bs{F}}-\dot{\bs{F}}\bs{n}_0\otimes\bs{n}_0, \label{eq:F0F0dot}
+\end{align}
+- plane strain representation of the right Cauchy-Green tensor:
+\begin{align}
+    \bs{C}^{||} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \bs{n}_0\otimes\bs{n}_0 \label{eq:Cplane}
+\end{align}
+
+- relation of in-plane and out-of-plane stretches
+\begin{align}
+    I\!\!I\!\!I_{C}^{||} = \det \bs{C}^{||} = \lambda_{\xi}^2 \lambda_{\eta}^2 = \frac{1}{\lambda_{\zeta}^2}, \qquad \rightsquigarrow \lambda_{\zeta} = \frac{1}{\sqrt{I\!\!I\!\!I_{C}^{||}}}\label{eq:detCplane}
+\end{align}
+
+- membrane right Cauchy-Green deformation tensor
+\begin{align}
+    \tilde{\bs{C}} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \frac{1}{I\!\!I\!\!I_{C}^{||}}\bs{n}_0\otimes\bs{n}_0. \label{eq:Cmod}
+\end{align}
+
+- rate:
+\begin{align}
+    \dot{\tilde{\bs{C}}} = \dot{\bs{F}}^{0^\mathrm{T}}\bs{F}^{0} + \bs{F}^{0^\mathrm{T}}\dot{\bs{F}}^{0} - \frac{\dot{I\!\!I\!\!I}_{C}^{||}}{I\!\!I\!\!I_{C}^{||^2}}\bs{n}_0\otimes\bs{n}_0, \label{eq:Cmoddot}
+\end{align}
+
+- time derivative of Eq.~(\ref{eq:detCplane}) with Jacobi's formula:
+\begin{align}
+\dot{I\!\!I\!\!I}_{C}^{||} = \dot{\overline{\det \bs{C}^{||}}} &= \det \bs{C}^{||} \,\mathrm{tr}\left(\bs{C}^{||^{-1}} \dot{\bs{C}^{||}}\right) \\
+&= I\!\!I\!\!I_{C}^{||}\,\mathrm{tr}\left(\bs{C}^{||^{-1}} \left(\dot{\bs{F}}^{0^\mathrm{T}}\bs{F}^{0} + \bs{F}^{0^\mathrm{T}}\dot{\bs{F}}^{0}\right)\right).
+\end{align}
+
+\subsubsection{Constitutive equations}
+\paragraph{General isotropic hyperelasticity}
+- exemplified for general isotropic hyperelasticity
+\begin{align}
+\mathit{\Psi} = \mathit{\Psi}(I_{\tilde{C}},I\!\!I_{\tilde{C}}) - \frac{1}{2}\ps(I\!\!I\!\!I_{\tilde{C}}-1), \label{eq:sef_red_solid_generic}
+\end{align}
+where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are the principal invariants of Eq.~(\ref{eq:Cmod})\\
+
+- 2nd Piola-Kirchhoff stress \cite{holzapfel2000}:
+\begin{align}
+\tilde{\bs{S}} = -\ps \tilde{\bs{C}}^{-1} + 2\left(\frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} + I_{\tilde{C}} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}}\right)\bs{I} - 2\frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \tilde{\bs{C}} \label{eq:S_membrane_stress}
+\end{align}
+
+- hydrostatic pressure $\ps$ recovered by plane stress assumption for 2-dimensional continua \cite{holzapfel1996,holzapfel2000}:
+\begin{align}
+\ps = 2 \left( \frac{1}{\lambda_{\xi}^2 \lambda_{\eta}^2} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - \lambda_{\xi}^2 \lambda_{\eta}^2 \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) = 2 \left( \frac{1}{I\!\!I\!\!I_{C}^{||}} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - I\!\!I\!\!I_{C}^{||} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) \label{eq:p_mem},
+\end{align}
+
+- 1st Piola-Kirchhoff stress then is computed by the push-forward operation
+\begin{align}
+    \tilde{\bs{P}}_{\fS} = \bs{F}^{0}\tilde{\bs{S}}, \label{eq:P_membrane_stress}
+\end{align}
+
+
+\paragraph{Cardiac mechanics}
+
+- isotropic exponential strain energy \cite{demiray1972}
+\begin{align}
+    \mathit{\Psi}(\bs{C},\ps) = \frac{a_0}{2b_0}\left(e^{b_0(\mathrm{tr}\bs{C} - 3)} - 1\right) -\frac{1}{2}\ps(\det{\bs{C}} - 1) \label{eq:psi_pass}
+\end{align}
+
+- viscous pseudo-potential \cite{chapelle2012}
+\begin{align}
+\mathit{\Psi}_{\mathrm{v}}(\dot{\bs{C}}) = \frac{\eta}{8}\dot{\bs{C}}:\dot{\bs{C}}\label{eq:psi_visc}
+\end{align}
+
+- for 3D incompressible hyper-viscoelastic active cardiac mechanics:
+\begin{align}
+\bs{S}&=\bs{S}_{\mathrm{e}} + \bs{S}_{\mathrm{v}} + \bs{S}_{\mathrm{a}} = 2\frac{\partial\mathit{\Psi}(\bs{C},\ps)}{\partial\bs{C}} + 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}(\dot{\bs{C}})}{\partial\dot{\bs{C}}} + \tau_{\mathrm{a}}(t)\bs{f}_{0}\otimes\bs{f}_{0}
+\end{align}
+
+- for reduced solid:
+\begin{align}
+\tilde{\bs{S}}=\tilde{\bs{S}}_{\mathrm{e}} + \tilde{\bs{S}}_{\mathrm{v}} + \tilde{\bs{S}}_{\mathrm{a}} = 2\frac{\partial\mathit{\Psi}(\tilde{\bs{C}})}{\partial\tilde{\bs{C}}} + 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}(\dot{\tilde{\bs{C}}})}{\partial\dot{\tilde{\bs{C}}}} + \tau_{\mathrm{a}}(t)\tilde{\bs{M}}_{0}
+\end{align}
+
+- note that in presence of viscosity according to Eq.~(\ref{eq:psi_visc}), hydrostatic pressure for hyperelastic solid, Eq.~(\ref{eq:p_mem}), needs to be updated to balance the viscous normal stresses:
+\begin{align}
+\ps \leftarrow \ps - \frac{\eta}{2}\frac{\dot{I\!\!I\!\!I}_{C}^{||}}{I\!\!I\!\!I_{C}^{||^3}}
+\end{align}
+
+
+- reduced (wall-averaged) structural tensor in circumferential and longitudinal directions $\bs{c}_{0}$ and $\bs{l}_{0}$, respectively:
+\begin{align}
+\tilde{\bs{M}}_{0} = \bar{\omega}\, \bs{c}_{0}\otimes\bs{c}_{0} + \bar{\iota}\,\bs{l}_{0}\otimes\bs{l}_{0} + 2\bar{\gamma}\,\mathrm{sym}(\bs{c}_{0}\otimes\bs{l}_{0}). \label{eq:M0}
+\end{align}
+
+\subsection{Discrete FSI equations}
+
+- original FSI-ALE-flow0d discrete residual problem: for staggered solve
+
+\begin{align}
+    \bs{\mathsf{r}}_{n+1}^{\mathrm{FSI}} 
+    = \begin{bmatrix}
+    \bs{\mathsf{r}}_{v}^{\fS}(\VS,\PS,\LM) \\ \bs{\mathsf{r}}_{p}^{\fS}(\VS) \\ \bs{\mathsf{r}}_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \bs{\mathsf{r}}_{p}^{\fF}(\VF) \\ \bs{\mathsf{r}}_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\VS,\VF) \\ \bs{\mathsf{r}}_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)
+    \end{bmatrix}_{n+1} 
+    = \bs{\mathsf{0}},
+    %  \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF)]_{n+1} = \bs{\mathsf{0}}
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF) = \bs{\mathsf{0}},
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}},\label{eq:res_nonlin_fsi}
+\end{align}
+
+- FSI linear system
+
+\begin{align}
+    \begin{bmatrix} 
+    \bs{\mathsf{K}}_{vv}^{\fS} 
+    & 
+    \bs{\mathsf{K}}_{vp}^{\fS} 
+    & \zerom 
+    & \zerom 
+    & 
+    \bs{\mathsf{K}}_{v\lmi}^{\fS} 
+    & 
+    \zerom 
+    \\ \\ 
+    \bs{\mathsf{K}}_{pv}^{\fS} 
+    & \zerom 
+    & \zerom 
+    & \zerom 
+    & \zerom 
+    & \zerom 
+    \\ \\ 
+    \zerom 
+    & \zerom 
+    & \bs{\mathsf{K}}_{vv}^{\fF} 
+    & \bs{\mathsf{K}}_{vp}^{\fF} 
+    & \bs{\mathsf{K}}_{v\lmi}^{\fF} 
+    & \bs{\mathsf{K}}_{v\lmzi}^{\fF} 
+    \\ \\ 
+    \zerom 
+    & \zerom 
+    & \bs{\mathsf{K}}_{pv}^{\fF} 
+    & \zerom 
+    & \zerom 
+    & \zerom
+    \\ \\ 
+    \bs{\mathsf{K}}_{\lmi v}^{\fS} 
+    & \zerom 
+    & \bs{\mathsf{K}}_{\lmi v}^{\fF} 
+    & \zerom 
+    & \zerom 
+    & \zerom 
+    \\ \\ 
+    \zerom 
+    & \zerom 
+    & \bs{\mathsf{K}}_{\lmzi v}^{\fF} 
+    & \zerom & \zerom 
+    &  \bs{\mathsf{K}}_{\lmzi\lmzi}^{\mathrm{\fF\mhyphen 0d}}
+    \end{bmatrix}_{n+1}^{k}
+    \begin{bmatrix} 
+    \Delta\VS 
+    \\ \\ \Delta\PS 
+    \\ \\ \Delta\VF 
+    \\ \\ \Delta\PF 
+    \\ \\ \Delta\LM 
+    \\ \\ \Delta\LMZ 
+    \end{bmatrix}_{n+1}^{k+1}
+    =
+    -\begin{bmatrix} 
+    \bs{\mathsf{r}}_{v}^{\fS} 
+    \\ \\ \bs{\mathsf{r}}_{p}^{\fS} 
+    \\ \\ \bs{\mathsf{r}}_{v}^{\fF} 
+    \\ \\ \bs{\mathsf{r}}_{p}^{\fF} 
+    \\ \\ \bs{\mathsf{r}}_{\lmi}^{\mathrm{\fF\mhyphen\fS}}
+    \\ \\ \bs{\mathsf{r}}_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}
+    \end{bmatrix}_{n+1}^{k}
+    \label{eq:lin_sys_fsi}  
+\end{align}
+
+- ALE and 0D linear systems:
+\begin{align}
+\bs{\mathsf{K}}_{n+1}^{\mathrm{ALE},k}\Delta\DOMVF_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE},k}, \qquad \bs{\mathsf{K}}_{n+1}^{\mathrm{0d},k}\Delta\Y_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{0d},k}\label{eq:lin_sys_ale_0d}   
+\end{align}
+
+\subsection{Discrete F3DrSI equations}
+
+\begin{align}
+    \ROP_{n+1}^{\mathrm{F3DrSI}} = \begin{bmatrix}\bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS}(\bs{\mathsf{V}}_{v}\VSr,\bs{\mathsf{V}}_{p}\PSr,\LM) \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\ROP_{p}^{\fS}(\bs{\mathsf{V}}_{v}\VSr) \\ \ROP_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \ROP_{p}^{\fF}(\VF) \\ \ROP_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\bs{\mathsf{V}}_{v}\VSr,\VF) \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)\end{bmatrix}_{n+1} = \bs{\mathsf{0}},
+    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF)]_{n+1} = \bs{\mathsf{0}}.
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF) = \bs{\mathsf{0}},
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}}.\label{eq:res_nonlin_f3rsi}
+\end{align}
+
+\begin{align}
+    \frac{\partial (\bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS})}{\partial \VSr} = \bs{\mathsf{V}}_{v}^{\mathrm{T}} \frac{\partial \ROP_{v}^{\fS}}{\partial \VS} \frac{\partial \VS}{\partial \VSr} = \bs{\mathsf{V}}_{v}^{\mathrm{T}} \bs{\mathsf{K}}_{vv}^{\fS} \bs{\mathsf{V}}_{v}
+\end{align}
+
+\begin{align}
+    \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{vv}^{\fS}\bs{\mathsf{V}}_{v} & \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{vp}^{\fS}\bs{\mathsf{V}}_{p} & \zerom & \zerom & \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{v\lmi}^{\fS} & \zerom  \\ \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\bs{\mathsf{K}}_{pv}^{\fS}\bs{\mathsf{V}}_{v} & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{vv}^{\fF} & \bs{\mathsf{K}}_{vp}^{\fF} & \bs{\mathsf{K}}_{v\lmi}^{\fF} & \bs{\mathsf{K}}_{v\lmzi}^{\fF} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{pv}^{\fF} & \zerom & \zerom & \zerom \\ \\ \bs{\mathsf{K}}_{\lmi v}^{\fS}\bs{\mathsf{V}}_{v} & \zerom & \bs{\mathsf{K}}_{\lmi v}^{\fF} & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi v}^{\fF} & \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}}^{\fS} \\ \\ \Delta\tilde{\bs{\mathsf{p}}}^{\fS} \\ \\ \Delta\VF \\ \\ \Delta\PF \\ \\ \Delta\LM \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS} \\ \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\ROP_{p}^{\fS} \\ \\ \ROP_{v}^{\fF} \\ \\ \ROP_{p}^{\fF} \\ \\ \ROP_{\lmi}^{\mathrm{\fF\mhyphen\fS}} \\ \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_f3drsi}
+\end{align}
+
+- ALE and 0D linear systems: Eq. (\ref{eq:lin_sys_ale_0d})
+
+
+\subsection{Discrete FrSI equations}
+
+\begin{align}
+    \ROP^{\mathrm{FrSI}}_{n+1} = \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v}^{\fF}(\bs{\mathsf{V}}_{v}^{\Gm}\VFr,\PF,\LMZ) \\ \ROP_{p}^{\fF}(\bs{\mathsf{V}}_{v}^{\Gm}\VFr) \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\bs{\mathsf{V}}_{v}^{\Gm}\VFr)\end{bmatrix}_{n+1} = \bs{\mathsf{0}},
+    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF)]_{n+1} = \bs{\mathsf{0}}
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF) = \bs{\mathsf{0}},
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}}\label{eq:res_nonlin_frsi}
+\end{align}
+
+\begin{align}
+    \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vv}^{\fF}\bs{\mathsf{V}}_{v}^{\Gm} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vp}^{\fF} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{v\lmzi}^{\fF} \\ \\ \bs{\mathsf{K}}_{pv}^{\fF}\bs{\mathsf{V}}_{v}^{\Gm} & \zerom & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi v}^{\fF}\bs{\mathsf{V}}_{v}^{\Gm} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}}^{\fF} \\ \\ \Delta\PF \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v}^{\fF} \\ \\ \ROP_{p}^{\fF} \\ \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_rom_frsi}
+\end{align}
+
+- ALE and 0D linear systems: Eq. (\ref{eq:lin_sys_ale_0d})
+
+\subsection{Reduced physics solid}
+
+
 
 \section{Lumped parameter (0D) models}
 
@@ -316,5 +619,6 @@ Q_{\mathrm{at}}^{r} := -\frac{\mathrm{d}V_{\mathrm{at}}^{r}}{\mathrm{d}t}, \qqua
 Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumber
 \end{align}
 
+\bibliography{../../../research_doc/literature/references}
 
 \end{document}

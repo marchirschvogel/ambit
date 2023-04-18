@@ -82,10 +82,6 @@ class AleProblem(problem_base):
         try: self.have_rom = io_params['use_model_order_red']
         except: self.have_rom = False
 
-        if self.have_rom:
-            import mor
-            self.rom = mor.ModelOrderReduction(mor_params, self.comm)
-
         # create finite element objects
         P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
         # function space
@@ -111,6 +107,10 @@ class AleProblem(problem_base):
         self.w_old = fem.Function(self.V_d)
 
         self.numdof = self.d.vector.getSize()
+
+        if self.have_rom:
+            import mor
+            self.rom = mor.ModelOrderReduction(mor_params, self.V_d, self.io, self.comm)
 
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(time_params, fem_params, time_curves, self.t_init, self.comm)
@@ -198,7 +198,7 @@ class AleProblem(problem_base):
 
         # perform Proper Orthogonal Decomposition
         if self.have_rom:
-            self.rom.POD(self, self.V_d)
+            self.rom.prepare_rob()
 
 
     def read_restart(self, sname, N):

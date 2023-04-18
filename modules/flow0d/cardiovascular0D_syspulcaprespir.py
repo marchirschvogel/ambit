@@ -18,7 +18,7 @@ from mpiroutines import allgather_vec
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
-    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, init=True, comm=None):
 
         self.R_airw = params['R_airw']
         self.L_alv = params['L_alv']
@@ -70,7 +70,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.V_tisscor = params['V_tisscor']
 
         # initialize base class
-        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cq, vq, valvelaws, cormodel=cormodel, vadmodel=vadmodel, comm=comm)
+        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cq, vq, valvelaws, cormodel=cormodel, vadmodel=vadmodel, init=init, comm=comm)
 
 
     def setup_arrays(self):

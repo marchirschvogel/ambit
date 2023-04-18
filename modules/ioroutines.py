@@ -27,6 +27,8 @@ class IO:
         self.mesh_domain = io_params['mesh_domain']
         self.mesh_boundary = io_params['mesh_boundary']
 
+        self.sname = io_params['simname']
+
         try: self.fiber_data = io_params['fiber_data']
         except: self.fiber_data = []
 

@@ -12,8 +12,11 @@ from mathutils import spectral_decomposition_3x3
 # variational form base class
 class variationalform_base:
 
-    # Visco-elastic membrane potential on surface
-    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{S}(\tilde{\boldsymbol{C}},\dot{\tilde{\boldsymbol{C}}}) : \frac{1}{2}\delta\tilde{\boldsymbol{C}}\,\mathrm{d}A
+    # Hyper-visco-elastic membrane model defined on a surface
+    # for solid mechanics, contribution to virtual work is:
+    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{u}\,\mathrm{d}A
+    # for fluid mechanics, contribution to virtual power is:
+    # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v}),\boldsymbol{v}) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{v}\,\mathrm{d}A
     def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None):
 
         C = F.T*F
@@ -32,7 +35,7 @@ class variationalform_base:
             c0, l0 = fibfnc[0], fibfnc[1]
             omega, iota, gamma = params['active_stress']['omega'], params['active_stress']['iota'], params['active_stress']['gamma']
 
-        # wall thickness
+        # wall thickness parameter
         h0 = params['h0']
 
         # only components in normal direction (F_nn, F_t1n, F_t2n)
@@ -114,7 +117,7 @@ class variationalform_base:
         # only in-plane components of test function derivatives should be used!
         var_F = ufl.grad(self.var_v) - ufl.grad(self.var_v)*n0n0
 
-        # boundary inner virtual power
+        # boundary inner virtual work/power
         dWb_int = h0*ufl.inner(P,var_F)*dboundary
 
         # boundary kinetic virtual work/power

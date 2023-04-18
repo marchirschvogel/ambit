@@ -315,8 +315,6 @@ class timeintegration_fluid(timeintegration):
             acc = self.update_a_ost(v, v_old, a_old, ufl=True)
         elif self.timint == 'genalpha':
             acc = self.update_a_genalpha(v, v_old, a_old, ufl=True)
-        elif self.timint == 'static':
-            acc = ufl.constantvalue.zero(3)
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
@@ -330,8 +328,6 @@ class timeintegration_fluid(timeintegration):
             uf = self.update_uf_ost(v, v_old, uf_old, ufl=True)
         elif self.timint == 'genalpha':
             uf = self.update_uf_genalpha(v, v_old, uf_old, ufl=True)
-        elif self.timint == 'static':
-            uf = ufl.constantvalue.zero(3)
         else:
             raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
@@ -341,8 +337,7 @@ class timeintegration_fluid(timeintegration):
     def timefactors(self):
 
         if self.timint=='ost':      timefac_m, timefac = self.theta_ost, self.theta_ost
-        if self.timint=='genalpha': timefac_m, timefac = 1.-self.alpha_m, 1.-self.alpha_f
-        if self.timint=='static':   timefac_m, timefac = 1., 1.
+        if self.timint=='genalpha': timefac_m, timefac = self.alpha_m, self.alpha_f # note the different definition compared to solid mechanics, where alpha_(.) <- 1.-alpha_(.)
 
         return timefac_m, timefac
 
@@ -468,9 +463,10 @@ class timeintegration_fluid(timeintegration):
 
     def compute_genalpha_params(self, rho_inf): # cf. Jansen et al. (2000)
 
-        alpha_m = 0.5*(3.-rho_inf)/(1.+rho_inf) # != to Chung and Hulbert (1993)
-        alpha_f = 1./(1.+rho_inf)               # != to Chung and Hulbert (1993)
-        gamma   = 0.5+alpha_m-alpha_f           # != to Chung and Hulbert (1993), even though stated by Jansen
+        # note that for solid, the alphas are differently defined: alpha_(.) <- 1.-alpha_(.)
+        alpha_m = 0.5*(3.-rho_inf)/(1.+rho_inf)
+        alpha_f = 1./(1.+rho_inf)
+        gamma   = 0.5+alpha_m-alpha_f
 
         return alpha_m, alpha_f, gamma
 
@@ -478,27 +474,27 @@ class timeintegration_fluid(timeintegration):
 # ALE time integration class
 class timeintegration_ale(timeintegration_fluid):
 
-    def update_timestep(self, u, u_old, w_old):
+    def update_timestep(self, d, d_old, w_old):
 
         # update old fields with new quantities
-        self.update_fields(u, u_old, w_old)
+        self.update_fields(d, d_old, w_old)
 
         # update time dependent load curves
         self.update_time_funcs()
 
 
-    def set_wel(self, u, u_old, w_old):
+    def set_wel(self, d, d_old, w_old):
 
         # set form for domain velocity wel
         if self.timint == 'ost':
-            wel = self.update_w_ost(u, u_old, w_old, ufl=True)
+            wel = self.update_w_ost(d, d_old, w_old, ufl=True)
         else:
             raise NameError("Unknown time scheme for ALE mechanics!")
 
         return wel
 
 
-    def update_w_ost(self, u, u_old, w_old, ufl=True):
+    def update_w_ost(self, d, d_old, w_old, ufl=True):
         # update formula for domain velocity
         if ufl:
             dt_ = self.dt
@@ -506,26 +502,26 @@ class timeintegration_ale(timeintegration_fluid):
         else:
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
-        return 1./(theta_*dt_) * (u - u_old) - (1.-theta_)/theta_ * w_old
+        return 1./(theta_*dt_) * (d - d_old) - (1.-theta_)/theta_ * w_old
 
 
-    def update_fields(self, u, u_old, w_old):
+    def update_fields(self, d, d_old, w_old):
         # update fields at the end of each time step
         # get vectors (references)
-        u_vec, u0_vec  = u.vector, u_old.vector
+        d_vec, d0_vec  = d.vector, d_old.vector
         w0_vec = w_old.vector
-        u_vec.assemble(), u0_vec.assemble(), w0_vec.assemble()
+        d_vec.assemble(), d0_vec.assemble(), w0_vec.assemble()
 
         # use update functions using vector arguments
-        w_vec = self.update_w_ost(u_vec, u0_vec, w0_vec, ufl=False)
+        w_vec = self.update_w_ost(d_vec, d0_vec, w0_vec, ufl=False)
 
         # update velocity: w_old <- w
         w_old.vector.axpby(1.0, 0.0, w_vec)
         w_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # update displacement: u_old <- u
-        u_old.vector.axpby(1.0, 0.0, u_vec)
-        u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        # update displacement: d_old <- d
+        d_old.vector.axpby(1.0, 0.0, d_vec)
+        d_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
 

@@ -17,7 +17,7 @@ from meshutils import gather_surface_dof_indices
 
 class ModelOrderReduction():
 
-    def __init__(self, params, comm):
+    def __init__(self, params, Vspace, io, comm):
 
         self.numhdms = params['numhdms']
         self.numsnapshots = params['numsnapshots']
@@ -74,172 +74,42 @@ class ModelOrderReduction():
 
         self.hdmfilenames = params['hdmfilenames']
 
+        # to access mesh data
+        self.io = io
+        # function space of variable to be reduced
+        self.Vspace = Vspace
+
         self.comm = comm
 
-
-    # Proper Orthogonal Decomposition
-    def POD(self, pb, Vspace):
-
-        locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
-        matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
+        self.locmatsize_u = self.Vspace.dofmap.index_map.size_local * self.Vspace.dofmap.index_map_bs
+        self.matsize_u = self.Vspace.dofmap.index_map.size_global * self.Vspace.dofmap.index_map_bs
 
         # snapshot matrix
-        S_d = PETSc.Mat().createDense(size=((locmatsize_u,matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
-        S_d.setUp()
+        self.S_d = PETSc.Mat().createDense(size=((self.locmatsize_u,self.matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
+        self.S_d.setUp()
 
-        ss, se = S_d.getOwnershipRange()
+        self.ss, self.se = self.S_d.getOwnershipRange()
+
+
+    # offline phase: preparation of reduced order basis
+    def prepare_rob(self):
 
         if bool(self.surface_rom):
-            self.fd_set = set(gather_surface_dof_indices(pb, Vspace, self.surface_rom,self.comm))
-
-        ts = time.time()
+            self.fd_set = set(gather_surface_dof_indices(self.io, self.Vspace, self.surface_rom, self.comm))
 
         if not self.modes_from_files:
-
-            if self.comm.rank==0:
-                print("Performing Proper Orthogonal Decomposition (POD) ...")
-                sys.stdout.flush()
-
-            # gather snapshots (mostly displacements or velocities)
-            for h in range(self.numhdms):
-
-                for i in range(self.numsnapshots):
-
-                    if self.comm.rank==0:
-                        print("Reading snapshot %i ..." % (i+1))
-                        sys.stdout.flush()
-
-                    step = self.snapshotoffset + (i+1)*self.snapshotincr
-
-                    field = fem.Function(Vspace)
-
-                    if self.snapshotsource[h] == 'petscvector':
-                        # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
-                        viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
-                        field.vector.load(viewer)
-
-                        field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-                    elif self.snapshotsource[h] == 'rawtxt':
-
-                        # own read function: requires plain txt format of type valx valy valz x z y
-                        pb.io.readfunction(field, Vspace, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
-
-                    else:
-                        raise NameError("Unknown snapshotsource!")
-
-                    S_d[ss:se, self.numhdms*h+i] = field.vector[ss:se]
-
-            # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
-            if bool(self.surface_rom):
-                # eliminate corresponding rows in S_d
-                for i in range(ss, se):
-                    if i not in self.fd_set:
-                        S_d[i,:] = np.zeros(self.numsnapshots)
-
-            S_d.assemble()
-
-            # covariance matrix
-            C_d = S_d.transposeMatMult(S_d) # S^T * S
-
-            # setup eigenvalue problem
-            eigsolver = SLEPc.EPS()
-            eigsolver.create()
-            eigsolver.setOperators(C_d)
-            eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # Hermitian problem
-            eigsolver.setType(SLEPc.EPS.Type.LAPACK)
-            eigsolver.setFromOptions()
-
-            # solve eigenvalue problem
-            eigsolver.solve()
-
-            nconv = eigsolver.getConverged()
-
-            if self.print_eigenproblem:
-                if self.comm.rank==0:
-                    print("Number of converged eigenpairs: %d" % nconv)
-                    sys.stdout.flush()
-
-            evecs, evals = [], []
-            numredbasisvec_true = 0
-
-            if nconv > 0:
-                # create the results vectors
-                vr, _ = C_d.getVecs()
-                vi, _ = C_d.getVecs()
-
-                if self.print_eigenproblem:
-                    if self.comm.rank==0:
-                        print("   k                        ||Ax-kx||/||kx||")
-                        print("   ----------------------   ----------------")
-                        sys.stdout.flush()
-
-                for i in range(len(self.redbasisvec_indices)):
-                    k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
-                    error = eigsolver.computeError(self.redbasisvec_indices[i])
-                    if self.print_eigenproblem:
-                        if k.imag != 0.0:
-                            if self.comm.rank==0:
-                                print('{:<3s}{:<4.4e}{:<1s}{:<4.4e}{:<1s}{:<3s}{:<4.4e}'.format(' ',k.real,'+',k.imag,'j',' ',error))
-                                sys.stdout.flush()
-                        else:
-                            if self.comm.rank==0:
-                                print('{:<3s}{:<4.4e}{:<15s}{:<4.4e}'.format(' ',k.real,' ',error))
-                                sys.stdout.flush()
-
-                    # store
-                    evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
-                    evals.append(k.real)
-
-                    if k.real > self.eigenvalue_cutoff: numredbasisvec_true += 1
-
-            if len(self.redbasisvec_indices) != numredbasisvec_true:
-                if self.comm.rank==0:
-                    print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),numredbasisvec_true))
-                    sys.stdout.flush()
-
-            # pop out undesired ones
-            for i in range(len(self.redbasisvec_indices)-numredbasisvec_true):
-                evecs.pop(-1)
-                evals.pop(-1)
-
-            # eigenvectors, scaled with 1 / sqrt(eigenval)
-            # calculate first numredbasisvec_true POD modes
-            self.Phi = np.zeros((matsize_u, numredbasisvec_true))
-            for i in range(numredbasisvec_true):
-                self.Phi[ss:se,i] = S_d * evecs[i] / math.sqrt(evals[i])
-
+            self.POD()
         else:
+            self.readin_modes()
 
-            numredbasisvec_true = self.numredbasisvec
-
-            self.Phi = np.zeros((matsize_u, numredbasisvec_true))
-            # read modes from files
-            # own read function: requires plain txt format of type valx valy valz x z y
-            for i in range(numredbasisvec_true):
-
-                if self.comm.rank==0:
-                    print("Reading mode %i ..." % (i+1))
-                    sys.stdout.flush()
-
-                field = fem.Function(Vspace)
-                pb.io.readfunction(field, Vspace, self.modes_from_files.replace('*',str(i+1)), tol=self.snapshotreadin_tol)
-                self.Phi[ss:se,i] = field.vector[ss:se]
-
-        # write out POD modes
         if self.write_pod_modes:
-            for i in range(numredbasisvec_true):
-                outfile = io.XDMFFile(self.comm, pb.io.output_path+'/results_'+pb.simname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
-                outfile.write_mesh(pb.io.mesh)
-                podfunc = fem.Function(Vspace, name="POD_Mode_"+str(i+1))
-                podfunc.vector[ss:se] = self.Phi[ss:se,i]
-                outfile.write_function(podfunc)
+            self.write_modes()
 
-        # build reduced basis - either only on designated surfaces or for the whole model
+        # build reduced basis - either only on designated surface(s) or for the whole model
         if bool(self.surface_rom):
-            self.build_reduced_surface_basis(Vspace,numredbasisvec_true,ts)
+            self.build_reduced_surface_basis()
         else:
-            self.build_reduced_basis(Vspace,numredbasisvec_true,ts)
+            self.build_reduced_basis()
 
         if bool(self.redbasisvec_penalties):
             # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
@@ -248,13 +118,163 @@ class ModelOrderReduction():
             self.CpenVTV = self.Cpen.matMult(self.VTV) # Cpen * V^T * V
 
 
-    def build_reduced_basis(self, Vspace, rb, ts):
+    # Proper Orthogonal Decomposition
+    def POD(self):
 
-        locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
-        matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
+        ts = time.time()
+
+        if self.comm.rank==0:
+            print("Performing Proper Orthogonal Decomposition (POD) ...")
+            sys.stdout.flush()
+
+        # gather snapshots (mostly displacements or velocities)
+        for h in range(self.numhdms):
+
+            for i in range(self.numsnapshots):
+
+                if self.comm.rank==0:
+                    print("Reading snapshot %i ..." % (i+1))
+                    sys.stdout.flush()
+
+                step = self.snapshotoffset + (i+1)*self.snapshotincr
+
+                field = fem.Function(self.Vspace)
+
+                if self.snapshotsource[h] == 'petscvector':
+                    # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
+                    viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.comm)
+                    field.vector.load(viewer)
+
+                    field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+                elif self.snapshotsource[h] == 'rawtxt':
+
+                    # own read function: requires plain txt format of type valx valy valz x z y
+                    self.io.readfunction(field, self.Vspace, self.hdmfilenames[h].replace('*',str(step)), tol=self.snapshotreadin_tol)
+
+                else:
+                    raise NameError("Unknown snapshotsource!")
+
+                self.S_d[self.ss:self.se, self.numhdms*h+i] = field.vector[self.ss:self.se]
+
+        # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
+        if bool(self.surface_rom):
+            self.eliminate_mat_rows(self.S_d, self.fd_set)
+
+        self.S_d.assemble()
+
+        # covariance matrix
+        C_d = self.S_d.transposeMatMult(self.S_d) # S^T * S
+
+        # setup eigenvalue problem
+        eigsolver = SLEPc.EPS()
+        eigsolver.create()
+        eigsolver.setOperators(C_d)
+        eigsolver.setProblemType(SLEPc.EPS.ProblemType.HEP) # Hermitian problem
+        eigsolver.setType(SLEPc.EPS.Type.LAPACK)
+        eigsolver.setFromOptions()
+
+        # solve eigenvalue problem
+        eigsolver.solve()
+
+        nconv = eigsolver.getConverged()
+
+        if self.print_eigenproblem:
+            if self.comm.rank==0:
+                print("Number of converged eigenpairs: %d" % nconv)
+                sys.stdout.flush()
+
+        evecs, evals = [], []
+        self.numredbasisvec_true = 0
+
+        if nconv > 0:
+            # create the results vectors
+            vr, _ = C_d.getVecs()
+            vi, _ = C_d.getVecs()
+
+            if self.print_eigenproblem:
+                if self.comm.rank==0:
+                    print("   k                        ||Ax-kx||/||kx||")
+                    print("   ----------------------   ----------------")
+                    sys.stdout.flush()
+
+            for i in range(len(self.redbasisvec_indices)):
+                k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
+                error = eigsolver.computeError(self.redbasisvec_indices[i])
+                if self.print_eigenproblem:
+                    if k.imag != 0.0:
+                        if self.comm.rank==0:
+                            print('{:<3s}{:<4.4e}{:<1s}{:<4.4e}{:<1s}{:<3s}{:<4.4e}'.format(' ',k.real,'+',k.imag,'j',' ',error))
+                            sys.stdout.flush()
+                    else:
+                        if self.comm.rank==0:
+                            print('{:<3s}{:<4.4e}{:<15s}{:<4.4e}'.format(' ',k.real,' ',error))
+                            sys.stdout.flush()
+
+                # store
+                evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
+                evals.append(k.real)
+
+                if k.real > self.eigenvalue_cutoff: self.numredbasisvec_true += 1
+
+        if len(self.redbasisvec_indices) != self.numredbasisvec_true:
+            if self.comm.rank==0:
+                print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),self.numredbasisvec_true))
+                sys.stdout.flush()
+
+        # pop out undesired ones
+        for i in range(len(self.redbasisvec_indices)-self.numredbasisvec_true):
+            evecs.pop(-1)
+            evals.pop(-1)
+
+        # eigenvectors, scaled with 1 / sqrt(eigenval)
+        # calculate first numredbasisvec_true POD modes
+        self.Phi = np.zeros((self.matsize_u, self.numredbasisvec_true))
+        for i in range(self.numredbasisvec_true):
+            self.Phi[self.ss:self.se,i] = self.S_d * evecs[i] / math.sqrt(evals[i])
+
+        te = time.time() - ts
+
+        if self.comm.rank==0:
+            print("POD done... Time: %.4f s" % (te))
+            sys.stdout.flush()
+
+
+    def write_modes(self):
+        # write out POD modes
+        for i in range(self.numredbasisvec_true):
+            outfile = io.XDMFFile(self.comm, self.io.output_path+'/results_'+self.io.sname+'_PODmode_'+str(i+1)+'.xdmf', 'w')
+            outfile.write_mesh(self.io.mesh)
+            podfunc = fem.Function(self.Vspace, name="POD_Mode_"+str(i+1))
+            podfunc.vector[self.ss:self.se] = self.Phi[self.ss:self.se,i]
+            outfile.write_function(podfunc)
+
+
+    # read modes from files
+    def readin_modes(self):
+
+        self.numredbasisvec_true = self.numredbasisvec
+
+        self.Phi = np.zeros((self.matsize_u, self.numredbasisvec_true))
+
+        # own read function: requires plain txt format of type valx valy valz x z y
+        for i in range(self.numredbasisvec_true):
+
+            if self.comm.rank==0:
+                print("Reading mode %i ..." % (i+1))
+                sys.stdout.flush()
+
+            field = fem.Function(self.Vspace)
+            self.io.readfunction(field, self.Vspace, self.modes_from_files.replace('*',str(i+1)), tol=self.snapshotreadin_tol)
+            self.Phi[self.ss:self.se,i] = field.vector[self.ss:self.se]
+
+
+    def build_reduced_basis(self):
+
+        ts = time.time()
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb)), bsize=None, nnz=(rb,locmatsize_u), csr=None, comm=self.comm)
+        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(self.numredbasisvec_true)), bsize=None, nnz=(self.numredbasisvec_true,self.locmatsize_u), csr=None, comm=self.comm)
         self.V.setUp()
 
         vrs, vre = self.V.getOwnershipRange()
@@ -266,7 +286,7 @@ class ModelOrderReduction():
 
         # set penalties
         if bool(self.redbasisvec_penalties):
-            self.Cpen = PETSc.Mat().createAIJ(size=((rb),(rb)), bsize=None, nnz=(rb), csr=None, comm=self.comm)
+            self.Cpen = PETSc.Mat().createAIJ(size=((self.numredbasisvec_true),(self.numredbasisvec_true)), bsize=None, nnz=(self.numredbasisvec_true), csr=None, comm=self.comm)
             self.Cpen.setUp()
 
             for i in range(len(self.redbasisvec_penalties)):
@@ -277,30 +297,30 @@ class ModelOrderReduction():
         te = time.time() - ts
 
         if self.comm.rank==0:
-            print("POD done... Created reduced-order basis for ROM. Time: %.4f s" % (te))
+            print("Built reduced basis operator for ROM. Time: %.4f s" % (te))
+            print(" ")
             sys.stdout.flush()
 
 
-    def build_reduced_surface_basis(self, Vspace, rb, ts):
+    def build_reduced_surface_basis(self):
 
-        locmatsize_u = Vspace.dofmap.index_map.size_local * Vspace.dofmap.index_map_bs
-        matsize_u = Vspace.dofmap.index_map.size_global * Vspace.dofmap.index_map_bs
+        ts = time.time()
 
         # number of non-reduced "bulk" dofs
-        ndof_bulk = matsize_u - len(self.fd_set)
+        ndof_bulk = self.matsize_u - len(self.fd_set)
 
         # row loop to get entries (1's) for "non-reduced" dofs
         nr, a = 0, 0
         row_1, col_1, col_fd = [], [], []
 
-        for row in range(matsize_u):
+        for row in range(self.matsize_u):
 
             if row in self.fd_set:
                 # increase counter for number of reduced dofs
                 nr += 1
                 # column shift if we've exceeded the number of reduced basis vectors
-                if nr <= rb: col_fd.append(row)
-                if nr > rb: a += 1
+                if nr <= self.numredbasisvec_true: col_fd.append(row)
+                if nr > self.numredbasisvec_true: a += 1
             else:
                 # column id of non-reduced dof (left-shifted by a)
                 col_id = row-a
@@ -312,7 +332,7 @@ class ModelOrderReduction():
         col_fd_set = set(col_fd)
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(rb+ndof_bulk)), bsize=None, nnz=(2*rb,locmatsize_u), csr=None, comm=self.comm)
+        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(self.numredbasisvec_true+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true+1,self.locmatsize_u), csr=None, comm=self.comm)
         self.V.setUp()
 
         vrs, vre = self.V.getOwnershipRange()
@@ -328,7 +348,7 @@ class ModelOrderReduction():
 
         # column loop to insert columns of Phi
         n=0
-        for col in range(rb+ndof_bulk):
+        for col in range(self.numredbasisvec_true+ndof_bulk):
             # set Phi column
             if col in col_fd_set:
                 # NOTE: We actually do not want to set the columns at once like this, since PETSc may treat close-zero entries as non-zeros
@@ -344,11 +364,11 @@ class ModelOrderReduction():
         # set penalties
         if bool(self.redbasisvec_penalties):
 
-            self.Cpen = PETSc.Mat().createAIJ(size=((rb+ndof_bulk),(rb+ndof_bulk)), bsize=None, nnz=(rb), csr=None, comm=self.comm)
+            self.Cpen = PETSc.Mat().createAIJ(size=((self.numredbasisvec_true+ndof_bulk),(self.numredbasisvec_true+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true), csr=None, comm=self.comm)
             self.Cpen.setUp()
 
             n=0
-            for col in range(rb+ndof_bulk):
+            for col in range(self.numredbasisvec_true+ndof_bulk):
                 if col in col_fd_set:
                     self.Cpen[col,col] = self.redbasisvec_penalties[n]
                     n += 1
@@ -358,5 +378,16 @@ class ModelOrderReduction():
         te = time.time() - ts
 
         if self.comm.rank==0:
-            print("POD done... Created reduced-order basis for surface ROM on boundary id(s) "+str(self.surface_rom)+". Time: %.4f s" % (te))
+            print("Built reduced basis operator for ROM on boundary id(s) "+str(self.surface_rom)+". Time: %.4f s" % (te))
+            print(" ")
             sys.stdout.flush()
+
+
+    # eliminate rows in matrix
+    def eliminate_mat_rows(self, mat, dofs):
+
+        ncol = mat.getSize()[1]
+        rs,re = mat.getOwnershipRange()
+        for i in range(rs,re):
+            if i not in dofs:
+                mat[i,:] = np.zeros(ncol)
