@@ -14,13 +14,13 @@
 * Fluid dynamics (only in Q2Q1/P2P1 Taylor-Hood space)
   - Incompressible Navier-Stokes equations, either in nonconservative or conservative formulation
   - Navier-Stokes in an Arbitrary Lagrangian Eulerian (ALE) reference frame
-  - One-step theta time integration
+  - One-step theta, or generalized-alpha time integration
 * Lumped (0D) models
   - Systemic and pulmonary circulation flow models
   - 2-element as well as 4-element Windkessel models
   - Signalling network model
-* Monolithic coupling
-  - Monolithic coupling of 3D solid/fluid/ALE fluid with lumped 0D flow models
+* Coupling of different physics:
+  - Monolithic coupling of ALE and fluid, 3D solid/fluid/ALE-fluid with lumped 0D flow models
   - Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid-flow0d and G&R solid problem)
 * Fluid-reduced-solid interaction (FrSI)
   - Boundary subspace-projected physics-reduced solid model (incl. hyperelastic, viscous, and active parts) in an ALE fluid reference frame

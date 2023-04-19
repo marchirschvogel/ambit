@@ -9,7 +9,6 @@
 import numpy as np
 from dolfinx import fem, mesh
 import ufl
-from petsc4py import PETSc
 
 import expression
 

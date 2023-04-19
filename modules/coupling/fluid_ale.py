@@ -43,7 +43,7 @@ class FluidmechanicsAleProblem():
         try: self.fluid_on_deformed = self.coupling_params['fluid_on_deformed']
         except: self.fluid_on_deformed = 'consistent'
 
-        # initialize problem instances (also sets the variational forms for the fluid problem)
+        # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
         self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
         alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
@@ -186,7 +186,7 @@ class FluidmechanicsAleProblem():
 
                 # add to fluid internal virtual power
                 self.pbf.weakform_v += work_robin_ale_fluid
-                # add to fluid jacobian form and define offdiagonal derivative w.r.t. ALE
+                # add to fluid jacobian form
                 self.pbf.weakform_lin_vv += ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
 
             else:
