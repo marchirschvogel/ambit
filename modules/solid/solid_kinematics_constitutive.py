@@ -209,7 +209,7 @@ class constitutive:
             raise NameError('Unknown solid material law!')
 
 
-    # Cauchy stress tensor: sigma = (1/J) * F*S*F.T
+    # Cauchy stress tensor: sigma = (1/J) * F*S*F^T
     def sigma(self, u_, p_, v_, ivar):
         return (1./self.kin.J(u_)) * self.kin.F(u_)*self.S(u_,p_,v_,ivar)*self.kin.F(u_).T
 
@@ -231,7 +231,7 @@ class constitutive:
 
     # Kirchhoff stress tensor: tau = J * sigma
     def tau_kirch(self, u_, p_, v_, ivar):
-        return self.kin.J(u_) * self.sigma(u_)
+        return self.kin.J(u_) * self.sigma(u_,p_,v_,ivar)
 
 
     # Mandel stress tensor: M = C*S

@@ -95,11 +95,11 @@ class SolidmechanicsProblem(problem_base):
 
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
-            dg_type = "DG"
+            self.dg_type = "DG"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 3:
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif str(self.io.mesh.ufl_cell()) == 'hexahedron' or str(self.io.mesh.ufl_cell()) == 'quadrilateral' or str(self.io.mesh.ufl_cell()) == 'quadrilateral3D':
-            dg_type = "DQ"
+            self.dg_type = "DQ"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 5:
                 raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
             if self.quad_degree < 2:
@@ -134,9 +134,9 @@ class SolidmechanicsProblem(problem_base):
         #self.Vd_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
 
         # Quadrature function spaces (currently not properly functioning for higher-order meshes!!!)
-        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
+        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
+        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
 
         # functions
         self.du    = ufl.TrialFunction(self.V_u)            # Incremental displacement
@@ -393,8 +393,8 @@ class SolidmechanicsProblem(problem_base):
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.u_pre)
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane     = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc)
-            w_membrane_old = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old)
+            w_membrane, self.dbmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, self.var_u)
+            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, self.var_u)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots in our external virtual work
         # plus no rate-dependent or inelastic constitutive models

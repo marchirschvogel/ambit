@@ -17,7 +17,7 @@ class variationalform_base:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{u}\,\mathrm{d}A
     # for fluid mechanics, contribution to virtual power is:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v}),\boldsymbol{v}) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{v}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None):
+    def deltaW_ext_membrane(self, F, Fdot, a, varu, params, dboundary, ivar=None, fibfnc=None, stress=False):
 
         C = F.T*F
 
@@ -63,11 +63,11 @@ class variationalform_base:
         elif model=='membrane_fmod':
             raise RuntimeError("Model 'membrane_fmod' seems incompatible and gives erroneous results. To be investigated...")
             # get eigenvalues and eigenvectors of C
-            evalC, EprojC = spectral_decomposition_3x3(C)
+            evalC, _, EprojC = spectral_decomposition_3x3(C)
             U = ufl.sqrt(evalC[0])*EprojC[0] + ufl.sqrt(evalC[1])*EprojC[1] + ufl.sqrt(evalC[2])*EprojC[2]
             R = F*ufl.inv(U)
             # get eigenvalues and eigenvectors of modified C
-            evalCmod, EprojCmod = spectral_decomposition_3x3(Cmod)
+            evalCmod, _, EprojCmod = spectral_decomposition_3x3(Cmod)
             Umod = ufl.sqrt(evalCmod[0])*EprojCmod[0] + ufl.sqrt(evalCmod[1])*EprojCmod[1] + ufl.sqrt(evalCmod[2])*EprojCmod[2]
             Fmod = R*Umod
         else:
@@ -114,17 +114,23 @@ class variationalform_base:
         # 1st PK stress P = FS
         P = Fmod * S
 
+        # Cauchy stress for postprocessing: sigma = (1/J) P*F^T --> membrane is incompressible, hence J=1
+        sigma = P * Fmod.T
+
         # only in-plane components of test function derivatives should be used!
-        var_F = ufl.grad(self.var_v) - ufl.grad(self.var_v)*n0n0
+        var_F = ufl.grad(varu) - ufl.grad(varu)*n0n0
 
         # boundary inner virtual work/power
         dWb_int = h0*ufl.inner(P,var_F)*dboundary
 
         # boundary kinetic virtual work/power
         if not isinstance(a, ufl.constantvalue.Zero):
-            dWb_kin = rho0*(h0*ufl.dot(a,self.var_v)*dboundary)
+            dWb_kin = rho0*(h0*ufl.dot(a,varu)*dboundary)
         else:
             dWb_kin = ufl.as_ufl(0)
 
         # minus signs, since this sums into external virtual work/power!
-        return -dWb_int - dWb_kin
+        if not stress:
+            return -dWb_int - dWb_kin
+        else:
+            return sigma

@@ -166,9 +166,9 @@ class boundary_cond():
 
 
     # set membrane surface BCs
-    def membranesurf_bcs(self, bcdict, u, v, a, ivar=None):
+    def membranesurf_bcs(self, bcdict, u, v, a, varu, ivar=None):
 
-        w = ufl.as_ufl(0)
+        w, db_, bstress = ufl.as_ufl(0), [], []
 
         for m in bcdict:
 
@@ -181,11 +181,12 @@ class boundary_cond():
 
             for i in range(len(m['id'])):
 
-                db_ = ufl.ds(subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                db_.append(ufl.ds(subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree}))
 
-                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], db_, ivar=ivar, fibfnc=self.ff)
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff)
+                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff, stress=True))
 
-        return w
+        return w, db_, bstress
 
 
 class boundary_cond_solid(boundary_cond):

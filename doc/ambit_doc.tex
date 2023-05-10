@@ -60,7 +60,7 @@
 
 % continuous variables
 \newcommand{\vf}{\bs{v}_{\fF}} % fluid vel
-\newcommand{\domvf}{\bs{w}} % ALE vel
+\newcommand{\va}{\bs{w}} % ALE vel
 \newcommand{\vs}{\bs{v}_{\fS}} % solid vel
 \newcommand{\us}{\bs{u}_{\fS}} % solid disp
 \newcommand{\uf}{\bs{u}_{\fF}} % fluid domain disp
@@ -74,7 +74,7 @@
 % MH: definition of test functions
 % either this way (all with delta and subscript)
 \newcommand{\vft}{\delta\vf} % fluid vel test fcn
-\newcommand{\domvft}{\delta\domvf} % ALE vel test fcn
+\newcommand{\vat}{\delta\va} % ALE vel test fcn
 \newcommand{\vst}{\delta\vs} % solid vel test fcn
 \newcommand{\ust}{\delta\us} % solid disp test fcn
 \newcommand{\pft}{\delta\pf} % fluid pres test fcn
@@ -84,11 +84,13 @@
 \newcommand{\zdt}{\delta\zd} % 0D test fcn
 
 % discrete unknowns
-\newcommand{\VF}{\bs{\mathsf{v}}^{\fF}} 
+\newcommand{\VF}{\bs{\mathsf{v}}^{\fF}}
+\newcommand{\UF}{\bs{\mathsf{u}}^{\fF}} 
 \newcommand{\VS}{\bs{\mathsf{v}}^{\fS}}
+\newcommand{\US}{\bs{\mathsf{u}}^{\fS}}
 \newcommand{\PF}{\bs{\mathsf{p}}^{\fF}}
 \newcommand{\PS}{\bs{\mathsf{p}}^{\fS}}
-\newcommand{\DOMVF}{\bs{\mathsf{w}}}
+\newcommand{\VA}{\bs{\mathsf{w}}}
 \newcommand{\LM}{\bs{\mathsf{\lambda}}}
 \newcommand{\LMZ}{\bs{\mathsf{\Lambda}}}
 \newcommand{\Y}{\bs{\mathsf{y}}} % same as \zd - already spatially discrete...
@@ -174,7 +176,7 @@ with velocity and acceleration $\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}$ and
 \subsection{Physics-reduced solid}
 
 \begin{align}
-    \Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\mhyphen\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V_0 = \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A_0, \label{eq:omega_to_gamma}
+\Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\mhyphen\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V_0 = \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A_0, \label{eq:omega_to_gamma}
 \end{align}
 $h_{0}$: reduced solid's wall thickness parameter
 
@@ -274,6 +276,28 @@ where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are th
 \tilde{\bs{M}}_{0} = \bar{\omega}\, \bs{c}_{0}\otimes\bs{c}_{0} + \bar{\iota}\,\bs{l}_{0}\otimes\bs{l}_{0} + 2\bar{\gamma}\,\mathrm{sym}(\bs{c}_{0}\otimes\bs{l}_{0}). \label{eq:M0}
 \end{align}
 
+\paragraph{Balance equation}
+
+\begin{align}
+    \tilde{\rop}_{\fS} (\vf; \vft) 
+    & := 
+    \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}} h_0\,\rho_{0,\fS}\,D_t \vf \cdot \vft \,\mathrm{d}A_0 
+    + 
+    \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}} h_0\,\tilde{\bs{P}}_{\fS}(\uf(\vf),\vf) : \nabla_{\tilde{\bs{X}}} \vft \,\mathrm{d}A_0
+    \label{eq:fsi_solid_weakform_red}
+\end{align}
+
+\subsection{Projection-based reduction}
+
+\begin{align}
+    \hat{\bs{\mathsf{S}}}_{v}^{\Gm} = \pmb{\mathbb{I}}_{\Gm} \begin{bmatrix} \bs{\mathsf{v}}_{1}^{\fF} & \hdots & \bs{\mathsf{v}}_{m_v}^{\fF} \end{bmatrix} = \begin{bmatrix} \mathbb{I}_{\Gm}^{1} & & \\ & \mathbb{I}_{\Gm}^{2} & \\ & & \ddots & \\ & & & \mathbb{I}_{\Gm}^{n_v} \end{bmatrix} \begin{bmatrix} v_{1}^1 & \hdots & v_{m_v}^1 \\ v_{1}^2 & \hdots & v_{m_v}^2 \\ \vdots & \ddots & \vdots \\ v_{1}^{n_v} & \hdots & v_{m_v}^{n_v} \end{bmatrix}, \label{eq:snap_surf}
+\end{align}
+
+with 
+\begin{align}
+    \mathbb{I}_{\Gm}^{i} = \begin{cases} 1,\;\text{if}\;{i} \in \mathcal{N}_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}}, \\ 0,\;\text{else},\end{cases} \label{eq:surf_indicative}
+\end{align}
+
 \subsection{Discrete FSI equations}
 
 - original FSI-ALE-flow0d discrete residual problem: for staggered solve
@@ -284,8 +308,8 @@ where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are th
     \bs{\mathsf{r}}_{v}^{\fS}(\VS,\PS,\LM) \\ \bs{\mathsf{r}}_{p}^{\fS}(\VS) \\ \bs{\mathsf{r}}_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \bs{\mathsf{r}}_{p}^{\fF}(\VF) \\ \bs{\mathsf{r}}_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\VS,\VF) \\ \bs{\mathsf{r}}_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)
     \end{bmatrix}_{n+1} 
     = \bs{\mathsf{0}},
-    %  \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF)]_{n+1} = \bs{\mathsf{0}}
-    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF) = \bs{\mathsf{0}},
+    %  \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA)]_{n+1} = \bs{\mathsf{0}}
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA) = \bs{\mathsf{0}},
     \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}},\label{eq:res_nonlin_fsi}
 \end{align}
 
@@ -359,15 +383,15 @@ where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are th
 
 - ALE and 0D linear systems:
 \begin{align}
-\bs{\mathsf{K}}_{n+1}^{\mathrm{ALE},k}\Delta\DOMVF_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE},k}, \qquad \bs{\mathsf{K}}_{n+1}^{\mathrm{0d},k}\Delta\Y_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{0d},k}\label{eq:lin_sys_ale_0d}   
+\bs{\mathsf{K}}_{n+1}^{\mathrm{ALE},k}\Delta\VA_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE},k}, \qquad \bs{\mathsf{K}}_{n+1}^{\mathrm{0d},k}\Delta\Y_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{0d},k}\label{eq:lin_sys_ale_0d}   
 \end{align}
 
 \subsection{Discrete F3DrSI equations}
 
 \begin{align}
     \ROP_{n+1}^{\mathrm{F3DrSI}} = \begin{bmatrix}\bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS}(\bs{\mathsf{V}}_{v}\VSr,\bs{\mathsf{V}}_{p}\PSr,\LM) \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\ROP_{p}^{\fS}(\bs{\mathsf{V}}_{v}\VSr) \\ \ROP_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \ROP_{p}^{\fF}(\VF) \\ \ROP_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\bs{\mathsf{V}}_{v}\VSr,\VF) \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)\end{bmatrix}_{n+1} = \bs{\mathsf{0}},
-    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF)]_{n+1} = \bs{\mathsf{0}}.
-    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF) = \bs{\mathsf{0}},
+    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA)]_{n+1} = \bs{\mathsf{0}}.
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA) = \bs{\mathsf{0}},
     \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}}.\label{eq:res_nonlin_f3rsi}
 \end{align}
 
@@ -384,10 +408,15 @@ where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are th
 
 \subsection{Discrete FrSI equations}
 
+- discrete fluid domain displacement:
+\begin{align}
+\UF_{n+1} = \theta \Delta t\,\VF_{n+1} + (1-\theta)\Delta t\, \VF_{n} + \UF_{n} \label{eq:ufluid_discr}
+\end{align}
+
 \begin{align}
     \ROP^{\mathrm{FrSI}}_{n+1} = \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v}^{\fF}(\bs{\mathsf{V}}_{v}^{\Gm}\VFr,\PF,\LMZ) \\ \ROP_{p}^{\fF}(\bs{\mathsf{V}}_{v}^{\Gm}\VFr) \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\bs{\mathsf{V}}_{v}^{\Gm}\VFr)\end{bmatrix}_{n+1} = \bs{\mathsf{0}},
-    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF)]_{n+1} = \bs{\mathsf{0}}
-    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\DOMVF) = \bs{\mathsf{0}},
+    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA)]_{n+1} = \bs{\mathsf{0}}
+    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA) = \bs{\mathsf{0}},
     \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}}\label{eq:res_nonlin_frsi}
 \end{align}
 

@@ -15,6 +15,7 @@ import ufl
 from projection import project
 from mpiroutines import allgather_vec
 import expression
+from mathutils import spectral_decomposition_3x3
 
 
 class IO:
@@ -271,6 +272,26 @@ class IO_solid(IO):
                             stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         cauchystress_nodal = project(stressfuncs, pb.V_tensor, pb.dx_, nm="CauchyStress_nodal")
                         self.resultsfiles[res].write_function(cauchystress_nodal, t)
+                    elif res=='cauchystress_principal':
+                        stressfuncs_eval = []
+                        for n in range(pb.num_domains):
+                            evals, _, _ = spectral_decomposition_3x3(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
+                            stressfuncs_eval.append(ufl.as_vector(evals)) # written as vector
+                        cauchystress_principal = project(stressfuncs_eval, pb.Vd_vector, pb.dx_, nm="CauchyStress_princ")
+                        self.resultsfiles[res].write_function(cauchystress_principal, t)
+                    elif res=='cauchystress_membrane':
+                        stressfuncs=[]
+                        for n in range(len(pb.bstress)):
+                            stressfuncs.append(pb.bstress[n])
+                        cauchystress_membrane = project(stressfuncs, pb.Vd_tensor, pb.dbmem, nm="CauchyStress_membrane")
+                        self.resultsfiles[res].write_function(cauchystress_membrane, t)
+                    elif res=='cauchystress_membrane_principal':
+                        stressfuncs=[]
+                        for n in range(len(pb.bstress)):
+                            evals, _, _ = spectral_decomposition_3x3(pb.bstress[n])
+                            stressfuncs.append(ufl.as_vector(evals)) # written as vector
+                        self.cauchystress_membrane_principal = project(stressfuncs, pb.Vd_vector, pb.dbmem, nm="CauchyStress_membrane_princ")
+                        self.resultsfiles[res].write_function(self.cauchystress_membrane_principal, t)
                     elif res=='trmandelstress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
@@ -281,7 +302,7 @@ class IO_solid(IO):
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.vel,pb.ki.C(pb.u),ivar=pb.internalvars)))
-                            else: stressfuncs.append(as_ufl(0))
+                            else: stressfuncs.append(ufl.as_ufl(0))
                         trmandelstress_e = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress_e")
                         self.resultsfiles[res].write_function(trmandelstress_e, t)
                     elif res=='vonmises_cauchystress':
@@ -308,9 +329,19 @@ class IO_solid(IO):
                     elif res=='glstrain':
                         glstrain = project(pb.ki.E(pb.u), pb.Vd_tensor, pb.dx_, nm="GreenLagrangeStrain")
                         self.resultsfiles[res].write_function(glstrain, t)
+                    elif res=='glstrain_principal':
+                        evals, _, _ = spectral_decomposition_3x3(pb.ki.E(pb.u))
+                        evals_gl = ufl.as_vector(evals) # written as vector
+                        glstrain_principal = project(evals_gl, pb.Vd_vector, pb.dx_, nm="GreenLagrangeStrain_princ")
+                        self.resultsfiles[res].write_function(glstrain_principal, t)
                     elif res=='eastrain':
                         eastrain = project(pb.ki.e(pb.u), pb.Vd_tensor, pb.dx_, nm="EulerAlmansiStrain")
                         self.resultsfiles[res].write_function(eastrain, t)
+                    elif res=='eastrain_principal':
+                        evals, _, _ = spectral_decomposition_3x3(pb.ki.e(pb.u))
+                        evals_ea = ufl.as_vector(evals) # written as vector
+                        eastrain_principal = project(evals_gl, pb.Vd_vector, pb.dx_, nm="EulerAlmansiStrain_princ")
+                        self.resultsfiles[res].write_function(eastrain_principal, t)
                     elif res=='fiberstretch':
                         fiberstretch = project(pb.ki.fibstretch(pb.u,pb.fib_func[0]), pb.Vd_scalar, pb.dx_, nm="FiberStretch")
                         self.resultsfiles[res].write_function(fiberstretch, t)
@@ -318,7 +349,7 @@ class IO_solid(IO):
                         stretchfuncs=[]
                         for n in range(pb.num_domains):
                             if pb.mat_growth[n]: stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(pb.u),pb.theta,pb.fib_func[0]))
-                            else: stretchfuncs.append(as_ufl(0))
+                            else: stretchfuncs.append(ufl.as_ufl(0))
                         fiberstretch_e = project(stretchfuncs, pb.Vd_scalar, pb.dx_, nm="FiberStretch_e")
                         self.resultsfiles[res].write_function(fiberstretch_e, t)
                     elif res=='theta':
@@ -327,7 +358,7 @@ class IO_solid(IO):
                         phifuncs=[]
                         for n in range(pb.num_domains):
                             if pb.mat_remodel[n]: phifuncs.append(pb.ma[n].phi_remod(pb.theta))
-                            else: phifuncs.append(as_ufl(0))
+                            else: phifuncs.append(ufl.as_ufl(0))
                         phiremod = project(phifuncs, pb.Vd_scalar, pb.dx_, nm="phiRemodel")
                         self.resultsfiles[res].write_function(phiremod, t)
                     elif res=='tau_a':
@@ -464,6 +495,12 @@ class IO_fluid(IO):
                     elif res=='fibers':
                         # written only once at the beginning, not after each time step (since constant in time)
                         pass
+                    elif res=='cauchystress_membrane':
+                        stressfuncs=[]
+                        for n in range(len(pb.bstress)):
+                            stressfuncs.append(pb.bstress[n])
+                        cauchystress_membrane = project(stressfuncs, pb.Vd_tensor, pb.dbmem, nm="CauchyStress_membrane")
+                        self.resultsfiles[res].write_function(cauchystress_membrane, t)
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
 

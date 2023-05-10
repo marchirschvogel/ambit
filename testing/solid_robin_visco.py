@@ -18,7 +18,7 @@ def main():
                          'mesh_domain'           : basepath+'/input/blockhex_domain.xdmf',
                          'mesh_boundary'         : basepath+'/input/blockhex_boundary.xdmf',
                          'write_results_every'   : -999,
-                         'output_path'           : '/home/shared/work/codes/fem_scripts/tests/tmp/',
+                         'output_path'           : basepath+'/tmp/',
                          'results_to_write'      : ['displacement'],
                          'simname'               : 'solid_robin_visc'}
 

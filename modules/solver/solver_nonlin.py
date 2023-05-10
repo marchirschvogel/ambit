@@ -11,7 +11,6 @@ import sys, time
 import numpy as np
 from petsc4py import PETSc
 from dolfinx import fem
-import ufl
 
 from projection import project
 from mpiroutines import allgather_vec
@@ -309,7 +308,7 @@ class solver_nonlinear:
                 # nested variable vector
                 r_full_nest = PETSc.Vec().createNest(r_list)
 
-                # nested uu-up,pu-zero matrix
+                # nested matrix
                 K_full_nest = PETSc.Mat().createNest(K_list, isrows=None, iscols=None, comm=self.pb.comm)
                 K_full_nest.assemble()
 

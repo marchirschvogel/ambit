@@ -70,6 +70,9 @@ if solid:
     errs['solid_2Dheart_frankstarling 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_2Dheart_frankstarling.py'])
     errs['solid_2Dheart_frankstarling 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_2Dheart_frankstarling.py'])
 
+    errs['solid_membrane 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_membrane.py'])
+    errs['solid_membrane 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_membrane.py'])
+
 if fluid:
     errs['fluid_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_taylorhood_cylinder.py'])
     errs['fluid_taylorhood_cylinder 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'fluid_taylorhood_cylinder.py'])

@@ -51,4 +51,13 @@ def spectral_decomposition_3x3(A):
     E2 = ufl.diff(lambda2, A).T
     E3 = ufl.diff(lambda3, A).T
 
-    return [lambda1, lambda2, lambda3], [E1, E2, E3]
+    # eigenvectors
+    evc1 = ufl.diag_vector(E1)
+    evc2 = ufl.diag_vector(E2)
+    evc3 = ufl.diag_vector(E3)
+    # normalize
+    evc1 /= ufl.sqrt(ufl.dot(evc1,evc1))
+    evc2 /= ufl.sqrt(ufl.dot(evc2,evc2))
+    evc3 /= ufl.sqrt(ufl.dot(evc3,evc3))
+
+    return [lambda1, lambda2, lambda3], [evc1, evc2, evc3], [E1, E2, E3]
