@@ -295,7 +295,7 @@ class SolidmechanicsProblem(problem_base):
             fibarray = ['fiber']
             if len(self.io.fiber_data)>1: fibarray.append('sheet')
 
-            self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.dx_)
+            self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.dx_, self.order_disp)
 
             if 'fibers' in self.results_to_write:
                 for i in range(len(fibarray)):

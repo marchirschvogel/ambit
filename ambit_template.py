@@ -18,6 +18,7 @@ def main():
                             'mesh_boundary'         : basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
                             'fiber_data'            : [basepath+'/file1.txt',basepath+'/file2.txt'], # OPTIONAL: only for anisotropic solid materials
+                            'order_fib_input'       : 1, # OPTIONAL: input degree of function space of fiber data (default: equal to 'order_disp' or 'order_vel' from FEM_PARAMS section)
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
                             'write_restart_every'   : 1, # OPTIONAL: if restart info should be written (default: -1)

@@ -219,7 +219,7 @@ class FluidmechanicsProblem(problem_base):
             fibarray = ['circ']
             if len(self.io.fiber_data)>1: fibarray.append('long')
 
-            self.fib_func = self.io.readin_fibers(fibarray, self.V_v, self.dx_)
+            self.fib_func = self.io.readin_fibers(fibarray, self.V_v, self.dx_, self.order_vel)
 
             if 'fibers' in self.results_to_write:
                 for i in range(len(fibarray)):

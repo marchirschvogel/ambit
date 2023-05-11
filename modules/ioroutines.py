@@ -22,6 +22,8 @@ class IO:
 
     def __init__(self, io_params, comm):
 
+        self.io_params = io_params
+
         self.write_results_every = io_params['write_results_every']
         self.output_path = io_params['output_path']
 
@@ -204,19 +206,36 @@ class IO:
 
 
     # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
-    def readin_fibers(self, fibarray, V_fib, dx_):
+    def readin_fibers(self, fibarray, V_fib, dx_, order_disp):
 
-        fib_func, fib_func_disc = [], []
+        fib_func_input, fib_func = [], []
+
+        try: self.order_fib_input = self.io_params['order_fib_input']
+        except: self.order_fib_input = order_disp
+
+        # define input fiber function space
+        V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", self.order_fib_input))
 
         si = 0
         for s in fibarray:
 
-            fib_func.append(fem.Function(V_fib, name='Fiber'+str(si+1)))
+            if isinstance(self.fiber_data[si], str):
+                dat = np.loadtxt(self.fiber_data[si])
+                if len(dat)!=V_fib_input.dofmap.index_map.size_global:
+                    raise RuntimeError("Your order of fiber input data does not match the (assumed) order of the fiber function space, %i. Specify 'order_fib_input' in your IO section." % (self.order_fib_input))
+
+            fib_func_input.append(fem.Function(V_fib_input, name='Fiber'+str(si+1)))
 
             if isinstance(self.fiber_data[si], str):
-                self.readfunction(fib_func[si], V_fib, self.fiber_data[si], normalize=True, tol=self.readin_tol)
+                self.readfunction(fib_func_input[si], V_fib_input, self.fiber_data[si], normalize=True, tol=self.readin_tol)
             else: # assume a constant-in-space list or array
-                self.set_func_const(fib_func[si], self.fiber_data[si])
+                self.set_func_const(fib_func_input[si], self.fiber_data[si])
+
+            # project to fiber function space
+            if self.order_fib_input != order_disp:
+                fib_func.append( project(fib_func_input[si], V_fib, dx_, nm='Fiber'+str(si+1)) )
+            else:
+                fib_func.append( fib_func_input[si] )
 
             # assert that field is actually always normalized!
             fib_func[si] /= ufl.sqrt(ufl.dot(fib_func[si],fib_func[si]))
