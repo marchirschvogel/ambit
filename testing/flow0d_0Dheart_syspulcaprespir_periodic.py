@@ -39,7 +39,7 @@ def main():
 
         def tc1(self, t):
 
-            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_lv.txt', skiprows=0)
+            elastinterp = np.loadtxt(basepath+'/input/elastances_lv.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
@@ -49,7 +49,7 @@ def main():
 
         def tc2(self, t):
 
-            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_rv.txt', skiprows=0)
+            elastinterp = np.loadtxt(basepath+'/input/elastances_rv.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
@@ -59,7 +59,7 @@ def main():
 
         def tc3(self, t):
 
-            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_la.txt', skiprows=0)
+            elastinterp = np.loadtxt(basepath+'/input/elastances_la.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):
@@ -69,7 +69,7 @@ def main():
 
         def tc4(self, t):
 
-            elastinterp = np.loadtxt(str(basepath)+'/input/elastances_ra.txt', skiprows=0)
+            elastinterp = np.loadtxt(basepath+'/input/elastances_ra.txt', skiprows=0)
 
             equidist_time_array = np.zeros(len(elastinterp))
             for i in range(len(equidist_time_array)):

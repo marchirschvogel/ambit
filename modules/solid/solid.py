@@ -657,23 +657,23 @@ class SolidmechanicsProblem(problem_base):
     def solve_volume_laplace(self, N, t):
 
         # Define variational problem
-        uf = TrialFunction(self.V_u)
-        vf = TestFunction(self.V_u)
+        uf = ufl.TrialFunction(self.V_u)
+        vf = ufl.TestFunction(self.V_u)
 
-        f = Function(self.V_u) # zero source term
+        f = fem.Function(self.V_u) # zero source term
 
         a, L = ufl.as_ufl(0), ufl.as_ufl(0)
         for n in range(self.num_domains):
             a += ufl.inner(ufl.grad(uf), ufl.grad(vf))*self.dx_[n]
             L += ufl.dot(f,vf)*self.dx_[n]
 
-        uf = Function(self.V_u, name="uf")
+        uf = fem.Function(self.V_u, name="uf")
 
         dbcs_laplace=[]
-        dbcs_laplace.append( DirichletBC(self.u, locate_dofs_topological(self.V_u, 2, self.io.mt_b1.indices[self.io.mt_b1.values == self.volume_laplace[0]])) )
+        dbcs_laplace.append( fem.dirichletbc(self.u, fem.locate_dofs_topological(self.V_u, 2, self.io.mt_b1.indices[self.io.mt_b1.values == self.volume_laplace[0]])) )
 
         # solve linear Laplace problem
-        lp = LinearProblem(a, L, bcs=dbcs_laplace, u=uf)
+        lp = fem.petsc.LinearProblem(a, L, bcs=dbcs_laplace, u=uf)
         lp.solve()
 
         vol_all = ufl.as_ufl(0)

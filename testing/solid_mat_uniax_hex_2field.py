@@ -47,7 +47,7 @@ def main():
 
     MATERIALS         = {'MAT1' : {'neohooke_dev'       : {'mu' : 10.}},
                          'MAT2' : {'mooneyrivlin_dev'   : {'c1' : 2.5, 'c2' : 2.5}},
-                         'MAT3' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436, 'fiber_comp' : False}}}
+                         'MAT3' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436, 'fiber_comp_switch' : 'hard'}}}
 
 
 

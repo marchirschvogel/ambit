@@ -91,10 +91,10 @@ class materiallaw:
             f0, s0 = fib1, fib2
         elif fibers_type == 'fn':
             f0, n0 = fib1, fib2
-            s0 = cross(f0,n0)
+            s0 = ufl.cross(f0,n0)
         elif fibers_type == 'sn':
             s0, n0 = fib1, fib2
-            f0 = cross(s0,n0)
+            f0 = ufl.cross(s0,n0)
         else:
             raise ValueError("Value for fibers_type has to be fs, fn, or sn!")
 
@@ -111,16 +111,22 @@ class materiallaw:
         a_s, b_s = params['a_s'], params['b_s']
         a_fs, b_fs = params['a_fs'], params['b_fs']
 
-        try: fiber_comp = params['fiber_comp']
-        except: fiber_comp = False
+        try: fiber_comp_switch = params['fiber_comp_switch']
+        except: fiber_comp_switch = 'hard'
 
-        # conditional parameters: if fiber_comp is False, fibers are only active in tension, otherwise also in compression
-        if not fiber_comp:
+        # conditional parameters: if fiber_comp_switch is 'hard' (default) or 'soft', fibers are only active in tension; for 'no' also in compression
+        if fiber_comp_switch=='hard':
             a_f_c = ufl.conditional(ufl.ge(I4,1.), a_f, 0.)
             a_s_c = ufl.conditional(ufl.ge(I6,1.), a_s, 0.)
-        else:
+        elif fiber_comp_switch=='soft':
+            k = params['k_fib']
+            a_f_c = a_f * 1./(1.+ufl.exp(-k*(I4-1.)))
+            a_s_c = a_s * 1./(1.+ufl.exp(-k*(I6-1.)))
+        elif fiber_comp_switch=='no':
             a_f_c = a_f
             a_s_c = a_s
+        else:
+            raise ValueError("Unknown fiber_comp_switch option!")
 
         # Holzapfel-Ogden (Holzapfel and Ogden 2009) material w/o split applied to invariants I4, I6, I8 (Nolan et al. 2014, Sansour 2008)
         Psi_dev = a_0/(2.*b_0)*(ufl.exp(b_0*(self.Ic_bar-3.)) - 1.) + \
