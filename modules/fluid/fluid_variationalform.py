@@ -63,8 +63,8 @@ class variationalform(variationalform_base):
         return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
     # TeX: \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v
-    def deltaW_int_pres(self, v, rho, ddomain, w=None, Fale=None):
-        return rho*ufl.div(v)*self.var_p*ddomain
+    def deltaW_int_pres(self, v, ddomain, w=None, Fale=None):
+        return ufl.div(v)*self.var_p*ddomain
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
 
@@ -129,7 +129,7 @@ class variationalform(variationalform_base):
 
 
     ### SUPG/PSPG stabilization
-    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, Fale=None):
+    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, w=None, Fale=None):
 
         return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, res_v_strong) * ddomain
 
@@ -141,16 +141,16 @@ class variationalform(variationalform_base):
 
         return tau_lsic*ufl.div(self.var_v)*rho*self.res_p_strong(v) * ddomain
 
-    def stab_v(self, delta1, delta2, delta3, v, p, ddomain):
+    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None):
 
         return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_v)*v) + \
                  delta2 * ufl.div(v)*ufl.div(self.var_v) + \
                  delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_v)*v) ) * ddomain
 
-    def stab_p(self, delta1, delta3, v, p, ddomain):
+    def stab_p(self, delta1, delta3, v, p, rho, ddomain, w=None, Fale=None):
 
-        return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_p)) + \
-                 delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_p)) ) * ddomain
+        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_p)) + \
+                            delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_p)) ) * ddomain
 
 
     ### Flux coupling conditions
@@ -172,6 +172,13 @@ class variationalform(variationalform_base):
 # \boldsymbol{n}\,\mathrm{d}a = J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
 # hence, all infinitesimal surface elements transform according to
 # \mathrm{d}a = J\sqrt{\boldsymbol{n}_0 \cdot (\boldsymbol{F}^{-1}\boldsymbol{F}^{-\mathrm{T}})\boldsymbol{n}_0}\,\mathrm{d}A
+
+# gradients of a vector field transform according to:
+# grad(u) = Grad(u) * F^(-1)
+# gradients of a scalar field transform according to:
+# grad(p) = F^(-T) * Grad(p)
+# divergences of a tensor/vector field transform according to:
+# div(A) = Grad(A) : F^(-T)
 
 class variationalform_ale(variationalform):
 
@@ -234,9 +241,9 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v =
     # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V
     # \int\limits_{\Omega_0}J\,\boldsymbol{\nabla}_0\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}}\,\delta p\,\mathrm{d}V (cf. Holzapfel eq. (2.56))
-    def deltaW_int_pres(self, v, rho, ddomain, Fale=None):
+    def deltaW_int_pres(self, v, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return rho*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p * J*ddomain
+        return ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p * J*ddomain
 
     # Robin term for weak imposition of Dirichlet condition
     # TeX:
@@ -257,7 +264,7 @@ class variationalform_ale(variationalform):
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, Fale=None):
         J = ufl.det(Fale)
         i, j, k = ufl.indices(3)
-        return rho*(ufl.grad(v)*ufl.inv(Fale) * v) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        return rho*(ufl.grad(v)*ufl.inv(Fale) * (v-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, Fale=None):
         J = ufl.det(Fale)
@@ -306,20 +313,28 @@ class variationalform_ale(variationalform):
 
 
     ### SUPG/PSPG stabilization
-    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, Fale=None):
-        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, w=None, Fale=None):
+        J = ufl.det(Fale)
+        return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*ufl.inv(Fale)*(v-w), res_v_strong) * J*ddomain
 
     def stab_pspg(self, a, v, p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
-        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+        J = ufl.det(Fale)
+        return (1./rho) * ufl.dot(tau_pspg*ufl.inv(Fale).T*ufl.grad(self.var_p), res_v_strong) * J*ddomain
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
-        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+        J = ufl.det(Fale)
+        return tau_lsic * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) * rho*self.res_p_strong(v) * J*ddomain
 
-    def stab_v(self, delta1, delta2, delta3, v, p, ddomain):
-        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None):
+        J = ufl.det(Fale)
+        return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.grad(self.var_v)*v) + \
+                 delta2 * ufl.inner(ufl.grad(v),ufl.inv(Fale).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) + \
+                 delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.grad(self.var_v)*ufl.inv(Fale)*v) ) * J*ddomain
 
-    def stab_p(self, delta1, delta3, v, p, ddomain):
-        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+    def stab_p(self, delta1, delta3, v, p, rho, ddomain, w=None, Fale=None):
+        J = ufl.det(Fale)
+        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.inv(Fale).T*ufl.grad(self.var_p)) + \
+                            delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.inv(Fale).T*ufl.grad(self.var_p)) ) * J*ddomain
 
 
     ### Flux coupling conditions

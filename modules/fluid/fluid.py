@@ -287,8 +287,8 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), self.dx_[n], Fale=self.alevar['Fale_old'])
 
             # pressure virtual power
-            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.alevar['Fale'])
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.alevar['Fale_old'])
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
@@ -349,7 +349,7 @@ class FluidmechanicsProblem(problem_base):
         # stabilization
         if self.stabilization is not None:
 
-            # should only be used for equal order approximations
+            # should only be used for equal-order approximations
             assert(self.order_vel==self.order_pres)
 
             vscale = self.stabilization['vscale']
@@ -361,7 +361,7 @@ class FluidmechanicsProblem(problem_base):
                 for n in range(self.num_domains):
 
                     tau_supg = h / vscale
-                    tau_pspg = self.rho[n] * h / vscale
+                    tau_pspg = h / vscale
                     tau_lsic = h * vscale
 
                     # strong momentum residuals
@@ -382,8 +382,8 @@ class FluidmechanicsProblem(problem_base):
 
                     # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
                     if self.fluid_governing_type=='navierstokes_transient' or self.fluid_governing_type=='navierstokes_steady':
-                        self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p, residual_v_strong, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                        self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+                        self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p, residual_v_strong, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
                     # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
                     self.deltaW_p       += self.vf.stab_pspg(self.acc, self.v, self.p, residual_v_strong, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
                     self.deltaW_p_old   += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
@@ -407,11 +407,11 @@ class FluidmechanicsProblem(problem_base):
                     delta2 = dscales[1] * self.rho[n] * h * vscale
                     delta3 = dscales[2] * h / vscale
 
-                    self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p, self.dx_[n])
-                    self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old, self.dx_[n])
+                    self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p, self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                    self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old, self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
 
-                    self.deltaW_p       += self.vf.stab_p(delta1, delta3, self.v, self.p, self.dx_[n])
-                    self.deltaW_p_old   += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old, self.dx_[n])
+                    self.deltaW_p       += self.vf.stab_p(delta1, delta3, self.v, self.p, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                    self.deltaW_p_old   += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
 
         ### full weakforms
 

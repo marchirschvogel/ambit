@@ -11,10 +11,11 @@
   - Nearly incompressible as well as fully incompressible formulations (latter using pressure dofs)
   - Prestressing using MULF method in displacement formulation
   - Volumetric growth & remodeling
-* Fluid dynamics (only in Q2Q1/P2P1 Taylor-Hood space)
+* Fluid dynamics
   - Incompressible Navier-Stokes equations, either in nonconservative or conservative formulation
   - Navier-Stokes in an Arbitrary Lagrangian Eulerian (ALE) reference frame
   - One-step theta, or generalized-alpha time integration
+  - SUPG/PSPG stabilization for equal-order approximations of velocity and pressure
 * Lumped (0D) models
   - Systemic and pulmonary circulation flow models
   - 2-element as well as 4-element Windkessel models
@@ -32,7 +33,6 @@
 
 Still experimental / to-do:
 
-- Inf-sup stable equal order fluid mechanics formulation for Navier Stokes (SUPG/PSPG stabilization)
 - Fluid-solid interaction (FSI) (started)
 - Plugging PETSc linear solvers and preconditioners, optimal choices for coupled problems
 - Finite strain plasticity
