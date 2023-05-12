@@ -109,8 +109,8 @@ class FluidmechanicsProblem(problem_base):
 
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
-        # if self.stabilization is None and self.order_vel == self.order_pres:
-        #     raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
+        if self.stabilization is None and self.order_vel == self.order_pres:
+            raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
 
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']
@@ -287,8 +287,8 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), self.dx_[n], Fale=self.alevar['Fale_old'])
 
             # pressure virtual power
-            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.alevar['Fale'])
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.alevar['Fale_old'])
+            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
@@ -347,56 +347,71 @@ class FluidmechanicsProblem(problem_base):
             self.Re += ufl.sqrt(ufl.dot(self.vf.f_inert(self.acc,self.v,self.rho[n]), self.vf.f_inert(self.acc,self.v,self.rho[n]))) / ufl.sqrt(ufl.dot(self.vf.f_viscous(self.ma[n].sigma(self.v, self.p)), self.vf.f_viscous(self.ma[n].sigma(self.v, self.p))))
 
         # stabilization
-        if self.stabilization=='supg_pspg':
+        if self.stabilization is not None:
+
+            # should only be used for equal order approximations
             assert(self.order_vel==self.order_pres)
-            raise RuntimeError("Stabilization not yet working as expected!")
-            vscale = 1e3
-            h = self.io.hd0 # self.io.emax0
 
-            tau_supg = h / vscale
-            tau_pspg = self.rho[n] * h / vscale
-            tau_lsic = h * vscale
+            vscale = self.stabilization['vscale']
+            h = self.io.hd0 # cell diameter (could also use max edge length self.io.emax0, but seems to yield similar/same results)
 
-            ####
-            delta1 = self.rho[n] * h / vscale
-            delta2 = self.rho[n] * h * vscale
-            delta3 = h / vscale
+            # full scheme
+            if self.stabilization['scheme']=='supg_pspg':
 
-            for n in range(self.num_domains):
+                for n in range(self.num_domains):
 
-                # strong momentum residuals
-                if self.fluid_governing_type=='navierstokes_transient':
-                    residual_v_strong     = self.vf.res_v_strong_navierstokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
-                    residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
-                elif self.fluid_governing_type=='navierstokes_steady':
-                    residual_v_strong     = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
-                    residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
-                elif self.fluid_governing_type=='stokes_transient':
-                    residual_v_strong     = self.vf.res_v_strong_stokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
-                    residual_v_strong_old = self.vf.res_v_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
-                elif self.fluid_governing_type=='stokes_steady':
-                    residual_v_strong     = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), Fale=self.alevar['Fale'])
-                    residual_v_strong_old = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), Fale=self.alevar['Fale_old'])
-                else:
-                    raise ValueError("Unknown fluid_governing_type!")
+                    tau_supg = h / vscale
+                    tau_pspg = self.rho[n] * h / vscale
+                    tau_lsic = h * vscale
 
-                # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
-                if self.fluid_governing_type=='navierstokes_transient' or self.fluid_governing_type=='navierstokes_steady':
-                    self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p, residual_v_strong, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                    self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
-                # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
-                self.deltaW_p       += self.vf.stab_pspg(self.acc, self.v, self.p, residual_v_strong, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                self.deltaW_p_old   += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
-                # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
-                self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+                    # strong momentum residuals
+                    if self.fluid_governing_type=='navierstokes_transient':
+                        residual_v_strong     = self.vf.res_v_strong_navierstokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                    elif self.fluid_governing_type=='navierstokes_steady':
+                        residual_v_strong     = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                    elif self.fluid_governing_type=='stokes_transient':
+                        residual_v_strong     = self.vf.res_v_strong_stokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                    elif self.fluid_governing_type=='stokes_steady':
+                        residual_v_strong     = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), Fale=self.alevar['Fale_old'])
+                    else:
+                        raise ValueError("Unknown fluid_governing_type!")
 
-                #### yields same result as above for navierstokes_steady
-                # self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p, self.dx_[n])
-                # self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old, self.dx_[n])
-                #
-                # self.deltaW_p       += self.vf.stab_p(delta1, delta3, self.v, self.p, self.dx_[n])
-                # self.deltaW_p_old   += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old, self.dx_[n])
+                    # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
+                    if self.fluid_governing_type=='navierstokes_transient' or self.fluid_governing_type=='navierstokes_steady':
+                        self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p, residual_v_strong, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+                        self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+                    # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
+                    self.deltaW_p       += self.vf.stab_pspg(self.acc, self.v, self.p, residual_v_strong, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+                    self.deltaW_p_old   += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+                    # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
+                    self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+                    self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+
+            # reduced scheme: missing transient NS term as well as divergence stress term of strong residual
+            if self.stabilization['scheme']=='supg_pspg2':
+
+                # optimized for first-order
+                assert(self.order_vel==1)
+                assert(self.order_pres==1)
+
+                for n in range(self.num_domains):
+
+                    dscales = self.stabilization['dscales']
+
+                    # yields same result as above for navierstokes_steady
+                    delta1 = dscales[0] * self.rho[n] * h / vscale
+                    delta2 = dscales[1] * self.rho[n] * h * vscale
+                    delta3 = dscales[2] * h / vscale
+
+                    self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p, self.dx_[n])
+                    self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old, self.dx_[n])
+
+                    self.deltaW_p       += self.vf.stab_p(delta1, delta3, self.v, self.p, self.dx_[n])
+                    self.deltaW_p_old   += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old, self.dx_[n])
 
         ### full weakforms
 

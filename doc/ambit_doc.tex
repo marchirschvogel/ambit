@@ -128,8 +128,10 @@
 
 - solid mechanics are formulated in a Total Lagrangian frame\\
 
-- displacement-based strong form: primary variable $\bs{u}$
+\subsection{Strong form}
 
+\subsubsection{Displacement-based}
+- primary variable: displacement $\bs{u}$
 \begin{alignat}{3}
 \bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a} \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
 \bs{u} &= \hat{\bs{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
@@ -138,18 +140,60 @@
 \bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
 \end{alignat}
 
-- strong form for incompressible solid mechanics: primary variables $\bs{u}$ and $p$
-
+\subsubsection{Incompressible mechanics}
+- primary variables: displacement $\bs{u}$ and pressure $p$
 \begin{alignat}{3}
-\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a} \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
-J-1 &= 0 \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
+J(\bs{u})-1 &= 0 \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
 \bs{u} &= \hat{\bs{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
-\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
-\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
-\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
+\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} \quad &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
+\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_u}\\
+\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_v}
 \end{alignat}
 
 with velocity and acceleration $\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}$ and $\bs{a}=\frac{\mathrm{d}^2\bs{u}}{\mathrm{d}t^2}$, respectively
+
+\subsection{Weak form}
+
+\subsubsection{Displacement-based}
+- primary variable: displacement $\bs{u}$\\
+
+- Principal of Virtual Work:
+\begin{align}
+r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u} \label{eq:r_u}
+\end{align}
+- kinetic virtual work:
+\begin{align}
+\delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \rho_{0}\,\bs{a}(\bs{u}) \cdot \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWkin}
+\end{align}
+- internal virtual work:
+\begin{align}
+\delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},\bs{v}(\bs{u})) : \nabla_{\bs{X}} \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWint}
+\end{align}
+- external virtual work (conservative Neumann load):
+\begin{align}
+\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{\bs{t}}_{0} \cdot \delta\bs{u} \,\mathrm{d}A \label{eq:deltaWext_pk1}
+\end{align}
+
+\subsubsection{Incompressible mechanics: 2-field displacement and pressure variables}
+- primary variables: displacement $\bs{u}$ and pressure $p$\\
+
+\begin{align}
+r_u(\bs{u},p;\delta\bs{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u} \\
+r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0, \quad \forall \; \delta p
+\end{align}
+
+- kinetic virtual work: (\ref{eq:deltaWkin})\\
+- internal virtual work:
+\begin{align}
+\delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},p,\bs{v}(\bs{u})) : \nabla_{\bs{X}} \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWint_incomp}
+\end{align}
+- pressure virtual work:
+\begin{align}
+\delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) &= \int\limits_{\Om_{0}} (J(\bs{u}) - 1) \,\delta p \,\mathrm{d}V \label{eq:deltaWpres}
+\end{align}
+
+
 
 \section{Fluid mechanics}
 
@@ -157,15 +201,57 @@ with velocity and acceleration $\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}$ and
 
 - incompressible Navier-Stokes equations in Eulerian reference frame\\
 
-- strong form with primary variables velocity $\bs{v}$ and pressure $p$
-
+\subsubsection{Strong Form}
+- primary variables: velocity $\bs{v}$ and pressure $p$
 \begin{alignat}{3}
-\bs{\nabla} \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\,\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\bs{v}\right) \quad &&\text{in} \; \mathit{\Omega} \times [0, T], \label{eq:divsigma_ns} \\
-\bs{\nabla}\cdot \bs{v} &= 0 \quad &&\text{in} \; \mathit{\Omega} \times [0, T],\label{eq:divv_ns}\\
-\bs{v} &= \hat{\bs{v}} \quad &&\text{on} \; \mathit{\Gamma}^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} \quad &&\text{on} \; \mathit{\Gamma}^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) \quad &&\text{in} \; \mathit{\Omega}, \label{eq:ini_v_ns}
+\bs{\nabla} \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) \quad &&\text{in} \; \mathit{\Omega} \times [0, T], \label{eq:divsigma_ns} \\
+\rho\,\bs{\nabla}\cdot \bs{v} &= 0 \quad &&\text{in} \; \mathit{\Om}_t \times [0, T],\label{eq:divv_ns}\\
+\bs{v} &= \hat{\bs{v}} \quad &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} \quad &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
+\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) \quad &&\text{in} \; \mathit{\Om}_t, \label{eq:ini_v_ns}
 \end{alignat}
+
+\subsubsection{Weak Form}
+- primary variables: velocity $\bs{v}$ and pressure $p$\\
+
+- Principle of Virtual Power
+\begin{align}
+r_v(\bs{v},p;\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v}) = 0, \quad \forall \; \delta\bs{v} \label{eq:res_v_fluid}\\
+r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v}), \quad \forall \; \delta p \label{eq:res_p_fluid}
+\end{align}
+
+- kinetic virtual power:
+\begin{align}
+\delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) = \int\limits_{\Om_t} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) \cdot \delta\bs{v} \,\mathrm{d}v
+\end{align}
+- internal virtual power:
+\begin{align}
+\delta \mathcal{P}_{\mathrm{int}}(\bs{v},p;\delta\bs{v}) = 
+\int\limits_{\Om_t} \bs{\sigma}(\bs{v},p) : \nabla \delta\bs{v} \,\mathrm{d}v 
+\end{align}
+- pressure virtual power:
+\begin{align}
+\delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p) = 
+\int\limits_{\Om_t} \rho\,(\nabla\cdot\bs{v})\,\delta p\,\mathrm{d}v
+\end{align}
+- external virtual power (Neumann load):
+\begin{align}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_t^{\mathrm{N}}} \hat{\bs{t}} \cdot \delta\bs{v} \,\mathrm{d}a
+\end{align}
+
+\subsubsection{Stabilization}
+- Stabilization \verb\supg_pspg2\:\\
+- velocity residual operator (\ref{eq:res_v_fluid}) is augmented with the following terms:
+\begin{align}
+r_v \leftarrow r_v &+ \int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v \\
+& + \int\limits_{\Om_t} d_2\,(\bs{\nabla}\cdot\bs{v}) (\bs{\nabla}\cdot\delta\bs{v})\,\mathrm{d}v\\
+&+ \int\limits_{\Om_t} d_3\,(\bs{\nabla}p) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v 
+\end{align}
+- pressure residual operator (\ref{eq:res_p_fluid}) is augmented with the following terms:
+\begin{align}
+r_p \leftarrow r_p &+ \int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta p)\,\mathrm{d}v \\
+&+ \int\limits_{\Om_t} d_3\,(\bs{\nabla}p) \cdot (\bs{\nabla}\delta p)\,\mathrm{d}v 
+\end{align}
 
 \subsection{ALE reference frame}
 - to be written...
@@ -297,113 +383,114 @@ with
 \begin{align}
     \mathbb{I}_{\Gm}^{i} = \begin{cases} 1,\;\text{if}\;{i} \in \mathcal{N}_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}}, \\ 0,\;\text{else},\end{cases} \label{eq:surf_indicative}
 \end{align}
-
-\subsection{Discrete FSI equations}
-
-- original FSI-ALE-flow0d discrete residual problem: for staggered solve
-
-\begin{align}
-    \bs{\mathsf{r}}_{n+1}^{\mathrm{FSI}} 
-    = \begin{bmatrix}
-    \bs{\mathsf{r}}_{v}^{\fS}(\VS,\PS,\LM) \\ \bs{\mathsf{r}}_{p}^{\fS}(\VS) \\ \bs{\mathsf{r}}_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \bs{\mathsf{r}}_{p}^{\fF}(\VF) \\ \bs{\mathsf{r}}_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\VS,\VF) \\ \bs{\mathsf{r}}_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)
-    \end{bmatrix}_{n+1} 
-    = \bs{\mathsf{0}},
-    %  \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA)]_{n+1} = \bs{\mathsf{0}}
-    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA) = \bs{\mathsf{0}},
-    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}},\label{eq:res_nonlin_fsi}
-\end{align}
-
-- FSI linear system
-
-\begin{align}
-    \begin{bmatrix} 
-    \bs{\mathsf{K}}_{vv}^{\fS} 
-    & 
-    \bs{\mathsf{K}}_{vp}^{\fS} 
-    & \zerom 
-    & \zerom 
-    & 
-    \bs{\mathsf{K}}_{v\lmi}^{\fS} 
-    & 
-    \zerom 
-    \\ \\ 
-    \bs{\mathsf{K}}_{pv}^{\fS} 
-    & \zerom 
-    & \zerom 
-    & \zerom 
-    & \zerom 
-    & \zerom 
-    \\ \\ 
-    \zerom 
-    & \zerom 
-    & \bs{\mathsf{K}}_{vv}^{\fF} 
-    & \bs{\mathsf{K}}_{vp}^{\fF} 
-    & \bs{\mathsf{K}}_{v\lmi}^{\fF} 
-    & \bs{\mathsf{K}}_{v\lmzi}^{\fF} 
-    \\ \\ 
-    \zerom 
-    & \zerom 
-    & \bs{\mathsf{K}}_{pv}^{\fF} 
-    & \zerom 
-    & \zerom 
-    & \zerom
-    \\ \\ 
-    \bs{\mathsf{K}}_{\lmi v}^{\fS} 
-    & \zerom 
-    & \bs{\mathsf{K}}_{\lmi v}^{\fF} 
-    & \zerom 
-    & \zerom 
-    & \zerom 
-    \\ \\ 
-    \zerom 
-    & \zerom 
-    & \bs{\mathsf{K}}_{\lmzi v}^{\fF} 
-    & \zerom & \zerom 
-    &  \bs{\mathsf{K}}_{\lmzi\lmzi}^{\mathrm{\fF\mhyphen 0d}}
-    \end{bmatrix}_{n+1}^{k}
-    \begin{bmatrix} 
-    \Delta\VS 
-    \\ \\ \Delta\PS 
-    \\ \\ \Delta\VF 
-    \\ \\ \Delta\PF 
-    \\ \\ \Delta\LM 
-    \\ \\ \Delta\LMZ 
-    \end{bmatrix}_{n+1}^{k+1}
-    =
-    -\begin{bmatrix} 
-    \bs{\mathsf{r}}_{v}^{\fS} 
-    \\ \\ \bs{\mathsf{r}}_{p}^{\fS} 
-    \\ \\ \bs{\mathsf{r}}_{v}^{\fF} 
-    \\ \\ \bs{\mathsf{r}}_{p}^{\fF} 
-    \\ \\ \bs{\mathsf{r}}_{\lmi}^{\mathrm{\fF\mhyphen\fS}}
-    \\ \\ \bs{\mathsf{r}}_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}
-    \end{bmatrix}_{n+1}^{k}
-    \label{eq:lin_sys_fsi}  
-\end{align}
-
-- ALE and 0D linear systems:
-\begin{align}
-\bs{\mathsf{K}}_{n+1}^{\mathrm{ALE},k}\Delta\VA_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE},k}, \qquad \bs{\mathsf{K}}_{n+1}^{\mathrm{0d},k}\Delta\Y_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{0d},k}\label{eq:lin_sys_ale_0d}   
-\end{align}
-
-\subsection{Discrete F3DrSI equations}
-
-\begin{align}
-    \ROP_{n+1}^{\mathrm{F3DrSI}} = \begin{bmatrix}\bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS}(\bs{\mathsf{V}}_{v}\VSr,\bs{\mathsf{V}}_{p}\PSr,\LM) \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\ROP_{p}^{\fS}(\bs{\mathsf{V}}_{v}\VSr) \\ \ROP_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \ROP_{p}^{\fF}(\VF) \\ \ROP_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\bs{\mathsf{V}}_{v}\VSr,\VF) \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)\end{bmatrix}_{n+1} = \bs{\mathsf{0}},
-    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA)]_{n+1} = \bs{\mathsf{0}}.
-    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA) = \bs{\mathsf{0}},
-    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}}.\label{eq:res_nonlin_f3rsi}
-\end{align}
-
-\begin{align}
-    \frac{\partial (\bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS})}{\partial \VSr} = \bs{\mathsf{V}}_{v}^{\mathrm{T}} \frac{\partial \ROP_{v}^{\fS}}{\partial \VS} \frac{\partial \VS}{\partial \VSr} = \bs{\mathsf{V}}_{v}^{\mathrm{T}} \bs{\mathsf{K}}_{vv}^{\fS} \bs{\mathsf{V}}_{v}
-\end{align}
-
-\begin{align}
-    \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{vv}^{\fS}\bs{\mathsf{V}}_{v} & \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{vp}^{\fS}\bs{\mathsf{V}}_{p} & \zerom & \zerom & \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{v\lmi}^{\fS} & \zerom  \\ \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\bs{\mathsf{K}}_{pv}^{\fS}\bs{\mathsf{V}}_{v} & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{vv}^{\fF} & \bs{\mathsf{K}}_{vp}^{\fF} & \bs{\mathsf{K}}_{v\lmi}^{\fF} & \bs{\mathsf{K}}_{v\lmzi}^{\fF} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{pv}^{\fF} & \zerom & \zerom & \zerom \\ \\ \bs{\mathsf{K}}_{\lmi v}^{\fS}\bs{\mathsf{V}}_{v} & \zerom & \bs{\mathsf{K}}_{\lmi v}^{\fF} & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi v}^{\fF} & \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}}^{\fS} \\ \\ \Delta\tilde{\bs{\mathsf{p}}}^{\fS} \\ \\ \Delta\VF \\ \\ \Delta\PF \\ \\ \Delta\LM \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS} \\ \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\ROP_{p}^{\fS} \\ \\ \ROP_{v}^{\fF} \\ \\ \ROP_{p}^{\fF} \\ \\ \ROP_{\lmi}^{\mathrm{\fF\mhyphen\fS}} \\ \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_f3drsi}
-\end{align}
-
-- ALE and 0D linear systems: Eq. (\ref{eq:lin_sys_ale_0d})
+%
+%%%% not yet implemented in AMBIT
+%\subsection{Discrete FSI equations}
+%
+%- original FSI-ALE-flow0d discrete residual problem: for staggered solve
+%
+%\begin{align}
+%    \bs{\mathsf{r}}_{n+1}^{\mathrm{FSI}} 
+%    = \begin{bmatrix}
+%    \bs{\mathsf{r}}_{v}^{\fS}(\VS,\PS,\LM) \\ \bs{\mathsf{r}}_{p}^{\fS}(\VS) \\ \bs{\mathsf{r}}_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \bs{\mathsf{r}}_{p}^{\fF}(\VF) \\ \bs{\mathsf{r}}_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\VS,\VF) \\ \bs{\mathsf{r}}_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)
+%    \end{bmatrix}_{n+1} 
+%    = \bs{\mathsf{0}},
+%    %  \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA)]_{n+1} = \bs{\mathsf{0}}
+%    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA) = \bs{\mathsf{0}},
+%    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}},\label{eq:res_nonlin_fsi}
+%\end{align}
+%
+%- FSI linear system
+%
+%\begin{align}
+%    \begin{bmatrix} 
+%    \bs{\mathsf{K}}_{vv}^{\fS} 
+%    & 
+%    \bs{\mathsf{K}}_{vp}^{\fS} 
+%    & \zerom 
+%    & \zerom 
+%    & 
+%    \bs{\mathsf{K}}_{v\lmi}^{\fS} 
+%    & 
+%    \zerom 
+%    \\ \\ 
+%    \bs{\mathsf{K}}_{pv}^{\fS} 
+%    & \zerom 
+%    & \zerom 
+%    & \zerom 
+%    & \zerom 
+%    & \zerom 
+%    \\ \\ 
+%    \zerom 
+%    & \zerom 
+%    & \bs{\mathsf{K}}_{vv}^{\fF} 
+%    & \bs{\mathsf{K}}_{vp}^{\fF} 
+%    & \bs{\mathsf{K}}_{v\lmi}^{\fF} 
+%    & \bs{\mathsf{K}}_{v\lmzi}^{\fF} 
+%    \\ \\ 
+%    \zerom 
+%    & \zerom 
+%    & \bs{\mathsf{K}}_{pv}^{\fF} 
+%    & \zerom 
+%    & \zerom 
+%    & \zerom
+%    \\ \\ 
+%    \bs{\mathsf{K}}_{\lmi v}^{\fS} 
+%    & \zerom 
+%    & \bs{\mathsf{K}}_{\lmi v}^{\fF} 
+%    & \zerom 
+%    & \zerom 
+%    & \zerom 
+%    \\ \\ 
+%    \zerom 
+%    & \zerom 
+%    & \bs{\mathsf{K}}_{\lmzi v}^{\fF} 
+%    & \zerom & \zerom 
+%    &  \bs{\mathsf{K}}_{\lmzi\lmzi}^{\mathrm{\fF\mhyphen 0d}}
+%    \end{bmatrix}_{n+1}^{k}
+%    \begin{bmatrix} 
+%    \Delta\VS 
+%    \\ \\ \Delta\PS 
+%    \\ \\ \Delta\VF 
+%    \\ \\ \Delta\PF 
+%    \\ \\ \Delta\LM 
+%    \\ \\ \Delta\LMZ 
+%    \end{bmatrix}_{n+1}^{k+1}
+%    =
+%    -\begin{bmatrix} 
+%    \bs{\mathsf{r}}_{v}^{\fS} 
+%    \\ \\ \bs{\mathsf{r}}_{p}^{\fS} 
+%    \\ \\ \bs{\mathsf{r}}_{v}^{\fF} 
+%    \\ \\ \bs{\mathsf{r}}_{p}^{\fF} 
+%    \\ \\ \bs{\mathsf{r}}_{\lmi}^{\mathrm{\fF\mhyphen\fS}}
+%    \\ \\ \bs{\mathsf{r}}_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}
+%    \end{bmatrix}_{n+1}^{k}
+%    \label{eq:lin_sys_fsi}  
+%\end{align}
+%
+%- ALE and 0D linear systems:
+%\begin{align}
+%\bs{\mathsf{K}}_{n+1}^{\mathrm{ALE},k}\Delta\VA_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE},k}, \qquad \bs{\mathsf{K}}_{n+1}^{\mathrm{0d},k}\Delta\Y_{n+1}^{k+1}=-\bs{\mathsf{r}}_{n+1}^{\mathrm{0d},k}\label{eq:lin_sys_ale_0d}   
+%\end{align}
+%
+%\subsection{Discrete F3DrSI equations}
+%
+%\begin{align}
+%    \ROP_{n+1}^{\mathrm{F3DrSI}} = \begin{bmatrix}\bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS}(\bs{\mathsf{V}}_{v}\VSr,\bs{\mathsf{V}}_{p}\PSr,\LM) \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\ROP_{p}^{\fS}(\bs{\mathsf{V}}_{v}\VSr) \\ \ROP_{v}^{\fF}(\VF,\PF,\LM,\LMZ) \\ \ROP_{p}^{\fF}(\VF) \\ \ROP_{\lmi}^{\mathrm{\fF\mhyphen\fS}}(\bs{\mathsf{V}}_{v}\VSr,\VF) \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}(\LMZ,\VF)\end{bmatrix}_{n+1} = \bs{\mathsf{0}},
+%    % \qquad [\bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA)]_{n+1} = \bs{\mathsf{0}}.
+%    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{ALE}}(\VA) = \bs{\mathsf{0}},
+%    \qquad \bs{\mathsf{r}}_{n+1}^{\mathrm{0d}}(\Y) = \bs{\mathsf{0}}.\label{eq:res_nonlin_f3rsi}
+%\end{align}
+%
+%\begin{align}
+%    \frac{\partial (\bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS})}{\partial \VSr} = \bs{\mathsf{V}}_{v}^{\mathrm{T}} \frac{\partial \ROP_{v}^{\fS}}{\partial \VS} \frac{\partial \VS}{\partial \VSr} = \bs{\mathsf{V}}_{v}^{\mathrm{T}} \bs{\mathsf{K}}_{vv}^{\fS} \bs{\mathsf{V}}_{v}
+%\end{align}
+%
+%\begin{align}
+%    \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{vv}^{\fS}\bs{\mathsf{V}}_{v} & \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{vp}^{\fS}\bs{\mathsf{V}}_{p} & \zerom & \zerom & \bs{\mathsf{V}}_{v}^{\mathrm{T}}\bs{\mathsf{K}}_{v\lmi}^{\fS} & \zerom  \\ \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\bs{\mathsf{K}}_{pv}^{\fS}\bs{\mathsf{V}}_{v} & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{vv}^{\fF} & \bs{\mathsf{K}}_{vp}^{\fF} & \bs{\mathsf{K}}_{v\lmi}^{\fF} & \bs{\mathsf{K}}_{v\lmzi}^{\fF} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{pv}^{\fF} & \zerom & \zerom & \zerom \\ \\ \bs{\mathsf{K}}_{\lmi v}^{\fS}\bs{\mathsf{V}}_{v} & \zerom & \bs{\mathsf{K}}_{\lmi v}^{\fF} & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi v}^{\fF} & \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}}^{\fS} \\ \\ \Delta\tilde{\bs{\mathsf{p}}}^{\fS} \\ \\ \Delta\VF \\ \\ \Delta\PF \\ \\ \Delta\LM \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\mathrm{T}}\ROP_{v}^{\fS} \\ \\ \bs{\mathsf{V}}_{p}^{\mathrm{T}}\ROP_{p}^{\fS} \\ \\ \ROP_{v}^{\fF} \\ \\ \ROP_{p}^{\fF} \\ \\ \ROP_{\lmi}^{\mathrm{\fF\mhyphen\fS}} \\ \\ \ROP_{\lmzi}^{\mathrm{\fF\mhyphen 0d}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_f3drsi}
+%\end{align}
+%
+%- ALE and 0D linear systems: Eq. (\ref{eq:lin_sys_ale_0d})
 
 
 \subsection{Discrete FrSI equations}

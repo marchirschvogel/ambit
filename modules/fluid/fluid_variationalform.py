@@ -63,8 +63,8 @@ class variationalform(variationalform_base):
         return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
     # TeX: \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v
-    def deltaW_int_pres(self, v, ddomain, w=None, Fale=None):
-        return ufl.div(v)*self.var_p*ddomain
+    def deltaW_int_pres(self, v, rho, ddomain, w=None, Fale=None):
+        return rho*ufl.div(v)*self.var_p*ddomain
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
 
@@ -234,9 +234,9 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v =
     # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V
     # \int\limits_{\Omega_0}J\,\boldsymbol{\nabla}_0\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}}\,\delta p\,\mathrm{d}V (cf. Holzapfel eq. (2.56))
-    def deltaW_int_pres(self, v, ddomain, Fale=None):
+    def deltaW_int_pres(self, v, rho, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p * J*ddomain
+        return rho*ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p * J*ddomain
 
     # Robin term for weak imposition of Dirichlet condition
     # TeX:
@@ -303,6 +303,23 @@ class variationalform_ale(variationalform):
     # Robin condition (dashpot) in normal direction
     def deltaW_ext_robin_dashpot_normal_cur(self, v, c_n, dboundary, Fale=None):
         raise ValueError("Robin condition in current normal direction not implemented")
+
+
+    ### SUPG/PSPG stabilization
+    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, Fale=None):
+        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+
+    def stab_pspg(self, a, v, p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
+        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+
+    def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
+        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+
+    def stab_v(self, delta1, delta2, delta3, v, p, ddomain):
+        raise ValueError("ALE fluid stabilization not yet fully implemented!")
+
+    def stab_p(self, delta1, delta3, v, p, ddomain):
+        raise ValueError("ALE fluid stabilization not yet fully implemented!")
 
 
     ### Flux coupling conditions

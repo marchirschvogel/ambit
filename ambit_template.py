@@ -91,7 +91,8 @@ def main():
                             'prestress_numstep'     : 100, # OPTIONAL: number of load steps for prestress (default: 1)
                             'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
                             'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt' # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
-                            'pressure_at_midpoint'  : False} # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
+                            'pressure_at_midpoint'  : False, # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
+                            'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}} # OPTIONAL: stabilization for equal-order fluid mechanics, where 'scheme' can be 'supg_pspg' or 'supg_pspg2' (latter excludes transient part in strong NS residual -> equal for steady NS) (default: None)
 
     # for solid_flow0d or fluid_flow0d problem type
     COUPLING_PARAMS_3D0D = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)

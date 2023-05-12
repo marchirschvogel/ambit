@@ -1844,7 +1844,7 @@
           316 324 305
         </DataItem>
       </Topology>
-      <Attribute AttributeType="Scalar" Center="Cell" Name="boundaries_surf">
+      <Attribute AttributeType="Scalar" Center="Face" Name="boundaries_surf">
         <DataItem DataType="Int" Dimensions="1090" Format="XML" Precision="4">
           1
           1
