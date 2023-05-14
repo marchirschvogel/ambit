@@ -99,9 +99,9 @@ class materiallaw:
             raise ValueError("Value for fibers_type has to be fs, fn, or sn!")
 
         # anisotropic invariants - keep in mind that for growth, self.C is the elastic part of C (hence != to function input variable C)
-        I4 = ufl.dot(ufl.dot(self.C,f0), f0)
-        I6 = ufl.dot(ufl.dot(self.C,s0), s0)
-        I8 = ufl.dot(ufl.dot(self.C,s0), f0)
+        I4 = ufl.dot(self.C*f0, f0)
+        I6 = ufl.dot(self.C*s0, s0)
+        I8 = ufl.dot(self.C*s0, f0)
 
         # to guarantee initial configuration is stress-free (in case of initially non-orthogonal fibers f0 and s0)
         I8 -= ufl.dot(f0,s0)
@@ -143,13 +143,13 @@ class materiallaw:
         n0 = ufl.cross(f0,s0)
 
         # anisotropic invariants - keep in mind that for growth, self.E is the elastic part of E
-        E_ff = ufl.dot(ufl.dot(self.E,f0), f0) # fiber GL strain
-        E_ss = ufl.dot(ufl.dot(self.E,s0), s0) # cross-fiber GL strain
-        E_nn = ufl.dot(ufl.dot(self.E,n0), n0) # radial GL strain
+        E_ff = ufl.dot(self.E*f0, f0) # fiber GL strain
+        E_ss = ufl.dot(self.E*s0, s0) # cross-fiber GL strain
+        E_nn = ufl.dot(self.E*n0, n0) # radial GL strain
 
-        E_fs = ufl.dot(ufl.dot(self.E,f0), s0)
-        E_fn = ufl.dot(ufl.dot(self.E,f0), n0)
-        E_sn = ufl.dot(ufl.dot(self.E,s0), n0)
+        E_fs = ufl.dot(self.E*f0, s0)
+        E_fn = ufl.dot(self.E*f0, n0)
+        E_sn = ufl.dot(self.E*s0, n0)
 
         c_0 = params['c_0']
         b_f = params['b_f']

@@ -53,14 +53,12 @@ class FluidmechanicsProblem(problem_base):
         self.quad_degree = fem_params['quad_degree']
 
         # collect domain data
-        self.dx_, self.rho, self.nu = [], [], []
+        self.dx_, self.rho = [], []
         for n in range(self.num_domains):
             # integration domains
             self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             self.rho.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
-            # kinematic viscosity (needed for stabilization)
-            self.nu.append(self.constitutive_models['MAT'+str(n+1)]['newtonian']['eta'] / self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
 
         # whether to enforce continuity of mass at midpoint or not
         try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
@@ -125,9 +123,9 @@ class FluidmechanicsProblem(problem_base):
         # function spaces for v and p
         self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
         self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
-        # tensor finite element and function space
-        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
-        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
+        # continuous tensor and scalar function spaces of order order_vel
+        self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
+        self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_vel))
 
         # a discontinuous tensor, vector, and scalar function space
         self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
@@ -167,7 +165,7 @@ class FluidmechanicsProblem(problem_base):
 
         if self.have_rom:
             import mor
-            self.rom = mor.ModelOrderReduction(mor_params, self.V_v, self.io, self.comm)
+            self.rom = mor.ModelOrderReduction(mor_params, [self.V_v,self.V_scalar], self.io, self.comm)
 
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)
@@ -309,10 +307,6 @@ class FluidmechanicsProblem(problem_base):
             self.mem_active_stress = [False]*len(self.bc_dict['membrane'])
 
             self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
-
-            # NOTE: The number of reduced solids currently has to be equal to the number of domains, since any internal variables can only have
-            # different governing parameters per subdomain, not per surface. So, reduced (surface) solid 1 should be entirely within domain 1, etc.
-            assert(len(self.bc_dict['membrane'])==len(self.dx_))
 
             self.actstress = []
             for nm in range(len(self.bc_dict['membrane'])):
@@ -461,7 +455,7 @@ class FluidmechanicsProblem(problem_base):
                 tau_a_.append(ufl.as_ufl(0))
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_)
+        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_) # TODO: Should be self.dbmem here, but yields error; why?
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 

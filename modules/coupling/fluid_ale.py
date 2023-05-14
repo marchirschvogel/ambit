@@ -213,8 +213,9 @@ class FluidmechanicsAleProblem():
         # coupling
         self.jac_vd = fem.form(self.weakform_lin_vd)
         self.jac_pd = fem.form(self.weakform_lin_pd)
-        if self.coupling_fluid_ale['type'] == 'robin':
-            self.jac_dv = fem.form(self.weakform_lin_dv)
+        if bool(self.coupling_fluid_ale):
+            if self.coupling_fluid_ale['type'] == 'robin':
+                self.jac_dv = fem.form(self.weakform_lin_dv)
 
         tee = time.time() - tes
         if self.comm.rank == 0:

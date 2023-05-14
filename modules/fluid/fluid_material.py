@@ -19,9 +19,9 @@ class materiallaw:
 
     def newtonian(self, params):
 
-        eta = params['eta'] # dynamic viscosity
+        mu = params['mu'] # dynamic viscosity
 
         # classical Newtonian fluid
-        sigma = 2.*eta*self.gamma
+        sigma = 2.*mu*self.gamma
 
         return sigma

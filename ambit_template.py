@@ -115,14 +115,16 @@ def main():
 
     # for model order reduction
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_simname_u_*_1proc.dat'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
-                            'numhdms'               : 1, # number of high-dimensional models
+                            'partitions'            : [basepath+'/input/artseg_part-1.txt',basepath+'/input/artseg_part-2.txt',basepath+'/input/artseg_part-3.txt'], # OPTIONAL: scalar fields that partition our POD mode space (default: [])
                             'numsnapshots'          : 10, # number of snapshots
                             'snapshotincr'          : 1, # OPTIONAL: snapshot increment (default: 1)
                             'numredbasisvec'        : 10, # OPTIONAL: number of reduced basis vectors to consider (default: numsnapshots)
                             'eigenvalue_cutoff'     : 1.0e-8, # OPTIONAL: cutoff tolerance (discard eigenvalues lower than that) (default: 0.0)
                             'print_eigenproblem'    : False, # OPTIONAL: print output of Proper Orthogonal Decomposition (POD) eigensolve (default: False)
                             'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
-                            'snapshotsource'        : 'petscvector', # OPTIONAL: source of snapshot data: 'petscvector' or 'rawtxt' (default: 'petscvector')
+                            'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
+                            'filesource'            : 'petscvector', # OPTIONAL: source of snapshot/mode data: 'petscvector' or 'rawtxt' (default: 'petscvector')
+                            'filereadin_tol'        : 1e-5, # OPTIONAL: read-in tolerance used if 'filesource' is 'rawtxt' (default: 1e-5)
                             'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type
@@ -164,7 +166,7 @@ def main():
                                                               'remodeling_mat' : {'neohooke_dev' : {'mu' : 3.}, # remodeling material
                                                                                   'ogden_vol'    : {'kappa' : 3./(1.-2.*0.49)}}}}}
 
-    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'eta' : 4.0e-6},
+    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                       'inertia'   : {'rho' : 1.025e-6}}}
 
 

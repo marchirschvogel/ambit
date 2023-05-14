@@ -128,6 +128,9 @@ if frsi:
     errs['frsi_artseg_prefile 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_prefile.py'])
     errs['frsi_artseg_prefile 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile.py'])
 
+    errs['frsi_artseg_partition 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_partition.py'])
+    errs['frsi_artseg_partition 2'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_partition.py'])
+
 err = 0
 for e in range(len(errs)):
     if list(errs.values())[e] != 0:

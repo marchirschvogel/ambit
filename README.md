@@ -12,8 +12,8 @@
   - Prestressing using MULF method in displacement formulation
   - Volumetric growth & remodeling
 * Fluid dynamics
-  - Incompressible Navier-Stokes equations, either in nonconservative or conservative formulation
-  - Navier-Stokes in an Arbitrary Lagrangian Eulerian (ALE) reference frame
+  - Incompressible Navier-Stokes/Stokes equations, either in nonconservative or conservative formulation
+  - Navier-Stokes/Stokes flow in an Arbitrary Lagrangian Eulerian (ALE) reference frame
   - One-step theta, or generalized-alpha time integration
   - SUPG/PSPG stabilization for equal-order approximations of velocity and pressure
 * Lumped (0D) models
@@ -53,9 +53,9 @@ if not present, install: (seems that uidmap needs to be installed, which require
 ``sudo apt install uidmap``\
 ``curl -fsSL https://get.docker.com/rootless | sh``
 
-* Get latest tested ambit-compatible digest (27 Mar 2023) of dolfinx Docker image:
+* Get latest tested ambit-compatible digest (13 May 2023) of dolfinx Docker image:
 
-``docker pull dolfinx/dolfinx@sha256:d5cb0d496e963786a401637cdf5c84258efd557a11d2f19d101da07318b279a0``
+``docker pull dolfinx/dolfinx@sha256:0e94503b07a8bf3821a14754e0b5f11c5e4e28d48aa81700fd6710d579a2194f``
 
 * To get dolfinx nightly build (may or may not work with ambit code):
 
@@ -63,7 +63,7 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * Put the following shortcut in .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
 
-``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:d5cb0d496e963786a401637cdf5c84258efd557a11d2f19d101da07318b279a0'``
+``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:0e94503b07a8bf3821a14754e0b5f11c5e4e28d48aa81700fd6710d579a2194f'``
 
 * If 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
 

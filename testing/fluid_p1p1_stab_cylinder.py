@@ -47,9 +47,9 @@ def main():
                            'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}}
 
 
-    MATERIALS           = { 'MAT1' : {'newtonian' : {'eta' : 4.0e-6},
+    MATERIALS           = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                       'inertia' : {'rho' : 1.025e-6}},
-                            'MAT2' : {'newtonian' : {'eta' : 4.0e-6},
+                            'MAT2' : {'newtonian' : {'mu' : 4.0e-6},
                                       'inertia' : {'rho' : 1.025e-6}} }
 
 

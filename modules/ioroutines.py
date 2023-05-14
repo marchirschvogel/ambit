@@ -11,6 +11,7 @@ import numpy as np
 from petsc4py import PETSc
 from dolfinx import fem, io
 import ufl
+# import adios4dolfinx # for new checkpointing, but not yet importable...
 
 from projection import project
 from mpiroutines import allgather_vec
@@ -71,6 +72,10 @@ class IO:
             self.mesh = infile.read_mesh(name=self.gridname_domain)
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
+
+        # TODO: second mesh readin in case of different meshes desired for e.g. velocity and pressure in fluid
+        # with io.XDMFFile(self.comm, self.mesh_domain2, 'r', encoding=encoding) as infile:
+        #     self.mesh2 = infile.read_mesh(name=self.gridname_domain)
 
         # read in xdmf mesh - boundary
 

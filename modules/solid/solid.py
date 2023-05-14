@@ -119,9 +119,9 @@ class SolidmechanicsProblem(problem_base):
         # function spaces for u and p
         self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
         self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
-        # tensor finite element and function space
-        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
+        # continuous tensor and scalar function spaces of order order_disp
+        self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
+        self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
 
         # Quadrature tensor, vector, and scalar elements
         Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
@@ -197,7 +197,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.have_rom:
             import mor
-            self.rom = mor.ModelOrderReduction(mor_params, self.V_u, self.io, self.comm)
+            self.rom = mor.ModelOrderReduction(mor_params, [self.V_u,self.V_scalar], self.io, self.comm)
 
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)

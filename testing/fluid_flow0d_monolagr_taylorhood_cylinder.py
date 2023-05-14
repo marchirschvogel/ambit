@@ -52,7 +52,7 @@ def main():
                             'variable_quantity'     : ['flux'],
                             'print_subiter'         : True}
 
-    MATERIALS         = { 'MAT1' : {'newtonian' : {'eta' : 4.0e-6},
+    MATERIALS         = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                     'inertia' : {'rho' : 1.025e-6}} }
 
 

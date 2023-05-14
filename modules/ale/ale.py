@@ -86,9 +86,9 @@ class AleProblem(problem_base):
         P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
         # function space
         self.V_d = fem.FunctionSpace(self.io.mesh, P_d)
-        # tensor finite element and function space
-        P_tensor = ufl.TensorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        self.V_tensor = fem.FunctionSpace(self.io.mesh, P_tensor)
+        # continuous tensor and scalar function spaces of order order_disp
+        self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
+        self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
 
         # a discontinuous tensor, vector, and scalar function space
         self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
@@ -107,10 +107,6 @@ class AleProblem(problem_base):
         self.w_old = fem.Function(self.V_d)
 
         self.numdof = self.d.vector.getSize()
-
-        if self.have_rom:
-            import mor
-            self.rom = mor.ModelOrderReduction(mor_params, self.V_d, self.io, self.comm)
 
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(time_params, fem_params, time_curves, self.t_init, self.comm)
@@ -195,10 +191,7 @@ class AleProblem(problem_base):
     ### now the base routines for this problem
 
     def pre_timestep_routines(self):
-
-        # perform Proper Orthogonal Decomposition
-        if self.have_rom:
-            self.rom.prepare_rob()
+        pass
 
 
     def read_restart(self, sname, N):
