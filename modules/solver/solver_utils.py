@@ -18,7 +18,13 @@ class sol_utils():
         self.ptype = ptype
 
         try: self.print_liniter_every = solver_params['print_liniter_every']
-        except: self.print_liniter_every = 50
+        except: self.print_liniter_every = 1
+
+        try: self.adapt_factor = solver_params['adapt_factor']
+        except: self.adapt_factor = 0.1
+
+        try: self.tollin = solver_params['tol_lin']
+        except: self.tollin = 1.0e-8
 
 
     def catch_solver_errors(self, resnorm, incnorm=0, maxval=1.0e16):
@@ -178,6 +184,18 @@ class sol_utils():
             sys.stdout.flush()
 
 
+    def print_linear_iter_sub(self,it,rnorm,var):
+
+        if it == 0:
+            if self.pb.comm.rank == 0:
+                print("\n                        *************** linear sub-solve "+var+" *************")
+                sys.stdout.flush()
+
+        if self.pb.comm.rank == 0:
+            print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('                        lin. it.: ',it,'     abs. res. norm:',rnorm))
+            sys.stdout.flush()
+
+
     def check_converged(self, resnorms, incnorms, tolerances, ptype=None):
 
         if ptype is None:
@@ -231,14 +249,14 @@ class sol_utils():
         return converged
 
 
-    def adapt_linear_solver(self, rabsnorm):
+    def adapt_linear_solver(self, rabsnorm, ksp, tolres):
 
-        rnorm = self.ksp.getResidualNorm()
+        rnorm = ksp.getResidualNorm()
 
-        if rnorm*self.tollin < self.tolres: # currentnlnres*tol < desirednlnres
+        if rnorm*self.tollin < tolres: # currentnlnres*tol < desirednlnres
 
             # formula: "desirednlnres * factor / currentnlnres"
-            tollin_new = self.adapt_factor * self.tolres/rnorm
+            tollin_new = self.adapt_factor * tolres/rnorm
 
             if tollin_new > 1.0:
                 if self.pb.comm.rank == 0:
@@ -254,7 +272,7 @@ class sol_utils():
                 sys.stdout.flush()
 
             # adapt tolerance
-            self.ksp.setTolerances(rtol=tollin_new)
+            ksp.setTolerances(rtol=tollin_new)
 
 
     def timestep_separator(self, tolerances):

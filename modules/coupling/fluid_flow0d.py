@@ -294,6 +294,23 @@ class FluidmechanicsFlow0DProblem():
         return r_list, K_list
 
 
+    def get_index_sets(self):
+
+        # block size of velocity field
+        bs_v = self.pbf.V_v.dofmap.index_map_bs
+
+        offset_v = self.pbf.V_v.dofmap.index_map.local_range[0]*bs_v + self.pbf.V_p.dofmap.index_map.local_range[0] + self.lm.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(self.pbf.V_v.dofmap.index_map.size_local*bs_v, first=offset_v, step=1, comm=self.comm)
+
+        offset_p = offset_v + self.pbf.V_v.dofmap.index_map.size_local*bs_v
+        iset_p = PETSc.IS().createStride(self.pbf.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
+
+        offset_s = offset_p + self.pbf.V_p.dofmap.index_map.size_local
+        iset_s = PETSc.IS().createStride(self.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+
+        return [iset_v, iset_p, iset_s]
+
+
     ### now the base routines for this problem
 
     def pre_timestep_routines(self):

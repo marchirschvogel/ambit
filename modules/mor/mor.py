@@ -180,15 +180,15 @@ class ModelOrderReduction():
                 else:
                     raise NameError("Unknown filesource!")
 
-                self.S_d[self.ss:self.se, self.numhdms*h+i] = field.vector[self.ss:self.se]
+                self.S_d[self.ss:self.se, self.numsnapshots*h+i] = field.vector[self.ss:self.se]
 
         # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
         if bool(self.surface_rom):
-            self.eliminate_mat_rows(self.S_d, self.fd_set)
+            self.eliminate_mat_all_rows_but_from_id(self.S_d, self.fd_set)
 
         # eliminate any other unwanted snapshots (e.g. at Dirichlet dofs)
         if bool(self.exclude_from_snap):
-            self.eliminate_mat_rows(self.S_d, self.excl_set)
+            self.eliminate_mat_all_rows_from_id(self.S_d, self.excl_set)
 
         self.S_d.assemble()
 
@@ -357,7 +357,7 @@ class ModelOrderReduction():
 
         # set penalties
         if bool(self.redbasisvec_penalties):
-            self.Cpen = PETSc.Mat().createAIJ(size=((self.numredbasisvec_true),(self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.comm)
+            self.Cpen = PETSc.Mat().createAIJ(size=((self.numredbasisvec_true*self.num_partitions),(self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.comm)
             self.Cpen.setUp()
 
             for i in range(len(self.redbasisvec_penalties)):
@@ -454,11 +454,21 @@ class ModelOrderReduction():
             sys.stdout.flush()
 
 
-    # eliminate rows in matrix
-    def eliminate_mat_rows(self, mat, dofs):
+    # eliminate all rows in matrix but from a set of surface IDs
+    def eliminate_mat_all_rows_but_from_id(self, mat, dofs):
 
         ncol = mat.getSize()[1]
         rs,re = mat.getOwnershipRange()
         for i in range(rs,re):
             if i not in dofs:
+                mat[i,:] = np.zeros(ncol)
+
+
+    # eliminate all rows in matrix from a set of surface IDs
+    def eliminate_mat_all_rows_from_id(self, mat, dofs):
+
+        ncol = mat.getSize()[1]
+        rs,re = mat.getOwnershipRange()
+        for i in range(rs,re):
+            if i in dofs:
                 mat[i,:] = np.zeros(ncol)

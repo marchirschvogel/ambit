@@ -41,6 +41,9 @@ def main():
                             # direct linear solver settings (only apply for solve_type 'direct')
                             'direct_solver'         : 'mumps', # OPTIONAL: type of direct solver: 'mumps' or 'superlu_dist' (default: 'mumps' - seems to be faster and more robust in case of saddle point problems)
                             # iterative linear solver settings (only apply for solve_type 'iterative')
+                            'precond_fields'        : ['amg','direct'], # OPTIONAL: field-specific preconditioners (list has to have length of fields) (default: [])
+                            'block_precond'         : 'jacobi', # OPTIONAL: block preconditioner, 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
+                            'block_precond_mat'     : 'same', # OPTIONAL: which matrix to use for the block preconditioner (default: 'same')
                             'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
                             'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
@@ -116,6 +119,7 @@ def main():
     # for model order reduction
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_simname_u_*_1proc.dat'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
                             'partitions'            : [basepath+'/input/artseg_part-1.txt',basepath+'/input/artseg_part-2.txt',basepath+'/input/artseg_part-3.txt'], # OPTIONAL: scalar fields that partition our POD mode space (default: [])
+                            'modes_from_files'      : [basepath+'/input/PODmode-*.txt'], # OPTIONAL: if modes should be directly read from file bypassing POD (will ignore above partitions but instead set one list element per partition --> requires modes to be already partitioned!) (default: False)
                             'numsnapshots'          : 10, # number of snapshots
                             'snapshotincr'          : 1, # OPTIONAL: snapshot increment (default: 1)
                             'numredbasisvec'        : 10, # OPTIONAL: number of reduced basis vectors to consider (default: numsnapshots)

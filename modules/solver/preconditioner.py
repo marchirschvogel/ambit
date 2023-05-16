@@ -57,6 +57,5 @@ def simple2x2(K_00,K_01,K_10,K_11):
 
     # SIMPLE preconditioner matrix
     P = PETSc.Mat().createNest([[K_00, K00_invdiagK00_K01], [K_10, K10_invdiagK00_K01 - alpha*S]])
-    P.assemble()
 
     return P

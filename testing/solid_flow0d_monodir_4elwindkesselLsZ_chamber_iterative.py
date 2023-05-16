@@ -21,7 +21,10 @@ def main():
                             'results_to_write'      : [''],
                             'simname'               : 'test'}
 
-    SOLVER_PARAMS        = {'solve_type'            : 'direct',
+    SOLVER_PARAMS        = {'solve_type'            : 'iterative',
+                            'block_precond'         : 'gauss_seidel',
+                            'block_precond_mat'     : 'same',
+                            'precond_fields'        : ['amg','direct'],
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'print_liniter_every'   : 50,

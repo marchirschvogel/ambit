@@ -158,6 +158,28 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         return r_list, K_list
 
 
+    def get_index_sets(self):
+
+        # block size of velocity field
+        bs_v = self.pbf.V_v.dofmap.index_map_bs
+        # block size of ALE displacement field
+        bs_d = self.pba.V_d.dofmap.index_map_bs
+
+        offset_v = self.pbf.V_v.dofmap.index_map.local_range[0]*bs_v + self.pbf.V_p.dofmap.index_map.local_range[0] + self.pba.V_d.dofmap.index_map.local_range[0]*bs_d + self.pbf0.lm.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(self.pbf.V_v.dofmap.index_map.size_local*bs_v, first=offset_v, step=1, comm=self.comm)
+
+        offset_p = offset_v + self.pbf.V_v.dofmap.index_map.size_local*bs_v
+        iset_p = PETSc.IS().createStride(self.pbf.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
+
+        offset_d = offset_p + self.pbf.V_p.dofmap.index_map.size_local
+        iset_d = PETSc.IS().createStride(self.pba.V_d.dofmap.index_map.size_local*bs_d, first=offset_d, step=1, comm=self.comm)
+
+        offset_s = offset_d + self.pba.V_d.dofmap.index_map.size_local*bs_d
+        iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+
+        return [iset_v, iset_p, iset_d, iset_s]
+
+
     ### now the base routines for this problem
 
     def pre_timestep_routines(self):

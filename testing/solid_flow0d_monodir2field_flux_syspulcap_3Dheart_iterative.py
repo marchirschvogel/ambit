@@ -29,6 +29,9 @@ def main():
                             'simname'               : 'test'}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
+                            'block_precond'         : 'jacobi',
+                            'block_precond_mat'     : 'specific',
+                            'precond_fields'        : ['amg','amg','direct'],
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_inc'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_lin'               : 1.0e-7,

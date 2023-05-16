@@ -249,6 +249,32 @@ class SolidmechanicsConstraintProblem():
         return r_list, K_list
 
 
+    def get_index_sets(self):
+
+        # block size of displacement field
+        bs_u = self.pbs.V_u.dofmap.index_map_bs
+
+        offset_u = self.pbs.V_u.dofmap.index_map.local_range[0]*bs_u + self.lm.getOwnershipRange()[0]
+        if self.pbs.incompressible_2field: offset_u += self.pbs.V_p.dofmap.index_map.local_range[0]
+        iset_u = PETSc.IS().createStride(self.pbs.V_u.dofmap.index_map.size_local*bs_u, first=offset_u, step=1, comm=self.comm)
+
+        if self.pbs.incompressible_2field:
+            offset_p = offset_u + self.pbs.V_u.dofmap.index_map.size_local*bs_u
+            iset_p = PETSc.IS().createStride(self.pbs.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
+
+        if self.pbs.incompressible_2field:
+            offset_s = offset_p + self.pbs.V_p.dofmap.index_map.size_local
+        else:
+            offset_s = offset_u + self.pbs.V_u.dofmap.index_map.size_local*bs_u
+
+        iset_s = PETSc.IS().createStride(self.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+
+        if self.pbs.incompressible_2field:
+            return [iset_u, iset_p, iset_s]
+        else:
+            return [iset_u, iset_s]
+
+
     ### now the base routines for this problem
 
     def pre_timestep_routines(self):

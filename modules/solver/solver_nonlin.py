@@ -13,10 +13,8 @@ from petsc4py import PETSc
 from dolfinx import fem
 
 from projection import project
-from mpiroutines import allgather_vec
 
 from solver_utils import sol_utils
-import preconditioner
 
 ### useful infos for PETSc mats, vecs, solvers...
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Mat-class.html
@@ -82,11 +80,17 @@ class solver_nonlinear:
         try: self.direct_solver = solver_params['direct_solver']
         except: self.direct_solver = 'mumps'
 
+        try: self.precond_fields = solver_params['precond_fields']
+        except: self.precond_fields = []
+
+        try: self.block_precond = solver_params['block_precond']
+        except: self.block_precond = 'jacobi'
+
+        try: self.block_precond_mat = solver_params['block_precond_mat']
+        except: self.block_precond_mat = 'same'
+
         try: self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
         except: self.adapt_linsolv_tol = False
-
-        try: self.adapt_factor = solver_params['adapt_factor']
-        except: self.adapt_factor = 0.1
 
         try: self.tollin = solver_params['tol_lin']
         except: self.tollin = 1.0e-8
@@ -129,54 +133,64 @@ class solver_nonlinear:
 
         elif self.solvetype=='iterative':
 
-            # 2x2 block iterative method
+            # block iterative method
             if self.nfields > 1:
 
+                # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
+
                 self.ksp.setType("gmres")
-                self.ksp.getPC().setType("fieldsplit")
-                # TODO: What is the difference btw. ADDITIVE, MULTIPLICATIVE, SCHUR, SPECIAL?
-                self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.ADDITIVE)
-                #self.ksp.getPC().setFieldSplitType(PETSc.PC.CompositeType.SCHUR)
-                #self.ksp.getPC().setFieldSplitSchurFactType(0)
+                self.ksp.getPC().setType("fieldsplit") # fieldsplit, shell (TODO: How can we use shell apply here?)
 
-                # build "dummy" nested matrix in order to get the nested ISs (index sets)
-                locmatsize_u, locmatsize_p = self.pb.pbf.V_v.dofmap.index_map.size_local * self.pb.pbf.V_v.dofmap.index_map_bs, self.pb.pbf.V_p.dofmap.index_map.size_local * self.pb.pbf.V_p.dofmap.index_map_bs
-                matsize_u, matsize_p = self.pb.pbf.V_v.dofmap.index_map.size_global * self.pb.pbf.V_v.dofmap.index_map_bs, self.pb.pbf.V_p.dofmap.index_map.size_global * self.pb.pbf.V_p.dofmap.index_map_bs
-                K_uu = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-                K_uu.setUp()
-                K_up = PETSc.Mat().createAIJ(size=((locmatsize_u,matsize_u),(locmatsize_p,matsize_p)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-                K_up.setUp()
-                K_pu = PETSc.Mat().createAIJ(size=((locmatsize_p,matsize_p),(locmatsize_u,matsize_u)), bsize=None, nnz=None, csr=None, comm=self.pb.comm)
-                K_pu.setUp()
+                # cf. https://petsc.org/main/manualpages/PC/PCCompositeType
 
-                K_nest = PETSc.Mat().createNest([[K_uu, K_up], [K_pu, None]], isrows=None, iscols=None, comm=self.pb.comm)
+                if self.block_precond=='jacobi':
+                    splittype = PETSc.PC.CompositeType.ADDITIVE # block Jacobi
+                elif self.block_precond=='gauss_seidel':
+                    splittype = PETSc.PC.CompositeType.MULTIPLICATIVE # block Gauss-Seidel
+                elif self.block_precond=='gauss_seidel_sym':
+                    splittype = PETSc.PC.CompositeType.SYMMETRIC_MULTIPLICATIVE # symmetric block Gauss-Seidel
+                elif self.block_precond=='schur':
+                    assert(self.nfields==2)
+                    splittype = PETSc.PC.CompositeType.SCHUR # block Schur - for 2x2 block systems only
+                else:
+                    raise ValueError("Unkown block_precond option.")
 
-                nested_IS = K_nest.getNestISs()
-                self.ksp.getPC().setFieldSplitIS(
-                    ("u", nested_IS[0][0]),
-                    ("p", nested_IS[0][1]))
+                self.ksp.getPC().setFieldSplitType(splittype)
 
-                # set the preconditioners for each block
-                ksp_u, ksp_p = self.ksp.getPC().getFieldSplitSubKSP()
+                iset = self.pb.get_index_sets()
 
-                # AMG for displacement/velocity block
-                ksp_u.setType("preonly")
-                ksp_u.getPC().setType("hypre")
-                ksp_u.getPC().setMGLevels(3)
-                ksp_u.getPC().setHYPREType("boomeramg")
+                if self.nfields==2:   self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]))
+                elif self.nfields==3: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]))
+                elif self.nfields==4: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]))
+                else: raise RuntimeError("Currently, no more than 4 fields are supported.")
 
-                # AMG for pressure block
-                ksp_p.setType("preonly")
-                ksp_p.getPC().setType("hypre")
-                ksp_p.getPC().setMGLevels(3)
-                ksp_p.getPC().setHYPREType("boomeramg")
+                # self.ksp.setOperators(Ktmp,Ktmp) # needed here for Schur-type PC...
+                # self.ksp.getPC().setUp()
+
+                # get the preconditioners for each block
+                ksp_fields = self.ksp.getPC().getFieldSplitSubKSP()
+
+                # set field-specific preconditioners
+                for n in range(self.nfields):
+
+                    ksp_fields[n].setType("preonly") # preonly: only one solve/preconditioner application
+                    if self.precond_fields[n] == 'amg':
+                        ksp_fields[n].getPC().setType("hypre")
+                        ksp_fields[n].getPC().setMGLevels(3)
+                        ksp_fields[n].getPC().setHYPREType("boomeramg")
+                    elif self.precond_fields[n] == 'direct':
+                        ksp_fields[n].getPC().setType("lu")
+                    else:
+                        raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
             else:
 
-                # AMG
-                self.ksp.getPC().setType("hypre")
-                self.ksp.getPC().setMGLevels(3)
-                self.ksp.getPC().setHYPREType("boomeramg")
+                if self.precond_fields[0] == 'amg':
+                    self.ksp.getPC().setType("hypre")
+                    self.ksp.getPC().setMGLevels(3)
+                    self.ksp.getPC().setHYPREType("boomeramg")
+                else:
+                    raise ValueError("Currently, only 'amg' is supported as single-field preconditioner.")
 
             # set tolerances and print routine
             self.ksp.setTolerances(rtol=self.tollin, atol=None, divtol=None, max_it=self.maxliniter)
@@ -321,7 +335,6 @@ class solver_nonlinear:
 
                     K_full = PETSc.Mat()
                     K_full_nest.convert("aij", out=K_full)
-
                     K_full.assemble()
 
                     r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
@@ -336,16 +349,19 @@ class solver_nonlinear:
                     ts = time.time() - tss
 
                 # for nested iterative solver
-                elif self.solvetype=='iterative': # TODO: Extend to n-x-n!
+                elif self.solvetype=='iterative':
 
                     tes = time.time()
 
-                    P_pp = fem.petsc.assemble_matrix(fem.form(self.pb.a_p11), [])
-                    P = PETSc.Mat().createNest([[K_list[0][0], None], [None, P_pp]])
-                    P.assemble()
+                    if self.block_precond_mat=='same':
+                        P = K_full_nest
+                    else:
+                        P = self.pb.assemble_block_precond_matrix(K_list, self.block_precond_mat)
 
-                    del_full = PETSc.Vec().createNest([del_u, del_p])
+                    del_full = PETSc.Vec().createNest(del_x)
                     self.ksp.setOperators(K_full_nest, P)
+
+                    r_full_nest.assemble()
 
                     te += time.time() - tes
 
@@ -356,7 +372,7 @@ class solver_nonlinear:
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
 
                     if self.adapt_linsolv_tol:
-                        self.solutils.adapt_linear_solver(r_list[0].norm())
+                        self.solutils.adapt_linear_solver(r_full_nest.norm(),self.ksp,self.tolres[0])
 
                 else:
 
@@ -379,7 +395,7 @@ class solver_nonlinear:
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
 
                     if self.adapt_linsolv_tol:
-                        self.solutils.adapt_linear_solver(r_list[0].norm())
+                        self.solutils.adapt_linear_solver(r_list[0].norm(),self.ksp,self.tolres[0])
 
             # get residual and increment norms
             resnorms, incnorms = {}, {}
@@ -401,9 +417,8 @@ class solver_nonlinear:
 
             # destroy PETSc stuff...
             if self.nfields > 1:
-                r_full.destroy(), r_full_nest.destroy()
-                K_full.destroy(), K_full_nest.destroy()
-                del_full.destroy()
+                r_full_nest.destroy(), K_full_nest.destroy(), del_full.destroy()
+                if self.solvetype=='direct': r_full.destroy(), K_full.destroy()
             if self.pb.have_rom:
                 r_u_.destroy(), del_u_.destroy(), tmp.destroy()
             for n in range(self.nfields):

@@ -760,6 +760,24 @@ class SolidmechanicsProblem(problem_base):
             return [r_u], [[K_uu]]
 
 
+    def get_index_sets(self):
+
+        if self.incompressible_2field:
+            # block size of displacement field
+            bs_u = self.V_u.dofmap.index_map_bs
+
+            offset_u = self.V_u.dofmap.index_map.local_range[0]*bs_u + self.V_p.dofmap.index_map.local_range[0]
+            iset_u = PETSc.IS().createStride(self.V_u.dofmap.index_map.size_local*bs_u, first=offset_u, step=1, comm=self.comm)
+
+            offset_p = offset_u + self.V_u.dofmap.index_map.size_local*bs_u
+            iset_p = PETSc.IS().createStride(self.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
+
+            return [iset_u, iset_p]
+
+        else:
+            raise RuntimeError("Why are you here? Index set for single field problem should not be needed!")
+
+
     ### now the base routines for this problem
 
     def pre_timestep_routines(self):

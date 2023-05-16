@@ -105,6 +105,8 @@ if flow0d:
 if solid_flow0d:
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
+    
+    errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber_iterative 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber_iterative.py'])
 
     errs['solid_flow0d_monodir2field_4elwindkesselLpZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir2field_4elwindkesselLpZ_chamber.py'])
     errs['solid_flow0d_monodir2field_4elwindkesselLpZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir2field_4elwindkesselLpZ_chamber.py'])
