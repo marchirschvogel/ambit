@@ -122,9 +122,6 @@ class solver_base():
         # print header
         utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.numdof)
 
-        # anything that should be performed before the time loop (e.g. model reduction offline phase)
-        self.pb.pre_timestep_routines()
-
         # read restart information if requested
         self.pb.read_restart(self.pb.simname, self.pb.restart_step)
 

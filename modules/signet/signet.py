@@ -168,10 +168,6 @@ class SignallingNetworkProblem(problem_base):
 
     ### now the base routines for this problem
 
-    def pre_timestep_routines(self):
-        pass
-
-
     def read_restart(self):
 
         # read restart information

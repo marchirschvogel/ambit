@@ -117,12 +117,6 @@ class FSIProblem():
 
     ### now the base routines for this problem
 
-    def pre_timestep_routines(self):
-
-        self.pbs.pre_timestep_routines()
-        self.pbf.pre_timestep_routines()
-
-
     def read_restart(self, sname, N):
 
         # solid + flow0d problem

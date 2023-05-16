@@ -449,24 +449,28 @@ class SolidmechanicsFlow0DProblem():
 
     def get_index_sets(self):
 
-        # block size of displacement field
-        bs_u = self.pbs.V_u.dofmap.index_map_bs
+        if self.have_rom: # currently, ROM can only be on (subset of) first variable
+            ured = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            self.rom.V.multTranspose(self.pbs.u.vector, ured)
+            uvec = ured
+        else:
+            uvec = self.pbs.u.vector
 
         if self.coupling_type == 'monolithic_direct':   rvec = self.pb0.s
         if self.coupling_type == 'monolithic_lagrange': rvec = self.lm
 
-        offset_u = self.pbs.V_u.dofmap.index_map.local_range[0]*bs_u + rvec.getOwnershipRange()[0]
-        if self.pbs.incompressible_2field: offset_u += self.pbs.V_p.dofmap.index_map.local_range[0]
-        iset_u = PETSc.IS().createStride(self.pbs.V_u.dofmap.index_map.size_local*bs_u, first=offset_u, step=1, comm=self.comm)
+        offset_u = uvec.getOwnershipRange()[0] + rvec.getOwnershipRange()[0]
+        if self.pbs.incompressible_2field: offset_u += self.pbs.p.vector.getOwnershipRange()[0]
+        iset_u = PETSc.IS().createStride(uvec.getLocalSize(), first=offset_u, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
-            offset_p = offset_u + self.pbs.V_u.dofmap.index_map.size_local*bs_u
-            iset_p = PETSc.IS().createStride(self.pbs.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
+            offset_p = offset_u + uvec.getLocalSize()
+            iset_p = PETSc.IS().createStride(self.pbs.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
-            offset_s = offset_p + self.pbs.V_p.dofmap.index_map.size_local
+            offset_s = offset_p + self.pbs.p.vector.getLocalSize()
         else:
-            offset_s = offset_u + self.pbs.V_u.dofmap.index_map.size_local*bs_u
+            offset_s = offset_u + uvec.getLocalSize()
 
         iset_s = PETSc.IS().createStride(rvec.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
@@ -484,7 +488,8 @@ class SolidmechanicsFlow0DProblem():
             K_pp.assemble()
             P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1], Klist[0][2]], [Klist[1][0], K_pp, Klist[1][2]], [Klist[2][0], Klist[2][1], Klist[2][2]]])
         else:
-            P = preconditioner.simple2x2(Klist[0][0], Klist[0][1], Klist[1][0], Klist[1][1])
+            # P = preconditioner.simple2x2(Klist[0][0], Klist[0][1], Klist[1][0], Klist[1][1])
+            P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1]], [Klist[1][0], K_pp]])
 
         P.assemble()
 
@@ -492,12 +497,6 @@ class SolidmechanicsFlow0DProblem():
 
 
     ### now the base routines for this problem
-
-    def pre_timestep_routines(self):
-
-        self.pbs.pre_timestep_routines()
-        self.pb0.pre_timestep_routines()
-
 
     def read_restart(self, sname, N):
 
@@ -656,6 +655,10 @@ class SolidmechanicsFlow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+
+        # perform Proper Orthogonal Decomposition
+        if self.pb.have_rom:
+            self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)

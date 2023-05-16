@@ -100,6 +100,8 @@ class ModelOrderReduction():
         # scalar function space
         self.Vspace_sc = Vspace[1]
 
+        self.im_rom_r, self.im_rom_v = [], []
+
         self.comm = comm
 
         self.locmatsize_u = self.Vspace.dofmap.index_map.size_local * self.Vspace.dofmap.index_map_bs
@@ -109,6 +111,7 @@ class ModelOrderReduction():
         self.S_d = PETSc.Mat().createDense(size=((self.locmatsize_u,self.matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.comm)
         self.S_d.setUp()
 
+        # row ownership range of snapshhot matrix (same for ROB operator and non-reduced stiffness matrix)
         self.ss, self.se = self.S_d.getOwnershipRange()
 
 
@@ -188,7 +191,7 @@ class ModelOrderReduction():
 
         # eliminate any other unwanted snapshots (e.g. at Dirichlet dofs)
         if bool(self.exclude_from_snap):
-            self.eliminate_mat_all_rows_from_id(self.S_d, self.excl_set)
+            self.eliminate_mat_rows_from_id(self.S_d, self.excl_set)
 
         self.S_d.assemble()
 
@@ -380,6 +383,11 @@ class ModelOrderReduction():
         # number of non-reduced "bulk" dofs
         ndof_bulk = self.matsize_u - len(self.fd_set)
 
+        # all global indices (known to all processes)
+        iall = PETSc.IS().createStride(self.matsize_u, first=0, step=1, comm=self.comm)
+        # set for faster checking
+        iall_set = set(iall.array)
+
         # row loop to get entries (1's) for "non-reduced" dofs
         nr, a = 0, 0
         row_1, col_1, col_fd = [], [], []
@@ -390,11 +398,25 @@ class ModelOrderReduction():
                 # increase counter for number of reduced dofs
                 nr += 1
                 # column shift if we've exceeded the number of reduced basis vectors
-                if nr <= self.numredbasisvec_true*self.num_partitions: col_fd.append(row)
-                if nr > self.numredbasisvec_true*self.num_partitions: a += 1
+                if nr <= self.numredbasisvec_true*self.num_partitions:
+                    col_fd.append(row)
+
+                    # index set for block iterative solver
+                    if row in range(self.ss, self.se):
+                        if row in iall_set:
+                            self.im_rom_r.append(row)
+
+                if nr > self.numredbasisvec_true*self.num_partitions:
+                    a += 1
             else:
                 # column id of non-reduced dof (left-shifted by a)
                 col_id = row-a
+
+                # index set for block iterative solver
+                if row in range(self.ss, self.se):
+                    if row in iall_set:
+                        self.im_rom_v.append(col_id)
+
                 # store
                 row_1.append(row)
                 col_1.append(col_id)
@@ -464,8 +486,8 @@ class ModelOrderReduction():
                 mat[i,:] = np.zeros(ncol)
 
 
-    # eliminate all rows in matrix from a set of surface IDs
-    def eliminate_mat_all_rows_from_id(self, mat, dofs):
+    # eliminate rows in matrix from a set of surface IDs
+    def eliminate_mat_rows_from_id(self, mat, dofs):
 
         ncol = mat.getSize()[1]
         rs,re = mat.getOwnershipRange()

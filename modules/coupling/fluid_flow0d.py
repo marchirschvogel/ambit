@@ -296,28 +296,19 @@ class FluidmechanicsFlow0DProblem():
 
     def get_index_sets(self):
 
-        # block size of velocity field
-        bs_v = self.pbf.V_v.dofmap.index_map_bs
+        offset_v = self.pbf.v.vector.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.lm.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(self.pbf.v.vector.getLocalSize(), first=offset_v, step=1, comm=self.comm)
 
-        offset_v = self.pbf.V_v.dofmap.index_map.local_range[0]*bs_v + self.pbf.V_p.dofmap.index_map.local_range[0] + self.lm.getOwnershipRange()[0]
-        iset_v = PETSc.IS().createStride(self.pbf.V_v.dofmap.index_map.size_local*bs_v, first=offset_v, step=1, comm=self.comm)
+        offset_p = offset_v + self.pbf.v.vector.getLocalSize()
+        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        offset_p = offset_v + self.pbf.V_v.dofmap.index_map.size_local*bs_v
-        iset_p = PETSc.IS().createStride(self.pbf.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
-
-        offset_s = offset_p + self.pbf.V_p.dofmap.index_map.size_local
+        offset_s = offset_p + self.pbf.p.vector.getLocalSize()
         iset_s = PETSc.IS().createStride(self.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         return [iset_v, iset_p, iset_s]
 
 
     ### now the base routines for this problem
-
-    def pre_timestep_routines(self):
-
-        self.pbf.pre_timestep_routines()
-        self.pb0.pre_timestep_routines()
-
 
     def read_restart(self, sname, N):
 
@@ -454,6 +445,10 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+
+        # perform Proper Orthogonal Decomposition
+        if self.pb.have_rom:
+            self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)

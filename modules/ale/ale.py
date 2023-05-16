@@ -190,10 +190,6 @@ class AleProblem(problem_base):
 
     ### now the base routines for this problem
 
-    def pre_timestep_routines(self):
-        pass
-
-
     def read_restart(self, sname, N):
 
         # read restart information

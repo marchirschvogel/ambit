@@ -160,34 +160,40 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
     def get_index_sets(self):
 
-        # block size of velocity field
-        bs_v = self.pbf.V_v.dofmap.index_map_bs
-        # block size of ALE displacement field
-        bs_d = self.pba.V_d.dofmap.index_map_bs
+        if self.have_rom: # currently, ROM can only be on (subset of) first variable
+            vred = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            self.rom.V.multTranspose(self.pbf.v.vector, vred)
+            vvec = vred
+        else:
+            vvec = self.pbf.v.vector
 
-        offset_v = self.pbf.V_v.dofmap.index_map.local_range[0]*bs_v + self.pbf.V_p.dofmap.index_map.local_range[0] + self.pba.V_d.dofmap.index_map.local_range[0]*bs_d + self.pbf0.lm.getOwnershipRange()[0]
-        iset_v = PETSc.IS().createStride(self.pbf.V_v.dofmap.index_map.size_local*bs_v, first=offset_v, step=1, comm=self.comm)
+        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
 
-        offset_p = offset_v + self.pbf.V_v.dofmap.index_map.size_local*bs_v
-        iset_p = PETSc.IS().createStride(self.pbf.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
+        offset_p = offset_v + vvec.getLocalSize()
+        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        offset_d = offset_p + self.pbf.V_p.dofmap.index_map.size_local
-        iset_d = PETSc.IS().createStride(self.pba.V_d.dofmap.index_map.size_local*bs_d, first=offset_d, step=1, comm=self.comm)
+        offset_d = offset_p + self.pbf.p.vector.getLocalSize()
+        iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
-        offset_s = offset_d + self.pba.V_d.dofmap.index_map.size_local*bs_d
+        offset_s = offset_d + self.pba.d.vector.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         return [iset_v, iset_p, iset_d, iset_s]
 
 
+    def assemble_block_precond_matrix(self, Klist, pretype):
+
+        # TODO: distinguish according to pretype...
+        K_pp = fem.petsc.assemble_matrix(fem.form(self.pbf.a_p11), [])
+        K_pp.assemble()
+        P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1], Klist[0][2], Klist[0][3]], [Klist[1][0], K_pp, Klist[1][2], Klist[1][3]], [Klist[2][0], Klist[2][1], Klist[2][2], Klist[2][3]], [Klist[3][0], Klist[3][1], Klist[3][2], Klist[3][3]]])
+        P.assemble()
+
+        return P
+
+
     ### now the base routines for this problem
-
-    def pre_timestep_routines(self):
-
-        # perform Proper Orthogonal Decomposition
-        if self.have_rom:
-            self.rom.prepare_rob()
-
 
     def read_restart(self, sname, N):
 
@@ -282,6 +288,10 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+
+        # perform Proper Orthogonal Decomposition
+        if self.pb.have_rom:
+            self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)

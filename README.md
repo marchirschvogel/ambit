@@ -34,7 +34,7 @@
 Still experimental / to-do:
 
 - Fluid-solid interaction (FSI) (started)
-- Plugging PETSc linear solvers and preconditioners, optimal choices for coupled problems
+- Enhance PETSc linear iterative solver interface, enable surface-projected problems
 - Finite strain plasticity
 - ... whatever might be wanted in some future ...
 

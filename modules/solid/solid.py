@@ -762,30 +762,38 @@ class SolidmechanicsProblem(problem_base):
 
     def get_index_sets(self):
 
-        if self.incompressible_2field:
-            # block size of displacement field
-            bs_u = self.V_u.dofmap.index_map_bs
+        assert(self.incompressible_2field) # index sets only needed for 2-field problem
 
-            offset_u = self.V_u.dofmap.index_map.local_range[0]*bs_u + self.V_p.dofmap.index_map.local_range[0]
-            iset_u = PETSc.IS().createStride(self.V_u.dofmap.index_map.size_local*bs_u, first=offset_u, step=1, comm=self.comm)
-
-            offset_p = offset_u + self.V_u.dofmap.index_map.size_local*bs_u
-            iset_p = PETSc.IS().createStride(self.V_p.dofmap.index_map.size_local, first=offset_p, step=1, comm=self.comm)
-
-            return [iset_u, iset_p]
-
+        if self.have_rom: # currently, ROM can only be on (subset of) first variable
+            ured = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            self.rom.V.multTranspose(self.u.vector, ured)
+            uvec = ured
         else:
-            raise RuntimeError("Why are you here? Index set for single field problem should not be needed!")
+            uvec = self.u.vector
+
+        offset_u = uvec.getOwnershipRange()[0] + self.p.vector.getOwnershipRange()[0]
+        iset_u = PETSc.IS().createStride(uvec.getLocalSize(), first=offset_u, step=1, comm=self.comm)
+
+        offset_p = offset_u + uvec.getLocalSize()
+        iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+
+        return [iset_u, iset_p]
+
+
+    def assemble_block_precond_matrix(self, Klist, pretype):
+
+        assert(self.incompressible_2field) # block preconditioner only needed for 2-field problem
+
+        # TODO: distinguish according to pretype...
+        K_pp = fem.petsc.assemble_matrix(fem.form(self.pbf.a_p11), [])
+        K_pp.assemble()
+        P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1]], [Klist[1][0], K_pp]])
+        P.assemble()
+
+        return P
 
 
     ### now the base routines for this problem
-
-    def pre_timestep_routines(self):
-
-        # perform Proper Orthogonal Decomposition
-        if self.have_rom:
-            self.rom.prepare_rob()
-
 
     def read_restart(self, sname, N):
 
@@ -867,6 +875,10 @@ class SolidmechanicsSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+
+        # perform Proper Orthogonal Decomposition
+        if self.pb.have_rom:
+            self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)

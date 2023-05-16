@@ -34,9 +34,10 @@ def main():
                             'filereadin_tol'        : 1e-5}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
-                            'block_precond'         : 'jacobi',
-                            'block_precond_mat'     : 'same',
+                            'block_precond'         : 'gauss_seidel',
+                            'block_precond_mat'     : 'specific',
                             'precond_fields'        : ['amg','amg','amg'],
+                            'print_liniter_every'   : 50,
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 

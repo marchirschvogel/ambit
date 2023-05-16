@@ -212,6 +212,7 @@ class solver_nonlinear:
             ksp.getPC().setType("lu")
             ksp.getPC().setFactorSolverType(self.direct_solver)
         elif self.solvetype=='iterative':
+            ksp.setType("gmres")
             ksp.getPC().setType("hypre")
             ksp.getPC().setMGLevels(3)
             ksp.getPC().setHYPREType("boomeramg")

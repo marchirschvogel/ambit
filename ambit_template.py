@@ -31,7 +31,7 @@ def main():
                             'readin_tol'            : 1.0e-8} # OPTIONAL: read-in tolerance for own read-in function that uses node coordinates (default: 1.0e-8)
 
     # for all problem types
-    SOLVER_PARAMS         = {'solve_type'            : 'direct', # direct, iterative
+    SOLVER_PARAMS        = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
                             'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
                             'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, 'PTC' ('ptc' can stay False) (default: None)
@@ -40,7 +40,7 @@ def main():
                             'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence continues to occur (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
                             # direct linear solver settings (only apply for solve_type 'direct')
                             'direct_solver'         : 'mumps', # OPTIONAL: type of direct solver: 'mumps' or 'superlu_dist' (default: 'mumps' - seems to be faster and more robust in case of saddle point problems)
-                            # iterative linear solver settings (only apply for solve_type 'iterative')
+                            # iterative linear solver settings (only apply for solve_type 'iterative') - solver can only be GMRES
                             'precond_fields'        : ['amg','direct'], # OPTIONAL: field-specific preconditioners (list has to have length of fields) (default: [])
                             'block_precond'         : 'jacobi', # OPTIONAL: block preconditioner, 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
                             'block_precond_mat'     : 'same', # OPTIONAL: which matrix to use for the block preconditioner (default: 'same')
