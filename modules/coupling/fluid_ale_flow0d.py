@@ -170,6 +170,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
 
+        if self.rom.romvars_to_new_sblock:
+            iset_r = PETSc.IS().createStride(len(self.rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_v = iset_v.difference(iset_r) # subtract
+
         offset_p = offset_v + vvec.getLocalSize()
         iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
@@ -178,6 +182,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
         offset_s = offset_d + self.pba.d.vector.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+
+        if self.rom.romvars_to_new_sblock:
+            iset_s = iset_s.expand(iset_r) # add to 0D block
 
         return [iset_v, iset_p, iset_d, iset_s]
 

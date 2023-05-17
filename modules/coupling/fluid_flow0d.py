@@ -296,10 +296,17 @@ class FluidmechanicsFlow0DProblem():
 
     def get_index_sets(self):
 
-        offset_v = self.pbf.v.vector.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.lm.getOwnershipRange()[0]
-        iset_v = PETSc.IS().createStride(self.pbf.v.vector.getLocalSize(), first=offset_v, step=1, comm=self.comm)
+        if self.have_rom: # currently, ROM can only be on (subset of) first variable
+            vred = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            self.rom.V.multTranspose(self.pbf.v.vector, vred)
+            vvec = vred
+        else:
+            vvec = self.pbf.v.vector
 
-        offset_p = offset_v + self.pbf.v.vector.getLocalSize()
+        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.lm.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
+
+        offset_p = offset_v + vvec.getLocalSize()
         iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         offset_s = offset_p + self.pbf.p.vector.getLocalSize()

@@ -287,13 +287,20 @@ class FluidmechanicsAleProblem():
         offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
 
+        if self.rom.romvars_to_new_sblock:
+            iset_r = PETSc.IS().createStride(len(self.rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_v = iset_v.difference(iset_r) # subtract
+
         offset_p = offset_v + vvec.getLocalSize()
         iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         offset_d = offset_p + self.pbf.p.vector.getLocalSize()
         iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
-        return [iset_v, iset_p, iset_d]
+        if self.rom.romvars_to_new_sblock:
+            return [iset_v, iset_p, iset_d, iset_r]
+        else:
+            return [iset_v, iset_p, iset_d]
 
 
     def assemble_block_precond_matrix(self, Klist, pretype):

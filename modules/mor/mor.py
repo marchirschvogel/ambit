@@ -73,6 +73,9 @@ class ModelOrderReduction():
         try: self.exclude_from_snap = params['exclude_from_snap']
         except: self.exclude_from_snap = []
 
+        try: self.romvars_to_new_sblock = params['romvars_to_new_sblock']
+        except: self.romvars_to_new_sblock = False
+
         # mode partitions are either determined by the mode files or partition files
         if bool(self.modes_from_files):
             self.num_partitions = len(self.modes_from_files)
@@ -100,7 +103,8 @@ class ModelOrderReduction():
         # scalar function space
         self.Vspace_sc = Vspace[1]
 
-        self.im_rom_r, self.im_rom_v = [], []
+        # index set for block iterative solvers
+        self.im_rom_r = []
 
         self.comm = comm
 
@@ -400,22 +404,11 @@ class ModelOrderReduction():
                 # column shift if we've exceeded the number of reduced basis vectors
                 if nr <= self.numredbasisvec_true*self.num_partitions:
                     col_fd.append(row)
-
-                    # index set for block iterative solver
-                    if row in range(self.ss, self.se):
-                        if row in iall_set:
-                            self.im_rom_r.append(row)
-
                 if nr > self.numredbasisvec_true*self.num_partitions:
                     a += 1
             else:
                 # column id of non-reduced dof (left-shifted by a)
                 col_id = row-a
-
-                # index set for block iterative solver
-                if row in range(self.ss, self.se):
-                    if row in iall_set:
-                        self.im_rom_v.append(col_id)
 
                 # store
                 row_1.append(row)
@@ -429,6 +422,7 @@ class ModelOrderReduction():
         self.V.setUp()
 
         vrs, vre = self.V.getOwnershipRange()
+        vcs, vce = self.V.getOwnershipRangeColumn()
 
         # Phi should not have any non-zero rows that do not belong to a surface dof which is reduced
         for i in range(vrs, vre):
@@ -444,6 +438,9 @@ class ModelOrderReduction():
         for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
             # set Phi column
             if col in col_fd_set:
+                # prepare index set list for block iterative solver
+                if self.romvars_to_new_sblock:
+                    if col in range(vcs, vce): self.im_rom_r.append(col)
                 # NOTE: We actually do not want to set the columns at once like this, since PETSc may treat close-zero entries as non-zeros
                 # BUT: Needs to be double-checked if this is really slower for large problems!
                 self.V[vrs:vre,col] = self.Phi[vrs:vre,n]

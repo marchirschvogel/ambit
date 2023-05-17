@@ -34,7 +34,7 @@ def main():
                             'precond_fields'        : ['amg','amg','direct'],
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_inc'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
-                            'tol_lin'               : 1.0e-7,
+                            'tol_lin_rel'           : 1.0e-7,
                             'print_liniter_every'   : 50,
                             'divergence_continue'   : None,
                             'ptc'                   : False,

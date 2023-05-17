@@ -12,19 +12,9 @@ import numpy as np
 
 class sol_utils():
 
-    def __init__(self, pb, ptype, solver_params):
+    def __init__(self, solver):
 
-        self.pb = pb
-        self.ptype = ptype
-
-        try: self.print_liniter_every = solver_params['print_liniter_every']
-        except: self.print_liniter_every = 1
-
-        try: self.adapt_factor = solver_params['adapt_factor']
-        except: self.adapt_factor = 0.1
-
-        try: self.tollin = solver_params['tol_lin']
-        except: self.tollin = 1.0e-8
+        self.solver = solver
 
 
     def catch_solver_errors(self, resnorm, incnorm=0, maxval=1.0e16):
@@ -33,7 +23,7 @@ class sol_utils():
 
         if np.isnan(resnorm):
 
-            if self.pb.comm.rank == 0:
+            if self.solver.pb.comm.rank == 0:
                 print("NaN encountered. Reset Newton and perform PTC adaption.")
                 sys.stdout.flush()
 
@@ -41,7 +31,7 @@ class sol_utils():
 
         if resnorm >= maxval:
 
-            if self.pb.comm.rank == 0:
+            if self.solver.pb.comm.rank == 0:
                 print("Large residual > max val %.1E encountered. Reset Newton and perform PTC adaption." % (maxval))
                 sys.stdout.flush()
 
@@ -49,7 +39,7 @@ class sol_utils():
 
         if np.isinf(incnorm):
 
-            if self.pb.comm.rank == 0:
+            if self.solver.pb.comm.rank == 0:
                 print("Inf encountered. Reset Newton and perform PTC adaption.")
                 sys.stdout.flush()
 
@@ -66,20 +56,20 @@ class sol_utils():
             nkptc=''
 
         if header:
-            if self.pb.comm.rank == 0:
-                if self.ptype=='solid' and not self.pb.incompressible_2field:
+            if self.solver.pb.comm.rank == 0:
+                if self.solver.ptype=='solid' and not self.solver.pb.incompressible_2field:
                     print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='solid' and self.pb.incompressible_2field:
+                elif self.solver.ptype=='solid' and self.solver.pb.incompressible_2field:
                     print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='fluid':
+                elif self.solver.ptype=='fluid':
                     print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='ale':
+                elif self.solver.ptype=='ale':
                     print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','ale res 2-norm','ale inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='flow0d':
+                elif self.solver.ptype=='flow0d':
                     if not sub:
                         print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
                     else:
@@ -87,73 +77,73 @@ class sol_utils():
                         print('      *********************** 0D model solve ***********************')
                         print('{:<6s}{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format(' ','iter','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='signet':
+                elif self.solver.ptype=='signet':
                     print('{:<6s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','signet res 2-norm','signet inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
-                    if self.pb.coupling_type == 'monolithic_direct':
+                elif (self.solver.ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and not self.solver.pb.incompressible_2field:
+                    if self.solver.pb.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pb.coupling_type == 'monolithic_lagrange':
+                    if self.solver.pb.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res 2-norm','solid inc 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
-                    if self.pb.coupling_type == 'monolithic_direct':
+                elif (self.solver.ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and self.solver.pb.incompressible_2field:
+                    if self.solver.pb.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pb.coupling_type == 'monolithic_lagrange':
+                    if self.solver.pb.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','solid res_u 2-norm','solid inc_u 2-norm','solid res_p 2-norm','solid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='fluid_flow0d':
-                    if self.pb.coupling_type == 'monolithic_direct':
+                elif self.solver.ptype=='fluid_flow0d':
+                    if self.solver.pb.coupling_type == 'monolithic_direct':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','flow0d res 2-norm','flow0d inc 2-norm','ts','te'))
-                    if self.pb.coupling_type == 'monolithic_lagrange':
+                    if self.solver.pb.coupling_type == 'monolithic_lagrange':
                         print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='fluid_ale':
+                elif self.solver.ptype=='fluid_ale':
                     print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ale res 2-norm','ale inc 2-norm','ts','te'))
                     sys.stdout.flush()
-                elif self.ptype=='fluid_ale_flow0d':
+                elif self.solver.ptype=='fluid_ale_flow0d':
                     print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ale res 2-norm','ale inc 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
                     sys.stdout.flush()
                 else:
                     raise NameError("Unknown problem type!")
             return
 
-        if self.pb.comm.rank == 0:
+        if self.solver.pb.comm.rank == 0:
 
-            if self.ptype=='solid' and not self.pb.incompressible_2field:
+            if self.solver.ptype=='solid' and not self.solver.pb.incompressible_2field:
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='solid' and self.pb.incompressible_2field:
+            elif self.solver.ptype=='solid' and self.solver.pb.incompressible_2field:
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='fluid':
+            elif self.solver.ptype=='fluid':
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='ale':
+            elif self.solver.ptype=='ale':
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='flow0d':
+            elif self.solver.ptype=='flow0d':
                 if not sub:
                     print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 else:
                     print('{:<6s}{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(' ',it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='signet':
+            elif self.solver.ptype=='signet':
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res_0d'],' ',incnorms['inc_0d'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
+            elif (self.solver.ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and not self.solver.pb.incompressible_2field:
                 print('{:<3d}{:<3s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif (self.ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
+            elif (self.solver.ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and self.solver.pb.incompressible_2field:
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='fluid_flow0d':
+            elif self.solver.ptype=='fluid_flow0d':
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='fluid_ale':
+            elif self.solver.ptype=='fluid_ale':
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
-            elif self.ptype=='fluid_ale_flow0d':
+            elif self.solver.ptype=='fluid_ale_flow0d':
                 print('{:<3d}{:<3s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<11s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.4e}{:<9s}{:<4.2e}{:<2s}{:<4.2e}{:<9s}{:<18s}'.format(it,' ',resnorms['res1'],' ',incnorms['inc1'],' ',resnorms['res2'],' ',incnorms['inc2'],' ',resnorms['res3'],' ',incnorms['inc3'],' ',resnorms['res4'],' ',incnorms['inc4'],' ',ts,' ',te,' ',nkptc))
                 sys.stdout.flush()
             else:
@@ -164,50 +154,47 @@ class sol_utils():
 
         if it == 0:
             self.rnorm_start = rnorm
-            if self.pb.comm.rank == 0:
+            if self.solver.pb.comm.rank == 0:
                 print("\n            ***************** linear solve ****************")
                 sys.stdout.flush()
 
-        if it % self.print_liniter_every == 0:
+        if it % self.solver.print_liniter_every == 0:
 
-            if self.pb.comm.rank == 0:
-                print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('            lin. it.: ',it,'     rel. res. norm:',rnorm/self.rnorm_start))
+            if self.solver.res_lin_monitor=='rel': resnorm = rnorm/self.rnorm_start
+            elif self.solver.res_lin_monitor=='abs': resnorm = rnorm
+            else: raise ValueError("Unknown res_lin_monitor value. Choose 'rel' or 'abs'.")
+
+            if self.solver.pb.comm.rank == 0:
+                print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('            lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
                 sys.stdout.flush()
 
 
     def print_linear_iter_last(self,it,rnorm):
 
-        if self.pb.comm.rank == 0:
-            if it % self.print_liniter_every != 0: # otherwise already printed
-                print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('            lin. it.: ',it,'     rel. res. norm:',rnorm/self.rnorm_start))
-            print("            ***********************************************\n")
-            sys.stdout.flush()
+        if self.solver.res_lin_monitor=='rel': resnorm = rnorm/self.rnorm_start
+        elif self.solver.res_lin_monitor=='abs': resnorm = rnorm
+        else: raise ValueError("Unknown res_lin_monitor value. Choose 'rel' or 'abs'.")
 
-
-    def print_linear_iter_sub(self,it,rnorm,var):
-
-        if it == 0:
-            if self.pb.comm.rank == 0:
-                print("\n                        *************** linear sub-solve "+var+" *************")
-                sys.stdout.flush()
-
-        if self.pb.comm.rank == 0:
-            print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('                        lin. it.: ',it,'     abs. res. norm:',rnorm))
+        if self.solver.pb.comm.rank == 0:
+            if it % self.solver.print_liniter_every != 0: # otherwise already printed
+                print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('            lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
+            # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.ConvergedReason-class.html for converge codes
+            print('{:<12s}{:<13s}{:<18s}{:<2d}{:<14s}'.format(' ','************ ',' PETSc conv code: ',self.solver.ksp.getConvergedReason(),' *************\n'))
             sys.stdout.flush()
 
 
     def check_converged(self, resnorms, incnorms, tolerances, ptype=None):
 
         if ptype is None:
-            ptype = self.ptype
+            ptype = self.solver.ptype
 
         converged = False
 
-        if ptype=='solid' and not self.pb.incompressible_2field:
+        if ptype=='solid' and not self.solver.pb.incompressible_2field:
             if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1']:
                 converged = True
 
-        elif ptype=='solid' and self.pb.incompressible_2field:
+        elif ptype=='solid' and self.solver.pb.incompressible_2field:
             if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2']:
                 converged = True
 
@@ -223,11 +210,11 @@ class sol_utils():
             if resnorms['res_0d'] <= tolerances['res_0d'] and incnorms['inc_0d'] <= tolerances['inc_0d']:
                 converged = True
 
-        elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and not self.pb.incompressible_2field:
+        elif (ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and not self.solver.pb.incompressible_2field:
             if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2']:
                 converged = True
 
-        elif (ptype=='solid_flow0d' or self.ptype=='solid_constraint') and self.pb.incompressible_2field:
+        elif (ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and self.solver.pb.incompressible_2field:
             if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3']:
                 converged = True
 
@@ -249,44 +236,44 @@ class sol_utils():
         return converged
 
 
-    def adapt_linear_solver(self, rabsnorm, ksp, tolres):
+    def adapt_linear_solver(self, rabsnorm, tolres):
 
-        rnorm = ksp.getResidualNorm()
+        rnorm = self.solver.ksp.getResidualNorm()
 
-        if rnorm*self.tollin < tolres: # currentnlnres*tol < desirednlnres
+        if rnorm*self.solver.tol_lin_rel < tolres: # currentnlnres*tol < desirednlnres
 
             # formula: "desirednlnres * factor / currentnlnres"
-            tollin_new = self.adapt_factor * tolres/rnorm
+            tol_lin_rel_new = self.solver.adapt_factor * tolres/rnorm
 
-            if tollin_new > 1.0:
-                if self.pb.comm.rank == 0:
+            if tol_lin_rel_new > 1.0:
+                if self.solver.pb.comm.rank == 0:
                     print("Warning: Adapted relative tolerance > 1. --> Constrained to 0.999, but consider changing parameter 'adapt_factor'!")
                     sys.stdout.flush()
-                tollin_new = 0.999
+                tol_lin_rel_new = 0.999
 
-            if tollin_new < self.tollin:
-                tollin_new = self.tollin
+            if tol_lin_rel_new < self.solver.tol_lin_rel:
+                tol_lin_rel_new = self.solver.tol_lin_rel
 
-            if self.pb.comm.rank == 0 and tollin_new > self.tollin:
-                print("            Adapted linear tolerance to %.1e\n" % tollin_new)
+            if self.solver.pb.comm.rank == 0 and tol_lin_rel_new > self.solver.tol_lin_rel:
+                print("            Adapted relative linear tolerance to %.1e\n" % tol_lin_rel_new)
                 sys.stdout.flush()
 
-            # adapt tolerance
-            ksp.setTolerances(rtol=tollin_new)
+            # adapt relative tolerance
+            self.solver.ksp.setTolerances(rtol=tol_lin_rel_new, atol=self.solver.tol_lin_abs, divtol=None, max_it=self.solver.maxliniter)
 
 
-    def timestep_separator(self, tolerances):
+    def timestep_separator(self):
 
-        if len(tolerances)==2:
+        if len(self.solver.tolerances)==2:
             return "------------------------------------------------------------------------------"
 
-        elif len(tolerances)==4:
+        elif len(self.solver.tolerances)==4:
             return "------------------------------------------------------------------------------------------------------------"
 
-        elif len(tolerances)==6:
+        elif len(self.solver.tolerances)==6:
             return "--------------------------------------------------------------------------------------------------------------------------------------------------"
 
-        elif len(tolerances)==8:
+        elif len(self.solver.tolerances)==8:
             return "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         else:

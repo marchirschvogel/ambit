@@ -16,7 +16,7 @@ def main():
 
     IO_PARAMS            = {'problem_type'          : 'fluid_ale',
                             'use_model_order_red'   : True,
-                            'write_results_every'   : 2,
+                            'write_results_every'   : -1,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',
@@ -31,13 +31,20 @@ def main():
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
                             'filesource'            : 'rawtxt',
-                            'filereadin_tol'        : 1e-5}
+                            'filereadin_tol'        : 1e-5,
+                            'romvars_to_new_sblock' : True} # True, False
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'block_precond'         : 'gauss_seidel',
                             'block_precond_mat'     : 'specific',
-                            'precond_fields'        : ['amg','amg','amg'],
+                            'tol_lin_rel'           : 1.0e-5,
+                            'tol_lin_abs'           : 1.0e-30,
+                            'max_liniter'           : 1200,
+                            'res_lin_monitor'       : 'abs',
+                            'precond_fields'        : ['amg','amg','amg', 'direct'],
                             'print_liniter_every'   : 50,
+                            'adapt_linsolv_tol'     : False,
+                            'adapt_factor'          : 0.1,
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 

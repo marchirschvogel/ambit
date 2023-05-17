@@ -48,9 +48,6 @@ class solver_nonlinear:
                 self.tolerances['res'+str(n+1)] = self.tolres[0]
                 self.tolerances['inc'+str(n+1)] = self.tolinc[0]
 
-        self.solutils = sol_utils(self.pb, self.ptype, solver_params)
-        self.sepstring = self.solutils.timestep_separator(self.tolerances)
-
         self.initialize_petsc_solver()
 
         # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
@@ -58,6 +55,9 @@ class solver_nonlinear:
             self.subsol = solver_nonlinear_ode(self.pb.pb0, solver_params['subsolver_params'])
         else:
             self.subsol = None
+
+        self.solutils = sol_utils(self)
+        self.sepstring = self.solutils.timestep_separator()
 
 
     def set_solver_params(self, solver_params):
@@ -92,11 +92,23 @@ class solver_nonlinear:
         try: self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
         except: self.adapt_linsolv_tol = False
 
-        try: self.tollin = solver_params['tol_lin']
-        except: self.tollin = 1.0e-8
+        try: self.tol_lin_rel = solver_params['tol_lin_rel']
+        except: self.tol_lin_rel = 1.0e-5
+
+        try: self.tol_lin_abs = solver_params['tol_lin_abs']
+        except: self.tol_lin_abs = 1.0e-50
+
+        try: self.res_lin_monitor = solver_params['res_lin_monitor']
+        except: self.res_lin_monitor = 'rel'
 
         try: self.maxliniter = solver_params['max_liniter']
         except: self.maxliniter = 1200
+
+        try: self.adapt_factor = solver_params['adapt_factor']
+        except: self.adapt_factor = 0.1
+
+        try: self.print_liniter_every = solver_params['print_liniter_every']
+        except: self.print_liniter_every = 1
 
         try: self.print_local_iter = solver_params['print_local_iter']
         except: self.print_local_iter = False
@@ -158,11 +170,14 @@ class solver_nonlinear:
                 self.ksp.getPC().setFieldSplitType(splittype)
 
                 iset = self.pb.get_index_sets()
+                nsets = len(iset)
 
-                if self.nfields==2:   self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]))
-                elif self.nfields==3: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]))
-                elif self.nfields==4: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]))
-                else: raise RuntimeError("Currently, no more than 4 fields are supported.")
+                # normally, nsets = self.nfields, but for a surface-projected ROM (FrSI) problem, we have one more index set than fields
+                if nsets==2:   self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]))
+                elif nsets==3: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]))
+                elif nsets==4: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]))
+                elif nsets==5: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]),("f5", iset[4]))
+                else: raise RuntimeError("Currently, no more than 5 fields/index sets are supported.")
 
                 # self.ksp.setOperators(Ktmp,Ktmp) # needed here for Schur-type PC...
                 # self.ksp.getPC().setUp()
@@ -170,8 +185,10 @@ class solver_nonlinear:
                 # get the preconditioners for each block
                 ksp_fields = self.ksp.getPC().getFieldSplitSubKSP()
 
+                assert(nsets==len(self.precond_fields)) # sanity check
+
                 # set field-specific preconditioners
-                for n in range(self.nfields):
+                for n in range(nsets):
 
                     ksp_fields[n].setType("preonly") # preonly: only one solve/preconditioner application
                     if self.precond_fields[n] == 'amg':
@@ -193,7 +210,7 @@ class solver_nonlinear:
                     raise ValueError("Currently, only 'amg' is supported as single-field preconditioner.")
 
             # set tolerances and print routine
-            self.ksp.setTolerances(rtol=self.tollin, atol=None, divtol=None, max_it=self.maxliniter)
+            self.ksp.setTolerances(rtol=self.tol_lin_rel, atol=self.tol_lin_abs, divtol=None, max_it=self.maxliniter)
             self.ksp.setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its,rnorm))
 
         else:
@@ -355,14 +372,40 @@ class solver_nonlinear:
                     tes = time.time()
 
                     if self.block_precond_mat=='same':
-                        P = K_full_nest
+                        P_nest = K_full_nest
                     else:
-                        P = self.pb.assemble_block_precond_matrix(K_list, self.block_precond_mat)
+                        P_nest = self.pb.assemble_block_precond_matrix(K_list, self.block_precond_mat)
 
                     del_full = PETSc.Vec().createNest(del_x)
+
+                    # we cannot extract index subsets of field out of the
+                    # nested preconditioner matrix - so we need to convert
+                    if self.pb.have_rom:
+                        if self.pb.rom.romvars_to_new_sblock:
+                            P = PETSc.Mat()
+                            P_nest.convert("aij", out=P)
+                            P.assemble()
+                            # #####
+                            # Kfull = PETSc.Mat()
+                            # K_full_nest.convert("aij", out=Kfull)
+                            # Kfull.assemble()
+                            # K_full_nest = Kfull
+                            # #####
+                        else:
+                            P = P_nest
+                    else:
+                        P = P_nest
+
                     self.ksp.setOperators(K_full_nest, P)
 
                     r_full_nest.assemble()
+
+                    # #####
+                    # r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
+                    # r_full.assemble()
+                    # del_full = PETSc.Vec().createWithArray(del_full.getArray())
+                    # r_full_nest = r_full
+                    # #####
 
                     te += time.time() - tes
 
@@ -373,7 +416,7 @@ class solver_nonlinear:
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
 
                     if self.adapt_linsolv_tol:
-                        self.solutils.adapt_linear_solver(r_full_nest.norm(),self.ksp,self.tolres[0])
+                        self.solutils.adapt_linear_solver(r_full_nest.norm(),self.tolres[0])
 
                 else:
 
@@ -396,7 +439,7 @@ class solver_nonlinear:
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
 
                     if self.adapt_linsolv_tol:
-                        self.solutils.adapt_linear_solver(r_list[0].norm(),self.ksp,self.tolres[0])
+                        self.solutils.adapt_linear_solver(r_list[0].norm(),self.tolres[0])
 
             # get residual and increment norms
             resnorms, incnorms = {}, {}
@@ -553,9 +596,9 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         self.PTC = False # don't think we'll ever need PTC for the 0D ODE problem...
 
-        self.solutils = sol_utils(self.pb, self.ptype, solver_params)
+        self.solutils = sol_utils(self)
 
-        self.sepstring = self.solutils.timestep_separator(self.tolerances)
+        self.sepstring = self.solutils.timestep_separator()
 
         self.initialize_petsc_solver()
 

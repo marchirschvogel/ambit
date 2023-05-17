@@ -44,7 +44,9 @@ def main():
                             'precond_fields'        : ['amg','direct'], # OPTIONAL: field-specific preconditioners (list has to have length of fields) (default: [])
                             'block_precond'         : 'jacobi', # OPTIONAL: block preconditioner, 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
                             'block_precond_mat'     : 'same', # OPTIONAL: which matrix to use for the block preconditioner (default: 'same')
-                            'tol_lin'               : 1.0e-6, # OPTIONAL: linear solver tolerance (default: 1.0e-8)
+                            'tol_lin_rel'           : 1.0e-5, # OPTIONAL: relative linear solver tolerance (default: 1.0e-5)
+                            'tol_lin_abs'           : 1.0e-50, # OPTIONAL: absolute linear solver tolerance (default: 1.0e-50)
+                            'res_lin_monitor'       : 'rel', # OPTIONAL: which linear solver tolerance to monitor, 'abs' or 'rel' (default: 'rel')
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
                             'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
                             'adapt_linsolv_tol'     : False, # OPTIONAL: True, False - adapt linear tolerance throughout nonlinear iterations (default: False)
@@ -129,7 +131,8 @@ def main():
                             'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
                             'filesource'            : 'petscvector', # OPTIONAL: source of snapshot/mode data: 'petscvector' or 'rawtxt' (default: 'petscvector')
                             'filereadin_tol'        : 1e-5, # OPTIONAL: read-in tolerance used if 'filesource' is 'rawtxt' (default: 1e-5)
-                            'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
+                            'write_pod_modes'       : False, # OPTIONAL: whether to write out POD modes (default: False)
+                            'romvars_to_new_sblock' : False} # OPTIONAL: for a partly/surface-reduced ROM problem, move reduced rows to new index set/solver block (only for 'solve_type' : 'iterative' in SOLVER_PARAMS) (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # 'end_diastole', 'end_systole'

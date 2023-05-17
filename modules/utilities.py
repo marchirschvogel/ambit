@@ -100,7 +100,6 @@ def print_prestress(inst, comm):
     if inst=='end':
         if comm.rank == 0:
             print("Finished prestressing.")
-            print("   ")
             sys.stdout.flush()
 
 
