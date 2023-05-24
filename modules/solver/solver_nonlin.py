@@ -21,6 +21,7 @@ import preconditioner
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Vec-class.html
 # https://www.mcs.anl.gov/petsc/documentation/faq.html
 # https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html
+# https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP-class.html
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC-class.html
 
 # standard nonlinear solver for FEM problems
@@ -80,6 +81,9 @@ class solver_nonlinear:
         try: self.direct_solver = solver_params['direct_solver']
         except: self.direct_solver = 'mumps'
 
+        try: self.iterative_solver = solver_params['iterative_solver']
+        except: self.iterative_solver = 'gmres'
+
         try: self.precond_fields = solver_params['precond_fields']
         except: self.precond_fields = []
 
@@ -103,6 +107,16 @@ class solver_nonlinear:
 
         try: self.maxliniter = solver_params['max_liniter']
         except: self.maxliniter = 1200
+
+        try: self.lin_norm_type = solver_params['lin_norm_type']
+        except: self.lin_norm_type = 'unpreconditioned'
+
+        if self.lin_norm_type=='preconditioned':
+            self.linnormtype = 1
+        elif self.lin_norm_type=='unpreconditioned':
+            self.linnormtype = 2
+        else:
+            raise ValueError("Unkown lin_norm_type option!")
 
         try: self.adapt_factor = solver_params['adapt_factor']
         except: self.adapt_factor = 0.1
@@ -150,17 +164,20 @@ class solver_nonlinear:
 
         elif self.solvetype=='iterative':
 
+            self.ksp.setInitialGuessNonzero(False)
+            self.ksp.setNormType(self.linnormtype) # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
+
             # block iterative method
             if self.nfields > 1:
 
-                # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
+                self.ksp.setType(self.iterative_solver) # cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html
 
-                self.ksp.setType("gmres")
                 # TODO: how to use this adaptively...
                 #self.ksp.getPC().setReusePreconditioner(True)
 
                 if self.block_precond == 'fieldsplit':
 
+                    # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
                     self.ksp.getPC().setType("fieldsplit") # fieldsplit, shell (TODO: How can we use shell apply here?)
                     # cf. https://petsc.org/main/manualpages/PC/PCCompositeType
 
@@ -187,9 +204,6 @@ class solver_nonlinear:
                     elif nsets==4: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]))
                     elif nsets==5: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]),("f5", iset[4]))
                     else: raise RuntimeError("Currently, no more than 5 fields/index sets are supported.")
-
-                    # self.ksp.setOperators(Ktmp,Ktmp) # needed here for Schur-type PC...
-                    # self.ksp.getPC().setUp()
 
                     # get the preconditioners for each block
                     ksp_fields = self.ksp.getPC().getFieldSplitSubKSP()
@@ -259,7 +273,7 @@ class solver_nonlinear:
             ksp.getPC().setType("lu")
             ksp.getPC().setFactorSolverType(self.direct_solver)
         elif self.solvetype=='iterative':
-            ksp.setType("gmres")
+            ksp.setType(self.iterative_solver)
             ksp.getPC().setType("hypre")
             ksp.getPC().setMGLevels(3)
             ksp.getPC().setHYPREType("boomeramg")

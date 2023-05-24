@@ -29,11 +29,13 @@ def main():
                             'simname'               : 'test'}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
+                            'iterative_solver'      : 'gmres',
                             'block_precond'         : 'sblock3x3',
                             'precond_fields'        : ['amg','amg','direct'],
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_inc'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_lin_rel'           : 1.0e-9,
+                            'lin_norm_type'         : 'preconditioned',
                             'print_liniter_every'   : 50,
                             'divergence_continue'   : None,
                             'ptc'                   : False,

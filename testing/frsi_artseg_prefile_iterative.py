@@ -35,12 +35,14 @@ def main():
                             'filereadin_tol'        : 1e-5}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
+                            'iterative_solver'      : 'gmres',
                             'block_precond'         : 'sblock4x4',
+                            'precond_fields'        : ['amg','amg','direct','amg'], # fluid-v, fluid-p, fluid-red.v, ale-d
                             'tol_lin_rel'           : 1.0e-5,
                             'tol_lin_abs'           : 1.0e-30,
+                            'lin_norm_type'         : 'preconditioned',
                             'max_liniter'           : 1200,
                             'res_lin_monitor'       : 'abs',
-                            'precond_fields'        : ['amg','amg','direct','amg'], # fluid-v, fluid-p, fluid-red.v, ale-d
                             'print_liniter_every'   : 50,
                             'adapt_linsolv_tol'     : False,
                             'adapt_factor'          : 0.1,

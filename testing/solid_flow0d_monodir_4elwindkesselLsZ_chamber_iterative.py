@@ -22,10 +22,12 @@ def main():
                             'simname'               : 'test'}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
-                            'block_precond'         : 'fieldsplit', # fieldsplit, sblock3x3
+                            'iterative_solver'      : 'gmres',
+                            'block_precond'         : 'fieldsplit',
                             'fieldsplit_type'       : 'gauss_seidel',
                             'precond_fields'        : ['amg','direct'],
                             'tol_lin_rel'           : 1e-7,
+                            'lin_norm_type'         : 'unpreconditioned',
                             'print_liniter_every'   : 50,
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}

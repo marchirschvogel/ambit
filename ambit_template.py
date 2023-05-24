@@ -41,16 +41,19 @@ def main():
                             # direct linear solver settings (only apply for solve_type 'direct')
                             'direct_solver'         : 'mumps', # OPTIONAL: type of direct solver: 'mumps' or 'superlu_dist' (default: 'mumps' - seems to be faster and more robust in case of saddle point problems)
                             # iterative linear solver settings (only apply for solve_type 'iterative') - solver can only be GMRES
+                            'iterative_solver'      : 'gmres', # OPTIONAL: type of iterative solver, cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html (default: 'gmres')
                             'precond_fields'        : ['amg','direct'], # OPTIONAL: field-specific preconditioners (list has to have length of fields) (default: [])
-                            'block_precond'         : 'fieldsplit', # OPTIONAL: block preconditioner option: 'sblock2x2', sblock3x3, 'fieldsplit' (PETSc split implementation) (default: 'fieldsplit')
+                            'block_precond'         : 'fieldsplit', # OPTIONAL: block preconditioner option: 'sblock2x2', 'sblock3x3', 'sblock4x4', 'fieldsplit' (PETSc split implementation) (default: 'fieldsplit')
                             'fieldsplit_type'       : 'jacobi', # OPTIONAL: PETSc fieldsplit block preconditioner type: 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
                             'tol_lin_rel'           : 1.0e-5, # OPTIONAL: relative linear solver tolerance (default: 1.0e-5)
                             'tol_lin_abs'           : 1.0e-50, # OPTIONAL: absolute linear solver tolerance (default: 1.0e-50)
+                            'lin_norm_type'         : 'preconditioned', # OPTIONAL: type of iterative linear solver norm: 'preconditioned' or 'unpreconditioned' (default: 'preconditioned')
                             'res_lin_monitor'       : 'rel', # OPTIONAL: which linear solver tolerance to monitor, 'abs' or 'rel' (default: 'rel')
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
-                            'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 50)
+                            'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 1)
                             'adapt_linsolv_tol'     : False, # OPTIONAL: True, False - adapt linear tolerance throughout nonlinear iterations (default: False)
                             'adapt_factor'          : 0.1, # OPTIONAL: adaptation factor for adapt_linsolv_tol (the larger, the more adaptation) (default: 0.1)
+                            'romvars_to_new_sblock' : False, # OPTIONAL: for a partly/surface-reduced ROM problem, move reduced rows to new index set/solver block (default: False)
                             # for local Newton (only for inelastic nonlinear materials at Gauss points, i.e. deformation-dependent growth)
                             'print_local_iter'      : False, # OPTIONAL: if we want to print iterations of local Newton (default: False)
                             'tol_res_local'         : 1.0e-10, # OPTIONAL: local Newton residual inf-norm tolerance (default: 1.0e-10)
@@ -131,8 +134,7 @@ def main():
                             'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
                             'filesource'            : 'petscvector', # OPTIONAL: source of snapshot/mode data: 'petscvector' or 'rawtxt' (default: 'petscvector')
                             'filereadin_tol'        : 1e-5, # OPTIONAL: read-in tolerance used if 'filesource' is 'rawtxt' (default: 1e-5)
-                            'write_pod_modes'       : False, # OPTIONAL: whether to write out POD modes (default: False)
-                            'romvars_to_new_sblock' : False} # OPTIONAL: for a partly/surface-reduced ROM problem, move reduced rows to new index set/solver block (only for 'solve_type' : 'iterative' in SOLVER_PARAMS) (default: False)
+                            'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # 'end_diastole', 'end_systole'
