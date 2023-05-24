@@ -42,8 +42,8 @@ def main():
                             'direct_solver'         : 'mumps', # OPTIONAL: type of direct solver: 'mumps' or 'superlu_dist' (default: 'mumps' - seems to be faster and more robust in case of saddle point problems)
                             # iterative linear solver settings (only apply for solve_type 'iterative') - solver can only be GMRES
                             'precond_fields'        : ['amg','direct'], # OPTIONAL: field-specific preconditioners (list has to have length of fields) (default: [])
-                            'block_precond'         : 'jacobi', # OPTIONAL: block preconditioner, 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
-                            'block_precond_mat'     : 'same', # OPTIONAL: which matrix to use for the block preconditioner (default: 'same')
+                            'block_precond'         : 'fieldsplit', # OPTIONAL: block preconditioner option: 'sblock2x2', sblock3x3, 'fieldsplit' (PETSc split implementation) (default: 'fieldsplit')
+                            'fieldsplit_type'       : 'jacobi', # OPTIONAL: PETSc fieldsplit block preconditioner type: 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
                             'tol_lin_rel'           : 1.0e-5, # OPTIONAL: relative linear solver tolerance (default: 1.0e-5)
                             'tol_lin_abs'           : 1.0e-50, # OPTIONAL: absolute linear solver tolerance (default: 1.0e-50)
                             'res_lin_monitor'       : 'rel', # OPTIONAL: which linear solver tolerance to monitor, 'abs' or 'rel' (default: 'rel')

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# FrSI test case of an axially clamped, prestressed arterial segment - iterative solver
+# FrSI test case of an axially clamped, prestressed arterial segment
+# tests a 4x4 iterative solver with a decoupled solve on the 4th (ALE) block
 
 import ambit
 
@@ -21,7 +22,7 @@ def main():
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',
                             'results_to_write'      : [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']], # first fluid, then ale results
-                            'simname'               : 'frsi_artseg_prefile'}
+                            'simname'               : 'frsi_artseg_prefile_iterative'}
 
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'numsnapshots'          : 1,
@@ -31,20 +32,19 @@ def main():
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
                             'filesource'            : 'rawtxt',
-                            'filereadin_tol'        : 1e-5,
-                            'romvars_to_new_sblock' : True} # True, False
+                            'filereadin_tol'        : 1e-5}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
-                            'block_precond'         : 'gauss_seidel',
-                            'block_precond_mat'     : 'specific',
+                            'block_precond'         : 'sblock4x4',
                             'tol_lin_rel'           : 1.0e-5,
                             'tol_lin_abs'           : 1.0e-30,
                             'max_liniter'           : 1200,
                             'res_lin_monitor'       : 'abs',
-                            'precond_fields'        : ['amg','amg','amg', 'direct'],
+                            'precond_fields'        : ['amg','amg','direct','amg'], # fluid-v, fluid-p, fluid-red.v, ale-d
                             'print_liniter_every'   : 50,
                             'adapt_linsolv_tol'     : False,
                             'adapt_factor'          : 0.1,
+                            'romvars_to_new_sblock' : True,
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 

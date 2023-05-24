@@ -760,12 +760,12 @@ class SolidmechanicsProblem(problem_base):
             return [r_u], [[K_uu]]
 
 
-    def get_index_sets(self):
+    def get_index_sets(self, isoptions={}):
 
         assert(self.incompressible_2field) # index sets only needed for 2-field problem
 
         if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            ured = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            ured = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
             self.rom.V.multTranspose(self.u.vector, ured)
             uvec = ured
         else:

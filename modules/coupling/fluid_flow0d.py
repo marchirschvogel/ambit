@@ -294,10 +294,10 @@ class FluidmechanicsFlow0DProblem():
         return r_list, K_list
 
 
-    def get_index_sets(self):
+    def get_index_sets(self, isoptions={}):
 
         if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            vred = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            vred = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
             self.rom.V.multTranspose(self.pbf.v.vector, vred)
             vvec = vred
         else:
@@ -439,15 +439,6 @@ class FluidmechanicsFlow0DProblem():
 
 
 class FluidmechanicsFlow0DSolver(solver_base):
-
-    def __init__(self, problem, solver_params):
-
-        self.pb = problem
-
-        self.solver_params = solver_params
-
-        self.initialize_nonlinear_solver()
-
 
     def initialize_nonlinear_solver(self):
 

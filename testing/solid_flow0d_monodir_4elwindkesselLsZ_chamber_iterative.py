@@ -22,13 +22,13 @@ def main():
                             'simname'               : 'test'}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
-                            'block_precond'         : 'gauss_seidel',
-                            'block_precond_mat'     : 'same',
+                            'block_precond'         : 'fieldsplit', # fieldsplit, sblock3x3
+                            'fieldsplit_type'       : 'gauss_seidel',
                             'precond_fields'        : ['amg','direct'],
-                            'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8,
+                            'tol_lin_rel'           : 1e-7,
                             'print_liniter_every'   : 50,
-                            'tol_lin'               : 1e-11}
+                            'tol_res'               : 1.0e-8,
+                            'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 20,

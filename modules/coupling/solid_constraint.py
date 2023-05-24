@@ -249,10 +249,10 @@ class SolidmechanicsConstraintProblem():
         return r_list, K_list
 
 
-    def get_index_sets(self):
+    def get_index_sets(self, isoptions={}):
 
         if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            ured = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            ured = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
             self.rom.V.multTranspose(self.pbs.u.vector, ured)
             uvec = ured
         else:
@@ -277,21 +277,6 @@ class SolidmechanicsConstraintProblem():
             return [iset_u, iset_p, iset_s]
         else:
             return [iset_u, iset_s]
-
-
-    def assemble_block_precond_matrix(self, Klist, pretype):
-
-        # TODO: distinguish according to pretype...
-        if self.pbs.incompressible_2field:
-            K_pp = fem.petsc.assemble_matrix(fem.form(self.pbs.a_p11), [])
-            K_pp.assemble()
-            P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1], Klist[0][2]], [Klist[1][0], K_pp, Klist[1][2]], [Klist[2][0], Klist[2][1], Klist[2][2]]])
-        else:
-            P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1]], [Klist[1][0], K_pp]])
-
-        P.assemble()
-
-        return P
 
 
     ### now the base routines for this problem

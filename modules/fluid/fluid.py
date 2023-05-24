@@ -526,10 +526,10 @@ class FluidmechanicsProblem(problem_base):
         return [r_v, r_p], [[K_vv, K_vp], [K_pv, K_pp]]
 
 
-    def get_index_sets(self):
+    def get_index_sets(self, isoptions={}):
 
         if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            vred = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            vred = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
             self.rom.V.multTranspose(self.v.vector, vred)
             vvec = vred
         else:

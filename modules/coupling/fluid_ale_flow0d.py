@@ -158,10 +158,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         return r_list, K_list
 
 
-    def get_index_sets(self):
+    def get_index_sets(self, isoptions={}):
 
         if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            vred = PETSc.Vec().createMPI(self.rom.V.getSize()[1], comm=self.comm)
+            vred = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
             self.rom.V.multTranspose(self.pbf.v.vector, vred)
             vvec = vred
         else:
@@ -170,7 +170,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
 
-        if self.rom.romvars_to_new_sblock:
+        if isoptions['rom_to_new']:
             iset_r = PETSc.IS().createStride(len(self.rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
             iset_v = iset_v.difference(iset_r) # subtract
 
@@ -183,21 +183,11 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         offset_s = offset_d + self.pba.d.vector.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
-        if self.rom.romvars_to_new_sblock:
+        if isoptions['rom_to_new']:
             iset_s = iset_s.expand(iset_r) # add to 0D block
 
-        return [iset_v, iset_p, iset_d, iset_s]
-
-
-    def assemble_block_precond_matrix(self, Klist, pretype):
-
-        # TODO: distinguish according to pretype...
-        K_pp = fem.petsc.assemble_matrix(fem.form(self.pbf.a_p11), [])
-        K_pp.assemble()
-        P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1], Klist[0][2], Klist[0][3]], [Klist[1][0], K_pp, Klist[1][2], Klist[1][3]], [Klist[2][0], Klist[2][1], Klist[2][2], Klist[2][3]], [Klist[3][0], Klist[3][1], Klist[3][2], Klist[3][3]]])
-        P.assemble()
-
-        return P
+        # for convenience, add ALE as last in list (since we might want to address this with a decoupled block solve)
+        return [iset_v, iset_p, iset_s, iset_d]
 
 
     ### now the base routines for this problem
@@ -282,15 +272,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
 
 class FluidmechanicsAleFlow0DSolver(solver_base):
-
-    def __init__(self, problem, solver_params):
-
-        self.pb = problem
-
-        self.solver_params = solver_params
-
-        self.initialize_nonlinear_solver()
-
 
     def initialize_nonlinear_solver(self):
 

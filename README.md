@@ -34,8 +34,8 @@
 Still experimental / to-do:
 
 - Fluid-solid interaction (FSI) (started)
-- Enhance PETSc linear iterative solver interface, enable surface-projected problems
 - Finite strain plasticity
+- Electrophysiology/scalar transport
 - ... whatever might be wanted in some future ...
 
 

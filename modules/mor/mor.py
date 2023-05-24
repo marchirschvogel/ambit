@@ -73,9 +73,6 @@ class ModelOrderReduction():
         try: self.exclude_from_snap = params['exclude_from_snap']
         except: self.exclude_from_snap = []
 
-        try: self.romvars_to_new_sblock = params['romvars_to_new_sblock']
-        except: self.romvars_to_new_sblock = False
-
         # mode partitions are either determined by the mode files or partition files
         if bool(self.modes_from_files):
             self.num_partitions = len(self.modes_from_files)
@@ -376,7 +373,6 @@ class ModelOrderReduction():
 
         if self.comm.rank==0:
             print("Built reduced basis operator for ROM. Time: %.4f s" % (te))
-            print(" ")
             sys.stdout.flush()
 
 
@@ -439,8 +435,7 @@ class ModelOrderReduction():
             # set Phi column
             if col in col_fd_set:
                 # prepare index set list for block iterative solver
-                if self.romvars_to_new_sblock:
-                    if col in range(vcs, vce): self.im_rom_r.append(col)
+                if col in range(vcs, vce): self.im_rom_r.append(col)
                 # NOTE: We actually do not want to set the columns at once like this, since PETSc may treat close-zero entries as non-zeros
                 # BUT: Needs to be double-checked if this is really slower for large problems!
                 self.V[vrs:vre,col] = self.Phi[vrs:vre,n]
@@ -469,7 +464,6 @@ class ModelOrderReduction():
 
         if self.comm.rank==0:
             print("Built reduced basis operator for ROM on boundary id(s) "+str(self.surface_rom)+". Time: %.4f s" % (te))
-            print(" ")
             sys.stdout.flush()
 
 
