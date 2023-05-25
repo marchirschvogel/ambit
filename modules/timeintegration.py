@@ -273,6 +273,8 @@ class timeintegration_solid(timeintegration):
         u_old.vector.axpby(1.0, 0.0, u)
         u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        a.destroy(), v.destroy() # auxiliary vectors that have been created, so destroy
+
 
     def compute_genalpha_params(self, rho_inf): # cf. Chung and Hulbert (1993)
 
@@ -460,6 +462,10 @@ class timeintegration_fluid(timeintegration):
             uf_old.vector.axpby(1.0, 0.0, uf)
             uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+            uf.destroy() # auxiliary vector that has been created, so destroy
+
+        a.destroy() # auxiliary vector that has been created, so destroy
+
 
     def compute_genalpha_params(self, rho_inf): # cf. Jansen et al. (2000)
 
@@ -522,6 +528,8 @@ class timeintegration_ale(timeintegration_fluid):
         # update displacement: d_old <- d
         d_old.vector.axpby(1.0, 0.0, d_vec)
         d_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        w_vec.destroy() # auxiliary vector that has been created, so destroy
 
 
 
