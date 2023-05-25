@@ -241,6 +241,18 @@ class solver_nonlinear:
                     bj = preconditioner.sblock_4x4(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
                     self.ksp.getPC().setPythonContext(bj)
 
+                elif self.block_precond == 'bgs2x2':
+
+                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
+                    bj = preconditioner.bgs_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
+                    self.ksp.getPC().setPythonContext(bj)
+
+                elif self.block_precond == 'bgs3x3':
+
+                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
+                    bj = preconditioner.bgs_3x3(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
+                    self.ksp.getPC().setPythonContext(bj)
+
                 else:
                     raise ValueError("Unknown block_precond option!")
 
@@ -496,6 +508,7 @@ class solver_nonlinear:
             if self.nfields > 1:
                 r_full_nest.destroy(), K_full_nest.destroy(), del_full.destroy()
                 if self.solvetype=='direct': r_full.destroy(), K_full.destroy()
+                if self.solvetype=='iterative': P_nest.destroy()
             if self.pb.have_rom:
                 r_u_.destroy(), del_u_.destroy(), tmp.destroy()
             for n in range(self.nfields):

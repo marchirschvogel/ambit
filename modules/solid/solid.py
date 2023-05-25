@@ -506,7 +506,7 @@ class SolidmechanicsProblem(problem_base):
         # pressure contributions
         if self.incompressible_2field:
 
-            self.weakform_lin_up, self.weakform_lin_pu, self.a_p11, self.p11 = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            self.weakform_lin_up, self.weakform_lin_pu, self.p11 = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
             for n in range(self.num_domains):
                 # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
@@ -550,9 +550,6 @@ class SolidmechanicsProblem(problem_base):
                     self.weakform_lin_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
                 else:
                     self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
-
-                # for saddle-point block-diagonal preconditioner
-                self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
 
         if self.prestress_initial:
             # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
@@ -778,19 +775,6 @@ class SolidmechanicsProblem(problem_base):
         iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         return [iset_u, iset_p]
-
-
-    def assemble_block_precond_matrix(self, Klist, pretype):
-
-        assert(self.incompressible_2field) # block preconditioner only needed for 2-field problem
-
-        # TODO: distinguish according to pretype...
-        K_pp = fem.petsc.assemble_matrix(fem.form(self.pbf.a_p11), [])
-        K_pp.assemble()
-        P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1]], [Klist[1][0], K_pp]])
-        P.assemble()
-
-        return P
 
 
     ### now the base routines for this problem

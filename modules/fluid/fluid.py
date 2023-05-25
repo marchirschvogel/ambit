@@ -425,11 +425,6 @@ class FluidmechanicsProblem(problem_base):
         if self.stabilization is not None:
             self.weakform_lin_pp = ufl.derivative(self.weakform_p, self.p, self.dp)
 
-        # for saddle-point block-diagonal preconditioner
-        self.a_p11 = ufl.as_ufl(0)
-        for n in range(self.num_domains):
-            self.a_p11 += ufl.inner(self.dp, self.var_p) * self.dx_[n]
-
         if self.prestress_initial:
             # prestressing weak forms
             self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
@@ -542,17 +537,6 @@ class FluidmechanicsProblem(problem_base):
         iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         return [iset_v, iset_p]
-
-
-    def assemble_block_precond_matrix(self, Klist, pretype):
-
-        # TODO: distinguish according to pretype...
-        K_pp = fem.petsc.assemble_matrix(fem.form(self.pbf.a_p11), [])
-        K_pp.assemble()
-        P = PETSc.Mat().createNest([[Klist[0][0], Klist[0][1]], [Klist[1][0], K_pp]])
-        P.assemble()
-
-        return P
 
 
     ### now the base routines for this problem

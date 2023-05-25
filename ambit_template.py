@@ -64,13 +64,13 @@ def main():
                             'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
                             'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
                             'timint'                : 'genalpha', # time-integration algorithm: 'genalpha', 'ost', 'static'
-                            'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor
-                            'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma)
+                            'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor, \in ]0;1]
+                            'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma), \in [0;1]
                             'fluid_governing_type'  : 'navierstokes_transient'} # OPTIONAL: governing equation type for fluid mechanics: 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'stokes_steady' (default: 'navierstokes_transient')
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: 'ost'
-                            'theta_ost'             : 0.5, # One-Step-Theta time integration factor
+                            'theta_ost'             : 0.5, # One-Step-Theta time integration factor, \in ]0;1]
                             'initial_conditions'    : init(), # initial condition dictionary (here defined as function, see below)
                             'initial_file'          : None, # OPTIONAL: if we want to read initial conditions from a file (overwrites above specified dict)
                             'eps_periodic'          : 1.0e-3, # OPTIONAL: cardiac cycle periodicity tolerance (default: 1.0e-20)
