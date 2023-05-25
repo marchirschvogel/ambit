@@ -293,6 +293,10 @@ class FluidmechanicsFlow0DProblem():
         K_list[0][2] = K_vs
         K_list[2][0] = K_sv
 
+        # destroy PETSc vectors
+        for i in range(len(row_ids)): k_sv_rows[i].destroy()
+        for i in range(len(col_ids)): k_vs_cols[i].destroy()
+
         return r_list, K_list
 
 

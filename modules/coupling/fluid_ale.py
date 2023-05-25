@@ -234,6 +234,7 @@ class FluidmechanicsAleProblem():
                 self.ufa.vector.axpby(1.0, 0.0, uf_vec)
                 self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 #K_list[2][0] = self.K_uv
+                uf_vec.destroy()
             if self.coupling_fluid_ale['type'] == 'robin':
                 K_uv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
                 K_uv.assemble()
@@ -245,6 +246,7 @@ class FluidmechanicsAleProblem():
                 w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
                 self.wf.vector.axpby(1.0, 0.0, w_vec)
                 self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                w_vec.destroy()
 
         r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
 

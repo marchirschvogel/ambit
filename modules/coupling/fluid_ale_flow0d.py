@@ -102,6 +102,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
                 uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
                 self.ufa.vector.axpby(1.0, 0.0, uf_vec)
                 self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                uf_vec.destroy()
             if self.coupling_fluid_ale['type'] == 'weak_dirichlet':
                 K_uv = fem.petsc.assemble_matrix(fem.form(self.jac_uv), self.pba.bc.dbcs)
                 K_uv.assemble()
@@ -113,6 +114,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
                 w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
                 self.wf.vector.axpby(1.0, 0.0, w_vec)
                 self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                w_vec.destroy()
 
         r_list_fluidflow0d, K_list_fluidflow0d = self.pbf0.assemble_residual_stiffness(t, subsolver=subsolver)
 

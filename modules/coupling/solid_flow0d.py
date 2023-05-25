@@ -446,6 +446,10 @@ class SolidmechanicsFlow0DProblem():
         K_list[0][1+off] = K_us
         K_list[1+off][0] = K_su
 
+        # destroy PETSc vectors
+        for i in range(len(row_ids)): k_su_rows[i].destroy()
+        for i in range(len(col_ids)): k_us_cols[i].destroy()
+
         return r_list, K_list
 
 
