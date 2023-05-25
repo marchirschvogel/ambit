@@ -140,7 +140,7 @@ class sblock_2x2(block_precond):
 
         y.assemble()
 
-        z1.destroy()
+        z1.destroy(), z2.destroy()
         y1.destroy(), y2.destroy()
         By1.destroy(), Bty2.destroy()
 
@@ -409,7 +409,7 @@ class bgs_2x2(block_precond):
 
         y.assemble()
 
-        z1.destroy()
+        z1.destroy(), z2.destroy()
         y1.destroy(), y2.destroy()
         By1.destroy(), Bty2.destroy()
 

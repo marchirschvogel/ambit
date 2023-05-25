@@ -233,6 +233,8 @@ class FluidmechanicsFlow0DProblem():
         # restore 0D state variable
         self.pb0.s.axpby(1.0, 0.0, s_tmp)
 
+        df_tmp.destroy(), f_tmp.destroy(), s_tmp.destroy()
+
         K_lm.assemble()
 
         K_list[2][2] = K_lm

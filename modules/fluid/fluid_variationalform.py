@@ -128,7 +128,7 @@ class variationalform(variationalform_base):
         return -c_n*(ufl.dot(v, self.n)*ufl.dot(self.n, self.var_v)*dboundary)
 
 
-    ### SUPG/PSPG stabilization
+    ### SUPG/PSPG stabilization - cf. Tezduyar and Osawa (2000), "Finite element stabilization parameters computed from element matrices and vectors"
     def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, w=None, Fale=None):
 
         return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, res_v_strong) * ddomain
@@ -141,6 +141,8 @@ class variationalform(variationalform_base):
 
         return tau_lsic*ufl.div(self.var_v)*rho*self.res_p_strong(v) * ddomain
 
+
+    # reduced stabilization scheme - cf. Hoffman and Johnson (2006), "A new approach to computational turbulence modeling"
     def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None):
 
         return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_v)*v) + \

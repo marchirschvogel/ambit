@@ -73,8 +73,8 @@ class IO:
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
 
-        # TODO: second mesh readin in case of different meshes desired for e.g. velocity and pressure in fluid
-        # with io.XDMFFile(self.comm, self.mesh_domain2, 'r', encoding=encoding) as infile:
+        # # TODO: second mesh readin in case of different meshes desired for e.g. velocity and pressure in fluid
+        # with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
         #     self.mesh2 = infile.read_mesh(name=self.gridname_domain)
 
         # read in xdmf mesh - boundary
