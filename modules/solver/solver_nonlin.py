@@ -694,6 +694,9 @@ class solver_nonlinear_ode(solver_nonlinear):
 
             if print_iter: self.solutils.print_nonlinear_iter(it,{'res_0d' : res_norm},{'inc_0d' : inc_norm},ts=ts,te=te,sub=sub)
 
+            # destroy PETSc stuff...
+            ds.destroy(), r.destroy(), K.destroy()
+
             it += 1
 
             # check if converged
