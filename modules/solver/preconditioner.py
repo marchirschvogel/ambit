@@ -143,6 +143,7 @@ class sblock_2x2(block_precond):
         z1.destroy(), z2.destroy()
         y1.destroy(), y2.destroy()
         By1.destroy(), Bty2.destroy()
+        del arr_y1, arr_y2
 
 
 
@@ -293,6 +294,7 @@ class sblock_3x3(block_precond):
         z1.destroy(), z2.destroy(), z3.destroy()
         y1.destroy(), y2.destroy(), y3.destroy()
         By1.destroy(), Dy1.destroy(), DBty2.destroy(), Ey2.destroy(), Tmody3.destroy(), Bty2.destroy(), Dty3.destroy()
+        del arr_y1, arr_y2, arr_y3
 
 
 # a 4x4 block preconditioner that does sblock3x3 and a decoupled solve on the 4th block
@@ -339,6 +341,7 @@ class sblock_4x4(sblock_3x3):
         y.assemble()
 
         y4.destroy()
+        del arr_y4
 
 
 
@@ -412,6 +415,7 @@ class bgs_2x2(block_precond):
         z1.destroy(), z2.destroy()
         y1.destroy(), y2.destroy()
         By1.destroy(), Bty2.destroy()
+        del arr_y1, arr_y2
 
 
 
@@ -514,3 +518,4 @@ class bgs_3x3(block_precond):
         z1.destroy(), z2.destroy(), z3.destroy()
         y1.destroy(), y2.destroy(), y3.destroy()
         By1.destroy(), Dy1.destroy(), Ey2.destroy(), Ety3.destroy(), Bty2.destroy(), Dty3.destroy()
+        del arr_y1, arr_y2, arr_y3

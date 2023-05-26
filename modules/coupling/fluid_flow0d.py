@@ -234,6 +234,7 @@ class FluidmechanicsFlow0DProblem():
         self.pb0.s.axpby(1.0, 0.0, s_tmp)
 
         df_tmp.destroy(), f_tmp.destroy(), s_tmp.destroy()
+        del aux_tmp, lm_sq, s_sq, s_pert_sq
 
         K_lm.assemble()
 
