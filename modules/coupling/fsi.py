@@ -19,21 +19,21 @@ from projection import project
 from mpiroutines import allgather_vec
 
 from solid import SolidmechanicsProblem, SolidmechanicsSolver
-from fluid import FluidmechanicsProblem
+from fluid_ale import FluidmechanicsAleProblem
 
 from base import solver_base
 
 
 class FSIProblem():
 
-    def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, constitutive_models_solid, constitutive_models_fluid, bc_dict_solid, bc_dict_fluid, time_curves, coupling_params, ios, iof, mor_params={}, comm=None):
+    def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, ios, iof, mor_params={}, comm=None):
 
         self.problem_physics = 'fsi'
 
         self.comm = comm
 
         self.coupling_params = coupling_params
-        self.coupling_surface = self.coupling_params['surface_ids']
+        self.coupling_surface = self.coupling_params['coupling_fluid_ale']['surface_ids']
 
         self.ios, self.iof = ios, iof
 
@@ -42,86 +42,172 @@ class FSIProblem():
         time_params_fluid['numstep'] = time_params_solid['numstep']
 
         # initialize problem instances (also sets the variational forms for the solid and fluid problem)
-        self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params, comm=self.comm)
-        self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, ios, mor_params=mor_params, comm=self.comm)
+        self.pbs  = SolidmechanicsProblem(io_params['io_solid'], time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params, comm=self.comm)
+        self.pbfa = FluidmechanicsAleProblem(io_params['io_fluid'], time_params_fluid, fem_params_fluid, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params, comm=self.comm)
 
-        self.incompressible_2field = self.pbs.incompressible_2field
+        try: self.fluid_solid_interface = self.coupling_params['fluid_solid_interface']
+        except: self.fluid_solid_interface = 'solid_governed'
 
-        self.set_variational_forms_and_jacobians()
+        self.set_variational_forms()
 
-        self.numdof = self.pbs.numdof + self.pbf.numdof
+        self.numdof = self.pbs.numdof + self.pbfa.numdof
         # solid is 'master' problem - define problem variables based on its values
         self.simname = self.pbs.simname
         self.restart_step = self.pbs.restart_step
         self.numstep_stop = self.pbs.numstep_stop
         self.dt = self.pbs.dt
+        self.have_rom = self.pbs.have_rom
+        if self.have_rom: self.rom = self.pbs.rom
 
-        print("made it through IO....")
-        sys.exit()
+
+    def get_problem_var_list(self):
+
+        if self.pbs.incompressible_2field:
+            is_ghosted = [True]*6
+            return [self.pbs.u.vector, self.pbs.p.vector, self.pbfa.pbf.v.vector, self.pbfa.pbf.p.vector, self.pbfa.pba.d.vector, self.LMs], is_ghosted
+        else:
+            is_ghosted = [True]*5
+            return [self.pbs.u.vector, self.pbfa.pbf.v.vector, self.pbfa.pbf.p.vector, self.pbfa.pba.d.vector, self.LMs], is_ghosted
 
 
     # defines the monolithic coupling forms for FSI
-    def set_variational_forms_and_jacobians(self):
+    def set_variational_forms(self):
 
-        # create FSI interface
-        submsh_entities = fem.locate_dofs_topological(self.pbs.V_u, self.ios.mesh.topology.dim-1, self.ios.mt_b1.indices[self.ios.mt_b1.values == self.coupling_surface[0]])
-        self.fsi_interface, entity_map = mesh.create_submesh(self.ios.mesh, self.ios.mesh.topology.dim, submsh_entities)[0:2]
-        #submsh_entities = fem.locate_dofs_topological(self.pbf.V_v, self.iof.mesh.topology.dim-1, self.iof.mt_b1.indices[self.iof.mt_b1.values == self.coupling_surface[0]])
-        #self.fsi_interface, entity_map = mesh.create_submesh(self.iof.mesh, self.iof.mesh.topology.dim, submsh_entities)[0:2]
+        self.pbs.set_variational_forms()
+        self.pbfa.set_variational_forms()
 
-        # cf. https://github.com/jpdean/mixed_domain_demos/blob/main/lagrange_multiplier.py
+        # solid-sided interface
+        submsh_entities_solid = fem.locate_dofs_topological(self.pbs.V_u, self.ios.mesh.topology.dim-1, self.ios.mt_b1.indices[self.ios.mt_b1.values == self.coupling_surface[0]])
+        self.fsi_interface_solid, entity_map_solid = mesh.create_submesh(self.ios.mesh, self.ios.mesh.topology.dim-1, submsh_entities_solid)[0:2]
 
-        facet_imap = self.ios.mesh.topology.index_map(self.ios.mesh.topology.dim-1)
-        num_facets = facet_imap.size_local + facet_imap.num_ghosts
-        inv_entity_map = np.full(num_facets, -1)
-        inv_entity_map[entity_map] = np.arange(len(entity_map))
-        entity_maps = {self.fsi_interface: inv_entity_map}
+        facet_imap_solid = self.ios.mesh.topology.index_map(self.ios.mesh.topology.dim-1)
 
-        dx_fsi = ufl.dx(metadata={'quadrature_degree': self.pbs.quad_degree})
-
-        # Lagrange multiplier function space
-        P_lm = ufl.VectorElement("CG", self.fsi_interface.ufl_cell(), self.pbs.order_disp)
-        self.V_lm = fem.FunctionSpace(self.fsi_interface, P_lm)
-
-        # Lagrange multiplier
-        self.LM = fem.Function(self.V_lm)
-        self.LM_old = fem.Function(self.V_lm)
-
-        self.dLM    = ufl.TrialFunction(self.V_lm) # incremental LM
-        self.var_LM = ufl.TestFunction(self.V_lm)  # LM test function
-
-        facet_integration_entities = {self.coupling_surface[0]: []}
+        facet_integration_entities_solid = []
         self.ios.mesh.topology.create_connectivity(self.ios.mesh.topology.dim, self.ios.mesh.topology.dim-1)
         self.ios.mesh.topology.create_connectivity(self.ios.mesh.topology.dim-1, self.ios.mesh.topology.dim)
-        c_to_f = self.ios.mesh.topology.connectivity(self.ios.mesh.topology.dim, self.ios.mesh.topology.dim-1)
-        f_to_c = self.ios.mesh.topology.connectivity(self.ios.mesh.topology.dim-1, self.ios.mesh.topology.dim)
+        c_to_f_solid = self.ios.mesh.topology.connectivity(self.ios.mesh.topology.dim, self.ios.mesh.topology.dim-1)
+        f_to_c_solid = self.ios.mesh.topology.connectivity(self.ios.mesh.topology.dim-1, self.ios.mesh.topology.dim)
 
         interface_facets_solid = self.ios.mt_b1.indices[self.ios.mt_b1.values == self.coupling_surface[0]]
 
+        num_facets_solid = facet_imap_solid.size_local + facet_imap_solid.num_ghosts
+        inv_entity_map_solid = np.full(num_facets_solid, -1)
+        inv_entity_map_solid[entity_map_solid] = np.arange(len(entity_map_solid))
+        self.entity_maps_solid = {self.fsi_interface_solid: inv_entity_map_solid}
+
+        mshdomain_solid = self.ios.mesh
+
         for facet in interface_facets_solid:
             # Check if this facet is owned
-            if facet < facet_imap.size_local:
+            if facet < facet_imap_solid.size_local:
                 # Get a cell connected to the facet
-                cell = f_to_c.links(facet)[0]
-                local_facet = c_to_f.links(cell).tolist().index(facet)
-                facet_integration_entities[self.coupling_surface[0]].extend([cell, local_facet])
-        ds_fsi = ufl.Measure("ds", subdomain_data=facet_integration_entities, domain=self.ios.mesh)
+                cell = f_to_c_solid.links(facet)[0]
+                local_facet = c_to_f_solid.links(cell).tolist().index(facet)
+                facet_integration_entities_solid.extend([cell, local_facet])
 
-        # weak form of kinematic FSI coupling condition, v_solid = v_fluid
-        self.res_LM = ufl.dot((self.pbs.vel - self.pbf.v), self.var_LM) * ds_fsi(self.coupling_surface[0])
+        ds_fsi_solid = ufl.Measure("ds", subdomain_data=[(self.coupling_surface[0], facet_integration_entities_solid)], domain=mshdomain_solid)
 
-        # TODO: failing...
-        form = fem.form(self.res_LM, entity_maps=entity_maps)
-        #r_lm = fem.petsc.assemble_vector(fem.form(self.res_LM)) # test...
+        # fluid-sided interface
+        submsh_entities_fluid = fem.locate_dofs_topological(self.pbfa.pbf.V_v, self.iof.mesh.topology.dim-1, self.iof.mt_b1.indices[self.iof.mt_b1.values == self.coupling_surface[0]])
+        self.fsi_interface_fluid, entity_map_fluid = mesh.create_submesh(self.iof.mesh, self.iof.mesh.topology.dim-1, submsh_entities_fluid)[0:2]
 
+        facet_imap_fluid = self.iof.mesh.topology.index_map(self.iof.mesh.topology.dim-1)
+
+        facet_integration_entities_fluid = []
+        self.iof.mesh.topology.create_connectivity(self.iof.mesh.topology.dim, self.iof.mesh.topology.dim-1)
+        self.iof.mesh.topology.create_connectivity(self.iof.mesh.topology.dim-1, self.iof.mesh.topology.dim)
+        c_to_f_fluid = self.iof.mesh.topology.connectivity(self.iof.mesh.topology.dim, self.iof.mesh.topology.dim-1)
+        f_to_c_fluid = self.iof.mesh.topology.connectivity(self.iof.mesh.topology.dim-1, self.iof.mesh.topology.dim)
+
+        interface_facets_fluid = self.iof.mt_b1.indices[self.iof.mt_b1.values == self.coupling_surface[0]]
+
+        num_facets_fluid = facet_imap_fluid.size_local + facet_imap_fluid.num_ghosts
+        inv_entity_map_fluid = np.full(num_facets_fluid, -1)
+        inv_entity_map_fluid[entity_map_fluid] = np.arange(len(entity_map_fluid))
+        self.entity_maps_fluid = {self.fsi_interface_fluid: inv_entity_map_fluid}
+
+        mshdomain_fluid = self.iof.mesh
+
+        for facet in interface_facets_fluid:
+            # Check if this facet is owned
+            if facet < facet_imap_fluid.size_local:
+                # Get a cell connected to the facet
+                cell = f_to_c_fluid.links(facet)[0]
+                local_facet = c_to_f_fluid.links(cell).tolist().index(facet)
+                facet_integration_entities_fluid.extend([cell, local_facet])
+
+        ds_fsi_fluid = ufl.Measure("ds", subdomain_data=[(self.coupling_surface[0], facet_integration_entities_fluid)], domain=mshdomain_fluid)
+
+        P_lm_solid = ufl.VectorElement("CG", self.fsi_interface_solid.ufl_cell(), self.pbs.order_disp)
+        self.V_lm_solid = fem.FunctionSpace(self.fsi_interface_solid, P_lm_solid)
+
+        P_lm_fluid = ufl.VectorElement("CG", self.fsi_interface_fluid.ufl_cell(), self.pbfa.pbf.order_vel)
+        self.V_lm_fluid = fem.FunctionSpace(self.fsi_interface_fluid, P_lm_fluid)
+
+        # cf. https://github.com/jpdean/mixed_domain_demos/blob/main/lagrange_multiplier.py
+
+        # Lagrange multiplier
+        self.LMs = fem.Function(self.V_lm_solid)
+        self.LMs_old = fem.Function(self.V_lm_solid)
+
+        self.LMf = fem.Function(self.V_lm_fluid)
+        self.LMf_old = fem.Function(self.V_lm_fluid)
+
+        if self.fluid_solid_interface=='solid_governed':
+            self.dLM = ufl.TrialFunction(self.V_lm_solid) # incremental LM
+            self.var_LM = ufl.TestFunction(self.V_lm_solid)  # LM test function
+            dx_fsi = ufl.dx(metadata={'quadrature_degree': self.pbs.quad_degree})
+        elif self.fluid_solid_interface=='fluid_governed':
+            self.dLM = ufl.TrialFunction(self.V_lm_fluid) # incremental LM
+            self.var_LM = ufl.TestFunction(self.V_lm_fluid)  # LM test function
+            dx_fsi = ufl.dx(metadata={'quadrature_degree': self.pbfa.pbf.quad_degree})
+        else:
+            raise ValueError("Unknown fluid_solid_interface setting! Choose 'solid_governed' or 'fluid_governed'.")
+
+        work_coupling_solid = self.pbs.vf.deltaW_ext_neumann_cur(self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), self.LMs, ds_fsi_solid)
+        work_coupling_fluid = self.pbfa.pbf.vf.deltaW_ext_neumann_cur(self.LMf, ds_fsi_fluid, Fale=self.pbfa.pba.ki.F(self.pbfa.pba.d))
+
+        # add to solid and fluid virtual work/power
+        self.pbs.weakform_u += work_coupling_solid
+        # self.pbfa.pbf.weakform_v += work_coupling_fluid
+
+        if self.fluid_solid_interface=='solid_governed':
+            self.res_LM = ufl.dot((self.pbs.u - self.pbfa.pba.d), self.var_LM) * ds_fsi_solid(self.coupling_surface[0])
+
+        if self.fluid_solid_interface=='fluid_governed':
+            self.res_LM = ufl.dot((self.pbs.vel - self.pbfa.pbf.v), self.var_LM) * ds_fsi_fluid(self.coupling_surface[0])
+
+
+
+    def set_problem_residual_jacobian_forms(self):
+
+        self.pbs.set_problem_residual_jacobian_forms() # TODO: Seems that we need to pass entitiy maps here for form creation
+        self.pbfa.set_problem_residual_jacobian_forms() # TODO: Seems that we need to pass entitiy maps here for form creation
+
+        if self.fluid_solid_interface=='solid_governed':
+            ff = fem.form(self.res_LM, entity_maps=self.entity_maps_solid)
+
+        if self.fluid_solid_interface=='fluid_governed':
+            ff = fem.form(self.res_LM, entity_maps=self.entity_maps_fluid)
+
+        # for testing purposes...
+        tmp1, tmp2 = self.assemble_residual_stiffness(0.)
+
+
+    def assemble_residual_stiffness(self, t, subsolver=None):
+
+        r_list_solid, K_list_solid = self.pbs.assemble_residual_stiffness(t)
+        r_list_fluid_ale, K_list_fluid_ale = self.pbfa.assemble_residual_stiffness(t)
+
+        sys.exit()
 
     ### now the base routines for this problem
 
     def read_restart(self, sname, N):
 
-        # solid + flow0d problem
+        # solid + fluid-ALE problem
         self.pbs.read_restart(sname, N)
-        self.pbf.read_restart(sname, N)
+        self.pbfa.read_restart(sname, N)
 
         if self.pbs.restart_step > 0:
             if self.coupling_type == 'monolithic_lagrange':
@@ -137,7 +223,7 @@ class FSIProblem():
     def write_output_ini(self):
 
         self.pbs.write_output_ini()
-        self.pbf.write_output_ini()
+        self.pbfa.write_output_ini()
 
 
     def get_time_offset(self):
@@ -148,32 +234,32 @@ class FSIProblem():
     def evaluate_pre_solve(self, t):
 
         self.pbs.evaluate_pre_solve(t)
-        self.pbf.evaluate_pre_solve(t)
+        self.pbfa.evaluate_pre_solve(t)
 
 
     def evaluate_post_solve(self, t, N):
 
         self.pbs.evaluate_post_solve(t, N)
-        self.pbf.evaluate_post_solve(t, N)
+        self.pbfa.evaluate_post_solve(t, N)
 
 
     def set_output_state(self):
 
         self.pbs.set_output_state()
-        self.pbf.set_output_state()
+        self.pbfa.set_output_state()
 
 
     def write_output(self, N, t, mesh=False):
 
         self.pbs.write_output(N, t)
-        self.pbf.write_output(N, t)
+        self.pbfa.write_output(N, t)
 
 
     def update(self):
 
         # update time step - solid and 0D model
         self.pbs.update()
-        self.pbf.update()
+        self.pbfa.update()
 
         # update Lagrange multiplier
         self.lm_old.axpby(1.0, 0.0, self.lm)
@@ -182,19 +268,19 @@ class FSIProblem():
     def print_to_screen(self):
 
         self.pbs.print_to_screen()
-        self.pbf.print_to_screen()
+        self.pbfa.print_to_screen()
 
 
     def induce_state_change(self):
 
         self.pbs.induce_state_change()
-        self.pbf.induce_state_change()
+        self.pbfa.induce_state_change()
 
 
     def write_restart(self, sname, N):
 
         self.pbs.io.write_restart(self.pbs, N)
-        self.pbf.io.write_restart(self.pbs, N)
+        self.pbfa.io.write_restart(self.pbs, N)
 
         self.pb.write_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
 
@@ -202,32 +288,28 @@ class FSIProblem():
     def check_abort(self, t):
 
         self.pbs.check_abort(t)
-        self.pbf.check_abort(t)
+        self.pbfa.check_abort(t)
 
 
 
 class FSISolver(solver_base):
 
-    def __init__(self, problem, solver_params_solid, solver_params_flow0d):
-
-        self.pb = problem
-
-        self.solver_params_solid = solver_params_solid
-        self.solver_params_flow0d = solver_params_flow0d
-
-        self.initialize_nonlinear_solver()
-
-
     def initialize_nonlinear_solver(self):
 
-        # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_constraint_monolithic(self.pb, self.pb.pbs.V_u, self.pb.pbs.V_p, self.solver_params_solid, self.solver_params_flow0d)
+        self.pb.set_problem_residual_jacobian_forms()
 
-        if self.pb.pbs.prestress_initial:
-            # add coupling work to prestress weak form
-            self.pb.pbs.weakform_prestress_u -= self.pb.work_coupling_prestr
-            # initialize solid mechanics solver
-            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params_solid)
+        sys.exit()
+
+        # perform Proper Orthogonal Decomposition
+        if self.pb.have_rom:
+            self.pb.rom.prepare_rob()
+
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+
+        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
+            # initialize fluid mechanics solver
+            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
 
 
     def solve_initial_state(self):
@@ -254,10 +336,10 @@ class FSISolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
 
-        self.solnln.newton(self.pb.pbs.u, self.pb.pbs.p, self.pb.pbf.s, t, localdata=self.pb.pbs.localdata)
+        self.solnln.newton(t, localdata=self.pb.pbs.localdata)
 
 
     def print_timestep_info(self, N, t, wt):
 
         # print time step info to screen
-        self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbs.numstep, wt=wt)
+        self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)

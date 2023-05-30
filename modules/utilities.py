@@ -35,6 +35,10 @@ def print_problem(ptype, comm, numdof=0):
             print("#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###")
             sys.stdout.flush()
 
+        elif ptype == 'fsi':
+            print("################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################")
+            sys.stdout.flush()
+
         elif ptype == 'solid_flow0d':
             print("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########")
             sys.stdout.flush()

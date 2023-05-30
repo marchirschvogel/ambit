@@ -335,11 +335,6 @@ class FluidmechanicsProblem(problem_base):
         self.deltaW_ext     = w_neumann + w_robin + w_stabneumann + w_membrane
         self.deltaW_ext_old = w_neumann_old + w_robin_old + w_stabneumann_old + w_membrane_old
 
-        # Reynolds number: ratio of inertial to viscous forces
-        self.Re = ufl.as_ufl(0)
-        for n in range(self.num_domains):
-            self.Re += ufl.sqrt(ufl.dot(self.vf.f_inert(self.acc,self.v,self.rho[n]), self.vf.f_inert(self.acc,self.v,self.rho[n]))) / ufl.sqrt(ufl.dot(self.vf.f_viscous(self.ma[n].sigma(self.v, self.p)), self.vf.f_viscous(self.ma[n].sigma(self.v, self.p))))
-
         # stabilization
         if self.stabilization is not None:
 

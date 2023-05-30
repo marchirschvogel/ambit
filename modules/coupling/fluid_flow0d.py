@@ -118,8 +118,8 @@ class FluidmechanicsFlow0DProblem():
                     fluxvel, fluxvel_old = self.pbf.v - self.pbf.alevar['w'], self.pbf.v_old - self.pbf.alevar['w_old']
 
                 ds_vq = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                cq_ += self.pbf.vf.flux(fluxvel, ds_vq, Fale=self.pbf.alevar['Fale'])
-                cq_old_ += self.pbf.vf.flux(fluxvel_old, ds_vq, Fale=self.pbf.alevar['Fale_old'])
+                cq_ += self.pbf.vf.flux(fluxvel, ds_vq, w=self.pbf.alevar['w'], Fale=self.pbf.alevar['Fale'])
+                cq_old_ += self.pbf.vf.flux(fluxvel_old, ds_vq, w=self.pbf.alevar['w_old'], Fale=self.pbf.alevar['Fale_old'])
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
@@ -128,7 +128,7 @@ class FluidmechanicsFlow0DProblem():
             for i in range(len(self.surface_p_ids[n])):
 
                 ds_p = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                df_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, Fale=self.pbf.alevar['Fale'])
+                df_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), Fale=self.pbf.alevar['Fale'])
 
                 # add to fluid rhs contributions
                 self.power_coupling += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, Fale=self.pbf.alevar['Fale'])

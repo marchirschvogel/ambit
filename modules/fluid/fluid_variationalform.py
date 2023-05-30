@@ -67,12 +67,20 @@ class variationalform(variationalform_base):
         return ufl.div(v)*self.var_p*ddomain
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
-
-        return rho*(a + ufl.grad(v) * v) - ufl.div(sig)
+        if self.formulation=='nonconservative':
+            return rho*(a + ufl.grad(v) * v) - ufl.div(sig)
+        elif self.formulation=='conservative':
+            return rho*(a + ufl.div(ufl.outer(v,v))) - ufl.div(sig)
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, Fale=None):
-
-        return rho*(ufl.grad(v) * v) - ufl.div(sig)
+        if self.formulation=='nonconservative':
+            return rho*(ufl.grad(v) * v) - ufl.div(sig)
+        elif self.formulation=='conservative':
+            return rho*(ufl.div(ufl.outer(v,v))) - ufl.div(sig)
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, Fale=None):
 
@@ -86,13 +94,6 @@ class variationalform(variationalform_base):
 
         return ufl.div(v)
 
-    def f_inert(self, a, v, rho):
-
-        return rho*(a + ufl.grad(v) * v)
-
-    def f_viscous(self, sig):
-
-        return ufl.div(ufl.dev(sig))
 
     ### External virtual power \delta \mathcal{P}_{\mathrm{ext}}
 
@@ -139,7 +140,7 @@ class variationalform(variationalform_base):
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
 
-        return tau_lsic*ufl.div(self.var_v)*rho*self.res_p_strong(v) * ddomain
+        return tau_lsic*ufl.div(self.var_v)*rho*self.res_p_strong(v, Fale=Fale) * ddomain
 
 
     # reduced stabilization scheme - cf. Hoffman and Johnson (2006), "A new approach to computational turbulence modeling"
@@ -226,7 +227,7 @@ class variationalform_ale(variationalform):
             return rho*ufl.dot(a + ufl.grad(v)*ufl.inv(Fale) * (-w), self.var_v) * J*ddomain
         elif self.formulation=='conservative':
             i, j, k = ufl.indices(3)
-            return rho*ufl.dot(ufl.as_vector(ufl.grad(ufl.outer(v,-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
+            return rho*ufl.dot(a + ufl.as_vector(ufl.grad(ufl.outer(v,-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
         else:
             raise ValueError("Unkown fluid formulation!")
 
@@ -259,24 +260,40 @@ class variationalform_ale(variationalform):
             return (beta*ufl.dot((v-vD), self.var_v) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.n0)))(fcts)*dboundary
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
-        J = ufl.det(Fale)
         i, j, k = ufl.indices(3)
-        return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (v-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        if self.formulation=='nonconservative':
+            return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (v-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        elif self.formulation=='conservative':
+            return rho*(a + ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i)) - ufl.as_vector(ufl.grad(sig)[l,m,n]*ufl.inv(Fale).T[j,k], i)
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, Fale=None):
-        J = ufl.det(Fale)
         i, j, k = ufl.indices(3)
-        return rho*(ufl.grad(v)*ufl.inv(Fale) * (v-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        if self.formulation=='nonconservative':
+            return rho*(ufl.grad(v)*ufl.inv(Fale) * (v-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        elif self.formulation=='conservative':
+            return rho*(ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i)) - ufl.as_vector(ufl.grad(sig)[l,m,n]*ufl.inv(Fale).T[j,k], i)
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, Fale=None):
-        J = ufl.det(Fale)
         i, j, k = ufl.indices(3)
-        return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        if self.formulation=='nonconservative':
+            return rho*(a + ufl.grad(v)*ufl.inv(Fale) * (-w)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        elif self.formulation=='conservative':
+            return rho*(a + ufl.as_vector(ufl.grad(ufl.outer(v,-w))[i,j,k]*ufl.inv(Fale).T[j,k], i)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+        else:
+            raise ValueError("Unkown fluid formulation!")
 
     def res_v_strong_stokes_steady(self, rho, sig, Fale=None):
-        J = ufl.det(Fale)
         i, j, k = ufl.indices(3)
         return -ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
+
+    def res_p_strong(self, v, Fale=None):
+
+        return ufl.inner(ufl.grad(v), ufl.inv(Fale).T)
+
 
     ### External virtual power \delta \mathcal{P}_{\mathrm{ext}}
 
@@ -325,7 +342,7 @@ class variationalform_ale(variationalform):
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return tau_lsic * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) * rho*self.res_p_strong(v) * J*ddomain
+        return tau_lsic * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) * rho*self.res_p_strong(v, Fale=Fale) * J*ddomain
 
     def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
@@ -344,6 +361,6 @@ class variationalform_ale(variationalform):
     # flux
     # TeX: \int\limits_{\Gamma} (\boldsymbol{v}-\boldsymbol{w})\cdot\boldsymbol{n}\,\mathrm{d}a =
     #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\boldsymbol{w})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
-    def flux(self, v, dboundary, Fale=None):
+    def flux(self, v, dboundary, w=None, Fale=None):
         J = ufl.det(Fale)
-        return J*ufl.dot(ufl.inv(Fale).T*self.n0, v)*dboundary
+        return J*ufl.dot(ufl.inv(Fale).T*self.n0, (v-w))*dboundary

@@ -510,9 +510,6 @@ class IO_fluid(IO):
                             stressfuncs.append(pb.ma[n].sigma(pb.v,pb.p))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
                         self.resultsfiles[res].write_function(cauchystress, t)
-                    elif res=='reynolds':
-                        reynolds = project(pb.Re, pb.Vd_scalar, pb.dx_, nm="Reynolds")
-                        self.resultsfiles[res].write_function(reynolds, t)
                     elif res=='fluiddisplacement': # passed in uf is not a function but form, so we have to project
                         uf_proj = project(pb.ufluid, pb.V_v, pb.dx_, nm="FluidDisplacement")
                         self.resultsfiles[res].write_function(uf_proj, t)
@@ -629,10 +626,28 @@ class IO_fluid_ale(IO_fluid,IO_ale):
 
     def readcheckpoint(self, pb):
 
-        IO_fluid.readcheckpoint(self, pb)
-        IO_ale.readcheckpoint(self, pb)
+        IO_fluid.readcheckpoint(self, pb.pbf)
+        IO_ale.readcheckpoint(self, pb.pba)
 
     def writecheckpoint(self, pb, N):
 
-        IO_fluid.writecheckpoint(self, pb, N)
-        IO_ale.writecheckpoint(self, pb, N)
+        IO_fluid.writecheckpoint(self, pb.pbf, N)
+        IO_ale.writecheckpoint(self, pb.pba, N)
+
+
+class IO_fsi(IO_solid,IO_fluid_ale):
+
+    def write_output(self, pb, writemesh=False, N=1, t=0):
+
+        IO_solid.write_output(self, pb.pbs, writemesh=writemesh, N=N, t=t)
+        IO_fluid_ale.write_output(self, pb.pbfa, writemesh=writemesh, N=N, t=t)
+
+    def readcheckpoint(self, pb):
+
+        IO_solid.readcheckpoint(self, pb)
+        IO_fluid_ale.readcheckpoint(self, pb)
+
+    def writecheckpoint(self, pb, N):
+
+        IO_solid.writecheckpoint(self, pb, N)
+        IO_fluid_ale.writecheckpoint(self, pb, N)

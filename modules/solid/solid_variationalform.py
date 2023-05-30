@@ -109,7 +109,7 @@ class variationalform(variationalform_base):
     # TeX: \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
     def deltaW_ext_neumann_cur(self, J, F, func, dboundary):
 
-        return J*ufl.dot(ufl.inv(Fale).T*func, self.var_u)*dboundary
+        return J*ufl.dot(ufl.inv(F).T*func, self.var_u)*dboundary
 
     # Neumann follower load in current normal direction
     # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A

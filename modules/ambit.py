@@ -121,13 +121,17 @@ class Ambit():
 
             import fsi
 
+            io_params['io_solid']['simname'] = io_params['simname'] + '_solid'
+            io_params['io_solid']['problem_type'] = io_params['problem_type']
             ios = ioroutines.IO_solid(io_params['io_solid'], self.comm)
             ios.readin_mesh()
 
-            iof = ioroutines.IO_fluid(io_params['io_fluid'], self.comm)
+            io_params['io_fluid']['simname'] = io_params['simname'] + '_fluid'
+            io_params['io_fluid']['problem_type'] = io_params['problem_type']
+            iof = ioroutines.IO_fluid_ale(io_params['io_fluid'], self.comm)
             iof.readin_mesh()
 
-            self.mp = fsi.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, ios, iof, mor_params=mor_params, comm=self.comm)
+            self.mp = fsi.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], bc_dict[0], [bc_dict[1],bc_dict[2]], time_curves, coupling_params, ios, iof, mor_params=mor_params, comm=self.comm)
             self.ms = fsi.FSISolver(self.mp, solver_params)
 
         elif problem_type == 'solid_constraint':

@@ -24,7 +24,7 @@ def main():
                            'mesh_boundary'         : basepath+'/input/cylinder-quad_boundary.xdmf',
                            'write_results_every'   : 1,
                            'output_path'           : basepath+'/tmp/',
-                           'results_to_write'      : ['velocity','pressure','acceleration','cauchystress','reynolds','fluiddisplacement'],
+                           'results_to_write'      : ['velocity','pressure','acceleration','cauchystress','fluiddisplacement'],
                            'simname'               : 'fluid_taylorhood_cylinder'}
 
     SOLVER_PARAMS_FLUID = {'solve_type'            : 'direct',

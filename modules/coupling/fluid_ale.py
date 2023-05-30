@@ -426,7 +426,7 @@ class FluidmechanicsAleSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
 
-        if self.pb.pbf.prestress_initial and self.pb.pbs.restart_step == 0:
+        if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
             # initialize fluid mechanics solver
             self.solverprestr = FluidmechanicsSolver(self.pb.pbf, self.solver_params)
 
