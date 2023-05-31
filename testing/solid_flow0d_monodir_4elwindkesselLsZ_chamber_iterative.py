@@ -25,7 +25,7 @@ def main():
                             'iterative_solver'      : 'gmres',
                             'block_precond'         : 'fieldsplit',
                             'fieldsplit_type'       : 'gauss_seidel',
-                            'precond_fields'        : ['amg','direct'],
+                            'precond_fields'        : [{'prec':'amg'}, {'prec':'direct'}],
                             'tol_lin_rel'           : 1e-7,
                             'lin_norm_type'         : 'unpreconditioned',
                             'print_liniter_every'   : 50,

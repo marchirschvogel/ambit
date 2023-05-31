@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys
+import time, sys, copy
 import numpy as np
 from dolfinx import fem
 import ufl
@@ -402,7 +402,15 @@ class SolidmechanicsConstraintSolver(solver_base):
 
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # initialize solid mechanics solver
-            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
+            solver_params_prestr = copy.deepcopy(self.solver_params)
+            # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
+            try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
+            except: pass
+            try: solver_params_prestr['block_precond'] = self.solver_params['block_precond_prestr']
+            except: pass
+            try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
+            except: pass
+            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, solver_params_prestr)
 
 
     def solve_initial_state(self):

@@ -330,6 +330,8 @@ class FluidmechanicsProblem(problem_base):
             if 'neumann_prestress' in self.bc_dict.keys():
                 w_neumann_prestr = self.bc.neumann_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane
+        else:
+            assert('neumann_prestress' not in self.bc_dict.keys())
 
         # TODO: Body forces!
         self.deltaW_ext     = w_neumann + w_robin + w_stabneumann + w_membrane

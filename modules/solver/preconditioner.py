@@ -30,12 +30,15 @@ class block_precond():
             self.ksp_fields.append( PETSc.KSP().create(self.comm) )
         # set the options
         for n in range(self.nfields):
-            self.ksp_fields[n].setType("preonly")
-            if self.precond_fields[n] == 'amg':
+            if self.precond_fields[n]['prec'] == 'amg':
+                try: solvetype = self.precond_fields[n]['solve']
+                except: solvetype = "preonly"
+                self.ksp_fields[n].setType(solvetype)
                 self.ksp_fields[n].getPC().setType("hypre")
                 self.ksp_fields[n].getPC().setMGLevels(3)
                 self.ksp_fields[n].getPC().setHYPREType("boomeramg")
-            elif self.precond_fields[n] == 'direct':
+            elif self.precond_fields[n]['prec'] == 'direct':
+                self.ksp_fields[n].setType("preonly")
                 self.ksp_fields[n].getPC().setType("lu")
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")

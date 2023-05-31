@@ -165,8 +165,8 @@ class FluidmechanicsFlow0DProblem():
         # Lagrange multipliers (pressures) to be passed to 0D model
         lm_sq = allgather_vec(self.lm, self.comm)
 
-        for j in range(self.num_coupling_surf):
-            self.pb0.c[j] = lm_sq[j]
+        for i in range(self.num_coupling_surf):
+            self.pb0.c[i] = lm_sq[i]
 
         subsolver.newton(t, print_iter=self.print_subiter, sub=True)
 

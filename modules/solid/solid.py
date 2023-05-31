@@ -416,6 +416,8 @@ class SolidmechanicsProblem(problem_base):
             if 'robin' in bc_dict_prestr.keys():
                 w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
+        else:
+            assert('neumann_prestress' not in self.bc_dict.keys())
 
         # TODO: Body forces!
         self.deltaW_ext     = w_neumann + w_robin + w_membrane

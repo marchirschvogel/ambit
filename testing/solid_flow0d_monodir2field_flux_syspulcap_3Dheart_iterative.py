@@ -31,7 +31,7 @@ def main():
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',
                             'block_precond'         : 'sblock3x3',
-                            'precond_fields'        : ['amg','amg','direct'],
+                            'precond_fields'        : [{'prec':'amg'}, {'prec':'amg'}, {'prec':'direct'}],
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_inc'               : [1.0e-8,1.0e-8,1.0e-6], # u,p,0d
                             'tol_lin_rel'           : 1.0e-9,

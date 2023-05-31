@@ -178,7 +178,7 @@ class solver_nonlinear:
                 if self.block_precond == 'fieldsplit':
 
                     # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
-                    self.ksp.getPC().setType("fieldsplit") # fieldsplit, shell (TODO: How can we use shell apply here?)
+                    self.ksp.getPC().setType("fieldsplit")
                     # cf. https://petsc.org/main/manualpages/PC/PCCompositeType
 
                     if self.fieldsplit_type=='jacobi':
@@ -213,12 +213,15 @@ class solver_nonlinear:
                     # set field-specific preconditioners
                     for n in range(nsets):
 
-                        ksp_fields[n].setType("preonly") # preonly: only one solve/preconditioner application
-                        if self.precond_fields[n] == 'amg':
+                        if self.precond_fields[n]['prec'] == 'amg':
+                            try: solvetype = self.precond_fields[n]['solve']
+                            except: solvetype = "preonly"
+                            ksp_fields[n].setType(solvetype)
                             ksp_fields[n].getPC().setType("hypre")
                             ksp_fields[n].getPC().setMGLevels(3)
                             ksp_fields[n].getPC().setHYPREType("boomeramg")
-                        elif self.precond_fields[n] == 'direct':
+                        elif self.precond_fields[n]['prec'] == 'direct':
+                            ksp_fields[n].setType("preonly")
                             ksp_fields[n].getPC().setType("lu")
                         else:
                             raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
@@ -268,6 +271,11 @@ class solver_nonlinear:
             # set tolerances and print routine
             self.ksp.setTolerances(rtol=self.tol_lin_rel, atol=self.tol_lin_abs, divtol=None, max_it=self.maxliniter)
             self.ksp.setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its,rnorm))
+
+            # set some additional PETSc options
+            petsc_options = PETSc.Options()
+            petsc_options.setValue('ksp_gmres_modifiedgramschmidt', True)
+            self.ksp.setFromOptions()
 
         else:
 

@@ -107,75 +107,80 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         tmp = np.loadtxt(path+'/results_'+sname+'_p_ar_pul.txt', usecols=0) # could be another file - all should have the same length!
         numdata = len(tmp)
 
+        # in case our chamber model was "rigid", neither flux nor volume files exist, so write dummies
+        ch_dummy = []
+        for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort_sys']):
+            test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
+            test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
+            if test_Q > 0 and test_V > 0:
+                print(">>> WARNING: Neither volume nor flux file available for chamber %s! Writing dummy files." % (ch))
+                file_dummy_V = open(path+'/results_'+sname+'_V_'+ch+'.txt', 'wt')
+                for n in range(numdata):
+                    file_dummy_V.write('%.16E %.16E\n' % (tmp[n], 0.0))
+                file_dummy_V.close()
+                file_dummy_Q = open(path+'/results_'+sname+'_Q_'+ch+'.txt', 'wt')
+                for n in range(numdata):
+                    file_dummy_Q.write('%.16E %.16E\n' % (tmp[n], 0.0))
+                file_dummy_Q.close()
+                ch_dummy.append(ch)
+
         # in case our coupling quantity was not volume, but flux or pressure, we should calculate the volume out of the flux data
         for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort_sys']):
-            # test if volume file exists
-            test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
-            if test_V > 0:
-                # safety check - flux file should exist in case of missing volume file!
-                test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
-                if test_Q == 0:
-                    fluxes = np.loadtxt(path+'/results_'+sname+'_Q_'+ch+'.txt', usecols=1)
-                    # integrate volume (mid-point rule): Q_{mid} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{mid}*dt + V_{n}
-                    # --> V_{mid} = 0.5 * V_{n+1} + 0.5 * V_{n}
-                    file_vol = open(path+'/results_'+sname+'_V_'+ch+'.txt', 'wt')
-                    vol_n = V0[i]
-                    file_vol.write('%.16E %.16E\n' % (tmp[0], vol_n))
-                    for n in range(len(fluxes)-1):
-                        dt = tmp[n+1] - tmp[n]
-                        vol_np = -fluxes[n+1]*dt + vol_n
-                        vol_mid = 0.5*vol_np + 0.5*vol_n
-                        file_vol.write('%.16E %.16E\n' % (tmp[n+1], vol_mid))
-                        vol_n = vol_np
-                    file_vol.close()
-                else:
-                    if ch!='aort_sys':
-                        print(">>> WARNING: No flux file available for chamber %s! Writing dummy file." % (ch))
-                        file_dummy = open(path+'/results_'+sname+'_Q_'+ch+'.txt', 'wt')
-                        for n in range(numdata):
-                            file_dummy.write('%.16E %.16E\n' % (tmp[n], 0.0))
-                        file_dummy.close()
+            if ch not in ch_dummy:
+                # test if volume file exists
+                test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
+                if test_V > 0:
+                    # safety check - flux file should exist in case of missing volume file!
+                    test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
+                    if test_Q == 0:
+                        fluxes = np.loadtxt(path+'/results_'+sname+'_Q_'+ch+'.txt', usecols=1)
+                        # integrate volume (mid-point rule): Q_{mid} = -(V_{n+1} - V_{n})/dt --> V_{n+1} = -Q_{mid}*dt + V_{n}
+                        # --> V_{mid} = 0.5 * V_{n+1} + 0.5 * V_{n}
+                        file_vol = open(path+'/results_'+sname+'_V_'+ch+'.txt', 'wt')
+                        vol_n = V0[i]
+                        file_vol.write('%.16E %.16E\n' % (tmp[0], vol_n))
+                        for n in range(len(fluxes)-1):
+                            dt = tmp[n+1] - tmp[n]
+                            vol_np = -fluxes[n+1]*dt + vol_n
+                            vol_mid = 0.5*vol_np + 0.5*vol_n
+                            file_vol.write('%.16E %.16E\n' % (tmp[n+1], vol_mid))
+                            vol_n = vol_np
+                        file_vol.close()
 
         # in case our coupling quantity was not flux or pressure, but volume, we could calculate the chamber fluxes Q
         for i, ch in enumerate(['v_l','v_r','at_l','at_r', 'aort_sys']):
-            # test if flux file exists
-            test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
-            if test_Q > 0:
-                # safety check - volume file should exist in case of missing flux file!
-                test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
-                if test_V == 0:
+            if ch not in ch_dummy:
+                # test if flux file exists
+                test_Q = os.system('test -e '+path+'/results_'+sname+'_Q_'+ch+'.txt')
+                if test_Q > 0:
+                    # safety check - volume file should exist in case of missing flux file!
+                    test_V = os.system('test -e '+path+'/results_'+sname+'_V_'+ch+'.txt')
 
-                    if ch=='v_l':
-                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', usecols=1)
-                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', usecols=1)
-                    elif ch=='v_r':
-                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', usecols=1)
-                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vout_r.txt', usecols=1)
-                    elif ch=='at_l':
-                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_ven1_pul.txt', usecols=1)
-                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', usecols=1)
-                    elif ch=='at_r':
-                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_ven1_sys.txt', usecols=1)
-                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', usecols=1)
-                    elif ch=='aort_sys':
-                        flux_i = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', usecols=1)
-                        flux_o = np.loadtxt(path+'/results_'+sname+'_q_arp_sys.txt', usecols=1)
-                    else:
-                        raise NameError("Unknown chamber/compartment!")
+                    if test_V == 0:
 
-                    flux = -flux_i + flux_o # -Q_ch = q_ch_in - q_ch_out
-                    file_flx = open(path+'/results_'+sname+'_Q_'+ch+'.txt', 'wt')
-                    for n in range(len(flux)):
-                        file_flx.write('%.16E %.16E\n' % (tmp[n], flux[n]))
-                    file_flx.close()
+                        if ch=='v_l':
+                            flux_i = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', usecols=1)
+                            flux_o = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', usecols=1)
+                        elif ch=='v_r':
+                            flux_i = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', usecols=1)
+                            flux_o = np.loadtxt(path+'/results_'+sname+'_q_vout_r.txt', usecols=1)
+                        elif ch=='at_l':
+                            flux_i = np.loadtxt(path+'/results_'+sname+'_q_ven1_pul.txt', usecols=1)
+                            flux_o = np.loadtxt(path+'/results_'+sname+'_q_vin_l.txt', usecols=1)
+                        elif ch=='at_r':
+                            flux_i = np.loadtxt(path+'/results_'+sname+'_q_ven1_sys.txt', usecols=1)
+                            flux_o = np.loadtxt(path+'/results_'+sname+'_q_vin_r.txt', usecols=1)
+                        elif ch=='aort_sys':
+                            flux_i = np.loadtxt(path+'/results_'+sname+'_q_vout_l.txt', usecols=1)
+                            flux_o = np.loadtxt(path+'/results_'+sname+'_q_arp_sys.txt', usecols=1)
+                        else:
+                            raise NameError("Unknown chamber/compartment!")
 
-                else:
-                    if ch!='aort_sys':
-                        print(">>> WARNING: No volume file available for chamber %s! Writing dummy file." % (ch))
-                        file_dummy = open(path+'/results_'+sname+'_V_'+ch+'.txt', 'wt')
-                        for n in range(numdata):
-                            file_dummy.write('%.16E %.16E\n' % (tmp[n], 0.0))
-                        file_dummy.close()
+                        flux = -flux_i + flux_o # -Q_ch = q_ch_in - q_ch_out
+                        file_flx = open(path+'/results_'+sname+'_Q_'+ch+'.txt', 'wt')
+                        for n in range(len(flux)):
+                            file_flx.write('%.16E %.16E\n' % (tmp[n], flux[n]))
+                        file_flx.close()
 
         # check number of veins
         sysveins, pulveins = 0, 0
