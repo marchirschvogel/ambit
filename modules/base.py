@@ -183,9 +183,14 @@ class solver_base():
             if self.pb.check_abort(t-t_off):
                 break
 
-        # destroy PETSc ksp solver
-        self.solnln.ksp.destroy()
+        # destroy stuff
+        self.destroy()
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
             sys.stdout.flush()
+
+
+    def destroy(self):
+
+        self.solnln.ksp.destroy()

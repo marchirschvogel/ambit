@@ -213,6 +213,10 @@ class IO:
     # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
     def readin_fibers(self, fibarray, V_fib, dx_, order_disp):
 
+        if self.comm.rank==0:
+            print("Reading in fibers ...")
+            sys.stdout.flush()
+
         fib_func_input, fib_func = [], []
 
         try: self.order_fib_input = self.io_params['order_fib_input']
@@ -246,6 +250,10 @@ class IO:
             fib_func[si] /= ufl.sqrt(ufl.dot(fib_func[si],fib_func[si]))
 
             si+=1
+
+        if self.comm.rank==0:
+            print("Finished fiber read-in.")
+            sys.stdout.flush()
 
         return fib_func
 

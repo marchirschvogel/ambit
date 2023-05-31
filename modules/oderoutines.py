@@ -74,7 +74,7 @@ class ode:
     def lambdify_expressions(self):
 
         if self.comm.rank == 0:
-            print("Calling lambdify for expressions...")
+            print("ODE model: Calling lambdify for expressions...")
             sys.stdout.flush()
 
         ts = time.time()
@@ -87,7 +87,7 @@ class ode:
         te = time.time() - ts
 
         if self.comm.rank == 0:
-            print("Finished lambdify for residual expressions, %.4f s" % (te))
+            print("ODE model: Finished lambdify for residual expressions, %.4f s" % (te))
             sys.stdout.flush()
 
         ts = time.time()
@@ -102,7 +102,7 @@ class ode:
         te = time.time() - ts
 
         if self.comm.rank == 0:
-            print("Finished lambdify for stiffness expressions, %.4f s" % (te))
+            print("ODE model: Finished lambdify for stiffness expressions, %.4f s" % (te))
             sys.stdout.flush()
 
 
