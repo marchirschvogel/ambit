@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys
+import sys, time
 import numpy as np
 from petsc4py import PETSc
 from dolfinx import fem, io
@@ -213,6 +213,7 @@ class IO:
     # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
     def readin_fibers(self, fibarray, V_fib, dx_, order_disp):
 
+        ts = time.time()
         if self.comm.rank==0:
             print("Reading in fibers ...")
             sys.stdout.flush()
@@ -251,8 +252,9 @@ class IO:
 
             si+=1
 
+        te = time.time() - ts
         if self.comm.rank==0:
-            print("Finished fiber read-in.")
+            print("Finished fiber read-in. Time: %.4f s" % (te))
             sys.stdout.flush()
 
         return fib_func
