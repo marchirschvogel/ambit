@@ -274,7 +274,7 @@ class solver_nonlinear:
 
             # set some additional PETSc options
             petsc_options = PETSc.Options()
-            petsc_options.setValue('ksp_gmres_modifiedgramschmidt', True)
+            petsc_options.setValue('-ksp_gmres_modifiedgramschmidt', True)
             self.ksp.setFromOptions()
 
         else:

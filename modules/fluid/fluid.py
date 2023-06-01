@@ -219,7 +219,7 @@ class FluidmechanicsProblem(problem_base):
 
             self.fib_func = self.io.readin_fibers(fibarray, self.V_v, self.dx_, self.order_vel)
 
-            if 'fibers' in self.results_to_write:
+            if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
                 for i in range(len(fibarray)):
                     fib_proj = project(self.fib_func[i], self.V_v, self.dx_, nm='Fiber'+str(i+1))
                     self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
@@ -679,7 +679,7 @@ class FluidmechanicsSolver(solver_base):
             self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.sepstring, wt=wt)
 
             # write prestress displacement (given that we want to write the fluid displacement)
-            if 'fluiddisplacement' in self.pb.results_to_write:
+            if 'fluiddisplacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
                 self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, tprestr, 'fluiddisplacement_pre')
 
         utilities.print_prestress('end', self.pb.comm)

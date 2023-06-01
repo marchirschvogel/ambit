@@ -44,7 +44,7 @@ class block_precond():
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
         self.check_field_size()
-        self.init_mat()
+        self.init_mat_vec()
 
 
     def view(self, pc, vw):
@@ -67,9 +67,11 @@ class sblock_2x2(block_precond):
         assert(self.nfields==2)
 
 
-    def init_mat(self):
+    def init_mat_vec(self):
         self.A, self.Bt, self.B, self.C = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
         self.Smod = PETSc.Mat()
+
+        self.By1, self.Bty2 = PETSc.Vec(), PETSc.Vec()
 
 
     def setUp(self, pc):
@@ -97,6 +99,12 @@ class sblock_2x2(block_precond):
 
         self.B.diagonalScale(R=ad_vec)       # restore B
 
+        # some auxiliary vecs needed in apply
+        self.By1.destroy(), self.Bty2.destroy()
+
+        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
+        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+
         ad_vec.destroy(), adinv_vec.destroy()
         B_Adinv_Bt.destroy()
 
@@ -115,17 +123,15 @@ class sblock_2x2(block_precond):
         self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(x1, y1)
 
-        By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.B.mult(y1, By1)
-        z2 = x2 - By1
+        self.B.mult(y1, self.By1)
+        z2 = x2 - self.By1
 
         # 2) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(z2, y2)
 
-        Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
-        self.Bt.mult(y2, Bty2)
-        z1 = x1 - Bty2
+        self.Bt.mult(y2, self.Bty2)
+        z1 = x1 - self.Bty2
 
         # 3) solve A * y_1 = z_1
         self.ksp_fields[0].setOperators(self.A)
@@ -145,7 +151,6 @@ class sblock_2x2(block_precond):
 
         z1.destroy(), z2.destroy()
         y1.destroy(), y2.destroy()
-        By1.destroy(), Bty2.destroy()
         del arr_y1, arr_y2
 
 
@@ -156,10 +161,12 @@ class sblock_3x3(block_precond):
         assert(self.nfields==3)
 
 
-    def init_mat(self):
+    def init_mat_vec(self):
         self.A, self.Bt, self.Dt, self.B, self.C, self.Et, self.D, self.E, self.R = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
         self.Smod, self.Tmod, self.Wmod = PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
+
         self.DBt = PETSc.Mat()
+        self.By1, self.Dy1, self.DBty2, self.Ey2, self.Tmody3, self.Bty2, self.Dty3 = PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec()
 
 
     def setUp(self, pc):
@@ -170,7 +177,6 @@ class sblock_3x3(block_precond):
 
         self.A.destroy(), self.Bt.destroy(), self.Dt.destroy(), self.B.destroy(), self.C.destroy(), self.Et.destroy(), self.D.destroy(), self.E.destroy(), self.R.destroy()
         self.Smod.destroy(), self.Tmod.destroy(), self.Wmod.destroy()
-        self.DBt.destroy()
 
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
@@ -220,7 +226,18 @@ class sblock_3x3(block_precond):
         self.D.diagonalScale(R=ad_vec)     # restore D
         self.E.diagonalScale(R=smodd_vec)  # restore E
 
+        # some auxiliary mats and vecs needed in apply
+        self.DBt.destroy()
+        self.By1.destroy(), self.Dy1.destroy(), self.DBty2.destroy(), self.Ey2.destroy(), self.Tmody3.destroy(), self.Bty2.destroy(), self.Dty3.destroy()
+
         self.DBt = self.D.matMult(self.Bt)
+        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
+        self.Dy1 = PETSc.Vec().createMPI(size=(self.D.getLocalSize()[0],self.D.getSize()[0]), comm=self.comm)
+        self.DBty2 = PETSc.Vec().createMPI(size=(self.DBt.getLocalSize()[0],self.DBt.getSize()[0]), comm=self.comm)
+        self.Ey2 = PETSc.Vec().createMPI(size=(self.E.getLocalSize()[0],self.E.getSize()[0]), comm=self.comm)
+        self.Tmody3 = PETSc.Vec().createMPI(size=(self.Tmod.getLocalSize()[0],self.Tmod.getSize()[0]), comm=self.comm)
+        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+        self.Dty3 = PETSc.Vec().createMPI(size=(self.Dt.getLocalSize()[0],self.Dt.getSize()[0]), comm=self.comm)
 
         ad_vec.destroy(), adinv_vec.destroy(), smodd_vec.destroy(), smoddinv_vec.destroy()
         B_Adinv_Bt.destroy(), B_Adinv_Dt.destroy(), D_Adinv_Bt_Smoddinv_Tmod.destroy(), E_Smoddinv_Tmod.destroy(), D_Adinv_Dt.destroy(), Bt_Smoddinv_Tmod.destroy()
@@ -241,40 +258,33 @@ class sblock_3x3(block_precond):
         self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(x1, y1)
 
-        By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.B.mult(y1, By1)
-        z2 = x2 - By1
+        self.B.mult(y1, self.By1)
+        z2 = x2 - self.By1
 
         # 2) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(z2, y2)
 
-        Dy1 = PETSc.Vec().createMPI(size=(self.D.getLocalSize()[0],self.D.getSize()[0]), comm=self.comm)
-        self.D.mult(y1, Dy1)
-        DBty2 = PETSc.Vec().createMPI(size=(self.DBt.getLocalSize()[0],self.DBt.getSize()[0]), comm=self.comm)
-        self.DBt.mult(y2, DBty2)
-        Ey2 = PETSc.Vec().createMPI(size=(self.E.getLocalSize()[0],self.E.getSize()[0]), comm=self.comm)
-        self.E.mult(y2, Ey2)
+        self.D.mult(y1, self.Dy1)
+        self.DBt.mult(y2, self.DBty2)
+        self.E.mult(y2, self.Ey2)
 
-        z3 = x3 - (Dy1 - DBty2 + Ey2)
+        z3 = x3 - (self.Dy1 - self.DBty2 + self.Ey2)
 
         # 3) solve Wmod * y_3 = z_3
         self.ksp_fields[2].setOperators(self.Wmod)
         self.ksp_fields[2].solve(z3, y3)
 
-        Tmody3 = PETSc.Vec().createMPI(size=(self.Tmod.getLocalSize()[0],self.Tmod.getSize()[0]), comm=self.comm)
-        self.Tmod.mult(y3, Tmody3)
-        z2 = x2 - By1 - Tmody3
+        self.Tmod.mult(y3, self.Tmody3)
+        z2 = x2 - self.By1 - self.Tmody3
 
         # 4) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(z2, y2)
 
-        Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
-        self.Bt.mult(y2, Bty2)
-        Dty3 = PETSc.Vec().createMPI(size=(self.Dt.getLocalSize()[0],self.Dt.getSize()[0]), comm=self.comm)
-        self.Dt.mult(y3, Dty3)
-        z1 = x1 - Bty2 - Dty3
+        self.Bt.mult(y2, self.Bty2)
+        self.Dt.mult(y3, self.Dty3)
+        z1 = x1 - self.Bty2 - self.Dty3
 
         # 5) solve A * y_1 = z_1
         self.ksp_fields[0].setOperators(self.A)
@@ -296,7 +306,6 @@ class sblock_3x3(block_precond):
 
         z1.destroy(), z2.destroy(), z3.destroy()
         y1.destroy(), y2.destroy(), y3.destroy()
-        By1.destroy(), Dy1.destroy(), DBty2.destroy(), Ey2.destroy(), Tmody3.destroy(), Bty2.destroy(), Dty3.destroy()
         del arr_y1, arr_y2, arr_y3
 
 
@@ -307,8 +316,8 @@ class sblock_4x4(sblock_3x3):
         assert(self.nfields==4)
 
 
-    def init_mat(self):
-        super().init_mat()
+    def init_mat_vec(self):
+        super().init_mat_vec()
         self.G = PETSc.Mat()
 
 
@@ -355,8 +364,10 @@ class bgs_2x2(block_precond):
         assert(self.nfields==2)
 
 
-    def init_mat(self):
+    def init_mat_vec(self):
         self.A, self.Bt, self.B, self.C = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
+
+        self.By1, self.Bty2 = PETSc.Vec(), PETSc.Vec()
 
 
     def setUp(self, pc):
@@ -371,6 +382,12 @@ class bgs_2x2(block_precond):
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
         self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        # some auxiliary vecs needed in apply
+        self.By1.destroy(), self.Bty2.destroy()
+
+        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
+        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
 
 
     # computes y = P^(-1) x
@@ -387,17 +404,15 @@ class bgs_2x2(block_precond):
         self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(x1, y1)
 
-        By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.B.mult(y1, By1)
-        z2 = x2 - By1
+        self.B.mult(y1, self.By1)
+        z2 = x2 - self.By1
 
         # 2) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.C)
         self.ksp_fields[1].solve(z2, y2)
 
-        Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
-        self.Bt.mult(y2, Bty2)
-        z1 = x1 - Bty2
+        self.Bt.mult(y2, self.Bty2)
+        z1 = x1 - self.Bty2
 
         # 3) solve A * y_1 = z_1
         self.ksp_fields[0].setOperators(self.A)
@@ -417,7 +432,6 @@ class bgs_2x2(block_precond):
 
         z1.destroy(), z2.destroy()
         y1.destroy(), y2.destroy()
-        By1.destroy(), Bty2.destroy()
         del arr_y1, arr_y2
 
 
@@ -429,7 +443,7 @@ class bgs_3x3(block_precond):
         assert(self.nfields==3)
 
 
-    def init_mat(self):
+    def init_mat_vec(self):
         self.A, self.Bt, self.Dt, self.B, self.C, self.Et, self.D, self.E, self.R = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
 
 
@@ -451,6 +465,16 @@ class bgs_3x3(block_precond):
         self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
+        # some auxiliary vecs needed in apply
+        self.By1.destroy(), self.Dy1.destroy(), self.Ey2.destroy(), self.Ety3.destroy(), self.Bty2.destroy(), self.Dty3.destroy()
+
+        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
+        self.Dy1 = PETSc.Vec().createMPI(size=(self.D.getLocalSize()[0],self.D.getSize()[0]), comm=self.comm)
+        self.Ey2 = PETSc.Vec().createMPI(size=(self.E.getLocalSize()[0],self.E.getSize()[0]), comm=self.comm)
+        self.Ety3 = PETSc.Vec().createMPI(size=(self.Et.getLocalSize()[0],self.Et.getSize()[0]), comm=self.comm)
+        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+        self.Dty3 = PETSc.Vec().createMPI(size=(self.Dt.getLocalSize()[0],self.Dt.getSize()[0]), comm=self.comm)
+
 
     # computes y = P^(-1) x
     def apply(self, pc, x, y):
@@ -467,38 +491,32 @@ class bgs_3x3(block_precond):
         self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(x1, y1)
 
-        By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.B.mult(y1, By1)
-        z2 = x2 - By1
+        self.B.mult(y1, self.By1)
+        z2 = x2 - self.By1
 
         # 2) solve C * y_2 = z_2
         self.ksp_fields[1].setOperators(self.C)
         self.ksp_fields[1].solve(z2, y2)
 
-        Dy1 = PETSc.Vec().createMPI(size=(self.D.getLocalSize()[0],self.D.getSize()[0]), comm=self.comm)
-        self.D.mult(y1, Dy1)
-        Ey2 = PETSc.Vec().createMPI(size=(self.E.getLocalSize()[0],self.E.getSize()[0]), comm=self.comm)
-        self.E.mult(y2, Ey2)
+        self.D.mult(y1, self.Dy1)
+        self.E.mult(y2, self.Ey2)
 
-        z3 = x3 - Dy1 - Ey2
+        z3 = x3 - self.Dy1 - self.Ey2
 
         # 3) solve R * y_3 = z_3
         self.ksp_fields[2].setOperators(self.R)
         self.ksp_fields[2].solve(z3, y3)
 
-        Ety3 = PETSc.Vec().createMPI(size=(self.Et.getLocalSize()[0],self.Et.getSize()[0]), comm=self.comm)
-        self.Et.mult(y3, Ety3)
-        z2 = x2 - By1 - Ety3
+        self.Et.mult(y3, self.Ety3)
+        z2 = x2 - self.By1 - self.Ety3
 
         # 4) solve C * y_2 = z_2
         self.ksp_fields[1].setOperators(self.C)
         self.ksp_fields[1].solve(z2, y2)
 
-        Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
-        self.Bt.mult(y2, Bty2)
-        Dty3 = PETSc.Vec().createMPI(size=(self.Dt.getLocalSize()[0],self.Dt.getSize()[0]), comm=self.comm)
-        self.Dt.mult(y3, Dty3)
-        z1 = x1 - Bty2 - Dty3
+        self.Bt.mult(y2, self.Bty2)
+        self.Dt.mult(y3, self.Dty3)
+        z1 = x1 - self.Bty2 - self.Dty3
 
         # 5) solve A * y_1 = z_1
         self.ksp_fields[0].setOperators(self.A)
@@ -520,5 +538,4 @@ class bgs_3x3(block_precond):
 
         z1.destroy(), z2.destroy(), z3.destroy()
         y1.destroy(), y2.destroy(), y3.destroy()
-        By1.destroy(), Dy1.destroy(), Ey2.destroy(), Ety3.destroy(), Bty2.destroy(), Dty3.destroy()
         del arr_y1, arr_y2, arr_y3
