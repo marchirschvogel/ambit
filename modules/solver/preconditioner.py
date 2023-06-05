@@ -8,6 +8,8 @@
 
 from petsc4py import PETSc
 
+### PETSc PC types:
+# https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC.Type-class.html
 
 class block_precond():
 
@@ -34,12 +36,15 @@ class block_precond():
                 try: solvetype = self.precond_fields[n]['solve']
                 except: solvetype = "preonly"
                 self.ksp_fields[n].setType(solvetype)
-                self.ksp_fields[n].getPC().setType("hypre")
-                self.ksp_fields[n].getPC().setMGLevels(3)
-                self.ksp_fields[n].getPC().setHYPREType("boomeramg")
+                try: amgtype = self.precond_fields[n]['amgtype']
+                except: amgtype = "hypre"
+                self.ksp_fields[n].getPC().setType(amgtype)
+                if amgtype=="hypre":
+                    self.ksp_fields[n].getPC().setHYPREType("boomeramg")
             elif self.precond_fields[n]['prec'] == 'direct':
                 self.ksp_fields[n].setType("preonly")
                 self.ksp_fields[n].getPC().setType("lu")
+                self.ksp_fields[n].getPC().setFactorSolverType("mumps")
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 

@@ -27,8 +27,7 @@ def main():
                             'output_path_0D'        : basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
-                            'restart_step'          : 0, # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
-                            'readin_tol'            : 1.0e-8} # OPTIONAL: read-in tolerance for own read-in function that uses node coordinates (default: 1.0e-8)
+                            'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
 
     # for all problem types
     SOLVER_PARAMS        = {'solve_type'            : 'direct', # direct, iterative
@@ -133,7 +132,6 @@ def main():
                             'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
                             'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
                             'filesource'            : 'petscvector', # OPTIONAL: source of snapshot/mode data: 'petscvector' or 'rawtxt' (default: 'petscvector')
-                            'filereadin_tol'        : 1e-5, # OPTIONAL: read-in tolerance used if 'filesource' is 'rawtxt' (default: 1e-5)
                             'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type

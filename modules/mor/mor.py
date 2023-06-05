@@ -53,9 +53,6 @@ class ModelOrderReduction():
         except:
             self.filesource = 'petscvector'
 
-        try: self.filereadin_tol = params['filereadin_tol']
-        except: self.filereadin_tol = 1.0e-5
-
         try: self.write_pod_modes = params['write_pod_modes']
         except: self.write_pod_modes = False
 
@@ -179,7 +176,7 @@ class ModelOrderReduction():
                 elif self.filesource == 'rawtxt':
 
                     # own read function: requires plain txt format of type valx valy valz x z y
-                    self.io.readfunction(field, self.Vspace, self.hdmfilenames[h].replace('*',str(step)), tol=self.filereadin_tol)
+                    self.io.readfunction(field, self.Vspace, self.hdmfilenames[h].replace('*',str(step)))
 
                 else:
                     raise NameError("Unknown filesource!")
@@ -315,7 +312,7 @@ class ModelOrderReduction():
                     sys.stdout.flush()
 
                 field = fem.Function(self.Vspace)
-                self.io.readfunction(field, self.Vspace, self.modes_from_files[h].replace('*',str(i+1)), tol=self.filereadin_tol)
+                self.io.readfunction(field, self.Vspace, self.modes_from_files[h].replace('*',str(i+1)))
                 self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i] = field.vector[self.ss:self.se]
 
 
@@ -332,7 +329,7 @@ class ModelOrderReduction():
                 sys.stdout.flush()
 
             self.part.append( fem.Function(self.Vspace_sc) )
-            self.io.readfunction(self.part[-1], self.Vspace_sc, self.partitions[h], tol=self.filereadin_tol)
+            self.io.readfunction(self.part[-1], self.Vspace_sc, self.partitions[h])
 
             self.part_rvar.append( fem.Function(self.Vspace) )
 

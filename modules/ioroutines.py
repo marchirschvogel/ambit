@@ -11,7 +11,7 @@ import numpy as np
 from petsc4py import PETSc
 from dolfinx import fem, io
 import ufl
-# import adios4dolfinx # for new checkpointing, but not yet importable...
+# import adios4dolfinx
 
 from projection import project
 from mpiroutines import allgather_vec
@@ -47,10 +47,6 @@ class IO:
 
         try: self.gridname_boundary = io_params['gridname_boundary']
         except: self.gridname_boundary = 'Grid'
-
-        # readin tolerance for own read function that uses coordinate values to properly read in a field
-        try: self.readin_tol = io_params['readin_tol']
-        except: self.readin_tol = 1.0e-8
 
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
@@ -162,31 +158,25 @@ class IO:
         func.interpolate(load.evaluate)
 
 
-    def readfunction(self, f, V, datafile, normalize=False, tol=1.0e-8):
+    def readfunction(self, f, V, datafile, normalize=False):
 
         # block size of vector
         bs = f.vector.getBlockSize()
 
-        # load data and coordinates
-        data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2)
-        coords = np.loadtxt(datafile,usecols=(-3,-2,-1)) # last three always are the coordinates
+        # load data and input node indices
+        data = np.loadtxt(datafile,usecols=(np.arange(1,bs+1)),ndmin=2)
+        ind_file = np.loadtxt(datafile,usecols=(0),dtype=int)
 
-        # new node coordinates (dofs might be re-ordered in parallel)
-        # in case of DG fields, these are the Gauss point coordinates
-        co = V.tabulate_dof_coordinates()
-
-        # index map
-        #im = V.dofmap.index_map.global_indices() # function seems to have gone!
+        # index map and input indices
         im = np.asarray(V.dofmap.index_map.local_to_global(np.arange(V.dofmap.index_map.size_local + V.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
-
-        tolerance = int(-np.log10(tol))
+        igi = self.mesh.geometry.input_global_indices
 
         # since in parallel, the ordering of the dof ids might change, so we have to find the
         # mapping between original and new id via the coordinates
         ci = 0
         for i in im:
 
-            ind = np.where((np.round(coords,tolerance) == np.round(co[ci],tolerance)).all(axis=1))[0]
+            ind = np.where(ind_file == igi[ci])[0]
 
             # only write if we've found the index
             if len(ind):
@@ -205,8 +195,6 @@ class IO:
             ci+=1
 
         f.vector.assemble()
-
-        # update ghosts
         f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
@@ -237,7 +225,7 @@ class IO:
             fib_func_input.append(fem.Function(V_fib_input, name='Fiber'+str(si+1)))
 
             if isinstance(self.fiber_data[si], str):
-                self.readfunction(fib_func_input[si], V_fib_input, self.fiber_data[si], normalize=True, tol=self.readin_tol)
+                self.readfunction(fib_func_input[si], V_fib_input, self.fiber_data[si], normalize=True)
             else: # assume a constant-in-space list or array
                 self.set_func_const(fib_func_input[si], self.fiber_data[si])
 
@@ -256,6 +244,8 @@ class IO:
         if self.comm.rank==0:
             print("Finished fiber read-in. Time: %.4f s" % (te))
             sys.stdout.flush()
+
+        # sys.exit()
 
         return fib_func
 

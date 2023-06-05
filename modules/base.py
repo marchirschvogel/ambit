@@ -99,9 +99,6 @@ class solver_base():
 
         self.solver_params = solver_params
 
-        # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.numdof)
-
         self.initialize_nonlinear_solver()
 
 
@@ -121,6 +118,9 @@ class solver_base():
     def solve_problem(self):
 
         start = time.time()
+
+        # print header
+        utilities.print_problem(self.pb.problem_physics, self.pb.comm, self.pb.numdof)
 
         # read restart information if requested
         self.pb.read_restart(self.pb.simname, self.pb.restart_step)

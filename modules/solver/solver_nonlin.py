@@ -217,12 +217,15 @@ class solver_nonlinear:
                             try: solvetype = self.precond_fields[n]['solve']
                             except: solvetype = "preonly"
                             ksp_fields[n].setType(solvetype)
-                            ksp_fields[n].getPC().setType("hypre")
-                            ksp_fields[n].getPC().setMGLevels(3)
-                            ksp_fields[n].getPC().setHYPREType("boomeramg")
+                            try: amgtype = self.precond_fields[n]['amgtype']
+                            except: amgtype = "hypre"
+                            ksp_fields[n].getPC().setType(amgtype)
+                            if amgtype=="hypre":
+                                ksp_fields[n].getPC().setHYPREType("boomeramg")
                         elif self.precond_fields[n]['prec'] == 'direct':
                             ksp_fields[n].setType("preonly")
                             ksp_fields[n].getPC().setType("lu")
+                            ksp_fields[n].getPC().setFactorSolverType("mumps")
                         else:
                             raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 

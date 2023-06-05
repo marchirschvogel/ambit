@@ -28,7 +28,7 @@ def main():
                             'use_model_order_red'   : True,
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
-                            'fiber_data'            : [basepath+'/input/fib_fiber_coords_nodal_2D.txt',basepath+'/input/fib_sheet_coords_nodal_2D.txt'],
+                            'fiber_data'            : [basepath+'/input/fib_fiber_nodal_2D.txt',basepath+'/input/fib_sheet_nodal_2D.txt'],
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement'],
@@ -125,33 +125,33 @@ def main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 1.0164622985583151E+05
-    s_corr[1] = 3.8516455080275669E-01
-    s_corr[2] = -1.0582155965859292E+00
-    s_corr[3] = 2.8351832094692525E-01
-    s_corr[4] = 1.0865674286806209E+01
-    s_corr[5] = -7.3632729677186944E+04
-    s_corr[6] = 1.0874047399982050E+01
-    s_corr[7] = 7.1800294694938129E+04
-    s_corr[8] = 2.2872592890863466E+00
-    s_corr[9] = 8.4946010617801570E+04
-    s_corr[10] = 5.9925384618818891E+04
-    s_corr[11] = 2.4855503425911182E-01
-    s_corr[12] = -2.0235208262094981E-01
-    s_corr[13] = 1.8862964964029288E-01
-    s_corr[14] = 2.2121504758497910E+00
-    s_corr[15] = 3.5717295808690462E+04
-    s_corr[16] = 1.6763910387194352E+00
-    s_corr[17] = 8.6081765861112013E+04
-    s_corr[18] = 6.9670268925844334E+02
-    s_corr[19] = 2.9190391234346152E+03
-    s_corr[20] = 4.4346484246021373E-01
-    s_corr[21] = -3.5945105267256983E-01
-    s_corr[22] = 6.9670268925844334E+02
-    s_corr[23] = 2.9190391234346152E+03
-    s_corr[24] = 4.4346484246021373E-01
-    s_corr[25] = -3.5945105267256983E-01
-    s_corr[26] = -8.5023362388903493E+04
+    s_corr[0] = 1.0072498846634732E+05
+    s_corr[1] = 3.8514559531428966E-01
+    s_corr[2] = -1.0581253546863147E+00
+    s_corr[3] = 2.8442060684794246E-01
+    s_corr[4] = 1.0865674153711085E+01
+    s_corr[5] = -7.3632748798559376E+04
+    s_corr[6] = 1.0874047381615156E+01
+    s_corr[7] = 7.1800294544126518E+04
+    s_corr[8] = 2.2872593107992092E+00
+    s_corr[9] = 8.4945733706216852E+04
+    s_corr[10] = 6.2553713813202026E+04
+    s_corr[11] = 2.4856170185000773E-01
+    s_corr[12] = -2.0261424856731150E-01
+    s_corr[13] = 1.8600798803680565E-01
+    s_corr[14] = 2.2121504737099205E+00
+    s_corr[15] = 3.5717308623102937E+04
+    s_corr[16] = 1.6763908443633773E+00
+    s_corr[17] = 8.6083016603272583E+04
+    s_corr[18] = 6.9671229506558996E+02
+    s_corr[19] = 2.9188950634144771E+03
+    s_corr[20] = 4.4437756391412614E-01
+    s_corr[21] = -3.5320240534142283E-01
+    s_corr[22] = 6.9671229506558996E+02
+    s_corr[23] = 2.9188950634144771E+03
+    s_corr[24] = 4.4437756391412614E-01
+    s_corr[25] = -3.5320240534142283E-01
+    s_corr[26] = -8.5023349891608843E+04
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
