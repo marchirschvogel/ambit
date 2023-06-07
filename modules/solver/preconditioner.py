@@ -361,8 +361,56 @@ class sblock_4x4(sblock_3x3):
         del arr_y4
 
 
+class simple_2x2(sblock_2x2):
 
-# own 2x2 Block Gauss-Seidel (can be also called via PETSc's fieldsplit)
+    # computes y = P^(-1) x
+    def apply(self, pc, x, y):
+
+        # get subvectors (references!)
+        x1, x2 = PETSc.Vec(), PETSc.Vec()
+        x.getSubVector(self.iset[0], subvec=x1)
+        x.getSubVector(self.iset[1], subvec=x2)
+
+        y1, y2 = self.A.createVecLeft(), self.Smod.createVecLeft()
+
+        # 1) solve A * y_1 = x_1
+        self.ksp_fields[0].setOperators(self.A)
+        self.ksp_fields[0].solve(x1, y1)
+
+        self.B.mult(y1, self.By1)
+        z2 = x2 - self.By1
+
+        # 2) solve Smod * y_2 = z_2
+        self.ksp_fields[1].setOperators(self.Smod)
+        self.ksp_fields[1].solve(z2, y2)
+
+        # 3) update y_1
+        ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
+        adinv_vec.reciprocal()
+
+        self.Bt.diagonalScale(L=adinv_vec) # left scaling columns of Bt, corresponds to diag(A)^(-1) * Bt
+        self.Bt.mult(y2, self.Bty2)
+        y1 -= self.Bty2
+        self.Bt.diagonalScale(L=ad_vec)    # restore Bt
+
+        # restore/clean up
+        x.restoreSubVector(self.iset[0], subvec=x1)
+        x.restoreSubVector(self.iset[1], subvec=x2)
+
+        # set into y vector
+        arr_y1, arr_y2 = y1.getArray(readonly=True), y2.getArray(readonly=True)
+
+        y.setValues(self.iset[0], arr_y1)
+        y.setValues(self.iset[1], arr_y2)
+
+        y.assemble()
+
+        z2.destroy(), ad_vec.destroy(), adinv_vec.destroy()
+        y1.destroy(), y2.destroy()
+        del arr_y1, arr_y2
+
+
+# own 2x2 Block Gauss-Seidel (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
 class bgs_2x2(block_precond):
 
     def check_field_size(self):
@@ -412,16 +460,9 @@ class bgs_2x2(block_precond):
         self.B.mult(y1, self.By1)
         z2 = x2 - self.By1
 
-        # 2) solve Smod * y_2 = z_2
+        # 2) solve C * y_2 = z_2
         self.ksp_fields[1].setOperators(self.C)
         self.ksp_fields[1].solve(z2, y2)
-
-        self.Bt.mult(y2, self.Bty2)
-        z1 = x1 - self.Bty2
-
-        # 3) solve A * y_1 = z_1
-        self.ksp_fields[0].setOperators(self.A)
-        self.ksp_fields[0].solve(z1, y1)
 
         # restore/clean up
         x.restoreSubVector(self.iset[0], subvec=x1)
@@ -435,21 +476,23 @@ class bgs_2x2(block_precond):
 
         y.assemble()
 
-        z1.destroy(), z2.destroy()
+        z2.destroy()
         y1.destroy(), y2.destroy()
         del arr_y1, arr_y2
 
 
 
-# own 3x3 Block Gauss-Seidel (can be also called via PETSc's fieldsplit)
-class bgs_3x3(block_precond):
+# own 2x2 Jacobi (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
+class jacobi_2x2(block_precond):
 
     def check_field_size(self):
-        assert(self.nfields==3)
+        assert(self.nfields==2)
 
 
     def init_mat_vec(self):
-        self.A, self.Bt, self.Dt, self.B, self.C, self.Et, self.D, self.E, self.R = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
+        self.A, self.C = PETSc.Mat(), PETSc.Mat()
+
+        self.By1, self.Bty2 = PETSc.Vec(), PETSc.Vec()
 
 
     def setUp(self, pc):
@@ -458,89 +501,41 @@ class bgs_3x3(block_precond):
 
         _, self.P = pc.getOperators()
 
-        self.A.destroy(), self.Bt.destroy(), self.Dt.destroy(), self.B.destroy(), self.C.destroy(), self.Et.destroy(), self.D.destroy(), self.E.destroy(), self.R.destroy()
+        self.A.destroy(), self.C.destroy()
 
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
-        self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
-        self.Dt = self.P.createSubMatrix(self.iset[0],self.iset[2])
-        self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
-        self.Et = self.P.createSubMatrix(self.iset[1],self.iset[2])
-        self.D  = self.P.createSubMatrix(self.iset[2],self.iset[0])
-        self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
-        self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
-
-        # some auxiliary vecs needed in apply
-        self.By1.destroy(), self.Dy1.destroy(), self.Ey2.destroy(), self.Ety3.destroy(), self.Bty2.destroy(), self.Dty3.destroy()
-
-        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.Dy1 = PETSc.Vec().createMPI(size=(self.D.getLocalSize()[0],self.D.getSize()[0]), comm=self.comm)
-        self.Ey2 = PETSc.Vec().createMPI(size=(self.E.getLocalSize()[0],self.E.getSize()[0]), comm=self.comm)
-        self.Ety3 = PETSc.Vec().createMPI(size=(self.Et.getLocalSize()[0],self.Et.getSize()[0]), comm=self.comm)
-        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
-        self.Dty3 = PETSc.Vec().createMPI(size=(self.Dt.getLocalSize()[0],self.Dt.getSize()[0]), comm=self.comm)
 
 
     # computes y = P^(-1) x
     def apply(self, pc, x, y):
 
         # get subvectors (references!)
-        x1, x2, x3 = PETSc.Vec(), PETSc.Vec(), PETSc.Vec()
+        x1, x2 = PETSc.Vec(), PETSc.Vec()
         x.getSubVector(self.iset[0], subvec=x1)
         x.getSubVector(self.iset[1], subvec=x2)
-        x.getSubVector(self.iset[2], subvec=x3)
 
-        y1, y2, y3 = self.A.createVecLeft(), self.C.createVecLeft(), self.R.createVecLeft()
+        y1, y2 = self.A.createVecLeft(), self.C.createVecLeft()
 
         # 1) solve A * y_1 = x_1
         self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(x1, y1)
 
-        self.B.mult(y1, self.By1)
-        z2 = x2 - self.By1
-
-        # 2) solve C * y_2 = z_2
+        # 2) solve C * y_2 = x_2
         self.ksp_fields[1].setOperators(self.C)
-        self.ksp_fields[1].solve(z2, y2)
-
-        self.D.mult(y1, self.Dy1)
-        self.E.mult(y2, self.Ey2)
-
-        z3 = x3 - self.Dy1 - self.Ey2
-
-        # 3) solve R * y_3 = z_3
-        self.ksp_fields[2].setOperators(self.R)
-        self.ksp_fields[2].solve(z3, y3)
-
-        self.Et.mult(y3, self.Ety3)
-        z2 = x2 - self.By1 - self.Ety3
-
-        # 4) solve C * y_2 = z_2
-        self.ksp_fields[1].setOperators(self.C)
-        self.ksp_fields[1].solve(z2, y2)
-
-        self.Bt.mult(y2, self.Bty2)
-        self.Dt.mult(y3, self.Dty3)
-        z1 = x1 - self.Bty2 - self.Dty3
-
-        # 5) solve A * y_1 = z_1
-        self.ksp_fields[0].setOperators(self.A)
-        self.ksp_fields[0].solve(z1, y1)
+        self.ksp_fields[1].solve(x2, y2)
 
         # restore/clean up
         x.restoreSubVector(self.iset[0], subvec=x1)
         x.restoreSubVector(self.iset[1], subvec=x2)
-        x.restoreSubVector(self.iset[2], subvec=x3)
 
         # set into y vector
-        arr_y1, arr_y2, arr_y3 = y1.getArray(readonly=True), y2.getArray(readonly=True), y3.getArray(readonly=True)
+        arr_y1, arr_y2 = y1.getArray(readonly=True), y2.getArray(readonly=True)
 
         y.setValues(self.iset[0], arr_y1)
         y.setValues(self.iset[1], arr_y2)
-        y.setValues(self.iset[2], arr_y3)
 
         y.assemble()
 
-        z1.destroy(), z2.destroy(), z3.destroy()
-        y1.destroy(), y2.destroy(), y3.destroy()
-        del arr_y1, arr_y2, arr_y3
+        y1.destroy(), y2.destroy()
+        del arr_y1, arr_y2

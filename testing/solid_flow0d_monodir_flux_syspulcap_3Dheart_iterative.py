@@ -30,7 +30,7 @@ def main():
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',
-                            'block_precond'         : 'sblock2x2',
+                            'block_precond'         : 'simple2x2',
                             'precond_fields'        : [{'prec':'amg'}, {'prec':'direct'}],
                             'tol_res'               : [1.0e-8,1.0e-6], # u,0d
                             'tol_inc'               : [1.0e-8,1.0e-6], # u,0d
