@@ -294,10 +294,11 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
 
-            jac_a = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
+            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbf.a_old)
+            res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
 
     def solve_nonlinear_problem(self, t):

@@ -71,7 +71,7 @@ class variationalform_base:
             Umod = ufl.sqrt(evalCmod[0])*EprojCmod[0] + ufl.sqrt(evalCmod[1])*EprojCmod[1] + ufl.sqrt(evalCmod[2])*EprojCmod[2]
             Fmod = R*Umod
         else:
-            raise NameError("Unkown membrane model type!")
+            raise NameError("Unknown membrane model type!")
 
         # first and second invariant
         Ic = ufl.tr(Cmod)

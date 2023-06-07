@@ -42,7 +42,7 @@ class variationalform(variationalform_base):
             return rho*ufl.dot(a + ufl.div(ufl.outer(v,v)), self.var_v)*ddomain
 
         else:
-            raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
+            raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
     def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, Fale=None):
         if self.formulation=='nonconservative':
@@ -50,7 +50,7 @@ class variationalform(variationalform_base):
         elif self.formulation=='conservative':
             return rho*ufl.dot(ufl.div(ufl.outer(v,v)), self.var_v)*ddomain
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, Fale=None):
 
@@ -72,7 +72,7 @@ class variationalform(variationalform_base):
         elif self.formulation=='conservative':
             return rho*(a + ufl.div(ufl.outer(v,v))) - ufl.div(sig)
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, Fale=None):
         if self.formulation=='nonconservative':
@@ -80,7 +80,7 @@ class variationalform(variationalform_base):
         elif self.formulation=='conservative':
             return rho*(ufl.div(ufl.outer(v,v))) - ufl.div(sig)
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, Fale=None):
 
@@ -209,7 +209,7 @@ class variationalform_ale(variationalform):
             return rho*ufl.dot(a + ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
 
         else:
-            raise ValueError("Unkown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
+            raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
     def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
@@ -219,7 +219,7 @@ class variationalform_ale(variationalform):
             i, j, k = ufl.indices(3)
             return rho*ufl.dot(ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
@@ -229,7 +229,7 @@ class variationalform_ale(variationalform):
             i, j, k = ufl.indices(3)
             return rho*ufl.dot(a + ufl.as_vector(ufl.grad(ufl.outer(v,-w))[i,j,k]*ufl.inv(Fale).T[j,k], i), self.var_v) *J*ddomain
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     ### Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
 
@@ -266,7 +266,7 @@ class variationalform_ale(variationalform):
         elif self.formulation=='conservative':
             return rho*(a + ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i)) - ufl.as_vector(ufl.grad(sig)[l,m,n]*ufl.inv(Fale).T[j,k], i)
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, Fale=None):
         i, j, k = ufl.indices(3)
@@ -275,7 +275,7 @@ class variationalform_ale(variationalform):
         elif self.formulation=='conservative':
             return rho*(ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(Fale).T[j,k], i)) - ufl.as_vector(ufl.grad(sig)[l,m,n]*ufl.inv(Fale).T[j,k], i)
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, Fale=None):
         i, j, k = ufl.indices(3)
@@ -284,7 +284,7 @@ class variationalform_ale(variationalform):
         elif self.formulation=='conservative':
             return rho*(a + ufl.as_vector(ufl.grad(ufl.outer(v,-w))[i,j,k]*ufl.inv(Fale).T[j,k], i)) - ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(Fale).T[j,k], i)
         else:
-            raise ValueError("Unkown fluid formulation!")
+            raise ValueError("Unknown fluid formulation!")
 
     def res_v_strong_stokes_steady(self, rho, sig, Fale=None):
         i, j, k = ufl.indices(3)

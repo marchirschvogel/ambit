@@ -50,7 +50,7 @@ class AleProblem(problem_base):
         self.dx_ = []
         for n in range(self.num_domains):
             # integration domains
-            self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
 
         # whether to enforce continuity of mass at midpoint or not
         try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']

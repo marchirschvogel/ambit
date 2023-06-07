@@ -9,7 +9,7 @@
 import sys, time
 import numpy as np
 from petsc4py import PETSc
-from dolfinx import fem, io
+from dolfinx import fem, io, mesh
 import ufl
 # import adios4dolfinx
 
@@ -48,8 +48,18 @@ class IO:
         try: self.gridname_boundary = io_params['gridname_boundary']
         except: self.gridname_boundary = 'Grid'
 
+        try: self.mesh_domain2 = io_params['mesh_domain2']
+        except: self.mesh_domain2 = None
+
+        try: self.mesh_boundary2 = io_params['mesh_boundary2']
+        except: self.mesh_boundary2 = None
+
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
+
+        # TODO: Should go away once mixed branch has been merged into nightly dolfinx
+        try: self.USE_MIXED_DOLFINX_BRANCH = io_params['USE_MIXED_DOLFINX_BRANCH']
+        except: self.USE_MIXED_DOLFINX_BRANCH = False
 
         self.comm = comm
 
@@ -68,10 +78,13 @@ class IO:
             self.mesh = infile.read_mesh(name=self.gridname_domain)
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
+            # self.ttt = infile.read_topology_data(name=self.gridname_domain)
 
-        # # TODO: second mesh readin in case of different meshes desired for e.g. velocity and pressure in fluid
-        # with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
-        #     self.mesh2 = infile.read_mesh(name=self.gridname_domain)
+        if self.mesh_domain2 is not None:
+            with io.XDMFFile(self.comm, self.mesh_domain2, 'r', encoding=encoding) as infile:
+                self.mesh2 = infile.read_mesh(name=self.gridname_domain)
+        else:
+            self.mesh2 = None
 
         # read in xdmf mesh - boundary
 
@@ -89,6 +102,14 @@ class IO:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
+
+            if self.mesh_domain2 is not None:
+                try:
+                    self.mesh2.topology.create_connectivity(2, self.mesh2.topology.dim)
+                    with io.XDMFFile(self.comm, self.mesh_boundary2, 'r', encoding=encoding) as infile:
+                        self.mt2_b1 = infile.read_meshtags(self.mesh2, name=self.gridname_boundary)
+                except:
+                    pass
 
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
@@ -484,7 +505,10 @@ class IO_fluid(IO):
 
                 for res in pb.results_to_write:
                     outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
-                    outfile.write_mesh(self.mesh)
+                    if res=='pressure' and self.mesh_domain2 is not None: # assume that domain2 is always used for the pressure...
+                        outfile.write_mesh(self.mesh2)
+                    else:
+                        outfile.write_mesh(self.mesh)
                     self.resultsfiles[res] = outfile
 
             return

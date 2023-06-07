@@ -429,7 +429,8 @@ class SolidmechanicsConstraintSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.pbs.a_old)
+            res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbs.a_old)
 
 
     def solve_nonlinear_problem(self, t):

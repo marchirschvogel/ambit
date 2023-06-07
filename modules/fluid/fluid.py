@@ -53,10 +53,11 @@ class FluidmechanicsProblem(problem_base):
         self.quad_degree = fem_params['quad_degree']
 
         # collect domain data
-        self.dx_, self.rho = [], []
+        self.dx_, self.dx2_, self.rho = [], [], []
         for n in range(self.num_domains):
             # integration domains
-            self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            if self.io.mesh2 is not None: self.dx2_.append(ufl.dx(domain=self.io.mesh2, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             self.rho.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
 
@@ -87,7 +88,6 @@ class FluidmechanicsProblem(problem_base):
         if self.prestress_from_file: self.prestress_initial = False
 
         self.localsolve = False # no idea what might have to be solved locally...
-        self.p11 = ufl.as_ufl(0) # can't think of a fluid case with non-zero 11-block in system matrix...
 
         self.sub_solve = False
 
@@ -119,10 +119,16 @@ class FluidmechanicsProblem(problem_base):
 
         # create finite element objects for v and p
         P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
-        P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        if self.io.mesh2 is not None:
+            P_p = ufl.FiniteElement("CG", self.io.mesh2.ufl_cell(), self.order_pres)
+        else:
+            P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
         # function spaces for v and p
         self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
-        self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
+        if self.io.mesh2 is not None:
+            self.V_p = fem.FunctionSpace(self.io.mesh2, P_p)
+        else:
+            self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
         # continuous tensor and scalar function spaces of order order_vel
         self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
         self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_vel))
@@ -131,6 +137,32 @@ class FluidmechanicsProblem(problem_base):
         self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+
+        # still experimental and only running on one core!
+        if self.io.mesh2 is not None:
+
+            assert(self.io.USE_MIXED_DOLFINX_BRANCH)
+
+            oci1 = self.io.mesh.topology.original_cell_index
+            oci2 = self.io.mesh2.topology.original_cell_index
+
+            cell_imap = self.io.mesh2.topology.index_map(self.io.mesh2.topology.dim)
+            num_cells = cell_imap.size_local + cell_imap.num_ghosts
+
+            # imc_local_p = np.asarray(np.arange(self.io.mesh2.topology.index_map(self.io.mesh2.topology.dim).size_local + self.io.mesh2.topology.index_map(self.io.mesh2.topology.dim).num_ghosts, dtype=np.int32))
+            imc_local_p = np.full(num_cells, -1)
+            for i, f in enumerate(oci2):
+                ind = np.where(f == oci1)[0]
+                if len(ind):
+                    imc_local_p[i] = ind[0]
+
+            inv_entity_map_p = np.full_like(imc_local_p, -1)
+            for i, f in enumerate(imc_local_p):
+                inv_entity_map_p[f] = i
+            self.entity_maps = {self.io.mesh2: inv_entity_map_p}
+
+        else:
+            self.entity_maps = {}
 
         # functions
         self.dv     = ufl.TrialFunction(self.V_v)            # Incremental velocity
@@ -209,7 +241,7 @@ class FluidmechanicsProblem(problem_base):
                 self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
 
             else:
-                raise ValueError("Unkown fluid_on_deformed option!")
+                raise ValueError("Unknown fluid_on_deformed option!")
 
         # read in fiber data - for reduced solid (FrSI)
         if bool(self.io.fiber_data):
@@ -281,6 +313,7 @@ class FluidmechanicsProblem(problem_base):
                 raise ValueError("Unknown fluid_governing_type!")
 
             # internal virtual power
+            # dx_c = ufl.Measure("dx", domain=self.io.mesh)
             self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), self.dx_[n], Fale=self.alevar['Fale'])
             self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), self.dx_[n], Fale=self.alevar['Fale_old'])
 
@@ -467,21 +500,39 @@ class FluidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
         if not self.prestress_initial or self.restart_step > 0:
-            self.res_v = fem.form(self.weakform_v)
-            self.res_p = fem.form(self.weakform_p)
-            self.jac_vv = fem.form(self.weakform_lin_vv)
-            self.jac_vp = fem.form(self.weakform_lin_vp)
-            self.jac_pv = fem.form(self.weakform_lin_pv)
-            if self.stabilization is not None:
-                self.jac_pp = fem.form(self.weakform_lin_pp)
+            if self.io.USE_MIXED_DOLFINX_BRANCH:
+                self.res_v = fem.form(self.weakform_v, entity_maps=self.entity_maps)
+                self.res_p = fem.form(self.weakform_p, entity_maps=self.entity_maps)
+                self.jac_vv = fem.form(self.weakform_lin_vv, entity_maps=self.entity_maps)
+                self.jac_vp = fem.form(self.weakform_lin_vp, entity_maps=self.entity_maps)
+                self.jac_pv = fem.form(self.weakform_lin_pv, entity_maps=self.entity_maps)
+                if self.stabilization is not None:
+                    self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.entity_maps)
+            else:
+                self.res_v = fem.form(self.weakform_v)
+                self.res_p = fem.form(self.weakform_p)
+                self.jac_vv = fem.form(self.weakform_lin_vv)
+                self.jac_vp = fem.form(self.weakform_lin_vp)
+                self.jac_pv = fem.form(self.weakform_lin_pv)
+                if self.stabilization is not None:
+                    self.jac_pp = fem.form(self.weakform_lin_pp)
         else:
-            self.res_v  = fem.form(self.weakform_prestress_v)
-            self.jac_vv = fem.form(self.weakform_lin_prestress_vv)
-            self.res_p  = fem.form(self.weakform_prestress_p)
-            self.jac_vp = fem.form(self.weakform_lin_prestress_vp)
-            self.jac_pv = fem.form(self.weakform_lin_prestress_pv)
-            if self.stabilization is not None:
-                self.jac_pp = fem.form(self.weakform_lin_prestress_pp)
+            if self.io.USE_MIXED_DOLFINX_BRANCH:
+                self.res_v  = fem.form(self.weakform_prestress_v, entity_maps=self.entity_maps)
+                self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.entity_maps)
+                self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.entity_maps)
+                self.jac_vp = fem.form(self.weakform_lin_prestress_vp, entity_maps=self.entity_maps)
+                self.jac_pv = fem.form(self.weakform_lin_prestress_pv, entity_maps=self.entity_maps)
+                if self.stabilization is not None:
+                    self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.entity_maps)
+            else:
+                self.res_v  = fem.form(self.weakform_prestress_v)
+                self.jac_vv = fem.form(self.weakform_lin_prestress_vv)
+                self.res_p  = fem.form(self.weakform_prestress_p)
+                self.jac_vp = fem.form(self.weakform_lin_prestress_vp)
+                self.jac_pv = fem.form(self.weakform_lin_prestress_pv)
+                if self.stabilization is not None:
+                    self.jac_pp = fem.form(self.weakform_lin_prestress_pp)
 
         tee = time.time() - tes
         if self.comm.rank == 0:
@@ -629,7 +680,11 @@ class FluidmechanicsSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.a_old)
+            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
+                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.entity_maps)
+            else:
+                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)
 
 
     def solve_nonlinear_problem(self, t):

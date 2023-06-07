@@ -116,7 +116,7 @@ class solver_nonlinear:
         elif self.lin_norm_type=='unpreconditioned':
             self.linnormtype = 2
         else:
-            raise ValueError("Unkown lin_norm_type option!")
+            raise ValueError("Unknown lin_norm_type option!")
 
         try: self.adapt_factor = solver_params['adapt_factor']
         except: self.adapt_factor = 0.1
@@ -191,7 +191,7 @@ class solver_nonlinear:
                         assert(self.nfields==2)
                         splittype = PETSc.PC.CompositeType.SCHUR # block Schur - for 2x2 block systems only
                     else:
-                        raise ValueError("Unkown fieldsplit_type option.")
+                        raise ValueError("Unknown fieldsplit_type option.")
 
                     self.ksp.getPC().setFieldSplitType(splittype)
 
@@ -286,7 +286,7 @@ class solver_nonlinear:
 
 
     # solve for consistent initial acceleration a_old
-    def solve_consistent_ini_acc(self, weakform_old, weakform_lin_old, a_old):
+    def solve_consistent_ini_acc(self, res_a, jac_aa, a_old):
 
         # create solver
         ksp = PETSc.KSP().create(self.pb.comm)
@@ -304,10 +304,10 @@ class solver_nonlinear:
             raise NameError("Unknown solvetype!")
 
         # solve for consistent initial acceleration a_old
-        M_a = fem.petsc.assemble_matrix(fem.form(weakform_lin_old), [])
+        M_a = fem.petsc.assemble_matrix(jac_aa, [])
         M_a.assemble()
 
-        r_a = fem.petsc.assemble_vector(fem.form(weakform_old))
+        r_a = fem.petsc.assemble_vector(res_a)
         r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         ksp.setOperators(M_a)

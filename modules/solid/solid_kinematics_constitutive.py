@@ -423,7 +423,7 @@ class constitutive:
             tangdC = (ktheta*dt/K_growth) * ufl.outer(self.kin.fib_funcs[0],self.kin.fib_funcs[0])/(2.*self.kin.fibstretch(u_,self.kin.fib_funcs[0]))
 
         else:
-            raise NameError("Unkown growth_trig!")
+            raise NameError("Unknown growth_trig!")
 
         return tangdC
 
@@ -500,7 +500,7 @@ class constitutive:
             tangdp = as_ufl(0)
 
         else:
-            raise NameError("Unkown growth_trig!")
+            raise NameError("Unknown growth_trig!")
 
         return tangdp
 

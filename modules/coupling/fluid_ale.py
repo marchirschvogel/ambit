@@ -147,7 +147,7 @@ class FluidmechanicsAleProblem():
                 self.weakform_lin_dv = ufl.derivative(work_dbc_robin_fluid_ale, self.pbf.v, self.pbf.dv) # only contribution is from weak DBC here!
 
             else:
-                raise ValueError("Unkown coupling_fluid_ale option for fluid to ALE!")
+                raise ValueError("Unknown coupling_fluid_ale option for fluid to ALE!")
 
         # any DBC conditions that we want to set from ALE to fluid
         if bool(self.coupling_ale_fluid):
@@ -189,7 +189,7 @@ class FluidmechanicsAleProblem():
                 self.pbf.weakform_lin_vv += ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
 
             else:
-                raise ValueError("Unkown coupling_ale_fluid option for ALE to fluid!")
+                raise ValueError("Unknown coupling_ale_fluid option for ALE to fluid!")
 
         # derivative of fluid momentum w.r.t. ALE displacement - also includes potential weak Dirichlet or Robin BCs from ALE to fluid!
         self.weakform_lin_vd = ufl.derivative(self.pbf.weakform_v, self.pba.d, self.pba.dd)
@@ -210,8 +210,12 @@ class FluidmechanicsAleProblem():
             sys.stdout.flush()
 
         # coupling
-        self.jac_vd = fem.form(self.weakform_lin_vd)
-        self.jac_pd = fem.form(self.weakform_lin_pd)
+        if self.io.USE_MIXED_DOLFINX_BRANCH:
+            self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.pbf.entity_maps)
+            self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.pbf.entity_maps)
+        else:
+            self.jac_vd = fem.form(self.weakform_lin_vd)
+            self.jac_pd = fem.form(self.weakform_lin_pd)
         if bool(self.coupling_fluid_ale):
             if self.coupling_fluid_ale['type'] == 'robin':
                 self.jac_dv = fem.form(self.weakform_lin_dv)
@@ -444,10 +448,14 @@ class FluidmechanicsAleSolver(solver_base):
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
 
-            jac_a = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
+            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, jac_a, self.pb.pbf.a_old)
+            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
+                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.entity_maps)
+            else:
+                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
 
     def solve_nonlinear_problem(self, t):

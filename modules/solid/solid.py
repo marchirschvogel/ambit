@@ -67,8 +67,8 @@ class SolidmechanicsProblem(problem_base):
 
         for n in range(self.num_domains):
             # integration domains
-            if self.io.mt_d is not None: self.dx_.append(ufl.dx(subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
-            else:                        self.dx_.append(ufl.dx(metadata={'quadrature_degree': self.quad_degree}))
+            if self.io.mt_d is not None: self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            else:                        self.dx_.append(ufl.dx(domain=self.io.mesh, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             if self.timint != 'static':
                 self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
@@ -884,7 +884,8 @@ class SolidmechanicsSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            self.solnln.solve_consistent_ini_acc(weakform_a, weakform_lin_aa, self.pb.a_old)
+            res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)
 
 
     def solve_nonlinear_problem(self, t):

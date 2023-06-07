@@ -15,6 +15,7 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fsi',
+                            'USE_MIXED_DOLFINX_BRANCH' : True,
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'simname'               : 'test',
@@ -46,7 +47,7 @@ def main():
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
-    FEM_PARAMS_SOLID     = {'order_disp'            : 2,
+    FEM_PARAMS_SOLID     = {'order_disp'            : 2, # 2
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'incompressible_2field' : True}
