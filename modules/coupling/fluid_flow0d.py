@@ -485,7 +485,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
         self.solnln.newton(t)
 
 
-    def print_timestep_info(self, N, t, wt):
+    def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbf.numstep, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbf.numstep, ni=ni, li=li, wt=wt)

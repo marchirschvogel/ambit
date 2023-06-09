@@ -343,7 +343,7 @@ class FSISolver(solver_base):
         self.solnln.newton(t, localdata=self.pb.pbs.localdata)
 
 
-    def print_timestep_info(self, N, t, wt):
+    def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
+        self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, ni=ni, li=li, wt=wt)

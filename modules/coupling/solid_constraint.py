@@ -387,15 +387,6 @@ class SolidmechanicsConstraintProblem():
 
 class SolidmechanicsConstraintSolver(solver_base):
 
-    def __init__(self, problem, solver_params):
-
-        self.pb = problem
-
-        self.solver_params = solver_params
-
-        self.initialize_nonlinear_solver()
-
-
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
@@ -445,7 +436,7 @@ class SolidmechanicsConstraintSolver(solver_base):
         self.solnln.newton(t, localdata=self.pb.pbs.localdata)
 
 
-    def print_timestep_info(self, N, t, wt):
+    def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
+        self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, ni=ni, li=li, wt=wt)

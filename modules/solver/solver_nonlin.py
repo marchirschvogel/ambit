@@ -61,6 +61,7 @@ class solver_nonlinear:
         self.sepstring = self.solutils.timestep_separator()
 
 
+
     def set_solver_params(self, solver_params):
 
         try: self.maxiter = solver_params['maxiter']
@@ -359,6 +360,7 @@ class solver_nonlinear:
         k_PTC = self.k_PTC_initial
         counter_adapt, max_adapt = 0, 50
         maxresval = 1.0e16
+        self.ni, self.li = 0, 0 # nonlinear and linear iteration counters
 
         self.solutils.print_nonlinear_iter(header=True)
 
@@ -553,6 +555,7 @@ class solver_nonlinear:
                 if self.divcont=='PTC':
                     self.PTC = False
                     counter_adapt = 0
+                self.ni = it
                 break
 
         else:
@@ -671,6 +674,8 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         if print_iter: self.solutils.print_nonlinear_iter(header=True,sub=sub)
 
+        self.ni, self.li = 0, 0 # nonlinear and linear iteration counters (latter probably never relevant for ODE problems...)
+
         while it < self.maxiter:
 
             tes = time.time()
@@ -712,6 +717,7 @@ class solver_nonlinear_ode(solver_nonlinear):
                     if self.pb.comm.rank == 0:
                         print('      **************************************************************\n')
                         sys.stdout.flush()
+                self.ni = it
                 break
 
         else:

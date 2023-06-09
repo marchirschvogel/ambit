@@ -255,7 +255,7 @@ class SignallingNetworkSolver(solver_base):
         self.solnln.newton(self.pb.s, t)
 
 
-    def print_timestep_info(self, N, t, wt):
+    def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, wt=wt)
+        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, ni=ni, wt=wt)

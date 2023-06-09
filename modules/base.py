@@ -101,6 +101,8 @@ class solver_base():
 
         self.initialize_nonlinear_solver()
 
+        self.ni, self.li = 0, 0
+
 
     # routines that should be implemented by derived model solver
     def solve_initial_state(self):
@@ -171,13 +173,17 @@ class solver_base():
             wt = wte - wts
 
             # print timestep info
-            self.print_timestep_info(N, t, wt)
+            self.print_timestep_info(N, t, self.solnln.ni, self.solnln.li, wt)
 
             # apply any "on-the-fly" changes of model state/parameters
             self.pb.induce_state_change()
 
             # write restart information if desired
             self.pb.write_restart(self.pb.simname, N)
+
+            # update nonlinear and linear iteration counters
+            self.ni += self.solnln.ni
+            self.li += self.solnln.li
 
             # check any abort criterion
             if self.pb.check_abort(t-t_off):
@@ -188,6 +194,10 @@ class solver_base():
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+            print('Total number of nonlinear iterations: %i' % (self.ni))
+            print('Average number of nonlinear iterations per time step: %.1f' % (self.ni/self.pb.numstep_stop))
+            print('Total number of linear iterations: %i' % (self.li))
+            print('Average number of linear iterations per time step: %.1f' % (self.li/self.pb.numstep_stop))
             sys.stdout.flush()
 
 

@@ -692,10 +692,10 @@ class FluidmechanicsSolver(solver_base):
         self.solnln.newton(t)
 
 
-    def print_timestep_info(self, N, t, wt):
+    def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
+        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, ni=ni, li=li, wt=wt)
 
 
     def solve_initial_prestress(self):
@@ -731,7 +731,7 @@ class FluidmechanicsSolver(solver_base):
             self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             # print time step info to screen
-            self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.sepstring, wt=wt)
+            self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.sepstring, ni=self.solnln.ni, li=self.solnln.li, wt=wt)
 
             # write prestress displacement (given that we want to write the fluid displacement)
             if 'fluiddisplacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:

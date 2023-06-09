@@ -180,6 +180,7 @@ class sol_utils():
                 print('{:<21s}{:<4d}{:<21s}{:<4e}'.format('            lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
             # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.ConvergedReason-class.html for converge codes
             print('{:<12s}{:<13s}{:<18s}{:<2d}{:<14s}'.format(' ','************ ',' PETSc conv code: ',self.solver.ksp.getConvergedReason(),' *************\n'))
+            self.solver.li += it+1
             sys.stdout.flush()
 
 
