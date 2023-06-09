@@ -319,7 +319,14 @@ class FluidmechanicsFlow0DProblem():
         offset_s = offset_p + self.pbf.p.vector.getLocalSize()
         iset_s = PETSc.IS().createStride(self.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
-        return [iset_v, iset_p, iset_s]
+        if isoptions['lms_to_p']:
+            iset_p = iset_p.expand(iset_s) # add to pressure block
+            return [iset_v, iset_p]
+        elif isoptions['lms_to_v']:
+            iset_v = iset_u.expand(iset_s) # add to velocity block (could be bad...)
+            return [iset_v, iset_p]
+        else:
+            return [iset_v, iset_p, iset_s]
 
 
     ### now the base routines for this problem
@@ -456,7 +463,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
 
     def solve_initial_state(self):

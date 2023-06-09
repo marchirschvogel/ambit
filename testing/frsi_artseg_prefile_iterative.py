@@ -44,9 +44,7 @@ def main():
                             'max_liniter'           : 1200,
                             'res_lin_monitor'       : 'abs',
                             'print_liniter_every'   : 50,
-                            'adapt_linsolv_tol'     : False,
-                            'adapt_factor'          : 0.1,
-                            'romvars_to_new_sblock' : True,
+                            'indexset_options'      : {'rom_to_new' : True},
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 

@@ -236,32 +236,6 @@ class sol_utils():
         return converged
 
 
-    def adapt_linear_solver(self, rabsnorm, tolres):
-
-        rnorm = self.solver.ksp.getResidualNorm()
-
-        if rnorm*self.solver.tol_lin_rel < tolres: # currentnlnres*tol < desirednlnres
-
-            # formula: "desirednlnres * factor / currentnlnres"
-            tol_lin_rel_new = self.solver.adapt_factor * tolres/rnorm
-
-            if tol_lin_rel_new > 1.0:
-                if self.solver.pb.comm.rank == 0:
-                    print("Warning: Adapted relative tolerance > 1. --> Constrained to 0.999, but consider changing parameter 'adapt_factor'!")
-                    sys.stdout.flush()
-                tol_lin_rel_new = 0.999
-
-            if tol_lin_rel_new < self.solver.tol_lin_rel:
-                tol_lin_rel_new = self.solver.tol_lin_rel
-
-            if self.solver.pb.comm.rank == 0 and tol_lin_rel_new > self.solver.tol_lin_rel:
-                print("            Adapted relative linear tolerance to %.1e\n" % tol_lin_rel_new)
-                sys.stdout.flush()
-
-            # adapt relative tolerance
-            self.solver.ksp.setTolerances(rtol=tol_lin_rel_new, atol=self.solver.tol_lin_abs, divtol=None, max_it=self.solver.maxliniter)
-
-
     def timestep_separator(self):
 
         if len(self.solver.tolerances)==2:

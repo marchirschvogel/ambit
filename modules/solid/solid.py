@@ -292,8 +292,9 @@ class SolidmechanicsProblem(problem_base):
         # read in fiber data
         if bool(self.io.fiber_data):
 
-            fibarray = ['fiber']
-            if len(self.io.fiber_data)>1: fibarray.append('sheet')
+            fibarray = []
+            for nf in range(len(self.io.fiber_data)):
+                fibarray.append('f'+str(nf+1))
 
             self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.dx_, self.order_disp)
 
@@ -867,7 +868,7 @@ class SolidmechanicsSolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
 
     def solve_initial_state(self):

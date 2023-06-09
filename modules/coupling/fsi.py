@@ -308,7 +308,7 @@ class FSISolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # initialize fluid mechanics solver

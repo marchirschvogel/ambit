@@ -29,7 +29,7 @@ class solver_nonlinear:
 
     def __init__(self, pb, solver_params={}):
 
-        self.pb = pb
+        self.pb = pb[0] # currently only one monolithic problem considered
 
         # problem variables list
         self.x, self.is_ghosted = self.pb.get_problem_var_list()
@@ -53,7 +53,7 @@ class solver_nonlinear:
 
         # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
         if self.pb.sub_solve:
-            self.subsol = solver_nonlinear_ode(self.pb.pb0, solver_params['subsolver_params'])
+            self.subsol = solver_nonlinear_ode([self.pb.pb0], solver_params['subsolver_params'])
         else:
             self.subsol = None
 
@@ -93,9 +93,6 @@ class solver_nonlinear:
         try: self.block_precond = solver_params['block_precond']
         except: self.block_precond = 'fieldsplit'
 
-        try: self.adapt_linsolv_tol = solver_params['adapt_linsolv_tol']
-        except: self.adapt_linsolv_tol = False
-
         try: self.tol_lin_rel = solver_params['tol_lin_rel']
         except: self.tol_lin_rel = 1.0e-5
 
@@ -118,16 +115,15 @@ class solver_nonlinear:
         else:
             raise ValueError("Unknown lin_norm_type option!")
 
-        try: self.adapt_factor = solver_params['adapt_factor']
-        except: self.adapt_factor = 0.1
-
         try: self.print_liniter_every = solver_params['print_liniter_every']
         except: self.print_liniter_every = 1
 
-        try: self.romvars_to_new_sblock = solver_params['romvars_to_new_sblock']
-        except: self.romvars_to_new_sblock = False
-
-        self.iset_options = {'rom_to_new' : self.romvars_to_new_sblock}
+        try: self.iset_options = solver_params['indexset_options']
+        except: self.iset_options = {}
+        is_option_keys = ['lms_to_p','lms_to_v','rom_to_new']
+        # revert to defaults if not set by the user
+        for k in is_option_keys:
+            if k not in self.iset_options.keys(): self.iset_options[k] = False
 
         try: self.print_local_iter = solver_params['print_local_iter']
         except: self.print_local_iter = False
@@ -449,14 +445,13 @@ class solver_nonlinear:
 
                     del_full = PETSc.Vec().createNest(del_x)
 
-                    # we cannot extract index subsets of field out of the
-                    # nested preconditioner matrix - so we need to convert
-                    if self.pb.have_rom:
-                        if self.iset_options['rom_to_new']:
-                            P = PETSc.Mat()
-                            P_nest.convert("aij", out=P)
-                            P.assemble()
-                            P_nest = P
+                    # if index sets do not align with the nested matrix structure
+                    # anymore, we need a merged matrix to extract the submats
+                    if self.iset_options['rom_to_new'] or self.iset_options['lms_to_p'] or self.iset_options['lms_to_v']:
+                        P = PETSc.Mat()
+                        P_nest.convert("aij", out=P)
+                        P.assemble()
+                        P_nest = P
 
                     self.ksp.setOperators(K_full_nest, P_nest)
 
@@ -477,9 +472,6 @@ class solver_nonlinear:
 
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
 
-                    if self.adapt_linsolv_tol:
-                        self.solutils.adapt_linear_solver(r_full_nest.norm(),self.tolres[0])
-
                 else:
 
                     raise NameError("Unknown solvetype!")
@@ -499,9 +491,6 @@ class solver_nonlinear:
                 if self.solvetype=='iterative':
 
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
-
-                    if self.adapt_linsolv_tol:
-                        self.solutils.adapt_linear_solver(r_list[0].norm(),self.tolres[0])
 
             # get residual and increment norms
             resnorms, incnorms = {}, {}
@@ -642,7 +631,7 @@ class solver_nonlinear_ode(solver_nonlinear):
 
     def __init__(self, pb, solver_params={}):
 
-        self.pb = pb
+        self.pb = pb[0] # currently only one problem considered
 
         self.ptype = self.pb.problem_physics
 

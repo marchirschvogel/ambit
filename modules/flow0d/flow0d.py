@@ -386,7 +386,7 @@ class Flow0DSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_ode(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear_ode([self.pb], solver_params=self.solver_params)
 
 
     def solve_initial_state(self):

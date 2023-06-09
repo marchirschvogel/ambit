@@ -189,7 +189,14 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
             iset_s = iset_s.expand(iset_r) # add to 0D block
 
         # for convenience, add ALE as last in list (since we might want to address this with a decoupled block solve)
-        return [iset_v, iset_p, iset_s, iset_d]
+        if isoptions['lms_to_p']:
+            iset_p = iset_p.expand(iset_s) # add to pressure block - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
+            return [iset_v, iset_p, iset_d]
+        elif isoptions['lms_to_v']:
+            iset_v = iset_v.expand(iset_s) # add to velocity block (could be bad...) - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
+            return [iset_v, iset_p, iset_d]
+        else:
+            return [iset_v, iset_p, iset_s, iset_d]
 
 
     ### now the base routines for this problem
@@ -284,7 +291,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
 
     def solve_initial_state(self):

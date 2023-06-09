@@ -114,7 +114,7 @@ class sblock_2x2(block_precond):
         B_Adinv_Bt.destroy()
 
 
-    # computes y = P^(-1) x
+    # computes y = P^{-1} x
     def apply(self, pc, x, y):
 
         # get subvectors (references!)
@@ -248,7 +248,7 @@ class sblock_3x3(block_precond):
         B_Adinv_Bt.destroy(), B_Adinv_Dt.destroy(), D_Adinv_Bt_Smoddinv_Tmod.destroy(), E_Smoddinv_Tmod.destroy(), D_Adinv_Dt.destroy(), Bt_Smoddinv_Tmod.destroy()
 
 
-    # computes y = P^(-1) x
+    # computes y = P^{-1} x
     def apply(self, pc, x, y):
 
         # get subvectors (references!)
@@ -334,7 +334,7 @@ class sblock_4x4(sblock_3x3):
         self.G = self.P.createSubMatrix(self.iset[3],self.iset[3])
 
 
-    # computes y = P^(-1) x
+    # computes y = P^{-1} x
     def apply(self, pc, x, y):
         super().apply(pc,x,y)
 
@@ -363,7 +363,7 @@ class sblock_4x4(sblock_3x3):
 
 class simple_2x2(sblock_2x2):
 
-    # computes y = P^(-1) x
+    # computes y = P^{-1} x
     def apply(self, pc, x, y):
 
         # get subvectors (references!)
@@ -411,6 +411,9 @@ class simple_2x2(sblock_2x2):
 
 
 # own 2x2 Block Gauss-Seidel (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
+
+# P = [A  0] [I  0] [I  0], --> P^{-1} = [I    0   ] [ I  0] [A^{-1} 0]
+#     [0  I] [B  I] [0  C]               [0  C^{-1}] [-B  I] [0      I]
 class bgs_2x2(block_precond):
 
     def check_field_size(self):
@@ -443,7 +446,7 @@ class bgs_2x2(block_precond):
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
 
 
-    # computes y = P^(-1) x
+    # computes y = P^{-1} x
     def apply(self, pc, x, y):
 
         # get subvectors (references!)
@@ -483,6 +486,8 @@ class bgs_2x2(block_precond):
 
 
 # own 2x2 Jacobi (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
+# P = [A  0], --> P^{-1} = [A^{-1}  0  ]
+#     [0  C]               [  0  C^{-1}]
 class jacobi_2x2(block_precond):
 
     def check_field_size(self):
@@ -507,7 +512,7 @@ class jacobi_2x2(block_precond):
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
 
 
-    # computes y = P^(-1) x
+    # computes y = P^{-1} x
     def apply(self, pc, x, y):
 
         # get subvectors (references!)

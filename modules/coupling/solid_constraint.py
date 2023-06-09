@@ -278,7 +278,14 @@ class SolidmechanicsConstraintProblem():
         iset_s = PETSc.IS().createStride(self.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
-            return [iset_u, iset_p, iset_s]
+            if isoptions['lms_to_p']:
+                iset_p = iset_p.expand(iset_s) # add to pressure block
+                return [iset_u, iset_p]
+            elif isoptions['lms_to_v']:
+                iset_u = iset_u.expand(iset_s) # add to displacement block (could be bad...)
+                return [iset_u, iset_p]
+            else:
+                return [iset_u, iset_p, iset_s]
         else:
             return [iset_u, iset_s]
 
@@ -398,7 +405,7 @@ class SolidmechanicsConstraintSolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
             # initialize solid mechanics solver

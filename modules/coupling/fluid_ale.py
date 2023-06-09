@@ -237,12 +237,12 @@ class FluidmechanicsAleProblem():
                 uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
                 self.ufa.vector.axpby(1.0, 0.0, uf_vec)
                 self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                #K_list[2][0] = self.K_uv
+                #K_list[2][0] = self.K_dv
                 uf_vec.destroy()
             if self.coupling_fluid_ale['type'] == 'robin':
-                K_uv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
-                K_uv.assemble()
-                K_list[2][0] = K_uv
+                K_dv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
+                K_dv.assemble()
+                K_list[2][0] = K_dv
 
         if bool(self.coupling_ale_fluid):
             if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
@@ -428,7 +428,7 @@ class FluidmechanicsAleSolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
         if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
             # initialize fluid mechanics solver
