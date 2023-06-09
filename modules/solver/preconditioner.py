@@ -65,8 +65,8 @@ class block_precond():
         pass
 
 
-
-class sblock_2x2(block_precond):
+# Schur complement preconditioner (using a modified diag(A)^{-1} instead of A^{-1} in the Schur complement)
+class schur_2x2(block_precond):
 
     def check_field_size(self):
         assert(self.nfields==2)
@@ -96,7 +96,7 @@ class sblock_2x2(block_precond):
         ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
         adinv_vec.reciprocal()
 
-        self.B.diagonalScale(R=adinv_vec)    # right scaling columns of B, corresponds to B * diag(A)^(-1)
+        self.B.diagonalScale(R=adinv_vec)    # right scaling columns of B, corresponds to B * diag(A)^{-1}
         B_Adinv_Bt = self.B.matMult(self.Bt) # B diag(A)^-1 Bt
 
         # --- modified Schur complement Smod = C - B diag(A)^-1 Bt
@@ -159,8 +159,8 @@ class sblock_2x2(block_precond):
         del arr_y1, arr_y2
 
 
-
-class sblock_3x3(block_precond):
+# special MH Schur complement 3x3 preconditioner
+class schur_3x3(block_precond):
 
     def check_field_size(self):
         assert(self.nfields==3)
@@ -196,7 +196,7 @@ class sblock_3x3(block_precond):
         ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
         adinv_vec.reciprocal()
 
-        self.B.diagonalScale(R=adinv_vec)    # right scaling columns of B, corresponds to B * diag(A)^(-1)
+        self.B.diagonalScale(R=adinv_vec)    # right scaling columns of B, corresponds to B * diag(A)^{-1}
         B_Adinv_Bt = self.B.matMult(self.Bt) # B diag(A)^-1 Bt
 
         # --- modified Schur complement Smod = C - B diag(A)^-1 Bt
@@ -208,21 +208,24 @@ class sblock_3x3(block_precond):
 
         self.Tmod = self.Et - B_Adinv_Dt
 
-        # --- Wmod = R - D diag(A)^(-1) Dt - E diag(Smod)^(-1) Tmod + D diag(A)^(-1) Bt diag(Smod)^(-1) Tmod
+        # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
 
         smodd_vec, smoddinv_vec = self.Smod.getDiagonal(), self.Smod.getDiagonal()
         smoddinv_vec.reciprocal()
 
-        self.Bt.diagonalScale(R=smoddinv_vec)                       # right scaling columns of Bt, corresponds to Bt * diag(Smod)^(-1)
+        self.Bt.diagonalScale(R=smoddinv_vec)                       # right scaling columns of Bt, corresponds to Bt * diag(Smod)^{-1}
         Bt_Smoddinv_Tmod = self.Bt.matMult(self.Tmod)               # Bt diag(Smod)^-1 Tmod
 
-        self.D.diagonalScale(R=adinv_vec)                           # right scaling columns of D, corresponds to D * diag(A)^(-1)
-        D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(Bt_Smoddinv_Tmod) # D diag(A)^(-1) ( Bt diag(Smod)^-1 Tmod )
+        self.D.diagonalScale(R=adinv_vec)                           # right scaling columns of D, corresponds to D * diag(A)^{-1}
+        D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(Bt_Smoddinv_Tmod) # D diag(A)^{-1} ( Bt diag(Smod)^-1 Tmod )
 
-        self.E.diagonalScale(R=smoddinv_vec)                        # right scaling columns of E, corresponds to E * diag(Smod)^(-1)
+        self.DBt.destroy()
+        self.DBt = self.D.matMult(self.Bt)                          # D diag(A)^{-1} Bt for later use
+
+        self.E.diagonalScale(R=smoddinv_vec)                        # right scaling columns of E, corresponds to E * diag(Smod)^{-1}
         E_Smoddinv_Tmod = self.E.matMult(self.Tmod)                 # E diag(Smod)^-1 Tmod
 
-        D_Adinv_Dt = self.D.matMult(self.Dt)                        # D diag(A)^(-1) Dt - note that D is still scaled by diag(A)^(-1)
+        D_Adinv_Dt = self.D.matMult(self.Dt)                        # D diag(A)^{-1} Dt - note that D is still scaled by diag(A)^{-1}
 
         self.Wmod = self.R - D_Adinv_Dt - E_Smoddinv_Tmod + D_Adinv_Bt_Smoddinv_Tmod
 
@@ -231,11 +234,9 @@ class sblock_3x3(block_precond):
         self.D.diagonalScale(R=ad_vec)     # restore D
         self.E.diagonalScale(R=smodd_vec)  # restore E
 
-        # some auxiliary mats and vecs needed in apply
-        self.DBt.destroy()
+        # some auxiliary vecs needed in apply
         self.By1.destroy(), self.Dy1.destroy(), self.DBty2.destroy(), self.Ey2.destroy(), self.Tmody3.destroy(), self.Bty2.destroy(), self.Dty3.destroy()
 
-        self.DBt = self.D.matMult(self.Bt)
         self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
         self.Dy1 = PETSc.Vec().createMPI(size=(self.D.getLocalSize()[0],self.D.getSize()[0]), comm=self.comm)
         self.DBty2 = PETSc.Vec().createMPI(size=(self.DBt.getLocalSize()[0],self.DBt.getSize()[0]), comm=self.comm)
@@ -314,8 +315,8 @@ class sblock_3x3(block_precond):
         del arr_y1, arr_y2, arr_y3
 
 
-# a 4x4 block preconditioner that does sblock3x3 and a decoupled solve on the 4th block
-class sblock_4x4(sblock_3x3):
+# schur_3x3 with a decoupled solve on the 4th block (tailored towards FrSI, where the 4th block is the ALE problem)
+class schur_4x4(schur_3x3):
 
     def check_field_size(self):
         assert(self.nfields==4)
@@ -361,7 +362,8 @@ class sblock_4x4(sblock_3x3):
         del arr_y4
 
 
-class simple_2x2(sblock_2x2):
+# Schur complement preconditioner replacing the last solve with a diag(A)^{-1} update
+class simple_2x2(schur_2x2):
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
@@ -388,7 +390,7 @@ class simple_2x2(sblock_2x2):
         ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
         adinv_vec.reciprocal()
 
-        self.Bt.diagonalScale(L=adinv_vec) # left scaling columns of Bt, corresponds to diag(A)^(-1) * Bt
+        self.Bt.diagonalScale(L=adinv_vec) # left scaling columns of Bt, corresponds to diag(A)^{-1} * Bt
         self.Bt.mult(y2, self.Bty2)
         y1 -= self.Bty2
         self.Bt.diagonalScale(L=ad_vec)    # restore Bt

@@ -226,10 +226,10 @@ class solver_nonlinear:
                         else:
                             raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
-                elif self.block_precond == 'sblock2x2':
+                elif self.block_precond == 'schur2x2':
 
                     self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.sblock_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
+                    bj = preconditioner.schur_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
                     self.ksp.getPC().setPythonContext(bj)
 
                 elif self.block_precond == 'simple2x2':
@@ -238,16 +238,16 @@ class solver_nonlinear:
                     bj = preconditioner.simple_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
                     self.ksp.getPC().setPythonContext(bj)
 
-                elif self.block_precond == 'sblock3x3':
+                elif self.block_precond == 'schur3x3':
 
                     self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.sblock_3x3(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
+                    bj = preconditioner.schur_3x3(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
                     self.ksp.getPC().setPythonContext(bj)
 
-                elif self.block_precond == 'sblock4x4':
+                elif self.block_precond == 'schur4x4':
 
                     self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.sblock_4x4(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
+                    bj = preconditioner.schur_4x4(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
                     self.ksp.getPC().setPythonContext(bj)
 
                 elif self.block_precond == 'bgs2x2': # can also be called via PETSc's fieldsplit
