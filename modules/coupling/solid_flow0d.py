@@ -104,18 +104,18 @@ class SolidmechanicsFlow0DProblem():
 
         if self.coupling_type == 'monolithic_lagrange':
             if self.pbs.incompressible_2field:
-                is_ghosted = [True, True, False]
+                is_ghosted = [1, 1, 0]
                 return [self.pbs.u.vector, self.pbs.p.vector, self.lm], is_ghosted
             else:
-                is_ghosted = [True, False]
+                is_ghosted = [1, 0]
                 return [self.pbs.u.vector, self.lm], is_ghosted
 
         if self.coupling_type == 'monolithic_direct':
             if self.pbs.incompressible_2field:
-                is_ghosted = [True, True, False]
+                is_ghosted = [1, 1, 0]
                 return [self.pbs.u.vector, self.pbs.p.vector, self.pb0.s], is_ghosted
             else:
-                is_ghosted = [True, False]
+                is_ghosted = [1, 0]
                 return [self.pbs.u.vector, self.pb0.s], is_ghosted
 
 

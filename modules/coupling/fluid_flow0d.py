@@ -83,7 +83,7 @@ class FluidmechanicsFlow0DProblem():
 
     def get_problem_var_list(self):
 
-        is_ghosted = [True, True, False]
+        is_ghosted = [1, 1, 0]
         return [self.pbf.v.vector, self.pbf.p.vector, self.lm], is_ghosted
 
 

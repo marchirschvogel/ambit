@@ -85,7 +85,8 @@ class FluidmechanicsAleProblem():
 
     def get_problem_var_list(self):
 
-        is_ghosted = [True]*3
+        if self.pbf.num_dupl > 1: is_ghosted = [1, 2, 1]
+        else:                     is_ghosted = [1, 1, 1]
         return [self.pbf.v.vector, self.pbf.p.vector, self.pba.d.vector], is_ghosted
 
 
@@ -195,7 +196,9 @@ class FluidmechanicsAleProblem():
         self.weakform_lin_vd = ufl.derivative(self.pbf.weakform_v, self.pba.d, self.pba.dd)
 
         # derivative of fluid continuity w.r.t. ALE displacement
-        self.weakform_lin_pd = ufl.derivative(self.pbf.weakform_p, self.pba.d, self.pba.dd)
+        self.weakform_lin_pd = []
+        for n in range(self.pbf.num_domains):
+            self.weakform_lin_pd.append( ufl.derivative(self.pbf.weakform_p[n], self.pba.d, self.pba.dd) )
 
 
     def set_problem_residual_jacobian_forms(self):
@@ -209,10 +212,17 @@ class FluidmechanicsAleProblem():
             print('FEM form compilation for coupling...')
             sys.stdout.flush()
 
+        if not bool(self.pbf.io.duplicate_mesh_domains):
+            self.weakform_lin_pd = sum(self.weakform_lin_pd)
+
         # coupling
         if self.io.USE_MIXED_DOLFINX_BRANCH:
             self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.pbf.entity_maps)
-            self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.pbf.entity_maps)
+            self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.pbf.entity_maps) # list
+            if self.pbf.num_dupl > 1:
+                self.jac_pd_ = []
+                for j in range(self.pbf.num_dupl):
+                    self.jac_pd_.append([self.jac_pd[j]])
         else:
             self.jac_vd = fem.form(self.weakform_lin_vd)
             self.jac_pd = fem.form(self.weakform_lin_pd)
@@ -268,7 +278,10 @@ class FluidmechanicsAleProblem():
         K_list[1][1] = K_list_fluid[1][1]
 
         # derivative of fluid continuity w.r.t. ALE displacement
-        K_pd = fem.petsc.assemble_matrix(self.jac_pd, [])
+        if self.pbf.num_dupl > 1:
+            K_pd = fem.petsc.assemble_matrix_block(self.jac_pd_, [])
+        else:
+            K_pd = fem.petsc.assemble_matrix(self.jac_pd, [])
         K_pd.assemble()
         K_list[1][2] = K_pd
 

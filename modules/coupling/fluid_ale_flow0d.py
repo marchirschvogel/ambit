@@ -87,8 +87,17 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
     def get_problem_var_list(self):
 
-        is_ghosted = [True, True, True, False]
-        return [self.pbf0.pbf.v.vector, self.pbf0.pbf.p.vector, self.pba.d.vector, self.pbf0.lm], is_ghosted
+        if self.pbf0.pbf.num_dupl > 1: is_ghosted = [1, 2, 0, 1]
+        else:                          is_ghosted = [1, 1, 0, 1]
+        return [self.pbf0.pbf.v.vector, self.pbf0.pbf.p.vector, self.pbf0.lm, self.pba.d.vector], is_ghosted
+
+
+    def set_variational_forms(self):
+        super().set_variational_forms()
+
+        self.dcqd = []
+        for n in range(self.pbf0.num_coupling_surf):
+            self.dcqd.append(ufl.derivative(self.pbf0.cq[n], self.pba.d, self.pba.dd))
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
@@ -103,10 +112,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
                 self.ufa.vector.axpby(1.0, 0.0, uf_vec)
                 self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 uf_vec.destroy()
-            if self.coupling_fluid_ale['type'] == 'weak_dirichlet':
-                K_uv = fem.petsc.assemble_matrix(fem.form(self.jac_uv), self.pba.bc.dbcs)
-                K_uv.assemble()
-                K_list[2][0] = K_uv
+            if self.coupling_fluid_ale['type'] == 'robin':
+                K_dv = fem.petsc.assemble_matrix(fem.form(self.jac_dv), self.pba.bc.dbcs)
+                K_dv.assemble()
+                K_list[3][0] = K_dv
 
         if bool(self.coupling_ale_fluid):
             if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
@@ -122,40 +131,63 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
         K_list[0][0] = K_list_fluidflow0d[0][0]
         K_list[0][1] = K_list_fluidflow0d[0][1]
-
-        K_list[0][3] = K_list_fluidflow0d[0][2]
+        K_list[0][2] = K_list_fluidflow0d[0][2]
 
         K_list[1][0] = K_list_fluidflow0d[1][0]
         K_list[1][1] = K_list_fluidflow0d[1][1]
-        K_list[1][3] = K_list_fluidflow0d[1][2]
+        K_list[1][2] = K_list_fluidflow0d[1][2]
 
-        K_list[3][0] = K_list_fluidflow0d[2][0]
-        K_list[3][1] = K_list_fluidflow0d[2][1]
-        K_list[3][3] = K_list_fluidflow0d[2][2]
+        K_list[2][0] = K_list_fluidflow0d[2][0]
+        K_list[2][1] = K_list_fluidflow0d[2][1]
+        K_list[2][2] = K_list_fluidflow0d[2][2]
 
         # derivative of fluid momentum w.r.t. ALE displacement
-        K_vu = fem.petsc.assemble_matrix(self.jac_vd, self.pbf.bc.dbcs)
-        K_vu.assemble()
-        K_list[0][2] = K_vu
+        K_vd = fem.petsc.assemble_matrix(self.jac_vd, self.pbf.bc.dbcs)
+        K_vd.assemble()
+        K_list[0][3] = K_vd
 
         # derivative of fluid continuity w.r.t. ALE velocity
-        K_pu = fem.petsc.assemble_matrix(self.jac_pd, [])
-        K_pu.assemble()
-        K_list[1][2] = K_pu
+        if self.pbf.num_dupl > 1:
+            K_pd = fem.petsc.assemble_matrix_block(self.jac_pd_, [])
+        else:
+            K_pd = fem.petsc.assemble_matrix(self.jac_pd, [])
+        K_pd.assemble()
+        K_list[1][3] = K_pd
+
+        # offdiagonal s-d rows: derivative of flux constraint w.r.t. ALE displacement (in case of moving coupling boundaries)
+        row_ids = list(range(self.pbf0.num_coupling_surf))
+        k_sd_rows=[]
+        for i in range(len(row_ids)):
+            k_sd_rows.append(fem.petsc.assemble_vector(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i])))
+            k_sd_rows[-1].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+
+        locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
+        matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
+        K_sd = PETSc.Mat().createAIJ(size=((K_list[2][2].getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K_sd.setUp()
+        # set rows
+        irs, ire = K_list[0][0].getOwnershipRange()
+        for i in range(len(row_ids)):
+            K_sd[row_ids[i], irs:ire] = k_sd_rows[i][irs:ire]
+        K_sd.assemble()
+        K_list[2][3] = K_sd
 
         # derivative of ALE residual w.r.t. fluid velocities - needed due to DBCs u=uf added on the ALE surfaces
         # TODO: How to form this matrix efficiently?
-        #K_list[2][0] = self.K_uv
+        #K_list[3][0] = self.K_dv
 
-        K_list[2][2] = K_list_ale[0][0]
+        K_list[3][3] = K_list_ale[0][0]
 
         # fluid
         r_list[0] = r_list_fluidflow0d[0]
         r_list[1] = r_list_fluidflow0d[1]
-        # ALE
-        r_list[2] = r_list_ale[0]
         # flow0d
-        r_list[3] = r_list_fluidflow0d[2]
+        r_list[2] = r_list_fluidflow0d[2]
+        # ALE
+        r_list[3] = r_list_ale[0]
+
+        # destroy PETSc vector
+        for i in range(len(row_ids)): k_sd_rows[i].destroy()
 
         return r_list, K_list
 
@@ -169,7 +201,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         else:
             vvec = self.pbf.v.vector
 
-        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0]
+        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p_[0].vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -177,13 +209,13 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec.getLocalSize()
-        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+        iset_p = PETSc.IS().createStride(self.pbf.p_[0].vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        offset_d = offset_p + self.pbf.p.vector.getLocalSize()
-        iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
-
-        offset_s = offset_d + self.pba.d.vector.getLocalSize()
+        offset_s = offset_p + self.pbf.p_[0].vector.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+
+        offset_d = offset_s + self.pbf0.lm.getLocalSize()
+        iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
             iset_s = iset_s.expand(iset_r) # add to 0D block

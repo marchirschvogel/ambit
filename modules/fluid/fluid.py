@@ -8,7 +8,7 @@
 
 import time, sys
 import numpy as np
-from dolfinx import fem
+from dolfinx import fem, mesh, io
 import ufl
 from petsc4py import PETSc
 
@@ -19,6 +19,7 @@ import timeintegration
 import utilities
 import solver_nonlin
 import boundaryconditions
+import meshutils, expression
 from projection import project
 from solid_material import activestress_activation
 
@@ -33,7 +34,7 @@ from base import problem_base, solver_base
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None, alevar={}):
+    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, iof, mor_params={}, comm=None, alevar={}):
         problem_base.__init__(self, io_params, time_params, comm)
 
         self.problem_physics = 'fluid'
@@ -41,7 +42,7 @@ class FluidmechanicsProblem(problem_base):
         self.simname = io_params['simname']
         self.results_to_write = io_params['results_to_write']
 
-        self.io = io
+        self.io = iof
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
@@ -57,7 +58,6 @@ class FluidmechanicsProblem(problem_base):
         for n in range(self.num_domains):
             # integration domains
             self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
-            if self.io.mesh2 is not None: self.dx2_.append(ufl.dx(domain=self.io.mesh2, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             self.rho.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
 
@@ -119,16 +119,42 @@ class FluidmechanicsProblem(problem_base):
 
         # create finite element objects for v and p
         P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
-        if self.io.mesh2 is not None:
-            P_p = ufl.FiniteElement("CG", self.io.mesh2.ufl_cell(), self.order_pres)
-        else:
-            P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
         # function spaces for v and p
         self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
-        if self.io.mesh2 is not None:
-            self.V_p = fem.FunctionSpace(self.io.mesh2, P_p)
+
+        self.V_p_ = []
+        self.entity_maps = {}
+
+        if bool(self.io.duplicate_mesh_domains):
+
+            assert(self.io.USE_MIXED_DOLFINX_BRANCH)
+            assert(self.num_domains>1)
+
+            self.num_dupl = self.num_domains
+
+            self.io.submshes_emap, self.inv_emap, self.sub_mt_b1 = [], [], []
+
+            for mp in self.io.duplicate_mesh_domains:
+                self.io.submshes_emap.append( mesh.create_submesh(self.io.mesh, self.io.mesh.topology.dim, self.io.mt_d.indices[self.io.mt_d.values == mp])[0:2] )
+
+            cell_imap = self.io.mesh.topology.index_map(self.io.mesh.topology.dim)
+            num_cells = cell_imap.size_local + cell_imap.num_ghosts
+
+            for mp in range(self.num_dupl):
+                self.V_p_.append( fem.FunctionSpace(self.io.submshes_emap[mp][0], P_p) )
+                self.inv_emap.append( np.full(num_cells, -1) )
+
+            for mp in range(self.num_dupl):
+                self.inv_emap[mp][self.io.submshes_emap[mp][1]] = np.arange(len(self.io.submshes_emap[mp][1]))
+                self.entity_maps[self.io.submshes_emap[mp][0]] = self.inv_emap[mp]
+                # transfer boundary meshtags to submesh
+                self.sub_mt_b1.append( meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[mp][0], self.io.submshes_emap[mp][1], self.io.mesh) )
+
         else:
-            self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
+            self.num_dupl = 1
+            self.V_p_.append( fem.FunctionSpace(self.io.mesh, P_p) )
+
         # continuous tensor and scalar function spaces of order order_vel
         self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
         self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_vel))
@@ -138,43 +164,30 @@ class FluidmechanicsProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
 
-        # still experimental and only running on one core!
-        if self.io.mesh2 is not None:
-
-            assert(self.io.USE_MIXED_DOLFINX_BRANCH)
-
-            oci1 = self.io.mesh.topology.original_cell_index
-            oci2 = self.io.mesh2.topology.original_cell_index
-
-            cell_imap = self.io.mesh2.topology.index_map(self.io.mesh2.topology.dim)
-            num_cells = cell_imap.size_local + cell_imap.num_ghosts
-
-            # imc_local_p = np.asarray(np.arange(self.io.mesh2.topology.index_map(self.io.mesh2.topology.dim).size_local + self.io.mesh2.topology.index_map(self.io.mesh2.topology.dim).num_ghosts, dtype=np.int32))
-            imc_local_p = np.full(num_cells, -1)
-            for i, f in enumerate(oci2):
-                ind = np.where(f == oci1)[0]
-                if len(ind):
-                    imc_local_p[i] = ind[0]
-
-            inv_entity_map_p = np.full_like(imc_local_p, -1)
-            for i, f in enumerate(imc_local_p):
-                inv_entity_map_p[f] = i
-            self.entity_maps = {self.io.mesh2: inv_entity_map_p}
-
-        else:
-            self.entity_maps = {}
-
         # functions
         self.dv     = ufl.TrialFunction(self.V_v)            # Incremental velocity
         self.var_v  = ufl.TestFunction(self.V_v)             # Test function
-        self.dp     = ufl.TrialFunction(self.V_p)            # Incremental pressure
-        self.var_p  = ufl.TestFunction(self.V_p)             # Test function
         self.v      = fem.Function(self.V_v, name="Velocity")
-        self.p      = fem.Function(self.V_p, name="Pressure")
+
+        # pressure can have duplicate nodes (one variable per domain)
+        self.p_, self.p_old_, self.var_p_, self.dp_ = [], [], [], []
+        if self.num_dupl > 1:
+            for mp in range(self.num_dupl):
+                self.p_.append( fem.Function(self.V_p_[mp], name="Pressure"+str(self.io.duplicate_mesh_domains[mp])) )
+                self.dp_.append( ufl.TrialFunction(self.V_p_[mp]) )            # Incremental pressure
+                self.var_p_.append( ufl.TestFunction(self.V_p_[mp]) )          # Test function
+                # values of previous time step
+                self.p_old_.append( fem.Function(self.V_p_[mp]) )
+        else:
+            self.p_.append( fem.Function(self.V_p_[0], name="Pressure") )
+            self.dp_.append( ufl.TrialFunction(self.V_p_[0]) )            # Incremental pressure
+            self.var_p_.append( ufl.TestFunction(self.V_p_[0]) )          # Test function
+            # values of previous time step
+            self.p_old_.append( fem.Function(self.V_p_[0]) )
+
         # values of previous time step
         self.v_old  = fem.Function(self.V_v)
         self.a_old  = fem.Function(self.V_v)
-        self.p_old  = fem.Function(self.V_p)
         # a fluid displacement
         self.uf_old = fem.Function(self.V_v)
         # active stress for reduced solid
@@ -186,14 +199,26 @@ class FluidmechanicsProblem(problem_base):
         else:
             self.uf_pre = None
 
-        # own read function: requires plain txt format of type valx valy valz x z y
+        # collect references to pressure vectors
+        self.pvecs_, self.pvecs_old_ = [], []
+        if self.num_dupl > 1:
+            for mp in range(self.num_dupl):
+                self.pvecs_.append(self.p_[mp].vector)
+                self.pvecs_old_.append(self.p_old_[mp].vector)
+                # full pressure vectors - dummy function that holds a class variable "vector"
+                self.p = expression.function_dummy(self.pvecs_,self.comm)
+                self.p_old = expression.function_dummy(self.pvecs_old_,self.comm)
+        else:
+            self.V_p, self.p, self.p_old = self.V_p_[0], self.p_[0], self.p_old_[0] # pointer to first p's...
+
+        # own read function: requires plain txt format of type "node-id val-x val-y val-z"
         if self.prestress_from_file:
             self.io.readfunction(self.uf_pre, self.V_v, self.prestress_from_file)
 
         # dictionaries of internal variables
         self.internalvars, self.internalvars_old = {}, {}
 
-        self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
+        self.numdof = self.v.vector.getSize() + self.p_[0].vector.getSize()
 
         if self.have_rom:
             import mor
@@ -217,7 +242,7 @@ class FluidmechanicsProblem(problem_base):
         if not bool(self.alevar):
             # standard Eulerian fluid
             self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None, 'fluid_on_deformed' : 'no'}
-            self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
+            self.vf = fluid_variationalform.variationalform(self.var_v, self.var_p_, self.io.n0, formulation=self.fluid_formulation)
 
         else:
             # mid-point representation of ALE velocity
@@ -227,18 +252,18 @@ class FluidmechanicsProblem(problem_base):
 
             if self.alevar['fluid_on_deformed'] == 'consistent':
                 # fully consistent ALE formulation of Navier-Stokes
-                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
+                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.var_p_, self.io.n0, formulation=self.fluid_formulation)
 
             elif self.alevar['fluid_on_deformed'] == 'from_last_step':
                 # ALE formulation of Navier-Stokes using metrics (Fale, w) from the last converged step... more efficient but not fully consistent
                 self.alevar['Fale'], self.alevar['w'] = self.alevar['Fale_old'], self.alevar['w_old']
-                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
+                self.vf = fluid_variationalform.variationalform_ale(self.var_v, self.var_p_, self.io.n0, formulation=self.fluid_formulation)
 
             elif self.alevar['fluid_on_deformed'] == 'mesh_move':
                 # Navier-Stokes formulated w.r.t. the current, moved frame... more efficient than 'consistent' approach but not fully consistent
                 # WARNING: This is unsuitable for FrSI, as we need gradients w.r.t. the reference frame on the reduced boundary!
                 self.alevar = {'Fale' : None, 'Fale_old' : None, 'w' : None, 'w_old' : None, 'fluid_on_deformed' : 'mesh_move'}
-                self.vf = fluid_variationalform.variationalform(self.var_v, self.dv, self.var_p, self.dp, self.io.n0, formulation=self.fluid_formulation)
+                self.vf = fluid_variationalform.variationalform(self.var_v, self.var_p_, self.io.n0, formulation=self.fluid_formulation)
 
             else:
                 raise ValueError("Unknown fluid_on_deformed option!")
@@ -273,7 +298,8 @@ class FluidmechanicsProblem(problem_base):
 
     def get_problem_var_list(self):
 
-        is_ghosted = [True]*2
+        if self.num_dupl > 1: is_ghosted = [1, 2]
+        else:                 is_ghosted = [1, 1]
         return [self.v.vector, self.p.vector], is_ghosted
 
 
@@ -293,9 +319,12 @@ class FluidmechanicsProblem(problem_base):
         # kinetic, internal, and pressure virtual power
         self.deltaW_kin, self.deltaW_kin_old = ufl.as_ufl(0), ufl.as_ufl(0)
         self.deltaW_int, self.deltaW_int_old = ufl.as_ufl(0), ufl.as_ufl(0)
-        self.deltaW_p,   self.deltaW_p_old   = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaW_p,   self.deltaW_p_old   = [], []
 
         for n in range(self.num_domains):
+
+            if self.num_dupl==1: j=0
+            else: j=n
 
             # kinetic virtual power
             if self.fluid_governing_type=='navierstokes_transient':
@@ -313,13 +342,12 @@ class FluidmechanicsProblem(problem_base):
                 raise ValueError("Unknown fluid_governing_type!")
 
             # internal virtual power
-            # dx_c = ufl.Measure("dx", domain=self.io.mesh)
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), self.dx_[n], Fale=self.alevar['Fale'])
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), self.dx_[n], Fale=self.alevar['Fale_old'])
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p_[j], Fale=self.alevar['Fale']), self.dx_[n], Fale=self.alevar['Fale'])
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old_[j], Fale=self.alevar['Fale_old']), self.dx_[n], Fale=self.alevar['Fale_old'])
 
             # pressure virtual power
-            self.deltaW_p       += self.vf.deltaW_int_pres(self.v, self.dx_[n], Fale=self.alevar['Fale'])
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(self.v_old, self.dx_[n], Fale=self.alevar['Fale_old'])
+            self.deltaW_p.append( self.vf.deltaW_int_pres(self.v, self.var_p_[j], self.dx_[n], Fale=self.alevar['Fale']) )
+            self.deltaW_p_old.append( self.vf.deltaW_int_pres(self.v_old, self.var_p_[j], self.dx_[n], Fale=self.alevar['Fale_old']) )
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
@@ -384,33 +412,36 @@ class FluidmechanicsProblem(problem_base):
 
                 for n in range(self.num_domains):
 
+                    if self.num_dupl==1: j=0
+                    else: j=n
+
                     tau_supg = h / vscale
                     tau_pspg = h / vscale
                     tau_lsic = h * vscale
 
                     # strong momentum residuals
                     if self.fluid_governing_type=='navierstokes_transient':
-                        residual_v_strong     = self.vf.res_v_strong_navierstokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                        residual_v_strong     = self.vf.res_v_strong_navierstokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
                     elif self.fluid_governing_type=='navierstokes_steady':
-                        residual_v_strong     = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                        residual_v_strong     = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
                     elif self.fluid_governing_type=='stokes_transient':
-                        residual_v_strong     = self.vf.res_v_strong_stokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                        residual_v_strong     = self.vf.res_v_strong_stokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], Fale=self.alevar['Fale']), w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], Fale=self.alevar['Fale_old']), w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
                     elif self.fluid_governing_type=='stokes_steady':
-                        residual_v_strong     = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p, Fale=self.alevar['Fale']), Fale=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v_old, self.p_old, Fale=self.alevar['Fale_old']), Fale=self.alevar['Fale_old'])
+                        residual_v_strong     = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p_[j], Fale=self.alevar['Fale']), Fale=self.alevar['Fale'])
+                        residual_v_strong_old = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], Fale=self.alevar['Fale_old']), Fale=self.alevar['Fale_old'])
                     else:
                         raise ValueError("Unknown fluid_governing_type!")
 
                     # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
                     if self.fluid_governing_type=='navierstokes_transient' or self.fluid_governing_type=='navierstokes_steady':
-                        self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p, residual_v_strong, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
-                        self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                        self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p_[j], residual_v_strong, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                        self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old_[j], residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
                     # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
-                    self.deltaW_p       += self.vf.stab_pspg(self.acc, self.v, self.p, residual_v_strong, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
-                    self.deltaW_p_old   += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old, residual_v_strong_old, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
+                    self.deltaW_p[n]     += self.vf.stab_pspg(self.acc, self.v, self.p_[j], self.var_p_[j], residual_v_strong, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
+                    self.deltaW_p_old[n] += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old_[j], self.var_p_[j], residual_v_strong_old, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
                     # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
                     self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
                     self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
@@ -424,6 +455,9 @@ class FluidmechanicsProblem(problem_base):
 
                 for n in range(self.num_domains):
 
+                    if self.num_dupl==1: j=0
+                    else: j=n
+
                     dscales = self.stabilization['dscales']
 
                     # yields same result as above for navierstokes_steady
@@ -431,11 +465,11 @@ class FluidmechanicsProblem(problem_base):
                     delta2 = dscales[1] * self.rho[n] * h * vscale
                     delta3 = dscales[2] * h / vscale
 
-                    self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p, self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
-                    self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old, self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                    self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p_[j], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                    self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old_[j], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
 
-                    self.deltaW_p       += self.vf.stab_p(delta1, delta3, self.v, self.p, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
-                    self.deltaW_p_old   += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                    self.deltaW_p[n]     += self.vf.stab_p(delta1, delta3, self.v, self.p_[j], self.var_p_[j], self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                    self.deltaW_p_old[n] += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old_[j], self.var_p_[j], self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
 
         ### full weakforms
 
@@ -444,26 +478,35 @@ class FluidmechanicsProblem(problem_base):
                           self.timefac   * self.deltaW_int + (1.-self.timefac)   * self.deltaW_int_old - \
                           self.timefac   * self.deltaW_ext - (1.-self.timefac)   * self.deltaW_ext_old
 
-        if self.pressure_at_midpoint:
-            self.weakform_p = self.timefac   * self.deltaW_p   + (1.-self.timefac)   * self.deltaW_p_old
-        else:
-            self.weakform_p = self.deltaW_p
+        self.weakform_p, self.weakform_lin_vp, self.weakform_lin_pv, self.weakform_lin_pp = [], [], [], []
+
+        for n in range(self.num_domains):
+            if self.pressure_at_midpoint:
+                self.weakform_p.append( self.timefac * self.deltaW_p[n] + (1.-self.timefac) * self.deltaW_p_old[n] )
+            else:
+                self.weakform_p.append( self.deltaW_p[n] )
 
         self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
-        self.weakform_lin_vp = ufl.derivative(self.weakform_v, self.p, self.dp)
-        self.weakform_lin_pv = ufl.derivative(self.weakform_p, self.v, self.dv)
+        for j in range(self.num_dupl):
+            self.weakform_lin_vp.append( ufl.derivative(self.weakform_v, self.p_[j], self.dp_[j]) )
+        for n in range(self.num_domains):
+            self.weakform_lin_pv.append( ufl.derivative(self.weakform_p[n], self.v, self.dv) )
         if self.stabilization is not None:
-            self.weakform_lin_pp = ufl.derivative(self.weakform_p, self.p, self.dp)
+            for n in range(self.num_domains):
+                if self.num_dupl==1: j=0
+                else: j=n
+                self.weakform_lin_pp.append( ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]) )
 
         if self.prestress_initial:
             # prestressing weak forms
+            self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pp = ufl.as_ufl(0), ufl.as_ufl(0)
             self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
             self.weakform_prestress_p = self.deltaW_p
-            self.weakform_lin_prestress_vp = ufl.derivative(self.weakform_prestress_v, self.p, self.dp)
+            for j in range(self.num_dupl): self.weakform_lin_prestress_vp += ufl.derivative(self.weakform_prestress_v, self.p_[j], self.dp_[j])
             self.weakform_lin_prestress_pv = ufl.derivative(self.weakform_prestress_p, self.v, self.dv)
             if self.stabilization is not None:
-                self.weakform_lin_prestress_pp = ufl.derivative(self.weakform_prestress_p, self.p, self.dp)
+                for j in range(self.num_dupl): self.weakform_lin_prestress_pp += ufl.derivative(self.weakform_prestress_p, self.p_[j], self.dp_[j])
 
 
     # active stress ODE evaluation - for reduced solid model
@@ -499,6 +542,13 @@ class FluidmechanicsProblem(problem_base):
             print('FEM form compilation...')
             sys.stdout.flush()
 
+        if not bool(self.io.duplicate_mesh_domains):
+            self.weakform_p = sum(self.weakform_p)
+            self.weakform_lin_vp = sum(self.weakform_lin_vp)
+            self.weakform_lin_pv = sum(self.weakform_lin_pv)
+            if self.stabilization is not None:
+                self.weakform_lin_pp = sum(self.weakform_lin_pp)
+
         if not self.prestress_initial or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_v = fem.form(self.weakform_v, entity_maps=self.entity_maps)
@@ -506,8 +556,19 @@ class FluidmechanicsProblem(problem_base):
                 self.jac_vv = fem.form(self.weakform_lin_vv, entity_maps=self.entity_maps)
                 self.jac_vp = fem.form(self.weakform_lin_vp, entity_maps=self.entity_maps)
                 self.jac_pv = fem.form(self.weakform_lin_pv, entity_maps=self.entity_maps)
+                if self.num_dupl > 1:
+                    self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
+                    # make lists for offdiagonal block mat assembly
+                    self.jac_vp_ = [self.jac_vp]
+                    self.jac_pv_ = []
+                    for j in range(self.num_dupl):
+                        self.jac_pv_.append([self.jac_pv[j]])
                 if self.stabilization is not None:
                     self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.entity_maps)
+                    if self.num_dupl > 1:
+                        self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
+                        for j in range(self.num_dupl):
+                            self.jac_pp_[j][j] = self.jac_pp[j]
             else:
                 self.res_v = fem.form(self.weakform_v)
                 self.res_p = fem.form(self.weakform_p)
@@ -519,16 +580,26 @@ class FluidmechanicsProblem(problem_base):
         else:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_v  = fem.form(self.weakform_prestress_v, entity_maps=self.entity_maps)
-                self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.entity_maps)
                 self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.entity_maps)
+                self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.entity_maps)
                 self.jac_vp = fem.form(self.weakform_lin_prestress_vp, entity_maps=self.entity_maps)
                 self.jac_pv = fem.form(self.weakform_lin_prestress_pv, entity_maps=self.entity_maps)
+                if self.num_dupl > 1:
+                    self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
+                    # make lists for offdiagonal block mat assembly
+                    self.jac_vp_ = [self.jac_vp]
+                    self.jac_pv_ = []
+                    for j in range(self.num_dupl):
+                        self.jac_pv_.append([self.jac_pv[j]])
                 if self.stabilization is not None:
                     self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.entity_maps)
+                    self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
+                    for j in range(self.num_dupl):
+                        self.jac_pp_[j][j] = self.jac_pp[j]
             else:
                 self.res_v  = fem.form(self.weakform_prestress_v)
-                self.jac_vv = fem.form(self.weakform_lin_prestress_vv)
                 self.res_p  = fem.form(self.weakform_prestress_p)
+                self.jac_vv = fem.form(self.weakform_lin_prestress_vv)
                 self.jac_vp = fem.form(self.weakform_lin_prestress_vp)
                 self.jac_pv = fem.form(self.weakform_lin_prestress_pv)
                 if self.stabilization is not None:
@@ -553,16 +624,30 @@ class FluidmechanicsProblem(problem_base):
         K_vv.assemble()
 
         # assemble pressure rhs vector
-        r_p = fem.petsc.assemble_vector(self.res_p)
-        r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        if self.num_dupl > 1:
+            r_p = fem.petsc.assemble_vector_block(self.res_p, self.dummat, bcs=[]) # ghosts are updated inside assemble_vector_block
+        else:
+            r_p = fem.petsc.assemble_vector(self.res_p)
+            r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # assemble system matrices
-        K_vp = fem.petsc.assemble_matrix(self.jac_vp, self.bc.dbcs)
+        if self.num_dupl > 1:
+            K_vp = fem.petsc.assemble_matrix_block(self.jac_vp_, self.bc.dbcs)
+        else:
+            K_vp = fem.petsc.assemble_matrix(self.jac_vp, self.bc.dbcs)
         K_vp.assemble()
-        K_pv = fem.petsc.assemble_matrix(self.jac_pv, []) # currently, we do not consider pressure DBCs
+
+        if self.num_dupl > 1:
+            K_pv = fem.petsc.assemble_matrix_block(self.jac_pv_, []) # currently, we do not consider pressure DBCs
+        else:
+            K_pv = fem.petsc.assemble_matrix(self.jac_pv, []) # currently, we do not consider pressure DBCs
         K_pv.assemble()
+
         if self.stabilization is not None:
-            K_pp = fem.petsc.assemble_matrix(self.jac_pp, []) # currently, we do not consider pressure DBCs
+            if self.num_dupl > 1:
+                K_pp = fem.petsc.assemble_matrix_block(self.jac_pp_, []) # currently, we do not consider pressure DBCs
+            else:
+                K_pp = fem.petsc.assemble_matrix(self.jac_pp, []) # currently, we do not consider pressure DBCs
         else:
             K_pp = None
 

@@ -66,10 +66,10 @@ class SolidmechanicsConstraintProblem():
     def get_problem_var_list(self):
 
         if self.pbs.incompressible_2field:
-            is_ghosted = [True, True, False]
+            is_ghosted = [1, 1, 0]
             return [self.pbs.u.vector, self.pbs.p.vector, self.lm], is_ghosted
         else:
-            is_ghosted = [True, False]
+            is_ghosted = [1, 0]
             return [self.pbs.u.vector, self.lm], is_ghosted
 
 

@@ -354,7 +354,12 @@ class timeintegration_fluid(timeintegration):
 
         # update pressure variable
         p_old.vector.axpby(1.0, 0.0, p.vector)
-        p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        # for duplicate p-nodes, our combined (nested) pressure is not ghosted, but the subvecs
+        try:
+            p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        except:
+            subvecs = p_old.vector.getNestSubVecs()
+            for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update internal variables (e.g. active stress for reduced solid)
         for i in range(len(internalvars_old)):

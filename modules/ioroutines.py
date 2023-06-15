@@ -48,11 +48,8 @@ class IO:
         try: self.gridname_boundary = io_params['gridname_boundary']
         except: self.gridname_boundary = 'Grid'
 
-        try: self.mesh_domain2 = io_params['mesh_domain2']
-        except: self.mesh_domain2 = None
-
-        try: self.mesh_boundary2 = io_params['mesh_boundary2']
-        except: self.mesh_boundary2 = None
+        try: self.duplicate_mesh_domains = io_params['duplicate_mesh_domains']
+        except: self.duplicate_mesh_domains = []
 
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
@@ -78,13 +75,6 @@ class IO:
             self.mesh = infile.read_mesh(name=self.gridname_domain)
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
-            # self.ttt = infile.read_topology_data(name=self.gridname_domain)
-
-        if self.mesh_domain2 is not None:
-            with io.XDMFFile(self.comm, self.mesh_domain2, 'r', encoding=encoding) as infile:
-                self.mesh2 = infile.read_mesh(name=self.gridname_domain)
-        else:
-            self.mesh2 = None
 
         # read in xdmf mesh - boundary
 
@@ -102,14 +92,6 @@ class IO:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
             except:
                 pass
-
-            if self.mesh_domain2 is not None:
-                try:
-                    self.mesh2.topology.create_connectivity(2, self.mesh2.topology.dim)
-                    with io.XDMFFile(self.comm, self.mesh_boundary2, 'r', encoding=encoding) as infile:
-                        self.mt2_b1 = infile.read_meshtags(self.mesh2, name=self.gridname_boundary)
-                except:
-                    pass
 
             try:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
@@ -510,12 +492,15 @@ class IO_fluid(IO):
 
                 for res in pb.results_to_write:
                     if res not in results_pre:
-                        outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
-                        if res=='pressure' and self.mesh_domain2 is not None: # assume that domain2 is always used for the pressure...
-                            outfile.write_mesh(self.mesh2)
+                        if res=='pressure' and bool(self.duplicate_mesh_domains):
+                            for j in range(len(self.duplicate_mesh_domains)):
+                                outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+str(j+1)+'.xdmf', 'w')
+                                outfile.write_mesh(self.submshes_emap[j][0])
+                                self.resultsfiles[res+str(j+1)] = outfile
                         else:
+                            outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                             outfile.write_mesh(self.mesh)
-                        self.resultsfiles[res] = outfile
+                            self.resultsfiles[res] = outfile
 
             return
 
@@ -533,7 +518,11 @@ class IO_fluid(IO):
                         a_proj = project(pb.acc, pb.V_v, pb.dx_, nm="Acceleration")
                         self.resultsfiles[res].write_function(a_proj, t)
                     elif res=='pressure':
-                        self.resultsfiles[res].write_function(pb.p, t)
+                        if bool(self.duplicate_mesh_domains):
+                            for j in range(len(self.duplicate_mesh_domains)):
+                                self.resultsfiles[res+str(j+1)].write_function(pb.p_[j], t)
+                        else:
+                            self.resultsfiles[res].write_function(pb.p_[0], t)
                     elif res=='cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):

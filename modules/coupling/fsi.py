@@ -63,10 +63,10 @@ class FSIProblem():
     def get_problem_var_list(self):
 
         if self.pbs.incompressible_2field:
-            is_ghosted = [True]*6
+            is_ghosted = [1, 1, 1, 1, 1, 1]
             return [self.pbs.u.vector, self.pbs.p.vector, self.pbfa.pbf.v.vector, self.pbfa.pbf.p.vector, self.pbfa.pba.d.vector, self.LMs], is_ghosted
         else:
-            is_ghosted = [True]*5
+            is_ghosted = [1, 1, 1, 1, 1]
             return [self.pbs.u.vector, self.pbfa.pbf.v.vector, self.pbfa.pbf.p.vector, self.pbfa.pba.d.vector, self.LMs], is_ghosted
 
 
@@ -77,7 +77,8 @@ class FSIProblem():
         self.pbfa.set_variational_forms()
 
         # solid-sided interface
-        submsh_entities_solid = fem.locate_dofs_topological(self.pbs.V_u, self.ios.mesh.topology.dim-1, self.ios.mt_b1.indices[self.ios.mt_b1.values == self.coupling_surface[0]])
+        # submsh_entities_solid = fem.locate_dofs_topological(self.pbs.V_u, self.ios.mesh.topology.dim-1, self.ios.mt_b1.indices[self.ios.mt_b1.values == self.coupling_surface[0]])
+        submsh_entities_solid = self.ios.mt_b1.indices[self.ios.mt_b1.values == self.coupling_surface[0]]
         self.fsi_interface_solid, entity_map_solid, vertex_map_solid, geom_map_solid = mesh.create_submesh(self.ios.mesh, self.ios.mesh.topology.dim-1, submsh_entities_solid)#[0:2]
 
         facet_imap_solid = self.ios.mesh.topology.index_map(self.ios.mesh.topology.dim-1)
@@ -111,7 +112,8 @@ class FSIProblem():
         ds_fsi_solid = ufl.Measure("ds", subdomain_data=[(self.coupling_surface[0], facet_integration_entities_solid)], domain=mshdomain_solid)
         sys.exit()
         # fluid-sided interface
-        submsh_entities_fluid = fem.locate_dofs_topological(self.pbfa.pbf.V_v, self.iof.mesh.topology.dim-1, self.iof.mt_b1.indices[self.iof.mt_b1.values == self.coupling_surface[0]])
+        # submsh_entities_fluid = fem.locate_dofs_topological(self.pbfa.pbf.V_v, self.iof.mesh.topology.dim-1, self.iof.mt_b1.indices[self.iof.mt_b1.values == self.coupling_surface[0]])
+        submsh_entities_fluid = self.iof.mt_b1.indices[self.iof.mt_b1.values == self.coupling_surface[0]]
         self.fsi_interface_fluid, entity_map_fluid, vertex_map_fluid, geom_map_fluid = mesh.create_submesh(self.iof.mesh, self.iof.mesh.topology.dim-1, submsh_entities_fluid)#[0:2]
 
         facet_imap_fluid = self.iof.mesh.topology.index_map(self.iof.mesh.topology.dim-1)

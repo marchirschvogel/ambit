@@ -136,7 +136,7 @@ class AleProblem(problem_base):
 
     def get_problem_var_list(self):
 
-        is_ghosted = [True]
+        is_ghosted = [1]
         return [self.d.vector], is_ghosted
 
 

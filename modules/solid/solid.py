@@ -344,10 +344,10 @@ class SolidmechanicsProblem(problem_base):
     def get_problem_var_list(self):
 
         if self.incompressible_2field:
-            is_ghosted = [True]*2
+            is_ghosted = [1, 1]
             return [self.u.vector, self.p.vector], is_ghosted
         else:
-            is_ghosted = [True]
+            is_ghosted = [1]
             return [self.u.vector], is_ghosted
 
 

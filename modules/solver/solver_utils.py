@@ -102,7 +102,7 @@ class sol_utils():
                     print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ale res 2-norm','ale inc 2-norm','ts','te'))
                     sys.stdout.flush()
                 elif self.solver.ptype=='fluid_ale_flow0d':
-                    print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','ale res 2-norm','ale inc 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ts','te'))
+                    print('{:<6s}{:<21s}{:<21s}{:<21s}{:<21s}{:<19s}{:<19s}{:<19s}{:<19s}{:<10s}{:<5s}'.format('iter','fluid res_v 2-norm','fluid inc_v 2-norm','fluid res_p 2-norm','fluid inc_p 2-norm','lmcoup res 2-norm','lmcoup inc 2-norm','ale res 2-norm','ale inc 2-norm','ts','te'))
                     sys.stdout.flush()
                 else:
                     raise NameError("Unknown problem type!")

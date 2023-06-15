@@ -14,11 +14,9 @@ from variationalform import variationalform_base
 # TeX: \delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
 class variationalform(variationalform_base):
 
-    def __init__(self, var_v, dv, var_p, dp, n, formulation='nonconservative'):
+    def __init__(self, var_v, var_p, n, formulation='nonconservative'):
         self.var_v = var_v
-        self.var_p = var_p
-        self.dv = dv
-        self.dp = dp
+        # self.var_p = var_p
 
         self.n = n
         self.formulation = formulation
@@ -63,8 +61,8 @@ class variationalform(variationalform_base):
         return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
     # TeX: \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v
-    def deltaW_int_pres(self, v, ddomain, w=None, Fale=None):
-        return ufl.div(v)*self.var_p*ddomain
+    def deltaW_int_pres(self, v, var_p, ddomain, w=None, Fale=None):
+        return ufl.div(v)*var_p*ddomain
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
         if self.formulation=='nonconservative':
@@ -134,9 +132,9 @@ class variationalform(variationalform_base):
 
         return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, res_v_strong) * ddomain
 
-    def stab_pspg(self, a, v, p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
+    def stab_pspg(self, a, v, p, var_p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
 
-        return (1./rho) * ufl.dot(tau_pspg*ufl.grad(self.var_p), res_v_strong) * ddomain
+        return (1./rho) * ufl.dot(tau_pspg*ufl.grad(var_p), res_v_strong) * ddomain
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
 
@@ -150,10 +148,10 @@ class variationalform(variationalform_base):
                  delta2 * ufl.div(v)*ufl.div(self.var_v) + \
                  delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_v)*v) ) * ddomain
 
-    def stab_p(self, delta1, delta3, v, p, rho, ddomain, w=None, Fale=None):
+    def stab_p(self, delta1, delta3, v, p, var_p, rho, ddomain, w=None, Fale=None):
 
-        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_p)) + \
-                            delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_p)) ) * ddomain
+        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(var_p)) + \
+                            delta3 * ufl.dot(ufl.grad(p), ufl.grad(var_p)) ) * ddomain
 
 
     ### Flux coupling conditions
@@ -244,9 +242,9 @@ class variationalform_ale(variationalform):
     # \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v =
     # \int\limits_{\Omega_0}\boldsymbol{\nabla}_0\cdot(J\boldsymbol{F}^{-1}\boldsymbol{v})\,\delta p\,\mathrm{d}V
     # \int\limits_{\Omega_0}J\,\boldsymbol{\nabla}_0\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}}\,\delta p\,\mathrm{d}V (cf. Holzapfel eq. (2.56))
-    def deltaW_int_pres(self, v, ddomain, Fale=None):
+    def deltaW_int_pres(self, v, var_p, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*self.var_p * J*ddomain
+        return ufl.inner(ufl.grad(v), ufl.inv(Fale).T)*var_p * J*ddomain
 
     # Robin term for weak imposition of Dirichlet condition
     # TeX:
@@ -336,9 +334,9 @@ class variationalform_ale(variationalform):
         J = ufl.det(Fale)
         return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*ufl.inv(Fale)*(v-w), res_v_strong) * J*ddomain
 
-    def stab_pspg(self, a, v, p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
+    def stab_pspg(self, a, v, p, var_p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
         J = ufl.det(Fale)
-        return (1./rho) * ufl.dot(tau_pspg*ufl.inv(Fale).T*ufl.grad(self.var_p), res_v_strong) * J*ddomain
+        return (1./rho) * ufl.dot(tau_pspg*ufl.inv(Fale).T*ufl.grad(var_p), res_v_strong) * J*ddomain
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, Fale=None):
         J = ufl.det(Fale)
@@ -350,10 +348,10 @@ class variationalform_ale(variationalform):
                  delta2 * ufl.inner(ufl.grad(v),ufl.inv(Fale).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) + \
                  delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.grad(self.var_v)*ufl.inv(Fale)*v) ) * J*ddomain
 
-    def stab_p(self, delta1, delta3, v, p, rho, ddomain, w=None, Fale=None):
+    def stab_p(self, delta1, delta3, v, p, var_p, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
-        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.inv(Fale).T*ufl.grad(self.var_p)) + \
-                            delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.inv(Fale).T*ufl.grad(self.var_p)) ) * J*ddomain
+        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.inv(Fale).T*ufl.grad(var_p)) + \
+                            delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.inv(Fale).T*ufl.grad(var_p)) ) * J*ddomain
 
 
     ### Flux coupling conditions

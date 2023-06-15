@@ -508,7 +508,11 @@ class solver_nonlinear:
             # update variables
             for n in range(self.nfields):
                 self.x[n].axpy(1.0, del_x[n])
-                if self.is_ghosted[n]: self.x[n].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                if self.is_ghosted[n]==1:
+                    self.x[n].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                if self.is_ghosted[n]==2:
+                    subvecs = self.x[n].getNestSubVecs()
+                    for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
 
@@ -567,7 +571,7 @@ class solver_nonlinear:
 
         vec.axpby(1.0, 0.0, vec_start)
 
-        if ghosted:
+        if ghosted==1:
             vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 

@@ -6,16 +6,19 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
 import sys, os, subprocess, time
 import numpy as np
+import argparse
 
-category = 'all'
+parser = argparse.ArgumentParser()
 
-try: # from command line
-    category = sys.argv[1]
-except:
-    pass
+parser.add_argument('-c', '--category', dest='c', action='store', type=str, default='all') # all, solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi
+parser.add_argument('-b', '--branch', dest='b', action='store', type=str, default='nightly') # nightly, mixeddomain
+
+args = parser.parse_args()
+
+category = args.c
+branch = args.b
 
 if category=='all':
     solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = True, True, True, True, True, True, True
@@ -80,6 +83,9 @@ if fluid:
     errs['fluid_p1p1_stab_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder.py'])
     errs['fluid_p1p1_stab_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'fluid_p1p1_stab_cylinder.py'])
 
+    if branch=='mixeddomain':
+        errs['fluid_p1p1_stab_cylinder_valve 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder_valve.py'])
+        errs['fluid_p1p1_stab_cylinder_valve 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'fluid_p1p1_stab_cylinder_valve.py'])
 
 if fluid_flow0d:
     errs['fluid_flow0d_monolagr_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_flow0d_monolagr_taylorhood_cylinder.py'])
