@@ -119,6 +119,11 @@ class variationalform(variationalform_base):
 
         return -c*(ufl.dot(v, self.var_v)*dboundary)
 
+    # Robin condition for valve, over internal surface
+    def deltaW_ext_robin_valve(self, v, beta, dboundary, fcts='+', w=None, Fale=None):
+
+        return (-(beta*ufl.dot((v-w), self.var_v)))(fcts)*dboundary
+
     # Robin condition (dashpot) in normal direction
     # TeX: \int\limits_{\Gamma} c\,(\boldsymbol{n}\otimes \boldsymbol{n})\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a =
     #       \int\limits_{\Gamma} c\,(\boldsymbol{v}\cdot \boldsymbol{n})\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
@@ -327,6 +332,11 @@ class variationalform_ale(variationalform):
     # Robin condition (dashpot) in normal direction
     def deltaW_ext_robin_dashpot_normal_cur(self, v, c_n, dboundary, Fale=None):
         raise ValueError("Robin condition in current normal direction not implemented")
+
+    # Robin condition for valve, over internal surface
+    def deltaW_ext_robin_valve(self, v, beta, dboundary, fcts='+', w=None, Fale=None):
+        J = ufl.det(Fale)
+        return (-(beta*ufl.dot((v-w), self.var_v) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.n0))))(fcts)*dboundary
 
 
     ### SUPG/PSPG stabilization

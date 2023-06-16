@@ -105,25 +105,23 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         K_list = [[None]*4 for _ in range(4)]
         r_list = [None]*4
 
-        if bool(self.coupling_fluid_ale):
-            if self.coupling_fluid_ale['type'] == 'strong_dirichlet':
-                # we need a vector representation of ufluid to apply in ALE DBCs
-                uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
-                self.ufa.vector.axpby(1.0, 0.0, uf_vec)
-                self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                uf_vec.destroy()
-            if self.coupling_fluid_ale['type'] == 'robin':
-                K_dv = fem.petsc.assemble_matrix(fem.form(self.jac_dv), self.pba.bc.dbcs)
-                K_dv.assemble()
-                K_list[3][0] = K_dv
+        if self.have_dbc_fluid_ale:
+            # we need a vector representation of ufluid to apply in ALE DBCs
+            uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
+            self.ufa.vector.axpby(1.0, 0.0, uf_vec)
+            self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            uf_vec.destroy()
+        if self.have_robin_fluid_ale:
+            K_dv = fem.petsc.assemble_matrix(fem.form(self.jac_dv), self.pba.bc.dbcs)
+            K_dv.assemble()
+            K_list[3][0] = K_dv
 
-        if bool(self.coupling_ale_fluid):
-            if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
-                #we need a vector representation of w to apply in fluid DBCs
-                w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
-                self.wf.vector.axpby(1.0, 0.0, w_vec)
-                self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                w_vec.destroy()
+        if self.have_dbc_ale_fluid:
+            #we need a vector representation of w to apply in fluid DBCs
+            w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
+            self.wf.vector.axpby(1.0, 0.0, w_vec)
+            self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            w_vec.destroy()
 
         r_list_fluidflow0d, K_list_fluidflow0d = self.pbf0.assemble_residual_stiffness(t, subsolver=subsolver)
 
@@ -201,7 +199,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         else:
             vvec = self.pbf.v.vector
 
-        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p_[0].vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
+        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -209,9 +207,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec.getLocalSize()
-        iset_p = PETSc.IS().createStride(self.pbf.p_[0].vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        offset_s = offset_p + self.pbf.p_[0].vector.getLocalSize()
+        offset_s = offset_p + self.pbf.p.vector.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         offset_d = offset_s + self.pbf0.lm.getLocalSize()

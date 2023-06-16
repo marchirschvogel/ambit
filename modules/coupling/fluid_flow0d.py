@@ -344,6 +344,8 @@ class FluidmechanicsFlow0DProblem():
 
     def evaluate_initial(self):
 
+        self.pbf.evaluate_initial()
+
         self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
 
         self.pb0.c, self.constr, self.constr_old = [], [], []

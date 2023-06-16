@@ -54,7 +54,7 @@ def main():
                             'quad_degree'           : 6,
                             'fluid_formulation'     : 'nonconservative'}
 
-    COUPLING_PARAMS      = {'coupling_fluid_ale'    : {'surface_ids' : [1,6], 'type' : 'strong_dirichlet'},
+    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}],
                             'fluid_on_deformed'     : 'consistent'}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},

@@ -13,7 +13,7 @@ import argparse
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-c', '--category', dest='c', action='store', type=str, default='all') # all, solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi
-parser.add_argument('-b', '--branch', dest='b', action='store', type=str, default='nightly') # nightly, mixeddomain
+parser.add_argument('-b', '--branch', dest='b', action='store', type=str, default='nightly') # nightly, mixed
 
 args = parser.parse_args()
 
@@ -83,7 +83,7 @@ if fluid:
     errs['fluid_p1p1_stab_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder.py'])
     errs['fluid_p1p1_stab_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'fluid_p1p1_stab_cylinder.py'])
 
-    if branch=='mixeddomain':
+    if branch=='mixed':
         errs['fluid_p1p1_stab_cylinder_valve 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder_valve.py'])
         errs['fluid_p1p1_stab_cylinder_valve 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'fluid_p1p1_stab_cylinder_valve.py'])
 
@@ -111,7 +111,7 @@ if flow0d:
 if solid_flow0d:
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
-    
+
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber_iterative 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber_iterative.py'])
 
     errs['solid_flow0d_monodir2field_4elwindkesselLpZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir2field_4elwindkesselLpZ_chamber.py'])
@@ -140,7 +140,7 @@ if frsi:
 
     errs['frsi_artseg_partition 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_partition.py'])
     errs['frsi_artseg_partition 2'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_partition.py'])
-    
+
     errs['frsi_artseg_prefile_iterative 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'frsi_artseg_prefile_iterative.py'])
 
 err = 0

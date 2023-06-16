@@ -513,6 +513,8 @@ class SolidmechanicsFlow0DProblem():
 
     def evaluate_initial(self):
 
+        self.pbs.evaluate_initial()
+
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.coupling_type == 'monolithic_direct':
             self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s_old, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)

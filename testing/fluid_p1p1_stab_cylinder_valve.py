@@ -38,8 +38,8 @@ def main():
                            'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS_FLUID   = {'maxtime'               : 1.0,
-                           'numstep'               : 100,
-                           'numstep_stop'          : 3,
+                           'numstep'               : 10,
+                           #'numstep_stop'          : 3,
                            'timint'                : 'ost',
                            'theta_ost'             : 1.0,
                            'fluid_governing_type'  : 'navierstokes_transient'}
@@ -62,12 +62,18 @@ def main():
         
         def tc1(self, t):
             t_ramp = 1.0
-            pmax = 1.5
+            pmax = 1.0
             return 0.5*(-(pmax))*(1.-np.cos(np.pi*t/t_ramp))
 
+        def tc2(self, t):
+            pmax = 0.5
+            return -pmax
 
-    BC_DICT        = { 'dirichlet' : [{'id' : [1,5], 'dir' : 'all', 'val' : 0.}], # 5 is internal surface (valve)
-                       'neumann' : [{'id' : [2], 'dir' : 'normal_cur', 'curve' : 1}] }
+
+    BC_DICT        = { 'dirichlet'   : [{'id' : [1], 'dir' : 'all', 'val' : 0.}],
+                       'neumann'     : [{'id' : [2], 'dir' : 'normal_cur', 'curve' : 1},
+                                        {'id' : [4], 'dir' : 'normal_cur', 'curve' : 2}],
+                       'robin_valve' : [{'id' : [5], 'beta_max' : 1e3, 'beta_min' : 1e-3, 'epsilon' : 1e-6, 'upstream_domain' : 2, 'downstream_domain' : 1}] } # 5 is internal surface (valve)
 
 
     # problem setup
@@ -86,9 +92,9 @@ def main():
     v_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = -1.3770531845487710E+00 # x
-    v_corr[1] = 1.3042877526484933E+01 # y
-    v_corr[2] = -1.2323336148783317E+00 # z
+    v_corr[0] = 2.8961592602855979E+00 # x
+    v_corr[1] = 1.1646607897463809E+03 # y
+    v_corr[2] = -9.9702473473169971E+02 # z
 
     check1 = resultcheck.results_check_node(problem.mp.v, check_node, v_corr, problem.mp.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
 

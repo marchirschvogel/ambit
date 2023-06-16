@@ -61,7 +61,7 @@ def main():
                             'fluid_formulation'     : 'nonconservative',
                             'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt'}
 
-    COUPLING_PARAMS      = {'coupling_fluid_ale'    : {'surface_ids' : [1,6], 'type' : 'strong_dirichlet'},
+    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}],
                             'fluid_on_deformed'     : 'consistent'}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},

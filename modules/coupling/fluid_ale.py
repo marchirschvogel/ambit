@@ -42,6 +42,8 @@ class FluidmechanicsAleProblem():
         try: self.fluid_on_deformed = self.coupling_params['fluid_on_deformed']
         except: self.fluid_on_deformed = 'consistent'
 
+        self.have_dbc_fluid_ale, self.have_robin_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
+
         # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
         self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
@@ -96,101 +98,114 @@ class FluidmechanicsAleProblem():
         # any DBC conditions that we want to set from fluid to ALE (mandatory for FSI or FrSI)
         if bool(self.coupling_fluid_ale):
 
-            ids_fluid_ale = self.coupling_fluid_ale['surface_ids']
+            dbcs_coup_fluid_ale, work_robin_fluid_ale, work_robin_fluid_ale_old = [], ufl.as_ufl(0), ufl.as_ufl(0)
 
-            if self.coupling_fluid_ale['type'] == 'strong_dirichlet':
+            for j in range(len(self.coupling_fluid_ale)):
 
-                dbcs_coup_fluid_ale = []
-                for i in range(len(ids_fluid_ale)):
-                    dbcs_coup_fluid_ale.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_fluid_ale[i]])) )
+                ids_fluid_ale = self.coupling_fluid_ale[j]['surface_ids']
 
-                # pay attention to order... first u=uf, then the others... hence re-set!
+                if self.coupling_fluid_ale[j]['type'] == 'strong_dirichlet':
+
+                    for i in range(len(ids_fluid_ale)):
+                        dbcs_coup_fluid_ale.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_fluid_ale[i]])) )
+
+                    # NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
+
+                    #fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_d, ids_fluid_ale, self.comm))
+
+                    ## fluid and ALE actually should have same sizes...
+                    #locmatsize_d = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
+                    #matsize_d = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
+
+                    #locmatsize_v = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
+                    #matsize_v = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
+
+                    ## now we have to assemble the offdiagonal stiffness due to the DBCs w=v set on the ALE surface - cannot be treated with "derivative" since DBCs are not present in form
+                    #self.K_dv = PETSc.Mat().createAIJ(size=((locmatsize_d,matsize_d),(locmatsize_v,matsize_v)), bsize=None, nnz=None, csr=None, comm=self.comm)
+                    #self.K_dv.setUp()
+
+                    #for i in range(matsize_d):
+                        #if i in fdi:
+                            #self.K_dv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
+
+                    #self.K_dv.assemble()
+
+                elif self.coupling_fluid_ale[j]['type'] == 'robin':
+
+                    beta = self.coupling_fluid_ale[j]['beta']
+
+                    for i in range(len(ids_fluid_ale)):
+                        db_ = ufl.ds(domain=self.pba.mesh, subdomain_data=self.pba.io.mt_b1, subdomain_id=ids_fluid_ale[i], metadata={'quadrature_degree': self.pba.quad_degree})
+                        work_robin_fluid_ale += self.pba.vf.deltaW_int_robin_cur(self.pba.d, self.pbf.ufluid, self.pba.ki.F(self.pba.d), beta, db_) # here, ufluid as form is used!
+                        work_robin_fluid_ale_old += self.pba.vf.deltaW_int_robin_cur(self.pba.d_old, self.pbf.uf_old, self.pba.ki.F(self.pba.d_old), beta, db_)
+
+                else:
+                    raise ValueError("Unknown coupling_fluid_ale option for fluid to ALE!")
+
+            # now add the DBCs: pay attention to order... first u=uf, then the others... hence re-set!
+            if bool(dbcs_coup_fluid_ale):
                 self.pba.bc.dbcs = []
                 self.pba.bc.dbcs += dbcs_coup_fluid_ale
                 # Dirichlet boundary conditions
                 if 'dirichlet' in self.pba.bc_dict.keys():
                     self.pba.bc.dirichlet_bcs(self.pba.bc_dict['dirichlet'], self.pba.V_d)
+                self.have_dbc_fluid_ale = True
 
-                # NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
-
-                #fdi = set(gather_surface_dof_indices(self.pba, self.pba.V_d, ids_fluid_ale, self.comm))
-
-                ## fluid and ALE actually should have same sizes...
-                #locmatsize_d = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
-                #matsize_d = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
-
-                #locmatsize_v = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
-                #matsize_v = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
-
-                ## now we have to assemble the offdiagonal stiffness due to the DBCs w=v set on the ALE surface - cannot be treated with "derivative" since DBCs are not present in form
-                #self.K_dv = PETSc.Mat().createAIJ(size=((locmatsize_d,matsize_d),(locmatsize_v,matsize_v)), bsize=None, nnz=None, csr=None, comm=self.comm)
-                #self.K_dv.setUp()
-
-                #for i in range(matsize_d):
-                    #if i in fdi:
-                        #self.K_dv[i,i] = -1.0/(self.pbf.timefac*self.pbf.dt)
-
-                #self.K_dv.assemble()
-
-            elif self.coupling_fluid_ale['type'] == 'robin':
-
-                beta = self.coupling_fluid_ale['beta']
-
-                work_dbc_robin_fluid_ale = ufl.as_ufl(0)
-                for i in range(len(ids_fluid_ale)):
-                    db_ = ufl.ds(subdomain_data=self.pba.io.mt_b1, subdomain_id=ids_fluid_ale[i], metadata={'quadrature_degree': self.pba.quad_degree})
-                    work_dbc_robin_fluid_ale += self.pba.vf.deltaW_int_robin_cur(self.pba.d, self.pbf.ufluid, self.pba.ki.F(self.pba.d), beta, db_) # here, ufluid as form is used!
-
+            if not isinstance(work_robin_fluid_ale, ufl.constantvalue.Zero):
                 # add to ALE internal virtual work
-                self.pba.weakform_d += work_dbc_robin_fluid_ale
+                self.pba.weakform_d += self.pbf.timefac * work_robin_fluid_ale + (1.-self.pbf.timefac) * work_robin_fluid_ale_old
                 # add to ALE jacobian form and define offdiagonal derivative w.r.t. fluid
-                self.pba.weakform_lin_dd += ufl.derivative(work_dbc_robin_fluid_ale, self.pba.d, self.pba.dd)
-                self.weakform_lin_dv = ufl.derivative(work_dbc_robin_fluid_ale, self.pbf.v, self.pbf.dv) # only contribution is from weak DBC here!
-
-            else:
-                raise ValueError("Unknown coupling_fluid_ale option for fluid to ALE!")
+                self.pba.weakform_lin_dd += self.pbf.timefac * ufl.derivative(work_robin_fluid_ale, self.pba.d, self.pba.dd)
+                self.weakform_lin_dv = self.pbf.timefac * ufl.derivative(work_robin_fluid_ale, self.pbf.v, self.pbf.dv) # only contribution is from weak DBC here!
+                self.have_robin_fluid_ale = True
 
         # any DBC conditions that we want to set from ALE to fluid
         if bool(self.coupling_ale_fluid):
 
-            ids_ale_fluid = self.coupling_ale_fluid['surface_ids']
+            dbcs_coup_ale_fluid, work_robin_ale_fluid, work_robin_ale_fluid_old = [], ufl.as_ufl(0), ufl.as_ufl(0)
 
-            if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
+            for j in range(len(self.coupling_ale_fluid)):
 
-                dbcs_coup_ale_fluid = []
-                for i in range(len(ids_ale_fluid)):
-                    dbcs_coup_ale_fluid.append( fem.dirichletbc(self.wf, fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_ale_fluid[i]])) )
+                ids_ale_fluid = self.coupling_ale_fluid[j]['surface_ids']
 
-                # pay attention to order... first v=w, then the others... hence re-set!
+                if self.coupling_ale_fluid[j]['type'] == 'strong_dirichlet':
+
+                    for i in range(len(ids_ale_fluid)):
+                        dbcs_coup_ale_fluid.append( fem.dirichletbc(self.wf, fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_ale_fluid[i]])) )
+
+                    #NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
+
+                elif self.coupling_ale_fluid[j]['type'] == 'robin':
+
+                    self.beta, self.beta_min, self.beta_max, self.eps_vlv = [], [], [], []
+                    self.a_u_, self.a_d_ = [], []
+                    self.pint_u_, self.pint_d_ = [], []
+
+                    for i in range(len(ids_ale_fluid)):
+                        if self.coupling_ale_fluid[j]['type'] == 'robin':
+                            beta = self.coupling_ale_fluid[j]['beta']
+                            db_ = ufl.ds(domain=self.pbf.io.mesh, subdomain_data=self.pbf.io.mt_b1, subdomain_id=ids_ale_fluid[i], metadata={'quadrature_degree': self.pbf.quad_degree})
+                            work_robin_ale_fluid += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v, self.pba.wel, beta, db_, Fale=self.pba.ki.F(self.pba.d)) # here, wel as form is used!
+                            work_robin_ale_fluid_old += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v_old, self.pba.w_old, beta, db_, Fale=self.pba.ki.F(self.pba.d_old))
+
+                else:
+                    raise ValueError("Unknown coupling_ale_fluid option for ALE to fluid!")
+
+            if bool(dbcs_coup_ale_fluid):
+                # now add the DBCs: pay attention to order... first v=w, then the others... hence re-set!
                 self.pbf.bc.dbcs = []
                 self.pbf.bc.dbcs += dbcs_coup_ale_fluid
                 # Dirichlet boundary conditions
                 if 'dirichlet' in self.pbf.bc_dict.keys():
                     self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict['dirichlet'], self.pbf.V_v)
+                self.have_dbc_ale_fluid = True
 
-                #NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
-
-            elif self.coupling_ale_fluid['type'] == 'robin' or self.coupling_ale_fluid['type'] == 'robin_internal':
-
-                beta = self.coupling_ale_fluid['beta']
-
-                work_robin_ale_fluid = ufl.as_ufl(0)
-                for i in range(len(ids_ale_fluid)):
-                    if self.coupling_ale_fluid['type'] == 'robin':
-                        db_ = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=ids_ale_fluid[i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                        work_robin_ale_fluid += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v, self.pba.wel, beta, db_, Fale=self.pba.ki.F(self.pba.d)) # here, wel as form is used!
-                    # if we have an internal surface, we need to use ufl's dS instead of ds
-                    if self.coupling_ale_fluid['type'] == 'robin_internal':
-                        db_ = ufl.dS(subdomain_data=self.pbf.io.mt_b1, subdomain_id=ids_ale_fluid[i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                        work_robin_ale_fluid += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v, self.pba.wel, beta, db_, Fale=self.pba.ki.F(self.pba.d), fcts='+') # here, wel as form is used!
-
+            if not isinstance(work_robin_ale_fluid, ufl.constantvalue.Zero):
                 # add to fluid internal virtual power
-                self.pbf.weakform_v += work_robin_ale_fluid
+                self.pbf.weakform_v += self.pbf.timefac * work_robin_ale_fluid + (1.-self.pbf.timefac) * work_robin_ale_fluid_old
                 # add to fluid jacobian form
-                self.pbf.weakform_lin_vv += ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
-
-            else:
-                raise ValueError("Unknown coupling_ale_fluid option for ALE to fluid!")
+                self.pbf.weakform_lin_vv += self.pbf.timefac * ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
+                self.have_robin_ale_fluid = True
 
         # derivative of fluid momentum w.r.t. ALE displacement - also includes potential weak Dirichlet or Robin BCs from ALE to fluid!
         self.weakform_lin_vd = ufl.derivative(self.pbf.weakform_v, self.pba.d, self.pba.dd)
@@ -226,9 +241,8 @@ class FluidmechanicsAleProblem():
         else:
             self.jac_vd = fem.form(self.weakform_lin_vd)
             self.jac_pd = fem.form(self.weakform_lin_pd)
-        if bool(self.coupling_fluid_ale):
-            if self.coupling_fluid_ale['type'] == 'robin':
-                self.jac_dv = fem.form(self.weakform_lin_dv)
+        if self.have_robin_fluid_ale:
+            self.jac_dv = fem.form(self.weakform_lin_dv)
 
         tee = time.time() - tes
         if self.comm.rank == 0:
@@ -241,26 +255,24 @@ class FluidmechanicsAleProblem():
         K_list = [[None]*3 for _ in range(3)]
         r_list = [None]*3
 
-        if bool(self.coupling_fluid_ale):
-            if self.coupling_fluid_ale['type'] == 'strong_dirichlet':
-                # we need a vector representation of ufluid to apply in ALE DBCs
-                uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
-                self.ufa.vector.axpby(1.0, 0.0, uf_vec)
-                self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                #K_list[2][0] = self.K_dv
-                uf_vec.destroy()
-            if self.coupling_fluid_ale['type'] == 'robin':
-                K_dv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
-                K_dv.assemble()
-                K_list[2][0] = K_dv
+        if self.have_dbc_fluid_ale:
+            # we need a vector representation of ufluid to apply in ALE DBCs
+            uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
+            self.ufa.vector.axpby(1.0, 0.0, uf_vec)
+            self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            #K_list[2][0] = self.K_dv
+            uf_vec.destroy()
+        if self.have_robin_fluid_ale:
+            K_dv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
+            K_dv.assemble()
+            K_list[2][0] = K_dv
 
-        if bool(self.coupling_ale_fluid):
-            if self.coupling_ale_fluid['type'] == 'strong_dirichlet':
-                # we need a vector representation of w to apply in fluid DBCs
-                w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
-                self.wf.vector.axpby(1.0, 0.0, w_vec)
-                self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                w_vec.destroy()
+        if self.have_dbc_ale_fluid:
+            # we need a vector representation of w to apply in fluid DBCs
+            w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
+            self.wf.vector.axpby(1.0, 0.0, w_vec)
+            self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            w_vec.destroy()
 
         r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
 
@@ -355,6 +367,8 @@ class FluidmechanicsAleProblem():
 
 
     def evaluate_initial(self):
+
+        self.pbf.evaluate_initial()
 
         # issue a warning to the user in case of inconsistent fluid-ALE coupling
         # (might though be wanted in some cases for efficiency increases...)

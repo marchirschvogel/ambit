@@ -304,6 +304,8 @@ class SolidmechanicsConstraintProblem():
 
     def evaluate_initial(self):
 
+        self.pbs.evaluate_initial()
+
         self.set_pressure_fem(self.lm_old, self.coupfuncs_old)
 
         self.constr, self.constr_old = [], []

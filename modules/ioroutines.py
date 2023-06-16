@@ -493,10 +493,10 @@ class IO_fluid(IO):
                 for res in pb.results_to_write:
                     if res not in results_pre:
                         if res=='pressure' and bool(self.duplicate_mesh_domains):
-                            for j in range(len(self.duplicate_mesh_domains)):
-                                outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+str(j+1)+'.xdmf', 'w')
+                            for j in self.duplicate_mesh_domains:
+                                outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+str(j)+'.xdmf', 'w')
                                 outfile.write_mesh(self.submshes_emap[j][0])
-                                self.resultsfiles[res+str(j+1)] = outfile
+                                self.resultsfiles[res+str(j)] = outfile
                         else:
                             outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
                             outfile.write_mesh(self.mesh)
@@ -519,8 +519,10 @@ class IO_fluid(IO):
                         self.resultsfiles[res].write_function(a_proj, t)
                     elif res=='pressure':
                         if bool(self.duplicate_mesh_domains):
-                            for j in range(len(self.duplicate_mesh_domains)):
-                                self.resultsfiles[res+str(j+1)].write_function(pb.p_[j], t)
+                            m=0
+                            for j in self.duplicate_mesh_domains:
+                                self.resultsfiles[res+str(j)].write_function(pb.p_[m], t)
+                                m+=1
                         else:
                             self.resultsfiles[res].write_function(pb.p_[0], t)
                     elif res=='cauchystress':

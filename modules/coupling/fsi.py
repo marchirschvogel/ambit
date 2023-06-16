@@ -222,7 +222,8 @@ class FSIProblem():
 
     def evaluate_initial(self):
 
-        pass
+        self.pbs.evaluate_initial()
+        self.pbfa.evaluate_initial()
 
 
     def write_output_ini(self):

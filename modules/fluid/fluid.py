@@ -91,6 +91,8 @@ class FluidmechanicsProblem(problem_base):
 
         self.sub_solve = False
 
+        self.have_robin_valve = False
+
         self.dim = self.io.mesh.geometry.dim
 
         # type of discontinuous function spaces
@@ -120,10 +122,10 @@ class FluidmechanicsProblem(problem_base):
         # create finite element objects for v and p
         P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
         P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
-        # function spaces for v and p
+        # function space for v
         self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
 
-        self.V_p_ = []
+        self.V_p__ = {}
         self.entity_maps = {}
 
         if bool(self.io.duplicate_mesh_domains):
@@ -133,27 +135,27 @@ class FluidmechanicsProblem(problem_base):
 
             self.num_dupl = self.num_domains
 
-            self.io.submshes_emap, self.inv_emap, self.sub_mt_b1 = [], [], []
+            self.io.submshes_emap, self.inv_emap, self.io.sub_mt_b1 = {}, {}, {}
 
             for mp in self.io.duplicate_mesh_domains:
-                self.io.submshes_emap.append( mesh.create_submesh(self.io.mesh, self.io.mesh.topology.dim, self.io.mt_d.indices[self.io.mt_d.values == mp])[0:2] )
+                self.io.submshes_emap[mp] = mesh.create_submesh(self.io.mesh, self.io.mesh.topology.dim, self.io.mt_d.indices[self.io.mt_d.values == mp])[0:2]
 
             cell_imap = self.io.mesh.topology.index_map(self.io.mesh.topology.dim)
             num_cells = cell_imap.size_local + cell_imap.num_ghosts
 
-            for mp in range(self.num_dupl):
-                self.V_p_.append( fem.FunctionSpace(self.io.submshes_emap[mp][0], P_p) )
-                self.inv_emap.append( np.full(num_cells, -1) )
+            for mp in self.io.duplicate_mesh_domains:
+                self.V_p__[mp] = fem.FunctionSpace(self.io.submshes_emap[mp][0], P_p)
+                self.inv_emap[mp] = np.full(num_cells, -1)
 
-            for mp in range(self.num_dupl):
+            for mp in self.io.duplicate_mesh_domains:
                 self.inv_emap[mp][self.io.submshes_emap[mp][1]] = np.arange(len(self.io.submshes_emap[mp][1]))
                 self.entity_maps[self.io.submshes_emap[mp][0]] = self.inv_emap[mp]
                 # transfer boundary meshtags to submesh
-                self.sub_mt_b1.append( meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[mp][0], self.io.submshes_emap[mp][1], self.io.mesh) )
+                self.io.sub_mt_b1[mp] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[mp][0], self.io.submshes_emap[mp][1], self.io.mesh)
 
         else:
             self.num_dupl = 1
-            self.V_p_.append( fem.FunctionSpace(self.io.mesh, P_p) )
+            self.V_p_ = [ fem.FunctionSpace(self.io.mesh, P_p) ]
 
         # continuous tensor and scalar function spaces of order order_vel
         self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
@@ -170,20 +172,23 @@ class FluidmechanicsProblem(problem_base):
         self.v      = fem.Function(self.V_v, name="Velocity")
 
         # pressure can have duplicate nodes (one variable per domain)
-        self.p_, self.p_old_, self.var_p_, self.dp_ = [], [], [], []
+        self.p__, self.p_old__, self.var_p__, self.dp__ = {}, {}, {}, {}
         if self.num_dupl > 1:
-            for mp in range(self.num_dupl):
-                self.p_.append( fem.Function(self.V_p_[mp], name="Pressure"+str(self.io.duplicate_mesh_domains[mp])) )
-                self.dp_.append( ufl.TrialFunction(self.V_p_[mp]) )            # Incremental pressure
-                self.var_p_.append( ufl.TestFunction(self.V_p_[mp]) )          # Test function
+            for mp in self.io.duplicate_mesh_domains:
+                self.p__[mp] = fem.Function(self.V_p__[mp], name="Pressure"+str(mp))
+                self.dp__[mp] = ufl.TrialFunction(self.V_p__[mp])            # Incremental pressure
+                self.var_p__[mp] = ufl.TestFunction(self.V_p__[mp])          # Test function
                 # values of previous time step
-                self.p_old_.append( fem.Function(self.V_p_[mp]) )
+                self.p_old__[mp] = fem.Function(self.V_p__[mp])
+            # make lists
+            self.V_p_ = list(self.V_p__.values())
+            self.p_, self.dp_, self.var_p_, self.p_old_ = list(self.p__.values()), list(self.dp__.values()), list(self.var_p__.values()), list(self.p_old__.values())
         else:
-            self.p_.append( fem.Function(self.V_p_[0], name="Pressure") )
-            self.dp_.append( ufl.TrialFunction(self.V_p_[0]) )            # Incremental pressure
-            self.var_p_.append( ufl.TestFunction(self.V_p_[0]) )          # Test function
+            self.p_ = [ fem.Function(self.V_p_[0], name="Pressure") ]
+            self.dp_ = [ ufl.TrialFunction(self.V_p_[0]) ]            # Incremental pressure
+            self.var_p_ = [ ufl.TestFunction(self.V_p_[0]) ]          # Test function
             # values of previous time step
-            self.p_old_.append( fem.Function(self.V_p_[0]) )
+            self.p_old_ = [ fem.Function(self.V_p_[0]) ]
 
         # values of previous time step
         self.v_old  = fem.Function(self.V_v)
@@ -350,7 +355,7 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_p_old.append( self.vf.deltaW_int_pres(self.v_old, self.var_p_[j], self.dx_[n], Fale=self.alevar['Fale_old']) )
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_robin_valve, w_robin_valve_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
             w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
@@ -360,6 +365,15 @@ class FluidmechanicsProblem(problem_base):
         if 'stabilized_neumann' in self.bc_dict.keys():
             w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, wel=self.alevar['w'], Fale=self.alevar['Fale'])
             w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, wel=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+        if 'robin_valve' in self.bc_dict.keys():
+            assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
+            self.have_robin_valve = True
+            self.beta_valve, self.beta_valve_old = [], []
+            self.a_u_, self.a_d_, self.pint_u_, self.pint_d_ = [], [], [], []
+            self.a_old_u_, self.a_old_d_, self.pint_old_u_, self.pint_old_d_ = [], [], [], []
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, self.a_u_, self.a_d_, self.pint_u_, self.pint_d_, self.p__, wel=self.alevar['w'], Fale=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, self.a_u_, self.a_d_, self.pint_old_u_, self.pint_old_d_, self.p_old__, wel=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+
         # reduced-solid for FrSI problem
         self.have_active_stress, self.active_stress_trig = False, 'ode'
         if 'membrane' in self.bc_dict.keys():
@@ -395,8 +409,8 @@ class FluidmechanicsProblem(problem_base):
             assert('neumann_prestress' not in self.bc_dict.keys())
 
         # TODO: Body forces!
-        self.deltaW_ext     = w_neumann + w_robin + w_stabneumann + w_membrane
-        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_stabneumann_old + w_membrane_old
+        self.deltaW_ext     = w_neumann + w_robin + w_stabneumann + w_membrane + w_robin_valve
+        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_stabneumann_old + w_membrane_old + w_robin_valve_old
 
         # stabilization
         if self.stabilization is not None:
@@ -672,6 +686,42 @@ class FluidmechanicsProblem(problem_base):
         return [iset_v, iset_p]
 
 
+    def evaluate_robin_valve(self):
+
+        for m in range(len(self.bc_dict['robin_valve'])):
+
+            beta_min, beta_max, epsilon = self.bc_dict['robin_valve'][m]['beta_min'], self.bc_dict['robin_valve'][m]['beta_max'], self.bc_dict['robin_valve'][m]['epsilon']
+
+            # area of up- and downstream surfaces
+            au = fem.assemble_scalar(self.a_u_[m])
+            au = self.comm.allgather(au)
+            au_ = sum(au)
+
+            ad = fem.assemble_scalar(self.a_d_[m])
+            ad = self.comm.allgather(ad)
+            ad_ = sum(ad)
+
+            # assert that the two parts of the valve are actually of same size
+            assert(np.isclose(au_, ad_))
+
+            # surface-averaged pressures on up- and downstream sides
+            pu = (1./au_)*fem.assemble_scalar(self.pint_u_[m])
+            pu = self.comm.allgather(pu)
+            pu_ = sum(pu)
+
+            pd = (1./ad_)*fem.assemble_scalar(self.pint_d_[m])
+            pd = self.comm.allgather(pd)
+            pd_ = sum(pd)
+
+            beta = expression.template()
+            beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh((pd_ - pu_)/epsilon) + 1.) + beta_min
+            self.beta_valve[m].interpolate(beta.evaluate)
+
+            if self.comm.rank == 0:
+                print("Valve ID "+str(self.bc_dict['robin_valve'][m]['id'])+": pu = %.4e, pd = %.4e" % (pu_,pd_))
+                sys.stdout.flush()
+
+
     ### now the base routines for this problem
 
     def read_restart(self, sname, N):
@@ -683,7 +733,9 @@ class FluidmechanicsProblem(problem_base):
 
 
     def evaluate_initial(self):
-        pass
+
+        if self.have_robin_valve:
+            self.evaluate_robin_valve()
 
 
     def write_output_ini(self):
@@ -705,7 +757,9 @@ class FluidmechanicsProblem(problem_base):
 
 
     def evaluate_post_solve(self, t, N):
-        pass
+
+        if self.have_robin_valve:
+            self.evaluate_robin_valve()
 
 
     def set_output_state(self):
