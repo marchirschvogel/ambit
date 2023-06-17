@@ -15,7 +15,7 @@ import ufl
 
 from projection import project
 from mpiroutines import allgather_vec
-import expression
+import meshutils, expression
 from mathutils import spectral_decomposition_3x3
 
 
@@ -126,8 +126,11 @@ class IO:
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
 
-        # some mesh data that we might wanna use in some problems...
-        # facet normal
+
+    # some mesh data that we might wanna use in some problems...
+    def set_mesh_fields(self):
+
+        # facet normal field
         self.n0 = ufl.FacetNormal(self.mesh)
         # cell diameter
         self.hd0 = ufl.CellDiameter(self.mesh)
@@ -672,3 +675,32 @@ class IO_fsi(IO_solid,IO_fluid_ale):
 
         IO_solid.writecheckpoint(self, pb, N)
         IO_fluid_ale.writecheckpoint(self, pb, N)
+
+    def create_submeshes(self):
+
+        dom_solid, dom_fluid, surf_interf = self.io_params['domain_ids_solid'], self.io_params['domain_ids_fluid'], self.io_params['surface_ids_interface']
+
+        self.msh_emap_solid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == dom_solid])[0:2]
+        self.msh_emap_fluid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == dom_fluid])[0:2]
+
+        # self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
+        # self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
+
+        self.msh_emap_fsilm = mesh.create_submesh(self.mesh, self.mesh.topology.dim-1, self.mt_b1.indices[self.mt_b1.values == surf_interf])[0:2]
+
+        self.mt_d_solid = meshutils.meshtags_parent_to_child(self.mt_d, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'domain')
+        self.mt_d_fluid = meshutils.meshtags_parent_to_child(self.mt_d, self.msh_emap_fluid[0], self.msh_emap_fluid[1], self.mesh, 'domain')
+
+        self.mt_b1_solid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'boundary')
+        self.mt_b1_fluid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_fluid[0], self.msh_emap_fluid[1], self.mesh, 'boundary')
+
+
+        # with io.XDMFFile(self.comm, "sub_tag_solid.xdmf", "w") as xdmf:
+        #     xdmf.write_mesh(self.msh_emap_solid[0])
+        #     self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
+        #     xdmf.write_meshtags(self.mt_b1_solid)
+        #
+        # with io.XDMFFile(self.comm, "sub_tag_fluid.xdmf", "w") as xdmf:
+        #     xdmf.write_mesh(self.msh_emap_fluid[0])
+        #     self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
+        #     xdmf.write_meshtags(self.mt_b1_fluid)

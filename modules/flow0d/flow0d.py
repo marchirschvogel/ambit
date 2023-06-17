@@ -175,9 +175,11 @@ class Flow0DProblem(problem_base):
         # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         r = K.createVecLeft()
 
+        self.df.assemble(), self.df_old.assemble()
         r.axpy(1./self.dt, self.df)
         r.axpy(-1./self.dt, self.df_old)
 
+        self.f.assemble(), self.f_old.assemble()
         r.axpy(theta, self.f)
         r.axpy(1.-theta, self.f_old)
 
@@ -332,6 +334,7 @@ class Flow0DProblem(problem_base):
     def set_output_state(self):
 
         # get midpoint dof values for post-processing (has to be called before update!)
+        self.s.assemble(), self.s_old.assemble(), self.s_mid.assemble()
         self.cardvasc0D.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=self.output_midpoint)
         self.cardvasc0D.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=self.output_midpoint)
 
@@ -351,6 +354,7 @@ class Flow0DProblem(problem_base):
 
     def print_to_screen(self):
 
+        self.s_mid.assemble()
         self.cardvasc0D.print_to_screen(self.s_mid,self.aux_mid)
 
 

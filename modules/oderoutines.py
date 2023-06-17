@@ -218,6 +218,8 @@ class ode:
 
         restart_data = np.loadtxt(path+'/checkpoint_'+nm+'_'+str(rstep)+'.txt')
 
+        if not isinstance(var, np.ndarray): var.assemble()
+
         var[:] = restart_data[:]
 
 

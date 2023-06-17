@@ -497,6 +497,7 @@ class solver_nonlinear:
             # get residual and increment norms
             resnorms, incnorms = {}, {}
             for n in range(self.nfields):
+                r_list[n].assemble()
                 resnorms['res'+str(n+1)] = r_list[n].norm()
                 incnorms['inc'+str(n+1)] = del_x[n].norm()
 
@@ -684,6 +685,7 @@ class solver_nonlinear_ode(solver_nonlinear):
 
             tes = time.time()
 
+            self.pb.s.assemble()
             self.pb.odemodel.evaluate(self.pb.s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
 
             # ODE rhs vector and stiffness matrix

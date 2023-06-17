@@ -151,7 +151,7 @@ class FluidmechanicsProblem(problem_base):
                 self.inv_emap[mp][self.io.submshes_emap[mp][1]] = np.arange(len(self.io.submshes_emap[mp][1]))
                 self.entity_maps[self.io.submshes_emap[mp][0]] = self.inv_emap[mp]
                 # transfer boundary meshtags to submesh
-                self.io.sub_mt_b1[mp] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[mp][0], self.io.submshes_emap[mp][1], self.io.mesh)
+                self.io.sub_mt_b1[mp] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[mp][0], self.io.submshes_emap[mp][1], self.io.mesh, 'boundary')
 
         else:
             self.num_dupl = 1

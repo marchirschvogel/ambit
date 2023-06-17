@@ -12,6 +12,7 @@ import numpy as np
 # gather an entry of a parallel PETSc vector
 def allgather_vec_entry(var, Id, comm):
 
+    var.assemble()
     # ownership range of parallel vector
     vs, ve = var.getOwnershipRange()
 
@@ -30,6 +31,7 @@ def allgather_vec_entry(var, Id, comm):
 # gather a parallel PETSc vector and store it to a numpy array known by all processes
 def allgather_vec(var, comm):
 
+    var.assemble()
     # ownership range of parallel vector
     vs, ve = var.getOwnershipRange()
 
@@ -49,6 +51,7 @@ def allgather_vec(var, comm):
 # gather a parallel PETSc matrix and store it to a numpy array known by all processes
 def allgather_mat(var, comm):
 
+    var.assemble()
     # (row) ownership range of parallel matrix
     mrs, mre = var.getOwnershipRange()
 

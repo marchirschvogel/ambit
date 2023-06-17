@@ -340,6 +340,8 @@ class ModelOrderReduction():
                 for j in range(bs):
                     self.part_rvar[-1].vector[bs*i+j] = self.part[-1].vector[i]
 
+            self.part_rvar[-1].vector.assemble()
+
 
     def build_reduced_basis(self):
 

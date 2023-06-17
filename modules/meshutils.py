@@ -49,26 +49,33 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
 
 # cf. https://fenicsproject.discourse.group/t/transfer-meshtags-to-submesh-in-dolfinx/8952/6
-def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh):
+def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, dimentity):
 
-    f_map = parentmsh.topology.index_map(parentmsh.topology.dim-1)
-    all_facets = f_map.size_local + f_map.num_ghosts
-    # Create array with zeros for all facets that are not marked
-    all_values = np.zeros(all_facets, dtype=np.int32)
+    if dimentity=='domain':
+        dim = parentmsh.topology.dim
+    elif dimentity=='boundary':
+        dim = parentmsh.topology.dim-1
+    else:
+        raise ValueError("Unknown dim entity!")
+
+    d_map = parentmsh.topology.index_map(dim)
+    all_ent = d_map.size_local + d_map.num_ghosts
+    # Create array with zeros for all entities that are not marked
+    all_values = np.zeros(all_ent, dtype=np.int32)
     all_values[mshtags.indices] = mshtags.values
 
-    c_to_f = parentmsh.topology.connectivity(parentmsh.topology.dim, parentmsh.topology.dim-1)
+    c_to_e = parentmsh.topology.connectivity(parentmsh.topology.dim, dim)
 
-    childmsh.topology.create_entities(parentmsh.topology.dim-1)
-    subf_map = childmsh.topology.index_map(parentmsh.topology.dim-1)
-    childmsh.topology.create_connectivity(parentmsh.topology.dim, parentmsh.topology.dim-1)
-    c_to_f_sub = childmsh.topology.connectivity(parentmsh.topology.dim, parentmsh.topology.dim-1)
-    num_sub_facets = subf_map.size_local + subf_map.size_global
-    sub_values = np.empty(num_sub_facets, dtype=np.int32)
+    childmsh.topology.create_entities(dim)
+    subf_map = childmsh.topology.index_map(dim)
+    childmsh.topology.create_connectivity(parentmsh.topology.dim, dim)
+    c_to_e_sub = childmsh.topology.connectivity(parentmsh.topology.dim, dim)
+    num_sub_ent = subf_map.size_local + subf_map.size_global
+    sub_values = np.empty(num_sub_ent, dtype=np.int32)
     for i, entity in enumerate(childmsh_emap):
-        parent_facets = c_to_f.links(entity)
-        child_facets = c_to_f_sub.links(i)
-        for child, parent in zip(child_facets, parent_facets):
+        parent_ent = c_to_e.links(entity)
+        child_ent = c_to_e_sub.links(i)
+        for child, parent in zip(child_ent, parent_ent):
             sub_values[child] = all_values[parent]
 
-    return mesh.meshtags(childmsh, childmsh.topology.dim-1, np.arange(num_sub_facets, dtype=np.int32), sub_values)
+    return mesh.meshtags(childmsh, childmsh.topology.dim-1, np.arange(num_sub_ent, dtype=np.int32), sub_values)

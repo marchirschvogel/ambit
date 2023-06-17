@@ -145,6 +145,7 @@ class SolidmechanicsProblem(problem_base):
         self.var_p = ufl.TestFunction(self.V_p)             # Test function
         self.u     = fem.Function(self.V_u, name="Displacement")
         self.p     = fem.Function(self.V_p, name="Pressure")
+
         # values of previous time step
         self.u_old = fem.Function(self.V_u)
         self.v_old = fem.Function(self.V_u)

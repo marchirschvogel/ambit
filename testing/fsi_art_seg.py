@@ -19,16 +19,12 @@ def main():
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'simname'               : 'test',
-                            'io_solid' : {'mesh_domain'           : basepath+'/../../../sim/art_seg/solid_h1.0/h00q/__data__/input-quad_domain.xdmf',
-                                          'mesh_boundary'         : basepath+'/../../../sim/art_seg/solid_h1.0/h00q/__data__/input-quad_boundary.xdmf',
-                                          'results_to_write'      : [],
-                                          'write_results_every'   : -999,
-                                          'output_path'           : basepath+'/tmp/'},
-                            'io_fluid' : {'mesh_domain'           : basepath+'/../../../sim/art_seg/frsi/h00q/__data__/input-quad_domain.xdmf',
-                                          'mesh_boundary'         : basepath+'/../../../sim/art_seg/frsi/h00q/__data__/input-quad_boundary.xdmf',
-                                          'results_to_write'      : [[],[]],
-                                          'write_results_every'   : -999,
-                                          'output_path'           : basepath+'/tmp/'}
+                            'mesh_domain'           : basepath+'/input/artseg-fsi-quad_domain.xdmf',
+                            'mesh_boundary'         : basepath+'/input/artseg-fsi-quad_boundary.xdmf',
+                            'results_to_write'      : [['displacement','pressure'], [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']]],
+                            'domain_ids_solid'      : [1], 
+                            'domain_ids_fluid'      : [2],
+                            'surface_ids_interface' : [2]
                             }
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
@@ -56,7 +52,7 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
     
-    COUPLING_PARAMS      = {'coupling_fluid_ale'    : {'surface_ids' : [1], 'type' : 'strong_dirichlet'},
+    COUPLING_PARAMS      = {#'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
                             'fluid_solid_interface' : 'solid_governed', # solid_governed, fluid_governed
                             'fluid_on_deformed'     : 'consistent'}
 
@@ -81,7 +77,7 @@ def main():
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
-    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'all', 'val' : 0.},
+    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
                                             {'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
