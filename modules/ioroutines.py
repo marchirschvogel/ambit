@@ -21,7 +21,7 @@ from mathutils import spectral_decomposition_3x3
 
 class IO:
 
-    def __init__(self, io_params, comm):
+    def __init__(self, io_params, entity_maps, comm):
 
         self.io_params = io_params
 
@@ -57,6 +57,9 @@ class IO:
         # TODO: Should go away once mixed branch has been merged into nightly dolfinx
         try: self.USE_MIXED_DOLFINX_BRANCH = io_params['USE_MIXED_DOLFINX_BRANCH']
         except: self.USE_MIXED_DOLFINX_BRANCH = False
+
+        # entity map dict - for coupled multiphysics/multimesh problems
+        self.entity_maps = entity_maps
 
         self.comm = comm
 
@@ -678,7 +681,7 @@ class IO_fsi(IO_solid,IO_fluid_ale):
 
     def create_submeshes(self):
 
-        dom_solid, dom_fluid, surf_interf = self.io_params['domain_ids_solid'], self.io_params['domain_ids_fluid'], self.io_params['surface_ids_interface']
+        dom_solid, dom_fluid, self.surf_interf = self.io_params['domain_ids_solid'], self.io_params['domain_ids_fluid'], self.io_params['surface_ids_interface']
 
         self.msh_emap_solid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == dom_solid])[0:2]
         self.msh_emap_fluid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == dom_fluid])[0:2]
@@ -686,13 +689,36 @@ class IO_fsi(IO_solid,IO_fluid_ale):
         # self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
         # self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
 
-        self.msh_emap_fsilm = mesh.create_submesh(self.mesh, self.mesh.topology.dim-1, self.mt_b1.indices[self.mt_b1.values == surf_interf])[0:2]
+        self.msh_emap_lm = mesh.create_submesh(self.mesh, self.mesh.topology.dim-1, self.mt_b1.indices[self.mt_b1.values == self.surf_interf])[0:2]
 
+        # TODO: Assert that meshtags start actually from 1 when transferred!
         self.mt_d_solid = meshutils.meshtags_parent_to_child(self.mt_d, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'domain')
         self.mt_d_fluid = meshutils.meshtags_parent_to_child(self.mt_d, self.msh_emap_fluid[0], self.msh_emap_fluid[1], self.mesh, 'domain')
 
         self.mt_b1_solid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'boundary')
         self.mt_b1_fluid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_fluid[0], self.msh_emap_fluid[1], self.mesh, 'boundary')
+
+        # needed??
+        self.mesh.topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim-1)
+        self.mesh.topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
+
+        cell_imap = self.mesh.topology.index_map(self.mesh.topology.dim)
+        facet_imap = self.mesh.topology.index_map(self.mesh.topology.dim-1)
+
+        num_facets = facet_imap.size_local + facet_imap.num_ghosts
+        num_cells = cell_imap.size_local + cell_imap.num_ghosts
+
+        inv_emap_solid = np.full(num_cells, -1)
+        inv_emap_solid[self.msh_emap_solid[1]] = np.arange(len(self.msh_emap_solid[1]))
+        self.entity_maps[self.msh_emap_solid[0]] = inv_emap_solid
+
+        inv_emap_fluid = np.full(num_cells, -1)
+        inv_emap_fluid[self.msh_emap_fluid[1]] = np.arange(len(self.msh_emap_fluid[1]))
+        self.entity_maps[self.msh_emap_fluid[0]] = inv_emap_fluid
+
+        inv_emap_lm = np.full(num_facets, -1)
+        inv_emap_lm[self.msh_emap_lm[1]] = np.arange(len(self.msh_emap_lm[1]))
+        self.entity_maps[self.msh_emap_lm[0]] = inv_emap_lm
 
 
         # with io.XDMFFile(self.comm, "sub_tag_solid.xdmf", "w") as xdmf:
@@ -704,3 +730,6 @@ class IO_fsi(IO_solid,IO_fluid_ale):
         #     xdmf.write_mesh(self.msh_emap_fluid[0])
         #     self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
         #     xdmf.write_meshtags(self.mt_b1_fluid)
+
+        # with io.XDMFFile(self.comm, "mesh_lm.xdmf", "w") as xdmf:
+        #     xdmf.write_mesh(self.msh_emap_lm[0])

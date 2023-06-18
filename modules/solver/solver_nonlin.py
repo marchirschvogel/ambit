@@ -652,7 +652,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']
 
-        self.tolerances = {'res_0d' : self.tolres, 'inc_0d' : self.tolinc}
+        self.tolerances = {'res1' : self.tolres, 'inc1' : self.tolinc}
 
         self.PTC = False # don't think we'll ever need PTC for the 0D ODE problem...
 
@@ -685,7 +685,6 @@ class solver_nonlinear_ode(solver_nonlinear):
 
             tes = time.time()
 
-            self.pb.s.assemble()
             self.pb.odemodel.evaluate(self.pb.s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
 
             # ODE rhs vector and stiffness matrix
@@ -709,7 +708,7 @@ class solver_nonlinear_ode(solver_nonlinear):
             res_norm = r.norm()
             inc_norm = ds.norm()
 
-            if print_iter: self.solutils.print_nonlinear_iter(it,{'res_0d' : res_norm},{'inc_0d' : inc_norm},ts=ts,te=te,sub=sub)
+            if print_iter: self.solutils.print_nonlinear_iter(it,{'res1' : res_norm},{'inc1' : inc_norm},ts=ts,te=te,sub=sub)
 
             # destroy PETSc stuff...
             ds.destroy(), r.destroy(), K.destroy()
@@ -717,11 +716,11 @@ class solver_nonlinear_ode(solver_nonlinear):
             it += 1
 
             # check if converged
-            converged = self.solutils.check_converged({'res_0d' : res_norm},{'inc_0d' : inc_norm},self.tolerances,ptype='flow0d')
+            converged = self.solutils.check_converged({'res1' : res_norm},{'inc1' : inc_norm},self.tolerances,ptype='flow0d')
             if converged:
                 if print_iter and sub:
                     if self.pb.comm.rank == 0:
-                        print('      **************************************************************\n')
+                        print('       ****************************************************\n')
                         sys.stdout.flush()
                 self.ni = it
                 break

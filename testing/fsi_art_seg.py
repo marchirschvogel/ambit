@@ -24,12 +24,15 @@ def main():
                             'results_to_write'      : [['displacement','pressure'], [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']]],
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
-                            'surface_ids_interface' : [2]
+                            'surface_ids_interface' : [1]
                             }
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
-                            'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8}
+                            'direct_solver'         : 'mumps',
+                            'tol_res'               : [1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-1],
+                            'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1,1.0e-3,1.0e-3,1.0e-1]}
+                            #'tol_res'               : [1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-1],
+                            #'tol_inc'               : [1.0e-1,1.0e-1,1.0e-3,1.0e-3,1.0e-1]}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 100,
@@ -52,8 +55,8 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
     
-    COUPLING_PARAMS      = {#'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
-                            'fluid_solid_interface' : 'solid_governed', # solid_governed, fluid_governed
+    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
+                            'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
                             'fluid_on_deformed'     : 'consistent'}
 
     MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 10.},
@@ -73,7 +76,7 @@ def main():
         def tc1(self, t):
             t_ramp = 2.0
             p0 = 0.0
-            pinfl = 5.0
+            pinfl = 0.#5.0
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 

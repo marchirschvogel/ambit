@@ -54,8 +54,9 @@ class FluidmechanicsProblem(problem_base):
         self.quad_degree = fem_params['quad_degree']
 
         # collect domain data
-        self.dx_, self.dx2_, self.rho = [], [], []
+        self.dx_, self.rho = [], []
         for n in range(self.num_domains):
+            # print(min(self.io.mt_d.values)) # TODO: Check meshtags in case of submesh!!
             # integration domains
             self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
@@ -126,7 +127,6 @@ class FluidmechanicsProblem(problem_base):
         self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
 
         self.V_p__ = {}
-        self.entity_maps = {}
 
         if bool(self.io.duplicate_mesh_domains):
 
@@ -135,7 +135,7 @@ class FluidmechanicsProblem(problem_base):
 
             self.num_dupl = self.num_domains
 
-            self.io.submshes_emap, self.inv_emap, self.io.sub_mt_b1 = {}, {}, {}
+            self.io.submshes_emap, inv_emap, self.io.sub_mt_b1 = {}, {}, {}
 
             for mp in self.io.duplicate_mesh_domains:
                 self.io.submshes_emap[mp] = mesh.create_submesh(self.io.mesh, self.io.mesh.topology.dim, self.io.mt_d.indices[self.io.mt_d.values == mp])[0:2]
@@ -145,11 +145,11 @@ class FluidmechanicsProblem(problem_base):
 
             for mp in self.io.duplicate_mesh_domains:
                 self.V_p__[mp] = fem.FunctionSpace(self.io.submshes_emap[mp][0], P_p)
-                self.inv_emap[mp] = np.full(num_cells, -1)
+                inv_emap[mp] = np.full(num_cells, -1)
 
             for mp in self.io.duplicate_mesh_domains:
-                self.inv_emap[mp][self.io.submshes_emap[mp][1]] = np.arange(len(self.io.submshes_emap[mp][1]))
-                self.entity_maps[self.io.submshes_emap[mp][0]] = self.inv_emap[mp]
+                inv_emap[mp][self.io.submshes_emap[mp][1]] = np.arange(len(self.io.submshes_emap[mp][1]))
+                self.io.entity_maps[self.io.submshes_emap[mp][0]] = inv_emap[mp]
                 # transfer boundary meshtags to submesh
                 self.io.sub_mt_b1[mp] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[mp][0], self.io.submshes_emap[mp][1], self.io.mesh, 'boundary')
 
@@ -565,11 +565,11 @@ class FluidmechanicsProblem(problem_base):
 
         if not self.prestress_initial or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
-                self.res_v = fem.form(self.weakform_v, entity_maps=self.entity_maps)
-                self.res_p = fem.form(self.weakform_p, entity_maps=self.entity_maps)
-                self.jac_vv = fem.form(self.weakform_lin_vv, entity_maps=self.entity_maps)
-                self.jac_vp = fem.form(self.weakform_lin_vp, entity_maps=self.entity_maps)
-                self.jac_pv = fem.form(self.weakform_lin_pv, entity_maps=self.entity_maps)
+                self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
+                self.res_p = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
+                self.jac_vv = fem.form(self.weakform_lin_vv, entity_maps=self.io.entity_maps)
+                self.jac_vp = fem.form(self.weakform_lin_vp, entity_maps=self.io.entity_maps)
+                self.jac_pv = fem.form(self.weakform_lin_pv, entity_maps=self.io.entity_maps)
                 if self.num_dupl > 1:
                     self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
                     # make lists for offdiagonal block mat assembly
@@ -578,7 +578,7 @@ class FluidmechanicsProblem(problem_base):
                     for j in range(self.num_dupl):
                         self.jac_pv_.append([self.jac_pv[j]])
                 if self.stabilization is not None:
-                    self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.entity_maps)
+                    self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
                     if self.num_dupl > 1:
                         self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
                         for j in range(self.num_dupl):
@@ -593,11 +593,11 @@ class FluidmechanicsProblem(problem_base):
                     self.jac_pp = fem.form(self.weakform_lin_pp)
         else:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
-                self.res_v  = fem.form(self.weakform_prestress_v, entity_maps=self.entity_maps)
-                self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.entity_maps)
-                self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.entity_maps)
-                self.jac_vp = fem.form(self.weakform_lin_prestress_vp, entity_maps=self.entity_maps)
-                self.jac_pv = fem.form(self.weakform_lin_prestress_pv, entity_maps=self.entity_maps)
+                self.res_v  = fem.form(self.weakform_prestress_v, entity_maps=self.io.entity_maps)
+                self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
+                self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.io.entity_maps)
+                self.jac_vp = fem.form(self.weakform_lin_prestress_vp, entity_maps=self.io.entity_maps)
+                self.jac_pv = fem.form(self.weakform_lin_prestress_pv, entity_maps=self.io.entity_maps)
                 if self.num_dupl > 1:
                     self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
                     # make lists for offdiagonal block mat assembly
@@ -606,7 +606,7 @@ class FluidmechanicsProblem(problem_base):
                     for j in range(self.num_dupl):
                         self.jac_pv_.append([self.jac_pv[j]])
                 if self.stabilization is not None:
-                    self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.entity_maps)
+                    self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.io.entity_maps)
                     self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
                     for j in range(self.num_dupl):
                         self.jac_pp_[j][j] = self.jac_pp[j]
@@ -820,7 +820,7 @@ class FluidmechanicsSolver(solver_base):
 
             # solve for consistent initial acceleration a_old
             if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.entity_maps)
+                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)

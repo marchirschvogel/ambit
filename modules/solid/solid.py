@@ -67,8 +67,7 @@ class SolidmechanicsProblem(problem_base):
 
         for n in range(self.num_domains):
             # integration domains
-            if self.io.mt_d is not None: self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
-            else:                        self.dx_.append(ufl.dx(domain=self.io.mesh, metadata={'quadrature_degree': self.quad_degree}))
+            self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             if self.timint != 'static':
                 self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
@@ -703,19 +702,35 @@ class SolidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
         if not self.prestress_initial or self.restart_step > 0:
-            self.res_u  = fem.form(self.weakform_u)
-            self.jac_uu = fem.form(self.weakform_lin_uu)
-            if self.incompressible_2field:
-                self.res_p  = fem.form(self.weakform_p)
-                self.jac_up = fem.form(self.weakform_lin_up)
-                self.jac_pu = fem.form(self.weakform_lin_pu)
+            if self.io.USE_MIXED_DOLFINX_BRANCH:
+                self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
+                self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
+                if self.incompressible_2field:
+                    self.res_p  = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
+                    self.jac_up = fem.form(self.weakform_lin_up, entity_maps=self.io.entity_maps)
+                    self.jac_pu = fem.form(self.weakform_lin_pu, entity_maps=self.io.entity_maps)
+            else:
+                self.res_u  = fem.form(self.weakform_u)
+                self.jac_uu = fem.form(self.weakform_lin_uu)
+                if self.incompressible_2field:
+                    self.res_p  = fem.form(self.weakform_p)
+                    self.jac_up = fem.form(self.weakform_lin_up)
+                    self.jac_pu = fem.form(self.weakform_lin_pu)
         else:
-            self.res_u  = fem.form(self.weakform_prestress_u)
-            self.jac_uu = fem.form(self.weakform_lin_prestress_uu)
-            if self.incompressible_2field:
-                self.res_p  = fem.form(self.weakform_prestress_p)
-                self.jac_up = fem.form(self.weakform_lin_prestress_up)
-                self.jac_pu = fem.form(self.weakform_lin_prestress_pu)
+            if self.io.USE_MIXED_DOLFINX_BRANCH:
+                self.res_u  = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
+                self.jac_uu = fem.form(self.weakform_lin_prestress_uu, entity_maps=self.io.entity_maps)
+                if self.incompressible_2field:
+                    self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
+                    self.jac_up = fem.form(self.weakform_lin_prestress_up, entity_maps=self.io.entity_maps)
+                    self.jac_pu = fem.form(self.weakform_lin_prestress_pu, entity_maps=self.io.entity_maps)
+            else:
+                self.res_u  = fem.form(self.weakform_prestress_u)
+                self.jac_uu = fem.form(self.weakform_lin_prestress_uu)
+                if self.incompressible_2field:
+                    self.res_p  = fem.form(self.weakform_prestress_p)
+                    self.jac_up = fem.form(self.weakform_lin_prestress_up)
+                    self.jac_pu = fem.form(self.weakform_lin_prestress_pu)
 
         tee = time.time() - tes
         if self.comm.rank == 0:

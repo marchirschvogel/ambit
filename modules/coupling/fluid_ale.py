@@ -232,8 +232,8 @@ class FluidmechanicsAleProblem():
 
         # coupling
         if self.io.USE_MIXED_DOLFINX_BRANCH:
-            self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.pbf.entity_maps)
-            self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.pbf.entity_maps) # list
+            self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.pbf.io.entity_maps)
+            self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.pbf.io.entity_maps)
             if self.pbf.num_dupl > 1:
                 self.jac_pd_ = []
                 for j in range(self.pbf.num_dupl):
@@ -479,7 +479,7 @@ class FluidmechanicsAleSolver(solver_base):
 
             # solve for consistent initial acceleration a_old
             if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.entity_maps)
+                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)

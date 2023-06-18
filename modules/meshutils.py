@@ -52,24 +52,26 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, dimentity):
 
     if dimentity=='domain':
-        dim = parentmsh.topology.dim
+        dim_p = parentmsh.topology.dim
+        dim_c = childmsh.topology.dim
     elif dimentity=='boundary':
-        dim = parentmsh.topology.dim-1
+        dim_p = parentmsh.topology.dim-1
+        dim_c = childmsh.topology.dim-1
     else:
         raise ValueError("Unknown dim entity!")
 
-    d_map = parentmsh.topology.index_map(dim)
+    d_map = parentmsh.topology.index_map(dim_p)
     all_ent = d_map.size_local + d_map.num_ghosts
     # Create array with zeros for all entities that are not marked
     all_values = np.zeros(all_ent, dtype=np.int32)
     all_values[mshtags.indices] = mshtags.values
 
-    c_to_e = parentmsh.topology.connectivity(parentmsh.topology.dim, dim)
+    c_to_e = parentmsh.topology.connectivity(parentmsh.topology.dim, dim_p)
 
-    childmsh.topology.create_entities(dim)
-    subf_map = childmsh.topology.index_map(dim)
-    childmsh.topology.create_connectivity(parentmsh.topology.dim, dim)
-    c_to_e_sub = childmsh.topology.connectivity(parentmsh.topology.dim, dim)
+    childmsh.topology.create_entities(dim_c)
+    subf_map = childmsh.topology.index_map(dim_c)
+    childmsh.topology.create_connectivity(parentmsh.topology.dim, dim_p)
+    c_to_e_sub = childmsh.topology.connectivity(parentmsh.topology.dim, dim_p)
     num_sub_ent = subf_map.size_local + subf_map.size_global
     sub_values = np.empty(num_sub_ent, dtype=np.int32)
     for i, entity in enumerate(childmsh_emap):
@@ -78,4 +80,4 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
         for child, parent in zip(child_ent, parent_ent):
             sub_values[child] = all_values[parent]
 
-    return mesh.meshtags(childmsh, childmsh.topology.dim-1, np.arange(num_sub_ent, dtype=np.int32), sub_values)
+    return mesh.meshtags(childmsh, dim_c, np.arange(num_sub_ent, dtype=np.int32), sub_values)
