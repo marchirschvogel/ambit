@@ -41,6 +41,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         try: self.fluid_on_deformed = coupling_params_fluid_ale['fluid_on_deformed']
         except: self.fluid_on_deformed = 'consistent'
 
+        self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
+
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
         self.pba  = AleProblem(io_params, time_params_fluid, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
@@ -111,7 +113,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
             self.ufa.vector.axpby(1.0, 0.0, uf_vec)
             self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             uf_vec.destroy()
-        if self.have_robin_fluid_ale:
+            # K_list[3][0] = self.K_dv
+        if self.have_weak_dirichlet_fluid_ale:
             K_dv = fem.petsc.assemble_matrix(fem.form(self.jac_dv), self.pba.bc.dbcs)
             K_dv.assemble()
             K_list[3][0] = K_dv
@@ -169,10 +172,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
             K_sd[row_ids[i], irs:ire] = k_sd_rows[i][irs:ire]
         K_sd.assemble()
         K_list[2][3] = K_sd
-
-        # derivative of ALE residual w.r.t. fluid velocities - needed due to DBCs u=uf added on the ALE surfaces
-        # TODO: How to form this matrix efficiently?
-        #K_list[3][0] = self.K_dv
 
         K_list[3][3] = K_list_ale[0][0]
 
@@ -334,7 +333,10 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
+                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
+            else:
+                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
 
@@ -346,4 +348,4 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pbf.ti.print_timestep(N, t, self.solnln.sepstring, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.pbf.numstep, ni=ni, li=li, wt=wt)

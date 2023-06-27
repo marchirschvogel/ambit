@@ -285,7 +285,7 @@ class SolidmechanicsFlow0DProblem():
             lm_sq = allgather_vec(self.lm, self.comm)
 
             for i in range(self.num_coupling_surf):
-                self.pb0.c[i] = lm_sq[i]
+                self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
 
             subsolver.newton(t, print_iter=self.print_subiter, sub=True)
 
@@ -361,11 +361,11 @@ class SolidmechanicsFlow0DProblem():
             for i in range(self.num_coupling_surf):
                 for j in range(self.num_coupling_surf):
 
-                    self.pb0.c[j] = lm_sq[j] + self.eps_fd # perturbed LM
+                    self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] + self.eps_fd # perturbed LM
                     subsolver.newton(t, print_iter=False)
                     s_pert_sq = allgather_vec(self.pb0.s, self.comm)
                     K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
-                    self.pb0.c[j] = lm_sq[j] # restore LM
+                    self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] # restore LM
 
             # restore df, f, and aux vectors for correct time step update
             self.pb0.df.axpby(1.0, 0.0, df_tmp)
@@ -554,8 +554,15 @@ class SolidmechanicsFlow0DProblem():
         if bool(self.pb0.prescribed_variables):
             for a in self.pb0.prescribed_variables:
                 varindex = self.pb0.cardvasc0D.varmap[a]
-                curvenumber = self.pb0.prescribed_variables[a]
-                val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                prescr = self.pb0.prescribed_variables[a]
+                prtype = list(prescr.keys())[0]
+                if prtype=='val':
+                    val = prescr['val']
+                elif prtype=='curve':
+                    curvenumber = prescr['curve']
+                    val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                else:
+                    raise ValueError("Unknown type to prescribe a variable.")
                 self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
 
         # initially evaluate 0D model at old state

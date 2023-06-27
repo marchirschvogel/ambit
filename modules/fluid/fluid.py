@@ -46,6 +46,9 @@ class FluidmechanicsProblem(problem_base):
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
+        # for FSI, we want to specify the subdomains
+        try: domain_ids = self.io.io_params['domain_ids_fluid']
+        except: domain_ids = np.arange(1,self.num_domains+1)
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
@@ -55,12 +58,11 @@ class FluidmechanicsProblem(problem_base):
 
         # collect domain data
         self.dx_, self.rho = [], []
-        for n in range(self.num_domains):
-            # print(min(self.io.mt_d.values)) # TODO: Check meshtags in case of submesh!!
+        for i, n in enumerate(domain_ids):
             # integration domains
-            self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
-            self.rho.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho'])
+            self.rho.append(self.constitutive_models['MAT'+str(i+1)]['inertia']['rho'])
 
         # whether to enforce continuity of mass at midpoint or not
         try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
@@ -85,6 +87,8 @@ class FluidmechanicsProblem(problem_base):
         except: self.prestress_ptc = False
         try: self.prestress_from_file = fem_params['prestress_from_file']
         except: self.prestress_from_file = False
+        try: self.initial_fluid_pressure = fem_params['initial_fluid_pressure']
+        except: self.initial_fluid_pressure = []
 
         if self.prestress_from_file: self.prestress_initial = False
 
@@ -92,9 +96,12 @@ class FluidmechanicsProblem(problem_base):
 
         self.sub_solve = False
 
-        self.have_robin_valve = False
+        self.have_flux_monitor, self.have_dp_monitor, self.have_robin_valve = False, False, False
 
         self.dim = self.io.mesh.geometry.dim
+
+        # dicts for evaluations of surface integrals (fluxes, pressures), to be queried by other models
+        self.qv_, self.pu_, self.pd_ = {}, {}, {}
 
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
@@ -199,7 +206,7 @@ class FluidmechanicsProblem(problem_base):
         self.tau_a  = fem.Function(self.Vd_scalar, name="tau_a")
         self.tau_a_old = fem.Function(self.Vd_scalar)
         # prestress displacement for FrSI
-        if self.prestress_initial or self.prestress_from_file:
+        if self.prestress_initial or bool(self.prestress_from_file):
             self.uf_pre = fem.Function(self.V_v, name="Displacement_prestress")
         else:
             self.uf_pre = None
@@ -216,9 +223,21 @@ class FluidmechanicsProblem(problem_base):
         else:
             self.V_p, self.p, self.p_old = self.V_p_[0], self.p_[0], self.p_old_[0] # pointer to first p's...
 
+        # if we want to initialize the pressure (domain wise) with a scalar value
+        if bool(self.initial_fluid_pressure):
+            for mp in range(self.num_dupl):
+                val = self.initial_fluid_pressure[mp]
+                self.p_[mp].vector.set(val)
+                self.p_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+
         # own read function: requires plain txt format of type "node-id val-x val-y val-z"
-        if self.prestress_from_file:
-            self.io.readfunction(self.uf_pre, self.V_v, self.prestress_from_file)
+        if bool(self.prestress_from_file):
+            self.io.readfunction(self.uf_pre, self.V_v, self.prestress_from_file[0])
+            # if available, we might want to read in the pressure field, too
+            if len(self.prestress_from_file)>1:
+                assert(self.num_dupl==1) # TODO: Find a good way to read in if pressure domain is split!
+                self.io.readfunction(self.p_[0], self.V_p_[0], self.prestress_from_file[1])
+                self.io.readfunction(self.p_old_[0], self.V_p_[0], self.prestress_from_file[1])
 
         # dictionaries of internal variables
         self.internalvars, self.internalvars_old = {}, {}
@@ -369,10 +388,17 @@ class FluidmechanicsProblem(problem_base):
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve = True
             self.beta_valve, self.beta_valve_old = [], []
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, wel=self.alevar['w'], Fale=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, wel=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+        if 'flux_monitor' in self.bc_dict.keys():
+            self.have_flux_monitor = True
+            self.q_, self.q_old_ = [], []
+            self.bc.flux_monitor_bcs(self.bc_dict['flux_monitor'], self.v, self.q_, wel=self.alevar['w'], Fale=self.alevar['Fale'])
+        if 'dp_monitor' in self.bc_dict.keys():
+            assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
+            self.have_dp_monitor = True
             self.a_u_, self.a_d_, self.pint_u_, self.pint_d_ = [], [], [], []
-            self.a_old_u_, self.a_old_d_, self.pint_old_u_, self.pint_old_d_ = [], [], [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, self.a_u_, self.a_d_, self.pint_u_, self.pint_d_, self.p__, wel=self.alevar['w'], Fale=self.alevar['Fale'])
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, self.a_u_, self.a_d_, self.pint_old_u_, self.pint_old_d_, self.p_old__, wel=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.v, self.a_u_, self.a_d_, self.pint_u_, self.pint_d_, self.p__, wel=self.alevar['w'], Fale=self.alevar['Fale'])
 
         # reduced-solid for FrSI problem
         self.have_active_stress, self.active_stress_trig = False, 'ode'
@@ -419,6 +445,7 @@ class FluidmechanicsProblem(problem_base):
             assert(self.order_vel==self.order_pres)
 
             vscale = self.stabilization['vscale']
+            # these cell metrics don't seem to work for linear hexes... :(
             h = self.io.hd0 # cell diameter (could also use max edge length self.io.emax0, but seems to yield similar/same results)
 
             # full scheme
@@ -553,7 +580,7 @@ class FluidmechanicsProblem(problem_base):
 
         tes = time.time()
         if self.comm.rank == 0:
-            print('FEM form compilation...')
+            print('FEM form compilation for fluid...')
             sys.stdout.flush()
 
         if not bool(self.io.duplicate_mesh_domains):
@@ -621,11 +648,24 @@ class FluidmechanicsProblem(problem_base):
 
         tee = time.time() - tes
         if self.comm.rank == 0:
-            print('FEM form compilation finished, te = %.2f s' % (tee))
+            print('FEM form compilation for fluid finished, te = %.2f s' % (tee))
             sys.stdout.flush()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):
+
+        # if self.have_flux_monitor:
+        #     self.evaluate_flux_monitor(prnt=False)
+
+        # if self.have_dp_monitor:
+        #     self.evaluate_dp_monitor(prnt=False)
+
+        # NOTE: we do not linearize integrated pressure-dependent valves w.r.t. p,
+        # hence evaluation within the nonlinear solver loop may cause convergence problems
+        # (linearization would mean that every velocity at the valve surface depends
+        # on every pressure, which yields a fully dense matrix block!)
+        # if self.have_robin_valve:
+        #     self.evaluate_robin_valve(t)
 
         # assemble velocity rhs vector
         r_v = fem.petsc.assemble_vector(self.res_v)
@@ -686,11 +726,49 @@ class FluidmechanicsProblem(problem_base):
         return [iset_v, iset_p]
 
 
-    def evaluate_robin_valve(self):
+    # valve law on "immersed" surface (an internal boundary)
+    def evaluate_robin_valve(self, t):
 
         for m in range(len(self.bc_dict['robin_valve'])):
 
-            beta_min, beta_max, epsilon = self.bc_dict['robin_valve'][m]['beta_min'], self.bc_dict['robin_valve'][m]['beta_max'], self.bc_dict['robin_valve'][m]['epsilon']
+            beta_min, beta_max = self.bc_dict['robin_valve'][m]['beta_min'], self.bc_dict['robin_valve'][m]['beta_max']
+
+            beta = expression.template()
+
+            if self.bc_dict['robin_valve'][m]['type'] == 'dp':
+                dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
+                if self.pu_[dp_id] < self.pd_[dp_id]:
+                    beta.val = beta_max
+                else:
+                    beta.val = beta_min
+
+            elif self.bc_dict['robin_valve'][m]['type'] == 'dp_smooth':
+                dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
+                epsilon = self.bc_dict['robin_valve'][m]['epsilon']
+                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh((self.pd_[dp_id] - self.pu_[dp_id])/epsilon) + 1.) + beta_min
+
+            elif self.bc_dict['robin_valve'][m]['type'] == 'temporal':
+                to, tc = self.bc_dict['robin_valve'][m]['to'], self.bc_dict['robin_valve'][m]['tc']
+                if to > tc:
+                    if t < to and t >= tc:
+                        beta.val = beta_max
+                    if t >= to or t < tc:
+                        beta.val = beta_min
+                else:
+                    if t < to or t >= tc:
+                        beta.val = beta_max
+                    if t >= to and t < tc:
+                        beta.val = beta_min
+
+            else:
+                raise ValueError("Unknown Robin valve type!")
+
+            self.beta_valve[m].interpolate(beta.evaluate)
+
+
+    def evaluate_dp_monitor(self, prnt=True):
+
+        for m in range(len(self.bc_dict['dp_monitor'])):
 
             # area of up- and downstream surfaces
             au = fem.assemble_scalar(self.a_u_[m])
@@ -707,19 +785,30 @@ class FluidmechanicsProblem(problem_base):
             # surface-averaged pressures on up- and downstream sides
             pu = (1./au_)*fem.assemble_scalar(self.pint_u_[m])
             pu = self.comm.allgather(pu)
-            pu_ = sum(pu)
+            self.pu_[m] = sum(pu)
 
             pd = (1./ad_)*fem.assemble_scalar(self.pint_d_[m])
             pd = self.comm.allgather(pd)
-            pd_ = sum(pd)
+            self.pd_[m] = sum(pd)
 
-            beta = expression.template()
-            beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh((pd_ - pu_)/epsilon) + 1.) + beta_min
-            self.beta_valve[m].interpolate(beta.evaluate)
+            if prnt:
+                if self.comm.rank == 0:
+                    print("dp ID "+str(self.bc_dict['dp_monitor'][m]['id'])+": pu = %.4e, pd = %.4e" % (self.pu_[m],self.pd_[m]))
+                    sys.stdout.flush()
 
-            if self.comm.rank == 0:
-                print("Valve ID "+str(self.bc_dict['robin_valve'][m]['id'])+": pu = %.4e, pd = %.4e" % (pu_,pd_))
-                sys.stdout.flush()
+
+    def evaluate_flux_monitor(self, prnt=True):
+
+        for m in range(len(self.bc_dict['flux_monitor'])):
+
+            q = fem.assemble_scalar(self.q_[m])
+            q = self.comm.allgather(q)
+            self.qv_[m] = sum(q)
+
+            if prnt:
+                if self.comm.rank == 0:
+                    print("Flux ID "+str(self.bc_dict['flux_monitor'][m]['id'])+": q = %.4e" % (self.qv_[m]))
+                    sys.stdout.flush()
 
 
     ### now the base routines for this problem
@@ -734,8 +823,12 @@ class FluidmechanicsProblem(problem_base):
 
     def evaluate_initial(self):
 
+        if self.have_flux_monitor:
+            self.evaluate_flux_monitor()
+        if self.have_dp_monitor:
+            self.evaluate_dp_monitor()
         if self.have_robin_valve:
-            self.evaluate_robin_valve()
+            self.evaluate_robin_valve(0.0)
 
 
     def write_output_ini(self):
@@ -758,8 +851,12 @@ class FluidmechanicsProblem(problem_base):
 
     def evaluate_post_solve(self, t, N):
 
+        if self.have_flux_monitor:
+            self.evaluate_flux_monitor()
+        if self.have_dp_monitor:
+            self.evaluate_dp_monitor()
         if self.have_robin_valve:
-            self.evaluate_robin_valve()
+            self.evaluate_robin_valve(t)
 
 
     def set_output_state(self):

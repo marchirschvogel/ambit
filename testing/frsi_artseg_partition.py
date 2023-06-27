@@ -4,6 +4,7 @@
 # tests:
 # - mode partition of unity partitioning
 # - ALE transient Stokes flow (Taylor-Hood elements)
+# - weak Dirichlet condition from fluid to ALE
 
 import ambit
 
@@ -38,8 +39,8 @@ def main():
                             'filereadin_tol'        : 1e-5}
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
-                            'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
-                            'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
+                            'tol_res'               : [1.0e-8,1.0e-8,1.0e-8],
+                            'tol_inc'               : [1.0e-8,1.0e-8,1.0e-8]}
 
     TIME_PARAMS          = {'maxtime'               : 3.0,
                             'numstep'               : 150,
@@ -54,7 +55,7 @@ def main():
                             'quad_degree'           : 6,
                             'fluid_formulation'     : 'nonconservative'}
 
-    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}],
+    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'weak_dirichlet', 'beta' : 1e6}],
                             'fluid_on_deformed'     : 'consistent'}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},

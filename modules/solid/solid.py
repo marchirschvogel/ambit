@@ -47,6 +47,9 @@ class SolidmechanicsProblem(problem_base):
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
+        # for FSI, we want to specify the subdomains
+        try: domain_ids = self.io.io_params['domain_ids_solid']
+        except: domain_ids = np.arange(1,self.num_domains+1)
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
@@ -63,14 +66,13 @@ class SolidmechanicsProblem(problem_base):
         self.fem_params = fem_params
 
         # collect domain data
-        self.dx_, self.rho0, self.eta_m, self.eta_k = [], [], [], []
-
-        for n in range(self.num_domains):
+        self.dx_, self.rho0 = [], []
+        for i, n in enumerate(domain_ids):
             # integration domains
-            self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             if self.timint != 'static':
-                self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
+                self.rho0.append(self.constitutive_models['MAT'+str(i+1)]['inertia']['rho0'])
 
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
@@ -83,7 +85,7 @@ class SolidmechanicsProblem(problem_base):
         try: self.prestress_from_file = fem_params['prestress_from_file']
         except: self.prestress_from_file = False
 
-        if self.prestress_from_file: self.prestress_initial = False
+        if bool(self.prestress_from_file): self.prestress_initial = False
 
         if self.prestress_initial:
             self.constitutive_models_prestr = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
@@ -171,14 +173,19 @@ class SolidmechanicsProblem(problem_base):
         self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
         self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # prestress displacement
-        if self.prestress_initial or self.prestress_from_file:
+        if self.prestress_initial or bool(self.prestress_from_file):
             self.u_pre = fem.Function(self.V_u, name="Displacement_prestress")
         else:
             self.u_pre = None
 
         # own read function: requires plain txt format of type valx valy valz x z y
-        if self.prestress_from_file:
-            self.io.readfunction(self.u_pre, self.V_u, self.prestress_from_file)
+        if bool(self.prestress_from_file):
+            self.io.readfunction(self.u_pre, self.V_u, self.prestress_from_file[0])
+            # if available, we might want to read in the pressure field, too
+            if self.incompressible_2field:
+                if len(self.prestress_from_file)>1:
+                    self.io.readfunction(self.p, self.V_p, self.prestress_from_file[1])
+                    self.io.readfunction(self.p_old, self.V_p, self.prestress_from_file[1])
 
         try: self.volume_laplace = io_params['volume_laplace']
         except: self.volume_laplace = []
@@ -698,12 +705,13 @@ class SolidmechanicsProblem(problem_base):
 
         tes = time.time()
         if self.comm.rank == 0:
-            print('FEM form compilation...')
+            print('FEM form compilation for solid...')
             sys.stdout.flush()
 
         if not self.prestress_initial or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
+                sys.exit()
                 self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
                 if self.incompressible_2field:
                     self.res_p  = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
@@ -734,7 +742,7 @@ class SolidmechanicsProblem(problem_base):
 
         tee = time.time() - tes
         if self.comm.rank == 0:
-            print('FEM form compilation finished, te = %.2f s' % (tee))
+            print('FEM form compilation for solid finished, te = %.2f s' % (tee))
             sys.stdout.flush()
 
 

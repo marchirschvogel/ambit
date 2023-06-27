@@ -14,8 +14,8 @@ from variationalform import variationalform_base
 # TeX: \delta \mathcal{W} = \delta \mathcal{W}_{\mathrm{int}} - \delta \mathcal{W}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{u}
 class variationalform(variationalform_base):
 
-    def __init__(self, var_u, n0=None):
-        self.var_u = var_u
+    def __init__(self, var_d, n0=None):
+        self.var_d = var_d
 
         self.n0 = n0
 
@@ -25,13 +25,16 @@ class variationalform(variationalform_base):
     # TeX: \delta \mathcal{W}_{\mathrm{int}} := \int\limits_{\Omega_0} \boldsymbol{\sigma} : \delta\boldsymbol{\epsilon} \,\mathrm{d}V
     def deltaW_int(self, stress, ddomain):
 
-        return ufl.inner(stress,ufl.grad(self.var_u)) * ddomain
+        return ufl.inner(stress,ufl.grad(self.var_d)) * ddomain
 
     # Robin term for weak imposition of Dirichlet condition
     # TeX: \int\limits_{\Gamma_0} J\beta\,(\boldsymbol{u}-\boldsymbol{u}_{\mathrm{D}})\cdot\delta\boldsymbol{u}\sqrt{\boldsymbol{n}_0 \cdot (\boldsymbol{F}^{-1}\boldsymbol{F}^{-\mathrm{T}})\boldsymbol{n}_0}\,\mathrm{d}A
-    def deltaW_int_robin_cur(self, u, uD, F, beta, dboundary):
-        J = ufl.det(F)
-        return beta*ufl.dot((u-uD), self.var_u) * J*ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F)*ufl.inv(F).T)*self.n0))*dboundary
+
+    # Nitsche term for weak imposition of Dirichlet condition
+    # TeX: \int\limits_{\Gamma_0} \beta\,(\boldsymbol{u}-\boldsymbol{u}_{\mathrm{D}})\cdot\delta\boldsymbol{u}\,\mathrm{d}A - \int\limits_{\Gamma_0} \boldsymbol{\sigma}(\delta\boldsymbol{u})\boldsymbol{n}_{0}\cdot (\boldsymbol{u}-\boldsymbol{u}_{\mathrm{D}})\,\mathrm{d}A
+    def deltaW_int_nitsche_dirichlet(self, u, uD, var_stress, beta, dboundary):
+
+        return ( beta*ufl.dot((u-uD), self.var_d) - ufl.dot(ufl.dot(var_stress,self.n0),(u-uD)) )*dboundary
 
 
     ### External virtual work
@@ -40,17 +43,17 @@ class variationalform(variationalform_base):
     # TeX: \int\limits_{\Gamma_0} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
     def deltaW_ext_neumann_ref(self, func, dboundary):
 
-        return ufl.dot(func, self.var_u)*dboundary
+        return ufl.dot(func, self.var_d)*dboundary
 
 
     # Robin condition
     # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring(self, u, k, dboundary, upre=None):
 
-        return -k*(ufl.dot(u, self.var_u)*dboundary)
+        return -k*(ufl.dot(u, self.var_d)*dboundary)
 
     # Robin condition in normal direction
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}\otimes \boldsymbol{n})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring_normal_ref(self, u, k_n, dboundary, upre=None):
 
-        return -k_n*(ufl.dot(u, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
+        return -k_n*(ufl.dot(u, self.n0)*ufl.dot(self.n0, self.var_d)*dboundary)

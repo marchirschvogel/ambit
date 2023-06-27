@@ -147,6 +147,8 @@ class Flow0DProblem(problem_base):
 
         self.c, self.y = [], []
 
+        self.auxdata = {} # auxiliary data that can be set by other fields (e.g. fluxes from the 3D monitor)
+
         # initialize flow0d time-integration class
         self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, comm=self.comm)
 
@@ -194,8 +196,18 @@ class Flow0DProblem(problem_base):
         if bool(self.prescribed_variables):
             for a in self.prescribed_variables:
                 varindex = self.cardvasc0D.varmap[a]
-                curvenumber = self.prescribed_variables[a]
-                val = self.ti.timecurves(curvenumber)(t)
+                prescr = self.prescribed_variables[a]
+                prtype = list(prescr.keys())[0]
+                if prtype=='val':
+                    val = prescr['val']
+                elif prtype=='curve':
+                    curvenumber = prescr['curve']
+                    val = self.ti.timecurves(curvenumber)(t)
+                elif prtype=='flux_monitor':
+                    monid = prescr['flux_monitor']
+                    val = self.auxdata['q'][monid]
+                else:
+                    raise ValueError("Unknown type to prescribe a variable.")
                 self.cardvasc0D.set_prescribed_variables(self.s, r, K, val, varindex)
 
         return r, K
@@ -301,8 +313,15 @@ class Flow0DProblem(problem_base):
         if bool(self.prescribed_variables):
             for a in self.prescribed_variables:
                 varindex = self.cardvasc0D.varmap[a]
-                curvenumber = self.prescribed_variables[a]
-                val = self.ti.timecurves(curvenumber)(self.t_init)
+                prescr = self.prescribed_variables[a]
+                prtype = list(prescr.keys())[0]
+                if prtype=='val':
+                    val = prescr['val']
+                elif prtype=='curve':
+                    curvenumber = prescr['curve']
+                    val = self.ti.timecurves(curvenumber)(self.t_init)
+                else:
+                    raise ValueError("Unknown type to prescribe a variable.")
                 self.s[varindex], self.s_old[varindex] = val, val
 
         self.cardvasc0D.evaluate(self.s_old, self.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)

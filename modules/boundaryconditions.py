@@ -111,9 +111,9 @@ class boundary_cond():
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
             if r['type'] == 'spring':
 
@@ -121,7 +121,7 @@ class boundary_cond():
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                         w += self.vf.deltaW_ext_robin_spring(u, r['stiff'], db_, u_pre)
 
@@ -129,7 +129,7 @@ class boundary_cond():
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                         w += self.vf.deltaW_ext_robin_spring_normal_ref(u, r['stiff'], db_, u_pre)
 
@@ -143,7 +143,7 @@ class boundary_cond():
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                         w     += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], db_)
 
@@ -151,7 +151,7 @@ class boundary_cond():
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                         w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], db_)
 
@@ -175,13 +175,13 @@ class boundary_cond():
             try: bdim_r = m['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
             for i in range(len(m['id'])):
 
-                db_.append(ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree}))
+                db_.append(ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree}))
 
                 w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff)
                 bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff, stress=True))
@@ -201,9 +201,9 @@ class boundary_cond_solid(boundary_cond):
             try: bdim_r = n['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
             if n['dir'] == 'xyz_ref': # reference xyz
 
@@ -219,7 +219,7 @@ class boundary_cond_solid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_ref(func, db_)
 
@@ -237,7 +237,7 @@ class boundary_cond_solid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
 
@@ -255,7 +255,7 @@ class boundary_cond_solid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_cur(self.ki.J(u,ext=True), self.ki.F(u,ext=True), func, db_)
 
@@ -273,7 +273,7 @@ class boundary_cond_solid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_normal_cur(self.ki.J(u,ext=True), self.ki.F(u,ext=True), func, db_)
 
@@ -293,9 +293,9 @@ class boundary_cond_solid(boundary_cond):
             try: bdim_r = n['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
             if n['dir'] == 'xyz_ref': # reference xyz
 
@@ -311,7 +311,7 @@ class boundary_cond_solid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_ref(func, db_)
 
@@ -329,7 +329,7 @@ class boundary_cond_solid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
 
@@ -351,9 +351,9 @@ class boundary_cond_fluid(boundary_cond):
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
             if n['dir'] == 'xyz_cur': # current xyz
 
@@ -369,7 +369,7 @@ class boundary_cond_fluid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_cur(func, db_, Fale=Fale)
 
@@ -388,7 +388,7 @@ class boundary_cond_fluid(boundary_cond):
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                     w += self.vf.deltaW_ext_neumann_normal_cur(func, db_, Fale=Fale)
 
@@ -408,13 +408,13 @@ class boundary_cond_fluid(boundary_cond):
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
             for i in range(len(sn['id'])):
 
-                db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=sn['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=sn['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                 par1 = sn['par1']
                 try: par2 = sn['par2']
@@ -435,9 +435,9 @@ class boundary_cond_fluid(boundary_cond):
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
             if r['type'] == 'dashpot':
 
@@ -445,7 +445,7 @@ class boundary_cond_fluid(boundary_cond):
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                         w += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], db_, Fale=Fale)
 
@@ -453,7 +453,7 @@ class boundary_cond_fluid(boundary_cond):
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                         w += self.vf.deltaW_ext_robin_dashpot_normal_cur(v, r['visc'], db_, Fale=Fale)
 
@@ -468,7 +468,7 @@ class boundary_cond_fluid(boundary_cond):
 
 
     # set Robin valve BCs
-    def robin_valve_bcs(self, bcdict, v, V_real, beta_, a_u_, a_d_, pint_u_, pint_d_, pdict, wel=None, Fale=None):
+    def robin_valve_bcs(self, bcdict, v, V_real, beta_, wel=None, Fale=None):
 
         w = ufl.as_ufl(0)
 
@@ -482,37 +482,104 @@ class boundary_cond_fluid(boundary_cond):
             try: bdim_r = r['bdim_reduction']
             except: bdim_r = 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
 
-            dom_u, dom_d = r['upstream_domain'], r['downstream_domain']
-
-            a_u, a_d, pint_u, pint_d = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             beta_.append( fem.Function(V_real) )
 
             for i in range(len(r['id'])):
 
-                db_ = ufl.dS(domain=self.io.mesh, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                db_ = ufl.dS(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                 w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], db_, fcts='+', w=wel_, Fale=Fale)
+
+        return w
+
+
+    # set flux monitor conditions
+    def flux_monitor_bcs(self, bcdict, v, qdict_, wel=None, Fale=None):
+
+        if wel is None:
+            wel_ = ufl.constantvalue.zero(self.io.mesh.topology.dim)
+        else:
+            wel_ = wel
+
+        for r in bcdict:
+
+            q = ufl.as_ufl(0)
+
+            try: bdim_r = r['bdim_reduction']
+            except: bdim_r = 1
+
+            try: internal = r['internal']
+            except: internal = False
+
+            if internal:
+                try: fcts = r['facet_side']
+                except: fcts = '+'
+            else:
+                fcts = None
+
+            for i in range(len(r['id'])):
+
+                if not internal:
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                else:
+                    db_ = ufl.dS(domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+
+                q += self.vf.flux(v, db_, w=wel_, Fale=Fale, fcts=fcts)
+
+            qdict_.append( fem.form(q) )
+
+
+    # set dp monitor conditions
+    def dp_monitor_bcs(self, bcdict, v, a_u_, a_d_, pint_u_, pint_d_, pdict, wel=None, Fale=None):
+
+        if wel is None:
+            wel_ = ufl.constantvalue.zero(self.io.mesh.topology.dim)
+        else:
+            wel_ = wel
+
+        # area map for integration
+        if Fale is not None:
+            J = ufl.det(Fale)
+            ja = J*ufl.sqrt(ufl.dot(self.vf.n0, (ufl.inv(Fale)*ufl.inv(Fale).T)*self.vf.n0))
+        else:
+            ja = 1.0
+
+        for r in bcdict:
+
+            try: bdim_r = r['bdim_reduction']
+            except: bdim_r = 1
+
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
+
+            dom_u, dom_d = r['upstream_domain'], r['downstream_domain']
+
+            a_u, a_d, pint_u, pint_d = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+
+            for i in range(len(r['id'])):
 
                 db_u_ = ufl.ds(domain=self.io.submshes_emap[dom_u][0], subdomain_data=self.io.sub_mt_b1[dom_u], subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 db_d_ = ufl.ds(domain=self.io.submshes_emap[dom_d][0], subdomain_data=self.io.sub_mt_b1[dom_d], subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                 # area forms
-                a_u += 1.*db_u_
-                a_d += 1.*db_d_
+                a_u += ja*db_u_
+                a_d += ja*db_d_
 
                 # pressure forms
-                pint_u += pdict[dom_u]*db_u_
-                pint_d += pdict[dom_d]*db_d_
+                pint_u += pdict[dom_u]*ja*db_u_
+                pint_d += pdict[dom_d]*ja*db_d_
 
-            # append to lists for later evaluate
-            a_u_.append( fem.form(a_u) )
-            a_d_.append( fem.form(a_d) )
+            # entity maps child to parent
+            em_u = {self.io.mesh : self.io.submshes_emap[dom_u][1]}
+            em_d = {self.io.mesh : self.io.submshes_emap[dom_d][1]}
 
-            pint_u_.append( fem.form(pint_u) )
-            pint_d_.append( fem.form(pint_d) )
+            a_u_.append( fem.form(a_u, entity_maps=em_u) )
+            a_d_.append( fem.form(a_d, entity_maps=em_d) )
 
-        return w
+            pint_u_.append( fem.form(pint_u, entity_maps=em_u) )
+            pint_d_.append( fem.form(pint_d, entity_maps=em_d) )

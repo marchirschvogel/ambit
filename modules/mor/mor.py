@@ -436,11 +436,10 @@ class ModelOrderReduction():
                 # prepare index set list for block iterative solver
                 if col in range(vcs, vce): self.im_rom_r.append(col)
                 # NOTE: We actually do not want to set the columns at once like this, since PETSc may treat close-zero entries as non-zeros
-                # BUT: Needs to be double-checked if this is really slower for large problems!
-                self.V[vrs:vre,col] = self.Phi[vrs:vre,n]
+                # self.V[vrs:vre,col] = self.Phi[vrs:vre,n]
                 # instead, set like this:
-                # for k in range(vrs,vre): # TODO: Find out why setting this way yields to initial NaNs in FrSI testcase, only when run with 2 or 3 cores!
-                #     if not np.isclose(self.Phi[k,n],0.0): self.V[k,col] = self.Phi[k,n]
+                for k in range(vrs,vre): # TODO: Find out why setting this way yields to initial NaNs in FrSI testcase, only when run with 2 or 3 cores!
+                    if not np.isclose(self.Phi[k,n],0.0): self.V[k,col] = self.Phi[k,n]
                 n += 1
 
         self.V.assemble()

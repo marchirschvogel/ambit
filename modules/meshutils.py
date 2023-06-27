@@ -62,7 +62,8 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
 
     d_map = parentmsh.topology.index_map(dim_p)
     all_ent = d_map.size_local + d_map.num_ghosts
-    # Create array with zeros for all entities that are not marked
+
+    # create array with zeros for all entities that are not marked
     all_values = np.zeros(all_ent, dtype=np.int32)
     all_values[mshtags.indices] = mshtags.values
 
@@ -73,7 +74,9 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
     childmsh.topology.create_connectivity(parentmsh.topology.dim, dim_p)
     c_to_e_sub = childmsh.topology.connectivity(parentmsh.topology.dim, dim_p)
     num_sub_ent = subf_map.size_local + subf_map.size_global
-    sub_values = np.empty(num_sub_ent, dtype=np.int32)
+
+    sub_values = np.zeros(num_sub_ent, dtype=np.int32)
+
     for i, entity in enumerate(childmsh_emap):
         parent_ent = c_to_e.links(entity)
         child_ent = c_to_e_sub.links(i)

@@ -163,9 +163,11 @@ class variationalform(variationalform_base):
 
     # flux
     # TeX: \int\limits_{\Gamma} \boldsymbol{n}\cdot\boldsymbol{v}\,\mathrm{d}a
-    def flux(self, v, dboundary, w=None, Fale=None):
-
-        return ufl.dot(self.n, v)*dboundary
+    def flux(self, v, dboundary, w=None, Fale=None, fcts=None):
+        if fcts is None:
+            return ufl.dot(self.n, v)*dboundary
+        else:
+            return (ufl.dot(self.n, v))(fcts)*dboundary
 
 
 
@@ -315,6 +317,10 @@ class variationalform_ale(variationalform):
         J = ufl.det(Fale)
         return func*J*ufl.dot(ufl.inv(Fale).T*self.n0, self.var_v)*dboundary
 
+    def deltaW_ext_neumann_ref(self, func, dboundary):
+
+        return ufl.dot(func, self.var_v)*dboundary
+
     # stabilized Neumann BC - Esmaily Moghadam et al. 2011
     def deltaW_ext_stabilized_neumann_cur(self, v, par1, par2, dboundary, w=None, Fale=None):
         J = ufl.det(Fale)
@@ -369,6 +375,9 @@ class variationalform_ale(variationalform):
     # flux
     # TeX: \int\limits_{\Gamma} (\boldsymbol{v}-\boldsymbol{w})\cdot\boldsymbol{n}\,\mathrm{d}a =
     #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\boldsymbol{w})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
-    def flux(self, v, dboundary, w=None, Fale=None):
+    def flux(self, v, dboundary, w=None, Fale=None, fcts=None):
         J = ufl.det(Fale)
-        return J*ufl.dot(ufl.inv(Fale).T*self.n0, (v-w))*dboundary
+        if fcts is None:
+            return J*ufl.dot(ufl.inv(Fale).T*self.n0, (v-w))*dboundary
+        else:
+            return (J*ufl.dot(ufl.inv(Fale).T*self.n0, (v-w)))(fcts)*dboundary

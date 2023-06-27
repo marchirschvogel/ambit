@@ -48,7 +48,7 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 6,
                             'fluid_formulation'     : 'nonconservative',
-                            'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt'}
+                            'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt']}
 
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}],
                             'fluid_on_deformed'     : 'consistent'}

@@ -22,6 +22,7 @@ class cardiovascular0Dbase(ode):
         ode.__init__(self, init=init, comm=comm)
 
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
+        self.off_io = 0 # offsets for in-/outflows for coupling indices
 
 
     # check for cardiac cycle periodicity
@@ -123,13 +124,14 @@ class cardiovascular0Dbase(ode):
     # set compartment interfaces according to case and coupling quantity (can be volume, flux, or pressure)
     def set_compartment_interfaces(self):
 
-        # first get the number of 3D in- and out-flows in case of 3D-0D fluid coupling
-        num_3dinfl, num_3doutfl = [0]*5, [0]*5
+        # first get the number of in- and out-flows (defaults: 1) in case of 3D-0D fluid coupling
+        # can be zero for a 3D chamber that is linked to another 3D one (e.g. LA and LV)
+        num_infl, num_outfl = [1]*5, [1]*5
         for i, ch in enumerate(['lv','rv','la','ra', 'ao']):
-            try: num_3dinfl[i] = self.chmodels[ch]['num_inflows']
-            except: num_3dinfl[i] = 0
-            try: num_3doutfl[i] = self.chmodels[ch]['num_outflows']
-            except: num_3doutfl[i] = 0
+            try: num_infl[i] = self.chmodels[ch]['num_inflows']
+            except: num_infl[i] = 1
+            try: num_outfl[i] = self.chmodels[ch]['num_outflows'] # actually not used so far...
+            except: num_outfl[i] = 1
 
         # loop over chambers
         for i, ch in enumerate(['lv','rv','la','ra', 'ao']):
@@ -145,20 +147,20 @@ class cardiovascular0Dbase(ode):
             if ch == 'lv': # allow 1 in-flow, 1 ouf-flow for now...
                 ind_i = [0] # q_vin_l
                 ind_o = [3] # q_vout_l
-                if self.chmodels['la']['type']=='3D_fluid': ind_infl[0] += 1
+                if self.chmodels['la']['type']=='3D_fluid': ind_i[0] += 1
             if ch == 'rv': # allow 1 in-flow, 1 ouf-flow for now...
-                ind_i = [9+num_3dinfl[3]] # q_vin_r
-                ind_o = [11+num_3dinfl[3]] # q_vout_r
-                if self.chmodels['ra']['type']=='3D_fluid': ind_infl[0] += 1
+                ind_i = [9+num_infl[3]] # q_vin_r
+                ind_o = [11+num_infl[3]] # q_vout_r
+                if self.chmodels['ra']['type']=='3D_fluid': ind_i[0] += 1
             if ch == 'la': # allow 5 in-flows, 1 ouf-flow for now...
-                ind_i = [15+num_3dinfl[3],16+num_3dinfl[3],17+num_3dinfl[3],18+num_3dinfl[3],19+num_3dinfl[3]] # q_ven,1_pul, ..., q_ven,5_pul
+                ind_i = [16+num_infl[3],17+num_infl[3],18+num_infl[3],19+num_infl[3],20+num_infl[3]] # q_ven,1_pul, ..., q_ven,5_pul
                 ind_o = [1] # q_vin_l
             if ch == 'ra': # allow 5 in-flows, 1 ouf-flow for now...
-                ind_i = [9+num_3dinfl[3],10+num_3dinfl[3],11+num_3dinfl[3],12+num_3dinfl[3],13+num_3dinfl[3],14+num_3dinfl[3]] # q_ven,1_sys, ..., q_ven,5_sys
-                ind_o = [10+num_3dinfl[3]] # q_vin_r
+                ind_i = [9+num_infl[3],10+num_infl[3],11+num_infl[3],12+num_infl[3],13+num_infl[3],14+num_infl[3]] # q_ven,1_sys, ..., q_ven,5_sys
+                ind_o = [10+num_infl[3]] # q_vin_r
             if ch == 'ao': # allow 1 in-flow, 3 ouf-flows for now...
                 ind_i = [2] # q_vout_l
-                ind_o = [16+num_3dinfl[3]+num_3dinfl[2], 20+num_3dinfl[3]+num_3dinfl[2], 5] # q_corp_sys_l_in, q_corp_sys_r_in, q_arp_sys
+                ind_o = [16+num_infl[3]+num_infl[2], 20+num_infl[3]+num_infl[2], 5] # q_corp_sys_l_in, q_corp_sys_r_in, q_arp_sys
 
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i] = 1
@@ -206,6 +208,8 @@ class cardiovascular0Dbase(ode):
                     self.cname.append('p_'+chn)
                     self.si[i] = 1 # switch indices of pressure / outflux
                     self.v_ids.append(self.vindex_ch[i]-self.si[i]) # variable indices for coupling
+                    self.c_ids.append(self.off_io)
+                    self.off_io+=1
                 else:
                     raise NameError("Unknown coupling quantity!")
 
@@ -217,10 +221,23 @@ class cardiovascular0Dbase(ode):
                 for m in range(self.chmodels[ch]['num_inflows']):
                     self.cname.append('p_'+chn+'_i'+str(m+1))
                     self.v_ids.append(ind_i[m])
+                    self.c_ids.append(self.off_io)
+                    self.off_io+=1
                 # add outflow pressures to coupling name prefixes
                 for m in range(self.chmodels[ch]['num_outflows']):
                     self.cname.append('p_'+chn+'_o'+str(m+1))
                     self.v_ids.append(ind_o[m])
+                    self.c_ids.append(self.off_io)
+                    self.off_io+=1
+                # special case:
+                # if we have an LV surrounded by 3D flow domains (LA and AO),
+                # we have to (0D) in-/outflow and hence no coupling pressure;
+                # but if we have a coronary circulation model, we need to pass an integrated
+                # chamber pressure for its correct evaluation, hence we append a p_v_l_o1
+                # to the coupling array
+                if ch=='lv' and self.cormodel:
+                    if self.chmodels['lv']['num_outflows']==0:
+                        self.cname.append('p_v_l_o1')
 
             else:
                 raise NameError("Unknown chamber model for chamber %s!" % (ch))
@@ -293,8 +310,18 @@ class cardiovascular0Dbase(ode):
             for k in range(self.chmodels[ch]['num_outflows'],10):
                 if 'po'+str(k+1) in chvars.keys(): chvars['po'+str(k+1)] = chvars['po1']
 
-            # if no outflow is present, set to zero
-            if self.chmodels[ch]['num_outflows']==0: chvars['po1'] = sp.S.Zero
+            # if no outflow is present, set to zero - except for special case:
+            # if we have an LV surrounded by 3D flow domains (LA and AO),
+            # we have to (0D) in-/outflow and hence no coupling pressure;
+            # but if we have a coronary circulation model, we need to pass an integrated
+            # chamber pressure for its correct evaluation, hence we append a p_v_l_o1
+            # to the coupling array
+            if self.chmodels[ch]['num_outflows']==0:
+                if ch=='lv' and self.cormodel:
+                    self.c_.append(chvars['po1'])
+                    self.c_ids = [x+1 for x in self.c_ids]
+                else:
+                    chvars['po1'] = sp.S.Zero
 
             # now add outflow pressures to coupling array
             for m in range(self.chmodels[ch]['num_outflows']):

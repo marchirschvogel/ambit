@@ -21,7 +21,7 @@ from mathutils import spectral_decomposition_3x3
 
 class IO:
 
-    def __init__(self, io_params, entity_maps, comm):
+    def __init__(self, io_params, entity_maps, comm, entity_maps_s=None):
 
         self.io_params = io_params
 
@@ -61,6 +61,8 @@ class IO:
         # entity map dict - for coupled multiphysics/multimesh problems
         self.entity_maps = entity_maps
 
+        self.entity_maps_s = entity_maps_s
+
         self.comm = comm
 
 
@@ -79,6 +81,10 @@ class IO:
             try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
             except: self.mt_d = None
 
+        # master mesh object (need if fields are actually subdomains, e.g. in FSI)
+        self.mesh_master = self.mesh
+        self.mt_d_master = self.mt_d
+
         # read in xdmf mesh - boundary
 
         # here, we define b1 BCs as BCs associated to a topology one dimension less than the problem (most common),
@@ -93,6 +99,7 @@ class IO:
                 self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+                self.mt_b1_master = self.mt_b1
             except:
                 pass
 
@@ -100,6 +107,7 @@ class IO:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
+                self.mt_b2_master = self.mt_b2
             except:
                 pass
 
@@ -107,6 +115,7 @@ class IO:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b3 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b3')
+                self.mt_b3_master = self.mt_b3
             except:
                 pass
 
@@ -116,6 +125,7 @@ class IO:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+                self.mt_b1_master = self.mt_b1
             except:
                 pass
 
@@ -123,6 +133,7 @@ class IO:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
+                self.mt_b2_master = self.mt_b2
             except:
                 pass
 
@@ -131,19 +142,19 @@ class IO:
 
 
     # some mesh data that we might wanna use in some problems...
-    def set_mesh_fields(self):
+    def set_mesh_fields(self, msh):
 
         # facet normal field
-        self.n0 = ufl.FacetNormal(self.mesh)
+        self.n0 = ufl.FacetNormal(msh)
         # cell diameter
-        self.hd0 = ufl.CellDiameter(self.mesh)
+        self.hd0 = ufl.CellDiameter(msh)
         # cell circumradius
-        self.ro0 = ufl.Circumradius(self.mesh)
+        self.ro0 = ufl.Circumradius(msh)
         # min and max cell edge lengths
-        self.emin0 = ufl.MinCellEdgeLength(self.mesh)
-        self.emax0 = ufl.MaxCellEdgeLength(self.mesh)
+        self.emin0 = ufl.MinCellEdgeLength(msh)
+        self.emax0 = ufl.MaxCellEdgeLength(msh)
         # jacobian determinant
-        self.detj0 = ufl.JacobianDeterminant(self.mesh)
+        self.detj0 = ufl.JacobianDeterminant(msh)
 
 
     def write_output_pre(self, pb, func, t, name):
@@ -681,15 +692,13 @@ class IO_fsi(IO_solid,IO_fluid_ale):
 
     def create_submeshes(self):
 
-        dom_solid, dom_fluid, self.surf_interf = self.io_params['domain_ids_solid'], self.io_params['domain_ids_fluid'], self.io_params['surface_ids_interface']
+        self.dom_solid, self.dom_fluid, self.surf_interf = self.io_params['domain_ids_solid'], self.io_params['domain_ids_fluid'], self.io_params['surface_ids_interface']
 
-        self.msh_emap_solid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == dom_solid])[0:2]
-        self.msh_emap_fluid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == dom_fluid])[0:2]
+        self.msh_emap_solid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == self.dom_solid])[0:2]
+        self.msh_emap_fluid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == self.dom_fluid])[0:2]
 
         # self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
         # self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
-
-        self.msh_emap_lm = mesh.create_submesh(self.mesh, self.mesh.topology.dim-1, self.mt_b1.indices[self.mt_b1.values == self.surf_interf])[0:2]
 
         # TODO: Assert that meshtags start actually from 1 when transferred!
         self.mt_d_solid = meshutils.meshtags_parent_to_child(self.mt_d, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'domain')
@@ -698,9 +707,13 @@ class IO_fsi(IO_solid,IO_fluid_ale):
         self.mt_b1_solid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'boundary')
         self.mt_b1_fluid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_fluid[0], self.msh_emap_fluid[1], self.mesh, 'boundary')
 
-        # needed??
-        self.mesh.topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim-1)
-        self.mesh.topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
+        self.msh_emap_lm = mesh.create_submesh(self.mesh, self.mesh.topology.dim-1, self.mt_b1.indices[self.mt_b1.values == self.surf_interf])[0:2]
+        # self.msh_emap_lm = mesh.create_submesh(self.msh_emap_solid[0], self.msh_emap_solid[0].topology.dim-1, self.mt_b1_solid.indices[self.mt_b1_solid.values == self.surf_interf])[0:2]
+        # self.msh_emap_lm = mesh.create_submesh(self.msh_emap_fluid[0], self.msh_emap_fluid[0].topology.dim-1, self.mt_b1_fluid.indices[self.mt_b1_fluid.values == self.surf_interf])[0:2]
+
+        # # needed??
+        # self.mesh.topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim-1)
+        # self.mesh.topology.create_connectivity(self.mesh.topology.dim-1, self.mesh.topology.dim)
 
         cell_imap = self.mesh.topology.index_map(self.mesh.topology.dim)
         facet_imap = self.mesh.topology.index_map(self.mesh.topology.dim-1)
@@ -719,7 +732,9 @@ class IO_fsi(IO_solid,IO_fluid_ale):
         inv_emap_lm = np.full(num_facets, -1)
         inv_emap_lm[self.msh_emap_lm[1]] = np.arange(len(self.msh_emap_lm[1]))
         self.entity_maps[self.msh_emap_lm[0]] = inv_emap_lm
-
+        #
+        # self.em = {}
+        # self.em[self.msh_emap_lm[0]] = inv_emap_lm
 
         # with io.XDMFFile(self.comm, "sub_tag_solid.xdmf", "w") as xdmf:
         #     xdmf.write_mesh(self.msh_emap_solid[0])

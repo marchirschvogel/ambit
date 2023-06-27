@@ -39,7 +39,9 @@ class AleProblem(problem_base):
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
-
+        # for FSI, we want to specify the subdomains
+        try: domain_ids = self.io.io_params['domain_ids_fluid']
+        except: domain_ids = np.arange(1,self.num_domains+1)
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         try: self.order_disp = fem_params['order_disp']
@@ -48,9 +50,9 @@ class AleProblem(problem_base):
 
         # collect domain data
         self.dx_ = []
-        for n in range(self.num_domains):
+        for i, n in enumerate(domain_ids):
             # integration domains
-            self.dx_.append(ufl.dx(domain=self.io.mesh, subdomain_data=self.io.mt_d, subdomain_id=n+1, metadata={'quadrature_degree': self.quad_degree}))
+            self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
 
         # whether to enforce continuity of mass at midpoint or not
         try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
@@ -169,8 +171,22 @@ class AleProblem(problem_base):
 
     def set_problem_residual_jacobian_forms(self):
 
-        self.res_d = fem.form(self.weakform_d)
-        self.jac_dd = fem.form(self.weakform_lin_dd)
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation for ALE...')
+            sys.stdout.flush()
+
+        if self.io.USE_MIXED_DOLFINX_BRANCH:
+            self.res_d = fem.form(self.weakform_d, entity_maps=self.io.entity_maps)
+            self.jac_dd = fem.form(self.weakform_lin_dd, entity_maps=self.io.entity_maps)
+        else:
+            self.res_d = fem.form(self.weakform_d)
+            self.jac_dd = fem.form(self.weakform_lin_dd)
+
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation for ALE finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
 
 
     def assemble_residual_stiffness(self, t, subsolver=None):

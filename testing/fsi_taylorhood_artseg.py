@@ -16,37 +16,35 @@ def main():
 
     IO_PARAMS            = {'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
-                            'write_results_every'   : -999,
+                            'write_results_every'   : 1,
                             'output_path'           : basepath+'/tmp/',
-                            'simname'               : 'test',
-                            'mesh_domain'           : basepath+'/input/artseg-fsi-quad_domain.xdmf',
-                            'mesh_boundary'         : basepath+'/input/artseg-fsi-quad_boundary.xdmf',
-                            'results_to_write'      : [['displacement','pressure'], [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']]],
+                            'mesh_domain'           : basepath+'/input/artseg-fsi-hex-quad_domain.xdmf',
+                            'mesh_boundary'         : basepath+'/input/artseg-fsi-hex-quad_boundary.xdmf',
+                            'results_to_write'      : [['displacement'], [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']]],
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
-                            'surface_ids_interface' : [1]
+                            'surface_ids_interface' : [1],
+                            'simname'               : 'fsi_taylorhood_artseg',
                             }
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'direct_solver'         : 'mumps',
-                            'tol_res'               : [1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-1],
+                            'tol_res'               : [1.0e-6,1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1,1.0e-3,1.0e-3,1.0e-1]}
-                            #'tol_res'               : [1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-1],
-                            #'tol_inc'               : [1.0e-1,1.0e-1,1.0e-3,1.0e-3,1.0e-1]}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 100,
-                            'numstep_stop'          : 1,
+                            #'numstep_stop'          : 1,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
     TIME_PARAMS_FLUID    = {'maxtime'               : 1.0,
                             'numstep'               : 100,
-                            'numstep_stop'          : 1,
+                            #'numstep_stop'          : 1,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
-    FEM_PARAMS_SOLID     = {'order_disp'            : 2, # 2
+    FEM_PARAMS_SOLID     = {'order_disp'            : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'incompressible_2field' : True}
@@ -59,7 +57,8 @@ def main():
                             'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
                             'fluid_on_deformed'     : 'consistent'}
 
-    MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 10.},
+    MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 100.},
+                                      #'sussmanbathe_vol'  : {'kappa' :500.},
                                       'inertia'           : {'rho0' : 1.0e-6},
                                       'visco_green'       : {'eta' : 0.1}}}
 
@@ -76,13 +75,24 @@ def main():
         def tc1(self, t):
             t_ramp = 2.0
             p0 = 0.0
-            pinfl = 0.#5.0
+            pinfl = 0.1
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
-    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    #BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
+                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+
+    #BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
+                             #'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+
+    #BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
+                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+
+
+    BC_DICT_SOLID        = { 'robin' : [{'type' : 'spring', 'id' : [2,3,4,5], 'dir' : 'normal_ref', 'stiff' : 1e5}]}
 
     BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
                              'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},

@@ -112,14 +112,9 @@ class FluidmechanicsFlow0DProblem():
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                if self.pbf.alevar['w'] is None:
-                    fluxvel, fluxvel_old = self.pbf.v, self.pbf.v_old
-                else: # we need the relative velocity here
-                    fluxvel, fluxvel_old = self.pbf.v - self.pbf.alevar['w'], self.pbf.v_old - self.pbf.alevar['w_old']
-
                 ds_vq = ufl.ds(subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbf.quad_degree})
-                cq_ += self.pbf.vf.flux(fluxvel, ds_vq, w=self.pbf.alevar['w'], Fale=self.pbf.alevar['Fale'])
-                cq_old_ += self.pbf.vf.flux(fluxvel_old, ds_vq, w=self.pbf.alevar['w_old'], Fale=self.pbf.alevar['Fale_old'])
+                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], Fale=self.pbf.alevar['Fale'])
+                cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], Fale=self.pbf.alevar['Fale_old'])
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
@@ -166,7 +161,10 @@ class FluidmechanicsFlow0DProblem():
         lm_sq = allgather_vec(self.lm, self.comm)
 
         for i in range(self.num_coupling_surf):
-            self.pb0.c[i] = lm_sq[i]
+            self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
+
+        # point auxdata dict to dict of integral evaluations (fluxes, pressures) in case needed by 0D
+        self.pb0.auxdata['q'] = self.pbf.qv_
 
         subsolver.newton(t, print_iter=self.print_subiter, sub=True)
 
@@ -216,15 +214,21 @@ class FluidmechanicsFlow0DProblem():
         K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_lm.setUp()
 
+        # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
+        if bool(self.pb0.chamber_models):
+            if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
+                dp_id = self.pb0.chamber_models['lv']['dp_monitor_id']
+                self.pb0.c[0] = self.pbf.pu_[dp_id]
+
         # finite differencing for LM siffness matrix
         for i in range(self.num_coupling_surf):
             for j in range(self.num_coupling_surf):
 
-                self.pb0.c[j] = lm_sq[j] + self.eps_fd # perturbed LM
+                self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] + self.eps_fd # perturbed LM
                 subsolver.newton(t, print_iter=False)
                 s_pert_sq = allgather_vec(self.pb0.s, self.comm)
                 K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
-                self.pb0.c[j] = lm_sq[j] # restore LM
+                self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] # restore LM
 
         # restore df, f, and aux vectors for correct time step update
         self.pb0.df.axpby(1.0, 0.0, df_tmp)
@@ -349,6 +353,13 @@ class FluidmechanicsFlow0DProblem():
         self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
 
         self.pb0.c, self.constr, self.constr_old = [], [], []
+
+        # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
+        if bool(self.pb0.chamber_models):
+            if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
+                dp_id = self.pb0.chamber_models['lv']['dp_monitor_id']
+                self.pb0.c.append(self.pbf.pu_[dp_id])
+
         for i in range(self.num_coupling_surf):
             lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
             self.pb0.c.append(lm_sq[i])
@@ -371,8 +382,18 @@ class FluidmechanicsFlow0DProblem():
         if bool(self.pb0.prescribed_variables):
             for a in self.pb0.prescribed_variables:
                 varindex = self.pb0.cardvasc0D.varmap[a]
-                curvenumber = self.pb0.prescribed_variables[a]
-                val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                prescr = self.pb0.prescribed_variables[a]
+                prtype = list(prescr.keys())[0]
+                if prtype=='val':
+                    val = prescr['val']
+                elif prtype=='curve':
+                    curvenumber = prescr['curve']
+                    val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                elif prtype=='flux_monitor':
+                    monid = prescr['flux_monitor']
+                    val = self.pbf.qv_[monid]
+                else:
+                    raise ValueError("Unknown type to prescribe a variable.")
                 self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
 
         # initially evaluate 0D model at old state
@@ -478,7 +499,10 @@ class FluidmechanicsFlow0DSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            if self.pb.pbf.io.USE_MIXED_DOLFINX_BRANCH:
+                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
+            else:
+                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
 
