@@ -654,12 +654,6 @@ class FluidmechanicsProblem(problem_base):
 
     def assemble_residual_stiffness(self, t, subsolver=None):
 
-        # if self.have_flux_monitor:
-        #     self.evaluate_flux_monitor(prnt=False)
-
-        # if self.have_dp_monitor:
-        #     self.evaluate_dp_monitor(prnt=False)
-
         # NOTE: we do not linearize integrated pressure-dependent valves w.r.t. p,
         # hence evaluation within the nonlinear solver loop may cause convergence problems
         # (linearization would mean that every velocity at the valve surface depends

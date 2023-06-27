@@ -21,7 +21,7 @@ from mathutils import spectral_decomposition_3x3
 
 class IO:
 
-    def __init__(self, io_params, entity_maps, comm, entity_maps_s=None):
+    def __init__(self, io_params, entity_maps, comm):
 
         self.io_params = io_params
 
@@ -60,8 +60,6 @@ class IO:
 
         # entity map dict - for coupled multiphysics/multimesh problems
         self.entity_maps = entity_maps
-
-        self.entity_maps_s = entity_maps_s
 
         self.comm = comm
 

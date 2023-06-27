@@ -231,7 +231,7 @@ class cardiovascular0Dbase(ode):
                     self.off_io+=1
                 # special case:
                 # if we have an LV surrounded by 3D flow domains (LA and AO),
-                # we have to (0D) in-/outflow and hence no coupling pressure;
+                # we have no (0D) in-/outflow and hence no coupling pressure;
                 # but if we have a coronary circulation model, we need to pass an integrated
                 # chamber pressure for its correct evaluation, hence we append a p_v_l_o1
                 # to the coupling array
@@ -312,7 +312,7 @@ class cardiovascular0Dbase(ode):
 
             # if no outflow is present, set to zero - except for special case:
             # if we have an LV surrounded by 3D flow domains (LA and AO),
-            # we have to (0D) in-/outflow and hence no coupling pressure;
+            # we have no (0D) in-/outflow and hence no coupling pressure;
             # but if we have a coronary circulation model, we need to pass an integrated
             # chamber pressure for its correct evaluation, hence we append a p_v_l_o1
             # to the coupling array

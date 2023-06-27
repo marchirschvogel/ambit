@@ -515,22 +515,37 @@ class boundary_cond_fluid(boundary_cond):
             try: internal = r['internal']
             except: internal = False
 
+            try: on_subdomain = r['on_subdomain']
+            except: on_subdomain = False
+
             if internal:
+                assert(not on_subdomain)
                 try: fcts = r['facet_side']
                 except: fcts = '+'
             else:
                 fcts = None
 
+            if on_subdomain:
+                dom_u = r['domain']
+
             for i in range(len(r['id'])):
 
                 if not internal:
-                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    if not on_subdomain:
+                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
+                    else:
+                        db_ = ufl.ds(domain=self.io.submshes_emap[dom_u][0], subdomain_data=self.io.sub_mt_b1[dom_u], subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
                 else:
                     db_ = ufl.dS(domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
 
                 q += self.vf.flux(v, db_, w=wel_, Fale=Fale, fcts=fcts)
 
-            qdict_.append( fem.form(q) )
+            if on_subdomain:
+                # entity map child to parent
+                em_u = {self.io.mesh : self.io.submshes_emap[dom_u][1]}
+                qdict_.append( fem.form(q, entity_maps=em_u) )
+            else:
+                qdict_.append( fem.form(q) )
 
 
     # set dp monitor conditions
