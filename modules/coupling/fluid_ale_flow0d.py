@@ -75,7 +75,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
         self.set_variational_forms()
 
-        self.numdof = self.pbf.numdof + self.lm.getSize() + self.pba.numdof
+        self.numdof = self.pbf.numdof + self.pbf0.lm.getSize() + self.pba.numdof
         # fluid is 'master' problem - define problem variables based on its values
         self.simname = self.pbf.simname
         self.restart_step = self.pbf.restart_step
@@ -91,7 +91,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
         if self.pbf0.pbf.num_dupl > 1: is_ghosted = [1, 2, 0, 1]
         else:                          is_ghosted = [1, 1, 0, 1]
-        return [self.pbf0.pbf.v.vector, self.pbf0.pbf.p.vector, self.pbf0.lm, self.pba.d.vector], is_ghosted
+        return [self.pbf.v.vector, self.pbf.p.vector, self.pbf0.lm, self.pba.d.vector], is_ghosted
 
 
     def set_variational_forms(self):
