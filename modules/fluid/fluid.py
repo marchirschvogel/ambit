@@ -228,7 +228,7 @@ class FluidmechanicsProblem(problem_base):
             for mp in range(self.num_dupl):
                 val = self.initial_fluid_pressure[mp]
                 self.p_[mp].vector.set(val)
-                self.p_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                self.p_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # own read function: requires plain txt format of type "node-id val-x val-y val-z"
         if bool(self.prestress_from_file):
