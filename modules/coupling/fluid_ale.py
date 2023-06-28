@@ -111,7 +111,7 @@ class FluidmechanicsAleProblem():
 
                     # NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
 
-                    fdi = set(gather_surface_dof_indices(self.pba.io, self.pba.V_d, ids_fluid_ale, self.comm))
+                    # fdi = set(gather_surface_dof_indices(self.pba.io, self.pba.V_d, ids_fluid_ale, self.comm))
 
                     # # fluid and ALE actually should have same sizes...
                     # locmatsize_d = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
@@ -262,7 +262,7 @@ class FluidmechanicsAleProblem():
             self.ufa.vector.axpby(1.0, 0.0, uf_vec)
             self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             uf_vec.destroy()
-            # K_list[2][0] = self.K_dv
+            K_list[2][0] = self.K_dv
         if self.have_weak_dirichlet_fluid_ale:
             K_dv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
             K_dv.assemble()

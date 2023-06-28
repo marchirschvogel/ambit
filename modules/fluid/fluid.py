@@ -242,7 +242,7 @@ class FluidmechanicsProblem(problem_base):
         # dictionaries of internal variables
         self.internalvars, self.internalvars_old = {}, {}
 
-        self.numdof = self.v.vector.getSize() + self.p_[0].vector.getSize()
+        self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
         if self.have_rom:
             import mor
