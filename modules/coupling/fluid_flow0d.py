@@ -69,7 +69,7 @@ class FluidmechanicsFlow0DProblem():
 
         self.set_variational_forms()
 
-        self.numdof = self.pbf.numdof + self.pb0.numdof
+        self.numdof = self.pbf.numdof + self.lm.getSize()
         # fluid is 'master' problem - define problem variables based on its values
         self.simname = self.pbf.simname
         self.restart_step = self.pbf.restart_step

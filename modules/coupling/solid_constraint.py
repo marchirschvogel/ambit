@@ -51,7 +51,7 @@ class SolidmechanicsConstraintProblem():
 
         self.set_variational_forms_and_jacobians()
 
-        self.numdof = self.pbs.numdof + 1
+        self.numdof = self.pbs.numdof + self.lm.getSize()
         # solid is 'master' problem - define problem variables based on its values
         self.simname = self.pbs.simname
         self.restart_step = self.pbs.restart_step

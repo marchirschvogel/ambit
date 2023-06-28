@@ -84,7 +84,13 @@ class SolidmechanicsFlow0DProblem():
 
         self.set_variational_forms()
 
-        self.numdof = self.pbs.numdof + self.pb0.numdof
+        if self.coupling_type == 'monolithic_direct':
+            self.numdof = self.pbs.numdof + self.pb0.numdof
+        elif self.coupling_type == 'monolithic_lagrange':
+            self.numdof = self.pbs.numdof + self.lm.getSize()
+        else:
+            raise ValueError("Unknown coupling type!")
+
         # solid is 'master' problem - define problem variables based on its values
         self.simname = self.pbs.simname
         self.restart_step = self.pbs.restart_step
