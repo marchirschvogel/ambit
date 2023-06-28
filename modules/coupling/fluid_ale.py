@@ -262,7 +262,7 @@ class FluidmechanicsAleProblem():
             self.ufa.vector.axpby(1.0, 0.0, uf_vec)
             self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             uf_vec.destroy()
-            K_list[2][0] = self.K_dv
+            #K_list[2][0] = self.K_dv
         if self.have_weak_dirichlet_fluid_ale:
             K_dv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
             K_dv.assemble()
