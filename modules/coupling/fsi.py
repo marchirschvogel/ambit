@@ -351,8 +351,7 @@ class FSIProblem():
 
     def write_restart(self, sname, N):
 
-        self.pbs.io.write_restart(self.pbs, N)
-        self.pbfa.io.write_restart(self.pbs, N)
+        self.io.write_restart(self, N)
 
         # self.write_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
 
@@ -411,11 +410,6 @@ class FSISolver(solver_base):
             else:
                 res_a_fluid, jac_aa_fluid = fem.form(weakform_a_fluid), fem.form(weakform_lin_aa_fluid)
             self.solnln.solve_consistent_ini_acc(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
-
-        # print(self.pb.pbs.a_old.vector[:])
-        # print(self.pb.pbf.a_old.vector[:])
-        # sys.exit()
-
 
 
     def solve_nonlinear_problem(self, t):

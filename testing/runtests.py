@@ -58,6 +58,8 @@ if solid:
 
     errs['solid_robin_static_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_static_prestress.py'])
     errs['solid_robin_static_prestress 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_static_prestress.py'])
+    
+    errs['solid_divcont_ptc 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_divcont_ptc.py'])
 
     errs['solid_growth_volstressmandel 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel.py'])
     errs['solid_growth_volstressmandel 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_growth_volstressmandel.py'])
@@ -139,7 +141,8 @@ if frsi:
     errs['frsi_artseg_prefile 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile.py'])
 
     errs['frsi_artseg_partition 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_partition.py'])
-    errs['frsi_artseg_partition 2'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_partition.py'])
+    errs['frsi_artseg_partition 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'frsi_artseg_partition.py'])
+    errs['frsi_artseg_partition 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'frsi_artseg_partition.py', str(2)])
 
     errs['frsi_artseg_prefile_iterative 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'frsi_artseg_prefile_iterative.py'])
 

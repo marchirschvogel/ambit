@@ -298,8 +298,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
     def write_restart(self, sname, N):
 
-        self.pbf0.write_restart(sname, N)
-        self.pba.write_restart(sname, N)
+        self.io.write_restart(self, N)
 
 
     def check_abort(self, t):

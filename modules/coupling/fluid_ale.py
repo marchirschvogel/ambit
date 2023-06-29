@@ -362,9 +362,10 @@ class FluidmechanicsAleProblem():
 
     def read_restart(self, sname, N):
 
-        # fluid + ALE problem
-        self.pbf.read_restart(sname, N)
-        self.pba.read_restart(sname, N)
+        # read restart information
+        if self.restart_step > 0:
+            self.io.readcheckpoint(self, N)
+            self.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -434,8 +435,7 @@ class FluidmechanicsAleProblem():
 
     def write_restart(self, sname, N):
 
-        self.pbf.write_restart(sname, N)
-        self.pba.write_restart(sname, N)
+        self.io.write_restart(self, N)
 
 
     def check_abort(self, t):

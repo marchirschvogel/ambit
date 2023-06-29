@@ -57,7 +57,8 @@ class SolidmechanicsProblem(problem_base):
         try: self.order_pres = fem_params['order_pres']
         except: self.order_pres = 1
         self.quad_degree = fem_params['quad_degree']
-        self.incompressible_2field = fem_params['incompressible_2field']
+        try: self.incompressible_2field = fem_params['incompressible_2field']
+        except: self.incompressible_2field = False
 
         # whether to enforce continuity of mass at midpoint or not - only relevant for incompressible_2field option
         try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']

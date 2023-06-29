@@ -18,9 +18,15 @@ def main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS            = {'problem_type'          : 'fluid_ale',
                             'use_model_order_red'   : True,
                             'write_results_every'   : 1,
+                            'write_restart_every'   : 2,
+                            'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',

@@ -133,7 +133,8 @@ class timeintegration_solid(timeintegration):
 
             self.theta_ost = time_params['theta_ost']
 
-        self.incompressible_2field = fem_params['incompressible_2field']
+        try: self.incompressible_2field = fem_params['incompressible_2field']
+        except: self.incompressible_2field = False
 
 
     def set_acc_vel(self, u, u_old, v_old, a_old):

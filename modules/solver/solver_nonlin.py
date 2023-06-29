@@ -545,7 +545,7 @@ class solver_nonlinear:
                     self.PTC = True
                     # reset Newton step
                     it, k_PTC = 0, self.k_PTC_initial
-                    k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
+                    if counter_adapt>0: k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
                     for n in range(self.nfields):
                         self.reset_step(self.x[n], x_start[n], self.is_ghosted[n])
                     counter_adapt += 1

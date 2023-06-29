@@ -417,7 +417,8 @@ class IO_solid(IO):
 
     def readcheckpoint(self, pb, N_rest):
 
-        vecs_to_read = {pb.u : 'u'}
+        vecs_to_read = {}
+        vecs_to_read[pb.u] = 'u'
         if pb.incompressible_2field:
             vecs_to_read[pb.p] = 'p'
         if pb.have_growth:
@@ -460,7 +461,8 @@ class IO_solid(IO):
 
     def writecheckpoint(self, pb, N):
 
-        vecs_to_write = {pb.u : 'u'}
+        vecs_to_write = {}
+        vecs_to_write[pb.u] = 'u'
         if pb.incompressible_2field:
             vecs_to_write[pb.p] = 'p'
         if pb.have_growth:
@@ -562,37 +564,42 @@ class IO_fluid(IO):
                         raise NameError("Unknown output to write for fluid mechanics!")
 
 
-    def readcheckpoint(self, pb):
+    def readcheckpoint(self, pb, N_rest):
 
-        vecs_to_read = {'v' : pb.v}
-        vecs_to_read = {'p' : pb.p}
-        vecs_to_read = {'v_old' : pb.v_old}
-        vecs_to_read = {'a_old' : pb.a_old}
-        vecs_to_read = {'p_old' : pb.p_old}
+        vecs_to_read = {}
+        vecs_to_read[pb.v] = 'v'
+        vecs_to_read[pb.p] = 'p'
+        vecs_to_read[pb.v_old] = 'v_old'
+        vecs_to_read[pb.a_old] = 'a_old'
+        vecs_to_read[pb.p_old] = 'p_old'
+        vecs_to_read[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
 
         for key in vecs_to_read:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-            vecs_to_read[key].vector.load(viewer)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            key.vector.load(viewer)
 
-            vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def writecheckpoint(self, pb, N):
 
-        vecs_to_write = {'v' : pb.v}
-        vecs_to_write = {'p' : pb.p}
-        vecs_to_write = {'v_old' : pb.v_old}
-        vecs_to_write = {'a_old' : pb.a_old}
-        vecs_to_write = {'p_old' : pb.p_old}
+        vecs_to_write = {}
+        vecs_to_write[pb.v] = 'v'
+        vecs_to_write[pb.p] = 'p'
+        vecs_to_write[pb.v_old] = 'v_old'
+        vecs_to_write[pb.a_old] = 'a_old'
+        vecs_to_write[pb.p_old] = 'p_old'
+        vecs_to_write[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
 
         for key in vecs_to_write:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            key.vector.view(viewer)
 
 
 
@@ -628,29 +635,36 @@ class IO_ale(IO):
                         raise NameError("Unknown output to write for ALE mechanics!")
 
 
-    def readcheckpoint(self, pb):
+    def readcheckpoint(self, pb, N_rest):
 
-        vecs_to_read = {'u' : pb.d}
+        vecs_to_read = {}
+        vecs_to_read[pb.d] = 'd'
+        vecs_to_read[pb.d_old] = 'd_old'
+        vecs_to_read[pb.w_old] = 'w_old'
 
         for key in vecs_to_read:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(self.restart_step)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-            vecs_to_read[key].vector.load(viewer)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+            key.vector.load(viewer)
 
-            vecs_to_read[key].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def writecheckpoint(self, pb, N):
 
-        vecs_to_write = {'u' : pb.d}
+        vecs_to_write = {}
+        vecs_to_write[pb.d] = 'd'
+        vecs_to_write[pb.d_old] = 'd_old'
+        vecs_to_write[pb.w_old] = 'w_old'
 
         for key in vecs_to_write:
 
             # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
             # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+key+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+            key.vector.view(viewer)
 
 
 class IO_fluid_ale(IO_fluid,IO_ale):
@@ -660,15 +674,17 @@ class IO_fluid_ale(IO_fluid,IO_ale):
         IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)
         IO_ale.write_output(self, pb.pba, writemesh=writemesh, N=N, t=t)
 
-    def readcheckpoint(self, pb):
+    def readcheckpoint(self, pb, N_rest):
 
-        IO_fluid.readcheckpoint(self, pb.pbf)
-        IO_ale.readcheckpoint(self, pb.pba)
+        IO_fluid.readcheckpoint(self, pb.pbf, N_rest)
+        IO_ale.readcheckpoint(self, pb.pba, N_rest)
 
-    def writecheckpoint(self, pb, N):
+    def write_restart(self, pb, N):
 
-        IO_fluid.writecheckpoint(self, pb.pbf, N)
-        IO_ale.writecheckpoint(self, pb.pba, N)
+        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+
+            IO_fluid.writecheckpoint(self, pb.pbf, N)
+            IO_ale.writecheckpoint(self, pb.pba, N)
 
 
 class IO_fsi(IO_solid,IO_fluid_ale):
@@ -678,15 +694,17 @@ class IO_fsi(IO_solid,IO_fluid_ale):
         IO_solid.write_output(self, pb.pbs, writemesh=writemesh, N=N, t=t)
         IO_fluid_ale.write_output(self, pb.pbfa, writemesh=writemesh, N=N, t=t)
 
-    def readcheckpoint(self, pb):
+    def readcheckpoint(self, pb, N_rest):
 
-        IO_solid.readcheckpoint(self, pb)
-        IO_fluid_ale.readcheckpoint(self, pb)
+        IO_solid.readcheckpoint(self, pb.pbs, N_rest)
+        IO_fluid_ale.readcheckpoint(self, pb.pbfa, N_rest)
 
-    def writecheckpoint(self, pb, N):
+    def write_restart(self, pb, N):
 
-        IO_solid.writecheckpoint(self, pb, N)
-        IO_fluid_ale.writecheckpoint(self, pb, N)
+        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+
+            IO_solid.writecheckpoint(self, pb.pbs, N)
+            IO_fluid_ale.writecheckpoint(self, pb.pbfa, N)
 
     def create_submeshes(self):
 
