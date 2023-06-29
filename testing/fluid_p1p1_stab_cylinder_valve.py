@@ -7,6 +7,7 @@
 # - 2 material domains in fluid (w/ same parameters though)
 # - closed internal valve, requiring duplicate pressure nodes at that internal surface
 # - works currently only with mixed dolfinx branch (USE_MIXED_DOLFINX_BRANCH)
+# - checkpoint writing of domain-wise discontinuous pressure field
 
 import ambit
 
@@ -20,7 +21,10 @@ import resultcheck
 def main():
     
     basepath = str(Path(__file__).parent.absolute())
-    
+
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
 
     IO_PARAMS           = {'problem_type'          : 'fluid',
                            'USE_MIXED_DOLFINX_BRANCH' : True,
@@ -28,6 +32,8 @@ def main():
                            'mesh_domain'           : basepath+'/input/cylinder_domain.xdmf',
                            'mesh_boundary'         : basepath+'/input/cylinder_boundary.xdmf',
                            'write_results_every'   : 1,
+                           'write_restart_every'   : 9,
+                           'restart_step'          : restart_step,
                            'output_path'           : basepath+'/tmp/',
                            'results_to_write'      : ['velocity','pressure'],
                            'simname'               : 'fluid_p1p1_stab_cylinder_valve'}

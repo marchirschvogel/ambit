@@ -568,11 +568,18 @@ class IO_fluid(IO):
 
         vecs_to_read = {}
         vecs_to_read[pb.v] = 'v'
-        vecs_to_read[pb.p] = 'p'
         vecs_to_read[pb.v_old] = 'v_old'
         vecs_to_read[pb.a_old] = 'a_old'
-        vecs_to_read[pb.p_old] = 'p_old'
         vecs_to_read[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
+
+        # pressure may be discontinuous across domains
+        if bool(self.duplicate_mesh_domains):
+            for mp in self.duplicate_mesh_domains:
+                vecs_to_read[pb.p__[mp]] = 'p'+str(mp)
+                vecs_to_read[pb.p_old__[mp]] = 'p_old'+str(mp)
+        else:
+            vecs_to_read[pb.p] = 'p'
+            vecs_to_read[pb.p_old] = 'p_old'
 
         for key in vecs_to_read:
 
@@ -588,11 +595,18 @@ class IO_fluid(IO):
 
         vecs_to_write = {}
         vecs_to_write[pb.v] = 'v'
-        vecs_to_write[pb.p] = 'p'
         vecs_to_write[pb.v_old] = 'v_old'
         vecs_to_write[pb.a_old] = 'a_old'
-        vecs_to_write[pb.p_old] = 'p_old'
         vecs_to_write[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
+
+        # pressure may be discontinuous across domains
+        if bool(self.duplicate_mesh_domains):
+            for mp in self.duplicate_mesh_domains:
+                vecs_to_write[pb.p__[mp]] = 'p'+str(mp)
+                vecs_to_write[pb.p_old__[mp]] = 'p_old'+str(mp)
+        else:
+            vecs_to_write[pb.p] = 'p'
+            vecs_to_write[pb.p_old] = 'p_old'
 
         for key in vecs_to_write:
 
