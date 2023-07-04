@@ -18,7 +18,7 @@ import expression
 from projection import project
 from mpiroutines import allgather_vec
 
-from solid import SolidmechanicsProblem, SolidmechanicsSolver
+from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from flow0d import Flow0DProblem
 from base import solver_base
 import preconditioner
@@ -681,7 +681,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
             except: pass
             try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
             except: pass
-            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, solver_params_prestr)
+            self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, solver_params_prestr)
 
 
     def solve_initial_state(self):

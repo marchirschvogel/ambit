@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys, math
+import time, sys, copy
 import numpy as np
 from dolfinx import fem
 import ufl
@@ -19,6 +19,7 @@ from mpiroutines import allgather_vec
 
 from fluid_ale import FluidmechanicsAleProblem
 from fluid_flow0d import FluidmechanicsFlow0DProblem
+from fluid import FluidmechanicsSolverPrestr
 from ale import AleProblem
 from base import solver_base
 from meshutils import gather_surface_dof_indices
@@ -333,8 +334,26 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
+        if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
+            # initialize solid mechanics solver
+            solver_params_prestr = copy.deepcopy(self.solver_params)
+            # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
+            try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
+            except: pass
+            try: solver_params_prestr['block_precond'] = self.solver_params['block_precond_prestr']
+            except: pass
+            try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
+            except: pass
+            self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, solver_params_prestr)
+
 
     def solve_initial_state(self):
+
+        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
+        if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
+            # solve solid prestress problem
+            self.solverprestr.solve_initial_prestress()
+            self.solverprestr.solnln.ksp.destroy()
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:

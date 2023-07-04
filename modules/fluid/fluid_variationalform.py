@@ -107,6 +107,12 @@ class variationalform(variationalform_base):
 
         return func*ufl.dot(self.n, self.var_v)*dboundary
 
+    # Neumann load in reference normal direction - coincides with reference normal in Eulerian fluid mechanics
+    # TeX: \int\limits_{\Gamma_0} p\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
+    def deltaW_ext_neumann_normal_ref(self, func, dboundary):
+
+        return func*ufl.dot(self.n, self.var_v)*dboundary
+
     # body force external virtual power
     # TeX: \int\limits_{\Omega} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{v}\,\mathrm{d}V
     def deltaW_ext_bodyforce(self, func, funcdir, ddomain, Fale=None):

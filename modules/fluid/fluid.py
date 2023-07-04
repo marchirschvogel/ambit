@@ -236,12 +236,12 @@ class FluidmechanicsProblem(problem_base):
 
         # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
-            self.io.readfunction(self.uf_pre, self.V_v, self.prestress_from_file[0])
+            self.io.readfunction(self.uf_pre, self.prestress_from_file[0])
             # if available, we might want to read in the pressure field, too
             if len(self.prestress_from_file)>1:
                 assert(self.num_dupl==1) # TODO: Find a good way to read in if pressure domain is split!
-                self.io.readfunction(self.p_[0], self.V_p_[0], self.prestress_from_file[1])
-                self.io.readfunction(self.p_old_[0], self.V_p_[0], self.prestress_from_file[1])
+                self.io.readfunction(self.p_[0], self.prestress_from_file[1])
+                self.io.readfunction(self.p_old_[0], self.prestress_from_file[1])
 
         # dictionaries of internal variables
         self.internalvars, self.internalvars_old = {}, {}
@@ -439,7 +439,7 @@ class FluidmechanicsProblem(problem_base):
                 #self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
                 self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
             if 'neumann_prestress' in self.bc_dict.keys():
-                w_neumann_prestr = self.bc.neumann_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
@@ -549,14 +549,20 @@ class FluidmechanicsProblem(problem_base):
 
         if self.prestress_initial:
             # prestressing weak forms
-            self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pp = ufl.as_ufl(0), ufl.as_ufl(0)
+            self.weakform_prestress_p, self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pv, self.weakform_lin_prestress_pp = [], [], [], []
             self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
-            self.weakform_prestress_p = self.deltaW_p
-            for j in range(self.num_dupl): self.weakform_lin_prestress_vp += ufl.derivative(self.weakform_prestress_v, self.p_[j], self.dp_[j])
-            self.weakform_lin_prestress_pv = ufl.derivative(self.weakform_prestress_p, self.v, self.dv)
+            for n in range(self.num_domains):
+                self.weakform_prestress_p.append( self.deltaW_p[n] )
+            for j in range(self.num_dupl):
+                self.weakform_lin_prestress_vp.append( ufl.derivative(self.weakform_prestress_v, self.p_[j], self.dp_[j]) )
+            for n in range(self.num_domains):
+                self.weakform_lin_prestress_pv.append( ufl.derivative(self.weakform_prestress_p[n], self.v, self.dv) )
             if self.stabilization is not None:
-                for j in range(self.num_dupl): self.weakform_lin_prestress_pp += ufl.derivative(self.weakform_prestress_p, self.p_[j], self.dp_[j])
+                for n in range(self.num_domains):
+                    if self.num_dupl==1: j=0
+                    else: j=n
+                    self.weakform_lin_prestress_pp.append( ufl.derivative(self.weakform_prestress_p, self.p_[j], self.dp_[j]) )
 
 
     # active stress ODE evaluation - for reduced solid model
@@ -593,11 +599,18 @@ class FluidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
         if not bool(self.io.duplicate_mesh_domains):
-            self.weakform_p = sum(self.weakform_p)
-            self.weakform_lin_vp = sum(self.weakform_lin_vp)
-            self.weakform_lin_pv = sum(self.weakform_lin_pv)
-            if self.stabilization is not None:
-                self.weakform_lin_pp = sum(self.weakform_lin_pp)
+            if not self.prestress_initial or self.restart_step > 0:
+                self.weakform_p = sum(self.weakform_p)
+                self.weakform_lin_vp = sum(self.weakform_lin_vp)
+                self.weakform_lin_pv = sum(self.weakform_lin_pv)
+                if self.stabilization is not None:
+                    self.weakform_lin_pp = sum(self.weakform_lin_pp)
+            else:
+                self.weakform_prestress_p = sum(self.weakform_prestress_p)
+                self.weakform_lin_prestress_vp = sum(self.weakform_lin_prestress_vp)
+                self.weakform_lin_prestress_pv = sum(self.weakform_lin_prestress_pv)
+                if self.stabilization is not None:
+                    self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
 
         if not self.prestress_initial or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
@@ -643,9 +656,10 @@ class FluidmechanicsProblem(problem_base):
                         self.jac_pv_.append([self.jac_pv[j]])
                 if self.stabilization is not None:
                     self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.io.entity_maps)
-                    self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
-                    for j in range(self.num_dupl):
-                        self.jac_pp_[j][j] = self.jac_pp[j]
+                    if self.num_dupl > 1:
+                        self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
+                        for j in range(self.num_dupl):
+                            self.jac_pp_[j][j] = self.jac_pp[j]
             else:
                 self.res_v  = fem.form(self.weakform_prestress_v)
                 self.res_p  = fem.form(self.weakform_prestress_p)
@@ -985,6 +999,8 @@ class FluidmechanicsSolver(solver_base):
             # write prestress displacement (given that we want to write the fluid displacement)
             if 'fluiddisplacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
                 self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, tprestr, 'fluiddisplacement_pre')
+                # it may be convenient to write the prestress displacement field to a file for later read-in
+                self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path+'/results_'+self.pb.simname+'_fluiddisplacement_pre.txt')
 
         utilities.print_prestress('end', self.pb.comm)
 
@@ -1006,3 +1022,16 @@ class FluidmechanicsSolver(solver_base):
         # set flag to false again
         self.pb.prestress_initial = False
         self.pb.set_problem_residual_jacobian_forms()
+
+
+# prestress solver, to be called from other (coupled) problems
+class FluidmechanicsSolverPrestr(FluidmechanicsSolver):
+
+    def initialize_nonlinear_solver(self):
+
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
+
+
+    def solve_initial_state(self):
+        raise RuntimeError("You should not be here!")

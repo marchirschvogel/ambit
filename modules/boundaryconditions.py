@@ -318,7 +318,7 @@ class boundary_cond_solid(boundary_cond):
 
 
     # set Neumann BCs for prestress
-    def neumann_prestress_bcs(self, bcdict, V, V_real, u, funcs_to_update=None, funcs_to_update_vec=None):
+    def neumann_prestress_bcs(self, bcdict, V, V_real, funcs_to_update=None, funcs_to_update_vec=None):
 
         w = ufl.as_ufl(0)
 
@@ -428,6 +428,44 @@ class boundary_cond_fluid(boundary_cond):
 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
+
+        return w
+
+
+    # set Neumann BCs for prestress
+    def neumann_prestress_bcs(self, bcdict, V, V_real, funcs_to_update=None, funcs_to_update_vec=None):
+
+        w = ufl.as_ufl(0)
+
+        for n in bcdict:
+
+            try: bdim_r = n['bdim_reduction']
+            except: bdim_r = 1
+
+            if bdim_r==1: mdata = self.io.mt_b1_master
+            if bdim_r==2: mdata = self.io.mt_b2_master
+            if bdim_r==3: mdata = self.io.mt_b3_master
+
+            if n['dir'] == 'normal_ref': # reference normal - only option
+
+                func = fem.Function(V_real)
+
+                if 'curve' in n.keys():
+                    load = expression.template()
+                    load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
+                    func.interpolate(load.evaluate)
+                    funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
+                else:
+                    func.vector.set(n['val'])
+
+                for i in range(len(n['id'])):
+
+                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
+
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
+
+            else:
+                raise NameError("Unknown dir option for Neumann prestress BC!")
 
         return w
 

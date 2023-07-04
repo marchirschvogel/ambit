@@ -181,12 +181,12 @@ class SolidmechanicsProblem(problem_base):
 
         # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
-            self.io.readfunction(self.u_pre, self.V_u, self.prestress_from_file[0])
+            self.io.readfunction(self.u_pre, self.prestress_from_file[0])
             # if available, we might want to read in the pressure field, too
             if self.incompressible_2field:
                 if len(self.prestress_from_file)>1:
-                    self.io.readfunction(self.p, self.V_p, self.prestress_from_file[1])
-                    self.io.readfunction(self.p_old, self.V_p, self.prestress_from_file[1])
+                    self.io.readfunction(self.p, self.prestress_from_file[1])
+                    self.io.readfunction(self.p_old, self.prestress_from_file[1])
 
         try: self.volume_laplace = io_params['volume_laplace']
         except: self.volume_laplace = []
@@ -424,7 +424,7 @@ class SolidmechanicsProblem(problem_base):
                     if r['type'] == 'dashpot': r['visc'] = 0.
             bc_prestr = boundaryconditions.boundary_cond_solid(self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
             if 'neumann_prestress' in bc_dict_prestr.keys():
-                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.u, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             if 'robin' in bc_dict_prestr.keys():
                 w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
@@ -957,6 +957,8 @@ class SolidmechanicsSolver(solver_base):
             # write prestress displacement (given that we want to write the displacement)
             if 'displacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
                 self.pb.io.write_output_pre(self.pb, self.pb.u_pre, tprestr, 'displacement_pre')
+                # it may be convenient to write the prestress displacement field to a file for later read-in
+                self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path+'/results_'+self.pb.simname+'_displacement_pre.txt')
 
         utilities.print_prestress('end', self.pb.comm)
 
@@ -968,3 +970,16 @@ class SolidmechanicsSolver(solver_base):
         # set flag to false again
         self.pb.prestress_initial = False
         self.pb.set_problem_residual_jacobian_forms()
+
+
+# prestress solver, to be called from other (coupled) problems
+class SolidmechanicsSolverPrestr(SolidmechanicsSolver):
+
+    def initialize_nonlinear_solver(self):
+
+        # initialize nonlinear solver class
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
+
+
+    def solve_initial_state(self):
+        raise RuntimeError("You should not be here!")

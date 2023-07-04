@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# tests:
+# - MULF prestressing (Gee et al. 2010) in displacement formulation (Schein & Gee 2021)
+
 import ambit
 
 import sys, traceback

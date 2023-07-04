@@ -51,6 +51,9 @@ class IO:
         try: self.duplicate_mesh_domains = io_params['duplicate_mesh_domains']
         except: self.duplicate_mesh_domains = []
 
+        try: self.restart_io_type = io_params['restart_io_type']
+        except: self.restart_io_type = 'petscvector'
+
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
 
@@ -176,7 +179,8 @@ class IO:
         func.interpolate(load.evaluate)
 
 
-    def readfunction(self, f, V, datafile, normalize=False):
+    # own read function
+    def readfunction(self, f, datafile, normalize=False):
 
         # block size of vector
         bs = f.vector.getBlockSize()
@@ -186,7 +190,7 @@ class IO:
         ind_file = np.loadtxt(datafile,usecols=(0),dtype=int)
 
         # index map and input indices
-        im = np.asarray(V.dofmap.index_map.local_to_global(np.arange(V.dofmap.index_map.size_local + V.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
+        im = np.asarray(f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local + f.function_space.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
         igi = self.mesh.geometry.input_global_indices
 
         # since in parallel, the ordering of the dof ids might change, so we have to find the
@@ -196,7 +200,7 @@ class IO:
 
             ind = np.where(ind_file == igi[ci])[0]
 
-            # only write if we've found the index
+            # only read if we've found the index
             if len(ind):
 
                 if normalize:
@@ -214,6 +218,42 @@ class IO:
 
         f.vector.assemble()
         f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    # own write function - working for nodal fields that are defined on the input mesh
+    def writefunction(self, f, filenm):
+
+        # non-ghosted index map and input global node indices
+        im_no_ghosts = f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local, dtype=np.int32)).tolist()
+        igi = self.mesh.geometry.input_global_indices
+
+        # gather indices
+        im_no_ghosts_gathered = self.comm.allgather(im_no_ghosts)
+        igi_gathered = self.comm.allgather(igi)
+
+        # number of present partitions (number of cores we're running on)
+        npart = len(im_no_ghosts_gathered)
+
+        # get the (non-ghosted) input node indices of all partitions
+        igi_flat = []
+        for n in range(npart):
+            for i in range(len(im_no_ghosts_gathered[n])):
+                igi_flat.append(igi_gathered[n][i])
+
+        # gather PETSc vector
+        vec_sq = allgather_vec(f.vector, self.comm)
+
+        sz = f.vector.getSize()
+        bs = f.vector.getBlockSize()
+
+        # write to file
+        if self.comm.rank==0:
+            f = open(filenm, 'wt')
+            for i in range(int(sz/bs)):
+                f.write(str(igi_flat[i]) + ' ' + ' '.join(map(str, vec_sq[bs*i:bs*(i+1)])) + '\n')
+            f.close()
+
+        self.comm.Barrier()
 
 
     # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
@@ -243,7 +283,7 @@ class IO:
             fib_func_input.append(fem.Function(V_fib_input, name='Fiber'+str(si+1)))
 
             if isinstance(self.fiber_data[si], str):
-                self.readfunction(fib_func_input[si], V_fib_input, self.fiber_data[si], normalize=True)
+                self.readfunction(fib_func_input[si], self.fiber_data[si], normalize=True)
             else: # assume a constant-in-space list or array
                 self.set_func_const(fib_func_input[si], self.fiber_data[si])
 
@@ -451,12 +491,16 @@ class IO_solid(IO):
 
         for key in vecs_to_read:
 
-            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
-            # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-            key.vector.load(viewer)
-
-            key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            if self.restart_io_type=='petscvector':
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+                key.vector.load(viewer)
+                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+            else:
+                raise ValueError("Unknown restart_io_type!")
 
 
     def writecheckpoint(self, pb, N):
@@ -490,11 +534,15 @@ class IO_solid(IO):
 
         for key in vecs_to_write:
 
-            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
-            # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-            key.vector.view(viewer)
-
+            if self.restart_io_type=='petscvector':
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+                key.vector.view(viewer)
+            elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+            else:
+                raise ValueError("Unknown restart_io_type!")
 
 
 class IO_fluid(IO):
@@ -586,12 +634,16 @@ class IO_fluid(IO):
 
         for key in vecs_to_read:
 
-            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
-            # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-            key.vector.load(viewer)
-
-            key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            if self.restart_io_type=='petscvector':
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+                key.vector.load(viewer)
+                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+            else:
+                raise ValueError("Unknown restart_io_type!")
 
 
     def writecheckpoint(self, pb, N):
@@ -615,11 +667,15 @@ class IO_fluid(IO):
 
         for key in vecs_to_write:
 
-            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
-            # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-            key.vector.view(viewer)
-
+            if self.restart_io_type=='petscvector':
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+                key.vector.view(viewer)
+            elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+            else:
+                raise ValueError("Unknown restart_io_type!")
 
 
 class IO_ale(IO):
@@ -663,12 +719,16 @@ class IO_ale(IO):
 
         for key in vecs_to_read:
 
-            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
-            # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-            key.vector.load(viewer)
-
-            key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            if self.restart_io_type=='petscvector':
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+                key.vector.load(viewer)
+                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+            else:
+                raise ValueError("Unknown restart_io_type!")
 
 
     def writecheckpoint(self, pb, N):
@@ -680,10 +740,15 @@ class IO_ale(IO):
 
         for key in vecs_to_write:
 
-            # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
-            # and for safety reasons, include the number of cores in the dat file name
-            viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-            key.vector.view(viewer)
+            if self.restart_io_type=='petscvector':
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+                key.vector.view(viewer)
+            elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+            else:
+                raise ValueError("Unknown restart_io_type!")
 
 
 class IO_fluid_ale(IO_fluid,IO_ale):
