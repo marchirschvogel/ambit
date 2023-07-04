@@ -16,7 +16,7 @@ import utilities
 import solver_nonlin
 import expression
 
-from fluid import FluidmechanicsProblem, FluidmechanicsSolver
+from fluid import FluidmechanicsProblem, FluidmechanicsSolverPrestr
 from ale import AleProblem
 from base import solver_base
 from meshutils import gather_surface_dof_indices
@@ -459,8 +459,16 @@ class FluidmechanicsAleSolver(solver_base):
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
         if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
+            solver_params_prestr = copy.deepcopy(self.solver_params)
+            # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
+            try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
+            except: pass
+            try: solver_params_prestr['block_precond'] = self.solver_params['block_precond_prestr']
+            except: pass
+            try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
+            except: pass
             # initialize fluid mechanics solver
-            self.solverprestr = FluidmechanicsSolver(self.pb.pbf, self.solver_params)
+            self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, self.solver_params)
 
 
     def solve_initial_state(self):

@@ -18,7 +18,7 @@ import expression
 from projection import project
 from mpiroutines import allgather_vec, allgather_vec_entry
 
-from solid import SolidmechanicsProblem, SolidmechanicsSolver
+from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from base import solver_base
 
 
@@ -401,7 +401,6 @@ class SolidmechanicsConstraintSolver(solver_base):
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
         if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
-            # initialize solid mechanics solver
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -410,7 +409,8 @@ class SolidmechanicsConstraintSolver(solver_base):
             except: pass
             try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
             except: pass
-            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, solver_params_prestr)
+            # initialize solid mechanics solver
+            self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, solver_params_prestr)
 
 
     def solve_initial_state(self):

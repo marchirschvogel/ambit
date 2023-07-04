@@ -335,15 +335,15 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
         if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
-            # initialize solid mechanics solver
             solver_params_prestr = copy.deepcopy(self.solver_params)
-            # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
+            # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
             except: pass
             try: solver_params_prestr['block_precond'] = self.solver_params['block_precond_prestr']
             except: pass
             try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
             except: pass
+            # initialize fluid mechanics solver
             self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, solver_params_prestr)
 
 
