@@ -17,7 +17,7 @@ class sol_utils():
         self.solver = solver
 
 
-    def catch_solver_errors(self, resnorm, incnorm=0, maxval=1.0e16):
+    def catch_solver_errors(self, resnorm, incnorm=0, maxval=1e16):
 
         err = 0
 

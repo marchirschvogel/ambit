@@ -14,10 +14,16 @@ def main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS         = {'problem_type'          : 'solid',
                          'mesh_domain'           : basepath+'/input/blockhex_domain.xdmf',
                          'mesh_boundary'         : basepath+'/input/blockhex_boundary.xdmf',
                          'write_results_every'   : -999,
+                         'write_restart_every'   : 1,
+                         'restart_step'          : restart_step,
                          'output_path'           : basepath+'/tmp/',
                          'results_to_write'      : ['displacement'],
                          'simname'               : 'solid_robin_visc'}

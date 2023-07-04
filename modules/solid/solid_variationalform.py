@@ -117,6 +117,12 @@ class variationalform(variationalform_base):
 
         return func*J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary
 
+    # body force external virtual work
+    # TeX: \int\limits_{\Omega_{0}} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{u}\,\mathrm{d}V
+    def deltaW_ext_bodyforce(self, func, funcdir, ddomain):
+
+        return func*ufl.dot(funcdir, self.var_u)*ddomain
+
     # Robin condition (spring)
     # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring(self, u, k, dboundary, u_prestr=None):

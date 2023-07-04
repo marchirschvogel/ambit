@@ -107,6 +107,12 @@ class variationalform(variationalform_base):
 
         return func*ufl.dot(self.n, self.var_v)*dboundary
 
+    # body force external virtual power
+    # TeX: \int\limits_{\Omega} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{v}\,\mathrm{d}V
+    def deltaW_ext_bodyforce(self, func, funcdir, ddomain, Fale=None):
+
+        return func*ufl.dot(funcdir, self.var_v)*ddomain
+
     # stabilized Neumann BC - Esmaily Moghadam et al. 2011
     def deltaW_ext_stabilized_neumann_cur(self, v, par1, par2, dboundary, w=None, Fale=None):
 
@@ -320,6 +326,12 @@ class variationalform_ale(variationalform):
     def deltaW_ext_neumann_ref(self, func, dboundary):
 
         return ufl.dot(func, self.var_v)*dboundary
+
+    # body force external virtual power
+    # TeX: \int\limits_{\Omega_0} J \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{v}\,\mathrm{d}V
+    def deltaW_ext_bodyforce(self, func, funcdir, ddomain, Fale=None):
+        J = ufl.det(Fale)
+        return func*ufl.dot(funcdir, self.var_v) *J*ddomain
 
     # stabilized Neumann BC - Esmaily Moghadam et al. 2011
     def deltaW_ext_stabilized_neumann_cur(self, v, par1, par2, dboundary, w=None, Fale=None):

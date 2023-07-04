@@ -156,13 +156,15 @@ class AleProblem(problem_base):
             self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d), self.dx_[n])
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_robin = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+        if 'bodyforce' in self.bc_dict.keys():
+            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update)
         if 'robin' in self.bc_dict.keys():
             w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel)
 
-        self.deltaW_ext = w_neumann + w_robin
+        self.deltaW_ext = w_neumann + w_body + w_robin
 
         # internal minus external virtual work
         self.weakform_d = self.deltaW_int - self.deltaW_ext

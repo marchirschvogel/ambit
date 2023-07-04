@@ -34,7 +34,7 @@ def main():
                          'rho_inf_genalpha'      : 1.0}
 
     FEM_PARAMS        = {'order_disp'            : 1,
-                         'quad_degree'           : 1,
+                         'quad_degree'           : 2,
                          'incompressible_2field' : False}
 
     MATERIALS         = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 1000., 'nu' : 0.3},

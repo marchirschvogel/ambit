@@ -298,11 +298,11 @@ class IO_solid(IO):
                     if res=='displacement':
                         self.resultsfiles[res].write_function(pb.u, t)
                     elif res=='velocity': # passed in v is not a function but form, so we have to project
-                        v_proj = project(pb.vel, pb.V_u, pb.dx_, nm="Velocity")
-                        self.resultsfiles[res].write_function(v_proj, t)
+                        self.v_proj = project(pb.vel, pb.V_u, pb.dx_, nm="Velocity") # class variable for testing
+                        self.resultsfiles[res].write_function(self.v_proj, t)
                     elif res=='acceleration': # passed in a is not a function but form, so we have to project
-                        a_proj = project(pb.acc, pb.V_u, pb.dx_, nm="Acceleration")
-                        self.resultsfiles[res].write_function(a_proj, t)
+                        self.a_proj = project(pb.acc, pb.V_u, pb.dx_, nm="Acceleration") # class variable for testing
+                        self.resultsfiles[res].write_function(self.a_proj, t)
                     elif res=='pressure':
                         self.resultsfiles[res].write_function(pb.p, t)
                     elif res=='cauchystress':
@@ -571,6 +571,9 @@ class IO_fluid(IO):
         vecs_to_read[pb.v_old] = 'v_old'
         vecs_to_read[pb.a_old] = 'a_old'
         vecs_to_read[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
+        if pb.have_active_stress: # for active membrane model (FrSI)
+            vecs_to_read[pb.tau_a] = 'tau_a'
+            vecs_to_read[pb.tau_a_old] = 'tau_a'
 
         # pressure may be discontinuous across domains
         if bool(self.duplicate_mesh_domains):
@@ -598,6 +601,8 @@ class IO_fluid(IO):
         vecs_to_write[pb.v_old] = 'v_old'
         vecs_to_write[pb.a_old] = 'a_old'
         vecs_to_write[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
+        if pb.have_active_stress:
+            vecs_to_write[pb.tau_a] = 'tau_a'
 
         # pressure may be discontinuous across domains
         if bool(self.duplicate_mesh_domains):

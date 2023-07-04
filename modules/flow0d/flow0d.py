@@ -147,7 +147,7 @@ class Flow0DProblem(problem_base):
 
         self.c, self.y = [], []
 
-        self.auxdata = {} # auxiliary data that can be set by other fields (e.g. fluxes from the 3D monitor)
+        self.auxdata, self.auxdata_old = {}, {} # auxiliary data that can be set by other fields (e.g. fluxes from the 3D monitor)
 
         # initialize flow0d time-integration class
         self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, comm=self.comm)
@@ -157,9 +157,10 @@ class Flow0DProblem(problem_base):
         else:
             self.initialconditions = time_params['initial_conditions']
 
-        self.cardvasc0D.initialize(self.s, self.initialconditions)
-        self.cardvasc0D.initialize(self.s_old, self.initialconditions)
-        self.cardvasc0D.initialize(self.sTc_old, self.initialconditions)
+        if self.restart_step==0:
+            self.cardvasc0D.initialize(self.s, self.initialconditions)
+            self.cardvasc0D.initialize(self.s_old, self.initialconditions)
+            self.cardvasc0D.initialize(self.sTc_old, self.initialconditions)
 
         self.theta_ost = time_params['theta_ost']
 
@@ -235,10 +236,23 @@ class Flow0DProblem(problem_base):
 
         if self.cardvasc0D.T_cycl > 0: # write heart cycle info
             if self.comm.rank == 0:
-                filename = self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(N)+'.txt'
-                f = open(filename, 'wt')
+                f = open(self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(N)+'.txt', 'wt')
                 f.write('%i %.8f' % (self.ti.cycle[0],self.ti.cycleerror[0]))
                 f.close()
+
+        # write auxdata
+        if bool(self.auxdata_old):
+            if bool(self.auxdata_old['p']):
+                if self.comm.rank == 0:
+                    f = open(self.output_path_0D+'/checkpoint_'+sname+'_auxdata_old_p_'+str(N)+'.txt', 'wt')
+                    for m in self.auxdata_old['p'].keys():
+                        f.write('%.16E\n' % (self.auxdata_old['p'][m]))
+                    f.close()
+
+                # auxdata update - needs to be done here since timestep update is called prior to write_restart,
+                # but we need the values from the pre-previous step to get the correct restart (pressure auxdata)
+                # is only evaluated after a solve, hence technically within a step it's always "old" data
+                for k in self.auxdata['p']: self.auxdata_old['p'][k] = self.auxdata['p'][k]
 
 
     def readrestart(self, sname, rst, ms=False):
@@ -254,6 +268,12 @@ class Flow0DProblem(problem_base):
             self.ti.cycle[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(0), dtype=int)
             self.ti.cycleerror[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(1), dtype=float)
             self.t_init -= (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl
+
+        if bool(self.auxdata_old):
+            if bool(self.auxdata_old['p']):
+                auxdata_p = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_auxdata_old_p_'+str(rst)+'.txt', ndmin=1)
+                for m in range(len(auxdata_p)):
+                    self.auxdata_old['p'][m] = auxdata_p[m]
 
 
     def evaluate_activation(self, t):
@@ -310,19 +330,20 @@ class Flow0DProblem(problem_base):
                 if self.chamber_models[ch]['type']=='0D_prescr': self.c.append(self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(self.t_init))
 
         # if we have prescribed variable values over time
-        if bool(self.prescribed_variables):
-            for a in self.prescribed_variables:
-                varindex = self.cardvasc0D.varmap[a]
-                prescr = self.prescribed_variables[a]
-                prtype = list(prescr.keys())[0]
-                if prtype=='val':
-                    val = prescr['val']
-                elif prtype=='curve':
-                    curvenumber = prescr['curve']
-                    val = self.ti.timecurves(curvenumber)(self.t_init)
-                else:
-                    raise ValueError("Unknown type to prescribe a variable.")
-                self.s[varindex], self.s_old[varindex] = val, val
+        if self.restart_step==0: # we read s and s_old in case of restart
+            if bool(self.prescribed_variables):
+                for a in self.prescribed_variables:
+                    varindex = self.cardvasc0D.varmap[a]
+                    prescr = self.prescribed_variables[a]
+                    prtype = list(prescr.keys())[0]
+                    if prtype=='val':
+                        val = prescr['val']
+                    elif prtype=='curve':
+                        curvenumber = prescr['curve']
+                        val = self.ti.timecurves(curvenumber)(self.t_init)
+                    else:
+                        raise ValueError("Unknown type to prescribe a variable.")
+                    self.s[varindex], self.s_old[varindex] = val, val
 
         self.cardvasc0D.evaluate(self.s_old, self.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)
         self.auxTc_old[:] = self.aux_old[:]

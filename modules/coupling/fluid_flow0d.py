@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys
+import time, sys, copy
 import numpy as np
 from dolfinx import fem
 import ufl
@@ -80,6 +80,10 @@ class FluidmechanicsFlow0DProblem():
 
         self.sub_solve = True
 
+        if bool(self.pb0.chamber_models):
+            if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
+                self.pb0.auxdata['p'], self.pb0.auxdata_old['p'] = {-1:0}, {-1:0} # dummy entries
+
 
     def get_problem_var_list(self):
 
@@ -138,8 +142,9 @@ class FluidmechanicsFlow0DProblem():
         self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
         # old Lagrange multipliers - initialize with initial pressures
-        self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
-        self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
+        if self.pbf.restart_step==0:
+            self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
+            self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
 
 
     def set_problem_residual_jacobian_forms(self):
@@ -164,7 +169,13 @@ class FluidmechanicsFlow0DProblem():
             self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
 
         # point auxdata dict to dict of integral evaluations (fluxes, pressures) in case needed by 0D
-        self.pb0.auxdata['q'] = self.pbf.qv_
+        self.pb0.auxdata['q'], self.pb0.auxdata['p'] = self.pbf.qv_, self.pbf.pu_
+
+        # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
+        if bool(self.pb0.chamber_models):
+            if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
+                dp_id = self.pb0.chamber_models['lv']['dp_monitor_id']
+                self.pb0.c[0] = self.pb0.auxdata['p'][dp_id]
 
         subsolver.newton(t, print_iter=self.print_subiter, sub=True)
 
@@ -213,12 +224,6 @@ class FluidmechanicsFlow0DProblem():
         # Lagrange multiplier stiffness matrix (currently treated with FD!)
         K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_lm.setUp()
-
-        # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
-        if bool(self.pb0.chamber_models):
-            if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
-                dp_id = self.pb0.chamber_models['lv']['dp_monitor_id']
-                self.pb0.c[0] = self.pbf.pu_[dp_id]
 
         # finite differencing for LM siffness matrix
         for i in range(self.num_coupling_surf):
@@ -357,8 +362,11 @@ class FluidmechanicsFlow0DProblem():
         # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
         if bool(self.pb0.chamber_models):
             if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
+                if self.restart_step==0:
+                    self.pb0.auxdata_old['p'] = copy.deepcopy(self.pbf.pu_old_) # copy since we write restart and update auxdata_old differently
+                # for k in self.pb0.auxdata_old['p']: self.pb0.auxdata['p'][k] = self.pb0.auxdata_old['p'][k]
                 dp_id = self.pb0.chamber_models['lv']['dp_monitor_id']
-                self.pb0.c.append(self.pbf.pu_[dp_id])
+                self.pb0.c.append(self.pb0.auxdata_old['p'][dp_id])
 
         for i in range(self.num_coupling_surf):
             lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
@@ -379,22 +387,23 @@ class FluidmechanicsFlow0DProblem():
                 if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbf.t_init))
 
         # if we have prescribed variable values over time
-        if bool(self.pb0.prescribed_variables):
-            for a in self.pb0.prescribed_variables:
-                varindex = self.pb0.cardvasc0D.varmap[a]
-                prescr = self.pb0.prescribed_variables[a]
-                prtype = list(prescr.keys())[0]
-                if prtype=='val':
-                    val = prescr['val']
-                elif prtype=='curve':
-                    curvenumber = prescr['curve']
-                    val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
-                elif prtype=='flux_monitor':
-                    monid = prescr['flux_monitor']
-                    val = self.pbf.qv_[monid]
-                else:
-                    raise ValueError("Unknown type to prescribe a variable.")
-                self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
+        if self.restart_step==0: # we read s and s_old in case of restart
+            if bool(self.pb0.prescribed_variables):
+                for a in self.pb0.prescribed_variables:
+                    varindex = self.pb0.cardvasc0D.varmap[a]
+                    prescr = self.pb0.prescribed_variables[a]
+                    prtype = list(prescr.keys())[0]
+                    if prtype=='val':
+                        val = prescr['val']
+                    elif prtype=='curve':
+                        curvenumber = prescr['curve']
+                        val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                    elif prtype=='flux_monitor':
+                        monid = prescr['flux_monitor']
+                        val = self.pbf.qv_old_[monid]
+                    else:
+                        raise ValueError("Unknown type to prescribe a variable.")
+                    self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
 
         # initially evaluate 0D model at old state
         self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbf.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)

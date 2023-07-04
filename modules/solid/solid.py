@@ -179,7 +179,7 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.u_pre = None
 
-        # own read function: requires plain txt format of type valx valy valz x z y
+        # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
             self.io.readfunction(self.u_pre, self.V_u, self.prestress_from_file[0])
             # if available, we might want to read in the pressure field, too
@@ -394,10 +394,13 @@ class SolidmechanicsProblem(problem_base):
             self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx_[n])
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_neumann_old, w_body, w_body_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.u, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
             w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.u_old, funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+        if 'bodyforce' in self.bc_dict.keys():
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update_old)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.u_pre)
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.u_pre)
@@ -428,9 +431,8 @@ class SolidmechanicsProblem(problem_base):
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
 
-        # TODO: Body forces!
-        self.deltaW_ext     = w_neumann + w_robin + w_membrane
-        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_membrane_old
+        self.deltaW_ext     = w_neumann + w_body + w_robin + w_membrane
+        self.deltaW_ext_old = w_neumann_old + w_body_old + w_robin_old + w_membrane_old
 
         ### full weakforms
 

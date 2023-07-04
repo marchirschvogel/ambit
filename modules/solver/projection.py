@@ -8,6 +8,7 @@
 
 from dolfinx import fem
 import ufl
+from petsc4py import PETSc
 
 def project(v, V, dx_, bcs=[], nm=None):
 
@@ -26,16 +27,30 @@ def project(v, V, dx_, bcs=[], nm=None):
             fnc = v
 
         if not isinstance(fnc, ufl.constantvalue.Zero):
-            a += ufl.inner(w, Pv) * dx_[n]
-            L += ufl.inner(w, fnc) * dx_[n]
+            a += ufl.inner(Pv, w) * dx_[n]
+            L += ufl.inner(fnc, w) * dx_[n]
         else:
-            a += ufl.inner(w, Pv) * dx_[n]
-            L += ufl.inner(w, zerofnc) * dx_[n]
+            a += ufl.inner(Pv, w) * dx_[n]
+            L += ufl.inner(zerofnc, w) * dx_[n]
 
     # solve linear system for projection
     function = fem.Function(V, name=nm)
 
     lp = fem.petsc.LinearProblem(a, L, bcs=bcs, u=function)
     lp.solve()
+
+    # a_form, L_form = fem.form(a), fem.form(L)
+    #
+    # # Assemble linear system
+    # A = fem.petsc.assemble_matrix(a_form, bcs)
+    # A.assemble()
+    # b = fem.petsc.assemble_vector(L_form)
+    # fem.petsc.apply_lifting(b, [a_form], [bcs])
+    # b.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+    # fem.petsc.set_bc(b, bcs)
+    #
+    # solver = PETSc.KSP().create(A.getComm())
+    # solver.setOperators(A)
+    # solver.solve(b, function.vector)
 
     return function

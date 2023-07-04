@@ -195,6 +195,10 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 \begin{align}
 \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Gm_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq:deltaWext_cur}
 \end{align}
+\item body force:
+\begin{align}
+\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Om_{0}} \hat{\bs{b}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWext_body}
+\end{align}
 
 \item generalized Robin condition:
 \begin{align}
@@ -283,6 +287,10 @@ r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \q
 \begin{align}
 \delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= -\int\limits_{\Gm_t^{\mathrm{N}}} \hat{p}(t)\,\bs{n} \cdot \delta\bs{v} \,\mathrm{d}a \label{eq:deltaPext_neumann}
 \end{align}
+\item body force:
+\begin{align}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Om_t} \hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V \label{eq:deltaPext_body}
+\end{align}
 \end{itemize}
 
 \subsubsection{Stabilization}
@@ -338,7 +346,7 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 \subsubsection{Strong form}
 - primary variables: velocity $\bs{v}$ and pressure $p$
 \begin{alignat}{3}
-\bs{\nabla}_{0} \cdot \bs{\sigma}(\bs{v},\bs{d},p) + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) \quad &&\text{in} \; \mathit{\Om}_0 \times [0, T], \label{eq:divsigma_ns} \\
+\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) \quad &&\text{in} \; \mathit{\Om}_0 \times [0, T], \label{eq:divsigma_ns} \\
 \bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 \quad &&\text{in} \; \mathit{\Om}_0 \times [0, T],\label{eq:divv_ns}\\
 \bs{v} &= \hat{\bs{v}} \quad &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
 \bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} \quad &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
@@ -380,11 +388,15 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \begin{itemize}
 \item conservative Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_0^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_0^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale}
 \end{align}
 \item pressure Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann}
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale}
+\end{align}
+\item body force:
+\begin{align}
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} J\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V \label{eq:deltaPext_body_ale}
 \end{align}
 \end{itemize}
 

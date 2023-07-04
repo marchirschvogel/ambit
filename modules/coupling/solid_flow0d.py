@@ -196,7 +196,7 @@ class SolidmechanicsFlow0DProblem():
         # add to solid Jacobian
         self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
-        if self.coupling_type == 'monolithic_lagrange':
+        if self.coupling_type == 'monolithic_lagrange' and self.pbs.restart_step==0:
             # old Lagrange multipliers - initialize with initial pressures
             self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
             self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
@@ -557,19 +557,20 @@ class SolidmechanicsFlow0DProblem():
                 if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbs.t_init))
 
         # if we have prescribed variable values over time
-        if bool(self.pb0.prescribed_variables):
-            for a in self.pb0.prescribed_variables:
-                varindex = self.pb0.cardvasc0D.varmap[a]
-                prescr = self.pb0.prescribed_variables[a]
-                prtype = list(prescr.keys())[0]
-                if prtype=='val':
-                    val = prescr['val']
-                elif prtype=='curve':
-                    curvenumber = prescr['curve']
-                    val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
-                else:
-                    raise ValueError("Unknown type to prescribe a variable.")
-                self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
+        if self.restart_step==0: # we read s and s_old in case of restart
+            if bool(self.pb0.prescribed_variables):
+                for a in self.pb0.prescribed_variables:
+                    varindex = self.pb0.cardvasc0D.varmap[a]
+                    prescr = self.pb0.prescribed_variables[a]
+                    prtype = list(prescr.keys())[0]
+                    if prtype=='val':
+                        val = prescr['val']
+                    elif prtype=='curve':
+                        curvenumber = prescr['curve']
+                        val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                    else:
+                        raise ValueError("Unknown type to prescribe a variable.")
+                    self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
 
         # initially evaluate 0D model at old state
         self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbs.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)

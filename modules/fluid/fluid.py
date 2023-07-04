@@ -102,6 +102,7 @@ class FluidmechanicsProblem(problem_base):
 
         # dicts for evaluations of surface integrals (fluxes, pressures), to be queried by other models
         self.qv_, self.pu_, self.pd_ = {}, {}, {}
+        self.qv_old_, self.pu_old_, self.pd_old_ = {}, {}, {}
 
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
@@ -224,13 +225,16 @@ class FluidmechanicsProblem(problem_base):
             self.V_p, self.p, self.p_old = self.V_p_[0], self.p_[0], self.p_old_[0] # pointer to first p's...
 
         # if we want to initialize the pressure (domain wise) with a scalar value
-        if bool(self.initial_fluid_pressure):
-            for mp in range(self.num_dupl):
-                val = self.initial_fluid_pressure[mp]
-                self.p_[mp].vector.set(val)
-                self.p_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.restart_step==0:
+            if bool(self.initial_fluid_pressure):
+                for mp in range(self.num_dupl):
+                    val = self.initial_fluid_pressure[mp]
+                    self.p_[mp].vector.set(val)
+                    self.p_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                    self.p_old_[mp].vector.set(val)
+                    self.p_old_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # own read function: requires plain txt format of type "node-id val-x val-y val-z"
+        # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
             self.io.readfunction(self.uf_pre, self.V_v, self.prestress_from_file[0])
             # if available, we might want to read in the pressure field, too
@@ -374,10 +378,13 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_p_old.append( self.vf.deltaW_int_pres(self.v_old, self.var_p_[j], self.dx_[n], Fale=self.alevar['Fale_old']) )
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_robin_valve, w_robin_valve_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_neumann_old, w_body, w_body_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_robin_valve, w_robin_valve_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
             w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+        if 'bodyforce' in self.bc_dict.keys():
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, Fale=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, Fale=self.alevar['Fale'])
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, Fale=self.alevar['Fale_old'])
@@ -394,11 +401,14 @@ class FluidmechanicsProblem(problem_base):
             self.have_flux_monitor = True
             self.q_, self.q_old_ = [], []
             self.bc.flux_monitor_bcs(self.bc_dict['flux_monitor'], self.v, self.q_, wel=self.alevar['w'], Fale=self.alevar['Fale'])
+            self.bc.flux_monitor_bcs(self.bc_dict['flux_monitor'], self.v_old, self.q_old_, wel=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
         if 'dp_monitor' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_dp_monitor = True
             self.a_u_, self.a_d_, self.pint_u_, self.pint_d_ = [], [], [], []
-            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.v, self.a_u_, self.a_d_, self.pint_u_, self.pint_d_, self.p__, wel=self.alevar['w'], Fale=self.alevar['Fale'])
+            self.a_u_old_, self.a_d_old_, self.pint_u_old_, self.pint_d_old_ = [], [], [], []
+            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_, self.a_d_, self.pint_u_, self.pint_d_, self.p__, wel=self.alevar['w'], Fale=self.alevar['Fale'])
+            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_old_, self.a_d_old_, self.pint_u_old_, self.pint_d_old_, self.p_old__, wel=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
 
         # reduced-solid for FrSI problem
         self.have_active_stress, self.active_stress_trig = False, 'ode'
@@ -434,9 +444,8 @@ class FluidmechanicsProblem(problem_base):
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
 
-        # TODO: Body forces!
-        self.deltaW_ext     = w_neumann + w_robin + w_stabneumann + w_membrane + w_robin_valve
-        self.deltaW_ext_old = w_neumann_old + w_robin_old + w_stabneumann_old + w_membrane_old + w_robin_valve_old
+        self.deltaW_ext     = w_neumann + w_body + w_robin + w_stabneumann + w_membrane + w_robin_valve
+        self.deltaW_ext_old = w_neumann_old + w_body_old + w_robin_old + w_stabneumann_old + w_membrane_old + w_robin_valve_old
 
         # stabilization
         if self.stabilization is not None:
@@ -721,7 +730,7 @@ class FluidmechanicsProblem(problem_base):
 
 
     # valve law on "immersed" surface (an internal boundary)
-    def evaluate_robin_valve(self, t):
+    def evaluate_robin_valve(self, t, pu_, pd_):
 
         for m in range(len(self.bc_dict['robin_valve'])):
 
@@ -731,7 +740,7 @@ class FluidmechanicsProblem(problem_base):
 
             if self.bc_dict['robin_valve'][m]['type'] == 'dp':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
-                if self.pu_[dp_id] < self.pd_[dp_id]:
+                if pu_[dp_id] < pd_[dp_id]:
                     beta.val = beta_max
                 else:
                     beta.val = beta_min
@@ -739,7 +748,7 @@ class FluidmechanicsProblem(problem_base):
             elif self.bc_dict['robin_valve'][m]['type'] == 'dp_smooth':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
                 epsilon = self.bc_dict['robin_valve'][m]['epsilon']
-                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh((self.pd_[dp_id] - self.pu_[dp_id])/epsilon) + 1.) + beta_min
+                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh((pd_[dp_id] - pu_[dp_id])/epsilon) + 1.) + beta_min
 
             elif self.bc_dict['robin_valve'][m]['type'] == 'temporal':
                 to, tc = self.bc_dict['robin_valve'][m]['to'], self.bc_dict['robin_valve'][m]['tc']
@@ -760,16 +769,16 @@ class FluidmechanicsProblem(problem_base):
             self.beta_valve[m].interpolate(beta.evaluate)
 
 
-    def evaluate_dp_monitor(self, prnt=True):
+    def evaluate_dp_monitor(self, pu_, pd_, pint_u_, pint_d_, a_u_, a_d_, prnt=True):
 
         for m in range(len(self.bc_dict['dp_monitor'])):
 
             # area of up- and downstream surfaces
-            au = fem.assemble_scalar(self.a_u_[m])
+            au = fem.assemble_scalar(a_u_[m])
             au = self.comm.allgather(au)
             au_ = sum(au)
 
-            ad = fem.assemble_scalar(self.a_d_[m])
+            ad = fem.assemble_scalar(a_d_[m])
             ad = self.comm.allgather(ad)
             ad_ = sum(ad)
 
@@ -777,31 +786,31 @@ class FluidmechanicsProblem(problem_base):
             assert(np.isclose(au_, ad_))
 
             # surface-averaged pressures on up- and downstream sides
-            pu = (1./au_)*fem.assemble_scalar(self.pint_u_[m])
+            pu = (1./au_)*fem.assemble_scalar(pint_u_[m])
             pu = self.comm.allgather(pu)
-            self.pu_[m] = sum(pu)
+            pu_[m] = sum(pu)
 
-            pd = (1./ad_)*fem.assemble_scalar(self.pint_d_[m])
+            pd = (1./ad_)*fem.assemble_scalar(pint_d_[m])
             pd = self.comm.allgather(pd)
-            self.pd_[m] = sum(pd)
+            pd_[m] = sum(pd)
 
             if prnt:
                 if self.comm.rank == 0:
-                    print("dp ID "+str(self.bc_dict['dp_monitor'][m]['id'])+": pu = %.4e, pd = %.4e" % (self.pu_[m],self.pd_[m]))
+                    print("dp ID "+str(self.bc_dict['dp_monitor'][m]['id'])+": pu = %.4e, pd = %.4e" % (pu_[m],pd_[m]))
                     sys.stdout.flush()
 
 
-    def evaluate_flux_monitor(self, prnt=True):
+    def evaluate_flux_monitor(self, qv_, q_, prnt=True):
 
         for m in range(len(self.bc_dict['flux_monitor'])):
 
-            q = fem.assemble_scalar(self.q_[m])
+            q = fem.assemble_scalar(q_[m])
             q = self.comm.allgather(q)
-            self.qv_[m] = sum(q)
+            qv_[m] = sum(q)
 
             if prnt:
                 if self.comm.rank == 0:
-                    print("Flux ID "+str(self.bc_dict['flux_monitor'][m]['id'])+": q = %.4e" % (self.qv_[m]))
+                    print("Flux ID "+str(self.bc_dict['flux_monitor'][m]['id'])+": q = %.4e" % (qv_[m]))
                     sys.stdout.flush()
 
 
@@ -817,12 +826,16 @@ class FluidmechanicsProblem(problem_base):
 
     def evaluate_initial(self):
 
+        # if self.restart_step == 0: # for restart, we read the monitor data...
         if self.have_flux_monitor:
-            self.evaluate_flux_monitor()
-        if self.have_dp_monitor:
-            self.evaluate_dp_monitor()
+            self.evaluate_flux_monitor(self.qv_old_, self.q_old_)
+            for k in self.qv_old_: self.qv_[k] = self.qv_old_[k]
+        if self.have_dp_monitor: # only dependent on prim. var. p, so no need to read at restart
+            self.evaluate_dp_monitor(self.pu_old_, self.pd_old_, self.pint_u_old_, self.pint_d_old_, self.a_u_old_, self.a_d_old_)
+            for k in self.pu_old_: self.pu_[k] = self.pu_old_[k]
+            for k in self.pd_old_: self.pd_[k] = self.pd_old_[k]
         if self.have_robin_valve:
-            self.evaluate_robin_valve(0.0)
+            self.evaluate_robin_valve(self.t_init, self.pu_old_, self.pd_old_)
 
 
     def write_output_ini(self):
@@ -846,11 +859,11 @@ class FluidmechanicsProblem(problem_base):
     def evaluate_post_solve(self, t, N):
 
         if self.have_flux_monitor:
-            self.evaluate_flux_monitor()
+            self.evaluate_flux_monitor(self.qv_, self.q_)
         if self.have_dp_monitor:
-            self.evaluate_dp_monitor()
+            self.evaluate_dp_monitor(self.pu_, self.pd_, self.pint_u_, self.pint_d_, self.a_u_, self.a_d_)
         if self.have_robin_valve:
-            self.evaluate_robin_valve(t)
+            self.evaluate_robin_valve(t, self.pu_, self.pd_)
 
 
     def set_output_state(self):
@@ -866,6 +879,12 @@ class FluidmechanicsProblem(problem_base):
 
         # update - velocity, acceleration, pressure, all internal variables, all time functions
         self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, uf_old=self.uf_old)
+        # update monitor dicts
+        if self.have_flux_monitor:
+            for k in self.qv_: self.qv_old_[k] = self.qv_[k]
+        if self.have_dp_monitor:
+            for k in self.pu_: self.pu_old_[k] = self.pu_[k]
+            for k in self.pd_: self.pd_old_[k] = self.pd_[k]
 
 
     def print_to_screen(self):

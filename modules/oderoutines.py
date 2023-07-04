@@ -216,7 +216,7 @@ class ode:
     # read restart routine for ODE models
     def read_restart(self, path, nm, rstep, var):
 
-        restart_data = np.loadtxt(path+'/checkpoint_'+nm+'_'+str(rstep)+'.txt')
+        restart_data = np.loadtxt(path+'/checkpoint_'+nm+'_'+str(rstep)+'.txt', ndmin=1)
 
         if not isinstance(var, np.ndarray): var.assemble()
 

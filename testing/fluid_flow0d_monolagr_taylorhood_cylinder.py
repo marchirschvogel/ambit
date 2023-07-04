@@ -16,10 +16,16 @@ def main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS            = {'problem_type'          : 'fluid_flow0d',
                             'mesh_domain'           : basepath+'/input/cylinder-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/cylinder-quad_boundary.xdmf',
                             'write_results_every'   : -1,
+                            'write_restart_every'   : 1,
+                            'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : [],
                             'simname'               : 'fluid_flow0d_monolagr_taylorhood_cylinder'}

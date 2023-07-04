@@ -37,6 +37,7 @@ def main():
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
                             'ptc_randadapt_range'   : [0.85, 1.35], # OPTIONAL: in what range to randomly adapt PTC parameter if divergence continues to occur (default: [0.85, 1.35]) (only if divergence_continue is set to 'PTC')
+                            'catch_max_res_value'   : 1e16, # OPTIONAL: max residual value when to catch a solver error (default: 1e16)
                             # direct linear solver settings (only apply for solve_type 'direct')
                             'direct_solver'         : 'mumps', # OPTIONAL: type of direct solver: 'mumps' or 'superlu_dist' (default: 'mumps' - seems to be faster and more robust in case of saddle point problems)
                             # iterative linear solver settings (only apply for solve_type 'iterative') - solver can only be GMRES

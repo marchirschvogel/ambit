@@ -189,6 +189,40 @@ class boundary_cond():
         return w, db_, bstress
 
 
+    # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
+    def bodyforce(self, bcdict, V, V_real, funcs_to_update=None):
+
+        w = ufl.as_ufl(0)
+
+        for b in bcdict:
+
+            func, func_dir = fem.Function(V_real), fem.Function(V)
+
+            # direction needs to be set
+            driection = expression.template_vector()
+            dir_x, dir_y, dir_z = b['dir'][0], b['dir'][1], b['dir'][2]
+            dir_norm = np.sqrt(dir_x**2. + dir_y**2. + dir_z**2.)
+            driection.val_x, driection.val_y, driection.val_z = dir_x/dir_norm, dir_y/dir_norm, dir_z/dir_norm
+            func_dir.interpolate(driection.evaluate)
+
+            if 'curve' in b.keys():
+                load = expression.template()
+                load.val = self.ti.timecurves(b['curve'])(self.ti.t_init)
+                func.interpolate(load.evaluate)
+                funcs_to_update.append({func : self.ti.timecurves(b['curve'])})
+            else:
+                func.vector.set(b['val'])
+
+            for i in range(len(b['id'])):
+
+                db_ = ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=b['id'][i], metadata={'quadrature_degree': self.quad_degree})
+
+                w += self.vf.deltaW_ext_bodyforce(func, func_dir, db_)
+
+        return w
+
+
+
 class boundary_cond_solid(boundary_cond):
 
     # set Neumann BCs
@@ -398,6 +432,37 @@ class boundary_cond_fluid(boundary_cond):
         return w
 
 
+    # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
+    def bodyforce(self, bcdict, V, V_real, funcs_to_update=None, Fale=None):
+
+        w = ufl.as_ufl(0)
+
+        for b in bcdict:
+
+            func, func_dir = fem.Function(V_real), fem.Function(V)
+
+            # direction needs to be set
+            driection = expression.template_vector()
+            driection.val_x, driection.val_y, driection.val_z = b['dir'][0], b['dir'][1], b['dir'][2]
+            func_dir.interpolate(driection.evaluate)
+
+            if 'curve' in b.keys():
+                load = expression.template()
+                load.val = self.ti.timecurves(b['curve'])(self.ti.t_init)
+                func.interpolate(load.evaluate)
+                funcs_to_update.append({func : self.ti.timecurves(b['curve'])})
+            else:
+                func.vector.set(b['val'])
+
+            for i in range(len(b['id'])):
+
+                db_ = ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=b['id'][i], metadata={'quadrature_degree': self.quad_degree})
+
+                w += self.vf.deltaW_ext_bodyforce(func, func_dir, db_, Fale=Fale)
+
+        return w
+
+
     # set stabilized Neumann BCs
     def stabilized_neumann_bcs(self, bcdict, v, wel=None, Fale=None):
 
@@ -549,7 +614,7 @@ class boundary_cond_fluid(boundary_cond):
 
 
     # set dp monitor conditions
-    def dp_monitor_bcs(self, bcdict, v, a_u_, a_d_, pint_u_, pint_d_, pdict, wel=None, Fale=None):
+    def dp_monitor_bcs(self, bcdict, a_u_, a_d_, pint_u_, pint_d_, pdict, wel=None, Fale=None):
 
         if wel is None:
             wel_ = ufl.constantvalue.zero(self.io.mesh.topology.dim)

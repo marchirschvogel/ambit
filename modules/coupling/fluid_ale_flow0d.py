@@ -232,9 +232,16 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
     def read_restart(self, sname, N):
 
-        # fluid+flow0d + ALE problem
-        self.pbf0.read_restart(sname, N)
-        self.pba.read_restart(sname, N)
+        # fluid-ALE + flow0d problem
+        if self.restart_step > 0:
+            self.io.readcheckpoint(self, N)
+            self.simname += '_r'+str(N)
+
+        self.pb0.read_restart(sname, N)
+
+        if self.restart_step > 0:
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm)
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm_old)
 
 
     def evaluate_initial(self):
@@ -250,7 +257,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
 
     def get_time_offset(self):
 
-        return 0.
+        return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
     def evaluate_pre_solve(self, t):
@@ -299,6 +306,11 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
     def write_restart(self, sname, N):
 
         self.io.write_restart(self, N)
+
+        self.pb0.write_restart(sname, N)
+
+        if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
+            self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm)
 
 
     def check_abort(self, t):

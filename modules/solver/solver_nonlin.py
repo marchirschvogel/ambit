@@ -79,6 +79,9 @@ class solver_nonlinear:
         try: self.PTC_randadapt_range = solver_params['ptc_randadapt_range']
         except: self.PTC_randadapt_range = [0.85, 1.35]
 
+        try: self.maxresval = solver_params['catch_max_res_value']
+        except: self.maxresval = 1e16
+
         try: self.direct_solver = solver_params['direct_solver']
         except: self.direct_solver = 'mumps'
 
@@ -353,13 +356,16 @@ class solver_nonlinear:
             x_start[n] = self.x[n].duplicate()
             self.x[n].assemble()
             x_start[n].axpby(1.0, 0.0, self.x[n])
+            if self.pb.sub_solve: # can only be a 0D model so far...
+                s_start = self.pb.pb0.s.duplicate()
+                self.pb.pb0.s.assemble()
+                s_start.axpby(1.0, 0.0, self.pb.pb0.s)
 
         # Newton iteration index
         it = 0
         # for PTC
         k_PTC = self.k_PTC_initial
         counter_adapt, max_adapt = 0, 50
-        maxresval = 1.0e16
         self.ni, self.li = 0, 0 # nonlinear and linear iteration counters
 
         self.solutils.print_nonlinear_iter(header=True)
@@ -539,7 +545,7 @@ class solver_nonlinear:
             if self.divcont=='PTC':
 
                 self.maxiter = 250
-                err = self.solutils.catch_solver_errors(resnorms['res1'], incnorm=incnorms['inc1'], maxval=maxresval)
+                err = self.solutils.catch_solver_errors(resnorms['res1'], incnorm=incnorms['inc1'], maxval=self.maxresval)
 
                 if err:
                     self.PTC = True
@@ -548,6 +554,8 @@ class solver_nonlinear:
                     if counter_adapt>0: k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
                     for n in range(self.nfields):
                         self.reset_step(self.x[n], x_start[n], self.is_ghosted[n])
+                        if self.pb.sub_solve: # can only be a 0D model so far...
+                            self.reset_step(self.pb.pb0.s, s_start, 0)
                     counter_adapt += 1
 
             # check if converged
@@ -556,6 +564,7 @@ class solver_nonlinear:
                 # destroy PETSc vectors
                 for n in range(self.nfields):
                     del_x[n].destroy(), x_start[n].destroy()
+                if self.pb.sub_solve: s_start.destroy()
                 # reset to normal Newton if PTC was used in a divcont action
                 if self.divcont=='PTC':
                     self.PTC = False
