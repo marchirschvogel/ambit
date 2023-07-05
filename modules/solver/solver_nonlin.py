@@ -321,6 +321,7 @@ class solver_nonlinear:
 
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        r_a.destroy(), M_a.destroy()
         ksp.destroy()
 
 
@@ -398,6 +399,7 @@ class solver_nonlinear:
                     self.pb.rom.Cpen.mult(u_, penterm_) # Cpen * V^T * u
                     r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
                     K_list[0][0].aypx(1.0, self.pb.rom.CpenVTV) # K_00 + Cpen * V^T * V
+                r_list[0].destroy(), del_x[0].destroy() # destroy, since we re-define the references!
                 r_list[0], del_x[0] = r_u_, del_u_
                 # now the offdiagonal blocks
                 if self.nfields > 1:

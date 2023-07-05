@@ -190,48 +190,83 @@ class timeintegration_solid(timeintegration):
 
     def update_a_newmark(self, u, u_old, v_old, a_old, ufl=True):
         # update formula for acceleration
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             beta_ = self.beta
-        else:
+            return 1./(beta_*dt_*dt_) * (u - u_old) - 1./(beta_*dt_) * v_old - (1.-2.*beta_)/(2.*beta_) * a_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             beta_ = float(self.beta)
-        return 1./(beta_*dt_*dt_) * (u - u_old) - 1./(beta_*dt_) * v_old - (1.-2.*beta_)/(2.*beta_) * a_old
+
+            aout = a_old.duplicate()
+
+            aout.axpby(-(1.-2.*beta_)/(2.*beta_), 0.0, a_old)
+            aout.axpby(-1./(beta_*dt_), 1.0, v_old)
+            aout.axpby(1./(beta_*dt_*dt_), 1.0, u)
+            aout.axpby(-1./(beta_*dt_*dt_), 1.0, u_old)
+
+            return aout
 
 
     def update_a_ost(self, u, u_old, v_old, a_old, ufl=True):
         # update formula for acceleration
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
-        else:
+            return 1./(theta_*theta_*dt_*dt_) * (u - u_old) - 1./(theta_*theta_*dt_) * v_old - (1.-theta_)/theta_ * a_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
-        return 1./(theta_*theta_*dt_*dt_) * (u - u_old) - 1./(theta_*theta_*dt_) * v_old - (1.-theta_)/theta_ * a_old
+
+            aout = a_old.duplicate()
+
+            aout.axpby(-(1.-theta_)/theta_, 0.0, a_old)
+            aout.axpby(-1./(theta_*theta_*dt_), 1.0, v_old)
+            aout.axpby(1./(theta_*theta_*dt_*dt_), 1.0, u)
+            aout.axpby(-1./(theta_*theta_*dt_*dt_), 1.0, u_old)
+
+            return aout
 
 
     def update_v_newmark(self, u, u_old, v_old, a_old, ufl=True):
         # update formula for velocity
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             gamma_ = self.gamma
             beta_ = self.beta
-        else:
+            return gamma_/(beta_*dt_) * (u - u_old) - (gamma_ - beta_)/beta_ * v_old - (gamma_-2.*beta_)/(2.*beta_) * dt_*a_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             gamma_ = float(self.gamma)
             beta_ = float(self.beta)
-        return gamma_/(beta_*dt_) * (u - u_old) - (gamma_ - beta_)/beta_ * v_old - (gamma_-2.*beta_)/(2.*beta_) * dt_*a_old
+
+            vout = v_old.duplicate()
+
+            vout.axpby(-(gamma_-beta_)/beta_, 0.0, v_old)
+            vout.axpby(-(gamma_-2.*beta_)/(2.*beta_) * dt_, 1.0, a_old)
+            vout.axpby(gamma_/(beta_*dt_), 1.0, u)
+            vout.axpby(-gamma_/(beta_*dt_), 1.0, u_old)
+
+            return vout
 
 
     def update_v_ost(self, u, u_old, v_old, a_old, ufl=True):
         # update formula for velocity
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
-        else:
+            return 1./(theta_*dt_) * (u - u_old) - (1. - theta_)/theta_ * v_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
-        return 1./(theta_*dt_) * (u - u_old) - (1. - theta_)/theta_ * v_old
+
+            vout = v_old.duplicate()
+
+            vout.axpby(-(1.-theta_)/theta_, 0.0, v_old)
+            vout.axpby(1./(theta_*dt_), 1.0, u)
+            vout.axpby(-1./(theta_*dt_), 1.0, u_old)
+
+            return vout
 
 
     def update_fields_newmark(self, u, u_old, v_old, a_old):
@@ -375,46 +410,78 @@ class timeintegration_fluid(timeintegration):
 
     def update_a_ost(self, v, v_old, a_old, ufl=True):
         # update formula for acceleration
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
-        else:
+            return 1./(theta_*dt_) * (v - v_old) - (1.-theta_)/theta_ * a_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
-        return 1./(theta_*dt_) * (v - v_old) - (1.-theta_)/theta_ * a_old
+
+            aout = a_old.duplicate()
+
+            aout.axpby(-(1.-theta_)/theta_, 0.0, a_old)
+            aout.axpby(1./(theta_*dt_), 1.0, v)
+            aout.axpby(-1./(theta_*dt_), 1.0, v_old)
+
+            return aout
 
 
     def update_a_genalpha(self, v, v_old, a_old, ufl=True):
         # update formula for acceleration
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             gamma_ = self.gamma
-        else:
+            return 1./(gamma_*dt_) * (v - v_old) - (1.-gamma_)/gamma_ * a_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             gamma_ = float(self.gamma)
-        return 1./(gamma_*dt_) * (v - v_old) - (1.-gamma_)/gamma_ * a_old
+
+            aout = uf_old.duplicate()
+
+            aout.axpby(-(1.-gamma_)/gamma_, 0.0, a_old)
+            aout.axpby(1./(gamma_*dt_), 1.0, v)
+            aout.axpby(-1./(gamma_*dt_), 1.0, v_old)
+
+            return aout
 
 
     def update_uf_ost(self, v, v_old, uf_old, ufl=True):
         # update formula for integrated fluid displacement uf
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
+            return theta_*dt_ * v + (1.-theta_)*dt_ * v_old + uf_old
         else:
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
-        return theta_*dt_ * v + (1.-theta_)*dt_ * v_old + uf_old
+
+            ufout = uf_old.duplicate()
+
+            ufout.axpby(1., 0.0, uf_old)
+            ufout.axpby(theta_*dt_, 1.0, v)
+            ufout.axpby((1.-theta_)*dt_, 1.0, v_old)
+
+            return ufout
 
 
     def update_uf_genalpha(self, v, v_old, uf_old, ufl=True):
         # update formula for integrated fluid displacement uf
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             gamma_ = self.gamma
-        else:
+            return gamma_*dt_ * v + (1.-gamma_)*dt_ * v_old + uf_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             gamma_ = float(self.gamma)
-        return gamma_*dt_ * v + (1.-gamma_)*dt_ * v_old + uf_old
+
+            ufout = uf_old.duplicate()
+
+            ufout.axpby(1., 0.0, uf_old)
+            ufout.axpby(gamma_*dt_, 1.0, v)
+            ufout.axpby((1.-gamma_)*dt_, 1.0, v_old)
+
+            return ufout
 
 
     def update_fields_ost(self, v, v_old, a_old, uf_old=None):
@@ -510,13 +577,21 @@ class timeintegration_ale(timeintegration_fluid):
 
     def update_w_ost(self, d, d_old, w_old, ufl=True):
         # update formula for domain velocity
-        if ufl:
+        if ufl: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
-        else:
+            return 1./(theta_*dt_) * (d - d_old) - (1.-theta_)/theta_ * w_old
+        else: # PETSc vector update
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
-        return 1./(theta_*dt_) * (d - d_old) - (1.-theta_)/theta_ * w_old
+
+            wout = w_old.duplicate()
+
+            wout.axpby(-(1.-theta_)/theta_, 0.0, w_old)
+            wout.axpby(1./(theta_*dt_), 1.0, d)
+            wout.axpby(-1./(theta_*dt_), 1.0, d_old)
+
+            return wout
 
 
     def update_fields(self, d, d_old, w_old):

@@ -143,6 +143,10 @@ class ModelOrderReduction():
             self.VTV = self.V.transposeMatMult(self.V)
             self.CpenVTV = self.Cpen.matMult(self.VTV) # Cpen * V^T * V
 
+            self.VTV.destroy()
+
+        self.S_d.destroy()
+
 
     # Proper Orthogonal Decomposition
     def POD(self):
