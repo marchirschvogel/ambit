@@ -42,7 +42,7 @@ class boundary_cond():
             if bdim_r==2: mdata = self.io.mt_b2
             if bdim_r==3: mdata = self.io.mt_b3
 
-            func, func_old = fem.Function(V), fem.Function(V)
+            func = fem.Function(V)
 
             if 'curve' in d.keys():
                 assert('val' not in d.keys())
@@ -50,13 +50,11 @@ class boundary_cond():
                 if d['dir'] == 'all': curve_x, curve_y, curve_z = d['curve'][0], d['curve'][1], d['curve'][2]
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
                 load.val_x, load.val_y, load.val_z = self.ti.timecurves(curve_x)(self.ti.t_init), self.ti.timecurves(curve_y)(self.ti.t_init), self.ti.timecurves(curve_z)(self.ti.t_init)
-                func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
+                func.interpolate(load.evaluate)
                 self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
-                self.ti.funcs_to_update_vec_old.append({func_old : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
             elif 'val' in d.keys():
                 assert('curve' not in d.keys())
                 func.vector.set(d['val'])
-                func_old.vector.set(d['val'])
             else:
                 raise RuntimeError("Need to have 'curve' or 'val' specified!")
 
@@ -99,7 +97,7 @@ class boundary_cond():
 
         for d in bcdict:
 
-            func, func_old = fem.Function(V), fem.Function(V)
+            func = fem.Function(V)
 
             if 'curve' in d.keys():
                 assert('val' not in d.keys())
@@ -108,19 +106,16 @@ class boundary_cond():
                 if d['dir'] == 'all': curve_x, curve_y, curve_z = d['curve'][0], d['curve'][1], d['curve'][2]
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
                 load.val_x, load.val_y, load.val_z = self.ti.timecurves(curve_x)(self.ti.t_init), self.ti.timecurves(curve_y)(self.ti.t_init), self.ti.timecurves(curve_z)(self.ti.t_init)
-                func.interpolate(load.evaluate), func_old.interpolate(load.evaluate)
+                func.interpolate(load.evaluate)
                 self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
-                self.ti.funcs_to_update_vec_old.append({func_old : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
             elif 'val' in d.keys():
                 assert('curve' not in d.keys())
                 assert('file' not in d.keys())
                 func.vector.set(d['val'])
-                func_old.vector.set(d['val'])
             elif 'file' in d.keys():
                 assert('val' not in d.keys())
                 assert('curve' not in d.keys())
                 self.ti.funcs_data.append({func : d['file']})
-                self.ti.funcs_data_old.append({func_old : d['file']})
                 self.have_dirichlet_file = True
             else:
                 raise RuntimeError("Need to have 'curve', 'val', or 'file' specified!")

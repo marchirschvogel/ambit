@@ -220,9 +220,7 @@ class AleProblem(problem_base):
 
 
     def evaluate_initial(self):
-
-        if self.bc.have_dirichlet_file:
-            pass
+        pass
 
 
     def write_output_ini(self):
