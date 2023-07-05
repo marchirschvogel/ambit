@@ -261,10 +261,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
 
-        self.pbf0.evaluate_pre_solve(t)
-        self.pba.evaluate_pre_solve(t)
+        self.pbf0.evaluate_pre_solve(t, N)
+        self.pba.evaluate_pre_solve(t, N)
 
 
     def evaluate_post_solve(self, t, N):
@@ -273,10 +273,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         self.pba.evaluate_post_solve(t, N)
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
 
-        self.pbf0.set_output_state()
-        self.pba.set_output_state()
+        self.pbf0.set_output_state(N)
+        self.pba.set_output_state(N)
 
 
     def write_output(self, N, t, mesh=False):

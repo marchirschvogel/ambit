@@ -133,6 +133,9 @@ class AleProblem(problem_base):
         if 'dirichlet' in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_d)
 
+        if 'dirichlet_vol' in self.bc_dict.keys():
+            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_d)
+
         self.set_variational_forms()
 
 
@@ -217,7 +220,9 @@ class AleProblem(problem_base):
 
 
     def evaluate_initial(self):
-        pass
+
+        if self.bc.have_dirichlet_file:
+            pass
 
 
     def write_output_ini(self):
@@ -229,17 +234,24 @@ class AleProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
 
         # set time-dependent functions
         self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
+
+        # DBC from files
+        if self.bc.have_dirichlet_file:
+            for m in self.ti.funcs_data:
+                file = list(m.values())[0].replace('*',str(N))
+                func = list(m.keys())[0]
+                self.io.readfunction(func, file)
 
 
     def evaluate_post_solve(self, t, N):
         pass
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
         pass
 
 

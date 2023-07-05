@@ -32,6 +32,8 @@ class timeintegration():
 
         # time-dependent functions to update
         self.funcs_to_update, self.funcs_to_update_old, self.funcs_to_update_vec, self.funcs_to_update_vec_old = [], [], [], []
+        # functions which are fed with external data
+        self.funcs_data, self.funcs_data_old = [], []
 
 
     # print timestep info

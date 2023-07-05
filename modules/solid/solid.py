@@ -346,6 +346,9 @@ class SolidmechanicsProblem(problem_base):
         if 'dirichlet' in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_u)
 
+        if 'dirichlet_vol' in self.bc_dict.keys():
+            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_u)
+
         self.set_variational_forms()
 
 
@@ -830,13 +833,20 @@ class SolidmechanicsProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
 
         # set time-dependent functions
         self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
 
         # evaluate rate equations
         self.evaluate_rate_equations(t)
+
+        # DBC from files
+        if self.bc.have_dirichlet_file:
+            for m in self.ti.funcs_data:
+                file = list(m.values())[0].replace('*',str(N))
+                func = list(m.keys())[0]
+                self.io.readfunction(func, file)
 
 
     def evaluate_post_solve(self, t, N):
@@ -849,7 +859,7 @@ class SolidmechanicsProblem(problem_base):
             self.compute_solid_growth_rate(N, t)
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
         pass
 
 

@@ -321,6 +321,9 @@ class FluidmechanicsProblem(problem_base):
         if 'dirichlet' in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_v)
 
+        if 'dirichlet_vol' in self.bc_dict.keys():
+            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_v)
+
         self.set_variational_forms()
 
 
@@ -840,11 +843,10 @@ class FluidmechanicsProblem(problem_base):
 
     def evaluate_initial(self):
 
-        # if self.restart_step == 0: # for restart, we read the monitor data...
         if self.have_flux_monitor:
             self.evaluate_flux_monitor(self.qv_old_, self.q_old_)
             for k in self.qv_old_: self.qv_[k] = self.qv_old_[k]
-        if self.have_dp_monitor: # only dependent on prim. var. p, so no need to read at restart
+        if self.have_dp_monitor:
             self.evaluate_dp_monitor(self.pu_old_, self.pd_old_, self.pint_u_old_, self.pint_d_old_, self.a_u_old_, self.a_d_old_)
             for k in self.pu_old_: self.pu_[k] = self.pu_old_[k]
             for k in self.pd_old_: self.pd_[k] = self.pd_old_[k]
@@ -861,13 +863,20 @@ class FluidmechanicsProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
 
         # set time-dependent functions
         self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
 
         # evaluate rate equations
         self.evaluate_rate_equations(t)
+
+        # DBC from files
+        if self.bc.have_dirichlet_file:
+            for m in self.ti.funcs_data:
+                file = list(m.values())[0].replace('*',str(N))
+                func = list(m.keys())[0]
+                self.io.readfunction(func, file)
 
 
     def evaluate_post_solve(self, t, N):
@@ -880,7 +889,7 @@ class FluidmechanicsProblem(problem_base):
             self.evaluate_robin_valve(t, self.pu_, self.pd_)
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
         pass
 
 

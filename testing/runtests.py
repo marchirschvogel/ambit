@@ -20,25 +20,6 @@ args = parser.parse_args()
 category = args.c
 branch = args.b
 
-if category=='all':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = True, True, True, True, True, True, True
-elif category=='solid':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = True, False, False, False, False, False, False
-elif category=='fluid':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, True, False, False, False, False, False
-elif category=='flow0d':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, True, False, False, False, False
-elif category=='solid_flow0d':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, True, False, False, False
-elif category=='fluid_flow0d':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, False, True, False, False
-elif category=='solid_constraint':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, False, False, True, False
-elif category=='frsi':
-    solid, fluid, flow0d, solid_flow0d, fluid_flow0d, solid_constraint, frsi = False, False, False, False, False, False, True
-else:
-    raise NameError("Unknown test category!")
-
 errs = {}
 
 start = time.time()
@@ -47,7 +28,7 @@ start = time.time()
 subprocess.call(['mkdir', '-p', 'tmp'])
 
 
-if solid:
+if category=='solid' or category=='all':
     errs['solid_mat_uniax_hex_2field 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_mat_uniax_hex_2field.py'])
     errs['solid_mat_uniax_hex_2field 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_mat_uniax_hex_2field.py'])
 
@@ -82,7 +63,7 @@ if solid:
     errs['solid_membrane 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_membrane.py'])
     errs['solid_membrane 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_membrane.py'])
 
-if fluid:
+if category=='fluid' or category=='all':
     errs['fluid_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_taylorhood_cylinder.py'])
     errs['fluid_taylorhood_cylinder 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'fluid_taylorhood_cylinder.py'])
 
@@ -93,11 +74,15 @@ if fluid:
         errs['fluid_p1p1_stab_cylinder_valve 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder_valve.py'])
         errs['fluid_p1p1_stab_cylinder_valve 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'fluid_p1p1_stab_cylinder_valve.py'])
 
-if fluid_flow0d:
+if category=='fluid_flow0d' or category=='all':
     errs['fluid_flow0d_monolagr_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_flow0d_monolagr_taylorhood_cylinder.py'])
     errs['fluid_flow0d_monolagr_taylorhood_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'fluid_flow0d_monolagr_taylorhood_cylinder.py'])
 
-if flow0d:
+if category=='fluid_ale_flow0d' or category=='all':
+    if branch=='mixed':
+        errs['fluid_ale_flow0d_lalv_syspul_prescribed 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'fluid_ale_flow0d_lalv_syspul_prescribed.py'])
+
+if category=='flow0d' or category=='all':
     errs['flow0d_0Dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
     errs['flow0d_0Dvol_4elwindkesselLsZ 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
 
@@ -114,7 +99,7 @@ if flow0d:
     errs['flow0d_0Dheart_syspulcaprespir_periodic 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py'])
     errs['flow0d_0Dheart_syspulcaprespir_periodic 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py'])
 
-if solid_flow0d:
+if category=='solid_flow0d' or category=='all':
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
 
@@ -136,11 +121,11 @@ if solid_flow0d:
 
     errs['solid_flow0d_monodir_syspulcor_2Dheart_ROM 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_syspulcor_2Dheart_ROM.py'])
 
-if solid_constraint:
+if category=='solid_constraint' or category=='all':
     errs['solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_constraint_volume_chamber.py'])
     errs['solid_constraint_volume_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_constraint_volume_chamber.py'])
 
-if frsi:
+if category=='frsi' or category=='all':
     errs['frsi_artseg_prefile 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_prefile.py'])
     errs['frsi_artseg_prefile 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile.py'])
 
@@ -149,6 +134,7 @@ if frsi:
     errs['frsi_artseg_partition 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'frsi_artseg_partition.py', str(2)])
 
     errs['frsi_artseg_prefile_iterative 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'frsi_artseg_prefile_iterative.py'])
+
 
 err = 0
 for e in range(len(errs)):

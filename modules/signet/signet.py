@@ -44,7 +44,7 @@ class SignallingNetworkProblem(problem_base):
 
         # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
         try: self.output_midpoint = io_params['output_midpoint_0D']
-        except: self.output_midpoint = True
+        except: self.output_midpoint = False
 
         try: self.prescribed_variables = model_params['prescribed_variables']
         except: self.prescribed_variables = {}
@@ -189,7 +189,7 @@ class SignallingNetworkProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
         pass
 
 
@@ -197,11 +197,16 @@ class SignallingNetworkProblem(problem_base):
         pass
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
 
         # get midpoint dof values for post-processing (has to be called before update!)
-        self.signet.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=self.output_midpoint)
-        self.signet.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=self.output_midpoint)
+        self.s.assemble(), self.s_old.assemble(), self.s_mid.assemble()
+        if self.initial_backwardeuler and N==1:
+            omid = False
+        else:
+            omid = self.output_midpoint
+        self.signet.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=omid)
+        self.signet.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=omid)
 
 
     def write_output(self, N, t):

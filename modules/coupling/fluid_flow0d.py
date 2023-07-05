@@ -87,7 +87,8 @@ class FluidmechanicsFlow0DProblem():
 
     def get_problem_var_list(self):
 
-        is_ghosted = [1, 1, 0]
+        if self.pbf.num_dupl > 1: is_ghosted = [1, 2, 0]
+        else:                     is_ghosted = [1, 1, 0]
         return [self.pbf.v.vector, self.pbf.p.vector, self.lm], is_ghosted
 
 
@@ -420,10 +421,10 @@ class FluidmechanicsFlow0DProblem():
         return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
 
-        self.pbf.evaluate_pre_solve(t)
-        self.pb0.evaluate_pre_solve(t)
+        self.pbf.evaluate_pre_solve(t, N)
+        self.pb0.evaluate_pre_solve(t, N)
 
 
     def evaluate_post_solve(self, t, N):
@@ -432,10 +433,10 @@ class FluidmechanicsFlow0DProblem():
         self.pb0.evaluate_post_solve(t, N)
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
 
-        self.pbf.set_output_state()
-        self.pb0.set_output_state()
+        self.pbf.set_output_state(N)
+        self.pb0.set_output_state(N)
 
 
     def write_output(self, N, t, mesh=False):

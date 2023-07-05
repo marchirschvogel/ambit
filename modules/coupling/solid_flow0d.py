@@ -587,10 +587,10 @@ class SolidmechanicsFlow0DProblem():
         return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
 
-        self.pbs.evaluate_pre_solve(t)
-        self.pb0.evaluate_pre_solve(t)
+        self.pbs.evaluate_pre_solve(t, N)
+        self.pb0.evaluate_pre_solve(t, N)
 
 
     def evaluate_post_solve(self, t, N):
@@ -602,10 +602,10 @@ class SolidmechanicsFlow0DProblem():
             self.set_homeostatic_threshold(t), self.set_growth_trigger(t-t_off)
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
 
-        self.pbs.set_output_state()
-        self.pb0.set_output_state()
+        self.pbs.set_output_state(N)
+        self.pb0.set_output_state(N)
 
 
     def write_output(self, N, t, mesh=False):

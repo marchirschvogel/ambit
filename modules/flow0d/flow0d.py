@@ -61,7 +61,7 @@ class Flow0DProblem(problem_base):
 
         # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
         try: self.output_midpoint = io_params['output_midpoint_0D']
-        except: self.output_midpoint = True
+        except: self.output_midpoint = False
 
         try: valvelaws = model_params['valvelaws']
         except: valvelaws = {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}
@@ -358,7 +358,7 @@ class Flow0DProblem(problem_base):
         return (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t):
+    def evaluate_pre_solve(self, t, N):
 
         # external volume/flux from time curve
         if self.excitation_curve is not None:
@@ -371,12 +371,16 @@ class Flow0DProblem(problem_base):
         pass
 
 
-    def set_output_state(self):
+    def set_output_state(self, N):
 
         # get midpoint dof values for post-processing (has to be called before update!)
         self.s.assemble(), self.s_old.assemble(), self.s_mid.assemble()
-        self.cardvasc0D.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=self.output_midpoint)
-        self.cardvasc0D.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=self.output_midpoint)
+        if self.initial_backwardeuler and N==1:
+            omid = False
+        else:
+            omid = self.output_midpoint
+        self.cardvasc0D.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=omid)
+        self.cardvasc0D.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=omid)
 
 
     def write_output(self, N, t):
