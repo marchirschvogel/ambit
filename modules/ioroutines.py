@@ -497,6 +497,7 @@ class IO_solid(IO):
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
                 key.vector.load(viewer)
                 key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
             else:
@@ -539,6 +540,7 @@ class IO_solid(IO):
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
                 key.vector.view(viewer)
+                viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
             else:
@@ -640,6 +642,7 @@ class IO_fluid(IO):
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
                 key.vector.load(viewer)
                 key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
             else:
@@ -672,6 +675,7 @@ class IO_fluid(IO):
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
                 key.vector.view(viewer)
+                viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
             else:
@@ -725,6 +729,7 @@ class IO_ale(IO):
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
                 key.vector.load(viewer)
                 key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
             else:
@@ -745,6 +750,7 @@ class IO_ale(IO):
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
                 key.vector.view(viewer)
+                viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
             else:
