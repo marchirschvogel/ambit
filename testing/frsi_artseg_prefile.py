@@ -73,7 +73,7 @@ def main():
                                             {'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_FLUID        = { 'membrane' :  [{'id' : [1,6], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : 0.1}}],
+    BC_DICT_FLUID        = { 'membrane' :  [{'id' : [1,6], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}],
                              'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
                              'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }

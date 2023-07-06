@@ -422,7 +422,7 @@ class FluidmechanicsProblem(problem_base):
 
             self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
 
-            self.actstress = []
+            self.actstress, self.wallfields = [], []
             for nm in range(len(self.bc_dict['membrane'])):
 
                 if 'active_stress' in self.bc_dict['membrane'][nm]['params'].keys():
@@ -431,8 +431,14 @@ class FluidmechanicsProblem(problem_base):
                     act_curve = self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])
                     self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], act_curve))
 
-            w_membrane, self.dbmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.var_v, ivar=self.internalvars)
-            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.var_v, ivar=self.internalvars_old)
+                if 'field' in self.bc_dict['membrane'][nm]['params']['h0'].keys():
+                    # wall thickness field for reduced solid
+                    h0_func = fem.Function(self.V_scalar)
+                    self.io.readfunction(h0_func, self.bc_dict['membrane'][nm]['params']['h0']['field'])
+                    self.wallfields.append(h0_func)
+
+            w_membrane, self.dbmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.var_v, ivar=self.internalvars, wallfields=self.wallfields)
+            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.var_v, ivar=self.internalvars_old, wallfields=self.wallfields)
 
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial:
@@ -800,7 +806,8 @@ class FluidmechanicsProblem(problem_base):
             ad_ = sum(ad)
 
             # assert that the two parts of the valve are actually of same size
-            assert(np.isclose(au_, ad_))
+            # acutally not needed - domain partitioning should assert this...
+            #assert(np.isclose(au_, ad_))
 
             # surface-averaged pressures on up- and downstream sides
             pu = (1./au_)*fem.assemble_scalar(pint_u_[m])

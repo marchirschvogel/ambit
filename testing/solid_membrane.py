@@ -49,11 +49,11 @@ def main():
         def tc1(self, t):
             return 0.5*t
 
-    BC_DICT           = { 'membrane' :  [{'id' : [5], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : 0.1}}, # block1
-                                         {'id' : [11], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : 0.1}}, # block2
-                                         {'id' : [17], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : 0.1}}, # block3
-                                         {'id' : [23], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : 0.1}}, # block4
-                                         {'id' : [29], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : 0.1}}], # block5
+    BC_DICT           = { 'membrane' :  [{'id' : [5], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}, # block1
+                                         {'id' : [11], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}, # block2
+                                         {'id' : [17], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}, # block3
+                                         {'id' : [23], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}, # block4
+                                         {'id' : [29], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}], # block5
                           # block1 - tension in membrane plane
                           'dirichlet' : [{'id' : [3,6], 'dir' : 'z', 'val' : 0.}, # out of 2D plane XY
                                          {'id' : [1], 'dir' : 'all', 'val' : 0.},

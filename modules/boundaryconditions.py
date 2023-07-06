@@ -202,10 +202,11 @@ class boundary_cond():
 
 
     # set membrane surface BCs
-    def membranesurf_bcs(self, bcdict, u, v, a, varu, ivar=None):
+    def membranesurf_bcs(self, bcdict, u, v, a, varu, ivar=None, wallfields=[]):
 
         w, db_, bstress = ufl.as_ufl(0), [], []
 
+        mi=0
         for m in bcdict:
 
             try: bdim_r = m['bdim_reduction']
@@ -215,12 +216,20 @@ class boundary_cond():
             if bdim_r==2: mdata = self.io.mt_b2_master
             if bdim_r==3: mdata = self.io.mt_b3_master
 
+            # field for variable wall thickness
+            if bool(wallfields):
+                wallfield = wallfields[mi]
+            else:
+                wallfield = None
+
             for i in range(len(m['id'])):
 
                 db_.append(ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree}))
 
-                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff)
-                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff, stress=True))
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff, wallfield=wallfield)
+                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, varu, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff, stress=True, wallfield=wallfield))
+
+            mi+=1
 
         return w, db_, bstress
 

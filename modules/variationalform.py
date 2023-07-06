@@ -17,7 +17,7 @@ class variationalform_base:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{u}\,\mathrm{d}A
     # for fluid mechanics, contribution to virtual power is:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v}),\boldsymbol{v}) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{v}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, varu, params, dboundary, ivar=None, fibfnc=None, stress=False):
+    def deltaW_ext_membrane(self, F, Fdot, a, varu, params, dboundary, ivar=None, fibfnc=None, stress=False, wallfield=None):
 
         C = F.T*F
 
@@ -40,8 +40,14 @@ class variationalform_base:
             else:
                 ValueError("Unknown ative stress dir!")
 
-        # wall thickness parameter
-        h0 = params['h0']
+        # wall thickness - can be constant or a field
+        wall_thickness = params['h0']
+        if 'val' in wall_thickness.keys():
+            h0 = wall_thickness['val']
+        elif 'field' in wall_thickness.keys():
+            h0 = wallfield
+        else:
+            raise ValueError("Have to have either val or field in h0 dict!")
 
         # only components in normal direction (F_nn, F_t1n, F_t2n)
         Fn = F*n0n0
