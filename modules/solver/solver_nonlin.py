@@ -585,6 +585,9 @@ class solver_nonlinear:
 
         if ghosted==1:
             vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if ghosted==2:
+            subvecs = vec.getNestSubVecs()
+            for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     # local Newton where increment can be expressed as form at integration point level
