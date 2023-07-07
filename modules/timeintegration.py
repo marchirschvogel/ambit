@@ -201,9 +201,9 @@ class timeintegration_solid(timeintegration):
             aout = a_old.duplicate()
 
             aout.axpby(-(1.-2.*beta_)/(2.*beta_), 0.0, a_old)
-            aout.axpby(-1./(beta_*dt_), 1.0, v_old)
-            aout.axpby(1./(beta_*dt_*dt_), 1.0, u)
-            aout.axpby(-1./(beta_*dt_*dt_), 1.0, u_old)
+            aout.axpy(-1./(beta_*dt_), v_old)
+            aout.axpy(1./(beta_*dt_*dt_), u)
+            aout.axpy(-1./(beta_*dt_*dt_), u_old)
 
             return aout
 
@@ -221,9 +221,9 @@ class timeintegration_solid(timeintegration):
             aout = a_old.duplicate()
 
             aout.axpby(-(1.-theta_)/theta_, 0.0, a_old)
-            aout.axpby(-1./(theta_*theta_*dt_), 1.0, v_old)
-            aout.axpby(1./(theta_*theta_*dt_*dt_), 1.0, u)
-            aout.axpby(-1./(theta_*theta_*dt_*dt_), 1.0, u_old)
+            aout.axpy(-1./(theta_*theta_*dt_), v_old)
+            aout.axpy(1./(theta_*theta_*dt_*dt_), u)
+            aout.axpy(-1./(theta_*theta_*dt_*dt_), u_old)
 
             return aout
 
@@ -243,9 +243,9 @@ class timeintegration_solid(timeintegration):
             vout = v_old.duplicate()
 
             vout.axpby(-(gamma_-beta_)/beta_, 0.0, v_old)
-            vout.axpby(-(gamma_-2.*beta_)/(2.*beta_) * dt_, 1.0, a_old)
-            vout.axpby(gamma_/(beta_*dt_), 1.0, u)
-            vout.axpby(-gamma_/(beta_*dt_), 1.0, u_old)
+            vout.axpy(-(gamma_-2.*beta_)/(2.*beta_) * dt_, a_old)
+            vout.axpy(gamma_/(beta_*dt_), u)
+            vout.axpy(-gamma_/(beta_*dt_), u_old)
 
             return vout
 
@@ -263,8 +263,8 @@ class timeintegration_solid(timeintegration):
             vout = v_old.duplicate()
 
             vout.axpby(-(1.-theta_)/theta_, 0.0, v_old)
-            vout.axpby(1./(theta_*dt_), 1.0, u)
-            vout.axpby(-1./(theta_*dt_), 1.0, u_old)
+            vout.axpy(1./(theta_*dt_), u)
+            vout.axpy(-1./(theta_*dt_), u_old)
 
             return vout
 
@@ -421,8 +421,8 @@ class timeintegration_fluid(timeintegration):
             aout = a_old.duplicate()
 
             aout.axpby(-(1.-theta_)/theta_, 0.0, a_old)
-            aout.axpby(1./(theta_*dt_), 1.0, v)
-            aout.axpby(-1./(theta_*dt_), 1.0, v_old)
+            aout.axpy(1./(theta_*dt_), v)
+            aout.axpy(-1./(theta_*dt_), v_old)
 
             return aout
 
@@ -440,8 +440,8 @@ class timeintegration_fluid(timeintegration):
             aout = uf_old.duplicate()
 
             aout.axpby(-(1.-gamma_)/gamma_, 0.0, a_old)
-            aout.axpby(1./(gamma_*dt_), 1.0, v)
-            aout.axpby(-1./(gamma_*dt_), 1.0, v_old)
+            aout.axpy(1./(gamma_*dt_), v)
+            aout.axpy(-1./(gamma_*dt_), v_old)
 
             return aout
 
@@ -459,8 +459,8 @@ class timeintegration_fluid(timeintegration):
             ufout = uf_old.duplicate()
 
             ufout.axpby(1., 0.0, uf_old)
-            ufout.axpby(theta_*dt_, 1.0, v)
-            ufout.axpby((1.-theta_)*dt_, 1.0, v_old)
+            ufout.axpy(theta_*dt_, v)
+            ufout.axpy((1.-theta_)*dt_, v_old)
 
             return ufout
 
@@ -478,8 +478,8 @@ class timeintegration_fluid(timeintegration):
             ufout = uf_old.duplicate()
 
             ufout.axpby(1., 0.0, uf_old)
-            ufout.axpby(gamma_*dt_, 1.0, v)
-            ufout.axpby((1.-gamma_)*dt_, 1.0, v_old)
+            ufout.axpy(gamma_*dt_, v)
+            ufout.axpy((1.-gamma_)*dt_, v_old)
 
             return ufout
 
@@ -588,8 +588,8 @@ class timeintegration_ale(timeintegration_fluid):
             wout = w_old.duplicate()
 
             wout.axpby(-(1.-theta_)/theta_, 0.0, w_old)
-            wout.axpby(1./(theta_*dt_), 1.0, d)
-            wout.axpby(-1./(theta_*dt_), 1.0, d_old)
+            wout.axpy(1./(theta_*dt_), d)
+            wout.axpy(-1./(theta_*dt_), d_old)
 
             return wout
 
