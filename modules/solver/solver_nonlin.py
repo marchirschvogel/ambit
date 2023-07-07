@@ -554,10 +554,17 @@ class solver_nonlinear:
                     # reset Newton step
                     it, k_PTC = 0, self.k_PTC_initial
                     if counter_adapt>0: k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
+
+                    if self.pb.comm.rank == 0:
+                        print("PTC factor: %.4f" % (k_PTC))
+                        sys.stdout.flush()
+
+                    # reset solver
                     for n in range(self.nfields):
                         self.reset_step(self.x[n], x_start[n], self.is_ghosted[n])
                         if self.pb.sub_solve: # can only be a 0D model so far...
                             self.reset_step(self.pb.pb0.s, s_start, 0)
+
                     counter_adapt += 1
 
             # check if converged
