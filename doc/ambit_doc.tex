@@ -137,7 +137,7 @@
 
 \section{Preface}
 
-Ambit is an open-source software tool written in Python for parallel multi-physics simulations focusing on -- but not limited to -- cardiac mechanics. It makes use of the open-source finite element library FEniCS/dolfinx (https://fenicsproject.org) \cite{logg2012} along with the linear algebra package PETSc (https://petsc.org) \cite{petsc-user-ref}. It is constantly updated to ensure compatibility with the latest dolfinx development version, hence guaranteeing a state-of-the-art finite element and linear algebra backend.\\
+Ambit is an open-source software tool written in Python for parallel multi-physics simulations focusing on -- but not limited to -- cardiac mechanics. Amongst others, it contains re-implementations and generalizations of methods developed by the author for his PhD thesis \cite{hirschvogel2018}. Ambit makes use of the open-source finite element library FEniCS/dolfinx (https://fenicsproject.org) \cite{logg2012} along with the linear algebra package PETSc (https://petsc.org) \cite{petsc-user-ref}. It is constantly updated to ensure compatibility with a recent dolfinx development version, hence guaranteeing a state-of-the-art finite element and linear algebra backend.\\
 
 Ambit is designed such that the user only needs to provide input files that define parameters through Python dictionaries, hence no programming or in-depth knowledge of any library-specific syntax is required.\\
 
@@ -148,9 +148,11 @@ Furthermore, fluid dynamics in terms of incompressible Navier-Stokes/Stokes equa
 
 A variety of reduced 0D lumped models targeted at blood circulation modeling are implemented, including 3- and 4-element Windkessel models \cite{westerhof2009} as well as closed-loop full circulation \cite{hirschvogel2017} and coronary flow models \cite{arthurs2016}.\\
 
-Monolithic multiphysics coupling of solid, fluid, and ALE-fluid with 0D lumped models is implemented such that cardiovascular simulations with realistic boundary conditions can be performed. Monolithic fluid-solid interaction (FSI) will be provided in the near future once mixed domain functionality is fully supported in the finite element backend dolfinx.\\
+Monolithic multi-physics coupling of solid, fluid, and ALE-fluid with 0D lumped models is implemented such that cardiovascular simulations with realistic boundary conditions can be performed. Monolithic fluid-solid interaction (FSI) will be provided in the near future once mixed domain functionality is fully supported in the finite element backend dolfinx.\\
 
 Implementations for a recently proposed novel physics- and projection-based model reduction for FSI, denoted as fluid-reduced-solid interaction (FrSI) \cite{hirschvogel2022preprint}, are provided, along with POD-based Galerkin model reduction techniques \cite{farhat2014} using full or boundary subspaces.\\
+
+The nonlinear (single- or multi-field) problems are solved with a customized Newton solver with PTC \cite{gee2009} adaptibity in case of divergence, providing robustness for numerically challenging problems. Linear solvers and preconditioners can be chosen from the PETSc repertoire, and specific block preconditioners are made available for coupled problems.\\
 
 Avenues for future functionality include cardiac electrophysiology, scalar transport, or finite strain plasticity.\\
 
@@ -158,6 +160,11 @@ In the following, a brief description of the supported problem types is given, i
 
 Examples of input files for the respective problem types can be found in the folder \verb\ambit/testing\.
 
+%\begin{figure}[!htp]
+%\centering
+%\includegraphics[width=0.8\textwidth]{/home/mh/work/publications/paper_ambit/code_design.pdf}
+%\caption{Code design}\label{fig:code_design}
+%\end{figure}
 
 \section{Solid mechanics}
 
@@ -170,7 +177,7 @@ Examples of input files for the respective problem types can be found in the fol
 \subsubsection{Displacement-based}
 -- primary variable: displacement $\bs{u}$
 \begin{alignat}{3}
-\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a} \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
 \bs{u} &= \hat{\bs{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
 \bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
 \bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
@@ -217,7 +224,7 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 \begin{align}
 \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{p}(t)\,J \bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{u} \,\mathrm{d}A \label{eq:deltaWext_cur_p}
 \end{align}
-\item general Neumann load in current normal direction:
+\item general Neumann load in current direction:
 \begin{align}
 \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Gm_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq:deltaWext_cur}
 \end{align}
