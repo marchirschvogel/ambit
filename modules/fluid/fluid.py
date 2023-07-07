@@ -249,7 +249,7 @@ class FluidmechanicsProblem(problem_base):
 
         if self.have_rom:
             import mor
-            self.rom = mor.ModelOrderReduction(mor_params, [self.V_v,self.V_scalar], self.io, self.comm)
+            self.rom = mor.ModelOrderReduction(self, self.V_v, mor_params)
 
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)

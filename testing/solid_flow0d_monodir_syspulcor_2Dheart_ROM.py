@@ -42,7 +42,8 @@ def main():
                             'snapshotincr'          : 1,
                             'numredbasisvec'        : 5,
                             'eigenvalue_cutoff'     : 1.0e-8,
-                            'print_eigenproblem'    : True}
+                            'print_eigenproblem'    : True,
+                            'write_pod_modes'       : True}
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-6],

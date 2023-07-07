@@ -204,7 +204,7 @@ class SolidmechanicsProblem(problem_base):
 
         if self.have_rom:
             import mor
-            self.rom = mor.ModelOrderReduction(mor_params, [self.V_u,self.V_scalar], self.io, self.comm)
+            self.rom = mor.ModelOrderReduction(self, self.V_u, mor_params)
 
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
