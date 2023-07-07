@@ -12,7 +12,6 @@ from dolfinx import fem
 import ufl
 from petsc4py import PETSc
 
-import utilities
 import solver_nonlin
 import expression
 from projection import project
@@ -21,7 +20,6 @@ from mpiroutines import allgather_vec
 from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from flow0d import Flow0DProblem
 from base import problem_base, solver_base
-import preconditioner
 
 
 class SolidmechanicsFlow0DProblem(problem_base):

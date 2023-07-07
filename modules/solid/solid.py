@@ -12,7 +12,6 @@ from dolfinx import fem
 import ufl
 from petsc4py import PETSc
 
-import ioroutines
 import solid_kinematics_constitutive
 import solid_variationalform
 import timeintegration

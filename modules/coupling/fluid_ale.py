@@ -12,7 +12,6 @@ from dolfinx import fem
 import ufl
 from petsc4py import PETSc
 
-import utilities
 import solver_nonlin
 import expression
 
@@ -20,7 +19,6 @@ from fluid import FluidmechanicsProblem, FluidmechanicsSolverPrestr
 from ale import AleProblem
 from base import problem_base, solver_base
 from meshutils import gather_surface_dof_indices
-from projection import project
 
 
 class FluidmechanicsAleProblem(problem_base):

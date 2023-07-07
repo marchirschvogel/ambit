@@ -11,7 +11,6 @@ import numpy as np
 
 from petsc4py import PETSc
 import timeintegration
-import utilities
 import solver_nonlin
 
 from base import problem_base, solver_base

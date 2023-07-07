@@ -12,11 +12,7 @@ from dolfinx import fem, mesh
 import ufl
 from petsc4py import PETSc
 
-import utilities
 import solver_nonlin
-import expression
-from projection import project
-from mpiroutines import allgather_vec
 
 from solid import SolidmechanicsProblem, SolidmechanicsSolver
 from fluid_ale import FluidmechanicsAleProblem

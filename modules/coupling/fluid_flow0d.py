@@ -12,7 +12,6 @@ from dolfinx import fem
 import ufl
 from petsc4py import PETSc
 
-import utilities
 import solver_nonlin
 import expression
 from mpiroutines import allgather_vec

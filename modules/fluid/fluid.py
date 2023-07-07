@@ -12,7 +12,6 @@ from dolfinx import fem, mesh, io
 import ufl
 from petsc4py import PETSc
 
-import ioroutines
 import fluid_kinematics_constitutive
 import fluid_variationalform
 import timeintegration
