@@ -48,7 +48,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
     def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, init=True, comm=None):
         # initialize base class
-        cardiovascular0Dbase.__init__(self, init=init, comm=comm)
+        super().__init__(init=init, comm=comm)
 
         # parameters
         # circulatory system parameters: resistances (R), compliances (C), inertances (L, I), impedances (Z)

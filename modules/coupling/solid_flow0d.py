@@ -20,17 +20,16 @@ from mpiroutines import allgather_vec
 
 from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from flow0d import Flow0DProblem
-from base import solver_base
+from base import problem_base, solver_base
 import preconditioner
 
 
-class SolidmechanicsFlow0DProblem():
+class SolidmechanicsFlow0DProblem(problem_base):
 
     def __init__(self, io_params, time_params_solid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None):
+        super().__init__(io_params, time_params_solid, comm)
 
         self.problem_physics = 'solid_flow0d'
-
-        self.comm = comm
 
         self.coupling_params = coupling_params
 
@@ -91,11 +90,6 @@ class SolidmechanicsFlow0DProblem():
         else:
             raise ValueError("Unknown coupling type!")
 
-        # solid is 'master' problem - define problem variables based on its values
-        self.simname = self.pbs.simname
-        self.restart_step = self.pbs.restart_step
-        self.numstep_stop = self.pbs.numstep_stop
-        self.dt = self.pbs.dt
         self.localsolve = self.pbs.localsolve
         self.have_rom = self.pbs.have_rom
         if self.have_rom: self.rom = self.pbs.rom

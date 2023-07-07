@@ -18,18 +18,17 @@ import expression
 
 from fluid import FluidmechanicsProblem, FluidmechanicsSolverPrestr
 from ale import AleProblem
-from base import solver_base
+from base import problem_base, solver_base
 from meshutils import gather_surface_dof_indices
 from projection import project
 
 
-class FluidmechanicsAleProblem():
+class FluidmechanicsAleProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None):
+        super().__init__(io_params, time_params, comm)
 
         self.problem_physics = 'fluid_ale'
-
-        self.comm = comm
 
         self.coupling_params = coupling_params
 
@@ -74,11 +73,7 @@ class FluidmechanicsAleProblem():
         self.set_variational_forms()
 
         self.numdof = self.pbf.numdof + self.pba.numdof
-        # fluid is 'master' problem - define problem variables based on its values
-        self.simname = self.pbf.simname
-        self.restart_step = self.pbf.restart_step
-        self.numstep_stop = self.pbf.numstep_stop
-        self.dt = self.pbf.dt
+
         self.have_rom = self.pbf.have_rom
         if self.have_rom: self.rom = self.pbf.rom
 
@@ -366,6 +361,10 @@ class FluidmechanicsAleProblem():
         if self.restart_step > 0:
             self.io.readcheckpoint(self, N)
             self.simname += '_r'+str(N)
+            # TODO: quick-fix - simname variables of single field problems need to be addressed, too
+            # but this should be handled by one variable, however neeeds revamp of I/O
+            self.pbf.simname += '_r'+str(N)
+            self.pba.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):

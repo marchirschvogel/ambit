@@ -19,16 +19,15 @@ from projection import project
 from mpiroutines import allgather_vec, allgather_vec_entry
 
 from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
-from base import solver_base
+from base import problem_base, solver_base
 
 
-class SolidmechanicsConstraintProblem():
+class SolidmechanicsConstraintProblem(problem_base):
 
     def __init__(self, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None):
+        super().__init__(io_params, time_params_solid, comm)
 
         self.problem_physics = 'solid_constraint'
-
-        self.comm = comm
 
         self.coupling_params = coupling_params
 
@@ -52,11 +51,7 @@ class SolidmechanicsConstraintProblem():
         self.set_variational_forms_and_jacobians()
 
         self.numdof = self.pbs.numdof + self.lm.getSize()
-        # solid is 'master' problem - define problem variables based on its values
-        self.simname = self.pbs.simname
-        self.restart_step = self.pbs.restart_step
-        self.numstep_stop = self.pbs.numstep_stop
-        self.dt = self.pbs.dt
+
         self.localsolve = self.pbs.localsolve
         self.have_rom = self.pbs.have_rom
 

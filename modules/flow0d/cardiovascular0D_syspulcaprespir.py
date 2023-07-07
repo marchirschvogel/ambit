@@ -70,7 +70,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.V_tisscor = params['V_tisscor']
 
         # initialize base class
-        cardiovascular0Dsyspulcap.__init__(self, params, chmodels, cq, vq, valvelaws, cormodel=cormodel, vadmodel=vadmodel, init=init, comm=comm)
+        super().__init__(params, chmodels, cq, vq, valvelaws, cormodel=cormodel, vadmodel=vadmodel, init=init, comm=comm)
 
 
     def setup_arrays(self):

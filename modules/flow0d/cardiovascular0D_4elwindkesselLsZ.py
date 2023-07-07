@@ -27,7 +27,7 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
     def __init__(self, params, cq, vq, init=True, comm=None):
         # initialize base class
-        cardiovascular0Dbase.__init__(self, init=init, comm=comm)
+        super().__init__(init=init, comm=comm)
 
         # number of degrees of freedom
         self.numdof = 3

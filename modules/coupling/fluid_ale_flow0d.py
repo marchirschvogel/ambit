@@ -21,17 +21,16 @@ from fluid_ale import FluidmechanicsAleProblem
 from fluid_flow0d import FluidmechanicsFlow0DProblem
 from fluid import FluidmechanicsSolverPrestr
 from ale import AleProblem
-from base import solver_base
+from base import problem_base, solver_base
 from meshutils import gather_surface_dof_indices
 
 
-class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
+class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
     def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}, comm=None):
+        problem_base.__init__(self, io_params, time_params_fluid, comm)
 
         self.problem_physics = 'fluid_ale_flow0d'
-
-        self.comm = comm
 
         try: self.coupling_fluid_ale = coupling_params_fluid_ale['coupling_fluid_ale']
         except: self.coupling_fluid_ale = {}
@@ -77,11 +76,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         self.set_variational_forms()
 
         self.numdof = self.pbf.numdof + self.pbf0.lm.getSize() + self.pba.numdof
-        # fluid is 'master' problem - define problem variables based on its values
-        self.simname = self.pbf.simname
-        self.restart_step = self.pbf.restart_step
-        self.numstep_stop = self.pbf.numstep_stop
-        self.dt = self.pbf.dt
+
         self.have_rom = self.pbf.have_rom
         if self.have_rom: self.rom = self.pbf.rom
 
@@ -237,6 +232,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem):
         if self.restart_step > 0:
             self.io.readcheckpoint(self, N)
             self.simname += '_r'+str(N)
+            # TODO: quick-fix - simname variables of single field problems need to be addressed, too
+            # but this should be handled by one variable, however neeeds revamp of I/O
+            self.pbf.simname += '_r'+str(N)
+            self.pba.simname += '_r'+str(N)
 
         self.pb0.read_restart(sname, N)
 

@@ -19,11 +19,9 @@ from base import problem_base, solver_base
 class SignallingNetworkProblem(problem_base):
 
     def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None):
-        problem_base.__init__(self, io_params, time_params, comm)
+        super().__init__(io_params, time_params, comm)
 
         self.problem_physics = 'signet'
-
-        self.simname = io_params['simname']
 
         self.time_params = time_params
 

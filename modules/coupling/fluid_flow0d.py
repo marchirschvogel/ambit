@@ -19,16 +19,15 @@ from mpiroutines import allgather_vec
 
 from fluid import FluidmechanicsProblem
 from flow0d import Flow0DProblem
-from base import solver_base
+from base import problem_base, solver_base
 
 
-class FluidmechanicsFlow0DProblem():
+class FluidmechanicsFlow0DProblem(problem_base):
 
     def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, alevar={}):
+        super().__init__(io_params, time_params_fluid, comm)
 
         self.problem_physics = 'fluid_flow0d'
-
-        self.comm = comm
 
         self.coupling_params = coupling_params
 
@@ -70,11 +69,7 @@ class FluidmechanicsFlow0DProblem():
         self.set_variational_forms()
 
         self.numdof = self.pbf.numdof + self.lm.getSize()
-        # fluid is 'master' problem - define problem variables based on its values
-        self.simname = self.pbf.simname
-        self.restart_step = self.pbf.restart_step
-        self.numstep_stop = self.pbf.numstep_stop
-        self.dt = self.pbf.dt
+
         self.localsolve = self.pbf.localsolve
         self.have_rom = self.pbf.have_rom
 

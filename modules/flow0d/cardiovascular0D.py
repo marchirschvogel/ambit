@@ -19,7 +19,7 @@ class cardiovascular0Dbase(ode):
     def __init__(self, init=True, comm=None):
 
         # initialize base class
-        ode.__init__(self, init=init, comm=comm)
+        super().__init__(init=init, comm=comm)
 
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
         self.off_io = 0 # offsets for in-/outflows for coupling indices

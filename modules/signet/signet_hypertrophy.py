@@ -20,7 +20,7 @@ class signethypertrophy(ode):
     def __init__(self, params, init=True, comm=None):
 
         # initialize base class
-        ode.__init__(self, init=init, comm=comm)
+        super().__init__(init=init, comm=comm)
 
         # parameters
         self.p1 = params['p1']

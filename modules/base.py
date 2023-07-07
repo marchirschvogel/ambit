@@ -17,6 +17,8 @@ class problem_base():
 
         self.problem_type = io_params['problem_type']
 
+        self.simname = io_params['simname']
+
         try: self.timint = time_params['timint']
         except: self.timint = 'static'
 

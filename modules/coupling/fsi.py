@@ -21,16 +21,15 @@ from mpiroutines import allgather_vec
 from solid import SolidmechanicsProblem, SolidmechanicsSolver
 from fluid_ale import FluidmechanicsAleProblem
 
-from base import solver_base
+from base import problem_base, solver_base
 
 
-class FSIProblem():
+class FSIProblem(problem_base):
 
     def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, io, ios, iof, mor_params={}, comm=None):
+        super().__init__(io_params, time_params_solid, comm)
 
         self.problem_physics = 'fsi'
-
-        self.comm = comm
 
         self.coupling_params = coupling_params
         # self.coupling_surface = self.coupling_params['coupling_fluid_ale']['surface_ids']
@@ -62,11 +61,7 @@ class FSIProblem():
         self.set_variational_forms()
 
         self.numdof = self.pbs.numdof + self.pbfa.numdof
-        # solid is 'master' problem - define problem variables based on its values
-        self.simname = self.pbs.simname
-        self.restart_step = self.pbs.restart_step
-        self.numstep_stop = self.pbs.numstep_stop
-        self.dt = self.pbs.dt
+
         self.have_rom = self.pbs.have_rom
         if self.have_rom: self.rom = self.pbs.rom
 

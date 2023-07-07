@@ -28,11 +28,10 @@ from base import problem_base, solver_base
 class AleProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
-        problem_base.__init__(self, io_params, time_params, comm)
+        super().__init__(io_params, time_params, comm)
 
         self.problem_physics = 'ale'
 
-        self.simname = io_params['simname']
         self.results_to_write = io_params['results_to_write']
 
         self.io = io
@@ -161,7 +160,7 @@ class AleProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.d, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
         if 'bodyforce' in self.bc_dict.keys():
             w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update)
         if 'robin' in self.bc_dict.keys():
@@ -288,7 +287,7 @@ class AleSolver(solver_base):
         self.pb.set_problem_residual_jacobian_forms()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear(self.pb, solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
 
     def solve_initial_state(self):
@@ -300,7 +299,7 @@ class AleSolver(solver_base):
         self.solnln.newton(t)
 
 
-    def print_timestep_info(self, N, t, wt):
+    def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, wt=wt)
+        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, ni=ni, li=li, wt=wt)

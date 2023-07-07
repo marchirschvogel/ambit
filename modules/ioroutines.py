@@ -31,8 +31,6 @@ class IO:
         self.mesh_domain = io_params['mesh_domain']
         self.mesh_boundary = io_params['mesh_boundary']
 
-        self.sname = io_params['simname']
-
         try: self.fiber_data = io_params['fiber_data']
         except: self.fiber_data = []
 
@@ -172,7 +170,7 @@ class IO:
             self.writecheckpoint(pb, N)
 
 
-    def set_func_const(self, func, array):
+    def set_func_const_vec(self, func, array):
 
         load = expression.template_vector()
         load.val_x, load.val_y, load.val_z = array[0], array[1], array[2]
@@ -285,7 +283,7 @@ class IO:
             if isinstance(self.fiber_data[si], str):
                 self.readfunction(fib_func_input[si], self.fiber_data[si], normalize=True)
             else: # assume a constant-in-space list or array
-                self.set_func_const(fib_func_input[si], self.fiber_data[si])
+                self.set_func_const_vec(fib_func_input[si], self.fiber_data[si])
 
             # project to fiber function space
             if self.order_fib_input != order_disp:

@@ -36,11 +36,10 @@ from base import problem_base, solver_base
 class SolidmechanicsProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
-        problem_base.__init__(self, io_params, time_params, comm)
+        super().__init__(io_params, time_params, comm)
 
         self.problem_physics = 'solid'
 
-        self.simname = io_params['simname']
         self.results_to_write = io_params['results_to_write']
 
         self.io = io
