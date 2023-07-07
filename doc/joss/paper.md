@@ -38,7 +38,7 @@ Monolithic multi-physics coupling of solid, fluid, and ALE-fluid with 0D lumped 
 
 Implementations for a recently proposed novel physics- and projection-based model reduction for FSI, denoted as fluid-reduced-solid interaction (FrSI) [@hirschvogel2022preprint], are provided, along with POD-based Galerkin model reduction techniques [@farhat2014] using full or boundary subspaces.
 
-The nonlinear (single- or multi-field) problems are solved with a customized Newton solver with PTC [@gee2009] adaptibity in case of divergence, providing robustness for numerically challenging problems. Linear solvers and preconditioners can be chosen from the PETSc repertoire, and specific block preconditioners are made available for coupled problems.
+The nonlinear (single- or multi-field) problems are solved with a customized Newton solver with PTC [@gee2009] adaptivity in case of divergence, providing robustness for numerically challenging problems. Linear solvers and preconditioners can be chosen from the PETSc repertoire, and specific block preconditioners are made available for coupled problems.
 
 Avenues for future functionality include cardiac electrophysiology, scalar transport, or finite strain plasticity.
 
