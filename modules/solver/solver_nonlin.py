@@ -366,7 +366,7 @@ class solver_nonlinear:
         it = 0
         # for PTC
         k_PTC = self.k_PTC_initial
-        counter_adapt, max_adapt = 0, 50
+        counter_adapt, max_adapt = 0, 10
         self.ni, self.li = 0, 0 # nonlinear and linear iteration counters
 
         self.solutils.print_nonlinear_iter(header=True)
