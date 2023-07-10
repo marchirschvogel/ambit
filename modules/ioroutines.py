@@ -322,7 +322,7 @@ class IO_solid(IO):
         elif self.indicate_results_by=='step':
             indicator = N-1
         else:
-            raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
+            raise ValueError("Unknown indicate_results_by option. Choose 'time' or 'step'.")
 
         if writemesh:
 
