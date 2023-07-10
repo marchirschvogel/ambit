@@ -953,7 +953,7 @@ class SolidmechanicsSolver(solver_base):
 
             self.pb.ti.set_time_funcs(tprestr, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
 
-            self.solnln.newton(0.0)
+            self.solnln.newton(tprestr)
 
             # MULF update
             self.pb.ki.prestress_update(self.pb.u)

@@ -445,11 +445,14 @@ class FluidmechanicsProblem(problem_base):
             self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
             # Stokes kinetic virtual power
             for n in range(self.num_domains):
-                #self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
+                # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
             if 'neumann_prestress' in self.bc_dict.keys():
                 w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
-            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane
+            if 'membrane' in self.bc_dict.keys():
+                self.ufluid_prestr = self.v * self.dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
+                w_membrane_prestr, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.var_v, ivar=self.internalvars, wallfields=self.wallfields)
+            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
 
@@ -993,21 +996,17 @@ class FluidmechanicsSolver(solver_base):
 
             self.pb.ti.set_time_funcs(tprestr, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
 
-            self.solnln.newton(0.0)
+            self.solnln.newton(tprestr)
 
-            # MULF update - use backward scheme to calculate uf
-            uf_vec = float(dt_prestr) * self.pb.v.vector + self.pb.uf_old.vector
-            self.pb.ki.prestress_update(uf_vec)
+            # update uf_pre
+            self.pb.ki.prestress_update(dt_prestr, self.pb.v.vector)
             utilities.print_prestress('updt', self.pb.comm)
 
-            wt = time.time() - wts
-
-            # update fluid displacement: uf_old <- uf
-            self.pb.uf_old.vector.axpby(1.0, 0.0, uf_vec)
-            self.pb.uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            # update fluid velocity: v_old <- v
+            # update fluid velocity: v_old <- v - we need some slight inertia for this to work smoothly...
             self.pb.v_old.vector.axpby(1.0, 0.0, self.pb.v.vector)
             self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+            wt = time.time() - wts
 
             # print time step info to screen
             self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.sepstring, ni=self.solnln.ni, li=self.solnln.li, wt=wt)
@@ -1027,14 +1026,10 @@ class FluidmechanicsSolver(solver_base):
             os._exit(0)
 
         # reset state
-        self.pb.uf_old.vector.set(0.0)
-        self.pb.uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self.pb.v.vector.set(0.0)
         self.pb.v.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self.pb.v_old.vector.set(0.0)
         self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.a_old.vector.set(0.0)
-        self.pb.a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # reset PTC flag to what it was
         if self.pb.prestress_ptc:

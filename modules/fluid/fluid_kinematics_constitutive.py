@@ -109,7 +109,7 @@ class kinematics:
 
     # prestressing update for FrSI (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010,
     # displacement formulation according to Schein and Gee 2021)
-    def prestress_update(self, uf_vec):
+    def prestress_update(self, dt, v_vec):
 
-        self.uf_pre.vector.axpy(1.0, uf_vec)
+        self.uf_pre.vector.axpy(dt, v_vec)
         self.uf_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
