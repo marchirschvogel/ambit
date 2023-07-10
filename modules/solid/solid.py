@@ -964,14 +964,11 @@ class SolidmechanicsSolver(solver_base):
             # print time step info to screen
             self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.sepstring, ni=self.solnln.ni, li=self.solnln.li, wt=wt)
 
-            # write prestress displacement (given that we want to write the displacement)
-            if 'displacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
-                if self.pb.io.indicate_results_by=='time': indicator = tprestr
-                elif self.pb.io.indicate_results_by=='step': indicator = N-1
-                else: raise ValueError("Unknown indicate_results_by option. Choose 'time' or 'step'.")
-                self.pb.io.write_output_pre(self.pb, self.pb.u_pre, indicator, 'displacement_pre')
-
         utilities.print_prestress('end', self.pb.comm)
+
+        # write prestress displacement (given that we want to write the displacement)
+        if 'displacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
+            self.pb.io.write_output_pre(self.pb, self.pb.u_pre, 0, 'displacement_pre')
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in
