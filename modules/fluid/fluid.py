@@ -1014,6 +1014,9 @@ class FluidmechanicsSolver(solver_base):
 
             # write prestress displacement (given that we want to write the fluid displacement)
             if 'fluiddisplacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
+                if self.pb.io.indicate_results_by=='time': indicator = tprestr
+                elif self.pb.io.indicate_results_by=='step': indicator = N-1
+                else: raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
                 self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, tprestr, 'fluiddisplacement_pre')
 
         utilities.print_prestress('end', self.pb.comm)
