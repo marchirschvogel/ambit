@@ -676,6 +676,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.tolerances = {'res1' : self.tolres, 'inc1' : self.tolinc}
 
         self.PTC = False # don't think we'll ever need PTC for the 0D ODE problem...
+        self.solvetype = 'direct' # only a direct solver is available for ODE problems
 
         self.solutils = sol_utils(self)
 

@@ -103,7 +103,8 @@ class solver_base():
 
         self.initialize_nonlinear_solver()
 
-        self.ni, self.li = 0, 0
+        self.wt, self.ni, self.li = 0., 0, 0
+        self.wt_, self.ni_, self.li_ = [], [], []
 
 
     # routines that should be implemented by derived model solver
@@ -184,8 +185,7 @@ class solver_base():
             self.pb.write_restart(self.pb.simname, N)
 
             # update nonlinear and linear iteration counters
-            self.ni += self.solnln.ni
-            self.li += self.solnln.li
+            self.update_counters(wt)
 
             # check any abort criterion
             if self.pb.check_abort(t-t_off):
@@ -195,12 +195,36 @@ class solver_base():
         self.destroy()
 
         if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
+            print('Program complete. Time for computation: %.4f s (= %.2f min)\n' % ( time.time()-start, (time.time()-start)/60. ))
+
+            print('Total solution time of all steps: %.8f' % (self.wt))
+            print('Average solution time per time step: %.8f' % (self.wt/self.pb.numstep_stop))
+            print('Maximum solution time of a time step: %.8f\n' % (max(self.wt_)))
+
             print('Total number of nonlinear iterations: %i' % (self.ni))
             print('Average number of nonlinear iterations per time step: %.1f' % (self.ni/self.pb.numstep_stop))
-            print('Total number of linear iterations: %i' % (self.li))
-            print('Average number of linear iterations per time step: %.1f' % (self.li/self.pb.numstep_stop))
+            print('Maximum number of nonlinear iterations in a time step: %.i' % (max(self.ni_)))
+
+            if self.solnln.solvetype=='iterative':
+                print('\nTotal number of linear iterations: %i' % (self.li))
+                print('Average number of linear iterations per time step: %.1f' % (self.li/self.pb.numstep_stop))
+                print('Maximum number of nonlinear iterations in a time step: %.i' % (max(self.li_)))
+
+            print(self.solnln.sepstring)
+
             sys.stdout.flush()
+
+
+    def update_counters(self, wt):
+
+        self.wt += wt
+        self.ni += self.solnln.ni
+        self.li += self.solnln.li
+
+        # for determination of max values
+        self.wt_.append(wt)
+        self.ni_.append(self.solnln.ni)
+        self.li_.append(self.solnln.li)
 
 
     def destroy(self):
