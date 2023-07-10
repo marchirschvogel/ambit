@@ -973,7 +973,9 @@ class SolidmechanicsSolver(solver_base):
         utilities.print_prestress('end', self.pb.comm)
 
         if self.pb.prestress_initial_only:
-            print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.")
+            if self.pb.comm.rank == 0:
+                print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.")
+                sys.stdout.flush()
             os._exit(0)
 
         # reset PTC flag to what it was
