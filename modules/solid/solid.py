@@ -967,12 +967,12 @@ class SolidmechanicsSolver(solver_base):
             # write prestress displacement (given that we want to write the displacement)
             if 'displacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
                 self.pb.io.write_output_pre(self.pb, self.pb.u_pre, tprestr, 'displacement_pre')
-                # it may be convenient to write the prestress displacement field to a file for later read-in
-                self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_displacement_pre.txt')
 
         utilities.print_prestress('end', self.pb.comm)
 
         if self.pb.prestress_initial_only:
+            # it may be convenient to write the prestress displacement field to a file for later read-in
+            self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_displacement_pre.txt')
             if self.pb.comm.rank == 0:
                 print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.")
                 sys.stdout.flush()

@@ -1015,12 +1015,12 @@ class FluidmechanicsSolver(solver_base):
             # write prestress displacement (given that we want to write the fluid displacement)
             if 'fluiddisplacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
                 self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, tprestr, 'fluiddisplacement_pre')
-                # it may be convenient to write the prestress displacement field to a file for later read-in
-                self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_fluiddisplacement_pre.txt')
 
         utilities.print_prestress('end', self.pb.comm)
 
         if self.pb.prestress_initial_only:
+            # it may be convenient to write the prestress displacement field to a file for later read-in
+            self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_fluiddisplacement_pre.txt')
             if self.pb.comm.rank == 0:
                 print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.")
                 sys.stdout.flush()
