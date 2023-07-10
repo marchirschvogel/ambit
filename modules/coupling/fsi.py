@@ -14,7 +14,7 @@ from petsc4py import PETSc
 
 import solver_nonlin
 
-from solid import SolidmechanicsProblem, SolidmechanicsSolver
+from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from fluid_ale import FluidmechanicsAleProblem
 
 from base import problem_base, solver_base
@@ -367,9 +367,9 @@ class FSISolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
-        if self.pb.pbs.prestress_initial and self.pb.pbs.restart_step == 0:
+        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
             # initialize fluid mechanics solver
-            self.solverprestr = SolidmechanicsSolver(self.pb.pbs, self.solver_params)
+            self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, self.solver_params)
 
 
     def solve_initial_state(self):

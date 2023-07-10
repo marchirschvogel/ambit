@@ -28,6 +28,9 @@ class IO:
         self.write_results_every = io_params['write_results_every']
         self.output_path = io_params['output_path']
 
+        try: self.output_path_pre = io_params['output_path_pre']
+        except: self.output_path_pre = self.output_path
+
         self.mesh_domain = io_params['mesh_domain']
         self.mesh_boundary = io_params['mesh_boundary']
 
@@ -161,7 +164,7 @@ class IO:
 
     def write_output_pre(self, pb, func, t, name):
 
-        outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+name+'.xdmf', 'w')
+        outfile = io.XDMFFile(self.comm, self.output_path_pre+'/results_'+pb.simname+'_'+name+'.xdmf', 'w')
         outfile.write_mesh(self.mesh)
         outfile.write_function(func, t)
 

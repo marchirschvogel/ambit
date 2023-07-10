@@ -27,6 +27,7 @@ def main():
                             'output_midpoint_0D'    : False, # OPTIONAL: whether to output mid- or end-point of 0D ODE model results (default: False)
                             'output_path'           : basepath+'/tmp/', # where results are written to
                             'output_path_0D'        : basepath+'/tmp/', # OPTIONAL: different output path for flow0d results (default: output_path)
+                            'output_path_pre'       : basepath+'/tmp/', # OPTIONAL: different output path for pre-computed results (before time loop, e.g. prestress) (default: output_path)
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
                             'restart_step'          : 0} # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
@@ -97,9 +98,10 @@ def main():
                             'fluid_formulation'     : 'nonconservative', # OPTIONAL: formulation for Navier-Stokes advective term: 'nonconservative', 'conservative' (default: 'nonconservative')
                             'initial_fluid_pressure': [0.3,0.3,7.0], # OPTIONAL: initialize (separated) fluid regions with different uniform pressure values (default: [])
                             'prestress_initial'     : False, # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
+                            'prestress_initial_only': False, # OPTIONAL: same as 'prestress_initial', but will terminate after prestressing (in case one wants to compute u_pre only once and read it in later using 'prestress_from_file' for mutliple different simulations that use the same u_pre) (default: False)
                             'prestress_numstep'     : 100, # OPTIONAL: number of load steps for prestress (default: 1)
                             'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
-                            'prestress_from_file'   : basepath+'/input/artseg_uf_pre.txt' # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
+                            'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt'], # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             'pressure_at_midpoint'  : False, # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
                             'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}} # OPTIONAL: stabilization for equal-order fluid mechanics, where 'scheme' can be 'supg_pspg' or 'supg_pspg2' (latter excludes transient part in strong NS residual -> equal for steady NS) (default: None)
 

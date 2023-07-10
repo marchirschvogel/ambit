@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys
+import time, sys, os
 import numpy as np
 from dolfinx import fem, mesh, io
 import ufl
@@ -77,6 +77,8 @@ class FluidmechanicsProblem(problem_base):
 
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
+        try: self.prestress_initial_only = fem_params['prestress_initial_only']
+        except: self.prestress_initial_only = False
         try: self.prestress_numstep = fem_params['prestress_numstep']
         except: self.prestress_numstep = 1
         try: self.prestress_maxtime = fem_params['prestress_maxtime']
@@ -88,7 +90,7 @@ class FluidmechanicsProblem(problem_base):
         try: self.initial_fluid_pressure = fem_params['initial_fluid_pressure']
         except: self.initial_fluid_pressure = []
 
-        if self.prestress_from_file: self.prestress_initial = False
+        if self.prestress_from_file: self.prestress_initial, self.prestress_initial_only  = False, False
 
         self.localsolve = False # no idea what might have to be solved locally...
 
@@ -205,7 +207,7 @@ class FluidmechanicsProblem(problem_base):
         self.tau_a  = fem.Function(self.Vd_scalar, name="tau_a")
         self.tau_a_old = fem.Function(self.Vd_scalar)
         # prestress displacement for FrSI
-        if self.prestress_initial or bool(self.prestress_from_file):
+        if (self.prestress_initial or self.prestress_initial_only) or bool(self.prestress_from_file):
             self.uf_pre = fem.Function(self.V_v, name="Displacement_prestress")
         else:
             self.uf_pre = None
@@ -439,7 +441,7 @@ class FluidmechanicsProblem(problem_base):
             w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.var_v, ivar=self.internalvars_old, wallfields=self.wallfields)
 
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
-        if self.prestress_initial:
+        if self.prestress_initial or self.prestress_initial_only:
             self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
             # Stokes kinetic virtual power
             for n in range(self.num_domains):
@@ -554,7 +556,7 @@ class FluidmechanicsProblem(problem_base):
                 else: j=n
                 self.weakform_lin_pp.append( ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]) )
 
-        if self.prestress_initial:
+        if self.prestress_initial or self.prestress_initial_only:
             # prestressing weak forms
             self.weakform_prestress_p, self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pv, self.weakform_lin_prestress_pp = [], [], [], []
             self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
@@ -606,7 +608,7 @@ class FluidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
         if not bool(self.io.duplicate_mesh_domains):
-            if not self.prestress_initial or self.restart_step > 0:
+            if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
                 self.weakform_p = sum(self.weakform_p)
                 self.weakform_lin_vp = sum(self.weakform_lin_vp)
                 self.weakform_lin_pv = sum(self.weakform_lin_pv)
@@ -619,7 +621,7 @@ class FluidmechanicsProblem(problem_base):
                 if self.stabilization is not None:
                     self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
 
-        if not self.prestress_initial or self.restart_step > 0:
+        if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
                 self.res_p = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
@@ -1014,9 +1016,13 @@ class FluidmechanicsSolver(solver_base):
             if 'fluiddisplacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
                 self.pb.io.write_output_pre(self.pb, self.pb.uf_pre, tprestr, 'fluiddisplacement_pre')
                 # it may be convenient to write the prestress displacement field to a file for later read-in
-                self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path+'/results_'+self.pb.simname+'_fluiddisplacement_pre.txt')
+                self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_fluiddisplacement_pre.txt')
 
         utilities.print_prestress('end', self.pb.comm)
+
+        if self.pb.prestress_initial_only:
+            print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.")
+            os._exit(0)
 
         # reset state
         self.pb.uf_old.vector.set(0.0)

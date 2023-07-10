@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys, copy
+import time, sys, copy, os
 import numpy as np
 from dolfinx import fem
 import ufl
@@ -75,6 +75,8 @@ class SolidmechanicsProblem(problem_base):
 
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
+        try: self.prestress_initial_only = fem_params['prestress_initial_only']
+        except: self.prestress_initial_only = False
         try: self.prestress_numstep = fem_params['prestress_numstep']
         except: self.prestress_numstep = 1
         try: self.prestress_maxtime = fem_params['prestress_maxtime']
@@ -84,9 +86,9 @@ class SolidmechanicsProblem(problem_base):
         try: self.prestress_from_file = fem_params['prestress_from_file']
         except: self.prestress_from_file = False
 
-        if bool(self.prestress_from_file): self.prestress_initial = False
+        if bool(self.prestress_from_file): self.prestress_initial, self.prestress_initial_only = False, False
 
-        if self.prestress_initial:
+        if self.prestress_initial or self.prestress_initial_only:
             self.constitutive_models_prestr = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.dim = self.io.mesh.geometry.dim
@@ -172,7 +174,7 @@ class SolidmechanicsProblem(problem_base):
         self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
         self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # prestress displacement
-        if self.prestress_initial or bool(self.prestress_from_file):
+        if (self.prestress_initial or self.prestress_initial_only) or bool(self.prestress_from_file):
             self.u_pre = fem.Function(self.V_u, name="Displacement_prestress")
         else:
             self.u_pre = None
@@ -324,7 +326,7 @@ class SolidmechanicsProblem(problem_base):
             self.ma.append(solid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)], self.incompressible_2field, mat_growth=self.mat_growth[n], mat_remodel=self.mat_remodel[n], mat_plastic=self.mat_plastic[n]))
 
         # for prestress, we don't have any inelastic or rate-dependent stuff
-        if self.prestress_initial:
+        if self.prestress_initial or self.prestress_initial_only:
             self.ma_prestr = []
             mat_remove = ['visco_green','growth','plastic']
             for n in range(self.num_domains):
@@ -412,7 +414,7 @@ class SolidmechanicsProblem(problem_base):
         # for (quasi-static) prestressing, we need to eliminate dashpots in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
         w_neumann_prestr, w_robin_prestr, self.deltaW_prestr_int = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
-        if self.prestress_initial:
+        if self.prestress_initial or self.prestress_initial_only:
             self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
             # internal virtual work
             for n in range(self.num_domains):
@@ -565,7 +567,7 @@ class SolidmechanicsProblem(problem_base):
                 else:
                     self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
 
-        if self.prestress_initial:
+        if self.prestress_initial or self.prestress_initial_only:
             # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
             self.weakform_prestress_u = self.deltaW_prestr_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_uu = ufl.derivative(self.weakform_prestress_u, self.u, self.du)
@@ -712,7 +714,7 @@ class SolidmechanicsProblem(problem_base):
             print('FEM form compilation for solid...')
             sys.stdout.flush()
 
-        if not self.prestress_initial or self.restart_step > 0:
+        if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
                 sys.exit()
@@ -909,7 +911,7 @@ class SolidmechanicsSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
-        if self.pb.prestress_initial and self.pb.restart_step == 0:
+        if (self.pb.prestress_initial or self.pb.prestress_initial_only) and self.pb.restart_step == 0:
             self.solve_initial_prestress()
 
         # consider consistent initial acceleration
@@ -966,9 +968,13 @@ class SolidmechanicsSolver(solver_base):
             if 'displacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
                 self.pb.io.write_output_pre(self.pb, self.pb.u_pre, tprestr, 'displacement_pre')
                 # it may be convenient to write the prestress displacement field to a file for later read-in
-                self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path+'/results_'+self.pb.simname+'_displacement_pre.txt')
+                self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_displacement_pre.txt')
 
         utilities.print_prestress('end', self.pb.comm)
+
+        if self.pb.prestress_initial_only:
+            print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.")
+            os._exit(0)
 
         # reset PTC flag to what it was
         if self.pb.prestress_ptc:

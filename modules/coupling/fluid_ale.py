@@ -455,7 +455,7 @@ class FluidmechanicsAleSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
 
-        if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -471,7 +471,7 @@ class FluidmechanicsAleSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the FrSI problem
-        if self.pb.pbf.prestress_initial and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
             self.solverprestr.solnln.ksp.destroy()
