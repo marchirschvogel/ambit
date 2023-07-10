@@ -29,6 +29,7 @@ def main():
                             'duplicate_mesh_domains': [1,2],
                             'write_results_every'   : 1,
                             'write_restart_every'   : 1,
+                            'indicate_results_by'   : 'step',
                             'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/lalv_domain.xdmf',

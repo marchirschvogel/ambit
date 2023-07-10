@@ -52,6 +52,9 @@ class IO:
         try: self.restart_io_type = io_params['restart_io_type']
         except: self.restart_io_type = 'petscvector'
 
+        try: self.indicate_results_by = io_params['indicate_results_by']
+        except: self.indicate_results_by = 'time'
+
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
 
@@ -301,8 +304,6 @@ class IO:
             print("Finished fiber read-in. Time: %.4f s" % (te))
             sys.stdout.flush()
 
-        # sys.exit()
-
         return fib_func
 
 
@@ -312,6 +313,13 @@ class IO_solid(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
         results_pre = ['fibers']
+
+        if self.indicate_results_by=='time':
+            indicator = t
+        elif self.indicate_results_by=='step':
+            indicator = N-1
+        else:
+            raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
 
         if writemesh:
 
@@ -334,118 +342,118 @@ class IO_solid(IO):
                 for res in pb.results_to_write:
 
                     if res=='displacement':
-                        self.resultsfiles[res].write_function(pb.u, t)
+                        self.resultsfiles[res].write_function(pb.u, indicator)
                     elif res=='velocity': # passed in v is not a function but form, so we have to project
                         self.v_proj = project(pb.vel, pb.V_u, pb.dx_, nm="Velocity") # class variable for testing
-                        self.resultsfiles[res].write_function(self.v_proj, t)
+                        self.resultsfiles[res].write_function(self.v_proj, indicator)
                     elif res=='acceleration': # passed in a is not a function but form, so we have to project
                         self.a_proj = project(pb.acc, pb.V_u, pb.dx_, nm="Acceleration") # class variable for testing
-                        self.resultsfiles[res].write_function(self.a_proj, t)
+                        self.resultsfiles[res].write_function(self.a_proj, indicator)
                     elif res=='pressure':
-                        self.resultsfiles[res].write_function(pb.p, t)
+                        self.resultsfiles[res].write_function(pb.p, indicator)
                     elif res=='cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
-                        self.resultsfiles[res].write_function(cauchystress, t)
+                        self.resultsfiles[res].write_function(cauchystress, indicator)
                     elif res=='cauchystress_nodal':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         cauchystress_nodal = project(stressfuncs, pb.V_tensor, pb.dx_, nm="CauchyStress_nodal")
-                        self.resultsfiles[res].write_function(cauchystress_nodal, t)
+                        self.resultsfiles[res].write_function(cauchystress_nodal, indicator)
                     elif res=='cauchystress_principal':
                         stressfuncs_eval = []
                         for n in range(pb.num_domains):
                             evals, _, _ = spectral_decomposition_3x3(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                             stressfuncs_eval.append(ufl.as_vector(evals)) # written as vector
                         cauchystress_principal = project(stressfuncs_eval, pb.Vd_vector, pb.dx_, nm="CauchyStress_princ")
-                        self.resultsfiles[res].write_function(cauchystress_principal, t)
+                        self.resultsfiles[res].write_function(cauchystress_principal, indicator)
                     elif res=='cauchystress_membrane':
                         stressfuncs=[]
                         for n in range(len(pb.bstress)):
                             stressfuncs.append(pb.bstress[n])
                         cauchystress_membrane = project(stressfuncs, pb.Vd_tensor, pb.dbmem, nm="CauchyStress_membrane")
-                        self.resultsfiles[res].write_function(cauchystress_membrane, t)
+                        self.resultsfiles[res].write_function(cauchystress_membrane, indicator)
                     elif res=='cauchystress_membrane_principal':
                         stressfuncs=[]
                         for n in range(len(pb.bstress)):
                             evals, _, _ = spectral_decomposition_3x3(pb.bstress[n])
                             stressfuncs.append(ufl.as_vector(evals)) # written as vector
                         self.cauchystress_membrane_principal = project(stressfuncs, pb.Vd_vector, pb.dbmem, nm="CauchyStress_membrane_princ")
-                        self.resultsfiles[res].write_function(self.cauchystress_membrane_principal, t)
+                        self.resultsfiles[res].write_function(self.cauchystress_membrane_principal, indicator)
                     elif res=='trmandelstress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             stressfuncs.append(tr(pb.ma[n].M(pb.u,pb.p,pb.vel,ivar=pb.internalvars)))
                         trmandelstress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress")
-                        self.resultsfiles[res].write_function(trmandelstress, t)
+                        self.resultsfiles[res].write_function(trmandelstress, indicator)
                     elif res=='trmandelstress_e':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.vel,pb.ki.C(pb.u),ivar=pb.internalvars)))
                             else: stressfuncs.append(ufl.as_ufl(0))
                         trmandelstress_e = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress_e")
-                        self.resultsfiles[res].write_function(trmandelstress_e, t)
+                        self.resultsfiles[res].write_function(trmandelstress_e, indicator)
                     elif res=='vonmises_cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma_vonmises(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         vonmises_cauchystress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="vonMises_CauchyStress")
-                        self.resultsfiles[res].write_function(vonmises_cauchystress, t)
+                        self.resultsfiles[res].write_function(vonmises_cauchystress, indicator)
                     elif res=='pk1stress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].P(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         pk1stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK1Stress")
-                        self.resultsfiles[res].write_function(pk1stress, t)
+                        self.resultsfiles[res].write_function(pk1stress, indicator)
                     elif res=='pk2stress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].S(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         pk2stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK2Stress")
-                        self.resultsfiles[res].write_function(pk2stress, t)
+                        self.resultsfiles[res].write_function(pk2stress, indicator)
                     elif res=='jacobian':
                         jacobian = project(pb.ki.J(pb.u), pb.Vd_scalar, pb.dx_, nm="Jacobian")
-                        self.resultsfiles[res].write_function(jacobian, t)
+                        self.resultsfiles[res].write_function(jacobian, indicator)
                     elif res=='glstrain':
                         glstrain = project(pb.ki.E(pb.u), pb.Vd_tensor, pb.dx_, nm="GreenLagrangeStrain")
-                        self.resultsfiles[res].write_function(glstrain, t)
+                        self.resultsfiles[res].write_function(glstrain, indicator)
                     elif res=='glstrain_principal':
                         evals, _, _ = spectral_decomposition_3x3(pb.ki.E(pb.u))
                         evals_gl = ufl.as_vector(evals) # written as vector
                         glstrain_principal = project(evals_gl, pb.Vd_vector, pb.dx_, nm="GreenLagrangeStrain_princ")
-                        self.resultsfiles[res].write_function(glstrain_principal, t)
+                        self.resultsfiles[res].write_function(glstrain_principal, indicator)
                     elif res=='eastrain':
                         eastrain = project(pb.ki.e(pb.u), pb.Vd_tensor, pb.dx_, nm="EulerAlmansiStrain")
-                        self.resultsfiles[res].write_function(eastrain, t)
+                        self.resultsfiles[res].write_function(eastrain, indicator)
                     elif res=='eastrain_principal':
                         evals, _, _ = spectral_decomposition_3x3(pb.ki.e(pb.u))
                         evals_ea = ufl.as_vector(evals) # written as vector
                         eastrain_principal = project(evals_gl, pb.Vd_vector, pb.dx_, nm="EulerAlmansiStrain_princ")
-                        self.resultsfiles[res].write_function(eastrain_principal, t)
+                        self.resultsfiles[res].write_function(eastrain_principal, indicator)
                     elif res=='fiberstretch':
                         fiberstretch = project(pb.ki.fibstretch(pb.u,pb.fib_func[0]), pb.Vd_scalar, pb.dx_, nm="FiberStretch")
-                        self.resultsfiles[res].write_function(fiberstretch, t)
+                        self.resultsfiles[res].write_function(fiberstretch, indicator)
                     elif res=='fiberstretch_e':
                         stretchfuncs=[]
                         for n in range(pb.num_domains):
                             if pb.mat_growth[n]: stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(pb.u),pb.theta,pb.fib_func[0]))
                             else: stretchfuncs.append(ufl.as_ufl(0))
                         fiberstretch_e = project(stretchfuncs, pb.Vd_scalar, pb.dx_, nm="FiberStretch_e")
-                        self.resultsfiles[res].write_function(fiberstretch_e, t)
+                        self.resultsfiles[res].write_function(fiberstretch_e, indicator)
                     elif res=='theta':
-                        self.resultsfiles[res].write_function(pb.theta, t)
+                        self.resultsfiles[res].write_function(pb.theta, indicator)
                     elif res=='phi_remod':
                         phifuncs=[]
                         for n in range(pb.num_domains):
                             if pb.mat_remodel[n]: phifuncs.append(pb.ma[n].phi_remod(pb.theta))
                             else: phifuncs.append(ufl.as_ufl(0))
                         phiremod = project(phifuncs, pb.Vd_scalar, pb.dx_, nm="phiRemodel")
-                        self.resultsfiles[res].write_function(phiremod, t)
+                        self.resultsfiles[res].write_function(phiremod, indicator)
                     elif res=='tau_a':
-                        self.resultsfiles[res].write_function(pb.tau_a, t)
+                        self.resultsfiles[res].write_function(pb.tau_a, indicator)
                     elif res=='fibers':
                         # written only once at the beginning, not after each time step (since constant in time)
                         pass
@@ -551,6 +559,13 @@ class IO_fluid(IO):
 
         results_pre = ['fibers']
 
+        if self.indicate_results_by=='time':
+            indicator = t
+        elif self.indicate_results_by=='step':
+            indicator = N-1
+        else:
+            raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
+
         if writemesh:
 
             if self.write_results_every > 0:
@@ -578,27 +593,27 @@ class IO_fluid(IO):
                 for res in pb.results_to_write:
 
                     if res=='velocity':
-                        self.resultsfiles[res].write_function(pb.v, t)
+                        self.resultsfiles[res].write_function(pb.v, indicator)
                     elif res=='acceleration': # passed in a is not a function but form, so we have to project
                         a_proj = project(pb.acc, pb.V_v, pb.dx_, nm="Acceleration")
-                        self.resultsfiles[res].write_function(a_proj, t)
+                        self.resultsfiles[res].write_function(a_proj, indicator)
                     elif res=='pressure':
                         if bool(self.duplicate_mesh_domains):
                             m=0
                             for j in self.duplicate_mesh_domains:
-                                self.resultsfiles[res+str(j)].write_function(pb.p_[m], t)
+                                self.resultsfiles[res+str(j)].write_function(pb.p_[m], indicator)
                                 m+=1
                         else:
-                            self.resultsfiles[res].write_function(pb.p_[0], t)
+                            self.resultsfiles[res].write_function(pb.p_[0], indicator)
                     elif res=='cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(pb.v,pb.p))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
-                        self.resultsfiles[res].write_function(cauchystress, t)
+                        self.resultsfiles[res].write_function(cauchystress, indicator)
                     elif res=='fluiddisplacement': # passed in uf is not a function but form, so we have to project
                         uf_proj = project(pb.ufluid, pb.V_v, pb.dx_, nm="FluidDisplacement")
-                        self.resultsfiles[res].write_function(uf_proj, t)
+                        self.resultsfiles[res].write_function(uf_proj, indicator)
                     elif res=='fibers':
                         # written only once at the beginning, not after each time step (since constant in time)
                         pass
@@ -607,7 +622,7 @@ class IO_fluid(IO):
                         for n in range(len(pb.bstress)):
                             stressfuncs.append(pb.bstress[n])
                         cauchystress_membrane = project(stressfuncs, pb.Vd_tensor, pb.dbmem, nm="CauchyStress_membrane")
-                        self.resultsfiles[res].write_function(cauchystress_membrane, t)
+                        self.resultsfiles[res].write_function(cauchystress_membrane, indicator)
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
 
@@ -684,6 +699,13 @@ class IO_ale(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
+        if self.indicate_results_by=='time':
+            indicator = t
+        elif self.indicate_results_by=='step':
+            indicator = N-1
+        else:
+            raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
+
         if writemesh:
 
             if self.write_results_every > 0:
@@ -704,10 +726,10 @@ class IO_ale(IO):
                 for res in pb.results_to_write:
 
                     if res=='aledisplacement':
-                        self.resultsfiles[res].write_function(pb.d, t)
+                        self.resultsfiles[res].write_function(pb.d, indicator)
                     elif res=='alevelocity':
                         w_proj = project(pb.wel, pb.V_d, pb.dx_, nm="AleVelocity")
-                        self.resultsfiles[res].write_function(w_proj, t)
+                        self.resultsfiles[res].write_function(w_proj, indicator)
                     else:
                         raise NameError("Unknown output to write for ALE mechanics!")
 
