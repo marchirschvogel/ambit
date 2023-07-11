@@ -208,7 +208,7 @@ class solver_base():
             if self.solnln.solvetype=='iterative':
                 print('\nTotal number of linear iterations: %i' % (self.li))
                 print('Average number of linear iterations per time step: %.1f' % (self.li/self.pb.numstep_stop))
-                print('Maximum number of nonlinear iterations in a time step: %.i' % (max(self.li_)))
+                print('Maximum number of linear iterations in a time step: %.i' % (max(self.li_)))
 
             print(self.solnln.sepstring)
 
