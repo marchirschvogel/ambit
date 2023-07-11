@@ -239,9 +239,15 @@ class FluidmechanicsProblem(problem_base):
             self.io.readfunction(self.uf_pre, self.prestress_from_file[0])
             # if available, we might want to read in the pressure field, too
             if len(self.prestress_from_file)>1:
-                assert(self.num_dupl==1) # TODO: Find a good way to read in if pressure domain is split!
-                self.io.readfunction(self.p_[0], self.prestress_from_file[1])
-                self.io.readfunction(self.p_old_[0], self.prestress_from_file[1])
+                if bool(self.duplicate_mesh_domains):
+                    m=0
+                    for j in self.duplicate_mesh_domains:
+                        self.io.readfunction(self.p_[m], self.prestress_from_file[1].replace('*',str(m+1)))
+                        self.io.readfunction(self.p_old_[m], self.prestress_from_file[1].replace('*',str(m+1)))
+                        m+=1
+                else:
+                    self.io.readfunction(self.p_[0], self.prestress_from_file[1])
+                    self.io.readfunction(self.p_old_[0], self.prestress_from_file[1])
 
         # dictionaries of internal variables
         self.internalvars, self.internalvars_old = {}, {}
@@ -1020,6 +1026,14 @@ class FluidmechanicsSolver(solver_base):
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in
             self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_fluiddisplacement_pre.txt')
+            if bool(self.pb.io.duplicate_mesh_domains):
+                m=0
+                for j in self.pb.io.duplicate_mesh_domains:
+                     # TODO: Might not work for duplicate mesh, since we do not have the input node indices (do we...?)
+                    self.pb.io.writefunction(self.pb.p_[m], self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_pressure'+str(m+1)+'_pre.txt')
+                    m+=1
+            else:
+                self.pb.io.writefunction(self.pb.p_[0], self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_pressure_pre.txt')
             if self.pb.comm.rank == 0:
                 print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.")
                 sys.stdout.flush()

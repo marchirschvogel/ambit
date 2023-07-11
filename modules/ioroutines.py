@@ -225,6 +225,10 @@ class IO:
 
 
     # own write function - working for nodal fields that are defined on the input mesh
+    # also works "bottom-down" for lower-order functions defined on a higher-order input mesh
+    # (e.g. linear pressure field defined on a quadratic input mesh), but not the other way
+    # around (since we would not have all input node ids for a higher-order mesh defined using
+    # a lower order input mesh)
     def writefunction(self, f, filenm):
 
         # non-ghosted index map and input global node indices
