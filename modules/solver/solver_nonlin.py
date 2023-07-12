@@ -60,6 +60,7 @@ class solver_nonlinear:
         self.solutils = sol_utils(self)
         self.sepstring = self.solutils.timestep_separator()
 
+        self.li_s = [] # linear iterations over all solves
 
 
     def set_solver_params(self, solver_params):

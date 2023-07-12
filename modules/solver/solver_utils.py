@@ -230,6 +230,7 @@ class sol_utils():
             # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.ConvergedReason-class.html for converge codes
             print('{:<9s}{:<13s}{:<18s}{:<2d}{:<14s}'.format(' ','************ ',' PETSc conv code: ',self.solver.ksp.getConvergedReason(),' *************\n'))
             self.solver.li += it+1
+            self.solver.li_s.append(it+1)
             sys.stdout.flush()
 
 
