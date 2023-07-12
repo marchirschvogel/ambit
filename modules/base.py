@@ -198,17 +198,17 @@ class solver_base():
             print('Program complete. Time for computation: %.4f s (= %.2f min)\n' % ( time.time()-start, (time.time()-start)/60. ))
 
             print('{:<55s}{:<1.8f}'.format('Total solution time of all steps: ',self.wt))
-            print('{:<55s}{:<1.8f}'.format('Average solution time per time step: ',self.wt/self.pb.numstep_stop))
+            print('{:<55s}{:<1.8f}'.format('Average solution time per time step: ',self.wt/N))
             print('{:<55s}{:<1.8f}'.format('Maximum solution time of a time step: ',max(self.wt_)))
             print(' ')
             print('{:<55s}{:<1d}'.format('Total number of nonlinear iterations: ',self.ni))
-            print('{:<55s}{:<1.1f}'.format('Average number of nonlinear iterations per time step: ',self.ni/self.pb.numstep_stop))
+            print('{:<55s}{:<1.1f}'.format('Average number of nonlinear iterations per time step: ',self.ni/N))
             print('{:<55s}{:<1d}'.format('Maximum number of nonlinear iterations in a time step: ',max(self.ni_)))
 
             if self.solnln.solvetype=='iterative':
                 print(' ')
                 print('{:<55s}{:<1d}'.format('Total number of linear iterations: ',self.li))
-                print('{:<55s}{:<1.1f}'.format('Average number of linear iterations per time step: ',self.li/self.pb.numstep_stop))
+                print('{:<55s}{:<1.1f}'.format('Average number of linear iterations per time step: ',self.li/N))
                 print('{:<55s}{:<1d}'.format('Maximum number of linear iterations in a time step: ',max(self.li_)))
                 print('{:<55s}{:<1.1f}'.format('Average number of linear iterations per solve: ',self.li/self.ni))
                 print('{:<55s}{:<1d}'.format('Maximum number of linear iterations in a solve: ',max(self.solnln.li_s)))
