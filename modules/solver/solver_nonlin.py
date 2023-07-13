@@ -735,7 +735,6 @@ class solver_nonlinear_ode(solver_nonlinear):
 
             # get norms
             inc_norm = ds.norm()
-            #r = self.pb.assemble_residual(t)
             res_norm = r.norm()
 
             if print_iter: self.solutils.print_nonlinear_iter(it,{'res1' : res_norm},{'inc1' : inc_norm},ts=ts,te=te,sub=sub)
