@@ -64,7 +64,7 @@ class problem_base():
         raise RuntimeError("Problem misses function implementation!")
 
 
-    def set_output_state(self, N):
+    def set_output_state(self, t):
         raise RuntimeError("Problem misses function implementation!")
 
 
@@ -160,7 +160,7 @@ class solver_base():
             self.pb.evaluate_post_solve(t-t_off, N)
 
             # anything that has to be set prior to writing output
-            self.pb.set_output_state(N)
+            self.pb.set_output_state(t)
 
             # write output of solutions
             self.pb.write_output(N, t)

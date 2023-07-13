@@ -752,7 +752,7 @@ class SolidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
 
         # assemble rhs vector
         r_u = fem.petsc.assemble_vector(self.res_u)
@@ -760,15 +760,26 @@ class SolidmechanicsProblem(problem_base):
         r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         fem.set_bc(r_u, self.bc.dbcs, x0=self.u.vector, scale=-1.0)
 
-        # assemble system matrix
-        K_uu = fem.petsc.assemble_matrix(self.jac_uu, self.bc.dbcs)
-        K_uu.assemble()
-
         if self.incompressible_2field:
 
             # assemble pressure rhs vector
             r_p = fem.petsc.assemble_vector(self.res_p)
             r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+
+            return [r_u, r_p]
+
+        else:
+
+            return [r_u]
+
+
+    def assemble_stiffness(self, t, subsolver=None):
+
+        # assemble system matrix
+        K_uu = fem.petsc.assemble_matrix(self.jac_uu, self.bc.dbcs)
+        K_uu.assemble()
+
+        if self.incompressible_2field:
 
             # assemble system matrices
             K_up = fem.petsc.assemble_matrix(self.jac_up, self.bc.dbcs)
@@ -783,11 +794,11 @@ class SolidmechanicsProblem(problem_base):
             else:
                 K_pp = None
 
-            return [r_u, r_p], [[K_uu, K_up], [K_pu, K_pp]]
+            return [[K_uu, K_up], [K_pu, K_pp]]
 
         else:
 
-            return [r_u], [[K_uu]]
+            return [[K_uu]]
 
 
     def get_index_sets(self, isoptions={}):
@@ -859,7 +870,7 @@ class SolidmechanicsProblem(problem_base):
             self.compute_solid_growth_rate(N, t)
 
 
-    def set_output_state(self, N):
+    def set_output_state(self, t):
         pass
 
 

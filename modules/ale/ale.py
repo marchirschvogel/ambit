@@ -192,7 +192,7 @@ class AleProblem(problem_base):
             sys.stdout.flush()
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
 
         # assemble rhs vector
         r_d = fem.petsc.assemble_vector(self.res_d)
@@ -200,11 +200,16 @@ class AleProblem(problem_base):
         r_d.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         fem.set_bc(r_d, self.bc.dbcs, x0=self.d.vector, scale=-1.0)
 
+        return [r_d]
+
+
+    def assemble_stiffness(self, t, subsolver=None):
+
         # assemble system matrix
         K_dd = fem.petsc.assemble_matrix(self.jac_dd, self.bc.dbcs)
         K_dd.assemble()
 
-        return [r_d], [[K_dd]]
+        return [[K_dd]]
 
 
     ### now the base routines for this problem

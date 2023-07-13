@@ -693,7 +693,7 @@ class FluidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
 
         # NOTE: we do not linearize integrated pressure-dependent valves w.r.t. p,
         # hence evaluation within the nonlinear solver loop may cause convergence problems
@@ -708,16 +708,21 @@ class FluidmechanicsProblem(problem_base):
         r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         fem.set_bc(r_v, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
 
-        # assemble system matrix
-        K_vv = fem.petsc.assemble_matrix(self.jac_vv, self.bc.dbcs)
-        K_vv.assemble()
-
         # assemble pressure rhs vector
         if self.num_dupl > 1:
             r_p = fem.petsc.assemble_vector_block(self.res_p, self.dummat, bcs=[]) # ghosts are updated inside assemble_vector_block
         else:
             r_p = fem.petsc.assemble_vector(self.res_p)
             r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+
+        return [r_v, r_p]
+
+
+    def assemble_stiffness(self, t, subsolver=None):
+
+        # assemble system matrix
+        K_vv = fem.petsc.assemble_matrix(self.jac_vv, self.bc.dbcs)
+        K_vv.assemble()
 
         # assemble system matrices
         if self.num_dupl > 1:
@@ -740,7 +745,7 @@ class FluidmechanicsProblem(problem_base):
         else:
             K_pp = None
 
-        return [r_v, r_p], [[K_vv, K_vp], [K_pv, K_pp]]
+        return [[K_vv, K_vp], [K_pv, K_pp]]
 
 
     def get_index_sets(self, isoptions={}):
@@ -905,7 +910,7 @@ class FluidmechanicsProblem(problem_base):
             self.evaluate_robin_valve(t, self.pu_, self.pd_)
 
 
-    def set_output_state(self, N):
+    def set_output_state(self, t):
         pass
 
 

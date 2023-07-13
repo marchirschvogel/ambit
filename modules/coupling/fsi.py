@@ -200,7 +200,32 @@ class FSIProblem(problem_base):
             sys.stdout.flush()
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
+
+        if self.pbs.incompressible_2field:
+            off = 1
+        else:
+            off = 0
+
+        r_list = [None]*(5+off)
+
+        r_list_solid = self.pbs.assemble_residual(t)
+        r_list_fluid_ale = self.pbfa.assemble_residual(t)
+
+        r_list[0] = r_list_solid[0]
+        if self.pbs.incompressible_2field:
+            r_list[1] = r_list_solid[1]
+        r_list[1+off] = r_list_fluid_ale[0]
+        r_list[2+off] = r_list_fluid_ale[1]
+        r_l = fem.petsc.assemble_vector(self.res_l)
+        r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        r_list[3+off] = r_l
+        r_list[4+off] = r_list_fluid_ale[2]
+
+        return r_list
+
+
+    def assemble_stiffness(self, t, subsolver=None):
 
         if self.pbs.incompressible_2field:
             off = 1
@@ -208,10 +233,9 @@ class FSIProblem(problem_base):
             off = 0
 
         K_list = [[None]*(5+off) for _ in range(5+off)]
-        r_list = [None]*(5+off)
 
-        r_list_solid, K_list_solid = self.pbs.assemble_residual_stiffness(t)
-        r_list_fluid_ale, K_list_fluid_ale = self.pbfa.assemble_residual_stiffness(t)
+        K_list_solid = self.pbs.assemble_stiffness(t)
+        K_list_fluid_ale = self.pbfa.assemble_stiffness(t)
 
         # solid displacement
         K_list[0][0] = K_list_solid[0][0]
@@ -250,17 +274,7 @@ class FSIProblem(problem_base):
         # ALE displacement
         K_list[4+off][4+off] = K_list_fluid_ale[2][2]
 
-        r_list[0] = r_list_solid[0]
-        if self.pbs.incompressible_2field:
-            r_list[1] = r_list_solid[1]
-        r_list[1+off] = r_list_fluid_ale[0]
-        r_list[2+off] = r_list_fluid_ale[1]
-        r_l = fem.petsc.assemble_vector(self.res_l)
-        r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        r_list[3+off] = r_l
-        r_list[4+off] = r_list_fluid_ale[2]
-
-        return r_list, K_list
+        return K_list
 
 
     ### now the base routines for this problem

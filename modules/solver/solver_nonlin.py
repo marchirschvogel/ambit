@@ -379,7 +379,8 @@ class solver_nonlinear:
             if self.pb.localsolve:
                 self.solve_local(localdata)
 
-            r_list, K_list = self.pb.assemble_residual_stiffness(t, subsolver=self.subsol)
+            r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
+            K_list = self.pb.assemble_stiffness(t, subsolver=self.subsol)
 
             if self.PTC:
                 # computes K_00 + k_PTC * I
@@ -503,11 +504,9 @@ class solver_nonlinear:
 
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
 
-            # get residual and increment norms
-            resnorms, incnorms = {}, {}
+            # get increment norm
+            incnorms = {}
             for n in range(self.nfields):
-                r_list[n].assemble()
-                resnorms['res'+str(n+1)] = r_list[n].norm()
                 incnorms['inc'+str(n+1)] = del_x[n].norm()
 
             # reconstruct full-length increment vector - currently only for first var!
@@ -523,6 +522,12 @@ class solver_nonlinear:
                 if self.is_ghosted[n]==2:
                     subvecs = self.x[n].getNestSubVecs()
                     for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+            # get residual norm
+            resnorms = {}
+            for n in range(self.nfields):
+                r_list[n].assemble()
+                resnorms['res'+str(n+1)] = r_list[n].norm()
 
             self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
 
@@ -711,7 +716,8 @@ class solver_nonlinear_ode(solver_nonlinear):
             self.pb.odemodel.evaluate(self.pb.s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
 
             # ODE rhs vector and stiffness matrix
-            r, K = self.pb.assemble_residual_stiffness(t)
+            r = self.pb.assemble_residual(t)
+            K = self.pb.assemble_stiffness(t)
 
             ds = K.createVecLeft()
 
@@ -728,8 +734,9 @@ class solver_nonlinear_ode(solver_nonlinear):
             self.pb.s.axpy(1.0, ds)
 
             # get norms
-            res_norm = r.norm()
             inc_norm = ds.norm()
+            #r = self.pb.assemble_residual(t)
+            res_norm = r.norm()
 
             if print_iter: self.solutils.print_nonlinear_iter(it,{'res1' : res_norm},{'inc1' : inc_norm},ts=ts,te=te,sub=sub)
 

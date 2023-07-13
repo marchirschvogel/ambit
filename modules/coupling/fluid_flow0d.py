@@ -147,9 +147,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pbf.set_problem_residual_jacobian_forms()
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
 
-        K_list = [[None]*3 for _ in range(3)]
         r_list = [None]*3
 
         for i in range(self.num_coupling_surf):
@@ -178,12 +177,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pb0.cardvasc0D.set_pressure_fem(self.lm, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
 
         # fluid main blocks
-        r_list_fluid, K_list_fluid = self.pbf.assemble_residual_stiffness(t)
-
-        K_list[0][0] = K_list_fluid[0][0]
-        K_list[0][1] = K_list_fluid[0][1]
-        K_list[1][0] = K_list_fluid[1][0]
-        K_list[1][1] = K_list_fluid[1][1] # should be only non-zero if we have stabilization...
+        r_list_fluid = self.pbf.assemble_residual(t)
 
         r_list[0] = r_list_fluid[0]
         r_list[1] = r_list_fluid[1]
@@ -198,6 +192,38 @@ class FluidmechanicsFlow0DProblem(problem_base):
             r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
 
         r_list[2] = r_lm
+
+        return r_list
+
+
+    def assemble_stiffness(self, t, subsolver=None):
+
+        K_list = [[None]*3 for _ in range(3)]
+
+        # Lagrange multipliers (pressures) to be passed to 0D model
+        lm_sq = allgather_vec(self.lm, self.comm)
+
+        for i in range(self.num_coupling_surf):
+            self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
+
+        # point auxdata dict to dict of integral evaluations (fluxes, pressures) in case needed by 0D
+        self.pb0.auxdata['q'], self.pb0.auxdata['p'] = self.pbf.qv_, self.pbf.pu_
+
+        # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
+        if bool(self.pb0.chamber_models):
+            if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
+                dp_id = self.pb0.chamber_models['lv']['dp_monitor_id']
+                self.pb0.c[0] = self.pb0.auxdata['p'][dp_id]
+
+        # fluid main blocks
+        K_list_fluid = self.pbf.assemble_stiffness(t)
+
+        K_list[0][0] = K_list_fluid[0][0]
+        K_list[0][1] = K_list_fluid[0][1]
+        K_list[1][0] = K_list_fluid[1][0]
+        K_list[1][1] = K_list_fluid[1][1] # should be only non-zero if we have stabilization...
+
+        s_sq = allgather_vec(self.pb0.s, self.comm)
 
         # assemble 0D rhs contributions
         self.pb0.df_old.assemble()
@@ -302,7 +328,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         for i in range(len(row_ids)): k_sv_rows[i].destroy()
         for i in range(len(col_ids)): k_vs_cols[i].destroy()
 
-        return r_list, K_list
+        return K_list
 
 
     def get_index_sets(self, isoptions={}):

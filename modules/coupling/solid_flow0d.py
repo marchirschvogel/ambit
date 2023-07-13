@@ -262,14 +262,13 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pbs.set_problem_residual_jacobian_forms()
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
 
         if self.pbs.incompressible_2field:
             off = 1
         else:
             off = 0
 
-        K_list = [[None]*(2+off) for _ in range(2+off)]
         r_list = [None]*(2+off)
 
         if self.coupling_type == 'monolithic_lagrange':
@@ -302,23 +301,18 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 self.pb0.c[i] = sum(cq)*self.cq_factor[i]
 
             # evaluate 0D model with current p and return df, f, K_ss
-            self.pb0.cardvasc0D.evaluate(self.pb0.s, t, self.pb0.df, self.pb0.f, self.pb0.dK, self.pb0.K, self.pb0.c, self.pb0.y, self.pb0.aux)
+            self.pb0.cardvasc0D.evaluate(self.pb0.s, t, self.pb0.df, self.pb0.f, None, None, self.pb0.c, self.pb0.y, self.pb0.aux)
 
-            # 0D rhs vector and stiffness
-            r_s, K_ss = self.pb0.assemble_residual_stiffness(t)
+            # 0D rhs vector
+            r_s = self.pb0.assemble_residual(t)
 
             r_list[1+off] = r_s
-            K_list[1+off][1+off] = K_ss
 
         # solid main blocks
-        r_list_solid, K_list_solid = self.pbs.assemble_residual_stiffness(t)
+        r_list_solid = self.pbs.assemble_residual(t)
 
-        K_list[0][0] = K_list_solid[0][0]
         r_list[0] = r_list_solid[0]
         if self.pbs.incompressible_2field:
-            K_list[0][1] = K_list_solid[0][1]
-            K_list[1][0] = K_list_solid[1][0]
-            K_list[1][1] = K_list_solid[1][1] # should be only non-zero if we have stress-mediated growth...
             r_list[1] = r_list_solid[1]
 
         if self.coupling_type == 'monolithic_lagrange':
@@ -333,6 +327,55 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
 
             r_list[1+off] = r_lm
+
+        return r_list
+
+
+    def assemble_stiffness(self, t, subsolver=None):
+
+        if self.pbs.incompressible_2field:
+            off = 1
+        else:
+            off = 0
+
+        K_list = [[None]*(2+off) for _ in range(2+off)]
+
+        if self.coupling_type == 'monolithic_lagrange':
+
+            # Lagrange multipliers (pressures) to be passed to 0D model
+            lm_sq = allgather_vec(self.lm, self.comm)
+
+            for i in range(self.num_coupling_surf):
+                self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
+
+        if self.coupling_type == 'monolithic_direct':
+
+            # volumes/fluxes to be passed to 0D model
+            for i in range(len(self.pb0.cardvasc0D.c_ids)):
+                cq = fem.assemble_scalar(fem.form(self.cq[i]))
+                cq = self.comm.allgather(cq)
+                self.pb0.c[i] = sum(cq)*self.cq_factor[i]
+
+            # evaluate 0D model with current p and return K_ss
+            self.pb0.cardvasc0D.evaluate(self.pb0.s, t, None, None, self.pb0.dK, self.pb0.K, self.pb0.c, self.pb0.y, self.pb0.aux)
+
+            # 0D stiffness
+            K_ss = self.pb0.assemble_stiffness(t)
+
+            K_list[1+off][1+off] = K_ss
+
+        # solid main blocks
+        K_list_solid = self.pbs.assemble_stiffness(t)
+
+        K_list[0][0] = K_list_solid[0][0]
+        if self.pbs.incompressible_2field:
+            K_list[0][1] = K_list_solid[0][1]
+            K_list[1][0] = K_list_solid[1][0]
+            K_list[1][1] = K_list_solid[1][1] # should be only non-zero if we have stress-mediated growth...
+
+        if self.coupling_type == 'monolithic_lagrange':
+
+            s_sq = allgather_vec(self.pb0.s, self.comm)
 
             # assemble 0D rhs contributions
             self.pb0.df_old.assemble()
@@ -452,7 +495,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         for i in range(len(row_ids)): k_su_rows[i].destroy()
         for i in range(len(col_ids)): k_us_cols[i].destroy()
 
-        return r_list, K_list
+        return K_list
 
 
     def get_index_sets(self, isoptions={}):
@@ -594,10 +637,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.set_homeostatic_threshold(t), self.set_growth_trigger(t-t_off)
 
 
-    def set_output_state(self, N):
+    def set_output_state(self, t):
 
-        self.pbs.set_output_state(N)
-        self.pb0.set_output_state(N)
+        self.pbs.set_output_state(t)
+        self.pb0.set_output_state(t)
 
 
     def write_output(self, N, t, mesh=False):

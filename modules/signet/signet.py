@@ -95,12 +95,9 @@ class SignallingNetworkProblem(problem_base):
         self.odemodel = self.signet
 
 
-    def assemble_residual_stiffness(self, t):
+    def assemble_residual(self, t):
 
         theta = self.thetasn_timint(t)
-
-        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K.setUp()
 
         # signet rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         r = K.createVecLeft()
@@ -111,6 +108,16 @@ class SignallingNetworkProblem(problem_base):
         r.axpy(theta, self.f)
         r.axpy(1.-theta, self.f_old)
 
+        return r
+
+
+    def assemble_stiffness(self, t):
+
+        theta = self.thetasn_timint(t)
+
+        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K.setUp()
+
         self.dK.assemble()
         self.K.assemble()
         K.assemble()
@@ -118,7 +125,7 @@ class SignallingNetworkProblem(problem_base):
         K.axpy(1./self.dt, self.dK)
         K.axpy(theta, self.K)
 
-        return r, K
+        return K
 
 
     def thetasn_timint(self, t):
@@ -195,16 +202,12 @@ class SignallingNetworkProblem(problem_base):
         pass
 
 
-    def set_output_state(self, N):
+    def set_output_state(self, t):
 
         # get midpoint dof values for post-processing (has to be called before update!)
         self.s.assemble(), self.s_old.assemble(), self.s_mid.assemble()
-        if self.initial_backwardeuler and N==1:
-            omid = False
-        else:
-            omid = self.output_midpoint
-        self.signet.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=omid)
-        self.signet.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=omid)
+        self.signet.set_output_state(self.s, self.s_old, self.s_mid, self.thetasn_timint(t), midpoint=self.output_midpoint)
+        self.signet.set_output_state(self.aux, self.aux_old, self.aux_mid, self.thetasn_timint(t), midpoint=self.output_midpoint)
 
 
     def write_output(self, N, t):

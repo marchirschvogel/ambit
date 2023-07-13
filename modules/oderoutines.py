@@ -106,8 +106,8 @@ class ode:
             sys.stdout.flush()
 
 
-    # set prescribed variable values
-    def set_prescribed_variables(self, x, r, K, val, index_prescribed):
+    # set prescribed variable values for residual
+    def set_prescribed_variables_residual(self, x, r, val, index_prescribed):
 
         if isinstance(x, np.ndarray): xs, xe = 0, len(x)
         else: xs, xe = x.getOwnershipRange()
@@ -116,13 +116,19 @@ class ode:
         if index_prescribed in range(xs,xe):
             r[index_prescribed] = x[index_prescribed] - val
 
+        r.assemble()
+
+
+    # set stiffness entries for prescribed variable values
+    def set_prescribed_variables_stiffness(self, K, index_prescribed):
+
         # modification of stiffness matrix - all off-columns associated to index_prescribed = 0
         # diagonal entry associated to index_prescribed = 1
         K[index_prescribed,index_prescribed] = 1.
         for j in range(self.numdof):
             if j!=index_prescribed: K[index_prescribed,j] = 0.
 
-        r.assemble(), K.assemble()
+        K.assemble()
 
 
     # time step update

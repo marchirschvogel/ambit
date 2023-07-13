@@ -143,28 +143,23 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.set_problem_residual_jacobian_forms()
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
 
         if self.pbs.incompressible_2field:
             off = 1
         else:
             off = 0
 
-        K_list = [[None]*(2+off) for _ in range(2+off)]
         r_list = [None]*(2+off)
 
         # add to solid momentum equation
         self.set_pressure_fem(self.lm, self.coupfuncs)
 
         # solid main blocks
-        r_list_solid, K_list_solid = self.pbs.assemble_residual_stiffness(t)
+        r_list_solid = self.pbs.assemble_residual(t)
 
-        K_list[0][0] = K_list_solid[0][0]
         r_list[0] = r_list_solid[0]
         if self.pbs.incompressible_2field:
-            K_list[0][1] = K_list_solid[0][1]
-            K_list[1][0] = K_list_solid[1][0]
-            K_list[1][1] = K_list_solid[1][1] # should be only non-zero if we have stress-mediated growth...
             r_list[1] = r_list_solid[1]
 
         ls, le = self.lm.getOwnershipRange()
@@ -185,6 +180,30 @@ class SolidmechanicsConstraintProblem(problem_base):
             r_lm[i] = self.constr[i] - val[i]
 
         r_list[1+off] = r_lm
+
+        return r_list
+
+
+    def assemble_stiffness(self, t, subsolver=None):
+
+        if self.pbs.incompressible_2field:
+            off = 1
+        else:
+            off = 0
+
+        K_list = [[None]*(2+off) for _ in range(2+off)]
+
+        # add to solid momentum equation
+        self.set_pressure_fem(self.lm, self.coupfuncs)
+
+        # solid main blocks
+        K_list_solid = self.pbs.assemble_stiffness(t)
+
+        K_list[0][0] = K_list_solid[0][0]
+        if self.pbs.incompressible_2field:
+            K_list[0][1] = K_list_solid[0][1]
+            K_list[1][0] = K_list_solid[1][0]
+            K_list[1][1] = K_list_solid[1][1] # should be only non-zero if we have stress-mediated growth...
 
         # rows and columns for offdiagonal matrices
         row_ids = list(range(self.num_coupling_surf))
@@ -244,7 +263,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         for i in range(len(row_ids)): k_su_rows[i].destroy()
         for i in range(len(col_ids)): k_us_cols[i].destroy()
 
-        return r_list, K_list
+        return K_list
 
 
     def get_index_sets(self, isoptions={}):
@@ -330,9 +349,9 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.evaluate_post_solve(t, N)
 
 
-    def set_output_state(self, N):
+    def set_output_state(self, t):
 
-        self.pbs.set_output_state(N)
+        self.pbs.set_output_state(t)
 
 
     def write_output(self, N, t, mesh=False):

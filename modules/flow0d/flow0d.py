@@ -165,15 +165,12 @@ class Flow0DProblem(problem_base):
         self.odemodel = self.cardvasc0D
 
 
-    def assemble_residual_stiffness(self, t):
+    def assemble_residual(self, t):
 
         theta = self.theta0d_timint(t)
 
-        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K.setUp()
-
         # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
-        r = K.createVecLeft()
+        r = self.K.createVecLeft()
 
         self.df.assemble(), self.df_old.assemble()
         r.axpy(1./self.dt, self.df)
@@ -182,13 +179,6 @@ class Flow0DProblem(problem_base):
         self.f.assemble(), self.f_old.assemble()
         r.axpy(theta, self.f)
         r.axpy(1.-theta, self.f_old)
-
-        self.dK.assemble()
-        self.K.assemble()
-        K.assemble()
-
-        K.axpy(1./self.dt, self.dK)
-        K.axpy(theta, self.K)
 
         # if we have prescribed variable values over time
         if bool(self.prescribed_variables):
@@ -206,9 +196,32 @@ class Flow0DProblem(problem_base):
                     val = self.auxdata['q'][monid]
                 else:
                     raise ValueError("Unknown type to prescribe a variable.")
-                self.cardvasc0D.set_prescribed_variables(self.s, r, K, val, varindex)
+                self.cardvasc0D.set_prescribed_variables_residual(self.s, r, val, varindex)
 
-        return r, K
+        return r
+
+
+    def assemble_stiffness(self, t):
+
+        theta = self.theta0d_timint(t)
+
+        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        K.setUp()
+
+        self.dK.assemble()
+        self.K.assemble()
+        K.assemble()
+
+        K.axpy(1./self.dt, self.dK)
+        K.axpy(theta, self.K)
+
+        # if we have prescribed variable values over time
+        if bool(self.prescribed_variables):
+            for a in self.prescribed_variables:
+                varindex = self.cardvasc0D.varmap[a]
+                self.cardvasc0D.set_prescribed_variables_stiffness(K, varindex)
+
+        return K
 
 
     def theta0d_timint(self, t):
@@ -368,16 +381,12 @@ class Flow0DProblem(problem_base):
         pass
 
 
-    def set_output_state(self, N):
+    def set_output_state(self, t):
 
         # get midpoint dof values for post-processing (has to be called before update!)
         self.s.assemble(), self.s_old.assemble(), self.s_mid.assemble()
-        if self.initial_backwardeuler and N==1:
-            omid = False
-        else:
-            omid = self.output_midpoint
-        self.cardvasc0D.set_output_state(self.s, self.s_old, self.s_mid, self.theta_ost, midpoint=omid)
-        self.cardvasc0D.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta_ost, midpoint=omid)
+        self.cardvasc0D.set_output_state(self.s, self.s_old, self.s_mid, self.theta0d_timint(t), midpoint=self.output_midpoint)
+        self.cardvasc0D.set_output_state(self.aux, self.aux_old, self.aux_mid, self.theta0d_timint(t), midpoint=self.output_midpoint)
 
 
     def write_output(self, N, t):

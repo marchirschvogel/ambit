@@ -95,9 +95,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.dcqd.append(ufl.derivative(self.pbf0.cq[n], self.pba.d, self.pba.dd))
 
 
-    def assemble_residual_stiffness(self, t, subsolver=None):
+    def assemble_residual(self, t, subsolver=None):
 
-        K_list = [[None]*4 for _ in range(4)]
         r_list = [None]*4
 
         if self.have_dbc_fluid_ale:
@@ -106,11 +105,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.ufa.vector.axpby(1.0, 0.0, uf_vec)
             self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             uf_vec.destroy()
-            # K_list[3][0] = self.K_dv
-        if self.have_weak_dirichlet_fluid_ale:
-            K_dv = fem.petsc.assemble_matrix(fem.form(self.jac_dv), self.pba.bc.dbcs)
-            K_dv.assemble()
-            K_list[3][0] = K_dv
 
         if self.have_dbc_ale_fluid:
             #we need a vector representation of w to apply in fluid DBCs
@@ -119,9 +113,35 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             w_vec.destroy()
 
-        r_list_fluidflow0d, K_list_fluidflow0d = self.pbf0.assemble_residual_stiffness(t, subsolver=subsolver)
+        r_list_fluidflow0d = self.pbf0.assemble_residual(t, subsolver=subsolver)
 
-        r_list_ale, K_list_ale = self.pba.assemble_residual_stiffness(t)
+        r_list_ale = self.pba.assemble_residual(t)
+
+        # fluid
+        r_list[0] = r_list_fluidflow0d[0]
+        r_list[1] = r_list_fluidflow0d[1]
+        # flow0d
+        r_list[2] = r_list_fluidflow0d[2]
+        # ALE
+        r_list[3] = r_list_ale[0]
+
+        return r_list
+
+
+    def assemble_stiffness(self, t, subsolver=None):
+
+        K_list = [[None]*4 for _ in range(4)]
+
+        # if self.have_dbc_fluid_ale:
+            # K_list[3][0] = self.K_dv
+        if self.have_weak_dirichlet_fluid_ale:
+            K_dv = fem.petsc.assemble_matrix(fem.form(self.jac_dv), self.pba.bc.dbcs)
+            K_dv.assemble()
+            K_list[3][0] = K_dv
+
+        K_list_fluidflow0d = self.pbf0.assemble_stiffness(t, subsolver=subsolver)
+
+        K_list_ale = self.pba.assemble_stiffness(t)
 
         K_list[0][0] = K_list_fluidflow0d[0][0]
         K_list[0][1] = K_list_fluidflow0d[0][1]
@@ -168,18 +188,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         K_list[3][3] = K_list_ale[0][0]
 
-        # fluid
-        r_list[0] = r_list_fluidflow0d[0]
-        r_list[1] = r_list_fluidflow0d[1]
-        # flow0d
-        r_list[2] = r_list_fluidflow0d[2]
-        # ALE
-        r_list[3] = r_list_ale[0]
-
         # destroy PETSc vector
         for i in range(len(row_ids)): k_sd_rows[i].destroy()
 
-        return r_list, K_list
+        return K_list
 
 
     def get_index_sets(self, isoptions={}):
