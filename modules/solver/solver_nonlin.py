@@ -589,6 +589,10 @@ class solver_nonlinear:
                         if self.pb.sub_solve: # can only be a 0D model so far...
                             self.reset_step(self.pb.pb0.s, s_start, 0)
 
+                    # destroy PETSc vecs...
+                    for n in range(self.nfields):
+                        r_list[n].destroy()
+
                     # re-compute any local solve that is needed
                     if self.pb.localsolve:
                         self.solve_local(localdata)
