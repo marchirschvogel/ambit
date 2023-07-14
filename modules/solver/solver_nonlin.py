@@ -60,6 +60,9 @@ class solver_nonlinear:
         self.solutils = sol_utils(self)
         self.sepstring = self.solutils.timestep_separator()
 
+        # dicts for residual and increment norms
+        self.resnorms, self.incnorms = {}, {}
+
         self.li_s = [] # linear iterations over all solves
 
 
@@ -372,14 +375,35 @@ class solver_nonlinear:
 
         self.solutils.print_nonlinear_iter(header=True)
 
+        tes = time.time()
+
+        # any local solve that is needed
+        if self.pb.localsolve:
+            self.solve_local(localdata)
+
+        # compute initial residual from predictor
+        r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
+
+        # reduce initial residual
+        if self.pb.have_rom:
+            del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
+
+        # get initial residual norms
+        for n in range(self.nfields):
+            r_list[n].assemble()
+            self.resnorms['res'+str(n+1)] = r_list[n].norm()
+
+        te = time.time() - tes
+
+        self.solutils.print_nonlinear_iter(it,k_PTC,te=te)
+
+        it += 1
+
         while it < self.maxiter and counter_adapt < max_adapt:
 
             tes = time.time()
 
-            if self.pb.localsolve:
-                self.solve_local(localdata)
-
-            r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
+            # compute Jacobian
             K_list = self.pb.assemble_stiffness(t, subsolver=self.subsol)
 
             if self.PTC:
@@ -388,28 +412,8 @@ class solver_nonlinear:
 
             # model order reduction stuff - currently only on first mat in system...
             if self.pb.have_rom:
-                # projection of main block: system matrix, residual, and increment
-                tmp = K_list[0][0].matMult(self.pb.rom.V) # K_00 * V
-                K_list[0][0] = self.pb.rom.V.transposeMatMult(tmp) # V^T * K_00 * V
-                r_u_, del_u_ = self.pb.rom.V.createVecRight(), self.pb.rom.V.createVecRight()
-                self.pb.rom.V.multTranspose(r_list[0], r_u_) # V^T * r_u
-                # deal with penalties that may be added to reduced residual to penalize certain modes
-                if bool(self.pb.rom.redbasisvec_penalties):
-                    u_ = K_list[0][0].createVecRight()
-                    self.pb.rom.V.multTranspose(self.x[0], u_) # V^T * u
-                    penterm_ = self.pb.rom.V.createVecRight()
-                    self.pb.rom.Cpen.mult(u_, penterm_) # Cpen * V^T * u
-                    r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
-                    K_list[0][0].aypx(1.0, self.pb.rom.CpenVTV) # K_00 + Cpen * V^T * V
-                r_list[0].destroy(), del_x[0].destroy() # destroy, since we re-define the references!
-                r_list[0], del_x[0] = r_u_, del_u_
-                # now the offdiagonal blocks
-                if self.nfields > 1:
-                    for n in range(self.nfields-1):
-                        if K_list[0][n+1] is not None:
-                            K_list[0][n+1] = self.pb.rom.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
-                        if K_list[n+1][0] is not None:
-                            K_list[n+1][0] = K_list[n+1][0].matMult(self.pb.rom.V) # K_{n+1,0} * V
+                # reduce Jacobian
+                self.pb.rom.reduce_stiffness(K_list, self.nfields)
 
             te = time.time() - tes
 
@@ -505,14 +509,16 @@ class solver_nonlinear:
                     self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
 
             # get increment norm
-            incnorms = {}
             for n in range(self.nfields):
-                incnorms['inc'+str(n+1)] = del_x[n].norm()
+                self.incnorms['inc'+str(n+1)] = del_x[n].norm()
 
             # reconstruct full-length increment vector - currently only for first var!
             if self.pb.have_rom:
                 del_x[0] = self.pb.rom.V.createVecLeft()
                 self.pb.rom.V.mult(del_u_, del_x[0]) # V * dx_red
+
+            # norm from last step for potential PTC adaption - prior to res update
+            res_norm_main_last = self.resnorms['res1']
 
             # update variables
             for n in range(self.nfields):
@@ -523,43 +529,55 @@ class solver_nonlinear:
                     subvecs = self.x[n].getNestSubVecs()
                     for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+            # destroy PETSc vecs...
+            for n in range(self.nfields):
+                r_list[n].destroy()
+
+            # any local solve that is needed
+            if self.pb.localsolve:
+                self.solve_local(localdata)
+
+            # compute new residual after updated solution
+            r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
+            if self.pb.have_rom:
+                del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
+
             # get residual norm
-            resnorms = {}
             for n in range(self.nfields):
                 r_list[n].assemble()
-                resnorms['res'+str(n+1)] = r_list[n].norm()
+                self.resnorms['res'+str(n+1)] = r_list[n].norm()
 
-            self.solutils.print_nonlinear_iter(it,resnorms,incnorms,self.PTC,k_PTC,ts=ts,te=te)
+            self.solutils.print_nonlinear_iter(it,k_PTC,ts=ts,te=te)
 
             # destroy PETSc stuff...
             if self.nfields > 1:
                 r_full_nest.destroy(), K_full_nest.destroy(), del_full.destroy()
                 if self.solvetype=='direct': r_full.destroy(), K_full.destroy()
                 if self.solvetype=='iterative': P_nest.destroy()
-            if self.pb.have_rom:
-                r_u_.destroy(), del_u_.destroy(), tmp.destroy()
             for n in range(self.nfields):
-                r_list[n].destroy()
                 for m in range(self.nfields):
                     if K_list[n][m] is not None: K_list[n][m].destroy()
 
-            it += 1
+            # for PTC - scale k_PTC with ratio of current to previous residual norm
+            if self.PTC:
+                k_PTC *= self.resnorms['res1']/res_norm_main_last
 
-            # for PTC - only applied to first main block so far...
-            if self.PTC and it > 1 and res_norm_main_last > 0.: k_PTC *= resnorms['res1']/res_norm_main_last
-            res_norm_main_last = resnorms['res1']
+            it += 1
 
             # adaptive PTC (for 3D block K_00 only!)
             if self.divcont=='PTC':
 
-                self.maxiter = 250
-                err = self.solutils.catch_solver_errors(resnorms['res1'], incnorm=incnorms['inc1'], maxval=self.maxresval)
+                self.maxiter = 250 # should be enough...
+                err = self.solutils.catch_solver_errors(self.resnorms['res1'], incnorm=self.incnorms['inc1'], maxval=self.maxresval)
 
                 if err:
                     self.PTC = True
                     # reset Newton step
-                    it, k_PTC = 0, self.k_PTC_initial
-                    if counter_adapt>0: k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
+                    it, k_PTC = 1, self.k_PTC_initial
+
+                    # try a new (random) PTC parameter if even the solve with k_PTC_initial fails
+                    if counter_adapt>0:
+                        k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
 
                     if self.pb.comm.rank == 0:
                         print("PTC factor: %.4f" % (k_PTC))
@@ -571,20 +589,36 @@ class solver_nonlinear:
                         if self.pb.sub_solve: # can only be a 0D model so far...
                             self.reset_step(self.pb.pb0.s, s_start, 0)
 
+                    # re-compute any local solve that is needed
+                    if self.pb.localsolve:
+                        self.solve_local(localdata)
+
+                    # re-compute initial residual from predictor
+                    r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
+
+                    # re-reduce initial residual
+                    if self.pb.have_rom:
+                        del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
+
+                    # re-get residual norm
+                    for n in range(self.nfields):
+                        r_list[n].assemble()
+                        self.resnorms['res'+str(n+1)] = r_list[n].norm()
+
                     counter_adapt += 1
 
             # check if converged
-            converged = self.solutils.check_converged(resnorms,incnorms,self.tolerances)
+            converged = self.solutils.check_converged(self.tolerances)
             if converged:
                 # destroy PETSc vectors
                 for n in range(self.nfields):
-                    del_x[n].destroy(), x_start[n].destroy()
+                    del_x[n].destroy(), x_start[n].destroy(), r_list[n].destroy()
                 if self.pb.sub_solve: s_start.destroy()
                 # reset to normal Newton if PTC was used in a divcont action
                 if self.divcont=='PTC':
                     self.PTC = False
                     counter_adapt = 0
-                self.ni = it
+                self.ni = it-1
                 break
 
         else:
@@ -681,6 +715,9 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         self.tolerances = {'res1' : self.tolres, 'inc1' : self.tolinc}
 
+        # dicts for residual and increment norms
+        self.resnorms, self.incnorms = {}, {}
+
         self.PTC = False # don't think we'll ever need PTC for the 0D ODE problem...
         self.solvetype = 'direct' # only a direct solver is available for ODE problems
 
@@ -709,14 +746,25 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         self.ni, self.li = 0, 0 # nonlinear and linear iteration counters (latter probably never relevant for ODE problems...)
 
+        tes = time.time()
+
+        # compute initial residual
+        r = self.pb.assemble_residual(t)
+
+        # get initial residual norm
+        self.resnorms['res1'] = r.norm()
+
+        te = time.time() - tes
+
+        if print_iter: self.solutils.print_nonlinear_iter(it,te=te,sub=sub)
+
+        it += 1
+
         while it < self.maxiter:
 
             tes = time.time()
 
-            self.pb.odemodel.evaluate(self.pb.s, t, self.pb.df, self.pb.f, self.pb.dK, self.pb.K, self.pb.c, self.pb.y, self.pb.aux)
-
-            # ODE rhs vector and stiffness matrix
-            r = self.pb.assemble_residual(t)
+            # compute Jacobian
             K = self.pb.assemble_stiffness(t)
 
             ds = K.createVecLeft()
@@ -733,25 +781,29 @@ class solver_nonlinear_ode(solver_nonlinear):
             # update solution
             self.pb.s.axpy(1.0, ds)
 
-            # get norms
-            inc_norm = ds.norm()
-            res_norm = r.norm()
+            r.destroy()
 
-            if print_iter: self.solutils.print_nonlinear_iter(it,{'res1' : res_norm},{'inc1' : inc_norm},ts=ts,te=te,sub=sub)
+            # compute new residual after updated solution
+            r = self.pb.assemble_residual(t)
+
+            # get norms
+            self.resnorms['res1'], self.incnorms['inc1'] = r.norm(), ds.norm()
+
+            if print_iter: self.solutils.print_nonlinear_iter(it,ts=ts,te=te,sub=sub)
 
             # destroy PETSc stuff...
-            ds.destroy(), r.destroy(), K.destroy()
+            ds.destroy(), K.destroy()
 
             it += 1
 
             # check if converged
-            converged = self.solutils.check_converged({'res1' : res_norm},{'inc1' : inc_norm},self.tolerances,ptype='flow0d')
+            converged = self.solutils.check_converged(self.tolerances,ptype='flow0d')
             if converged:
                 if print_iter and sub:
                     if self.pb.comm.rank == 0:
                         print('       ****************************************************\n')
                         sys.stdout.flush()
-                self.ni = it
+                self.ni = it-1
                 break
 
         else:

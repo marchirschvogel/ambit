@@ -34,7 +34,7 @@ def main():
 
     SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
-                         'tol_inc'               : 1.0e-8}
+                         'tol_inc'               : 1.0e-0} # linear problem, so only one solve needed...
 
     TIME_PARAMS       = {'maxtime'               : 1.0,
                          'numstep'               : 10,

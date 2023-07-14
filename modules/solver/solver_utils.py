@@ -48,7 +48,7 @@ class sol_utils():
         return err
 
 
-    def print_nonlinear_iter(self,it=0,resnorms=0,incnorms=0,PTC=False,k_PTC=0,header=False,ts=0,te=0,sub=False):
+    def print_nonlinear_iter(self,it=0,k_PTC=0,header=False,ts=0,te=0,sub=False):
 
         if self.solver.ptype=='solid':
             if self.solver.pb.incompressible_2field:
@@ -134,8 +134,8 @@ class sol_utils():
         else:
             raise NameError("Unknown problem type!")
 
-        if PTC:
-            nkptc='k_ptc = '+str(format(k_PTC, '.4e'))
+        if self.solver.PTC:
+            nkptc='k_ptc = '+str(format(k_PTC, '.4e')) # not printed currently...
         else:
             nkptc=''
 
@@ -144,30 +144,30 @@ class sol_utils():
                 if numres==1:
                     if not sub:
                         print('{:<1s}{:<6s}{:<25s}{:<3s}{:<7s}'.format(' ','it |',eq1,'| ','timings'))
-                        print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','ts','te'))
+                        print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
                     else:
                         print(' ')
                         print('       ****************** 0D model solve ******************')
                         print('{:<1s}{:<6s}{:<6s}{:<25s}{:<3s}{:<7s}'.format(' ',' ','it |',eq1,'| ','timings'))
-                        print('{:<1s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ',' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','ts','te'))
+                        print('{:<1s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ',' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
                 elif numres==2:
                     print('{:<1s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}'.format(' ','it |',eq1,'| ',eq2,'| ','timings'))
-                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ','ts','te'))
+                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ','te','ts'))
                 elif numres==3:
                     print('{:<1s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}'.format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ','timings'))
-                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ','ts','te'))
+                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ','te','ts'))
                 elif numres==4:
                     print('{:<1s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}'.format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ','timings'))
-                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','ts','te'))
+                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','te','ts'))
                 elif numres==5:
                     print('{:<1s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}'.format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ','timings'))
-                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','ts','te'))
+                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','te','ts'))
                 elif numres==6:
                     print('{:<1s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}'.format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ','timings'))
-                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','ts','te'))
+                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','te','ts'))
                 elif numres==7:
                     print('{:<1s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}'.format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ',eq7,'| ','timings'))
-                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','||r_'+v7+'||_2','||Δ'+v7+'||_2','| ','ts','te'))
+                    print('{:<1s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}'.format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','||r_'+v7+'||_2','||Δ'+v7+'||_2','| ','te','ts'))
                 else:
                     raise RuntimeError("Error. You should not be here!")
                 sys.stdout.flush()
@@ -177,26 +177,51 @@ class sol_utils():
 
         if self.solver.pb.comm.rank == 0:
 
-            if numres==1:
-                if not sub:
-                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',ts,' ',te))
+            if it==0:
+
+                if numres==1:
+                    if not sub:
+                        print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',te,' ',' '))
+                    else:
+                        print('{:<1s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',te,' ',' '))
+                elif numres==2:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',self.solver.resnorms['res2'],' ',' ','  |  ',te,' ',' '))
+                elif numres==3:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',self.solver.resnorms['res2'],' ',' ','  |  ',self.solver.resnorms['res3'],' ',' ','  |  ',te,' ',' '))
+                elif numres==4:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',self.solver.resnorms['res2'],' ',' ','  |  ',self.solver.resnorms['res3'],' ',' ','  |  ',self.solver.resnorms['res4'],' ',' ','  |  ',te,' ',' '))
+                elif numres==5:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',self.solver.resnorms['res2'],' ',' ','  |  ',self.solver.resnorms['res3'],' ',' ','  |  ',self.solver.resnorms['res4'],' ',' ','  |  ',self.solver.resnorms['res5'],' ',' ','  |  ',te,' ',' '))
+                elif numres==6:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',self.solver.resnorms['res2'],' ',' ','  |  ',self.solver.resnorms['res3'],' ',' ','  |  ',self.solver.resnorms['res4'],' ',' ','  |  ',self.solver.resnorms['res5'],' ',' ','  |  ',self.solver.resnorms['res6'],' ',' ','  |  ',te,' ',' '))
+                elif numres==7:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',' ','  |  ',self.solver.resnorms['res2'],' ',' ','  |  ',self.solver.resnorms['res3'],' ',' ','  |  ',self.solver.resnorms['res4'],' ',' ','  |  ',self.solver.resnorms['res5'],' ',' ','  |  ',self.solver.resnorms['res6'],' ',' ','  |  ',self.solver.resnorms['res7'],' ',' ','  |  ',te,' ',' '))
                 else:
-                    print('{:<1s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',ts,' ',te))
-            elif numres==2:
-                print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',ts,' ',te))
-            elif numres==3:
-                print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',ts,' ',te))
-            elif numres==4:
-                print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',ts,' ',te))
-            elif numres==5:
-                print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',ts,' ',te))
-            elif numres==6:
-                print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',resnorms['res6'],' ',incnorms['inc6'],'  |  ',ts,' ',te))
-            elif numres==7:
-                print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',resnorms['res6'],' ',incnorms['inc6'],'  |  ',resnorms['res7'],' ',incnorms['inc7'],'  |  ',ts,' ',te))
+                    raise RuntimeError("Number of residual norms inconsistent.")
+                sys.stdout.flush()
+
             else:
-                raise RuntimeError("Number of residual norms inconsistent.")
-            sys.stdout.flush()
+
+                if numres==1:
+                    if not sub:
+                        print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',te,' ',ts))
+                    else:
+                        print('{:<1s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',te,' ',ts))
+                elif numres==2:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',self.solver.resnorms['res2'],' ',self.solver.incnorms['inc2'],'  |  ',te,' ',ts))
+                elif numres==3:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',self.solver.resnorms['res2'],' ',self.solver.incnorms['inc2'],'  |  ',self.solver.resnorms['res3'],' ',self.solver.incnorms['inc3'],'  |  ',te,' ',ts))
+                elif numres==4:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',self.solver.resnorms['res2'],' ',self.solver.incnorms['inc2'],'  |  ',self.solver.resnorms['res3'],' ',self.solver.incnorms['inc3'],'  |  ',self.solver.resnorms['res4'],' ',self.solver.incnorms['inc4'],'  |  ',te,' ',ts))
+                elif numres==5:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',self.solver.resnorms['res2'],' ',self.solver.incnorms['inc2'],'  |  ',self.solver.resnorms['res3'],' ',self.solver.incnorms['inc3'],'  |  ',self.solver.resnorms['res4'],' ',self.solver.incnorms['inc4'],'  |  ',self.solver.resnorms['res5'],' ',self.solver.incnorms['inc5'],'  |  ',te,' ',ts))
+                elif numres==6:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',self.solver.resnorms['res2'],' ',self.solver.incnorms['inc2'],'  |  ',self.solver.resnorms['res3'],' ',self.solver.incnorms['inc3'],'  |  ',self.solver.resnorms['res4'],' ',self.solver.incnorms['inc4'],'  |  ',self.solver.resnorms['res5'],' ',self.solver.incnorms['inc5'],'  |  ',self.solver.resnorms['res6'],' ',self.solver.incnorms['inc6'],'  |  ',te,' ',ts))
+                elif numres==7:
+                    print('{:<1s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}'.format(' ',it,'| ',self.solver.resnorms['res1'],' ',self.solver.incnorms['inc1'],'  |  ',self.solver.resnorms['res2'],' ',self.solver.incnorms['inc2'],'  |  ',self.solver.resnorms['res3'],' ',self.solver.incnorms['inc3'],'  |  ',self.solver.resnorms['res4'],' ',self.solver.incnorms['inc4'],'  |  ',self.solver.resnorms['res5'],' ',self.solver.incnorms['inc5'],'  |  ',self.solver.resnorms['res6'],' ',self.solver.incnorms['inc6'],'  |  ',self.solver.resnorms['res7'],' ',self.solver.incnorms['inc7'],'  |  ',te,' ',ts))
+                else:
+                    raise RuntimeError("Number of residual norms inconsistent.")
+                sys.stdout.flush()
 
 
     def print_linear_iter(self,it,rnorm):
@@ -228,13 +253,16 @@ class sol_utils():
             if it % self.solver.print_liniter_every != 0: # otherwise already printed
                 print('{:<18s}{:<4d}{:<21s}{:<4e}'.format('         lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
             # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.ConvergedReason-class.html for converge codes
-            print('{:<9s}{:<13s}{:<18s}{:<2d}{:<14s}'.format(' ','************ ',' PETSc conv code: ',self.solver.ksp.getConvergedReason(),' *************\n'))
-            self.solver.li += it+1
-            self.solver.li_s.append(it+1)
+            print('{:<9s}{:<13s}{:<18s}{:<2d}{:<14s}'.format(' ','************ ',' PETSc conv code: ',self.solver.ksp.getConvergedReason(),' *************'))
+            if not self.solver.pb.print_subiter: print(' ') # no extra line if we have an "intermediate" print from another model... TODO: Find a nicer solution here...
             sys.stdout.flush()
 
+        # update counters
+        self.solver.li += it
+        self.solver.li_s.append(it)
 
-    def check_converged(self, resnorms, incnorms, tolerances, ptype=None):
+
+    def check_converged(self, tolerances, ptype=None):
 
         if ptype is None:
             ptype = self.solver.ptype
@@ -242,51 +270,51 @@ class sol_utils():
         converged = False
 
         if ptype=='solid' and not self.solver.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1']:
                 converged = True
 
         elif ptype=='solid' and self.solver.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2']:
                 converged = True
 
         elif ptype=='fluid':
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2']:
                 converged = True
 
         elif ptype=='ale':
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1']:
                 converged = True
 
         elif ptype=='flow0d':
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1']:
                 converged = True
 
         elif (ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and not self.solver.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2']:
                 converged = True
 
         elif (ptype=='solid_flow0d' or self.solver.ptype=='solid_constraint') and self.solver.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2'] and self.solver.resnorms['res3'] <= tolerances['res3'] and self.solver.incnorms['inc3'] <= tolerances['inc3']:
                 converged = True
 
         elif ptype=='fluid_flow0d':
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2'] and self.solver.resnorms['res3'] <= tolerances['res3'] and self.solver.incnorms['inc3'] <= tolerances['inc3']:
                 converged = True
 
         elif ptype=='fluid_ale':
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2'] and self.solver.resnorms['res3'] <= tolerances['res3'] and self.solver.incnorms['inc3'] <= tolerances['inc3']:
                 converged = True
 
         elif ptype=='fluid_ale_flow0d':
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3'] and resnorms['res4'] <= tolerances['res4'] and incnorms['inc4'] <= tolerances['inc4']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2'] and self.solver.resnorms['res3'] <= tolerances['res3'] and self.solver.incnorms['inc3'] <= tolerances['inc3'] and self.solver.resnorms['res4'] <= tolerances['res4'] and self.solver.incnorms['inc4'] <= tolerances['inc4']:
                 converged = True
 
         elif ptype=='fsi' and not self.solver.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3'] and resnorms['res4'] <= tolerances['res4'] and incnorms['inc4'] <= tolerances['inc4'] and resnorms['res5'] <= tolerances['res5'] and incnorms['inc5'] <= tolerances['inc5']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2'] and self.solver.resnorms['res3'] <= tolerances['res3'] and self.solver.incnorms['inc3'] <= tolerances['inc3'] and self.solver.resnorms['res4'] <= tolerances['res4'] and self.solver.incnorms['inc4'] <= tolerances['inc4'] and self.solver.resnorms['res5'] <= tolerances['res5'] and self.solver.incnorms['inc5'] <= tolerances['inc5']:
                 converged = True
 
         elif ptype=='fsi' and self.solver.pb.incompressible_2field:
-            if resnorms['res1'] <= tolerances['res1'] and incnorms['inc1'] <= tolerances['inc1'] and resnorms['res2'] <= tolerances['res2'] and incnorms['inc2'] <= tolerances['inc2'] and resnorms['res3'] <= tolerances['res3'] and incnorms['inc3'] <= tolerances['inc3'] and resnorms['res4'] <= tolerances['res4'] and incnorms['inc4'] <= tolerances['inc4'] and resnorms['res5'] <= tolerances['res5'] and incnorms['inc5'] <= tolerances['inc5'] and resnorms['res6'] <= tolerances['res6'] and incnorms['inc6'] <= tolerances['inc6']:
+            if self.solver.resnorms['res1'] <= tolerances['res1'] and self.solver.incnorms['inc1'] <= tolerances['inc1'] and self.solver.resnorms['res2'] <= tolerances['res2'] and self.solver.incnorms['inc2'] <= tolerances['inc2'] and self.solver.resnorms['res3'] <= tolerances['res3'] and self.solver.incnorms['inc3'] <= tolerances['inc3'] and self.solver.resnorms['res4'] <= tolerances['res4'] and self.solver.incnorms['inc4'] <= tolerances['inc4'] and self.solver.resnorms['res5'] <= tolerances['res5'] and self.solver.incnorms['inc5'] <= tolerances['inc5'] and self.solver.resnorms['res6'] <= tolerances['res6'] and self.solver.incnorms['inc6'] <= tolerances['inc6']:
                 converged = True
 
         else:

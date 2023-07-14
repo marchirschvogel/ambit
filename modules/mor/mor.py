@@ -486,3 +486,43 @@ class ModelOrderReduction():
         for i in range(rs,re):
             if i in dofs:
                 mat[i,:] = np.zeros(ncol)
+
+
+    # online functions
+    def reduce_residual(self, r_list, del_x):
+
+        # projection of main block: residual, and increment
+        r_u_, del_u_ = self.V.createVecRight(), self.V.createVecRight()
+        self.V.multTranspose(r_list[0], r_u_) # V^T * r_u
+
+        # deal with penalties that may be added to reduced residual to penalize certain modes
+        if bool(self.redbasisvec_penalties):
+            u_ = K_list[0][0].createVecRight()
+            self.V.multTranspose(self.x[0], u_) # V^T * u
+            penterm_ = self.V.createVecRight()
+            self.Cpen.mult(u_, penterm_) # Cpen * V^T * u
+            r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
+
+        r_list[0].destroy(), del_x[0].destroy() # destroy, since we re-define the references!
+        r_list[0], del_x[0] = r_u_, del_u_
+
+        return del_u_
+
+
+    def reduce_stiffness(self, K_list, nfields):
+
+        # projection of main block: system matrix
+        tmp = K_list[0][0].matMult(self.V) # K_00 * V
+        K_list[0][0] = self.V.transposeMatMult(tmp) # V^T * K_00 * V
+
+        # deal with penalties that may be added to reduced residual to penalize certain modes
+        if bool(self.redbasisvec_penalties):
+            K_list[0][0].aypx(1.0, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
+
+        # now the offdiagonal blocks
+        if nfields > 1:
+            for n in range(nfields-1):
+                if K_list[0][n+1] is not None:
+                    K_list[0][n+1] = self.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
+                if K_list[n+1][0] is not None:
+                    K_list[n+1][0] = K_list[n+1][0].matMult(self.V) # K_{n+1,0} * V

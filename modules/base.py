@@ -32,6 +32,8 @@ class problem_base():
         try: self.numstep_stop = time_params['numstep_stop']
         except: self.numstep_stop = self.numstep
 
+        self.print_subiter = False
+
         self.t_init = self.restart_step * self.dt
 
 

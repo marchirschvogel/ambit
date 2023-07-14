@@ -161,11 +161,10 @@ class Flow0DProblem(problem_base):
 
         self.theta_ost = time_params['theta_ost']
 
-        # for solver access
-        self.odemodel = self.cardvasc0D
-
 
     def assemble_residual(self, t):
+
+        self.cardvasc0D.evaluate(self.s, t, self.df, self.f, None, None, self.c, self.y, self.aux)
 
         theta = self.theta0d_timint(t)
 
@@ -202,6 +201,8 @@ class Flow0DProblem(problem_base):
 
 
     def assemble_stiffness(self, t):
+
+        self.cardvasc0D.evaluate(self.s, t, None, None, self.dK, self.K, self.c, self.y, self.aux)
 
         theta = self.theta0d_timint(t)
 
