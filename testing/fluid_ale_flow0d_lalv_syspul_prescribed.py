@@ -6,6 +6,7 @@
 # - ALE-fluid coupled to 0D circulation model
 # - prescribed ALE motion via volume Dirichlet condition
 # - duplicate pressure nodes (discontinuity) at mitral valve plane
+# - dt scaling of residual
 
 import ambit
 
@@ -42,7 +43,8 @@ def main():
                             'tol_inc'               : 1.0e-7,
                             'subsolver_params'      : {'tol_res' : 1.0e-6, 'tol_inc' : 1.0e-6},
                             'k_ptc_initial'         : 0.1,
-                            'catch_max_res_value'   : 1e12}
+                            'catch_max_res_value'   : 1e12,
+                            'residual_scale_dt'     : True}
 
     TIME_PARAMS          = {'maxtime'               : 1.0,
                             'numstep'               : 1000,

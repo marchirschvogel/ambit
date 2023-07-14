@@ -36,6 +36,7 @@ def main():
     SOLVER_PARAMS        = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
                             'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
+                            # divergence continue settings
                             'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, 'PTC' ('ptc' can stay False) (default: None)
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
                             'k_ptc_initial'         : 0.1, # OPTIONAL: initial PTC value that adapts during nonlinear iteration (default: 0.1)
@@ -58,7 +59,8 @@ def main():
                             # for local Newton (only for inelastic nonlinear materials at Gauss points, i.e. deformation-dependent growth)
                             'print_local_iter'      : False, # OPTIONAL: if we want to print iterations of local Newton (default: False)
                             'tol_res_local'         : 1.0e-10, # OPTIONAL: local Newton residual inf-norm tolerance (default: 1.0e-10)
-                            'tol_inc_local'         : 1.0e-10} # OPTIONAL: local Newton increment inf-norm tolerance (default: 1.0e-10)
+                            'tol_inc_local'         : 1.0e-10, # OPTIONAL: local Newton increment inf-norm tolerance (default: 1.0e-10)
+                            'residual_scale_dt'     : False} # OPTIONAL: if residuals should be scaled by step size or not (e.g. for better comparisons to solvers where this is done...) (default: False)
 
     # for solid*, fluid* problem types
     TIME_PARAMS_3D       = {'maxtime'               : 1.0, # maximum simulation time
