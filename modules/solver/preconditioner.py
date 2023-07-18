@@ -129,14 +129,22 @@ class schur_2x2(block_precond):
         self.ksp_fields[0].solve(x1, y1)
 
         self.B.mult(y1, self.By1)
-        z2 = x2 - self.By1
+
+        z2 = x2.duplicate()
+        # compute z2 = x2 - self.By1
+        z2.axpby(1., 0., x2)
+        z2.axpy(-1., self.By1)
 
         # 2) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(z2, y2)
 
         self.Bt.mult(y2, self.Bty2)
-        z1 = x1 - self.Bty2
+
+        z1 = x1.duplicate()
+        # compute z1 = x1 - self.Bty2
+        z1.axpby(1., 0., x1)
+        z1.axpy(-1., self.Bty2)
 
         # 3) solve A * y_1 = z_1
         self.ksp_fields[0].setOperators(self.A)
@@ -154,8 +162,9 @@ class schur_2x2(block_precond):
 
         y.assemble()
 
-        z1.destroy(), z2.destroy()
+        x1.destroy(), x2.destroy()
         y1.destroy(), y2.destroy()
+        z1.destroy(), z2.destroy()
         del arr_y1, arr_y2
 
 
@@ -265,7 +274,11 @@ class schur_3x3(block_precond):
         self.ksp_fields[0].solve(x1, y1)
 
         self.B.mult(y1, self.By1)
-        z2 = x2 - self.By1
+
+        z2 = x2.duplicate()
+        # compute z2 = x2 - self.By1
+        z2.axpby(1., 0., x2)
+        z2.axpy(-1., self.By1)
 
         # 2) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
@@ -275,14 +288,24 @@ class schur_3x3(block_precond):
         self.DBt.mult(y2, self.DBty2)
         self.E.mult(y2, self.Ey2)
 
-        z3 = x3 - (self.Dy1 - self.DBty2 + self.Ey2)
+        z3 = x3.duplicate()
+        # compute z3 = x3 - (self.Dy1 - self.DBty2 + self.Ey2)
+        z3.axpby(1., 0., x3)
+        z3.axpy(-1., self.Dy1)
+        z3.axpy(1., self.DBty2)
+        z3.axpy(-1., self.Ey2)
 
         # 3) solve Wmod * y_3 = z_3
         self.ksp_fields[2].setOperators(self.Wmod)
         self.ksp_fields[2].solve(z3, y3)
 
         self.Tmod.mult(y3, self.Tmody3)
-        z2 = x2 - self.By1 - self.Tmody3
+
+        z2 = x2.duplicate()
+        # compute z2 = x2 - self.By1 - self.Tmody3
+        z2.axpby(1., 0., x2)
+        z2.axpy(-1., self.By1)
+        z2.axpy(-1., self.Tmody3)
 
         # 4) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
@@ -290,7 +313,12 @@ class schur_3x3(block_precond):
 
         self.Bt.mult(y2, self.Bty2)
         self.Dt.mult(y3, self.Dty3)
-        z1 = x1 - self.Bty2 - self.Dty3
+
+        z1 = x1.duplicate()
+        # compute z1 = x1 - self.Bty2 - self.Dty3
+        z1.axpby(1., 0., x1)
+        z1.axpy(-1., self.Bty2)
+        z1.axpy(-1., self.Dty3)
 
         # 5) solve A * y_1 = z_1
         self.ksp_fields[0].setOperators(self.A)
@@ -310,8 +338,9 @@ class schur_3x3(block_precond):
 
         y.assemble()
 
-        z1.destroy(), z2.destroy(), z3.destroy()
+        x1.destroy(), x2.destroy(), x3.destroy()
         y1.destroy(), y2.destroy(), y3.destroy()
+        z1.destroy(), z2.destroy(), z3.destroy()
         del arr_y1, arr_y2, arr_y3
 
 
@@ -358,6 +387,7 @@ class schur_4x4(schur_3x3):
 
         y.assemble()
 
+        x4.destroy()
         y4.destroy()
         del arr_y4
 
@@ -380,7 +410,11 @@ class simple_2x2(schur_2x2):
         self.ksp_fields[0].solve(x1, y1)
 
         self.B.mult(y1, self.By1)
-        z2 = x2 - self.By1
+
+        z2 = x2.duplicate()
+        # compute z2 = x2 - self.By1
+        z2.axpby(1., 0., x2)
+        z2.axpy(-1., self.By1)
 
         # 2) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
@@ -392,7 +426,8 @@ class simple_2x2(schur_2x2):
 
         self.Bt.diagonalScale(L=adinv_vec) # left scaling columns of Bt, corresponds to diag(A)^{-1} * Bt
         self.Bt.mult(y2, self.Bty2)
-        y1 -= self.Bty2
+        # compute y1 -= self.Bty2
+        y1.axpy(-1., self.Bty2)
         self.Bt.diagonalScale(L=ad_vec)    # restore Bt
 
         # restore/clean up
@@ -407,8 +442,10 @@ class simple_2x2(schur_2x2):
 
         y.assemble()
 
-        z2.destroy(), ad_vec.destroy(), adinv_vec.destroy()
+        ad_vec.destroy(), adinv_vec.destroy()
+        x1.destroy(), x2.destroy()
         y1.destroy(), y2.destroy()
+        z2.destroy()
         del arr_y1, arr_y2
 
 
@@ -463,7 +500,11 @@ class bgs_2x2(block_precond):
         self.ksp_fields[0].solve(x1, y1)
 
         self.B.mult(y1, self.By1)
-        z2 = x2 - self.By1
+
+        z2 = x2.duplicate()
+        # compute z2 = x2 - self.By1
+        z2.axpby(1., 0., x2)
+        z2.axpy(-1., self.By1)
 
         # 2) solve C * y_2 = z_2
         self.ksp_fields[1].setOperators(self.C)
@@ -481,8 +522,9 @@ class bgs_2x2(block_precond):
 
         y.assemble()
 
-        z2.destroy()
+        x1.destroy(), x2.destroy()
         y1.destroy(), y2.destroy()
+        z2.destroy()
         del arr_y1, arr_y2
 
 
@@ -544,5 +586,6 @@ class jacobi_2x2(block_precond):
 
         y.assemble()
 
+        x1.destroy(), x2.destroy()
         y1.destroy(), y2.destroy()
         del arr_y1, arr_y2
