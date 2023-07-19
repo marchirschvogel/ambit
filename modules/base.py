@@ -259,7 +259,7 @@ class solver_base():
 
             if self.pb.comm.rank == 0:
 
-                f = open(self.pb.io.output_path+'/results_'+self.pb.simname+'_wt_ni_li_counters.txt', mode)
+                f = open(self.pb.output_path+'/results_'+self.pb.simname+'_wt_ni_li_counters.txt', mode)
                 f.write('%.16E %.16E %i %i\n' % (t, wt, self.solnln.ni, self.solnln.li))
                 f.close()
 
