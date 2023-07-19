@@ -214,8 +214,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         r_list[2] = r_lm
 
-        if self.residual_scale_dt:
-            self.scale_residual_list([r_lm], self.dt)
+        if bool(self.residual_scale):
+            self.scale_residual_list([r_lm], [self.residual_scale[2]])
 
         return r_list
 
@@ -340,8 +340,10 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         K_sv_t.assemble()
 
-        if self.residual_scale_dt:
-            self.scale_jacobian_list([K_vs,K_sv_t,K_lm], self.dt)
+        if bool(self.residual_scale):
+            K_vs.scale(self.residual_scale[0])
+            K_sv_t.scale(self.residual_scale[2])
+            K_lm.scale(self.residual_scale[2])
 
         K_list[0][2] = K_vs
         K_list[2][0] = K_sv_t.createTranspose(K_sv_t)

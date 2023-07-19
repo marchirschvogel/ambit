@@ -37,8 +37,8 @@ class problem_base():
         try: self.results_to_write = io_params['results_to_write']
         except: self.results_to_write = []
 
-        try: self.residual_scale_dt = time_params['residual_scale_dt']
-        except: self.residual_scale_dt = False
+        try: self.residual_scale = time_params['residual_scale']
+        except: self.residual_scale = []
 
         self.print_subiter = False
 
@@ -104,14 +104,15 @@ class problem_base():
 
     def scale_residual_list(self, rlist, fac):
 
-        for i in range(len(rlist)):
-            rlist[i].scale(fac)
+        for n in range(len(rlist)):
+            rlist[n].scale(fac[n])
 
 
     def scale_jacobian_list(self, Klist, fac):
 
-        for i in range(len(Klist)):
-            if Klist[i] is not None: Klist[i].scale(fac)
+        for n in range(len(Klist)):
+            for m in range(len(Klist)):
+                if Klist[n][m] is not None: Klist[n][m].scale(fac[n])
 
 
 class solver_base():

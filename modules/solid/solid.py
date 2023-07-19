@@ -776,8 +776,8 @@ class SolidmechanicsProblem(problem_base):
 
             r_list = [r_u]
 
-        if self.residual_scale_dt:
-            self.scale_residual_list(r_list, self.dt)
+        if bool(self.residual_scale):
+            self.scale_residual_list(r_list, self.residual_scale)
 
         return r_list
 
@@ -809,8 +809,8 @@ class SolidmechanicsProblem(problem_base):
 
             K_list = [[K_uu]]
 
-        if self.residual_scale_dt:
-            self.scale_jacobian_list([item for sublist in K_list for item in sublist], self.dt)
+        if bool(self.residual_scale):
+            self.scale_jacobian_list(K_list, self.residual_scale)
 
         return K_list
 

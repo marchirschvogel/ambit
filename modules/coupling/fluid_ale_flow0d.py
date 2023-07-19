@@ -210,8 +210,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         K_sd_t.assemble()
 
-        if self.residual_scale_dt:
-            self.scale_jacobian_list([K_sd_t], self.dt)
+        if bool(self.residual_scale):
+            K_sd_t.scale(self.residual_scale[2])
 
         K_list[2][3] = K_sd_t.createTranspose(K_sd_t)
         K_list[3][3] = K_list_ale[0][0]

@@ -347,8 +347,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             r_list[1+off] = r_lm
 
-        if self.residual_scale_dt:
-            self.scale_residual_list([r_list[1+off]], self.dt)
+        if bool(self.residual_scale):
+            self.scale_residual_list([r_list[1+off]], [self.residual_scale[1+off]])
 
         return r_list
 
@@ -507,8 +507,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         K_su_t.assemble()
 
-        if self.residual_scale_dt:
-            self.scale_jacobian_list([K_us,K_su_t,K_constr], self.dt)
+        if bool(self.residual_scale):
+            K_us.scale(self.residual_scale[0])
+            K_su_t.scale(self.residual_scale[1+off])
+            K_constr.scale(self.residual_scale[1+off])
 
         K_list[0][1+off] = K_us
         K_list[1+off][0] = K_su_t.createTranspose(K_su_t)

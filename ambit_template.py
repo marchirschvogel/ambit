@@ -69,7 +69,7 @@ def main():
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor, \in ]0;1]
                             'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma), \in [0;1]
                             'fluid_governing_type'  : 'navierstokes_transient', # OPTIONAL: governing equation type for fluid mechanics: 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'stokes_steady' (default: 'navierstokes_transient')
-                            'residual_scale_dt'     : False} # OPTIONAL: if residuals should be scaled by step size or not (e.g. for better comparisons to solvers where this is done...) (default: False)
+                            'residual_scale'        : [0.001,0.001,0.001]} # OPTIONAL: if residuals should be scaled or not (e.g. for better comparisons to solvers where this is done...) (list needs to have the length of residuals involved) (default: [])
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: 'ost'

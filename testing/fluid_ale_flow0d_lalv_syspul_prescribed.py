@@ -50,7 +50,7 @@ def main():
                             'numstep_stop'          : 2,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0,
-                            'residual_scale_dt'     : True}
+                            'residual_scale'        : [0.001,0.001,0.001]}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
