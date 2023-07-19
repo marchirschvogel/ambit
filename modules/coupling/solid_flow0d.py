@@ -180,7 +180,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), self.coupfuncs[-1], ds_p)
                 self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), self.coupfuncs_old[-1], ds_p)
 
-            self.dforce.append(fem.form(df_))
+            self.dforce.append(df_)
 
         # minus sign, since contribution to external work!
         self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
@@ -261,6 +261,25 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         self.pbs.set_problem_residual_jacobian_forms()
 
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation for solid-0D coupling...')
+            sys.stdout.flush()
+
+        self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
+
+        for i in range(self.num_coupling_surf):
+            self.cq_form.append(fem.form(self.cq[i]))
+            self.cq_old_form.append(fem.form(self.cq_old[i]))
+
+            self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
+            self.dforce_form.append(fem.form(self.dforce[i]))
+
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation for solid-0D finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
+
 
     def assemble_residual(self, t, subsolver=None):
 
@@ -274,7 +293,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         if self.coupling_type == 'monolithic_lagrange':
 
             for i in range(self.num_coupling_surf):
-                cq = fem.assemble_scalar(fem.form(self.cq[i]))
+                cq = fem.assemble_scalar(self.cq_form[i])
                 cq = self.comm.allgather(cq)
                 self.constr[i] = sum(cq)*self.cq_factor[i]
 
@@ -296,7 +315,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             # volumes/fluxes to be passed to 0D model
             for i in range(len(self.pb0.cardvasc0D.c_ids)):
-                cq = fem.assemble_scalar(fem.form(self.cq[i]))
+                cq = fem.assemble_scalar(self.cq_form[i])
                 cq = self.comm.allgather(cq)
                 self.pb0.c[i] = sum(cq)*self.cq_factor[i]
 
@@ -435,11 +454,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             K_constr = K_ss
 
-        # offdiagonal u-s columns
-        k_us_cols=[]
-        for i in range(len(col_ids)):
-            k_us_cols.append(fem.petsc.assemble_vector(self.dforce[i])) # already multiplied by time-integration factor
-
         # offdiagonal s-u rows
         k_su_rows=[]
         for i in range(len(row_ids)):
@@ -449,18 +463,21 @@ class SolidmechanicsFlow0DProblem(problem_base):
             if self.pb0.cq[i] == 'flux':     timefac = -self.pb0.theta0d_timint(t) # 0D model time-integration factor
             if self.pb0.cq[i] == 'pressure': timefac = 1.
 
-            k_su_rows.append(fem.petsc.assemble_vector(fem.form(timefac*self.cq_factor[i]*self.dcq[i])))
+            k_su_vec = fem.petsc.assemble_vector(self.dcq_form[i])
+            # ghost update on k_su_rows - needs to be done prior to scale
+            k_su_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            k_su_vec.scale(timefac)
+            k_su_rows.append(k_su_vec)
 
-        # apply displacement dbcs to matrix entries k_us - basically since these are offdiagonal we want a zero there!
+        # offdiagonal u-s columns
+        k_us_cols=[]
         for i in range(len(col_ids)):
-
-            fem.apply_lifting(k_us_cols[i], [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
-            k_us_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(k_us_cols[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
-
-        # ghost update on k_su_rows
-        for i in range(len(row_ids)):
-            k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            k_us_vec = fem.petsc.assemble_vector(self.dforce_form[i])
+            # apply displacement dbcs to matrix entries k_us - basically since these are offdiagonal we want a zero there!
+            fem.apply_lifting(k_us_vec, [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            k_us_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_us_vec, self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
+            k_us_cols.append(k_us_vec) # already multiplied by time-integration factor
 
         # setup offdiagonal matrices
         locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
@@ -486,7 +503,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         for i in range(len(row_ids)):
             K_su[row_ids[i], irs:ire] = k_su_rows[i][irs:ire]
 
-        K_su.assemble()
+        K_su.assemble() # TODO: Seems to take very long for large problems... Why?
 
         K_list[0][1+off] = K_us
         K_list[1+off][0] = K_su
@@ -567,7 +584,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             # old 3D coupling quantities (volumes or fluxes)
             self.pb0.c = []
             for i in range(self.num_coupling_surf):
-                cq = fem.assemble_scalar(fem.form(self.cq_old[i]))
+                cq = fem.assemble_scalar(self.cq_old_form[i])
                 cq = self.comm.allgather(cq)
                 self.pb0.c.append(sum(cq)*self.cq_factor[i])
 
@@ -576,7 +593,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             for i in range(self.num_coupling_surf):
                 lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
                 self.pb0.c.append(lm_sq[i])
-                con = fem.assemble_scalar(fem.form(self.cq_old[i]))
+                con = fem.assemble_scalar(self.cq_old_form[i])
                 con = self.comm.allgather(con)
                 self.constr.append(sum(con)*self.cq_factor[i])
                 self.constr_old.append(sum(con)*self.cq_factor[i])

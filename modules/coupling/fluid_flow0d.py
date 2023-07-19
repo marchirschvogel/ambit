@@ -128,7 +128,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
                 self.power_coupling += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, Fale=self.pbf.alevar['Fale'])
                 self.power_coupling_old += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_old[-1], ds_p, Fale=self.pbf.alevar['Fale_old'])
 
-            self.dforce.append(fem.form(df_))
+            self.dforce.append(df_)
 
         # minus sign, since contribution to external power!
         self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling - (1.-self.pbf.timefac) * self.power_coupling_old
@@ -146,13 +146,32 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.pbf.set_problem_residual_jacobian_forms()
 
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation for fluid-0D coupling...')
+            sys.stdout.flush()
+
+        self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
+
+        for i in range(self.num_coupling_surf):
+            self.cq_form.append(fem.form(self.cq[i]))
+            self.cq_old_form.append(fem.form(self.cq_old[i]))
+
+            self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
+            self.dforce_form.append(fem.form(self.dforce[i]))
+
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation for fluid-0D finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
+
 
     def assemble_residual(self, t, subsolver=None):
 
         r_list = [None]*3
 
         for i in range(self.num_coupling_surf):
-            cq = fem.assemble_scalar(fem.form(self.cq[i]))
+            cq = fem.assemble_scalar(self.cq_form[i])
             cq = self.comm.allgather(cq)
             self.constr[i] = sum(cq)*self.cq_factor[i]
 
@@ -274,26 +293,22 @@ class FluidmechanicsFlow0DProblem(problem_base):
         row_ids = list(range(self.num_coupling_surf))
         col_ids = list(range(self.num_coupling_surf))
 
-        # offdiagonal v-s columns
-        k_vs_cols=[]
-        for i in range(len(col_ids)):
-            k_vs_cols.append(fem.petsc.assemble_vector(self.dforce[i])) # already multiplied by time-integration factor
-
         # offdiagonal s-v rows
         k_sv_rows=[]
         for i in range(len(row_ids)):
-            k_sv_rows.append(fem.petsc.assemble_vector(fem.form(self.cq_factor[i]*self.dcq[i])))
+            k_sv_vec = fem.petsc.assemble_vector(self.dcq_form[i])
+            k_sv_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            k_sv_rows.append(k_sv_vec)
 
-        # apply velocity dbcs to matrix entries k_vs - basically since these are offdiagonal we want a zero there!
+        # offdiagonal v-s columns
+        k_vs_cols=[]
         for i in range(len(col_ids)):
-
-            fem.apply_lifting(k_vs_cols[i], [self.pbf.jac_vv], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
-            k_vs_cols[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(k_vs_cols[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
-
-        # ghost update on k_sv_rows
-        for i in range(len(row_ids)):
-            k_sv_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            k_vs_vec = fem.petsc.assemble_vector(self.dforce_form[i])
+            # apply velocity dbcs to matrix entries k_vs - basically since these are offdiagonal we want a zero there!
+            fem.apply_lifting(k_vs_vec, [self.pbf.jac_vv], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
+            k_vs_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(k_vs_vec, self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
+            k_vs_cols.append(k_vs_vec) # already multiplied by time-integration factor
 
         # setup offdiagonal matrices
         locmatsize = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
@@ -319,7 +334,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         for i in range(len(row_ids)):
             K_sv[row_ids[i], irs:ire] = k_sv_rows[i][irs:ire]
 
-        K_sv.assemble()
+        K_sv.assemble() # TODO: Seems to take very long for large problems... Why?
 
         K_list[0][2] = K_vs
         K_list[2][0] = K_sv
@@ -392,7 +407,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         for i in range(self.num_coupling_surf):
             lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
             self.pb0.c.append(lm_sq[i])
-            con = fem.assemble_scalar(fem.form(self.cq_old[i]))
+            con = fem.assemble_scalar(self.cq_old_form[i])
             con = self.comm.allgather(con)
             self.constr.append(sum(con)*self.cq_factor[i])
             self.constr_old.append(sum(con)*self.cq_factor[i])

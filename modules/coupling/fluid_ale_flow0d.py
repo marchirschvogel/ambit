@@ -95,6 +95,27 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.dcqd.append(ufl.derivative(self.pbf0.cq[n], self.pba.d, self.pba.dd))
 
 
+    def set_problem_residual_jacobian_forms(self):
+
+        super().set_problem_residual_jacobian_forms()
+        self.pbf0.set_problem_residual_jacobian_forms()
+
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation for ALE-0D coupling...')
+            sys.stdout.flush()
+
+        self.dcqd_form = []
+
+        for i in range(self.pbf0.num_coupling_surf):
+            self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i]))
+
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation for ALE-0D finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
+
+
     def assemble_residual(self, t, subsolver=None):
 
         r_list = [None]*4
@@ -172,20 +193,24 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         row_ids = list(range(self.pbf0.num_coupling_surf))
         k_sd_rows=[]
         for i in range(len(row_ids)):
-            k_sd_rows.append(fem.petsc.assemble_vector(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i])))
-            k_sd_rows[-1].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            k_sd_vec = fem.petsc.assemble_vector(self.dcqd_form[i])
+            k_sd_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            k_sd_rows.append(k_sd_vec)
 
         locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
         matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
+
         K_sd = PETSc.Mat().createAIJ(size=((K_list[2][2].getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         K_sd.setUp()
+
         # set rows
         irs, ire = K_list[0][0].getOwnershipRange()
         for i in range(len(row_ids)):
             K_sd[row_ids[i], irs:ire] = k_sd_rows[i][irs:ire]
-        K_sd.assemble()
-        K_list[2][3] = K_sd
 
+        K_sd.assemble() # TODO: Seems to take very long for large problems... Why?
+
+        K_list[2][3] = K_sd
         K_list[3][3] = K_list_ale[0][0]
 
         # destroy PETSc vector
