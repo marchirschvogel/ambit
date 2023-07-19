@@ -522,7 +522,7 @@ class SolidmechanicsProblem(problem_base):
         # pressure contributions
         if self.incompressible_2field:
 
-            self.weakform_lin_up, self.weakform_lin_pu, self.p11 = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            self.weakform_lin_up, self.weakform_lin_pu, self.weakform_lin_pp = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
             for n in range(self.num_domains):
                 # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
@@ -556,7 +556,7 @@ class SolidmechanicsProblem(problem_base):
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
                     dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                     if not isinstance(dthetadp, ufl.constantvalue.Zero):
-                        self.p11 += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx_[n]
+                        self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx_[n]
                 else:
                     Ctang_p = Cmat_p
                     Jtang = Jmat
@@ -723,6 +723,8 @@ class SolidmechanicsProblem(problem_base):
                     self.res_p  = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
                     self.jac_up = fem.form(self.weakform_lin_up, entity_maps=self.io.entity_maps)
                     self.jac_pu = fem.form(self.weakform_lin_pu, entity_maps=self.io.entity_maps)
+                    if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
+                        self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
             else:
                 self.res_u  = fem.form(self.weakform_u)
                 self.jac_uu = fem.form(self.weakform_lin_uu)
@@ -730,6 +732,8 @@ class SolidmechanicsProblem(problem_base):
                     self.res_p  = fem.form(self.weakform_p)
                     self.jac_up = fem.form(self.weakform_lin_up)
                     self.jac_pu = fem.form(self.weakform_lin_pu)
+                    if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
+                        self.jac_pp = fem.form(self.weakform_lin_pp)
         else:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_u  = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
@@ -766,11 +770,16 @@ class SolidmechanicsProblem(problem_base):
             r_p = fem.petsc.assemble_vector(self.res_p)
             r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
-            return [r_u, r_p]
+            r_list = [r_u, r_p]
 
         else:
 
-            return [r_u]
+            r_list = [r_u]
+
+        if self.residual_scale_dt:
+            self.scale_residual_list(r_list, self.dt)
+
+        return r_list
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -788,17 +797,22 @@ class SolidmechanicsProblem(problem_base):
             K_pu.assemble()
 
             # for stress-mediated volumetric growth, K_pp is not zero!
-            if not isinstance(self.p11, ufl.constantvalue.Zero):
-                K_pp = fem.petsc.assemble_matrix(fem.form(self.p11), [])
+            if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
+                K_pp = fem.petsc.assemble_matrix(self.jac_pp, [])
                 K_pp.assemble()
             else:
                 K_pp = None
 
-            return [[K_uu, K_up], [K_pu, K_pp]]
+            K_list = [[K_uu, K_up], [K_pu, K_pp]]
 
         else:
 
-            return [[K_uu]]
+            K_list = [[K_uu]]
+
+        if self.residual_scale_dt:
+            self.scale_jacobian_list([item for sublist in K_list for item in sublist], self.dt)
+
+        return K_list
 
 
     def get_index_sets(self, isoptions={}):

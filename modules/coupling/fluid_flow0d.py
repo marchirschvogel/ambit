@@ -210,7 +210,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
         for i in range(ls,le):
             r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
 
+        r_lm.assemble()
+
         r_list[2] = r_lm
+
+        if self.residual_scale_dt:
+            self.scale_residual_list([r_lm], self.dt)
 
         return r_list
 
@@ -326,18 +331,20 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         K_vs.assemble()
 
-        # derivative of 0D residual w.r.t. fluid velocities
-        K_sv = PETSc.Mat().createAIJ(size=((K_lm.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K_sv.setUp()
+        # derivative of 0D residual w.r.t. fluid velocities (use transpose, since more efficient assembly)
+        K_sv_t = K_vs.duplicate()
 
         # set rows
         for i in range(len(row_ids)):
-            K_sv[row_ids[i], irs:ire] = k_sv_rows[i][irs:ire]
+            K_sv_t[irs:ire, row_ids[i]] = k_sv_rows[i][irs:ire]
 
-        K_sv.assemble() # TODO: Seems to take very long for large problems... Why?
+        K_sv_t.assemble()
+
+        if self.residual_scale_dt:
+            self.scale_jacobian_list([K_vs,K_sv_t,K_lm], self.dt)
 
         K_list[0][2] = K_vs
-        K_list[2][0] = K_sv
+        K_list[2][0] = K_sv_t.createTranspose(K_sv_t)
 
         # destroy PETSc vectors
         for i in range(len(row_ids)): k_sv_rows[i].destroy()

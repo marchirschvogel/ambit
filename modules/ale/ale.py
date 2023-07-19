@@ -200,7 +200,12 @@ class AleProblem(problem_base):
         r_d.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         fem.set_bc(r_d, self.bc.dbcs, x0=self.d.vector, scale=-1.0)
 
-        return [r_d]
+        r_list = [r_d]
+
+        if self.residual_scale_dt:
+            self.scale_residual_list(r_list, self.dt)
+
+        return r_list
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -209,7 +214,12 @@ class AleProblem(problem_base):
         K_dd = fem.petsc.assemble_matrix(self.jac_dd, self.bc.dbcs)
         K_dd.assemble()
 
-        return [[K_dd]]
+        K_list = [[K_dd]]
+
+        if self.residual_scale_dt:
+            self.scale_jacobian_list([i for subl in K_list for i in subl], self.dt)
+
+        return K_list
 
 
     ### now the base routines for this problem

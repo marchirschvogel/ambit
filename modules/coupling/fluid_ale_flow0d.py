@@ -200,17 +200,20 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
         matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
 
-        K_sd = PETSc.Mat().createAIJ(size=((K_list[2][2].getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K_sd.setUp()
+        # derivative of 0D residual w.r.t. ALE displacements (use transpose, since more efficient assembly)
+        K_sd_t = K_list_fluidflow0d[0][2].duplicate()
 
         # set rows
         irs, ire = K_list[0][0].getOwnershipRange()
         for i in range(len(row_ids)):
-            K_sd[row_ids[i], irs:ire] = k_sd_rows[i][irs:ire]
+            K_sd_t[irs:ire, row_ids[i]] = k_sd_rows[i][irs:ire]
 
-        K_sd.assemble() # TODO: Seems to take very long for large problems... Why?
+        K_sd_t.assemble()
 
-        K_list[2][3] = K_sd
+        if self.residual_scale_dt:
+            self.scale_jacobian_list([K_sd_t], self.dt)
+
+        K_list[2][3] = K_sd_t.createTranspose(K_sd_t)
         K_list[3][3] = K_list_ale[0][0]
 
         # destroy PETSc vector

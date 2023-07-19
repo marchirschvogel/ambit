@@ -36,6 +36,9 @@ class problem_base():
         try: self.results_to_write = io_params['results_to_write']
         except: self.results_to_write = []
 
+        try: self.residual_scale_dt = time_params['residual_scale_dt']
+        except: self.residual_scale_dt = False
+
         self.print_subiter = False
 
         self.t_init = self.restart_step * self.dt
@@ -97,6 +100,17 @@ class problem_base():
     def check_abort(self, t):
         raise RuntimeError("Problem misses function implementation!")
 
+
+    def scale_residual_list(self, rlist, fac):
+
+        for i in range(len(rlist)):
+            rlist[i].scale(fac)
+
+
+    def scale_jacobian_list(self, Klist, fac):
+
+        for i in range(len(Klist)):
+            if Klist[i] is not None: Klist[i].scale(fac)
 
 
 class solver_base():

@@ -715,7 +715,12 @@ class FluidmechanicsProblem(problem_base):
             r_p = fem.petsc.assemble_vector(self.res_p)
             r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
-        return [r_v, r_p]
+        r_list = [r_v, r_p]
+
+        if self.residual_scale_dt:
+            self.scale_residual_list(r_list, self.dt)
+
+        return r_list
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -742,10 +747,16 @@ class FluidmechanicsProblem(problem_base):
                 K_pp = fem.petsc.assemble_matrix_block(self.jac_pp_, []) # currently, we do not consider pressure DBCs
             else:
                 K_pp = fem.petsc.assemble_matrix(self.jac_pp, []) # currently, we do not consider pressure DBCs
+            K_pp.assemble()
         else:
             K_pp = None
 
-        return [[K_vv, K_vp], [K_pv, K_pp]]
+        K_list = [[K_vv, K_vp], [K_pv, K_pp]]
+
+        if self.residual_scale_dt:
+            self.scale_jacobian_list([i for subl in K_list for i in subl], self.dt)
+
+        return K_list
 
 
     def get_index_sets(self, isoptions={}):

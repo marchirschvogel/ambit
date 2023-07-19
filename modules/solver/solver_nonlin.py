@@ -142,9 +142,6 @@ class solver_nonlinear:
         try: self.tol_inc_local = solver_params['tol_inc_local']
         except: self.tol_inc_local = 1.0e-10
 
-        try: self.residual_scale_dt = solver_params['residual_scale_dt']
-        except: self.residual_scale_dt = False
-
         self.solvetype = solver_params['solve_type']
 
         # check if we have a list of tolerances (for coupled problems) or just one value
@@ -391,12 +388,6 @@ class solver_nonlinear:
         if self.pb.have_rom:
             del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
 
-        # scale by time step size if requested
-        if self.residual_scale_dt:
-            for n in range(self.nfields):
-                r_list[n].assemble()
-                r_list[n].scale(self.pb.dt)
-
         # get initial residual norms
         for n in range(self.nfields):
             r_list[n].assemble()
@@ -437,10 +428,6 @@ class solver_nonlinear:
                 # nested matrix
                 K_full_nest = PETSc.Mat().createNest(K_list, isrows=None, iscols=None, comm=self.pb.comm)
                 K_full_nest.assemble()
-
-                # scale by time step size if requested
-                if self.residual_scale_dt:
-                    K_full_nest.scale(self.pb.dt)
 
                 te += time.time() - tes
 
@@ -510,10 +497,6 @@ class solver_nonlinear:
 
             else:
 
-                # scale by time step size if requested
-                if self.residual_scale_dt:
-                    K_list[0][0].scale(self.pb.dt)
-
                 # solve linear system
                 self.ksp.setOperators(K_list[0][0])
 
@@ -558,12 +541,6 @@ class solver_nonlinear:
             r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
             if self.pb.have_rom:
                 del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
-
-            # scale by time step size if requested
-            if self.residual_scale_dt:
-                for n in range(self.nfields):
-                    r_list[n].assemble()
-                    r_list[n].scale(self.pb.dt)
 
             # get residual norm
             for n in range(self.nfields):
@@ -626,12 +603,6 @@ class solver_nonlinear:
                     # re-reduce initial residual
                     if self.pb.have_rom:
                         del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
-
-                    # re-scale by time step size if requested
-                    if self.residual_scale_dt:
-                        for n in range(self.nfields):
-                            r_list[n].assemble()
-                            r_list[n].scale(self.pb.dt)
 
                     # re-get residual norm
                     for n in range(self.nfields):

@@ -347,6 +347,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             r_list[1+off] = r_lm
 
+        if self.residual_scale_dt:
+            self.scale_residual_list([r_list[1+off]], self.dt)
+
         return r_list
 
 
@@ -495,18 +498,20 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         K_us.assemble()
 
-        # derivative of 0D residual w.r.t. solid displacements
-        K_su = PETSc.Mat().createAIJ(size=((K_constr.getSize()[0]),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K_su.setUp()
+        # derivative of 0D residual w.r.t. solid displacements (use transpose, since more efficient assembly)
+        K_su_t = K_us.duplicate()
 
         # set rows
         for i in range(len(row_ids)):
-            K_su[row_ids[i], irs:ire] = k_su_rows[i][irs:ire]
+            K_su_t[irs:ire, row_ids[i]] = k_su_rows[i][irs:ire]
 
-        K_su.assemble() # TODO: Seems to take very long for large problems... Why?
+        K_su_t.assemble()
+
+        if self.residual_scale_dt:
+            self.scale_jacobian_list([K_us,K_su_t,K_constr], self.dt)
 
         K_list[0][1+off] = K_us
-        K_list[1+off][0] = K_su
+        K_list[1+off][0] = K_su_t.createTranspose(K_su_t)
 
         # destroy PETSc vectors
         for i in range(len(row_ids)): k_su_rows[i].destroy()

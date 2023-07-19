@@ -96,13 +96,15 @@ class schur_2x2(block_precond):
         ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
         adinv_vec.reciprocal()
 
-        self.B.diagonalScale(R=adinv_vec)    # right scaling columns of B, corresponds to B * diag(A)^{-1}
-        B_Adinv_Bt = self.B.matMult(self.Bt) # B diag(A)^-1 Bt
+        # form diag(A)^{-1}
+        Adinv = self.A.duplicate()
+        Adinv.setDiagonal(adinv_vec, addv=PETSc.InsertMode.INSERT)
 
-        # --- modified Schur complement Smod = C - B diag(A)^-1 Bt
+        Adinv_Bt = Adinv.matMult(self.Bt)     # diag(A)^{-1} Bt
+        B_Adinv_Bt = self.B.matMult(Adinv_Bt) # B diag(A)^{-1} Bt
+
+        # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
         self.Smod = self.C - B_Adinv_Bt
-
-        self.B.diagonalScale(R=ad_vec)       # restore B
 
         # some auxiliary vecs needed in apply
         self.By1.destroy(), self.Bty2.destroy()
@@ -111,7 +113,7 @@ class schur_2x2(block_precond):
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
 
         ad_vec.destroy(), adinv_vec.destroy()
-        B_Adinv_Bt.destroy()
+        Adinv.destroy(), Adinv_Bt.destroy(), B_Adinv_Bt.destroy()
 
 
     # computes y = P^{-1} x
@@ -202,46 +204,52 @@ class schur_3x3(block_precond):
         self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
-        ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
+        adinv_vec = self.A.getDiagonal()
         adinv_vec.reciprocal()
 
-        self.B.diagonalScale(R=adinv_vec)    # right scaling columns of B, corresponds to B * diag(A)^{-1}
-        B_Adinv_Bt = self.B.matMult(self.Bt) # B diag(A)^-1 Bt
+        # form diag(A)^{-1}
+        Adinv = self.A.duplicate()
+        Adinv.setDiagonal(adinv_vec, addv=PETSc.InsertMode.INSERT)
+
+        Adinv_Bt = Adinv.matMult(self.Bt)      # diag(A)^{-1} Bt
+        B_Adinv_Bt = self.B.matMult(Adinv_Bt)  # B diag(A)^{-1} Bt
 
         # --- modified Schur complement Smod = C - B diag(A)^-1 Bt
         self.Smod = self.C - B_Adinv_Bt
 
         # --- Tmod = Et - B diag(A)^-1 Dt
 
-        B_Adinv_Dt = self.B.matMult(self.Dt) # B diag(A)^-1 Dt
+        Adinv_Dt = Adinv.matMult(self.Dt)      # diag(A)^{-1} Dt
+        B_Adinv_Dt = self.B.matMult(Adinv_Dt)  # B diag(A)^-1 Dt
 
         self.Tmod = self.Et - B_Adinv_Dt
 
         # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
 
-        smodd_vec, smoddinv_vec = self.Smod.getDiagonal(), self.Smod.getDiagonal()
+        smoddinv_vec = self.Smod.getDiagonal()
         smoddinv_vec.reciprocal()
 
-        self.Bt.diagonalScale(R=smoddinv_vec)                       # right scaling columns of Bt, corresponds to Bt * diag(Smod)^{-1}
-        Bt_Smoddinv_Tmod = self.Bt.matMult(self.Tmod)               # Bt diag(Smod)^-1 Tmod
+        # form diag(Smod)^{-1}
+        Smoddinv = self.Smod.duplicate()
+        Smoddinv.setDiagonal(smoddinv_vec, addv=PETSc.InsertMode.INSERT)
 
-        self.D.diagonalScale(R=adinv_vec)                           # right scaling columns of D, corresponds to D * diag(A)^{-1}
-        D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(Bt_Smoddinv_Tmod) # D diag(A)^{-1} ( Bt diag(Smod)^-1 Tmod )
+        Smoddinv_Tmod = Smoddinv.matMult(self.Tmod)                        # diag(Smod)^{-1} Tmod
+        Bt_Smoddinv_Tmod = self.Bt.matMult(Smoddinv_Tmod)                  # Bt diag(Smod)^{-1} Tmod
+
+        Adinv_Bt_Smoddinv_Tmod = Adinv.matMult(Bt_Smoddinv_Tmod)           # diag(A)^{-1} ( Bt diag(Smod)^-1 Tmod )
+        D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(Adinv_Bt_Smoddinv_Tmod)  # D diag(A)^{-1} ( Bt diag(Smod)^-1 Tmod )
 
         self.DBt.destroy()
-        self.DBt = self.D.matMult(self.Bt)                          # D diag(A)^{-1} Bt for later use
+        Adinv_Bt = Adinv.matMult(self.Bt)
+        self.DBt = self.D.matMult(Adinv_Bt)                                # D diag(A)^{-1} Bt for later use
 
-        self.E.diagonalScale(R=smoddinv_vec)                        # right scaling columns of E, corresponds to E * diag(Smod)^{-1}
-        E_Smoddinv_Tmod = self.E.matMult(self.Tmod)                 # E diag(Smod)^-1 Tmod
+        Smoddinv_Tmod = Smoddinv.matMult(self.Tmod)                        # diag(Smod)^-1 Tmod
+        E_Smoddinv_Tmod = self.E.matMult(Smoddinv_Tmod)                    # E diag(Smod)^-1 Tmod
 
-        D_Adinv_Dt = self.D.matMult(self.Dt)                        # D diag(A)^{-1} Dt - note that D is still scaled by diag(A)^{-1}
+        Adinv_Dt = Adinv.matMult(self.Dt)                                  # diag(A)^{-1} Dt
+        D_Adinv_Dt = self.D.matMult(Adinv_Dt)                              # D diag(A)^{-1} Dt
 
         self.Wmod = self.R - D_Adinv_Dt - E_Smoddinv_Tmod + D_Adinv_Bt_Smoddinv_Tmod
-
-        self.B.diagonalScale(R=ad_vec)     # restore B
-        self.Bt.diagonalScale(R=smodd_vec) # restore Bt
-        self.D.diagonalScale(R=ad_vec)     # restore D
-        self.E.diagonalScale(R=smodd_vec)  # restore E
 
         # some auxiliary vecs needed in apply
         self.By1.destroy(), self.Dy1.destroy(), self.DBty2.destroy(), self.Ey2.destroy(), self.Tmody3.destroy(), self.Bty2.destroy(), self.Dty3.destroy()
@@ -254,8 +262,8 @@ class schur_3x3(block_precond):
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
         self.Dty3 = PETSc.Vec().createMPI(size=(self.Dt.getLocalSize()[0],self.Dt.getSize()[0]), comm=self.comm)
 
-        ad_vec.destroy(), adinv_vec.destroy(), smodd_vec.destroy(), smoddinv_vec.destroy()
-        B_Adinv_Bt.destroy(), B_Adinv_Dt.destroy(), D_Adinv_Bt_Smoddinv_Tmod.destroy(), E_Smoddinv_Tmod.destroy(), D_Adinv_Dt.destroy(), Bt_Smoddinv_Tmod.destroy()
+        adinv_vec.destroy(), smoddinv_vec.destroy()
+        Adinv.destroy(), Smoddinv.destroy(), Adinv_Bt.destroy(), B_Adinv_Bt.destroy(), Adinv_Dt.destroy(), B_Adinv_Dt.destroy(), Smoddinv_Tmod.destroy(), Bt_Smoddinv_Tmod.destroy(), Adinv_Bt_Smoddinv_Tmod.destroy(), D_Adinv_Bt_Smoddinv_Tmod.destroy(), Adinv_Bt.destroy(), E_Smoddinv_Tmod.destroy(), Adinv_Dt.destroy(), D_Adinv_Dt.destroy()
 
 
     # computes y = P^{-1} x
@@ -421,14 +429,17 @@ class simple_2x2(schur_2x2):
         self.ksp_fields[1].solve(z2, y2)
 
         # 3) update y_1
-        ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
+        adinv_vec = self.A.getDiagonal()
         adinv_vec.reciprocal()
 
-        self.Bt.diagonalScale(L=adinv_vec) # left scaling columns of Bt, corresponds to diag(A)^{-1} * Bt
-        self.Bt.mult(y2, self.Bty2)
+        # form diag(A)^{-1}
+        Adinv = self.A.duplicate()
+        Adinv.setDiagonal(adinv_vec, addv=PETSc.InsertMode.INSERT)
+
+        Adinv_Bt = Adinv.matMult(self.Bt)  # diag(A)^{-1} * Bt
+        Adinv_Bt.mult(y2, self.Bty2)
         # compute y1 -= self.Bty2
         y1.axpy(-1., self.Bty2)
-        self.Bt.diagonalScale(L=ad_vec)    # restore Bt
 
         # restore/clean up
         x.restoreSubVector(self.iset[0], subvec=x1)
@@ -442,7 +453,7 @@ class simple_2x2(schur_2x2):
 
         y.assemble()
 
-        ad_vec.destroy(), adinv_vec.destroy()
+        adinv_vec.destroy(), Adinv.destroy(), Adinv_Bt.destroy()
         x1.destroy(), x2.destroy()
         y1.destroy(), y2.destroy()
         z2.destroy()
