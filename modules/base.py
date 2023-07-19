@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import sys, time
+import numpy as np
 import utilities
 
 class problem_base():
@@ -31,6 +32,9 @@ class problem_base():
 
         try: self.numstep_stop = time_params['numstep_stop']
         except: self.numstep_stop = self.numstep
+
+        try: self.results_to_write = io_params['results_to_write']
+        except: self.results_to_write = []
 
         self.print_subiter = False
 
@@ -187,7 +191,7 @@ class solver_base():
             self.pb.write_restart(self.pb.simname, N)
 
             # update nonlinear and linear iteration counters
-            self.update_counters(wt)
+            self.update_counters(wt, t)
 
             # check any abort criterion
             if self.pb.check_abort(t-t_off):
@@ -220,7 +224,7 @@ class solver_base():
             sys.stdout.flush()
 
 
-    def update_counters(self, wt):
+    def update_counters(self, wt, t):
 
         self.wt += wt
         self.ni += self.solnln.ni
@@ -230,6 +234,19 @@ class solver_base():
         self.wt_.append(wt)
         self.ni_.append(self.solnln.ni)
         self.li_.append(self.solnln.li)
+
+        # write file for counters if requested
+        if 'counters' in self.pb.results_to_write:
+
+            # mode: 'wt' generates new file, 'a' appends to existing one
+            if np.isclose(t,self.pb.dt): mode = 'wt'
+            else: mode = 'a'
+
+            if self.pb.comm.rank == 0:
+
+                f = open(self.pb.io.output_path+'/results_'+self.pb.simname+'_wt_ni_li_counters.txt', mode)
+                f.write('%.16E %.16E %i %i\n' % (t, wt, self.solnln.ni, self.solnln.li))
+                f.close()
 
 
     def destroy(self):

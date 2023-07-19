@@ -464,6 +464,9 @@ class IO_solid(IO):
                     elif res=='fibers':
                         # written only once at the beginning, not after each time step (since constant in time)
                         pass
+                    elif res=='counters':
+                        # iteration counters, written by base class
+                        pass
                     else:
                         raise NameError("Unknown output to write for solid mechanics!")
 
@@ -630,6 +633,9 @@ class IO_fluid(IO):
                             stressfuncs.append(pb.bstress[n])
                         cauchystress_membrane = project(stressfuncs, pb.Vd_tensor, pb.dbmem, nm="CauchyStress_membrane")
                         self.resultsfiles[res].write_function(cauchystress_membrane, indicator)
+                    elif res=='counters':
+                        # iteration counters, written by base class
+                        pass
                     else:
                         raise NameError("Unknown output to write for fluid mechanics!")
 
@@ -737,6 +743,9 @@ class IO_ale(IO):
                     elif res=='alevelocity':
                         w_proj = project(pb.wel, pb.V_d, pb.dx_, nm="AleVelocity")
                         self.resultsfiles[res].write_function(w_proj, indicator)
+                    elif res=='counters':
+                        # iteration counters, written by base class
+                        pass
                     else:
                         raise NameError("Unknown output to write for ALE mechanics!")
 

@@ -431,7 +431,7 @@ class solver_nonlinear:
 
                 tes = time.time()
 
-                # nested variable vector
+                # nested residual vector
                 r_full_nest = PETSc.Vec().createNest(r_list)
 
                 # nested matrix

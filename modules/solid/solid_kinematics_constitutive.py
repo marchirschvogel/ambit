@@ -396,7 +396,6 @@ class constitutive:
             raise NameError("Unknown return quantity!")
 
 
-
     def dtheta_dC(self, u_, p_, v_, ivar, theta_old_, dt, thres):
 
         theta_ = ivar["theta"]
