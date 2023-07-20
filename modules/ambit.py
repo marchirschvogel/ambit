@@ -62,7 +62,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid_ale.FluidmechanicsAleProblem(io_params, time_params, fem_params, constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.mp = fluid_ale.FluidmechanicsAleProblem(io_params, time_params, fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
             self.ms = fluid_ale.FluidmechanicsAleSolver(self.mp, solver_params)
 
         elif problem_type == 'fluid_ale_flow0d':
@@ -73,7 +73,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid_ale_flow0d.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm)
+            self.mp = fluid_ale_flow0d.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm)
             self.ms = fluid_ale_flow0d.FluidmechanicsAleFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'flow0d':

@@ -13,7 +13,7 @@ import ufl
 from petsc4py import PETSc
 
 import solver_nonlin
-import expression
+import expression, ioparams
 from projection import project
 from mpiroutines import allgather_vec, allgather_vec_entry
 

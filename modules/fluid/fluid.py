@@ -18,7 +18,7 @@ import timeintegration
 import utilities
 import solver_nonlin
 import boundaryconditions
-import meshutils, expression
+import meshutils, expression, ioparams
 from projection import project
 from solid_material import activestress_activation
 
@@ -35,6 +35,8 @@ class FluidmechanicsProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, iof, mor_params={}, comm=None, alevar={}):
         super().__init__(io_params, time_params, comm)
+
+        ioparams.check_params_fem_fluid(fem_params)
 
         self.problem_physics = 'fluid'
 

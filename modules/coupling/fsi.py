@@ -13,6 +13,7 @@ import ufl
 from petsc4py import PETSc
 
 import solver_nonlin
+import ioparams
 
 from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from fluid_ale import FluidmechanicsAleProblem

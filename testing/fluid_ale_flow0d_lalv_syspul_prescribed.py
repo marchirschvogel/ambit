@@ -64,10 +64,13 @@ def main():
                             'valvelaws'             : {'av' : ['pwlin_time'], 'mv' : ['pwlin_pres'], 'pv' : ['pwlin_pres'], 'tv' : ['pwlin_pres']},
                             'prescribed_variables'  : {'q_vin_l' : {'flux_monitor' : 0}}}
 
-    FEM_PARAMS           = {'order_vel'             : 1, 
+    FEM_PARAMS_FLUID     = {'order_vel'             : 1, 
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]} }
+    
+    FEM_PARAMS_ALE       = {'order_disp'            : 1, 
+                            'quad_degree'           : 5}
     
     COUPLING_PARAMS_ALE_FLUID = {'coupling_ale_fluid' : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}], # strong_dirichlet, weak_dirichlet
                                  'fluid_on_deformed'  : 'consistent'}
@@ -111,7 +114,7 @@ def main():
     
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS_ALE_FLUID,COUPLING_PARAMS_FLUID_FLOW0D])
+    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS_ALE_FLUID,COUPLING_PARAMS_FLUID_FLOW0D])
 
     
     # problem solve

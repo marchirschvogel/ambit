@@ -13,7 +13,7 @@ import ufl
 from petsc4py import PETSc
 
 import solver_nonlin
-import expression
+import expression, ioparams
 
 from fluid import FluidmechanicsProblem, FluidmechanicsSolverPrestr
 from ale import AleProblem
@@ -23,7 +23,7 @@ from meshutils import gather_surface_dof_indices
 
 class FluidmechanicsAleProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None):
+    def __init__(self, io_params, time_params, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None):
         super().__init__(io_params, time_params, comm)
 
         self.problem_physics = 'fluid_ale'
@@ -42,10 +42,10 @@ class FluidmechanicsAleProblem(problem_base):
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
         # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
-        self.pba = AleProblem(io_params, time_params, fem_params, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
+        self.pba = AleProblem(io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
         alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
-        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevariables)
+        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevariables)
 
         # modify results to write...
         self.pbf.results_to_write = io_params['results_to_write'][0]

@@ -178,7 +178,7 @@ class ModelOrderReduction():
 
                 elif self.filesource == 'rawtxt':
 
-                    # own read function: requires plain txt format of type valx valy valz x z y
+                    # own read function: requires plain txt format of type node-id valx valy valz
                     self.pb.io.readfunction(field, self.hdmfilenames[h].replace('*',str(step)))
 
                 else:

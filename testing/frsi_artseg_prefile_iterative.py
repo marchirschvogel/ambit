@@ -54,12 +54,14 @@ def main():
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
-    FEM_PARAMS           = {'order_vel'             : 2,
-                            'order_disp'            : 2,
+    FEM_PARAMS_FLUID     = {'order_vel'             : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 6,
                             'fluid_formulation'     : 'nonconservative',
                             'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt']}
+
+    FEM_PARAMS_ALE       = {'order_disp'            : 2,
+                            'quad_degree'           : 6}
 
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}],
                             'fluid_on_deformed'     : 'consistent'}
@@ -90,7 +92,7 @@ def main():
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

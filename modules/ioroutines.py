@@ -15,13 +15,15 @@ import ufl
 
 from projection import project
 from mpiroutines import allgather_vec
-import meshutils, expression
+import meshutils, expression, ioparams
 from mathutils import spectral_decomposition_3x3
 
 
 class IO:
 
     def __init__(self, io_params, entity_maps, comm):
+
+        ioparams.check_params_io(io_params)
 
         self.io_params = io_params
 

@@ -18,6 +18,7 @@ import timeintegration
 import utilities
 import solver_nonlin
 import boundaryconditions
+import ioparams
 from projection import project
 from solid_material import activestress_activation
 
@@ -36,6 +37,8 @@ class SolidmechanicsProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
         super().__init__(io_params, time_params, comm)
+
+        ioparams.check_params_fem_solid(fem_params)
 
         self.problem_physics = 'solid'
 

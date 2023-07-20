@@ -12,6 +12,7 @@ import numpy as np
 from petsc4py import PETSc
 import timeintegration
 import solver_nonlin
+import ioparams
 
 from base import problem_base, solver_base
 

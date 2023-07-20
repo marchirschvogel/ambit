@@ -18,6 +18,7 @@ import timeintegration
 import utilities
 import solver_nonlin
 import boundaryconditions
+import ioparams
 
 from base import problem_base, solver_base
 
@@ -28,6 +29,8 @@ class AleProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
         super().__init__(io_params, time_params, comm)
+
+        ioparams.check_params_fem_ale(fem_params)
 
         self.problem_physics = 'ale'
 
@@ -42,8 +45,7 @@ class AleProblem(problem_base):
         except: domain_ids = np.arange(1,self.num_domains+1)
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
-        try: self.order_disp = fem_params['order_disp']
-        except: self.order_disp = fem_params['order_vel'] # from fluid problem!
+        self.order_disp = fem_params['order_disp']
         self.quad_degree = fem_params['quad_degree']
 
         # collect domain data
