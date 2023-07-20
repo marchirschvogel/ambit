@@ -11,7 +11,7 @@ from dolfinx import fem
 
 
 # print header at beginning of simulation
-def print_problem(ptype, comm, numdof=0):
+def print_problem(ptype, sname, comm, numdof=0):
 
     if comm.rank == 0:
         print("#####################################   AMBIT   #######################################")
@@ -78,10 +78,9 @@ def print_problem(ptype, comm, numdof=0):
         sys.stdout.flush()
 
         print("Number of degrees of freedom: %i" % (numdof))
-        sys.stdout.flush()
         print("Number of cores: %i" % (comm.size))
-        sys.stdout.flush()
         print("File name: %s" % (sys.argv[0]))
+        print("Output specifier name: %s" % (sname))
         sys.stdout.flush()
 
         print("#######################################################################################")
