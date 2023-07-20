@@ -319,7 +319,7 @@ class IO_solid(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
-        results_pre = ['fibers']
+        results_pre = ['fibers','counters']
 
         if self.indicate_results_by=='time':
             indicator = t
@@ -567,7 +567,7 @@ class IO_fluid(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
-        results_pre = ['fibers']
+        results_pre = ['fibers','counters']
 
         if self.indicate_results_by=='time':
             indicator = t
@@ -712,6 +712,8 @@ class IO_ale(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
+        results_pre = ['counters']
+
         if self.indicate_results_by=='time':
             indicator = t
         elif self.indicate_results_by=='step':
@@ -724,9 +726,10 @@ class IO_ale(IO):
             if self.write_results_every > 0:
 
                 for res in pb.results_to_write:
-                    outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
-                    outfile.write_mesh(self.mesh)
-                    self.resultsfiles[res] = outfile
+                    if res not in results_pre:
+                        outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+res+'.xdmf', 'w')
+                        outfile.write_mesh(self.mesh)
+                        self.resultsfiles[res] = outfile
 
             return
 
