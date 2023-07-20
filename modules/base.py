@@ -219,9 +219,9 @@ class solver_base():
         if self.pb.comm.rank == 0: # only proc 0 should print this
             print('Program complete. Time for computation: %.4f s (= %.2f min)\n' % ( time.time()-start, (time.time()-start)/60. ))
 
-            print('{:<55s}{:<1.8f}'.format('Total solution time of all steps: ',self.wt))
-            print('{:<55s}{:<1.8f}'.format('Average solution time per time step: ',self.wt/N))
-            print('{:<55s}{:<1.8f}'.format('Maximum solution time of a time step: ',max(self.wt_)))
+            print('{:<55s}{:<1.4f}{:<2s}'.format('Total solution time of all steps: ',self.wt,' s'))
+            print('{:<55s}{:<1.4f}{:<2s}'.format('Average solution time per time step: ',self.wt/N,' s'))
+            print('{:<55s}{:<1.4f}{:<2s}'.format('Maximum solution time of a time step: ',max(self.wt_),' s'))
             print(' ')
             print('{:<55s}{:<1d}'.format('Total number of nonlinear iterations: ',self.ni))
             print('{:<55s}{:<1.1f}'.format('Average number of nonlinear iterations per time step: ',self.ni/N))

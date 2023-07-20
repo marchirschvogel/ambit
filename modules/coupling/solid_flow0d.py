@@ -319,9 +319,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 cq = self.comm.allgather(cq)
                 self.pb0.c[i] = sum(cq)*self.cq_factor[i]
 
-            # evaluate 0D model with current p and return df, f, K_ss
-            self.pb0.cardvasc0D.evaluate(self.pb0.s, t, self.pb0.df, self.pb0.f, None, None, self.pb0.c, self.pb0.y, self.pb0.aux)
-
             # 0D rhs vector
             r_s = self.pb0.assemble_residual(t)
 
@@ -379,9 +376,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 cq = fem.assemble_scalar(fem.form(self.cq[i]))
                 cq = self.comm.allgather(cq)
                 self.pb0.c[i] = sum(cq)*self.cq_factor[i]
-
-            # evaluate 0D model with current p and return K_ss
-            self.pb0.cardvasc0D.evaluate(self.pb0.s, t, None, None, self.pb0.dK, self.pb0.K, self.pb0.c, self.pb0.y, self.pb0.aux)
 
             # 0D stiffness
             K_ss = self.pb0.assemble_stiffness(t)
