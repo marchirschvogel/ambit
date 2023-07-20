@@ -11,6 +11,8 @@ def check_params_io(params):
 
     valid_params = ['duplicate_mesh_domains',
                     'fiber_data',
+                    'gridname_domain',
+                    'gridname_boundary',
                     'indicate_results_by',
                     'mesh_domain',
                     'mesh_boundary',
