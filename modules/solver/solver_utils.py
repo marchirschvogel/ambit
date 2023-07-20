@@ -323,25 +323,21 @@ class sol_utils():
         return converged
 
 
-    def timestep_separator(self): # TODO: Better adjust lengths of separators...
+    def timestep_separator_len(self):
 
         if len(self.solver.tolerances)==2:
-            return "--------------------------------------------------------------------------------"
-
+            seplen = 80
         elif len(self.solver.tolerances)==4:
-            return "---------------------------------------------------------------------------------"
-
+            seplen = 81
         elif len(self.solver.tolerances)==6:
-            return "-------------------------------------------------------------------------------------------------------------"
-
+            seplen = 109
         elif len(self.solver.tolerances)==8:
-            return "-----------------------------------------------------------------------------------------------------------------------------------------"
-
+            seplen = 137
         elif len(self.solver.tolerances)==10:
-            return "---------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-
+            seplen = 165
         elif len(self.solver.tolerances)==12:
-            return "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-
+            seplen = 195
         else:
             raise ValueError("Unknown size of tolerances!")
+
+        return seplen

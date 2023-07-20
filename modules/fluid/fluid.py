@@ -1000,7 +1000,7 @@ class FluidmechanicsSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)
 
 
     def solve_initial_prestress(self):
@@ -1032,7 +1032,7 @@ class FluidmechanicsSolver(solver_base):
             wt = time.time() - wts
 
             # print time step info to screen
-            self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.sepstring, ni=self.solnln.ni, li=self.solnln.li, wt=wt)
+            self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.lsp, ni=self.solnln.ni, li=self.solnln.li, wt=wt)
 
         utilities.print_prestress('end', self.pb.comm)
 

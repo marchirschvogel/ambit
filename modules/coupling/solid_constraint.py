@@ -481,4 +481,4 @@ class SolidmechanicsConstraintSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pbs.ti.print_timestep(N, t, self.solnln.sepstring, ni=ni, li=li, wt=wt)
+        self.pb.pbs.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)

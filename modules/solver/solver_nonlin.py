@@ -58,7 +58,7 @@ class solver_nonlinear:
             self.subsol = None
 
         self.solutils = sol_utils(self)
-        self.sepstring = self.solutils.timestep_separator()
+        self.lsp = self.solutils.timestep_separator_len()
 
         # dicts for residual and increment norms
         self.resnorms, self.incnorms = {}, {}
@@ -727,7 +727,7 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         self.solutils = sol_utils(self)
 
-        self.sepstring = self.solutils.timestep_separator()
+        self.lsp = self.solutils.timestep_separator_len()
 
         self.initialize_petsc_solver()
 

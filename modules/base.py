@@ -235,7 +235,7 @@ class solver_base():
                 print('{:<55s}{:<1.1f}'.format('Average number of linear iterations per solve: ',self.li/self.ni))
                 print('{:<55s}{:<1d}'.format('Maximum number of linear iterations in a solve: ',max(self.solnln.li_s)))
 
-            print(self.solnln.sepstring)
+            print("-"*self.solnln.lsp)
 
             sys.stdout.flush()
 

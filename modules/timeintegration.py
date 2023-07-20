@@ -37,22 +37,26 @@ class timeintegration():
 
 
     # print timestep info
-    def print_timestep(self, N, t, separator, ni=0, li=0, wt=0):
+    def print_timestep(self, N, t, lsp, ni=0, li=0, wt=0):
 
         if self.comm.rank == 0:
-
-            print("### TIME STEP %i / %i completed | TIME: %.4f | ni = %i | li = %i | wt = %.2e" % (N,self.numstep,t,ni,li,wt))
-            print(separator)
+            msg = "### TIME STEP %i / %i completed | TIME: %.4f | ni = %i | li = %i | wt = %.2e" % (N,self.numstep,t,ni,li,wt)
+            print(msg)
+            if lsp > len(msg): lensep = lsp
+            else: lensep = len(msg)
+            print("-"*lensep)
             sys.stdout.flush()
 
 
     # print prestress step info
-    def print_prestress_step(self, N, t, Nmax, separator, ni=0, li=0, wt=0):
+    def print_prestress_step(self, N, t, Nmax, lsp, ni=0, li=0, wt=0):
 
         if self.comm.rank == 0:
-
-            print("### PRESTRESS STEP %i / %i completed | PSEUDO TIME: %.4f | ni = %i | li = %i | wt = %.2e" % (N,Nmax,t,ni,li,wt))
-            print(separator)
+            msg = "### PRESTRESS STEP %i / %i completed | PSEUDO TIME: %.4f | ni = %i | li = %i | wt = %.2e" % (N,Nmax,t,ni,li,wt)
+            print(msg)
+            if lsp > len(msg): lensep = lsp
+            else: lensep = len(msg)
+            print("-"*lensep)
             sys.stdout.flush()
 
 
@@ -628,15 +632,18 @@ class timeintegration_flow0d(timeintegration):
 
 
     # print time step info
-    def print_timestep(self, N, t, separator, Nmax, ni=0, li=0, wt=0):
+    def print_timestep(self, N, t, lsp, Nmax, ni=0, li=0, wt=0):
 
         if self.comm.rank == 0:
 
             if self.cycle[0]==1: # cycle error does not make sense in first cycle
-                print("### TIME STEP %i / %i completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: - | ni = %i | li = %i | wt = %.2e" % (N,Nmax,t,self.cycle[0],ni,li,wt))
+                msg = "### TIME STEP %i / %i completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: - | ni = %i | li = %i | wt = %.2e" % (N,Nmax,t,self.cycle[0],ni,li,wt)
             else:
-                print("### TIME STEP %i / %i completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: %.4f | ni = %i | li = %i | wt = %.2e" % (N,Nmax,t,self.cycle[0],self.cycleerror[0],ni,li,wt))
-            print(separator)
+                msg = "### TIME STEP %i / %i completed | TIME: %.4f | CYCLE: %i | CYCLE ERROR: %.4f | ni = %i | li = %i | wt = %.2e" % (N,Nmax,t,self.cycle[0],self.cycleerror[0],ni,li,wt)
+            print(msg)
+            if lsp > len(msg): lensep = lsp
+            else: lensep = len(msg)
+            print("-"*lensep)
             sys.stdout.flush()
 
 
@@ -650,10 +657,13 @@ class timeintegration_signet(timeintegration):
 
 
     # print time step info
-    def print_timestep(self, N, t, separator, Nmax, ni=0, li=0, wt=0):
+    def print_timestep(self, N, t, lsp, Nmax, ni=0, li=0, wt=0):
 
         if self.comm.rank == 0:
 
-            print("### TIME STEP %i / %i completed | TIME: %.4f | ni = %i | wt = %.2e" % (N,Nmax,t,ni,wt))
-            print(separator)
+            msg = "### TIME STEP %i / %i completed | TIME: %.4f | ni = %i | wt = %.2e" % (N,Nmax,t,ni,wt)
+            print(msg)
+            if lsp > len(msg): lensep = lsp
+            else: lensep = len(msg)
+            print("-"*lensep)
             sys.stdout.flush()

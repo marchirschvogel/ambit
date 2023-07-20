@@ -456,4 +456,4 @@ class Flow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.sepstring, self.pb.numstep, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.numstep, ni=ni, li=li, wt=wt)
