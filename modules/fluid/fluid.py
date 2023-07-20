@@ -58,7 +58,8 @@ class FluidmechanicsProblem(problem_base):
         self.dx_, self.rho = [], []
         for i, n in enumerate(domain_ids):
             # integration domains
-            self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
+            if self.io.mt_d_master is not None: self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
+            else:                               self.dx_.append(ufl.dx(domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree}))
             # data for inertial forces: density
             self.rho.append(self.constitutive_models['MAT'+str(i+1)]['inertia']['rho'])
 

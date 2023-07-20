@@ -50,11 +50,8 @@ class AleProblem(problem_base):
         self.dx_ = []
         for i, n in enumerate(domain_ids):
             # integration domains
-            self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
-
-        # whether to enforce continuity of mass at midpoint or not
-        try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
-        except: self.pressure_at_midpoint = False
+            if self.io.mt_d_master is not None: self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
+            else:                               self.dx_.append(ufl.dx(domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree}))
 
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in ALE is somehow senseless...
