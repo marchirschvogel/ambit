@@ -345,6 +345,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
             for i in range(ls,le):
                 r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
 
+            r_lm.assemble()
+
             r_list[1+off] = r_lm
 
         if bool(self.residual_scale):

@@ -326,7 +326,7 @@ class sol_utils():
     def timestep_separator_len(self):
 
         if len(self.solver.tolerances)==2:
-            seplen = 80
+            seplen = 53
         elif len(self.solver.tolerances)==4:
             seplen = 81
         elif len(self.solver.tolerances)==6:
