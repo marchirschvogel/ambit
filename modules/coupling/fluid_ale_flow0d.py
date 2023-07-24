@@ -9,6 +9,7 @@
 import time, sys, copy
 import numpy as np
 from dolfinx import fem
+import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 

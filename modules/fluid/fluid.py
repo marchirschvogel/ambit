@@ -8,7 +8,8 @@
 
 import time, sys, os
 import numpy as np
-from dolfinx import fem, mesh, io
+from dolfinx import fem, mesh
+import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 

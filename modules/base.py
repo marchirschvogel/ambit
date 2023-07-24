@@ -161,7 +161,7 @@ class solver_base():
         # any output that needs to be written initially (e.g. mesh data)
         self.pb.write_output_ini()
 
-        # ambit main time loop
+        # Ambit main time loop
         for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
 
             wts = time.time()

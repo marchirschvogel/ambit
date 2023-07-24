@@ -98,10 +98,12 @@ class SignallingNetworkProblem(problem_base):
 
     def assemble_residual(self, t):
 
+        self.signet.evaluate(self.s, t, self.df, self.f, None, None, self.c, self.y, self.aux)
+
         theta = self.thetasn_timint(t)
 
         # signet rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
-        r = K.createVecLeft()
+        r = self.K.createVecLeft()
 
         r.axpy(1./self.dt, self.df)
         r.axpy(-1./self.dt, self.df_old)
@@ -113,6 +115,8 @@ class SignallingNetworkProblem(problem_base):
 
 
     def assemble_stiffness(self, t):
+
+        self.signet.evaluate(self.s, t, None, None, self.dK, self.K, self.c, self.y, self.aux)
 
         theta = self.thetasn_timint(t)
 
@@ -174,12 +178,12 @@ class SignallingNetworkProblem(problem_base):
 
     ### now the base routines for this problem
 
-    def read_restart(self):
+    def read_restart(self, sname, N):
 
         # read restart information
         if self.restart_step > 0:
-            self.readrestart(self.simname, self.restart_step)
-            self.simname += '_r'+str(self.restart_step)
+            self.readrestart(sname, N)
+            self.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -232,11 +236,11 @@ class SignallingNetworkProblem(problem_base):
         pass
 
 
-    def write_restart(self, N):
+    def write_restart(self, sname, N):
 
         # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
         if self.write_restart_every > 0 and N % self.write_restart_every == 0:
-            self.writerestart(self.simname, N)
+            self.writerestart(sname, N)
 
 
     def check_abort(self, t):
@@ -250,7 +254,7 @@ class SignallingNetworkSolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear_ode(self.pb, self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear_ode([self.pb], solver_params=self.solver_params)
 
 
     def solve_initial_state(self):
@@ -259,10 +263,10 @@ class SignallingNetworkSolver(solver_base):
 
     def solve_nonlinear_problem(self, t):
 
-        self.solnln.newton(self.pb.s, t)
+        self.solnln.newton(t)
 
 
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.numstep, ni=ni, wt=wt)
+        self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.numstep, ni=ni, li=li, wt=wt)

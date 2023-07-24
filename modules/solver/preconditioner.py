@@ -240,13 +240,10 @@ class schur_3x3(block_precond):
         D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(Adinv_Bt_Smoddinv_Tmod)  # D diag(A)^{-1} ( Bt diag(Smod)^-1 Tmod )
 
         self.DBt.destroy()
-        Adinv_Bt = Adinv.matMult(self.Bt)
         self.DBt = self.D.matMult(Adinv_Bt)                                # D diag(A)^{-1} Bt for later use
 
-        Smoddinv_Tmod = Smoddinv.matMult(self.Tmod)                        # diag(Smod)^-1 Tmod
         E_Smoddinv_Tmod = self.E.matMult(Smoddinv_Tmod)                    # E diag(Smod)^-1 Tmod
 
-        Adinv_Dt = Adinv.matMult(self.Dt)                                  # diag(A)^{-1} Dt
         D_Adinv_Dt = self.D.matMult(Adinv_Dt)                              # D diag(A)^{-1} Dt
 
         self.Wmod = self.R - D_Adinv_Dt - E_Smoddinv_Tmod + D_Adinv_Bt_Smoddinv_Tmod
