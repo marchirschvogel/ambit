@@ -39,6 +39,42 @@ def check_params_io(params):
             raise RuntimeError("Unknown parameter found in I/O params: "+k)
 
 
+def check_params_solver(params):
+
+    valid_params = ['block_precond',
+                    'block_precond_prestr',
+                    'catch_max_res_value',
+                    'direct_solver',
+                    'divergence_continue',
+                    'fieldsplit_type',
+                    'indexset_options',
+                    'iterative_solver',
+                    'k_ptc_initial',
+                    'lin_norm_type',
+                    'max_liniter',
+                    'maxiter',
+                    'precond_fields',
+                    'precond_fields_prestr',
+                    'print_liniter_every',
+                    'print_local_iter',
+                    'ptc',
+                    'ptc_randadapt_range',
+                    'res_lin_monitor',
+                    'solve_type',
+                    'solve_type_presr',
+                    'subsolver_params',
+                    'tol_inc',
+                    'tol_inc_local',
+                    'tol_lin_abs',
+                    'tol_lin_rel',
+                    'tol_res',
+                    'tol_res_local']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in solver params: "+k)
+
+
 def check_params_fem_solid(params):
 
     valid_params = ['incompressible_2field',
@@ -87,3 +123,58 @@ def check_params_fem_ale(params):
     for k in params.keys():
         if k not in valid_params:
             raise RuntimeError("Unknown parameter found in ALE FEM params: "+k)
+
+
+def check_params_time_solid(params):
+
+    valid_params = ['alpha_m',
+                    'alpha_f',
+                    'beta',
+                    'gamma',
+                    'maxtime',
+                    'numstep',
+                    'numstep_stop',
+                    'residual_scale',
+                    'rho_inf_genalpha',
+                    'timint',
+                    'theta_ost']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in solid time params: "+k)
+
+
+def check_params_time_fluid(params):
+
+    valid_params = ['alpha_m',
+                    'alpha_f',
+                    'fluid_governing_type',
+                    'gamma',
+                    'maxtime',
+                    'numstep',
+                    'numstep_stop',
+                    'residual_scale',
+                    'rho_inf_genalpha',
+                    'timint',
+                    'theta_ost']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in fluid time params: "+k)
+
+
+def check_params_time_flow0d(params):
+
+    valid_params = ['eps_periodic',
+                    'initial_backwardeuler',
+                    'initial_conditions',
+                    'maxtime',
+                    'numstep',
+                    'numstep_stop',
+                    'periodic_checktype',
+                    'timint',
+                    'theta_ost']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in flow0d time params: "+k)

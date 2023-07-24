@@ -15,6 +15,7 @@ from dolfinx import fem
 from projection import project
 from solver_utils import sol_utils
 import preconditioner
+import ioparams
 
 ### useful infos for PETSc mats, vecs, solvers...
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Mat-class.html
@@ -28,6 +29,8 @@ import preconditioner
 class solver_nonlinear:
 
     def __init__(self, pb, solver_params={}):
+
+        ioparams.check_params_solver(solver_params)
 
         self.pb = pb[0] # currently only one monolithic problem considered
 
@@ -703,6 +706,8 @@ class solver_nonlinear:
 class solver_nonlinear_ode(solver_nonlinear):
 
     def __init__(self, pb, solver_params={}):
+
+        ioparams.check_params_solver(solver_params)
 
         self.pb = pb[0] # currently only one problem considered
 

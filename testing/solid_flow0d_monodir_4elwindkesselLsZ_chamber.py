@@ -23,9 +23,7 @@ def main():
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
-                            'tol_inc'               : 1.0e-8,
-                            'print_liniter_every'   : 50,
-                            'tol_lin'               : 1e-11}
+                            'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
                             'numstep'               : 20,

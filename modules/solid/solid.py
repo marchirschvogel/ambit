@@ -40,6 +40,7 @@ class SolidmechanicsProblem(problem_base):
         super().__init__(io_params, time_params, comm)
 
         ioparams.check_params_fem_solid(fem_params)
+        ioparams.check_params_time_solid(time_params)
 
         self.problem_physics = 'solid'
 

@@ -23,6 +23,8 @@ class Flow0DProblem(problem_base):
     def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None):
         super().__init__(io_params, time_params, comm)
 
+        ioparams.check_params_time_flow0d(time_params)
+
         self.problem_physics = 'flow0d'
 
         self.time_params = time_params

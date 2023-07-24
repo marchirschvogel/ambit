@@ -36,6 +36,7 @@ def main():
     SOLVER_PARAMS        = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
                             'tol_inc'               : 1.0e-8, # increment tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
+                            'maxiter'               : 25, # OPTIONAL: maximum number of nonlinear iterations to do (default: 25)
                             # divergence continue settings
                             'divergence_continue'   : None, # OPTIONAL: what to apply when Newton diverges: None, 'PTC' ('ptc' can stay False) (default: None)
                             'ptc'                   : False, # OPTIONAL: if you want to use PTC straight away (independent of divergence_continue) (default: False)
