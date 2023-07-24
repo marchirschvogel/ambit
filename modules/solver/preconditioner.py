@@ -97,7 +97,7 @@ class schur_2x2(block_precond):
         adinv_vec.reciprocal()
 
         # form diag(A)^{-1}
-        Adinv = self.A.duplicate()
+        Adinv = self.A.duplicate(copy=False)
         Adinv.setDiagonal(adinv_vec, addv=PETSc.InsertMode.INSERT)
 
         Adinv_Bt = Adinv.matMult(self.Bt)     # diag(A)^{-1} Bt
@@ -208,19 +208,19 @@ class schur_3x3(block_precond):
         adinv_vec.reciprocal()
 
         # form diag(A)^{-1}
-        Adinv = self.A.duplicate()
+        Adinv = self.A.duplicate(copy=False)
         Adinv.setDiagonal(adinv_vec, addv=PETSc.InsertMode.INSERT)
 
         Adinv_Bt = Adinv.matMult(self.Bt)      # diag(A)^{-1} Bt
         B_Adinv_Bt = self.B.matMult(Adinv_Bt)  # B diag(A)^{-1} Bt
 
-        # --- modified Schur complement Smod = C - B diag(A)^-1 Bt
+        # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
         self.Smod = self.C - B_Adinv_Bt
 
-        # --- Tmod = Et - B diag(A)^-1 Dt
+        # --- Tmod = Et - B diag(A)^{-1} Dt
 
         Adinv_Dt = Adinv.matMult(self.Dt)      # diag(A)^{-1} Dt
-        B_Adinv_Dt = self.B.matMult(Adinv_Dt)  # B diag(A)^-1 Dt
+        B_Adinv_Dt = self.B.matMult(Adinv_Dt)  # B diag(A)^{-1} Dt
 
         self.Tmod = self.Et - B_Adinv_Dt
 
@@ -230,19 +230,19 @@ class schur_3x3(block_precond):
         smoddinv_vec.reciprocal()
 
         # form diag(Smod)^{-1}
-        Smoddinv = self.Smod.duplicate()
+        Smoddinv = self.Smod.duplicate(copy=False)
         Smoddinv.setDiagonal(smoddinv_vec, addv=PETSc.InsertMode.INSERT)
 
         Smoddinv_Tmod = Smoddinv.matMult(self.Tmod)                        # diag(Smod)^{-1} Tmod
         Bt_Smoddinv_Tmod = self.Bt.matMult(Smoddinv_Tmod)                  # Bt diag(Smod)^{-1} Tmod
 
-        Adinv_Bt_Smoddinv_Tmod = Adinv.matMult(Bt_Smoddinv_Tmod)           # diag(A)^{-1} ( Bt diag(Smod)^-1 Tmod )
-        D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(Adinv_Bt_Smoddinv_Tmod)  # D diag(A)^{-1} ( Bt diag(Smod)^-1 Tmod )
+        Adinv_Bt_Smoddinv_Tmod = Adinv.matMult(Bt_Smoddinv_Tmod)           # diag(A)^{-1} ( Bt diag(Smod)^{-1} Tmod )
+        D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(Adinv_Bt_Smoddinv_Tmod)  # D diag(A)^{-1} ( Bt diag(Smod)^{-1} Tmod )
 
         self.DBt.destroy()
         self.DBt = self.D.matMult(Adinv_Bt)                                # D diag(A)^{-1} Bt for later use
 
-        E_Smoddinv_Tmod = self.E.matMult(Smoddinv_Tmod)                    # E diag(Smod)^-1 Tmod
+        E_Smoddinv_Tmod = self.E.matMult(Smoddinv_Tmod)                    # E diag(Smod)^{-1} Tmod
 
         D_Adinv_Dt = self.D.matMult(Adinv_Dt)                              # D diag(A)^{-1} Dt
 
@@ -430,7 +430,7 @@ class simple_2x2(schur_2x2):
         adinv_vec.reciprocal()
 
         # form diag(A)^{-1}
-        Adinv = self.A.duplicate()
+        Adinv = self.A.duplicate(copy=False)
         Adinv.setDiagonal(adinv_vec, addv=PETSc.InsertMode.INSERT)
 
         Adinv_Bt = Adinv.matMult(self.Bt)  # diag(A)^{-1} * Bt
