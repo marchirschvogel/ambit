@@ -34,8 +34,8 @@ def main():
                             'filereadin_tol'        : 1e-5}
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
-                            'tol_res'               : [[1.0e-8,1.0e-8],[1.0e-8]],
-                            'tol_inc'               : [[1.0e-1,1.0e-3],[1.0e-1]]}
+                            'tol_res'               : [[1.0e-8,1.0e-8],[1.0e-3]],
+                            'tol_inc'               : [[1.0e-4,1.0e-4],[1.0e-3]]}
                             #'tol_res'               : [[1.0e-1],[1.0e-8,1.0e-8]],
                             #'tol_inc'               : [[1.0e-1],[1.0e-1,1.0e-3]]}
 

@@ -48,7 +48,14 @@ class solver_nonlinear:
 
         self.set_solver_params(solver_params)
 
-        self.tolerances = [{}]*self.nprob
+        # list of dicts for tolerances, residual, and increment norms
+        self.tolerances, self.resnorms, self.incnorms = [], [], []
+        # caution: [{}]*self.nprob actually would produce a list of dicts with same reference!
+        # so do it like this...
+        for npr in range(self.nprob):
+            self.tolerances.append({})
+            self.resnorms.append({})
+            self.incnorms.append({})
 
         # set tolerances required by the user - may be a scalar, list, or list of lists
         for npr in range(self.nprob):
@@ -74,9 +81,6 @@ class solver_nonlinear:
 
         self.solutils = sol_utils(self)
         self.lsp = self.solutils.timestep_separator_len()
-
-        # dicts for residual and increment norms
-        self.resnorms, self.incnorms = [{}]*self.nprob, [{}]*self.nprob
 
         self.li_s = [] # linear iterations over all solves
 
@@ -163,6 +167,9 @@ class solver_nonlinear:
 
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']
+
+        self.r_list = [[]]*self.nprob
+        self.del_u_ = [[]]*self.nprob
 
 
     def initialize_petsc_solver(self):
@@ -389,9 +396,6 @@ class solver_nonlinear:
                     self.pb[npr].pb0.s.assemble()
                     s_start.axpby(1.0, 0.0, self.pb[npr].pb0.s)
 
-        r_list = [[]]*self.nprob
-        del_u_ = [[]]*self.nprob
-
         # Newton iteration index
         it = 0
         # for PTC
@@ -408,22 +412,8 @@ class solver_nonlinear:
 
             tes = time.time()
 
-            # any local solve that is needed
-            if self.pb[npr].localsolve:
-                self.solve_local(localdata)
-
-            # compute initial residual from predictor
-            if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
-            r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
-
-            # reduce initial residual
-            if self.pb[npr].have_rom:
-                del_u_[npr] = self.pb[npr].rom.reduce_residual(r_list[npr], del_x[npr])
-
-            # get initial residual norms
-            for n in range(self.nfields[npr]):
-                r_list[npr][n].assemble()
-                self.resnorms[npr]['res'+str(n+1)] = r_list[npr][n].norm()
+            # initial redidual actions due to predictor
+            self.residual_problem_actions(t, npr, del_x, localdata)
 
             te = time.time() - tes
 
@@ -460,7 +450,7 @@ class solver_nonlinear:
                     tes = time.time()
 
                     # nested residual vector
-                    r_full_nest = PETSc.Vec().createNest(r_list[npr])
+                    r_full_nest = PETSc.Vec().createNest(self.r_list[npr])
 
                     # nested matrix
                     K_full_nest = PETSc.Mat().createNest(K_list, isrows=None, iscols=None, comm=self.comm)
@@ -538,7 +528,7 @@ class solver_nonlinear:
                     self.ksp[npr].setOperators(K_list[0][0])
 
                     tss = time.time()
-                    self.ksp[npr].solve(-r_list[npr][0], del_x[npr][0])
+                    self.ksp[npr].solve(-self.r_list[npr][0], del_x[npr][0])
                     ts = time.time() - tss
 
                     if self.solvetype=='iterative':
@@ -552,7 +542,7 @@ class solver_nonlinear:
                 # reconstruct full-length increment vector - currently only for first var!
                 if self.pb[npr].have_rom:
                     del_x[npr][0] = self.pb[npr].rom.V.createVecLeft()
-                    self.pb[npr].rom.V.mult(del_u_[npr], del_x[npr][0]) # V * dx_red
+                    self.pb[npr].rom.V.mult(self.del_u_[npr], del_x[npr][0]) # V * dx_red
 
                 # norm from last step for potential PTC adaption - prior to res update
                 res_norm_main_last = self.resnorms[npr]['res1']
@@ -568,23 +558,15 @@ class solver_nonlinear:
 
                 # destroy PETSc vecs...
                 for n in range(self.nfields[npr]):
-                    r_list[npr][n].destroy()
+                    self.r_list[npr][n].destroy()
 
-                # any local solve that is needed
-                if self.pb[npr].localsolve:
-                    self.solve_local(localdata)
+                # compute new residual actions after updated solution
+                self.residual_problem_actions(t, npr, del_x, localdata)
 
-                # compute new residual after updated solution
-                if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
-                r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
-
-                if self.pb[npr].have_rom:
-                    del_u_[npr] = self.pb[npr].rom.reduce_residual(r_list[npr], del_x[npr])
-
-                # get residual norm
-                for n in range(self.nfields[npr]):
-                    r_list[npr][n].assemble()
-                    self.resnorms[npr]['res'+str(n+1)] = r_list[npr][n].norm()
+                # for partitioned solves, we now have to update all dependent other residuals, too
+                if self.nprob > 1:
+                    for mpr in range(self.nprob):
+                        if mpr!=npr: self.residual_problem_actions(t, mpr, del_x, localdata)
 
                 if npr==0: ll=1
                 else: ll=83
@@ -643,24 +625,10 @@ class solver_nonlinear:
 
                     # destroy PETSc vecs...
                     for n in range(self.nfields[npr]):
-                        r_list[npr][n].destroy()
+                        self.r_list[npr][n].destroy()
 
-                    # re-compute any local solve that is needed
-                    if self.pb[npr].localsolve:
-                        self.solve_local(localdata)
-
-                    # re-compute initial residual from predictor
-                    if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
-                    r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
-
-                    # re-reduce initial residual
-                    if self.pb[npr].have_rom:
-                        del_u_[npr] = self.pb[npr].rom.reduce_residual(r_list[npr], del_x[npr])
-
-                    # re-get residual norm
-                    for n in range(self.nfields[npr]):
-                        r_list[npr][n].assemble()
-                        self.resnorms[npr]['res'+str(n+1)] = r_list[npr][n].norm()
+                    # re-set residual actions
+                    self.residual_problem_actions(t, npr, del_x, localdata)
 
                     counter_adapt += 1
 
@@ -669,7 +637,7 @@ class solver_nonlinear:
                 # destroy PETSc vectors
                 for npr in range(self.nprob):
                     for n in range(self.nfields[npr]):
-                        del_x[npr][n].destroy(), x_start[npr][n].destroy(), r_list[npr][n].destroy()
+                        del_x[npr][n].destroy(), x_start[npr][n].destroy(), self.r_list[npr][n].destroy()
                     if self.pb[npr].sub_solve: s_start.destroy()
                 # reset to normal Newton if PTC was used in a divcont action
                 if self.divcont=='PTC':
@@ -681,6 +649,26 @@ class solver_nonlinear:
         else:
 
             raise RuntimeError("Newton did not converge after %i iterations!" % (it))
+
+
+    def residual_problem_actions(self, t, npr, del_x, localdata):
+
+        # any local solve that is needed
+        if self.pb[npr].localsolve:
+            self.solve_local(localdata)
+
+        # compute residual
+        if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
+        self.r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
+
+        # reduce residual
+        if self.pb[npr].have_rom:
+            self.del_u_[npr] = self.pb[npr].rom.reduce_residual(self.r_list[npr], del_x[npr])
+
+        # get residual norms
+        for n in range(self.nfields[npr]):
+            self.r_list[npr][n].assemble()
+            self.resnorms[npr]['res'+str(n+1)] = self.r_list[npr][n].norm()
 
 
     def reset_step(self, vec, vec_start, ghosted):
