@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
-# FrSI test case of an axially clamped arterial segment
-# tests:
-# - mode partition of unity partitioning
-# - ALE transient Stokes flow (Taylor-Hood elements)
-# - weak Dirichlet condition from fluid to ALE
+# FrSI test case of an axially clamped, prestressed arterial segment
 
 import ambit
 
@@ -18,23 +14,16 @@ def main():
 
     basepath = str(Path(__file__).parent.absolute())
 
-    # reads in restart step from the command line
-    try: restart_step = int(sys.argv[1])
-    except: restart_step = 0
-
     IO_PARAMS            = {'problem_type'          : 'fluid_ale',
                             'use_model_order_red'   : True,
-                            'write_results_every'   : 1,
-                            'write_restart_every'   : 2,
-                            'restart_step'          : restart_step,
+                            'write_results_every'   : 2,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',
-                            'results_to_write'      : [['velocity','pressure'],['aledisplacement']], # first fluid, then ale results
-                            'simname'               : 'frsi_artseg_partition'}
+                            'results_to_write'      : [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']], # first fluid, then ale results
+                            'simname'               : 'frsi_artseg_prefile'}
 
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
-                            'partitions'            : [basepath+'/input/artseg_part-1.txt',basepath+'/input/artseg_part-2.txt',basepath+'/input/artseg_part-3.txt'],
                             'numsnapshots'          : 1,
                             'snapshotincr'          : 1,
                             'numredbasisvec'        : 1,
@@ -45,26 +34,29 @@ def main():
                             'filereadin_tol'        : 1e-5}
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
-                            'tol_res'               : [1.0e-8,1.0e-8,1.0e-8],
-                            'tol_inc'               : [1.0e-8,1.0e-8,1.0e-8]}
+                            'tol_res'               : [[1.0e-8,1.0e-8],[1.0e-8]],
+                            'tol_inc'               : [[1.0e-1,1.0e-3],[1.0e-1]]}
+                            #'tol_res'               : [[1.0e-1],[1.0e-8,1.0e-8]],
+                            #'tol_inc'               : [[1.0e-1],[1.0e-1,1.0e-3]]}
 
     TIME_PARAMS          = {'maxtime'               : 3.0,
                             'numstep'               : 150,
                             'numstep_stop'          : 3,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0,
-                            'fluid_governing_type'  : 'stokes_transient'}
+                            'theta_ost'             : 1.0}
 
     FEM_PARAMS_FLUID     = {'order_vel'             : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 6,
-                            'fluid_formulation'     : 'nonconservative'}
+                            'fluid_formulation'     : 'nonconservative',
+                            'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt']}
 
     FEM_PARAMS_ALE       = {'order_disp'            : 2,
                             'quad_degree'           : 6}
 
-    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'weak_dirichlet', 'beta' : 1e6}],
-                            'fluid_on_deformed'     : 'consistent'}
+    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}],
+                            'fluid_on_deformed'     : 'consistent',
+                            'coupling_strategy'     : 'partitioned'}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                        'inertia'   : {'rho' : 1.025e-6}} }
@@ -77,8 +69,8 @@ def main():
 
         def tc1(self, t):
             t_ramp = 2.0
-            p0 = 0.0
-            pinfl = 1.0
+            p0 = 0.3
+            pinfl = 10.0
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
@@ -86,8 +78,7 @@ def main():
                                             {'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_FLUID        = { 'membrane' :  [{'id' : [1], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.1, 'rho0' : 1e-6, 'h0' : {'val' : 0.1}}},
-                                            {'id' : [6], 'params' : {'model' : 'membrane', 'a_0' : 8.0, 'b_0' : 6.0, 'eta' : 0.1, 'rho0' : 1e-6, 'h0' : {'val' : 0.1}}}],
+    BC_DICT_FLUID        = { 'membrane' :  [{'id' : [1,6], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}],
                              'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
                              'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
@@ -108,8 +99,8 @@ def main():
     v_corr = np.zeros(3*len(check_node))
 
     # correct results
-    v_corr[0] = 1.9247317946929927E+00 # x
-    v_corr[1] = 1.9247317946929929E+00 # y
+    v_corr[0] = 9.7145272096246937E-01 # x
+    v_corr[1] = 9.7145272096246937E-01 # y
     v_corr[2] = 0.0 # z
 
     check1 = resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)

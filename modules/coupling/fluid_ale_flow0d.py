@@ -29,6 +29,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
     def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}, comm=None):
         problem_base.__init__(self, io_params, time_params_fluid, comm)
 
+        ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
+
         self.problem_physics = 'fluid_ale_flow0d'
 
         try: self.coupling_fluid_ale = coupling_params_fluid_ale['coupling_fluid_ale']
@@ -39,6 +41,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         try: self.fluid_on_deformed = coupling_params_fluid_ale['fluid_on_deformed']
         except: self.fluid_on_deformed = 'consistent'
+
+        try: self.coupling_strategy = coupling_params_fluid_ale['coupling_strategy']
+        except: self.coupling_strategy = 'monolithic'
 
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
@@ -100,7 +105,27 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
     def set_problem_residual_jacobian_forms(self):
 
         super().set_problem_residual_jacobian_forms()
-        self.pbf0.set_problem_residual_jacobian_forms()
+
+        # NOTE: fluid 3D0D coupling forms set here, since set_problem_residual_jacobian_forms() of pbf0 problem
+        # would build the fluid forms, too - which however are already dealt with by the parent (fluid-ALE) problem
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('FEM form compilation for fluid-0D coupling...')
+            sys.stdout.flush()
+
+        self.pbf0.cq_form, self.pbf0.cq_old_form, self.pbf0.dcq_form, self.pbf0.dforce_form = [], [], [], []
+
+        for i in range(self.pbf0.num_coupling_surf):
+            self.pbf0.cq_form.append(fem.form(self.pbf0.cq[i]))
+            self.pbf0.cq_old_form.append(fem.form(self.pbf0.cq_old[i]))
+
+            self.pbf0.dcq_form.append(fem.form(self.pbf0.cq_factor[i]*self.pbf0.dcq[i]))
+            self.pbf0.dforce_form.append(fem.form(self.pbf0.dforce[i]))
+
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('FEM form compilation for fluid-0D finished, te = %.2f s' % (tee))
+            sys.stdout.flush()
 
         tes = time.time()
         if self.comm.rank == 0:
@@ -122,19 +147,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         r_list = [None]*4
 
-        if self.have_dbc_fluid_ale:
-            # we need a vector representation of ufluid to apply in ALE DBCs
-            uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
-            self.ufa.vector.axpby(1.0, 0.0, uf_vec)
-            self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            uf_vec.destroy()
-
-        if self.have_dbc_ale_fluid:
-            #we need a vector representation of w to apply in fluid DBCs
-            w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
-            self.wf.vector.axpby(1.0, 0.0, w_vec)
-            self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            w_vec.destroy()
+        self.evaluate_residual_dbc_coupling()
 
         r_list_fluidflow0d = self.pbf0.assemble_residual(t, subsolver=subsolver)
 
@@ -370,7 +383,12 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
+        if self.pb.coupling_strategy=='monolithic':
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+        elif self.pb.coupling_strategy=='partitioned':
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf0,self.pb.pba], self.solver_params, cp=self.pb)
+        else:
+            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
         if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
             solver_params_prestr = copy.deepcopy(self.solver_params)
@@ -391,7 +409,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.ksp.destroy()
+            self.solverprestr.solnln.ksp[0].destroy()
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:

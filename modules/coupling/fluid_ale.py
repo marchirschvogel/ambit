@@ -27,6 +27,8 @@ class FluidmechanicsAleProblem(problem_base):
     def __init__(self, io_params, time_params, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None):
         super().__init__(io_params, time_params, comm)
 
+        ioparams.check_params_coupling_fluid_ale(coupling_params)
+
         self.problem_physics = 'fluid_ale'
 
         self.coupling_params = coupling_params
@@ -39,6 +41,9 @@ class FluidmechanicsAleProblem(problem_base):
 
         try: self.fluid_on_deformed = self.coupling_params['fluid_on_deformed']
         except: self.fluid_on_deformed = 'consistent'
+
+        try: self.coupling_strategy = self.coupling_params['coupling_strategy']
+        except: self.coupling_strategy = 'monolithic'
 
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
@@ -249,19 +254,7 @@ class FluidmechanicsAleProblem(problem_base):
 
         r_list = [None]*3
 
-        if self.have_dbc_fluid_ale:
-            # we need a vector representation of ufluid to apply in ALE DBCs
-            uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
-            self.ufa.vector.axpby(1.0, 0.0, uf_vec)
-            self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            uf_vec.destroy()
-
-        if self.have_dbc_ale_fluid:
-            # we need a vector representation of w to apply in fluid DBCs
-            w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
-            self.wf.vector.axpby(1.0, 0.0, w_vec)
-            self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            w_vec.destroy()
+        self.evaluate_residual_dbc_coupling()
 
         r_list_fluid = self.pbf.assemble_residual(t)
 
@@ -311,6 +304,23 @@ class FluidmechanicsAleProblem(problem_base):
         K_list[2][2] = K_list_ale[0][0]
 
         return K_list
+
+
+    def evaluate_residual_dbc_coupling(self):
+
+        if self.have_dbc_fluid_ale:
+            # we need a vector representation of ufluid to apply in ALE DBCs
+            uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
+            self.ufa.vector.axpby(1.0, 0.0, uf_vec)
+            self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            uf_vec.destroy()
+
+        if self.have_dbc_ale_fluid:
+            # we need a vector representation of w to apply in fluid DBCs
+            w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
+            self.wf.vector.axpby(1.0, 0.0, w_vec)
+            self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            w_vec.destroy()
 
 
     def get_index_sets(self, isoptions={}):
@@ -466,7 +476,12 @@ class FluidmechanicsAleSolver(solver_base):
             self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
+        if self.pb.coupling_strategy=='monolithic':
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+        elif self.pb.coupling_strategy=='partitioned':
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf,self.pb.pba], self.solver_params, cp=self.pb)
+        else:
+            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
         if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
             solver_params_prestr = copy.deepcopy(self.solver_params)

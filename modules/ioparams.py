@@ -178,3 +178,15 @@ def check_params_time_flow0d(params):
     for k in params.keys():
         if k not in valid_params:
             raise RuntimeError("Unknown parameter found in flow0d time params: "+k)
+
+
+def check_params_coupling_fluid_ale(params):
+
+    valid_params = ['coupling_ale_fluid',
+                    'coupling_fluid_ale',
+                    'coupling_strategy',
+                    'fluid_on_deformed']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in fluid-ALE coupling params: "+k)

@@ -28,35 +28,47 @@ import ioparams
 # standard nonlinear solver for FEM problems
 class solver_nonlinear:
 
-    def __init__(self, pb, solver_params={}):
+    def __init__(self, pb, solver_params, cp=None):
 
         ioparams.check_params_solver(solver_params)
 
-        self.pb = pb[0] # currently only one monolithic problem considered
+        self.comm = pb[0].comm
+
+        self.pb = pb
+        self.nprob = len(pb)
+
+        self.x, self.is_ghosted = [[]]*self.nprob, [[]]*self.nprob
+        self.nfields, self.ptype = [], []
 
         # problem variables list
-        self.x, self.is_ghosted = self.pb.get_problem_var_list()
-
-        self.nfields = len(self.x)
-
-        self.ptype = self.pb.problem_physics
+        for npr in range(self.nprob):
+            self.x[npr], self.is_ghosted[npr] = self.pb[npr].get_problem_var_list()
+            self.nfields.append(len(self.x[npr]))
+            self.ptype.append(self.pb[npr].problem_physics)
 
         self.set_solver_params(solver_params)
 
-        self.tolerances = {}
-        for n in range(self.nfields):
-            if len(self.tolres)>1: # if we have a list here, we need one tolerance per variable!
-                self.tolerances['res'+str(n+1)] = self.tolres[n]
-                self.tolerances['inc'+str(n+1)] = self.tolinc[n]
-            else:
-                self.tolerances['res'+str(n+1)] = self.tolres[0]
-                self.tolerances['inc'+str(n+1)] = self.tolinc[0]
+        self.tolerances = [{}]*self.nprob
+
+        # set tolerances required by the user - may be a scalar, list, or list of lists
+        for npr in range(self.nprob):
+            for n in range(self.nfields[npr]):
+                if isinstance(self.tolres, list):
+                    if isinstance(self.tolres[npr], list):
+                        self.tolerances[npr]['res'+str(n+1)] = self.tolres[npr][n]
+                        self.tolerances[npr]['inc'+str(n+1)] = self.tolinc[npr][n]
+                    else:
+                        self.tolerances[npr]['res'+str(n+1)] = self.tolres[n]
+                        self.tolerances[npr]['inc'+str(n+1)] = self.tolinc[n]
+                else:
+                    self.tolerances[npr]['res'+str(n+1)] = self.tolres
+                    self.tolerances[npr]['inc'+str(n+1)] = self.tolinc
 
         self.initialize_petsc_solver()
 
         # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
-        if self.pb.sub_solve:
-            self.subsol = solver_nonlinear_ode([self.pb.pb0], solver_params['subsolver_params'])
+        if self.pb[0].sub_solve:
+            self.subsol = solver_nonlinear_ode([self.pb[0].pb0], solver_params['subsolver_params'])
         else:
             self.subsol = None
 
@@ -64,9 +76,11 @@ class solver_nonlinear:
         self.lsp = self.solutils.timestep_separator_len()
 
         # dicts for residual and increment norms
-        self.resnorms, self.incnorms = {}, {}
+        self.resnorms, self.incnorms = [{}]*self.nprob, [{}]*self.nprob
 
         self.li_s = [] # linear iterations over all solves
+
+        self.cp = cp
 
 
     def set_solver_params(self, solver_params):
@@ -147,162 +161,159 @@ class solver_nonlinear:
 
         self.solvetype = solver_params['solve_type']
 
-        # check if we have a list of tolerances (for coupled problems) or just one value
-        self.tolres, self.tolinc = [], []
-        if isinstance(solver_params['tol_res'], list):
-            for n in range(len(solver_params['tol_res'])):
-                self.tolres.append(solver_params['tol_res'][n])
-                self.tolinc.append(solver_params['tol_inc'][n])
-        else:
-            self.tolres.append(solver_params['tol_res'])
-            self.tolinc.append(solver_params['tol_inc'])
+        self.tolres = solver_params['tol_res']
+        self.tolinc = solver_params['tol_inc']
 
 
     def initialize_petsc_solver(self):
 
-        # create solver
-        self.ksp = PETSc.KSP().create(self.pb.comm)
+        self.ksp = [[]]*self.nprob
 
-        if self.solvetype=='direct':
+        for npr in range(self.nprob):
 
-            self.ksp.setType("preonly")
-            self.ksp.getPC().setType("lu")
-            self.ksp.getPC().setFactorSolverType(self.direct_solver)
+            # create solver
+            self.ksp[npr] = PETSc.KSP().create(self.comm)
 
-        elif self.solvetype=='iterative':
+            if self.solvetype=='direct':
 
-            self.ksp.setInitialGuessNonzero(False)
-            self.ksp.setNormType(self.linnormtype) # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
+                self.ksp[npr].setType("preonly")
+                self.ksp[npr].getPC().setType("lu")
+                self.ksp[npr].getPC().setFactorSolverType(self.direct_solver)
 
-            # block iterative method
-            if self.nfields > 1:
+            elif self.solvetype=='iterative':
 
-                self.ksp.setType(self.iterative_solver) # cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html
+                self.ksp[npr].setInitialGuessNonzero(False)
+                self.ksp[npr].setNormType(self.linnormtype) # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
 
-                # TODO: how to use this adaptively...
-                #self.ksp.getPC().setReusePreconditioner(True)
+                # block iterative method
+                if self.nfields[npr] > 1:
 
-                if self.block_precond == 'fieldsplit':
+                    self.ksp[npr].setType(self.iterative_solver) # cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html
 
-                    # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
-                    self.ksp.getPC().setType("fieldsplit")
-                    # cf. https://petsc.org/main/manualpages/PC/PCCompositeType
+                    # TODO: how to use this adaptively...
+                    #self.ksp.getPC().setReusePreconditioner(True)
 
-                    if self.fieldsplit_type=='jacobi':
-                        splittype = PETSc.PC.CompositeType.ADDITIVE # block Jacobi
-                    elif self.fieldsplit_type=='gauss_seidel':
-                        splittype = PETSc.PC.CompositeType.MULTIPLICATIVE # block Gauss-Seidel
-                    elif self.fieldsplit_type=='gauss_seidel_sym':
-                        splittype = PETSc.PC.CompositeType.SYMMETRIC_MULTIPLICATIVE # symmetric block Gauss-Seidel
-                    elif self.fieldsplit_type=='schur':
-                        assert(self.nfields==2)
-                        splittype = PETSc.PC.CompositeType.SCHUR # block Schur - for 2x2 block systems only
-                    else:
-                        raise ValueError("Unknown fieldsplit_type option.")
+                    if self.block_precond == 'fieldsplit':
 
-                    self.ksp.getPC().setFieldSplitType(splittype)
+                        # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
+                        self.ksp[npr].getPC().setType("fieldsplit")
+                        # cf. https://petsc.org/main/manualpages/PC/PCCompositeType
 
-                    iset = self.pb.get_index_sets(isoptions=self.iset_options)
-                    nsets = len(iset)
-
-                    # normally, nsets = self.nfields, but for a surface-projected ROM (FrSI) problem, we have one more index set than fields
-                    if nsets==2:   self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]))
-                    elif nsets==3: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]))
-                    elif nsets==4: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]))
-                    elif nsets==5: self.ksp.getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]),("f5", iset[4]))
-                    else: raise RuntimeError("Currently, no more than 5 fields/index sets are supported.")
-
-                    # get the preconditioners for each block
-                    ksp_fields = self.ksp.getPC().getFieldSplitSubKSP()
-
-                    assert(nsets==len(self.precond_fields)) # sanity check
-
-                    # set field-specific preconditioners
-                    for n in range(nsets):
-
-                        if self.precond_fields[n]['prec'] == 'amg':
-                            try: solvetype = self.precond_fields[n]['solve']
-                            except: solvetype = "preonly"
-                            ksp_fields[n].setType(solvetype)
-                            try: amgtype = self.precond_fields[n]['amgtype']
-                            except: amgtype = "hypre"
-                            ksp_fields[n].getPC().setType(amgtype)
-                            if amgtype=="hypre":
-                                ksp_fields[n].getPC().setHYPREType("boomeramg")
-                        elif self.precond_fields[n]['prec'] == 'direct':
-                            ksp_fields[n].setType("preonly")
-                            ksp_fields[n].getPC().setType("lu")
-                            ksp_fields[n].getPC().setFactorSolverType("mumps")
+                        if self.fieldsplit_type=='jacobi':
+                            splittype = PETSc.PC.CompositeType.ADDITIVE # block Jacobi
+                        elif self.fieldsplit_type=='gauss_seidel':
+                            splittype = PETSc.PC.CompositeType.MULTIPLICATIVE # block Gauss-Seidel
+                        elif self.fieldsplit_type=='gauss_seidel_sym':
+                            splittype = PETSc.PC.CompositeType.SYMMETRIC_MULTIPLICATIVE # symmetric block Gauss-Seidel
+                        elif self.fieldsplit_type=='schur':
+                            assert(self.nfields==2)
+                            splittype = PETSc.PC.CompositeType.SCHUR # block Schur - for 2x2 block systems only
                         else:
-                            raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
+                            raise ValueError("Unknown fieldsplit_type option.")
 
-                elif self.block_precond == 'schur2x2':
+                        self.ksp[npr].getPC().setFieldSplitType(splittype)
 
-                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.schur_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
-                    self.ksp.getPC().setPythonContext(bj)
+                        iset = self.pb[npr].get_index_sets(isoptions=self.iset_options)
+                        nsets = len(iset)
 
-                elif self.block_precond == 'simple2x2':
+                        # normally, nsets = self.nfields, but for a surface-projected ROM (FrSI) problem, we have one more index set than fields
+                        if nsets==2:   self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]))
+                        elif nsets==3: self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]))
+                        elif nsets==4: self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]))
+                        elif nsets==5: self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]),("f5", iset[4]))
+                        else: raise RuntimeError("Currently, no more than 5 fields/index sets are supported.")
 
-                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.simple_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
-                    self.ksp.getPC().setPythonContext(bj)
+                        # get the preconditioners for each block
+                        ksp_fields = self.ksp[npr].getPC().getFieldSplitSubKSP()
 
-                elif self.block_precond == 'schur3x3':
+                        assert(nsets==len(self.precond_fields)) # sanity check
 
-                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.schur_3x3(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
-                    self.ksp.getPC().setPythonContext(bj)
+                        # set field-specific preconditioners
+                        for n in range(nsets):
 
-                elif self.block_precond == 'schur4x4':
+                            if self.precond_fields[n]['prec'] == 'amg':
+                                try: solvetype = self.precond_fields[n]['solve']
+                                except: solvetype = "preonly"
+                                ksp_fields[n].setType(solvetype)
+                                try: amgtype = self.precond_fields[n]['amgtype']
+                                except: amgtype = "hypre"
+                                ksp_fields[n].getPC().setType(amgtype)
+                                if amgtype=="hypre":
+                                    ksp_fields[n].getPC().setHYPREType("boomeramg")
+                            elif self.precond_fields[n]['prec'] == 'direct':
+                                ksp_fields[n].setType("preonly")
+                                ksp_fields[n].getPC().setType("lu")
+                                ksp_fields[n].getPC().setFactorSolverType("mumps")
+                            else:
+                                raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
-                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.schur_4x4(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
-                    self.ksp.getPC().setPythonContext(bj)
+                    elif self.block_precond == 'schur2x2':
 
-                elif self.block_precond == 'bgs2x2': # can also be called via PETSc's fieldsplit
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.schur_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options),self.precond_fields,self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
 
-                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.bgs_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
-                    self.ksp.getPC().setPythonContext(bj)
+                    elif self.block_precond == 'simple2x2':
 
-                elif self.block_precond == 'jacobi2x2': # can also be called via PETSc's fieldsplit
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.simple_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options),self.precond_fields,self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
 
-                    self.ksp.getPC().setType(PETSc.PC.Type.PYTHON)
-                    bj = preconditioner.jacobi_2x2(self.pb.get_index_sets(isoptions=self.iset_options),self.precond_fields,self.pb.comm)
-                    self.ksp.getPC().setPythonContext(bj)
+                    elif self.block_precond == 'schur3x3':
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.schur_3x3(self.pb[npr].get_index_sets(isoptions=self.iset_options),self.precond_fields,self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond == 'schur4x4':
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.schur_4x4(self.pb[npr].get_index_sets(isoptions=self.iset_options),self.precond_fields,self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond == 'bgs2x2': # can also be called via PETSc's fieldsplit
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgs_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options),self.precond_fields,self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond == 'jacobi2x2': # can also be called via PETSc's fieldsplit
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.jacobi_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options),self.precond_fields,self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    else:
+                        raise ValueError("Unknown block_precond option!")
 
                 else:
-                    raise ValueError("Unknown block_precond option!")
+
+                    if self.precond_fields[0] == 'amg':
+                        self.ksp[npr].getPC().setType("hypre")
+                        self.ksp[npr].getPC().setMGLevels(3)
+                        self.ksp[npr].getPC().setHYPREType("boomeramg")
+                    else:
+                        raise ValueError("Currently, only 'amg' is supported as single-field preconditioner.")
+
+                # set tolerances and print routine
+                self.ksp[npr].setTolerances(rtol=self.tol_lin_rel, atol=self.tol_lin_abs, divtol=None, max_it=self.maxliniter)
+                self.ksp[npr].setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its,rnorm))
+
+                # set some additional PETSc options
+                petsc_options = PETSc.Options()
+                petsc_options.setValue('-ksp_gmres_modifiedgramschmidt', True)
+                self.ksp[npr].setFromOptions()
 
             else:
 
-                if self.precond_fields[0] == 'amg':
-                    self.ksp.getPC().setType("hypre")
-                    self.ksp.getPC().setMGLevels(3)
-                    self.ksp.getPC().setHYPREType("boomeramg")
-                else:
-                    raise ValueError("Currently, only 'amg' is supported as single-field preconditioner.")
-
-            # set tolerances and print routine
-            self.ksp.setTolerances(rtol=self.tol_lin_rel, atol=self.tol_lin_abs, divtol=None, max_it=self.maxliniter)
-            self.ksp.setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its,rnorm))
-
-            # set some additional PETSc options
-            petsc_options = PETSc.Options()
-            petsc_options.setValue('-ksp_gmres_modifiedgramschmidt', True)
-            self.ksp.setFromOptions()
-
-        else:
-
-            raise NameError("Unknown solvetype!")
+                raise NameError("Unknown solvetype!")
 
 
     # solve for consistent initial acceleration a_old
     def solve_consistent_ini_acc(self, res_a, jac_aa, a_old):
 
         # create solver
-        ksp = PETSc.KSP().create(self.pb.comm)
+        ksp = PETSc.KSP().create(self.comm)
 
         if self.solvetype=='direct':
             ksp.setType("preonly")
@@ -341,33 +352,45 @@ class solver_nonlinear:
     def newton(self, t, localdata={}):
 
         # offset array for multi-field systems
-        self.offsetarr = [0]
-        off=0
-        for n in range(self.nfields):
-            if n==0:
-                if self.pb.have_rom: # currently, ROM is only implemented for the first variable in the system!
-                    off += self.pb.rom.V.getLocalSize()[1]
+        self.offsetarr = [[]]*self.nprob
+        for npr in range(self.nprob):
+
+            self.offsetarr[npr] = [0]
+            off=0
+            for n in range(self.nfields[npr]):
+                if n==0:
+                    if self.pb[npr].have_rom: # currently, ROM is only implemented for the first variable in the system!
+                        off += self.pb[npr].rom.V.getLocalSize()[1]
+                    else:
+                        off += self.x[npr][0].getLocalSize()
                 else:
-                    off += self.x[0].getLocalSize()
-            else:
-                off += self.x[n].getLocalSize()
+                    off += self.x[npr][n].getLocalSize()
 
-            self.offsetarr.append(off)
+                self.offsetarr[npr].append(off)
 
-        del_x, x_start = [[]]*self.nfields, [[]]*self.nfields
+        del_x, x_start = [], []
+        for npr in range(self.nprob):
 
-        for n in range(self.nfields):
-            # solution increments for Newton
-            del_x[n] = self.x[n].duplicate()
-            del_x[n].set(0.0)
-            # start vector (needed for reset of Newton in case of divergence)
-            x_start[n] = self.x[n].duplicate()
-            self.x[n].assemble()
-            x_start[n].axpby(1.0, 0.0, self.x[n])
-            if self.pb.sub_solve: # can only be a 0D model so far...
-                s_start = self.pb.pb0.s.duplicate()
-                self.pb.pb0.s.assemble()
-                s_start.axpby(1.0, 0.0, self.pb.pb0.s)
+            del_x.append([[]]*self.nfields[npr])
+            x_start.append([[]]*self.nfields[npr])
+
+        for npr in range(self.nprob):
+
+            for n in range(self.nfields[npr]):
+                # solution increments for Newton
+                del_x[npr][n] = self.x[npr][n].duplicate()
+                del_x[npr][n].set(0.0)
+                # start vector (needed for reset of Newton in case of divergence)
+                x_start[npr][n] = self.x[npr][n].duplicate()
+                self.x[npr][n].assemble()
+                x_start[npr][n].axpby(1.0, 0.0, self.x[npr][n])
+                if self.pb[npr].sub_solve: # can only be a 0D model so far...
+                    s_start = self.pb[npr].pb0.s.duplicate()
+                    self.pb[npr].pb0.s.assemble()
+                    s_start.axpby(1.0, 0.0, self.pb[npr].pb0.s)
+
+        r_list = [[]]*self.nprob
+        del_u_ = [[]]*self.nprob
 
         # Newton iteration index
         it = 0
@@ -376,29 +399,35 @@ class solver_nonlinear:
         counter_adapt, max_adapt = 0, 10
         self.ni, self.li = 0, 0 # nonlinear and linear iteration counters
 
-        self.solutils.print_nonlinear_iter(header=True)
+        for npr in range(self.nprob):
 
-        tes = time.time()
+            if npr==0: ll=1
+            else: ll=83
 
-        # any local solve that is needed
-        if self.pb.localsolve:
-            self.solve_local(localdata)
+            self.solutils.print_nonlinear_iter(header=True, ptype=self.ptype[npr], prfxlen=ll)
 
-        # compute initial residual from predictor
-        r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
+            tes = time.time()
 
-        # reduce initial residual
-        if self.pb.have_rom:
-            del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
+            # any local solve that is needed
+            if self.pb[npr].localsolve:
+                self.solve_local(localdata)
 
-        # get initial residual norms
-        for n in range(self.nfields):
-            r_list[n].assemble()
-            self.resnorms['res'+str(n+1)] = r_list[n].norm()
+            # compute initial residual from predictor
+            if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
+            r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
 
-        te = time.time() - tes
+            # reduce initial residual
+            if self.pb[npr].have_rom:
+                del_u_[npr] = self.pb[npr].rom.reduce_residual(r_list[npr], del_x[npr])
 
-        self.solutils.print_nonlinear_iter(it,k_PTC,te=te)
+            # get initial residual norms
+            for n in range(self.nfields[npr]):
+                r_list[npr][n].assemble()
+                self.resnorms[npr]['res'+str(n+1)] = r_list[npr][n].norm()
+
+            te = time.time() - tes
+
+            self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], te=te, ptype=self.ptype[npr], prfxlen=ll)
 
         it += 1
 
@@ -406,221 +435,242 @@ class solver_nonlinear:
 
             tes = time.time()
 
-            # compute Jacobian
-            K_list = self.pb.assemble_stiffness(t, subsolver=self.subsol)
+            converged, err = [], []
 
-            if self.PTC:
-                # computes K_00 + k_PTC * I
-                K_list[0][0].shift(k_PTC)
+            # problem loop (in case of partitioned solves)
+            for npr in range(self.nprob):
 
-            # model order reduction stuff - currently only on first mat in system...
-            if self.pb.have_rom:
-                # reduce Jacobian
-                self.pb.rom.reduce_stiffness(K_list, self.nfields)
+                # compute Jacobian
+                K_list = self.pb[npr].assemble_stiffness(t, subsolver=self.subsol)
 
-            te = time.time() - tes
+                if self.PTC:
+                    # computes K_00 + k_PTC * I
+                    K_list[0][0].shift(k_PTC)
 
-            # we use a block matrix (either with merge-into-one or for a nested iterative solver) if we have more than one field
-            if self.nfields > 1:
+                # model order reduction stuff - currently only on first mat in system...
+                if self.pb[npr].have_rom:
+                    # reduce Jacobian
+                    self.pb[npr].rom.reduce_stiffness(K_list, self.nfields[npr])
 
-                tes = time.time()
+                te = time.time() - tes
 
-                # nested residual vector
-                r_full_nest = PETSc.Vec().createNest(r_list)
-
-                # nested matrix
-                K_full_nest = PETSc.Mat().createNest(K_list, isrows=None, iscols=None, comm=self.pb.comm)
-                K_full_nest.assemble()
-
-                te += time.time() - tes
-
-                # for monolithic direct solver
-                if self.solvetype=='direct':
+                # we use a block matrix (either with merge-into-one or for a nested iterative solver) if we have more than one field
+                if self.nfields[npr] > 1:
 
                     tes = time.time()
 
-                    K_full = PETSc.Mat()
-                    K_full_nest.convert("aij", out=K_full)
-                    K_full.assemble()
+                    # nested residual vector
+                    r_full_nest = PETSc.Vec().createNest(r_list[npr])
 
-                    r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
-                    r_full.assemble()
+                    # nested matrix
+                    K_full_nest = PETSc.Mat().createNest(K_list, isrows=None, iscols=None, comm=self.comm)
+                    K_full_nest.assemble()
 
-                    del_full = K_full.createVecLeft()
-                    self.ksp.setOperators(K_full)
                     te += time.time() - tes
 
-                    tss = time.time()
-                    self.ksp.solve(-r_full, del_full)
-                    ts = time.time() - tss
+                    # for monolithic direct solver
+                    if self.solvetype=='direct':
 
-                # for nested iterative solver
-                elif self.solvetype=='iterative':
+                        tes = time.time()
 
-                    tes = time.time()
+                        K_full = PETSc.Mat()
+                        K_full_nest.convert("aij", out=K_full)
+                        K_full.assemble()
 
-                    # use same matrix as preconditioner
-                    P_nest = K_full_nest
-
-                    del_full = PETSc.Vec().createNest(del_x)
-
-                    # if index sets do not align with the nested matrix structure
-                    # anymore, we need a merged matrix to extract the submats
-                    if self.iset_options['rom_to_new'] or self.iset_options['lms_to_p'] or self.iset_options['lms_to_v']:
-                        P = PETSc.Mat()
-                        P_nest.convert("aij", out=P)
-                        P.assemble()
-                        P_nest = P
-
-                    self.ksp.setOperators(K_full_nest, P_nest)
-
-                    r_full_nest.assemble()
-
-                    # need to merge for non-fieldsplit-type preconditioners
-                    if not self.block_precond == 'fieldsplit':
                         r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
                         r_full.assemble()
-                        del_full = PETSc.Vec().createWithArray(del_full.getArray())
-                        r_full_nest = r_full
 
-                    te += time.time() - tes
+                        del_full = K_full.createVecLeft()
+                        self.ksp[npr].setOperators(K_full)
+                        te += time.time() - tes
 
-                    tss = time.time()
-                    self.ksp.solve(-r_full_nest, del_full)
-                    ts = time.time() - tss
+                        tss = time.time()
+                        self.ksp[npr].solve(-r_full, del_full)
+                        ts = time.time() - tss
 
-                    self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
+                    # for nested iterative solver
+                    elif self.solvetype=='iterative':
+
+                        tes = time.time()
+
+                        # use same matrix as preconditioner
+                        P_nest = K_full_nest
+
+                        del_full = PETSc.Vec().createNest(del_x[npr])
+
+                        # if index sets do not align with the nested matrix structure
+                        # anymore, we need a merged matrix to extract the submats
+                        if self.iset_options['rom_to_new'] or self.iset_options['lms_to_p'] or self.iset_options['lms_to_v']:
+                            P = PETSc.Mat()
+                            P_nest.convert("aij", out=P)
+                            P.assemble()
+                            P_nest = P
+
+                        self.ksp[npr].setOperators(K_full_nest, P_nest)
+
+                        r_full_nest.assemble()
+
+                        # need to merge for non-fieldsplit-type preconditioners
+                        if not self.block_precond == 'fieldsplit':
+                            r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
+                            r_full.assemble()
+                            del_full = PETSc.Vec().createWithArray(del_full.getArray())
+                            r_full_nest = r_full
+
+                        te += time.time() - tes
+
+                        tss = time.time()
+                        self.ksp[npr].solve(-r_full_nest, del_full)
+                        ts = time.time() - tss
+
+                        self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
+
+                    else:
+
+                        raise NameError("Unknown solvetype!")
+
+                    for n in range(self.nfields[npr]):
+                        del_x[npr][n].array[:] = del_full.array_r[self.offsetarr[npr][n]:self.offsetarr[npr][n+1]]
 
                 else:
 
-                    raise NameError("Unknown solvetype!")
+                    # solve linear system
+                    self.ksp[npr].setOperators(K_list[0][0])
 
-                for n in range(self.nfields):
-                    del_x[n].array[:] = del_full.array_r[self.offsetarr[n]:self.offsetarr[n+1]]
+                    tss = time.time()
+                    self.ksp[npr].solve(-r_list[npr][0], del_x[npr][0])
+                    ts = time.time() - tss
 
-            else:
+                    if self.solvetype=='iterative':
 
-                # solve linear system
-                self.ksp.setOperators(K_list[0][0])
+                        self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
 
-                tss = time.time()
-                self.ksp.solve(-r_list[0], del_x[0])
-                ts = time.time() - tss
+                # get increment norm
+                for n in range(self.nfields[npr]):
+                    self.incnorms[npr]['inc'+str(n+1)] = del_x[npr][n].norm()
 
-                if self.solvetype=='iterative':
+                # reconstruct full-length increment vector - currently only for first var!
+                if self.pb[npr].have_rom:
+                    del_x[npr][0] = self.pb[npr].rom.V.createVecLeft()
+                    self.pb[npr].rom.V.mult(del_u_[npr], del_x[npr][0]) # V * dx_red
 
-                    self.solutils.print_linear_iter_last(self.ksp.getIterationNumber(),self.ksp.getResidualNorm())
+                # norm from last step for potential PTC adaption - prior to res update
+                res_norm_main_last = self.resnorms[npr]['res1']
 
-            # get increment norm
-            for n in range(self.nfields):
-                self.incnorms['inc'+str(n+1)] = del_x[n].norm()
+                # update variables
+                for n in range(self.nfields[npr]):
+                    self.x[npr][n].axpy(1.0, del_x[npr][n])
+                    if self.is_ghosted[npr][n]==1:
+                        self.x[npr][n].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                    if self.is_ghosted[npr][n]==2:
+                        subvecs = self.x[npr][n].getNestSubVecs()
+                        for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-            # reconstruct full-length increment vector - currently only for first var!
-            if self.pb.have_rom:
-                del_x[0] = self.pb.rom.V.createVecLeft()
-                self.pb.rom.V.mult(del_u_, del_x[0]) # V * dx_red
+                # destroy PETSc vecs...
+                for n in range(self.nfields[npr]):
+                    r_list[npr][n].destroy()
 
-            # norm from last step for potential PTC adaption - prior to res update
-            res_norm_main_last = self.resnorms['res1']
+                # any local solve that is needed
+                if self.pb[npr].localsolve:
+                    self.solve_local(localdata)
 
-            # update variables
-            for n in range(self.nfields):
-                self.x[n].axpy(1.0, del_x[n])
-                if self.is_ghosted[n]==1:
-                    self.x[n].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                if self.is_ghosted[n]==2:
-                    subvecs = self.x[n].getNestSubVecs()
-                    for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                # compute new residual after updated solution
+                if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
+                r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
 
-            # destroy PETSc vecs...
-            for n in range(self.nfields):
-                r_list[n].destroy()
+                if self.pb[npr].have_rom:
+                    del_u_[npr] = self.pb[npr].rom.reduce_residual(r_list[npr], del_x[npr])
 
-            # any local solve that is needed
-            if self.pb.localsolve:
-                self.solve_local(localdata)
+                # get residual norm
+                for n in range(self.nfields[npr]):
+                    r_list[npr][n].assemble()
+                    self.resnorms[npr]['res'+str(n+1)] = r_list[npr][n].norm()
 
-            # compute new residual after updated solution
-            r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
-            if self.pb.have_rom:
-                del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
+                if npr==0: ll=1
+                else: ll=83
 
-            # get residual norm
-            for n in range(self.nfields):
-                r_list[n].assemble()
-                self.resnorms['res'+str(n+1)] = r_list[n].norm()
+                self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], incnorms=self.incnorms[npr], ts=ts, te=te, ptype=self.ptype[npr], prfxlen=ll)
 
-            self.solutils.print_nonlinear_iter(it,k_PTC,ts=ts,te=te)
+                # destroy PETSc stuff...
+                if self.nfields[npr] > 1:
+                    r_full_nest.destroy(), K_full_nest.destroy(), del_full.destroy()
+                    if self.solvetype=='direct': r_full.destroy(), K_full.destroy()
+                    if self.solvetype=='iterative': P_nest.destroy()
+                for n in range(self.nfields[npr]):
+                    for m in range(self.nfields[npr]):
+                        if K_list[n][m] is not None: K_list[n][m].destroy()
 
-            # destroy PETSc stuff...
-            if self.nfields > 1:
-                r_full_nest.destroy(), K_full_nest.destroy(), del_full.destroy()
-                if self.solvetype=='direct': r_full.destroy(), K_full.destroy()
-                if self.solvetype=='iterative': P_nest.destroy()
-            for n in range(self.nfields):
-                for m in range(self.nfields):
-                    if K_list[n][m] is not None: K_list[n][m].destroy()
+                # get converged state of each problem
+                converged.append(self.solutils.check_converged(self.resnorms[npr], self.incnorms[npr], self.tolerances[npr], ptype=self.ptype[npr]))
 
-            # for PTC - scale k_PTC with ratio of current to previous residual norm
-            if self.PTC:
-                k_PTC *= self.resnorms['res1']/res_norm_main_last
+                # for PTC - scale k_PTC with ratio of current to previous residual norm
+                if self.PTC:
+                    k_PTC *= self.resnorms[npr]['res1']/res_norm_main_last
 
+                # adaptive PTC (for 3D block K_00 only!)
+                if self.divcont=='PTC':
+
+                    self.maxiter = 250 # should be enough...
+
+                    # collect errors
+                    err.append(self.solutils.catch_solver_errors(self.resnorms[npr]['res1'], incnorm=self.incnorms[npr]['inc1'], maxval=self.maxresval))
+
+            # iteration update after all problems have been solved
             it += 1
 
-            # adaptive PTC (for 3D block K_00 only!)
-            if self.divcont=='PTC':
+            # now check if errors occurred
+            if any(err):
 
-                self.maxiter = 250 # should be enough...
-                err = self.solutils.catch_solver_errors(self.resnorms['res1'], incnorm=self.incnorms['inc1'], maxval=self.maxresval)
+                self.PTC = True
+                # reset Newton step
+                it, k_PTC = 1, self.k_PTC_initial
 
-                if err:
-                    self.PTC = True
-                    # reset Newton step
-                    it, k_PTC = 1, self.k_PTC_initial
+                # try a new (random) PTC parameter if even the solve with k_PTC_initial fails
+                if counter_adapt>0:
+                    k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
 
-                    # try a new (random) PTC parameter if even the solve with k_PTC_initial fails
-                    if counter_adapt>0:
-                        k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
+                if self.comm.rank == 0:
+                    print("PTC factor: %.4f" % (k_PTC))
+                    sys.stdout.flush()
 
-                    if self.pb.comm.rank == 0:
-                        print("PTC factor: %.4f" % (k_PTC))
-                        sys.stdout.flush()
+                for npr in range(self.nprob):
 
                     # reset solver
-                    for n in range(self.nfields):
-                        self.reset_step(self.x[n], x_start[n], self.is_ghosted[n])
-                        if self.pb.sub_solve: # can only be a 0D model so far...
+                    for n in range(self.nfields[npr]):
+                        self.reset_step(self.x[npr][n], x_start[npr][n], self.is_ghosted[npr][n])
+                        if self.pb[npr].sub_solve: # can only be a 0D model so far...
                             self.reset_step(self.pb.pb0.s, s_start, 0)
 
                     # destroy PETSc vecs...
-                    for n in range(self.nfields):
-                        r_list[n].destroy()
+                    for n in range(self.nfields[npr]):
+                        r_list[npr][n].destroy()
 
                     # re-compute any local solve that is needed
-                    if self.pb.localsolve:
+                    if self.pb[npr].localsolve:
                         self.solve_local(localdata)
 
                     # re-compute initial residual from predictor
-                    r_list = self.pb.assemble_residual(t, subsolver=self.subsol)
+                    if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
+                    r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
 
                     # re-reduce initial residual
-                    if self.pb.have_rom:
-                        del_u_ = self.pb.rom.reduce_residual(r_list, del_x)
+                    if self.pb[npr].have_rom:
+                        del_u_[npr] = self.pb[npr].rom.reduce_residual(r_list[npr], del_x[npr])
 
                     # re-get residual norm
-                    for n in range(self.nfields):
-                        r_list[n].assemble()
-                        self.resnorms['res'+str(n+1)] = r_list[n].norm()
+                    for n in range(self.nfields[npr]):
+                        r_list[npr][n].assemble()
+                        self.resnorms[npr]['res'+str(n+1)] = r_list[npr][n].norm()
 
                     counter_adapt += 1
 
-            # check if converged
-            converged = self.solutils.check_converged(self.tolerances)
-            if converged:
+            # check if all problems have converged
+            if all(converged):
                 # destroy PETSc vectors
-                for n in range(self.nfields):
-                    del_x[n].destroy(), x_start[n].destroy(), r_list[n].destroy()
-                if self.pb.sub_solve: s_start.destroy()
+                for npr in range(self.nprob):
+                    for n in range(self.nfields[npr]):
+                        del_x[npr][n].destroy(), x_start[npr][n].destroy(), r_list[npr][n].destroy()
+                    if self.pb[npr].sub_solve: s_start.destroy()
                 # reset to normal Newton if PTC was used in a divcont action
                 if self.divcont=='PTC':
                     self.PTC = False
@@ -665,7 +715,7 @@ class solver_nonlinear:
             for i in range(num_loc_res):
 
                 # interpolate symbolic increment form into increment vector
-                increment_proj = project(increment_forms[i], functionspaces[i], self.pb.dx_)
+                increment_proj = project(increment_forms[i], functionspaces[i], self.pb[0].dx_)
                 increments[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 increments[i].interpolate(increment_proj)
 
@@ -676,7 +726,7 @@ class solver_nonlinear:
 
             for i in range(num_loc_res):
                 # interpolate symbolic residual form into residual vector
-                residual_proj = project(residual_forms[i], functionspaces[i], self.pb.dx_)
+                residual_proj = project(residual_forms[i], functionspaces[i], self.pb[0].dx_)
                 residuals[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 residuals[i].interpolate(residual_proj)
                 # get residual and increment inf norms
@@ -684,7 +734,7 @@ class solver_nonlinear:
                 inc_norms[i] = increments[i].vector.norm(norm_type=3)
 
             if self.print_local_iter:
-                if self.pb.comm.rank == 0:
+                if self.comm.rank == 0:
                     print("      (it_local = %i, res: %.4e, inc: %.4e)" % (it_local,np.sum(res_norms),np.sum(inc_norms)))
                     sys.stdout.flush()
 
@@ -705,11 +755,14 @@ class solver_nonlinear:
 # solver for pure ODE (0D) problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)
 class solver_nonlinear_ode(solver_nonlinear):
 
-    def __init__(self, pb, solver_params={}):
+    def __init__(self, pb, solver_params):
 
         ioparams.check_params_solver(solver_params)
 
-        self.pb = pb[0] # currently only one problem considered
+        self.comm = pb[0].comm
+
+        self.pb = pb[0] # only one problem considered here
+        self.nprob = 1
 
         self.ptype = self.pb.problem_physics
 
@@ -722,7 +775,8 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']
 
-        self.tolerances = {'res1' : self.tolres, 'inc1' : self.tolinc}
+        self.tolerances = [[]]
+        self.tolerances[0] = {'res1' : self.tolres, 'inc1' : self.tolinc}
 
         # dicts for residual and increment norms
         self.resnorms, self.incnorms = {}, {}
@@ -739,11 +793,13 @@ class solver_nonlinear_ode(solver_nonlinear):
 
     def initialize_petsc_solver(self):
 
+        self.ksp = [[]]
+
         # create solver
-        self.ksp = PETSc.KSP().create(self.pb.comm)
-        self.ksp.setType("preonly")
-        self.ksp.getPC().setType("lu")
-        self.ksp.getPC().setFactorSolverType(self.direct_solver)
+        self.ksp[0] = PETSc.KSP().create(self.comm)
+        self.ksp[0].setType("preonly")
+        self.ksp[0].getPC().setType("lu")
+        self.ksp[0].getPC().setFactorSolverType(self.direct_solver)
 
 
     def newton(self, t, print_iter=True, sub=False):
@@ -751,7 +807,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         # Newton iteration index
         it = 0
 
-        if print_iter: self.solutils.print_nonlinear_iter(header=True,sub=sub)
+        if print_iter: self.solutils.print_nonlinear_iter(header=True, sub=sub, ptype=self.ptype)
 
         self.ni, self.li = 0, 0 # nonlinear and linear iteration counters (latter probably never relevant for ODE problems...)
 
@@ -765,7 +821,7 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         te = time.time() - tes
 
-        if print_iter: self.solutils.print_nonlinear_iter(it,te=te,sub=sub)
+        if print_iter: self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms, te=te, sub=sub, ptype=self.ptype)
 
         it += 1
 
@@ -779,12 +835,12 @@ class solver_nonlinear_ode(solver_nonlinear):
             ds = K.createVecLeft()
 
             # solve linear system
-            self.ksp.setOperators(K)
+            self.ksp[0].setOperators(K)
 
             te = time.time() - tes
 
             tss = time.time()
-            self.ksp.solve(-r, ds)
+            self.ksp[0].solve(-r, ds)
             ts = time.time() - tss
 
             # update solution
@@ -798,7 +854,7 @@ class solver_nonlinear_ode(solver_nonlinear):
             # get norms
             self.resnorms['res1'], self.incnorms['inc1'] = r.norm(), ds.norm()
 
-            if print_iter: self.solutils.print_nonlinear_iter(it,ts=ts,te=te,sub=sub)
+            if print_iter: self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms, incnorms=self.incnorms, ts=ts, te=te, sub=sub, ptype=self.ptype)
 
             # destroy PETSc stuff...
             ds.destroy(), K.destroy()
@@ -806,10 +862,10 @@ class solver_nonlinear_ode(solver_nonlinear):
             it += 1
 
             # check if converged
-            converged = self.solutils.check_converged(self.tolerances,ptype='flow0d')
+            converged = self.solutils.check_converged(self.resnorms, self.incnorms, self.tolerances[0], ptype='flow0d')
             if converged:
                 if print_iter and sub:
-                    if self.pb.comm.rank == 0:
+                    if self.comm.rank == 0:
                         print('       ****************************************************\n')
                         sys.stdout.flush()
                 self.ni = it-1

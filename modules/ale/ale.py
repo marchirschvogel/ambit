@@ -82,6 +82,8 @@ class AleProblem(problem_base):
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']
         except: self.have_rom = False
+        # TODO....
+        self.have_rom=False
 
         # create finite element objects
         P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -302,7 +304,7 @@ class AleSolver(solver_base):
         self.pb.set_problem_residual_jacobian_forms()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
 
     def solve_initial_state(self):

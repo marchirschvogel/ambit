@@ -267,4 +267,5 @@ class solver_base():
 
     def destroy(self):
 
-        self.solnln.ksp.destroy()
+        for npr in range(self.solnln.nprob):
+            self.solnln.ksp[npr].destroy()
