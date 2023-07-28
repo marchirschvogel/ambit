@@ -82,6 +82,10 @@ class solver_nonlinear:
         self.solutils = sol_utils(self)
         self.lsp = self.solutils.timestep_separator_len()
 
+        if self.nprob>1:
+            self.indlen = self.lsp+2
+            self.lsp += 54
+
         self.li_s = [] # linear iterations over all solves
 
         self.cp = cp
@@ -406,7 +410,7 @@ class solver_nonlinear:
         for npr in range(self.nprob):
 
             if npr==0: ll=1
-            else: ll=83
+            else: ll=self.indlen
 
             self.solutils.print_nonlinear_iter(header=True, ptype=self.ptype[npr], prfxlen=ll)
 
@@ -566,10 +570,12 @@ class solver_nonlinear:
                 # for partitioned solves, we now have to update all dependent other residuals, too
                 if self.nprob > 1:
                     for mpr in range(self.nprob):
-                        if mpr!=npr: self.residual_problem_actions(t, mpr, del_x, localdata)
+                        if mpr!=npr:
+                            for n in range(self.nfields[mpr]): self.r_list[mpr][n].destroy()
+                            self.residual_problem_actions(t, mpr, del_x, localdata)
 
                 if npr==0: ll=1
-                else: ll=83
+                else: ll=self.indlen
 
                 self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], incnorms=self.incnorms[npr], ts=ts, te=te, ptype=self.ptype[npr], prfxlen=ll)
 

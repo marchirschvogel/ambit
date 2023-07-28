@@ -125,9 +125,10 @@ if category=='solid_constraint' or category=='all':
     errs['solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_constraint_volume_chamber.py'])
     errs['solid_constraint_volume_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_constraint_volume_chamber.py'])
 
-if category=='frsi' or category=='all':
+if category=='frsi' or category=='fluid_ale' or category=='all':
     errs['frsi_artseg_prefile 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_prefile.py'])
     errs['frsi_artseg_prefile 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile.py'])
+    errs['frsi_artseg_prefile_partitioned 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile_partitioned.py'])
 
     errs['frsi_artseg_modepartitionunity 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_modepartitionunity.py'])
     errs['frsi_artseg_modepartitionunity 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'frsi_artseg_modepartitionunity.py'])

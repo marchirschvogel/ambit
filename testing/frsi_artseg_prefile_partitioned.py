@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # FrSI test case of an axially clamped, prestressed arterial segment
+# partitioned solution strategy
 
 import ambit
 
@@ -14,14 +15,20 @@ def main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS            = {'problem_type'          : 'fluid_ale',
                             'use_model_order_red'   : True,
                             'write_results_every'   : 2,
+                            'write_restart_every'   : 2,
+                            'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',
                             'results_to_write'      : [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']], # first fluid, then ale results
-                            'simname'               : 'frsi_artseg_prefile'}
+                            'simname'               : 'frsi_artseg_prefile_partitioned'}
 
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'numsnapshots'          : 1,
@@ -36,8 +43,6 @@ def main():
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [[1.0e-8,1.0e-8],[1.0e-3]],
                             'tol_inc'               : [[1.0e-4,1.0e-4],[1.0e-3]]}
-                            #'tol_res'               : [[1.0e-1],[1.0e-8,1.0e-8]],
-                            #'tol_inc'               : [[1.0e-1],[1.0e-1,1.0e-3]]}
 
     TIME_PARAMS          = {'maxtime'               : 3.0,
                             'numstep'               : 150,
