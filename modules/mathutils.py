@@ -7,6 +7,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
+import numpy as np
+from dolfinx import fem
+from petsc4py import PETSc
 
 def spectral_decomposition_3x3(A):
     """Eigenvalues and eigenprojectors of a 3x3 (real-valued) tensor A.
@@ -61,3 +64,18 @@ def spectral_decomposition_3x3(A):
     evc3 /= ufl.sqrt(ufl.dot(evc3,evc3))
 
     return [lambda1, lambda2, lambda3], [evc1, evc2, evc3], [E1, E2, E3]
+
+
+def quad_interpolation(expr, V, msh, quadrature_points, func):
+    '''
+    See https://github.com/FEniCS/dolfinx/issues/2243
+    '''
+    e_expr = fem.Expression(expr, quadrature_points)
+    map_c = msh.topology.index_map(msh.topology.dim)
+    num_cells = map_c.size_local + map_c.num_ghosts
+    cells = np.arange(0, num_cells, dtype=np.int32)
+    e_eval = e_expr.eval(cells=cells, mesh=msh)
+
+    with func.vector.localForm() as func_local:
+        func_local.setBlockSize(func.function_space.dofmap.bs)
+        func_local.setValuesBlocked(V.dofmap.list, e_eval, addv=PETSc.InsertMode.INSERT)

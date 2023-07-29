@@ -40,7 +40,17 @@ def main():
                             'filesource'            : 'rawtxt',
                             'filereadin_tol'        : 1e-5}
 
-    SOLVER_PARAMS        = {'solve_type'            : 'direct',
+    SOLVER_PARAMS        = {'solve_type'            : ['iterative','direct'],
+                            'iterative_solver'      : 'gmres',
+                            'block_precond'         : ['schur3x3',None],
+                            'precond_fields'        : [[{'prec':'amg'}, {'prec':'amg'}, {'prec':'direct'}],[{}]], # fluid-v, fluid-p, fluid-red.v, ale-d
+                            'tol_lin_rel'           : 1.0e-5,
+                            'tol_lin_abs'           : 1.0e-30,
+                            'lin_norm_type'         : 'preconditioned',
+                            'max_liniter'           : 500,
+                            'res_lin_monitor'       : 'abs',
+                            'print_liniter_every'   : 50,
+                            'indexset_options'      : {'rom_to_new' : True},
                             'tol_res'               : [[1.0e-8,1.0e-8],[1.0e-3]],
                             'tol_inc'               : [[1.0e-4,1.0e-4],[1.0e-3]]}
 

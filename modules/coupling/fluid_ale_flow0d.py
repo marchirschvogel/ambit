@@ -56,6 +56,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pbf = self.pbf0.pbf
         self.pb0 = self.pbf0.pb0
 
+        self.pbrom = self.pbf # ROM problem can only be fluid
+
         # modify results to write...
         self.pbf.results_to_write = io_params['results_to_write'][0]
         self.pba.results_to_write = io_params['results_to_write'][1]
@@ -66,7 +68,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.noperiodicref = 1
 
         self.localsolve = False
-        self.have_rom = False
 
         # NOTE: Fluid and ALE function spaces should be of the same type, but are different objects.
         # For some reason, when applying a function from one funtion space as DBC to another function space,
@@ -80,9 +81,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.set_variational_forms()
 
         self.numdof = self.pbf.numdof + self.pbf0.lm.getSize() + self.pba.numdof
-
-        self.have_rom = self.pbf.have_rom
-        if self.have_rom: self.rom = self.pbf.rom
 
         self.sub_solve = True
 
@@ -237,23 +235,23 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         return K_list
 
 
-    def get_index_sets(self, isoptions={}):
+    def get_index_sets(self, isoptions={}, rom=None):
 
-        if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            vred = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
-            self.rom.V.multTranspose(self.pbf.v.vector, vred)
-            vvec = vred
+        if rom is not None: # currently, ROM can only be on (subset of) first variable
+            vvec_or0 = rom.V.getOwnershipRangeColumn()[0]
+            vvec_ls = rom.V.getLocalSize()[1]
         else:
-            vvec = self.pbf.v.vector
+            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
+            vvec_ls = self.pbf.v.vector.getLocalSize()
 
-        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
-        iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
+        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
-            iset_r = PETSc.IS().createStride(len(self.rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_r = PETSc.IS().createStride(len(rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
             iset_v = iset_v.difference(iset_r) # subtract
 
-        offset_p = offset_v + vvec.getLocalSize()
+        offset_p = offset_v + vvec_ls
         iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         offset_s = offset_p + self.pbf.p.vector.getLocalSize()
@@ -378,15 +376,11 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
 
         self.pb.set_problem_residual_jacobian_forms()
 
-        # perform Proper Orthogonal Decomposition
-        if self.pb.have_rom:
-            self.pb.rom.prepare_rob()
-
         # initialize nonlinear solver class
         if self.pb.coupling_strategy=='monolithic':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
         elif self.pb.coupling_strategy=='partitioned':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf0,self.pb.pba], self.solver_params, cp=self.pb)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf0,self.pb.pba], self.solver_params, cp=self.pb, rom=self.rom)
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 

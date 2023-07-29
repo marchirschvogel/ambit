@@ -259,9 +259,7 @@ class FluidmechanicsProblem(problem_base):
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
-        if self.have_rom:
-            import mor
-            self.rom = mor.ModelOrderReduction(self, self.V_v, mor_params)
+        self.mor_params = mor_params
 
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)
@@ -336,6 +334,9 @@ class FluidmechanicsProblem(problem_base):
             self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_v)
 
         self.set_variational_forms()
+
+        self.pbrom = self # self-pointer needed for ROM solver access
+        self.V_rom = self.V_v
 
 
     def get_problem_var_list(self):
@@ -764,22 +765,29 @@ class FluidmechanicsProblem(problem_base):
         return K_list
 
 
-    def get_index_sets(self, isoptions={}):
+    def get_index_sets(self, isoptions={}, rom=None):
 
-        if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            vred = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
-            self.rom.V.multTranspose(self.v.vector, vred)
-            vvec = vred
+        if rom is not None: # currently, ROM can only be on (subset of) first variable
+            vvec_or0 = rom.V.getOwnershipRangeColumn()[0]
+            vvec_ls = rom.V.getLocalSize()[1]
         else:
-            vvec = self.v.vector
+            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
+            vvec_ls = self.pbf.v.vector.getLocalSize()
 
-        offset_v = vvec.getOwnershipRange()[0] + self.p.vector.getOwnershipRange()[0]
-        iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
+        offset_v = vvec_or0 + self.p.vector.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
-        offset_p = offset_v + vvec.getLocalSize()
+        if isoptions['rom_to_new']:
+            iset_r = PETSc.IS().createStride(len(rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_v = iset_v.difference(iset_r) # subtract
+
+        offset_p = offset_v + vvec_ls
         iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        return [iset_v, iset_p]
+        if isoptions['rom_to_new']:
+            return [iset_v, iset_p, iset_r]
+        else:
+            return [iset_v, iset_p]
 
 
     # valve law on "immersed" surface (an internal boundary)
@@ -971,12 +979,8 @@ class FluidmechanicsSolver(solver_base):
 
         self.pb.set_problem_residual_jacobian_forms()
 
-        # perform Proper Orthogonal Decomposition
-        if self.pb.have_rom:
-            self.pb.rom.prepare_rob()
-
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
 
 
     def solve_initial_state(self):
@@ -1082,7 +1086,7 @@ class FluidmechanicsSolverPrestr(FluidmechanicsSolver):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
 
 
     def solve_initial_state(self):

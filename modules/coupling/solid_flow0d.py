@@ -67,6 +67,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
         self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
+        self.pbrom = self.pbs # ROM problem can only be solid
+
         self.incompressible_2field = self.pbs.incompressible_2field
 
         # for multiscale G&R analysis
@@ -90,8 +92,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             raise ValueError("Unknown coupling type!")
 
         self.localsolve = self.pbs.localsolve
-        self.have_rom = self.pbs.have_rom
-        if self.have_rom: self.rom = self.pbs.rom
 
         if self.coupling_type == 'monolithic_lagrange':
             self.sub_solve = True
@@ -519,30 +519,30 @@ class SolidmechanicsFlow0DProblem(problem_base):
         return K_list
 
 
-    def get_index_sets(self, isoptions={}):
+    def get_index_sets(self, isoptions={}, rom=None):
 
-        if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            ured = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
-            self.rom.V.multTranspose(self.pbs.u.vector, ured)
-            uvec = ured
+        if rom is not None: # currently, ROM can only be on (subset of) first variable
+            uvec_or0 = rom.V.getOwnershipRangeColumn()[0]
+            uvec_ls = rom.V.getLocalSize()[1]
         else:
-            uvec = self.pbs.u.vector
+            uvec_or0 = self.pbs.u.vector.getOwnershipRange()[0]
+            uvec_ls = self.pbs.u.vector.getLocalSize()
 
         if self.coupling_type == 'monolithic_direct':   rvec = self.pb0.s
         if self.coupling_type == 'monolithic_lagrange': rvec = self.lm
 
-        offset_u = uvec.getOwnershipRange()[0] + rvec.getOwnershipRange()[0]
+        offset_u = uvec_or0 + rvec.getOwnershipRange()[0]
         if self.pbs.incompressible_2field: offset_u += self.pbs.p.vector.getOwnershipRange()[0]
-        iset_u = PETSc.IS().createStride(uvec.getLocalSize(), first=offset_u, step=1, comm=self.comm)
+        iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
-            offset_p = offset_u + uvec.getLocalSize()
+            offset_p = offset_u + uvec_ls
             iset_p = PETSc.IS().createStride(self.pbs.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
             offset_s = offset_p + self.pbs.p.vector.getLocalSize()
         else:
-            offset_s = offset_u + uvec.getLocalSize()
+            offset_s = offset_u + uvec_ls
 
         iset_s = PETSc.IS().createStride(rvec.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
@@ -720,12 +720,8 @@ class SolidmechanicsFlow0DSolver(solver_base):
 
         self.pb.set_problem_residual_jacobian_forms()
 
-        # perform Proper Orthogonal Decomposition
-        if self.pb.have_rom:
-            self.pb.rom.prepare_rob()
-
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
 
         if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
             # initialize solid mechanics solver

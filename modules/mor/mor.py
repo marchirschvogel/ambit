@@ -17,49 +17,50 @@ from meshutils import gather_surface_dof_indices
 
 class ModelOrderReduction():
 
-    def __init__(self, pb, Vspace, params):
+    def __init__(self, pb):
 
         # underlying physics problem
         self.pb = pb
+        self.params = self.pb.mor_params
 
-        try: self.modes_from_files = params['modes_from_files']
+        try: self.modes_from_files = self.params['modes_from_files']
         except: self.modes_from_files = False
 
         if not self.modes_from_files:
 
-            self.hdmfilenames = params['hdmfilenames']
+            self.hdmfilenames = self.params['hdmfilenames']
             self.numhdms = len(self.hdmfilenames)
-            self.numsnapshots = params['numsnapshots']
+            self.numsnapshots = self.params['numsnapshots']
 
-            try: self.snapshotincr = params['snapshotincr']
+            try: self.snapshotincr = self.params['snapshotincr']
             except: self.snapshotincr = 1
 
-            try: self.snapshotoffset = params['snapshotoffset']
+            try: self.snapshotoffset = self.params['snapshotoffset']
             except: self.snapshotoffset = 0
 
-            try: self.print_eigenproblem = params['print_eigenproblem']
+            try: self.print_eigenproblem = self.params['print_eigenproblem']
             except: self.print_eigenproblem = False
 
-            try: self.eigenvalue_cutoff = params['eigenvalue_cutoff']
+            try: self.eigenvalue_cutoff = self.params['eigenvalue_cutoff']
             except: self.eigenvalue_cutoff = 0.0
         else:
             self.numhdms, self.numsnapshots = 1, 1
 
-        try: self.numredbasisvec = params['numredbasisvec']
+        try: self.numredbasisvec = self.params['numredbasisvec']
         except: self.numredbasisvec = self.numsnapshots
 
-        try: self.surface_rom = params['surface_rom']
+        try: self.surface_rom = self.params['surface_rom']
         except: self.surface_rom = []
 
         try:
-            self.filesource = params['filesource']
+            self.filesource = self.params['filesource']
         except:
             self.filesource = 'petscvector'
 
-        try: self.write_pod_modes = params['write_pod_modes']
+        try: self.write_pod_modes = self.params['write_pod_modes']
         except: self.write_pod_modes = False
 
-        try: self.redbasisvec_indices = params['redbasisvec_indices']
+        try: self.redbasisvec_indices = self.params['redbasisvec_indices']
         except:
             self.redbasisvec_indices = []
             for i in range(self.numredbasisvec): self.redbasisvec_indices.append(i)
@@ -67,10 +68,10 @@ class ModelOrderReduction():
         try: self.redbasisvec_penalties = params['redbasisvec_penalties']
         except: self.redbasisvec_penalties = []
 
-        try: self.partitions = params['partitions']
+        try: self.partitions = self.params['partitions']
         except: self.partitions = []
 
-        try: self.exclude_from_snap = params['exclude_from_snap']
+        try: self.exclude_from_snap = self.params['exclude_from_snap']
         except: self.exclude_from_snap = []
 
         # mode partitions are either determined by the mode files or partition files
@@ -94,7 +95,7 @@ class ModelOrderReduction():
                 raise ValueError('Number of reduced-basis vectors has to be > 0 and <= number of HDMs times number of snapshots!')
 
         # function space of variable to be reduced
-        self.Vspace = Vspace
+        self.Vspace = self.pb.V_rom
         # scalar function space
         self.Vspace_sc = self.pb.V_scalar
 

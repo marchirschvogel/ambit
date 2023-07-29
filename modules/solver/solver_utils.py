@@ -219,12 +219,13 @@ class sol_utils():
                 sys.stdout.flush()
 
 
-    def print_linear_iter(self,it,rnorm):
+    def print_linear_iter(self, it, rnorm, prfxlen=1):
 
         if it == 0:
             self.rnorm_start = rnorm
             if self.solver.comm.rank == 0:
-                print("\n         ***************** linear solve ****************")
+                print(' ')
+                print(('{:<'+str(prfxlen)+'s}{:<8s}{:<47s}').format(' ',' ','***************** linear solve ****************'))
                 sys.stdout.flush()
 
         if it % self.solver.print_liniter_every == 0:
@@ -234,11 +235,11 @@ class sol_utils():
             else: raise ValueError("Unknown res_lin_monitor value. Choose 'rel' or 'abs'.")
 
             if self.solver.comm.rank == 0:
-                print('{:<18s}{:<4d}{:<21s}{:<4e}'.format('         lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
+                print(('{:<'+str(prfxlen)+'s}{:<17s}{:<4d}{:<21s}{:<4e}').format(' ','        lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
                 sys.stdout.flush()
 
 
-    def print_linear_iter_last(self, it, rnorm, conv_reason):
+    def print_linear_iter_last(self, it, rnorm, conv_reason, prfxlen=1):
 
         if self.solver.res_lin_monitor=='rel': resnorm = rnorm/self.rnorm_start
         elif self.solver.res_lin_monitor=='abs': resnorm = rnorm
@@ -246,9 +247,9 @@ class sol_utils():
 
         if self.solver.comm.rank == 0:
             if it % self.solver.print_liniter_every != 0: # otherwise already printed
-                print('{:<18s}{:<4d}{:<21s}{:<4e}'.format('         lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
+                print(('{:<'+str(prfxlen)+'s}{:<17s}{:<4d}{:<21s}{:<4e}').format(' ','        lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
             # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.ConvergedReason-class.html for converge codes
-            print('{:<9s}{:<13s}{:<18s}{:<2d}{:<14s}'.format(' ','************ ',' PETSc conv code: ',conv_reason,' *************'))
+            print(('{:<'+str(prfxlen)+'s}{:<8s}{:<13s}{:<18s}{:<2d}{:<14s}').format(' ',' ','************ ',' PETSc conv code: ',conv_reason,' *************'))
             if not self.solver.pb[0].print_subiter: print(' ') # no extra line if we have an "intermediate" print from another model... TODO: Find a nicer solution here...
             sys.stdout.flush()
 

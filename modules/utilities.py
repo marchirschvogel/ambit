@@ -8,6 +8,7 @@
 
 import sys, copy
 from dolfinx import fem
+import basix
 
 
 # print header at beginning of simulation
@@ -123,3 +124,21 @@ def mat_params_to_dolfinx_constant(matparams, msh):
                                 matparams_new[k1][k2][k3][k4][k5] = fem.Constant(msh, matparams[k1][k2][k3][k4][k5])
 
     return matparams_new
+
+
+def get_basix_cell_type(ufl_cell_type):
+
+    if str(ufl_cell_type) == 'tetrahedron':
+        return basix.CellType.tetrahedron
+    elif str(ufl_cell_type) == 'hexahedron':
+        return basix.CellType.hexahedron
+    elif str(ufl_cell_type) == 'triangle':
+        return basix.CellType.triangle
+    elif str(ufl_cell_type) == 'triangle3D':
+        return basix.CellType.triangle
+    elif str(ufl_cell_type) == 'quadrilateral':
+        return basix.CellType.quadrilateral
+    elif str(ufl_cell_type) == 'quadrilateral3D':
+        return basix.CellType.quadrilateral
+    else:
+        raise ValueError("Check which cell type you have.")

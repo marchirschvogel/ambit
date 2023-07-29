@@ -82,8 +82,6 @@ class AleProblem(problem_base):
         # check if we want to use model order reduction and if yes, initialize MOR class
         try: self.have_rom = io_params['use_model_order_red']
         except: self.have_rom = False
-        # TODO....
-        self.have_rom=False
 
         # create finite element objects
         P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)

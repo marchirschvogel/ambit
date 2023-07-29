@@ -63,6 +63,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevar)
         self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
 
+        self.pbrom = self.pbf # ROM problem can only be fluid
+
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
@@ -71,7 +73,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.numdof = self.pbf.numdof + self.lm.getSize()
 
         self.localsolve = self.pbf.localsolve
-        self.have_rom = self.pbf.have_rom
 
         self.sub_solve = True
 
@@ -356,19 +357,19 @@ class FluidmechanicsFlow0DProblem(problem_base):
         return K_list
 
 
-    def get_index_sets(self, isoptions={}):
+    def get_index_sets(self, isoptions={}, rom=None):
 
-        if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            vred = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
-            self.rom.V.multTranspose(self.pbf.v.vector, vred)
-            vvec = vred
+        if rom is not None: # currently, ROM can only be on (subset of) first variable
+            vvec_or0 = rom.V.getOwnershipRangeColumn()[0]
+            vvec_ls = rom.V.getLocalSize()[1]
         else:
-            vvec = self.pbf.v.vector
+            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
+            vvec_ls = self.pbf.v.vector.getLocalSize()
 
-        offset_v = vvec.getOwnershipRange()[0] + self.pbf.p.vector.getOwnershipRange()[0] + self.lm.getOwnershipRange()[0]
-        iset_v = PETSc.IS().createStride(vvec.getLocalSize(), first=offset_v, step=1, comm=self.comm)
+        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.lm.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
-        offset_p = offset_v + vvec.getLocalSize()
+        offset_p = offset_v + vvec_ls
         iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         offset_s = offset_p + self.pbf.p.vector.getLocalSize()
@@ -536,12 +537,8 @@ class FluidmechanicsFlow0DSolver(solver_base):
 
         self.pb.set_problem_residual_jacobian_forms()
 
-        # perform Proper Orthogonal Decomposition
-        if self.pb.have_rom:
-            self.pb.rom.prepare_rob()
-
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
 
 
     def solve_initial_state(self):

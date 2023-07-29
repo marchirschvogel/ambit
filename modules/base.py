@@ -44,6 +44,10 @@ class problem_base():
 
         self.t_init = self.restart_step * self.dt
 
+        # ROM problem - will be overridden by derived model problems
+        self.pbrom = self
+        self.have_rom = False
+
 
     # routines that should be implemented by derived model problem
     def pre_timestep_routines(self):
@@ -122,6 +126,14 @@ class solver_base():
         self.pb = problem
 
         self.solver_params = solver_params
+
+        if self.pb.pbrom.have_rom:
+            import mor
+            self.rom = mor.ModelOrderReduction(self.pb.pbrom)
+            # prepare reduced-order basis (offline phase): perform Proper Orthogonal Decomposition, or read in pre-computed modes
+            self.rom.prepare_rob()
+        else:
+            self.rom = None
 
         self.initialize_nonlinear_solver()
 

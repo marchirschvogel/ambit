@@ -43,6 +43,8 @@ class FSIProblem(problem_base):
         self.pbs  = SolidmechanicsProblem(io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params, comm=self.comm)
         self.pbfa = FluidmechanicsAleProblem(io_params, time_params_fluid, fem_params_fluid, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params, comm=self.comm)
 
+        self.pbrom = self.pbs # ROM problem can only be solid so far...
+
         self.pbf = self.pbfa.pbf
         self.pba = self.pbfa.pba
 
@@ -59,9 +61,6 @@ class FSIProblem(problem_base):
         self.set_variational_forms()
 
         self.numdof = self.pbs.numdof + self.pbfa.numdof
-
-        self.have_rom = self.pbs.have_rom
-        if self.have_rom: self.rom = self.pbs.rom
 
         self.localsolve = False
         self.sub_solve = False
@@ -375,10 +374,6 @@ class FSISolver(solver_base):
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
-
-        # perform Proper Orthogonal Decomposition
-        if self.pb.have_rom:
-            self.pb.rom.prepare_rob()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)

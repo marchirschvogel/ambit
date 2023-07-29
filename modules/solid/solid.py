@@ -11,12 +11,13 @@ import numpy as np
 from dolfinx import fem
 import dolfinx.fem.petsc
 import ufl
+import basix
 from petsc4py import PETSc
 
 import solid_kinematics_constitutive
 import solid_variationalform
 import timeintegration
-import utilities
+import utilities, mathutils
 import solver_nonlin
 import boundaryconditions
 import ioparams
@@ -115,6 +116,8 @@ class SolidmechanicsProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
+        basix_celltype = utilities.get_basix_cell_type(self.io.mesh.ufl_cell())
+
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
         # check if we want to use model order reduction and if yes, initialize MOR class
@@ -132,16 +135,18 @@ class SolidmechanicsProblem(problem_base):
         self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
 
         # Quadrature tensor, vector, and scalar elements
-        Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
-        Q_vector = ufl.VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
-        Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=1, quad_scheme="default")
+        Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        Q_vector = ufl.VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
 
-        # not yet working - we cannot interpolate into Quadrature elements with the current dolfinx version currently!
-        #self.Vd_tensor = fem.FunctionSpace(self.io.mesh, Q_tensor)
-        #self.Vd_vector = fem.FunctionSpace(self.io.mesh, Q_vector)
-        #self.Vd_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
+        # quadrature function spaces
+        self.Vq_tensor = fem.FunctionSpace(self.io.mesh, Q_tensor)
+        self.Vq_vector = fem.FunctionSpace(self.io.mesh, Q_vector)
+        self.Vq_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
 
-        # Quadrature function spaces (currently not properly functioning for higher-order meshes!!!)
+        self.quadrature_points, wts = basix.make_quadrature(basix_celltype, self.quad_degree)
+
+        # discontinuous function spaces
         self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
@@ -174,6 +179,7 @@ class SolidmechanicsProblem(problem_base):
         self.theta.vector.set(1.0), self.theta_old.vector.set(1.0)
         self.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # active stress
+        # self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
         self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
         self.tau_a_old = fem.Function(self.Vd_scalar)
         self.amp_old, self.amp_old_set = fem.Function(self.Vd_scalar), fem.Function(self.Vd_scalar)
@@ -209,9 +215,7 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.numdof = self.u.vector.getSize()
 
-        if self.have_rom:
-            import mor
-            self.rom = mor.ModelOrderReduction(self, self.V_u, mor_params)
+        self.mor_params = mor_params
 
         # initialize solid time-integration class
         self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
@@ -356,6 +360,9 @@ class SolidmechanicsProblem(problem_base):
             self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_u)
 
         self.set_variational_forms()
+
+        self.pbrom = self # self-pointer needed for ROM solver access
+        self.V_rom = self.V_u
 
 
     def get_problem_var_list(self):
@@ -639,6 +646,9 @@ class SolidmechanicsProblem(problem_base):
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
+        #mathutils.quad_interpolation(tau_a_[0], self.Vq_scalar, self.io.mesh, self.quadrature_points, self.tau_a)
+        #sys.exit()
+
 
     # computes and prints the growth rate of the whole solid
     def compute_solid_growth_rate(self, N, t):
@@ -821,21 +831,21 @@ class SolidmechanicsProblem(problem_base):
         return K_list
 
 
-    def get_index_sets(self, isoptions={}):
+    def get_index_sets(self, isoptions={}, rom=None):
 
         assert(self.incompressible_2field) # index sets only needed for 2-field problem
 
-        if self.have_rom: # currently, ROM can only be on (subset of) first variable
-            ured = PETSc.Vec().createMPI(size=(self.rom.V.getLocalSize()[1],self.rom.V.getSize()[1]), comm=self.comm)
-            self.rom.V.multTranspose(self.u.vector, ured)
-            uvec = ured
+        if rom is not None: # currently, ROM can only be on (subset of) first variable
+            uvec_or0 = rom.V.getOwnershipRangeColumn()[0]
+            uvec_ls = rom.V.getLocalSize()[1]
         else:
-            uvec = self.u.vector
+            uvec_or0 = self.pbs.u.vector.getOwnershipRange()[0]
+            uvec_ls = self.pbs.u.vector.getLocalSize()
 
-        offset_u = uvec.getOwnershipRange()[0] + self.p.vector.getOwnershipRange()[0]
-        iset_u = PETSc.IS().createStride(uvec.getLocalSize(), first=offset_u, step=1, comm=self.comm)
+        offset_u = uvec_or0 + self.p.vector.getOwnershipRange()[0]
+        iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
 
-        offset_p = offset_u + uvec.getLocalSize()
+        offset_p = offset_u + uvec_ls
         iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         return [iset_u, iset_p]
@@ -931,12 +941,8 @@ class SolidmechanicsSolver(solver_base):
 
         self.pb.set_problem_residual_jacobian_forms()
 
-        # perform Proper Orthogonal Decomposition
-        if self.pb.have_rom:
-            self.pb.rom.prepare_rob()
-
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
 
 
     def solve_initial_state(self):
@@ -1027,7 +1033,7 @@ class SolidmechanicsSolverPrestr(SolidmechanicsSolver):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], solver_params=self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
 
 
     def solve_initial_state(self):

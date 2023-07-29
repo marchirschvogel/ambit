@@ -1,6 +1,6 @@
 # README #
 
-* AMBIT - A FEniCS-based cardiovascular physics solver
+* Ambit -- A FEniCS-based cardiovascular physics solver
 
 3D nonlinear solid and fluid mechanics finite element Python code using FEniCS and PETSc libraries, supporting
 
@@ -53,13 +53,9 @@ if not present, install: (seems that uidmap needs to be installed, which require
 ``sudo apt install uidmap``\
 ``curl -fsSL https://get.docker.com/rootless | sh``
 
-* Get latest tested ambit-compatible digest (24 Jul 2023) of dolfinx Docker image:
+* Get latest tested Ambit-compatible digest (24 Jul 2023) of dolfinx Docker image:
 
 ``docker pull dolfinx/dolfinx@sha256:ac772dd8f3152b14aa79211efceadbae5967c2cfdc547383a82c02b62e1238fe``
-
-* To get dolfinx nightly build (may or may not work with ambit code):
-
-``docker pull dolfinx/dolfinx:nightly``
 
 * Put the following shortcut in .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
 
@@ -75,6 +71,10 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * Have a look at example input files in ambit/testing and the file ambit_template.py in the main folder as example of all available input options
 
-* Launch your input file with
+* Best, check if all testcases run and pass, by navigating to ambit/testing and executing
+
+``./runtests.py``
+
+* Build your input file and run it with the command
 
 ``mpiexec -n <NUMBER_OF_CORES> python3 your_file.py``
