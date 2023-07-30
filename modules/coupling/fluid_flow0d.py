@@ -382,10 +382,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         if isoptions['rom_to_new']:
             iset_s = iset_s.expand(iset_r) # add to 0D block
             iset_s.sort() # should be sorted, otherwise PETSc may struggle to extract block
-            #iset_r = iset_r.expand(iset_s) # add to 0D block
-
-        print(iset_s.array)
-        # sys.exit()
 
         if isoptions['lms_to_p']:
             iset_p = iset_p.expand(iset_s) # add to pressure block
