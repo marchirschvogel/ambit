@@ -77,8 +77,10 @@ class solver_nonlinear:
         self.lsp = self.solutils.timestep_separator_len()
 
         if self.nprob>1:
-            self.indlen = self.lsp+2
+            self.indp2 = self.lsp+2 # indent length for partitioned problem print
             self.lsp += 54
+
+        self.indlen = 1
 
         self.initialize_petsc_solver()
 
@@ -430,10 +432,10 @@ class solver_nonlinear:
 
         for npr in range(self.nprob):
 
-            if npr==0: ll=1
-            else: ll=self.indlen
+            if npr==0: self.indlen=1
+            else: self.indlen=self.indp2
 
-            self.solutils.print_nonlinear_iter(header=True, ptype=self.ptype[npr], prfxlen=ll)
+            self.solutils.print_nonlinear_iter(header=True, ptype=self.ptype[npr])
 
             tes = time.time()
 
@@ -442,7 +444,7 @@ class solver_nonlinear:
 
             te = time.time() - tes
 
-            self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], te=te, ptype=self.ptype[npr], prfxlen=ll)
+            self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], te=te, ptype=self.ptype[npr])
 
         it += 1
 
@@ -455,6 +457,9 @@ class solver_nonlinear:
             # problem loop (in case of partitioned solves)
             for npr in range(self.nprob):
 
+                if npr==0: self.indlen=1
+                else: self.indlen=self.indp2
+
                 # compute Jacobian
                 K_list = self.pb[npr].assemble_stiffness(t, subsolver=self.subsol)
 
@@ -462,8 +467,8 @@ class solver_nonlinear:
                     # computes K_00 + k_PTC * I
                     K_list[0][0].shift(k_PTC)
 
-                # model order reduction stuff - currently only on first mat in system...
-                if self.rom is not None:
+                # model order reduction - reduce Jacobian
+                if self.rom is not None and npr==0: # only for first problem so far...
                     # reduce Jacobian
                     self.rom.reduce_stiffness(K_list, self.nfields[npr])
 
@@ -564,8 +569,8 @@ class solver_nonlinear:
                 for n in range(self.nfields[npr]):
                     self.incnorms[npr]['inc'+str(n+1)] = del_x[npr][n].norm()
 
-                # reconstruct full-length increment vector - currently only for first var!
-                if self.rom is not None:
+                # reconstruct full-length increment vector
+                if self.rom is not None and npr==0: # only for first problem so far...
                     del_x[npr][0] = self.rom.V.createVecLeft()
                     self.rom.V.mult(self.del_u_[npr], del_x[npr][0]) # V * dx_red
 
@@ -595,10 +600,7 @@ class solver_nonlinear:
                             for n in range(self.nfields[mpr]): self.r_list[mpr][n].destroy()
                             self.residual_problem_actions(t, mpr, del_x, localdata)
 
-                if npr==0: ll=1
-                else: ll=self.indlen
-
-                self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], incnorms=self.incnorms[npr], ts=ts, te=te, ptype=self.ptype[npr], prfxlen=ll)
+                self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], incnorms=self.incnorms[npr], ts=ts, te=te, ptype=self.ptype[npr])
 
                 # destroy PETSc stuff...
                 if self.nfields[npr] > 1:
@@ -689,7 +691,7 @@ class solver_nonlinear:
         self.r_list[npr] = self.pb[npr].assemble_residual(t, subsolver=self.subsol)
 
         # reduce residual
-        if self.rom is not None:
+        if self.rom is not None and npr==0: # only for first problem so far...
             self.del_u_[npr] = self.rom.reduce_residual(self.r_list[npr], del_x[npr])
 
         # get residual norms
@@ -802,6 +804,8 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.solutils = sol_utils(self)
 
         self.lsp = self.solutils.timestep_separator_len()
+
+        self.indlen = 1
 
         self.initialize_petsc_solver()
 

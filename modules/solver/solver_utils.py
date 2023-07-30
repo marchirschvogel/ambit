@@ -48,7 +48,7 @@ class sol_utils():
         return err
 
 
-    def print_nonlinear_iter(self, it=0, resnorms=None, incnorms=None, header=False, ts=0, te=0, sub=False, ptype=None, prfxlen=1):
+    def print_nonlinear_iter(self, it=0, resnorms=None, incnorms=None, header=False, ts=0, te=0, sub=False, ptype=None):
 
         if ptype=='solid':
             if self.solver.pb[0].incompressible_2field:
@@ -138,31 +138,31 @@ class sol_utils():
             if self.solver.comm.rank == 0:
                 if numres==1:
                     if not sub:
-                        print(('{:<'+str(prfxlen)+'s}{:<6s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ','timings'))
-                        print(('{:<'+str(prfxlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ','timings'))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
                     else:
                         print(' ')
                         print('       ****************** 0D model solve ******************')
-                        print(('{:<'+str(prfxlen)+'s}{:<6s}{:<6s}{:<25s}{:<3s}{:<7s}').format(' ',' ','it |',eq1,'| ','timings'))
-                        print(('{:<'+str(prfxlen)+'s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ',' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<6s}{:<25s}{:<3s}{:<7s}').format(' ',' ','it |',eq1,'| ','timings'))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ',' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
                 elif numres==2:
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ','timings'))
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ','timings'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ','te','ts'))
                 elif numres==3:
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ','timings'))
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ','timings'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ','te','ts'))
                 elif numres==4:
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ','timings'))
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ','timings'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','te','ts'))
                 elif numres==5:
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ','timings'))
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ','timings'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','te','ts'))
                 elif numres==6:
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ','timings'))
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ','timings'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','te','ts'))
                 elif numres==7:
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ',eq7,'| ','timings'))
-                    print(('{:<'+str(prfxlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','||r_'+v7+'||_2','||Δ'+v7+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ',eq7,'| ','timings'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','||r_'+v7+'||_2','||Δ'+v7+'||_2','| ','te','ts'))
                 else:
                     raise RuntimeError("Error. You should not be here!")
                 sys.stdout.flush()
@@ -176,21 +176,21 @@ class sol_utils():
 
                 if numres==1:
                     if not sub:
-                        print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',te,' ',' '))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',te,' ',' '))
                     else:
-                        print(('{:<'+str(prfxlen)+'s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',' ',it,'| ',resnorms['res1'],' ',' ','  |  ',te,' ',' '))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',' ',it,'| ',resnorms['res1'],' ',' ','  |  ',te,' ',' '))
                 elif numres==2:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',te,' ',' '))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',te,' ',' '))
                 elif numres==3:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',te,' ',' '))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',te,' ',' '))
                 elif numres==4:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',te,' ',' '))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',te,' ',' '))
                 elif numres==5:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',resnorms['res5'],' ',' ','  |  ',te,' ',' '))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',resnorms['res5'],' ',' ','  |  ',te,' ',' '))
                 elif numres==6:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',resnorms['res5'],' ',' ','  |  ',resnorms['res6'],' ',' ','  |  ',te,' ',' '))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',resnorms['res5'],' ',' ','  |  ',resnorms['res6'],' ',' ','  |  ',te,' ',' '))
                 elif numres==7:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',resnorms['res5'],' ',' ','  |  ',resnorms['res6'],' ',' ','  |  ',resnorms['res7'],' ',' ','  |  ',te,' ',' '))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}').format(' ',it,'| ',resnorms['res1'],' ',' ','  |  ',resnorms['res2'],' ',' ','  |  ',resnorms['res3'],' ',' ','  |  ',resnorms['res4'],' ',' ','  |  ',resnorms['res5'],' ',' ','  |  ',resnorms['res6'],' ',' ','  |  ',resnorms['res7'],' ',' ','  |  ',te,' ',' '))
                 else:
                     raise RuntimeError("Number of residual norms inconsistent.")
                 sys.stdout.flush()
@@ -199,33 +199,33 @@ class sol_utils():
 
                 if numres==1:
                     if not sub:
-                        print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',te,' ',ts))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',te,' ',ts))
                     else:
-                        print(('{:<'+str(prfxlen)+'s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',te,' ',ts))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',te,' ',ts))
                 elif numres==2:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',te,' ',ts))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',te,' ',ts))
                 elif numres==3:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',te,' ',ts))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',te,' ',ts))
                 elif numres==4:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',te,' ',ts))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',te,' ',ts))
                 elif numres==5:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',te,' ',ts))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',te,' ',ts))
                 elif numres==6:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',resnorms['res6'],' ',incnorms['inc6'],'  |  ',te,' ',ts))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',resnorms['res6'],' ',incnorms['inc6'],'  |  ',te,' ',ts))
                 elif numres==7:
-                    print(('{:<'+str(prfxlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',resnorms['res6'],' ',incnorms['inc6'],'  |  ',resnorms['res7'],' ',incnorms['inc7'],'  |  ',te,' ',ts))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',resnorms['res2'],' ',incnorms['inc2'],'  |  ',resnorms['res3'],' ',incnorms['inc3'],'  |  ',resnorms['res4'],' ',incnorms['inc4'],'  |  ',resnorms['res5'],' ',incnorms['inc5'],'  |  ',resnorms['res6'],' ',incnorms['inc6'],'  |  ',resnorms['res7'],' ',incnorms['inc7'],'  |  ',te,' ',ts))
                 else:
                     raise RuntimeError("Number of residual norms inconsistent.")
                 sys.stdout.flush()
 
 
-    def print_linear_iter(self, it, rnorm, prfxlen=1):
+    def print_linear_iter(self, it, rnorm):
 
         if it == 0:
             self.rnorm_start = rnorm
             if self.solver.comm.rank == 0:
                 print(' ')
-                print(('{:<'+str(prfxlen)+'s}{:<8s}{:<47s}').format(' ',' ','***************** linear solve ****************'))
+                print(('{:<'+str(self.solver.indlen)+'s}{:<8s}{:<47s}').format(' ',' ','***************** linear solve ****************'))
                 sys.stdout.flush()
 
         if it % self.solver.print_liniter_every == 0:
@@ -235,11 +235,11 @@ class sol_utils():
             else: raise ValueError("Unknown res_lin_monitor value. Choose 'rel' or 'abs'.")
 
             if self.solver.comm.rank == 0:
-                print(('{:<'+str(prfxlen)+'s}{:<17s}{:<4d}{:<21s}{:<4e}').format(' ','        lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
+                print(('{:<'+str(self.solver.indlen)+'s}{:<17s}{:<4d}{:<21s}{:<4e}').format(' ','        lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
                 sys.stdout.flush()
 
 
-    def print_linear_iter_last(self, it, rnorm, conv_reason, prfxlen=1):
+    def print_linear_iter_last(self, it, rnorm, conv_reason):
 
         if self.solver.res_lin_monitor=='rel': resnorm = rnorm/self.rnorm_start
         elif self.solver.res_lin_monitor=='abs': resnorm = rnorm
@@ -247,9 +247,9 @@ class sol_utils():
 
         if self.solver.comm.rank == 0:
             if it % self.solver.print_liniter_every != 0: # otherwise already printed
-                print(('{:<'+str(prfxlen)+'s}{:<17s}{:<4d}{:<21s}{:<4e}').format(' ','        lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
+                print(('{:<'+str(self.solver.indlen)+'s}{:<17s}{:<4d}{:<21s}{:<4e}').format(' ','        lin. it.: ',it,'     '+self.solver.res_lin_monitor+'. res. norm:',resnorm))
             # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.ConvergedReason-class.html for converge codes
-            print(('{:<'+str(prfxlen)+'s}{:<8s}{:<13s}{:<18s}{:<2d}{:<14s}').format(' ',' ','************ ',' PETSc conv code: ',conv_reason,' *************'))
+            print(('{:<'+str(self.solver.indlen)+'s}{:<8s}{:<13s}{:<18s}{:<2d}{:<14s}').format(' ',' ','************ ',' PETSc conv code: ',conv_reason,' *************'))
             if not self.solver.pb[0].print_subiter: print(' ') # no extra line if we have an "intermediate" print from another model... TODO: Find a nicer solution here...
             sys.stdout.flush()
 

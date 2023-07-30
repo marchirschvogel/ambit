@@ -218,34 +218,36 @@ class FluidmechanicsAleProblem(problem_base):
         self.pbf.set_problem_residual_jacobian_forms()
         self.pba.set_problem_residual_jacobian_forms()
 
-        tes = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation for fluid-ALE coupling...')
-            sys.stdout.flush()
+        if self.coupling_strategy=='monolithic':
 
-        if not bool(self.pbf.io.duplicate_mesh_domains):
-            self.weakform_lin_pd = sum(self.weakform_lin_pd)
+            tes = time.time()
+            if self.comm.rank == 0:
+                print('FEM form compilation for fluid-ALE coupling...')
+                sys.stdout.flush()
 
-        # coupling
-        if self.io.USE_MIXED_DOLFINX_BRANCH:
-            self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.pbf.io.entity_maps)
-            self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.pbf.io.entity_maps)
-            if self.pbf.num_dupl > 1:
-                self.jac_pd_ = []
-                for j in range(self.pbf.num_dupl):
-                    self.jac_pd_.append([self.jac_pd[j]])
-            if self.have_weak_dirichlet_fluid_ale:
-                self.jac_dv = fem.form(self.weakform_lin_dv, entity_maps=self.pbf.io.entity_maps)
-        else:
-            self.jac_vd = fem.form(self.weakform_lin_vd)
-            self.jac_pd = fem.form(self.weakform_lin_pd)
-            if self.have_weak_dirichlet_fluid_ale:
-                self.jac_dv = fem.form(self.weakform_lin_dv)
+            if not bool(self.pbf.io.duplicate_mesh_domains):
+                self.weakform_lin_pd = sum(self.weakform_lin_pd)
 
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('FEM form compilation for fluid-ALE coupling finished, te = %.2f s' % (tee))
-            sys.stdout.flush()
+            # coupling
+            if self.io.USE_MIXED_DOLFINX_BRANCH:
+                self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.pbf.io.entity_maps)
+                self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.pbf.io.entity_maps)
+                if self.pbf.num_dupl > 1:
+                    self.jac_pd_ = []
+                    for j in range(self.pbf.num_dupl):
+                        self.jac_pd_.append([self.jac_pd[j]])
+                if self.have_weak_dirichlet_fluid_ale:
+                    self.jac_dv = fem.form(self.weakform_lin_dv, entity_maps=self.pbf.io.entity_maps)
+            else:
+                self.jac_vd = fem.form(self.weakform_lin_vd)
+                self.jac_pd = fem.form(self.weakform_lin_pd)
+                if self.have_weak_dirichlet_fluid_ale:
+                    self.jac_dv = fem.form(self.weakform_lin_dv)
+
+            tee = time.time() - tes
+            if self.comm.rank == 0:
+                print('FEM form compilation for fluid-ALE coupling finished, te = %.2f s' % (tee))
+                sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):

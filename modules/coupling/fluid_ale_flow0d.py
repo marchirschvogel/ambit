@@ -125,20 +125,22 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             print('FEM form compilation for fluid-0D finished, te = %.2f s' % (tee))
             sys.stdout.flush()
 
-        tes = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation for ALE-0D coupling...')
-            sys.stdout.flush()
+        if self.coupling_strategy=='monolithic':
 
-        self.dcqd_form = []
+            tes = time.time()
+            if self.comm.rank == 0:
+                print('FEM form compilation for ALE-0D coupling...')
+                sys.stdout.flush()
 
-        for i in range(self.pbf0.num_coupling_surf):
-            self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i]))
+            self.dcqd_form = []
 
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('FEM form compilation for ALE-0D finished, te = %.2f s' % (tee))
-            sys.stdout.flush()
+            for i in range(self.pbf0.num_coupling_surf):
+                self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i]))
+
+            tee = time.time() - tes
+            if self.comm.rank == 0:
+                print('FEM form compilation for ALE-0D finished, te = %.2f s' % (tee))
+                sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -262,6 +264,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         if isoptions['rom_to_new']:
             iset_s = iset_s.expand(iset_r) # add to 0D block
+            iset_s.sort() # should be sorted, otherwise PETSc may struggle to extract block
 
         # for convenience, add ALE as last in list (since we might want to address this with a decoupled block solve)
         if isoptions['lms_to_p']:
