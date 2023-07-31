@@ -250,7 +250,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
-            iset_r = PETSc.IS().createStride(len(rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_r = PETSc.IS().createGeneral(rom.im_rom_r, comm=self.comm)
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
@@ -266,7 +266,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             iset_s = iset_s.expand(iset_r) # add to 0D block
             iset_s.sort() # should be sorted, otherwise PETSc may struggle to extract block
 
-        # for convenience, add ALE as last in list (since we might want to address this with a decoupled block solve)
         if isoptions['lms_to_p']:
             iset_p = iset_p.expand(iset_s) # add to pressure block - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
             return [iset_v, iset_p, iset_d]

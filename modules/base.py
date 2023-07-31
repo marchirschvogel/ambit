@@ -239,7 +239,7 @@ class solver_base():
             print('{:<55s}{:<1.1f}'.format('Average number of nonlinear iterations per time step: ',self.ni/N))
             print('{:<55s}{:<1d}'.format('Maximum number of nonlinear iterations in a time step: ',max(self.ni_)))
 
-            if self.solnln.solvetype=='iterative':
+            if self.solnln.solvetype[0]=='iterative':
                 print(' ')
                 print('{:<55s}{:<1d}'.format('Total number of linear iterations: ',self.li))
                 print('{:<55s}{:<1.1f}'.format('Average number of linear iterations per time step: ',self.li/N))

@@ -336,7 +336,7 @@ class FluidmechanicsAleProblem(problem_base):
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
-            iset_r = PETSc.IS().createStride(len(rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_r = PETSc.IS().createGeneral(rom.im_rom_r, comm=self.comm)
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
@@ -345,7 +345,6 @@ class FluidmechanicsAleProblem(problem_base):
         offset_d = offset_p + self.pbf.p.vector.getLocalSize()
         iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
-        # for convenience, add ALE as last in list (since we might want to address this with a decoupled block solve)
         if isoptions['rom_to_new']:
             return [iset_v, iset_p, iset_r, iset_d]
         else:

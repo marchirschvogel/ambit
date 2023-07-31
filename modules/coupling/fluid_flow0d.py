@@ -370,7 +370,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
-            iset_r = PETSc.IS().createStride(len(rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_r = PETSc.IS().createGeneral(rom.im_rom_r, comm=self.comm)
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
