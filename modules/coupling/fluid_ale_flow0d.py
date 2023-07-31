@@ -68,6 +68,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.noperiodicref = 1
 
         self.localsolve = False
+        self.print_subiter = self.pbf0.print_subiter
 
         # NOTE: Fluid and ALE function spaces should be of the same type, but are different objects.
         # For some reason, when applying a function from one funtion space as DBC to another function space,
