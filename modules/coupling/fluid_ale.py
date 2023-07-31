@@ -345,10 +345,17 @@ class FluidmechanicsAleProblem(problem_base):
         offset_d = offset_p + self.pbf.p.vector.getLocalSize()
         iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
+        if isoptions['ale_to_v']:
+            iset_v = iset_v.expand(iset_d) # add ALE to velocity block
+
         if isoptions['rom_to_new']:
-            return [iset_v, iset_p, iset_r, iset_d]
+            ilist = [iset_v, iset_p, iset_r, iset_d]
         else:
-            return [iset_v, iset_p, iset_d]
+            ilist = [iset_v, iset_p, iset_d]
+
+        if isoptions['ale_to_v']: ilist.pop(-1)
+
+        return ilist
 
 
     # DEPRECATED: This is something we should actually not do! It will mess with gradients we need w.r.t. the reference (e.g. for FrSI)

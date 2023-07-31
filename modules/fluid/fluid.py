@@ -785,9 +785,11 @@ class FluidmechanicsProblem(problem_base):
         iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
-            return [iset_v, iset_p, iset_r]
+            ilist = [iset_v, iset_p, iset_r]
         else:
-            return [iset_v, iset_p]
+            ilist = [iset_v, iset_p]
+
+        return ilist
 
 
     # valve law on "immersed" surface (an internal boundary)

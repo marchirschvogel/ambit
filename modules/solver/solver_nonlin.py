@@ -171,10 +171,15 @@ class solver_nonlinear:
 
         try: self.iset_options = solver_params['indexset_options']
         except: self.iset_options = {}
-        is_option_keys = ['lms_to_p','lms_to_v','rom_to_new']
+        is_option_keys = ['lms_to_p','lms_to_v','rom_to_new','ale_to_v']
         # revert to defaults if not set by the user
         for k in is_option_keys:
             if k not in self.iset_options.keys(): self.iset_options[k] = False
+
+        if any(list(self.iset_options.values())):
+            self.merge_prec_mat = True
+        else:
+            self.merge_prec_mat = False
 
         try: self.print_local_iter = solver_params['print_local_iter']
         except: self.print_local_iter = False
@@ -520,7 +525,7 @@ class solver_nonlinear:
 
                         # if index sets do not align with the nested matrix structure
                         # anymore, we need a merged matrix to extract the submats
-                        if self.iset_options['rom_to_new'] or self.iset_options['lms_to_p'] or self.iset_options['lms_to_v']:
+                        if self.merge_prec_mat:
                             P = PETSc.Mat()
                             P_nest.convert("aij", out=P)
                             P.assemble()

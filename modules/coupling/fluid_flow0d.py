@@ -385,12 +385,14 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         if isoptions['lms_to_p']:
             iset_p = iset_p.expand(iset_s) # add to pressure block
-            return [iset_v, iset_p]
+            ilist = [iset_v, iset_p]
         elif isoptions['lms_to_v']:
             iset_v = iset_u.expand(iset_s) # add to velocity block (could be bad...)
-            return [iset_v, iset_p]
+            ilist = [iset_v, iset_p]
         else:
-            return [iset_v, iset_p, iset_s]
+            ilist = [iset_v, iset_p, iset_s]
+
+        return ilist
 
 
     ### now the base routines for this problem

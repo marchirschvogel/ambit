@@ -266,14 +266,21 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             iset_s = iset_s.expand(iset_r) # add to 0D block
             iset_s.sort() # should be sorted, otherwise PETSc may struggle to extract block
 
+        if isoptions['ale_to_v']:
+            iset_v = iset_v.expand(iset_d) # add ALE to velocity block
+
         if isoptions['lms_to_p']:
             iset_p = iset_p.expand(iset_s) # add to pressure block - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
-            return [iset_v, iset_p, iset_d]
+            ilist = [iset_v, iset_p, iset_d]
         elif isoptions['lms_to_v']:
             iset_v = iset_v.expand(iset_s) # add to velocity block (could be bad...) - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
-            return [iset_v, iset_p, iset_d]
+            ilist = [iset_v, iset_p, iset_d]
         else:
-            return [iset_v, iset_p, iset_s, iset_d]
+            ilist = [iset_v, iset_p, iset_s, iset_d]
+
+        if isoptions['ale_to_v']: ilist.pop(-1)
+
+        return ilist
 
 
     ### now the base routines for this problem
