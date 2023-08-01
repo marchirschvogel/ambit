@@ -659,7 +659,7 @@ class solver_nonlinear:
                     for n in range(self.nfields[npr]):
                         self.reset_step(self.x[npr][n], x_start[npr][n], self.is_ghosted[npr][n])
                         if self.pb[npr].sub_solve: # can only be a 0D model so far...
-                            self.reset_step(self.pb.pb0.s, s_start, 0)
+                            self.reset_step(self.pb[npr].pb0.s, s_start, 0)
 
                     # destroy PETSc vecs...
                     for n in range(self.nfields[npr]):

@@ -63,7 +63,7 @@ if not present, install: (seems that uidmap needs to be installed, which require
 
 * If 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
 
-``cd ambit && mkdir modules/ext && pip3 install --system --target=modules/ext mpmath --no-deps --no-cache-dir && pip3 install --system --target=modules/ext sympy --no-deps --no-cache-dir && cd ..``
+``cd ambit && mkdir modules/ext && pip3 install --target=modules/ext mpmath --no-deps --no-cache-dir && pip3 install --target=modules/ext sympy --no-deps --no-cache-dir && cd ..``
 
 * Launch the container in a konsole/terminal window by simply typing
 
