@@ -52,7 +52,7 @@ class sol_utils():
 
         if ptype=='solid':
             if self.solver.pb[0].incompressible_2field:
-                eq1, eq2 = 'solid momentum', 'solid continuity'
+                eq1, eq2 = 'solid momentum', 'solid incompressibility'
                 v1, v2 = 'u', 'p'
                 numres = 2
             else:
@@ -78,11 +78,11 @@ class sol_utils():
         elif ptype=='solid_flow0d':
             if self.solver.pb[0].incompressible_2field:
                 if self.solver.pb[0].coupling_type == 'monolithic_direct':
-                    eq1, eq2, eq3 = 'solid momentum', 'solid continuity', 'flow-0d'
+                    eq1, eq2, eq3 = 'solid momentum', 'solid incompressibility', 'flow-0d'
                     v1, v2, v3 = 'u', 'p', 's'
                 if self.solver.pb[0].coupling_type == 'monolithic_lagrange':
-                    eq1, eq2, eq3 = 'solid momentum', 'solid continuity', 'lm constraint'
-                    v1, v2, v3 = 'u', 'p', 'lm'
+                    eq1, eq2, eq3 = 'solid momentum', 'solid incompressibility', 'lm constraint'
+                    v1, v2, v3 = 'u', 'p', 'Λ'
                 numres = 3
             else:
                 if self.solver.pb[0].coupling_type == 'monolithic_direct':
@@ -90,12 +90,12 @@ class sol_utils():
                     v1, v2 = 'u', 's'
                 if self.solver.pb[0].coupling_type == 'monolithic_lagrange':
                     eq1, eq2 = 'solid momentum', 'lm constraint'
-                    v1, v2 = 'u', 'lm'
+                    v1, v2 = 'u', 'Λ'
                 numres = 2
         elif ptype=='solid_constraint':
             if self.solver.pb[0].incompressible_2field:
-                eq1, eq2, eq3 = 'solid momentum', 'solid continuity', 'lm constraint'
-                v1, v2, v3 = 'u', 'p', 'lm'
+                eq1, eq2, eq3 = 'solid momentum', 'solid incompressibility', 'lm constraint'
+                v1, v2, v3 = 'u', 'p', 'Λ'
                 numres = 3
             else:
                 eq1, eq2 = 'solid momentum', 'lm constraint'
@@ -103,7 +103,7 @@ class sol_utils():
                 numres = 2
         elif ptype=='fluid_flow0d':
             eq1, eq2, eq3 = 'fluid momentum', 'fluid continuity', 'lm constraint'
-            v1, v2, v3 = 'v', 'p', 'lm'
+            v1, v2, v3 = 'v', 'p', 'Λ'
             numres = 3
         elif ptype=='fluid_ale':
             eq1, eq2, eq3 = 'fluid momentum', 'fluid continuity', 'ALE momentum'
@@ -111,25 +111,25 @@ class sol_utils():
             numres = 3
         elif ptype=='fluid_ale_flow0d':
             eq1, eq2, eq3, eq4 = 'fluid momentum', 'fluid continuity', 'lm constraint', 'ALE momentum'
-            v1, v2, v3, v4 = 'v', 'p', 'lm', 'd'
+            v1, v2, v3, v4 = 'v', 'p', 'Λ', 'd'
             numres = 4
         elif ptype=='fsi':
             if self.solver.pb[0].incompressible_2field:
-                eq1, eq2, eq3, eq4, eq5, eq6 = 'solid momentum', 'solid continuity', 'fluid momentum', 'fluid continuity', 'LM constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5, v6 = 'u', 'p', 'v', 'p', 'LM', 'd'
+                eq1, eq2, eq3, eq4, eq5, eq6 = 'solid momentum', 'solid incompressibility', 'fluid momentum', 'fluid continuity', 'LM constraint', 'ALE momentum'
+                v1, v2, v3, v4, v5, v6 = 'u', 'p', 'v', 'p', 'λ', 'd'
                 numres = 6
             else:
                 eq1, eq2, eq3, eq4, eq5 = 'solid momentum', 'fluid momentum', 'fluid continuity', 'LM constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5 = 'u', 'v', 'p', 'LM', 'd'
+                v1, v2, v3, v4, v5 = 'u', 'v', 'p', 'λ', 'd'
                 numres = 5
         elif ptype=='fsi_flow0d':
             if self.solver.pb[0].incompressible_2field:
-                eq1, eq2, eq3, eq4, eq5, eq6, eq7 = 'solid momentum', 'solid continuity', 'fluid momentum', 'fluid continuity', 'LM constraint', 'lm constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5, v6, v7 = 'u', 'p', 'v', 'p', 'LM', 'lm', 'd'
+                eq1, eq2, eq3, eq4, eq5, eq6, eq7 = 'solid momentum', 'solid incompressibility', 'fluid momentum', 'fluid continuity', 'LM constraint', 'lm constraint', 'ALE momentum'
+                v1, v2, v3, v4, v5, v6, v7 = 'u', 'p', 'v', 'p', 'λ', 'Λ', 'd'
                 numres = 7
             else:
                 eq1, eq2, eq3, eq4, eq5, eq6 = 'solid momentum', 'fluid momentum', 'fluid continuity', 'LM constraint', 'lm constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5, v6 = 'u', 'v', 'p', 'LM', 'lm', 'd'
+                v1, v2, v3, v4, v5, v6 = 'u', 'v', 'p', 'λ', 'Λ', 'd'
                 numres = 6
         else:
             raise NameError("Unknown problem type!")

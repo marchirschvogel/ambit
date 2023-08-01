@@ -570,6 +570,8 @@ class solver_nonlinear:
 
                         self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
 
+                tes = time.time()
+
                 # get increment norm
                 for n in range(self.nfields[npr]):
                     self.incnorms[npr]['inc'+str(n+1)] = del_x[npr][n].norm()
@@ -604,6 +606,8 @@ class solver_nonlinear:
                         if mpr!=npr:
                             for n in range(self.nfields[mpr]): self.r_list[mpr][n].destroy()
                             self.residual_problem_actions(t, mpr, del_x, localdata)
+
+                te += time.time() - tes
 
                 self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], incnorms=self.incnorms[npr], ts=ts, te=te, ptype=self.ptype[npr])
 
@@ -867,6 +871,8 @@ class solver_nonlinear_ode(solver_nonlinear):
             self.ksp[0].solve(-r, ds)
             ts = time.time() - tss
 
+            tes = time.time()
+
             # update solution
             self.pb.s.axpy(1.0, ds)
 
@@ -877,6 +883,8 @@ class solver_nonlinear_ode(solver_nonlinear):
 
             # get norms
             self.resnorms['res1'], self.incnorms['inc1'] = r.norm(), ds.norm()
+
+            te += time.time() - tes
 
             if print_iter: self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms, incnorms=self.incnorms, ts=ts, te=te, sub=sub, ptype=self.ptype)
 
