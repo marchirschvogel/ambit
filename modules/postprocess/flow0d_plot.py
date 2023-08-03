@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import argparse
 import distutils.util
+import importlib.util
 
 # postprocessing script for flow0d model results (needs gnuplot to be installed when plot generation is desired)
 # can/probably should be run outside of Docker container
@@ -24,7 +25,7 @@ parser.add_argument('-ted', '--tenddias', dest='ted', action='store', type=float
 parser.add_argument('-tes', '--tendsyst', dest='tes', action='store', type=float, default=0.53) # end-systolic time point (relative to cycle time)
 parser.add_argument('-T', '--Tcycl', dest='T', action='store', type=float, default=1.0) # cardiac cycle time
 parser.add_argument('-m', '--model', dest='m', action='store', type=str, default='syspul') # type of 0D model
-parser.add_argument('-mc', '--modelcoronary', dest='mc', action='store', default=None) # type of coronary sub-model
+parser.add_argument('-mc', '--modelcoronary', dest='mc', action='store', default=None) # type of coronary sub-model: None, 'std_lr', 'std'
 parser.add_argument('-cf', '--calcfunc', dest='cf', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=True) # whether to calculate funtion parameters (like stroke volume, cardiac output, ...)
 parser.add_argument('-ip', '--inducepertafter', dest='ip', action='store', type=int, default=-1) # at which cycle a perturbation has been introduced (e.g. valvular defect/repair)
 parser.add_argument('-mgr', '--multgandr', dest='mgr', action='store', type=lambda x:bool(distutils.util.strtobool(x)), default=False) # whether we have results from multiscale G&R analysis
@@ -50,29 +51,37 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
 
     if model == 'syspul':
 
-        import cardiovascular0D_syspul
-        cardiovascular0D_syspul.postprocess_groups_syspul(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspul', str(fpath)+'/../flow0d/cardiovascular0D_syspul.py')
+        module_name = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module_name)
+        module_name.postprocess_groups_syspul(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcap':
 
-        import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcap(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspulcap', str(fpath)+'/../flow0d/cardiovascular0D_syspulcap.py')
+        module_name = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module_name)
+        module_name.postprocess_groups_syspulcap(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcapcor':
 
-        import cardiovascular0D_syspulcap
-        cardiovascular0D_syspulcap.postprocess_groups_syspulcapcor(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspulcap', str(fpath)+'/../flow0d/cardiovascular0D_syspulcap.py')
+        module_name = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module_name)
+        module_name.postprocess_groups_syspulcapcor(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcaprespir':
 
-        import cardiovascular0D_syspulcaprespir
-        cardiovascular0D_syspulcaprespir.postprocess_groups_syspulcaprespir(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspulcaprespir', str(fpath)+'/../flow0d/cardiovascular0D_syspulcaprespir.py')
+        module_name = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module_name)
+        module_name.postprocess_groups_syspulcaprespir(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
@@ -525,7 +534,9 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
                 if (model == 'syspulcap' or model == 'syspulcapcor' or model == 'syspulcaprespir'):
                     xextend, yextend     = 1.0, 1.3
                     maxrows, maxcols, sl, swd = 3, 5, 10, 50
-                if coronarymodel is not None:
+                if coronarymodel == 'ZCRp_CRd_lr' or coronarymodel == 'std_lr':
+                    maxrows, maxcols, sl, swd = 2, 5, 20, 40
+                if coronarymodel == 'ZCRp_CRd' or coronarymodel == 'std': # TODO: Same settings as for _lr?
                     maxrows, maxcols, sl, swd = 2, 5, 20, 40
             if 'pres_vol_v' in list(groups[g].keys())[0]:
                 x1value, x2value     = 'V_{\\\mathrm{v}}', ''

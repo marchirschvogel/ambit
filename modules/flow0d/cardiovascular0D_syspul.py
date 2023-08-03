@@ -583,7 +583,7 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
                 'tex'              : ['$Q_{\\\mathrm{at}}^{\\\ell}$', '$Q_{\\\mathrm{v}}^{\\\ell}$', '$Q_{\\\mathrm{at}}^{r}$', '$Q_{\\\mathrm{v}}^{r}$'],
                 'lines'            : [1, 2, 16, 17]})
 
-    if coronarymodel == 'ZCRp_CRd_lr':
+    if coronarymodel == 'ZCRp_CRd_lr' or coronarymodel == 'std_lr':
 
         # index 6
         groups.append({'flux_time_cor'  : ['q_corp_sys_l_in', 'q_corp_sys_l', 'q_corp_sys_r_in', 'q_corp_sys_r', 'q_cord_sys_l', 'q_cord_sys_r'],
@@ -605,7 +605,7 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
         groups[5]['lines'].append(10)
         groups[5]['lines'].append(11)
 
-    if coronarymodel == 'ZCRp_CRd':
+    elif coronarymodel == 'ZCRp_CRd' or coronarymodel == 'std':
 
         # index 6
         groups.append({'flux_time_cor'  : ['q_corp_sys_in', 'q_corp_sys', 'q_ven2_sys'],
@@ -620,6 +620,13 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
 
         groups[5]['lines'].append(5)
         groups[5]['lines'].append(10)
+
+    elif coronarymodel is None:
+
+        pass
+
+    else:
+        raise RuntimeError("You've specified a non-existent coronarymodel!")
 
     # all volumes summed up for conservation check
     groups[5]['vol_time_compart'].append('V_all')
