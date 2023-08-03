@@ -10,7 +10,6 @@
 import time, sys, copy, math
 from dolfinx import fem, io
 from petsc4py import PETSc
-from slepc4py import SLEPc
 import numpy as np
 from meshutils import gather_surface_dof_indices
 
@@ -150,6 +149,8 @@ class ModelOrderReduction():
 
     # Proper Orthogonal Decomposition
     def POD(self):
+
+        from slepc4py import SLEPc # only import when we do POD
 
         ts = time.time()
 
