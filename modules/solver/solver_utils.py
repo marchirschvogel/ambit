@@ -82,7 +82,7 @@ class sol_utils():
                     v1, v2, v3 = 'u', 'p', 's'
                 if self.solver.pb[0].coupling_type == 'monolithic_lagrange':
                     eq1, eq2, eq3 = 'solid momentum', 'solid incompressibility', 'lm constraint'
-                    v1, v2, v3 = 'u', 'p', 'Λ'
+                    v1, v2, v3 = 'u', 'p', 'LM' # using greek symbol print (Λ) is not supported everywhere...
                 numres = 3
             else:
                 if self.solver.pb[0].coupling_type == 'monolithic_direct':
@@ -90,12 +90,12 @@ class sol_utils():
                     v1, v2 = 'u', 's'
                 if self.solver.pb[0].coupling_type == 'monolithic_lagrange':
                     eq1, eq2 = 'solid momentum', 'lm constraint'
-                    v1, v2 = 'u', 'Λ'
+                    v1, v2 = 'u', 'LM' # using greek symbol print (Λ) is not supported everywhere...
                 numres = 2
         elif ptype=='solid_constraint':
             if self.solver.pb[0].incompressible_2field:
                 eq1, eq2, eq3 = 'solid momentum', 'solid incompressibility', 'lm constraint'
-                v1, v2, v3 = 'u', 'p', 'Λ'
+                v1, v2, v3 = 'u', 'p', 'LM' # using greek symbol print (Λ) is not supported everywhere...
                 numres = 3
             else:
                 eq1, eq2 = 'solid momentum', 'lm constraint'
@@ -103,7 +103,7 @@ class sol_utils():
                 numres = 2
         elif ptype=='fluid_flow0d':
             eq1, eq2, eq3 = 'fluid momentum', 'fluid continuity', 'lm constraint'
-            v1, v2, v3 = 'v', 'p', 'Λ'
+            v1, v2, v3 = 'v', 'p', 'LM' # using greek symbol print (Λ) is not supported everywhere...
             numres = 3
         elif ptype=='fluid_ale':
             eq1, eq2, eq3 = 'fluid momentum', 'fluid continuity', 'ALE momentum'
@@ -111,58 +111,59 @@ class sol_utils():
             numres = 3
         elif ptype=='fluid_ale_flow0d':
             eq1, eq2, eq3, eq4 = 'fluid momentum', 'fluid continuity', 'lm constraint', 'ALE momentum'
-            v1, v2, v3, v4 = 'v', 'p', 'Λ', 'd'
+            v1, v2, v3, v4 = 'v', 'p', 'LM', 'd' # using greek symbol print (Λ) is not supported everywhere...
             numres = 4
         elif ptype=='fsi':
             if self.solver.pb[0].incompressible_2field:
                 eq1, eq2, eq3, eq4, eq5, eq6 = 'solid momentum', 'solid incompressibility', 'fluid momentum', 'fluid continuity', 'LM constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5, v6 = 'u', 'p', 'v', 'p', 'λ', 'd'
+                v1, v2, v3, v4, v5, v6 = 'u', 'p', 'v', 'p', 'lm', 'd' # using greek symbol print (λ) is not supported everywhere...
                 numres = 6
             else:
                 eq1, eq2, eq3, eq4, eq5 = 'solid momentum', 'fluid momentum', 'fluid continuity', 'LM constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5 = 'u', 'v', 'p', 'λ', 'd'
+                v1, v2, v3, v4, v5 = 'u', 'v', 'p', 'lm', 'd' # using greek symbol print (λ) is not supported everywhere...
                 numres = 5
         elif ptype=='fsi_flow0d':
             if self.solver.pb[0].incompressible_2field:
                 eq1, eq2, eq3, eq4, eq5, eq6, eq7 = 'solid momentum', 'solid incompressibility', 'fluid momentum', 'fluid continuity', 'LM constraint', 'lm constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5, v6, v7 = 'u', 'p', 'v', 'p', 'λ', 'Λ', 'd'
+                v1, v2, v3, v4, v5, v6, v7 = 'u', 'p', 'v', 'p', 'lm', 'LM', 'd' # using greek symbol print (λ, Λ) is not supported everywhere...
                 numres = 7
             else:
                 eq1, eq2, eq3, eq4, eq5, eq6 = 'solid momentum', 'fluid momentum', 'fluid continuity', 'LM constraint', 'lm constraint', 'ALE momentum'
-                v1, v2, v3, v4, v5, v6 = 'u', 'v', 'p', 'λ', 'Λ', 'd'
+                v1, v2, v3, v4, v5, v6 = 'u', 'v', 'p', 'lm', 'LM', 'd' # using greek symbol print (λ, Λ) is not supported everywhere...
                 numres = 6
         else:
             raise NameError("Unknown problem type!")
 
+        # using greek symbol print (Δ) is not supported everywhere... so use d instead
         if header:
             if self.solver.comm.rank == 0:
                 if numres==1:
                     if not sub:
                         print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ','timings'))
-                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ','te','ts'))
                     else:
                         print(' ')
                         print('       ****************** 0D model solve ******************')
                         print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<6s}{:<25s}{:<3s}{:<7s}').format(' ',' ','it |',eq1,'| ','timings'))
-                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ',' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ','te','ts'))
+                        print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<6s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ',' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ','te','ts'))
                 elif numres==2:
                     print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ','timings'))
-                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||d'+v2+'||_2','| ','te','ts'))
                 elif numres==3:
                     print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ','timings'))
-                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||d'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||d'+v3+'||_2','| ','te','ts'))
                 elif numres==4:
                     print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ','timings'))
-                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||d'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||d'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||d'+v4+'||_2','| ','te','ts'))
                 elif numres==5:
                     print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ','timings'))
-                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||d'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||d'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||d'+v4+'||_2','| ','||r_'+v5+'||_2','||d'+v5+'||_2','| ','te','ts'))
                 elif numres==6:
                     print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ','timings'))
-                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||d'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||d'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||d'+v4+'||_2','| ','||r_'+v5+'||_2','||d'+v5+'||_2','| ','||r_'+v6+'||_2','||d'+v6+'||_2','| ','te','ts'))
                 elif numres==7:
                     print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}').format(' ','it |',eq1,'| ',eq2,'| ',eq3,'| ',eq4,'| ',eq5,'| ',eq6,'| ',eq7,'| ','timings'))
-                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||Δ'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||Δ'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||Δ'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||Δ'+v4+'||_2','| ','||r_'+v5+'||_2','||Δ'+v5+'||_2','| ','||r_'+v6+'||_2','||Δ'+v6+'||_2','| ','||r_'+v7+'||_2','||Δ'+v7+'||_2','| ','te','ts'))
+                    print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}').format(' ','#  |','||r_'+v1+'||_2','||d'+v1+'||_2','| ' ,'||r_'+v2+'||_2','||d'+v2+'||_2','| ' ,'||r_'+v3+'||_2','||d'+v3+'||_2','| ' ,'||r_'+v4+'||_2','||d'+v4+'||_2','| ','||r_'+v5+'||_2','||d'+v5+'||_2','| ','||r_'+v6+'||_2','||d'+v6+'||_2','| ','||r_'+v7+'||_2','||d'+v7+'||_2','| ','te','ts'))
                 else:
                     raise RuntimeError("Error. You should not be here!")
                 sys.stdout.flush()
