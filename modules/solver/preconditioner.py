@@ -104,7 +104,9 @@ class schur_2x2(block_precond):
         B_Adinv_Bt = self.B.matMult(Adinv_Bt) # B diag(A)^{-1} Bt
 
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
-        self.Smod = self.C - B_Adinv_Bt
+        # compute self.Smod = self.C - B_Adinv_Bt
+        self.Smod = self.C.duplicate(copy=True)
+        self.Smod.axpy(-1., B_Adinv_Bt)
 
         # some auxiliary vecs needed in apply
         self.By1.destroy(), self.Bty2.destroy()
@@ -215,14 +217,18 @@ class schur_3x3(block_precond):
         B_Adinv_Bt = self.B.matMult(Adinv_Bt)  # B diag(A)^{-1} Bt
 
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
-        self.Smod = self.C - B_Adinv_Bt
+        # compute self.Smod = self.C - B_Adinv_Bt
+        self.Smod = self.C.duplicate(copy=True)
+        self.Smod.axpy(-1., B_Adinv_Bt)
 
         # --- Tmod = Et - B diag(A)^{-1} Dt
 
         Adinv_Dt = Adinv.matMult(self.Dt)      # diag(A)^{-1} Dt
         B_Adinv_Dt = self.B.matMult(Adinv_Dt)  # B diag(A)^{-1} Dt
 
-        self.Tmod = self.Et - B_Adinv_Dt
+        # compute self.Tmod = self.Et - B_Adinv_Dt
+        self.Tmod = self.Et.duplicate(copy=True)
+        self.Tmod.axpy(-1., B_Adinv_Dt)
 
         # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
 
@@ -246,7 +252,11 @@ class schur_3x3(block_precond):
 
         D_Adinv_Dt = self.D.matMult(Adinv_Dt)                              # D diag(A)^{-1} Dt
 
-        self.Wmod = self.R - D_Adinv_Dt - E_Smoddinv_Tmod + D_Adinv_Bt_Smoddinv_Tmod
+        # compute self.Wmod = self.R - D_Adinv_Dt - E_Smoddinv_Tmod + D_Adinv_Bt_Smoddinv_Tmod
+        self.Wmod = self.R.duplicate(copy=True)
+        self.Wmod.axpy(-1., D_Adinv_Dt)
+        self.Wmod.axpy(-1., E_Smoddinv_Tmod)
+        self.Wmod.axpy(1., D_Adinv_Bt_Smoddinv_Tmod)
 
         # some auxiliary vecs needed in apply
         self.By1.destroy(), self.Dy1.destroy(), self.DBty2.destroy(), self.Ey2.destroy(), self.Tmody3.destroy(), self.Bty2.destroy(), self.Dty3.destroy()
