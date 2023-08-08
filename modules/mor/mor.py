@@ -516,6 +516,7 @@ class ModelOrderReduction():
         # projection of main block: system matrix
         tmp = K_list[0][0].matMult(self.V) # K_00 * V
         K_list[0][0] = self.V.transposeMatMult(tmp) # V^T * K_00 * V
+        tmp.destroy()
 
         # deal with penalties that may be added to reduced residual to penalize certain modes
         if bool(self.redbasisvec_penalties):

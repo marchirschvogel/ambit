@@ -160,7 +160,8 @@ class cardiovascular0Dbase(ode):
                 ind_o = [10+num_infl[3]] # q_vin_r
             if ch == 'ao': # allow 1 in-flow, 3 ouf-flows for now...
                 ind_i = [2] # q_vout_l
-                ind_o = [16+num_infl[3]+num_infl[2], 20+num_infl[3]+num_infl[2], 5] # q_corp_sys_l_in, q_corp_sys_r_in, q_arp_sys
+                if self.cormodel: ind_o = [16+num_infl[3]+num_infl[2], 20+num_infl[3]+num_infl[2], 5] # q_corp_sys_l_in, q_corp_sys_r_in, q_arp_sys
+                else: ind_o = [5] # q_arp_sys
 
             if self.chmodels[ch]['type']=='0D_elast' or self.chmodels[ch]['type']=='0D_elast_prescr':
                 self.switch_V[i] = 1

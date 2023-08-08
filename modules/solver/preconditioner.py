@@ -41,6 +41,12 @@ class block_precond():
                 self.ksp_fields[n].getPC().setType(amgtype)
                 if amgtype=="hypre":
                     self.ksp_fields[n].getPC().setHYPREType("boomeramg")
+                # TODO: Some additional hypre options we might wanna set...
+                # opts = PETSc.Options()
+                # opts.setValue('pc_hypre_boomeramg_cycle_type', 'v') # v, w
+                # opts.setValue('pc_hypre_boomeramg_max_iter', 1)
+                # opts.setValue('pc_hypre_boomeramg_relax_type_all',  'symmetric-SOR/Jacobi')
+                # self.ksp_fields[n].getPC().setFromOptions()
             elif self.precond_fields[n]['prec'] == 'direct':
                 self.ksp_fields[n].setType("preonly")
                 self.ksp_fields[n].getPC().setType("lu")
@@ -93,7 +99,11 @@ class schur_2x2(block_precond):
         self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
 
-        ad_vec, adinv_vec = self.A.getDiagonal(), self.A.getDiagonal()
+        adinv_vec = self.A.getDiagonal()
+        # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
+        # adinv_vec = self.A.getRowSum()
+        # adinv_vec.abs()
+
         adinv_vec.reciprocal()
 
         # form diag(A)^{-1}
@@ -114,7 +124,7 @@ class schur_2x2(block_precond):
         self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
 
-        ad_vec.destroy(), adinv_vec.destroy()
+        adinv_vec.destroy()
         Adinv.destroy(), Adinv_Bt.destroy(), B_Adinv_Bt.destroy()
 
 
@@ -207,6 +217,10 @@ class schur_3x3(block_precond):
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
         adinv_vec = self.A.getDiagonal()
+        # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
+        # adinv_vec = self.A.getRowSum()
+        # adinv_vec.abs()
+
         adinv_vec.reciprocal()
 
         # form diag(A)^{-1}
@@ -233,6 +247,10 @@ class schur_3x3(block_precond):
         # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
 
         smoddinv_vec = self.Smod.getDiagonal()
+        # TODO: Check if this might be a better approximation
+        # smoddinv_vec = self.Smod.getRowSum()
+        # smoddinv_vec.abs()
+
         smoddinv_vec.reciprocal()
 
         # form diag(Smod)^{-1}
@@ -437,6 +455,10 @@ class simple_2x2(schur_2x2):
 
         # 3) update y_1
         adinv_vec = self.A.getDiagonal()
+        # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
+        # adinv_vec = self.A.getRowSum()
+        # adinv_vec.abs()
+
         adinv_vec.reciprocal()
 
         # form diag(A)^{-1}

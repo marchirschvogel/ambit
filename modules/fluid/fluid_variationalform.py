@@ -123,7 +123,7 @@ class variationalform(variationalform_base):
     def deltaW_ext_stabilized_neumann_cur(self, v, par1, par2, dboundary, w=None, Fale=None):
 
         vn = ufl.dot(v,self.n)
-        return par1*((vn**2.)/(vn**2. + 0.01*par2**2.) * ufl.min_value(vn,0.) * ufl.dot(v,self.var_v)*dboundary) # version from Esmaily Moghadam et al. 2011 if param2 = 0
+        return par1*((vn**2.)/(vn**2. + 0.01*par2**2.) * ufl.min_value(vn,0.) * ufl.dot(v,self.var_v)*dboundary) # version from Esmaily Moghadam et al. 2011 if par2 = 0
 
     # Robin condition (dashpot)
     # TeX: \int\limits_{\Gamma} c\,\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
