@@ -6,6 +6,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import sys, time
 from petsc4py import PETSc
 
 ### PETSc PC types:
@@ -13,7 +14,7 @@ from petsc4py import PETSc
 
 class block_precond():
 
-    def __init__(self, iset, precond_fields, comm=None):
+    def __init__(self, iset, precond_fields, prntdbg, comm=None):
 
         self.iset = iset
         self.precond_fields = precond_fields
@@ -22,6 +23,8 @@ class block_precond():
         self.comm = comm
         # preconditioner object
         self.P = PETSc.Mat()
+        # extra level of printing
+        self.prntdbg = prntdbg
 
 
     def create(self, pc):
@@ -87,6 +90,8 @@ class schur_2x2(block_precond):
 
     def setUp(self, pc):
 
+        tss = time.time()
+
         self.P.destroy()
 
         _, self.P = pc.getOperators()
@@ -126,6 +131,12 @@ class schur_2x2(block_precond):
 
         adinv_vec.destroy()
         Adinv.destroy(), Adinv_Bt.destroy(), B_Adinv_Bt.destroy()
+
+        tse = time.time() - tss
+        if self.prntdbg:
+            if self.comm.rank == 0:
+                print('       === PREC setup done, te = %.4f s' % (tse))
+                sys.stdout.flush()
 
 
     # computes y = P^{-1} x
@@ -198,6 +209,8 @@ class schur_3x3(block_precond):
 
 
     def setUp(self, pc):
+
+        tss = time.time()
 
         self.P.destroy()
 
@@ -289,6 +302,12 @@ class schur_3x3(block_precond):
 
         adinv_vec.destroy(), smoddinv_vec.destroy()
         Adinv.destroy(), Smoddinv.destroy(), Adinv_Bt.destroy(), B_Adinv_Bt.destroy(), Adinv_Dt.destroy(), B_Adinv_Dt.destroy(), Smoddinv_Tmod.destroy(), Bt_Smoddinv_Tmod.destroy(), Adinv_Bt_Smoddinv_Tmod.destroy(), D_Adinv_Bt_Smoddinv_Tmod.destroy(), Adinv_Bt.destroy(), E_Smoddinv_Tmod.destroy(), Adinv_Dt.destroy(), D_Adinv_Dt.destroy()
+
+        tse = time.time() - tss
+        if self.prntdbg:
+            if self.comm.rank == 0:
+                print('       === PREC setup done, te = %.4f s' % (tse))
+                sys.stdout.flush()
 
 
     # computes y = P^{-1} x
@@ -507,6 +526,8 @@ class bgs_2x2(block_precond):
 
     def setUp(self, pc):
 
+        tss = time.time()
+
         self.P.destroy()
 
         _, self.P = pc.getOperators()
@@ -523,6 +544,12 @@ class bgs_2x2(block_precond):
 
         self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+
+        tse = time.time() - tss
+        if self.prntdbg:
+            if self.comm.rank == 0:
+                print('       === PREC setup done, te = %.4f s' % (tse))
+                sys.stdout.flush()
 
 
     # computes y = P^{-1} x
@@ -586,6 +613,8 @@ class jacobi_2x2(block_precond):
 
     def setUp(self, pc):
 
+        tss = time.time()
+
         self.P.destroy()
 
         _, self.P = pc.getOperators()
@@ -594,6 +623,12 @@ class jacobi_2x2(block_precond):
 
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        tse = time.time() - tss
+        if self.prntdbg:
+            if self.comm.rank == 0:
+                print('       === PREC setup done, te = %.4f s' % (tse))
+                sys.stdout.flush()
 
 
     # computes y = P^{-1} x

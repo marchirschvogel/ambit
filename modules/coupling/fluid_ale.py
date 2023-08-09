@@ -80,6 +80,7 @@ class FluidmechanicsAleProblem(problem_base):
         self.numdof = self.pbf.numdof + self.pba.numdof
 
         self.sub_solve = False
+        self.print_debug = self.pbf.io.print_debug
 
 
     def get_problem_var_list(self):

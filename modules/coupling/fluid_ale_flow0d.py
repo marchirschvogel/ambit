@@ -84,6 +84,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.numdof = self.pbf.numdof + self.pbf0.lm.getSize() + self.pba.numdof
 
         self.sub_solve = True
+        self.print_debug = self.pbf.io.print_debug
 
 
     def get_problem_var_list(self):

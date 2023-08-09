@@ -22,6 +22,7 @@ def check_params_io(params):
                     'output_path',
                     'output_path_0D',
                     'output_path_pre',
+                    'print_debug',
                     'problem_type',
                     'restart_io_type',
                     'restart_step',

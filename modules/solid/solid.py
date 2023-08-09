@@ -363,6 +363,7 @@ class SolidmechanicsProblem(problem_base):
 
         self.pbrom = self # self-pointer needed for ROM solver access
         self.V_rom = self.V_u
+        self.print_debug = self.io.print_debug
 
 
     def get_problem_var_list(self):
@@ -741,6 +742,8 @@ class SolidmechanicsProblem(problem_base):
                     self.jac_pu = fem.form(self.weakform_lin_pu, entity_maps=self.io.entity_maps)
                     if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
                         self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
+                    else:
+                        self.jac_pp = None
             else:
                 self.res_u  = fem.form(self.weakform_u)
                 self.jac_uu = fem.form(self.weakform_lin_uu)
@@ -750,6 +753,8 @@ class SolidmechanicsProblem(problem_base):
                     self.jac_pu = fem.form(self.weakform_lin_pu)
                     if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
                         self.jac_pp = fem.form(self.weakform_lin_pp)
+                    else:
+                        self.jac_pp = None
         else:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_u  = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
@@ -813,7 +818,7 @@ class SolidmechanicsProblem(problem_base):
             K_pu.assemble()
 
             # for stress-mediated volumetric growth, K_pp is not zero!
-            if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
+            if self.jac_pp is not None:
                 K_pp = fem.petsc.assemble_matrix(self.jac_pp, [])
                 K_pp.assemble()
             else:
@@ -839,8 +844,8 @@ class SolidmechanicsProblem(problem_base):
             uvec_or0 = rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = rom.V.getLocalSize()[1]
         else:
-            uvec_or0 = self.pbs.u.vector.getOwnershipRange()[0]
-            uvec_ls = self.pbs.u.vector.getLocalSize()
+            uvec_or0 = self.u.vector.getOwnershipRange()[0]
+            uvec_ls = self.u.vector.getLocalSize()
 
         offset_u = uvec_or0 + self.p.vector.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)

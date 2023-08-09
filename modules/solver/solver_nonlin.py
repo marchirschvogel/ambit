@@ -37,6 +37,8 @@ class solver_nonlinear:
         self.pb = pb
         self.nprob = len(pb)
 
+        self.prntdbg = self.pb[0].print_debug
+
         self.x, self.is_ghosted = [[]]*self.nprob, [[]]*self.nprob
         self.nfields, self.ptype = [], []
 
@@ -181,6 +183,8 @@ class solver_nonlinear:
         else:
             self.merge_prec_mat = False
 
+        self.iset = [[]]*self.nprob
+
         try: self.print_local_iter = solver_params['print_local_iter']
         except: self.print_local_iter = False
 
@@ -227,6 +231,8 @@ class solver_nonlinear:
                 # block iterative method
                 if self.nfields[npr] > 1:
 
+                    self.iset[npr] = self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom)
+
                     self.ksp[npr].setType(self.iterative_solver) # cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html
 
                     # TODO: how to use this adaptively...
@@ -252,14 +258,13 @@ class solver_nonlinear:
 
                         self.ksp[npr].getPC().setFieldSplitType(splittype)
 
-                        iset = self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom)
-                        nsets = len(iset)
+                        nsets = len(self.iset[npr])
 
                         # normally, nsets = self.nfields, but for a surface-projected ROM (FrSI) problem, we have one more index set than fields
-                        if nsets==2:   self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]))
-                        elif nsets==3: self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]))
-                        elif nsets==4: self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]))
-                        elif nsets==5: self.ksp[npr].getPC().setFieldSplitIS(("f1", iset[0]),("f2", iset[1]),("f3", iset[2]),("f4", iset[3]),("f5", iset[4]))
+                        if nsets==2:   self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]))
+                        elif nsets==3: self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]))
+                        elif nsets==4: self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]),("f4", self.iset[npr][3]))
+                        elif nsets==5: self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]),("f4", self.iset[npr][3]),("f5", self.iset[npr][4]))
                         else: raise RuntimeError("Currently, no more than 5 fields/index sets are supported.")
 
                         # get the preconditioners for each block
@@ -289,37 +294,37 @@ class solver_nonlinear:
                     elif self.block_precond[npr] == 'schur2x2':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom),self.precond_fields[npr],self.comm)
+                        bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'simple2x2':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.simple_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom),self.precond_fields[npr],self.comm)
+                        bj = preconditioner.simple_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur3x3':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_3x3(self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom),self.precond_fields[npr],self.comm)
+                        bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur4x4':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_4x4(self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom),self.precond_fields[npr],self.comm)
+                        bj = preconditioner.schur_4x4(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgs2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom),self.precond_fields[npr],self.comm)
+                        bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'jacobi2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.jacobi_2x2(self.pb[npr].get_index_sets(isoptions=self.iset_options,rom=self.rom),self.precond_fields[npr],self.comm)
+                        bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     else:
@@ -489,7 +494,6 @@ class solver_nonlinear:
 
                     # nested matrix
                     K_full_nest = PETSc.Mat().createNest(K_list, isrows=None, iscols=None, comm=self.comm)
-                    K_full_nest.assemble()
 
                     te += time.time() - tes
 
@@ -498,12 +502,15 @@ class solver_nonlinear:
 
                         tes = time.time()
 
-                        K_full = PETSc.Mat()
-                        K_full_nest.convert("aij", out=K_full)
-                        K_full.assemble()
+                        tms = time.time()
+                        K_full = K_full_nest.convert("aij")
+                        tme = time.time() - tms
+                        if self.prntdbg:
+                            if self.comm.rank == 0:
+                                print('       === MAT merge time, te = %.4f s' % (tme))
+                                sys.stdout.flush()
 
                         r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
-                        r_full.assemble()
 
                         del_full = K_full.createVecLeft()
                         self.ksp[npr].setOperators(K_full)
@@ -526,10 +533,13 @@ class solver_nonlinear:
                         # if index sets do not align with the nested matrix structure
                         # anymore, we need a merged matrix to extract the submats
                         if self.merge_prec_mat:
-                            P = PETSc.Mat()
-                            P_nest.convert("aij", out=P)
-                            P.assemble()
-                            P_nest = P
+                            tms = time.time()
+                            P_nest = P_nest.convert("aij")
+                            tme = time.time() - tms
+                            if self.prntdbg:
+                                if self.comm.rank == 0:
+                                    print('       === PREC MAT merge time, te = %.4f s' % (tme))
+                                    sys.stdout.flush()
 
                         self.ksp[npr].setOperators(K_full_nest, P_nest)
 

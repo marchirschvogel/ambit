@@ -98,6 +98,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
         else:
             self.sub_solve = False
 
+        self.print_debug = self.pbs.io.print_debug
+
 
     def get_problem_var_list(self):
 

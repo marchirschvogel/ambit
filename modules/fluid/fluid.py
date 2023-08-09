@@ -337,6 +337,7 @@ class FluidmechanicsProblem(problem_base):
 
         self.pbrom = self # self-pointer needed for ROM solver access
         self.V_rom = self.V_v
+        self.print_debug = self.io.print_debug
 
 
     def get_problem_var_list(self):

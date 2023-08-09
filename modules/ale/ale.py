@@ -137,6 +137,8 @@ class AleProblem(problem_base):
 
         self.set_variational_forms()
 
+        self.print_debug = self.io.print_debug
+
 
     def get_problem_var_list(self):
 

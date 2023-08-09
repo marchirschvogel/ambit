@@ -75,6 +75,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.localsolve = self.pbf.localsolve
 
         self.sub_solve = True
+        self.print_debug = self.pbf.io.print_debug
 
         if bool(self.pb0.chamber_models):
             if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
