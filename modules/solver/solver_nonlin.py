@@ -717,7 +717,7 @@ class solver_nonlinear:
 
         # reduce residual
         if self.rom is not None and npr==0: # only for first problem so far...
-            self.del_u_[npr] = self.rom.reduce_residual(self.r_list[npr], del_x[npr])
+            self.del_u_[npr] = self.rom.reduce_residual(self.r_list[npr], del_x[npr], self.x[npr][0])
 
         # get residual norms
         for n in range(self.nfields[npr]):

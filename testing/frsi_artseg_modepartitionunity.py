@@ -3,6 +3,7 @@
 # FrSI test case of an axially clamped arterial segment
 # tests:
 # - mode partition of unity partitioning
+# - mode penalties
 # - ALE transient Stokes flow (Taylor-Hood elements)
 # - weak Dirichlet condition from fluid to ALE
 
@@ -41,6 +42,7 @@ def main():
                             'eigenvalue_cutoff'     : 1.0e-8,
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
+                            'redbasisvec_penalties' : [0.0, 0.0, 0.0], # only for code coverage test - applying zero terms
                             'filesource'            : 'rawtxt'}
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',

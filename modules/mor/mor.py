@@ -67,7 +67,7 @@ class ModelOrderReduction():
             self.redbasisvec_indices = []
             for i in range(self.numredbasisvec): self.redbasisvec_indices.append(i)
 
-        try: self.redbasisvec_penalties = params['redbasisvec_penalties']
+        try: self.redbasisvec_penalties = self.params['redbasisvec_penalties']
         except: self.redbasisvec_penalties = []
 
         try: self.partitions = self.params['partitions']
@@ -497,7 +497,7 @@ class ModelOrderReduction():
 
 
     # online functions
-    def reduce_residual(self, r_list, del_x):
+    def reduce_residual(self, r_list, del_x, x):
 
         tes = time.time()
 
@@ -507,13 +507,14 @@ class ModelOrderReduction():
 
         # deal with penalties that may be added to reduced residual to penalize certain modes
         if bool(self.redbasisvec_penalties):
-            u_ = K_list[0][0].createVecRight()
-            self.V.multTranspose(self.x[0], u_) # V^T * u
+            u_ = r_u_.duplicate()
+            self.V.multTranspose(x, u_) # V^T * u
             penterm_ = self.V.createVecRight()
             self.Cpen.mult(u_, penterm_) # Cpen * V^T * u
             r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
+            u_.destroy(), penterm_.destroy()
 
-        r_list[0].destroy(), del_x[0].destroy() # destroy, since we re-define the references!
+        r_list[0].destroy(), del_x[0].destroy() # destroy, since we re-define the references
         r_list[0], del_x[0] = r_u_, del_u_
 
         tee = time.time() - tes
@@ -530,10 +531,10 @@ class ModelOrderReduction():
         tes = time.time()
 
         # projection of main block: system matrix
-        tmp = K_list[0][0].matMult(self.V) # K_00 * V
-
-        K_list[0][0] = self.V.transposeMatMult(tmp) # V^T * K_00 * V
-        tmp.destroy()
+        KV = K_list[0][0].matMult(self.V) # K_00 * V
+        K_list[0][0].destroy() # destroy, since we re-define the reference
+        K_list[0][0] = self.V.transposeMatMult(KV) # V^T * K_00 * V
+        KV.destroy()
 
         # deal with penalties that may be added to reduced residual to penalize certain modes
         if bool(self.redbasisvec_penalties):
@@ -543,9 +544,13 @@ class ModelOrderReduction():
         if nfields > 1:
             for n in range(nfields-1):
                 if K_list[0][n+1] is not None:
-                    K_list[0][n+1] = self.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
+                    VtK = self.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
+                    K_list[0][n+1].destroy() # destroy, since we re-define the reference
+                    K_list[0][n+1] = VtK
                 if K_list[n+1][0] is not None:
-                    K_list[n+1][0] = K_list[n+1][0].matMult(self.V) # K_{n+1,0} * V
+                    KV = K_list[n+1][0].matMult(self.V) # K_{n+1,0} * V
+                    K_list[n+1][0].destroy() # destroy, since we re-define the reference
+                    K_list[n+1][0] = KV
 
         tee = time.time() - tes
         if self.print_projection_info:

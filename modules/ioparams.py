@@ -205,6 +205,7 @@ def check_params_rom(params):
                     'partitions',
                     'print_eigenproblem',
                     'print_projection_info',
+                    'redbasisvec_penalties',
                     'snapshotincr',
                     'surface_rom',
                     'write_pod_modes']
