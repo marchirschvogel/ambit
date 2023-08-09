@@ -190,3 +190,24 @@ def check_params_coupling_fluid_ale(params):
     for k in params.keys():
         if k not in valid_params:
             raise RuntimeError("Unknown parameter found in fluid-ALE coupling params: "+k)
+
+
+def check_params_rom(params):
+
+    valid_params = ['eigenvalue_cutoff',
+                    'exclude_from_snap',
+                    'filesource',
+                    'hdmfilenames',
+                    'modes_from_files',
+                    'numredbasisvec',
+                    'numsnapshots',
+                    'partitions',
+                    'print_eigenproblem',
+                    'print_projection_info',
+                    'snapshotincr',
+                    'surface_rom',
+                    'write_pod_modes']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in ROM params: "+k)

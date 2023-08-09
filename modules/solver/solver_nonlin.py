@@ -578,8 +578,14 @@ class solver_nonlinear:
 
                 # reconstruct full-length increment vector
                 if self.rom is not None and npr==0: # only for first problem so far...
+                    ters = time.time()
                     del_x[npr][0] = self.rom.V.createVecLeft()
                     self.rom.V.mult(self.del_u_[npr], del_x[npr][0]) # V * dx_red
+                    tere = time.time() - ters
+                    if self.rom.print_projection_info:
+                        if self.comm.rank == 0:
+                            print('       === Computed V * dx[0], te = %.4f s' % (tere))
+                            sys.stdout.flush()
 
                 # norm from last step for potential PTC adaption - prior to res update
                 res_norm_main_last = self.resnorms[npr]['res1']

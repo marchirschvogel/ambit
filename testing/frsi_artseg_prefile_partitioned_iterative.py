@@ -38,7 +38,7 @@ def main():
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
                             'filesource'            : 'rawtxt',
-                            'filereadin_tol'        : 1e-5}
+                            'print_projection_info' : True}
 
     SOLVER_PARAMS        = {'solve_type'            : ['iterative','direct'],
                             'iterative_solver'      : 'gmres',

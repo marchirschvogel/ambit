@@ -11,6 +11,7 @@ import time, sys, copy, math
 from dolfinx import fem, io
 from petsc4py import PETSc
 import numpy as np
+import ioparams
 from meshutils import gather_surface_dof_indices
 
 
@@ -21,6 +22,8 @@ class ModelOrderReduction():
         # underlying physics problem
         self.pb = pb
         self.params = self.pb.mor_params
+
+        ioparams.check_params_rom(self.params)
 
         try: self.modes_from_files = self.params['modes_from_files']
         except: self.modes_from_files = False
@@ -72,6 +75,9 @@ class ModelOrderReduction():
 
         try: self.exclude_from_snap = self.params['exclude_from_snap']
         except: self.exclude_from_snap = []
+
+        try: self.print_projection_info = self.params['print_projection_info']
+        except: self.print_projection_info = False
 
         # mode partitions are either determined by the mode files or partition files
         if bool(self.modes_from_files):
@@ -443,7 +449,7 @@ class ModelOrderReduction():
                 # NOTE: We actually do not want to set the columns at once like this, since PETSc may treat close-zero entries as non-zeros
                 # self.V[vrs:vre,col] = self.Phi[vrs:vre,n]
                 # instead, set like this:
-                for k in range(vrs,vre): # TODO: Find out why setting this way yields to initial NaNs in FrSI testcase, only when run with 2 or 3 cores!
+                for k in range(vrs,vre):
                     if not np.isclose(self.Phi[k,n],0.0): self.V[k,col] = self.Phi[k,n]
                 n += 1
 
@@ -493,6 +499,8 @@ class ModelOrderReduction():
     # online functions
     def reduce_residual(self, r_list, del_x):
 
+        tes = time.time()
+
         # projection of main block: residual, and increment
         r_u_, del_u_ = self.V.createVecRight(), self.V.createVecRight()
         self.V.multTranspose(r_list[0], r_u_) # V^T * r_u
@@ -508,13 +516,22 @@ class ModelOrderReduction():
         r_list[0].destroy(), del_x[0].destroy() # destroy, since we re-define the references!
         r_list[0], del_x[0] = r_u_, del_u_
 
+        tee = time.time() - tes
+        if self.print_projection_info:
+            if self.pb.comm.rank == 0:
+                print('       === Computed V^{T} * r[0], te = %.4f s' % (tee))
+                sys.stdout.flush()
+
         return del_u_
 
 
     def reduce_stiffness(self, K_list, nfields):
 
+        tes = time.time()
+
         # projection of main block: system matrix
         tmp = K_list[0][0].matMult(self.V) # K_00 * V
+
         K_list[0][0] = self.V.transposeMatMult(tmp) # V^T * K_00 * V
         tmp.destroy()
 
@@ -529,3 +546,9 @@ class ModelOrderReduction():
                     K_list[0][n+1] = self.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
                 if K_list[n+1][0] is not None:
                     K_list[n+1][0] = K_list[n+1][0].matMult(self.V) # K_{n+1,0} * V
+
+        tee = time.time() - tes
+        if self.print_projection_info:
+            if self.pb.comm.rank == 0:
+                print('       === Computed V^{T} * K * V, te = %.4f s' % (tee))
+                sys.stdout.flush()

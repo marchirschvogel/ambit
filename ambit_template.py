@@ -140,7 +140,8 @@ def main():
                             'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
                             'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
                             'filesource'            : 'petscvector', # OPTIONAL: source of snapshot/mode data: 'petscvector' or 'rawtxt' (default: 'petscvector')
-                            'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
+                            'write_pod_modes'       : False, # OPTIONAL: whether to write out POD modes (default: False)
+                            'print_projection_info' : False} # OPTIONAL: whether to print infos for projection operations
 
     # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # 'end_diastole', 'end_systole'

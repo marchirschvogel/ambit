@@ -213,9 +213,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             k_sd_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             k_sd_rows.append(k_sd_vec)
 
-        locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
-        matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
-
         # derivative of 0D residual w.r.t. ALE displacements (use transpose, since more efficient assembly)
         K_sd_t = K_list_fluidflow0d[0][2].duplicate()
 
