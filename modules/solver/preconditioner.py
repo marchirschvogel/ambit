@@ -14,7 +14,7 @@ from petsc4py import PETSc
 
 class block_precond():
 
-    def __init__(self, iset, precond_fields, prntdbg, comm=None):
+    def __init__(self, iset, precond_fields, printenh, comm=None):
 
         self.iset = iset
         self.precond_fields = precond_fields
@@ -24,7 +24,7 @@ class block_precond():
         # preconditioner object
         self.P = PETSc.Mat()
         # extra level of printing
-        self.prntdbg = prntdbg
+        self.printenh = printenh
 
 
     def create(self, pc):
@@ -145,7 +145,7 @@ class schur_2x2(block_precond):
         Adinv.destroy(), Adinv_Bt.destroy(), B_Adinv_Bt.destroy()
 
         tse = time.time() - tss
-        if self.prntdbg:
+        if self.printenh:
             if self.comm.rank == 0:
                 print('       === PREC setup done, te = %.4f s' % (tse))
                 sys.stdout.flush()
@@ -338,9 +338,9 @@ class schur_3x3(block_precond):
         Adinv.destroy(), Smoddinv.destroy(), Adinv_Bt.destroy(), B_Adinv_Bt.destroy(), Adinv_Dt.destroy(), B_Adinv_Dt.destroy(), Smoddinv_Tmod.destroy(), Bt_Smoddinv_Tmod.destroy(), Adinv_Bt_Smoddinv_Tmod.destroy(), D_Adinv_Bt_Smoddinv_Tmod.destroy(), Adinv_Bt.destroy(), E_Smoddinv_Tmod.destroy(), Adinv_Dt.destroy(), D_Adinv_Dt.destroy()
 
         tse = time.time() - tss
-        if self.prntdbg:
+        if self.printenh:
             if self.comm.rank == 0:
-                print('       === PREC setup done, te = %.4f s' % (tse))
+                print('       === PREC setup, te = %.4f s' % (tse))
                 sys.stdout.flush()
 
 
@@ -592,9 +592,9 @@ class bgs_2x2(block_precond):
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
 
         tse = time.time() - tss
-        if self.prntdbg:
+        if self.printenh:
             if self.comm.rank == 0:
-                print('       === PREC setup done, te = %.4f s' % (tse))
+                print('       === PREC setup, te = %.4f s' % (tse))
                 sys.stdout.flush()
 
 
@@ -677,9 +677,9 @@ class jacobi_2x2(block_precond):
         # self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
         tse = time.time() - tss
-        if self.prntdbg:
+        if self.printenh:
             if self.comm.rank == 0:
-                print('       === PREC setup done, te = %.4f s' % (tse))
+                print('       === PREC setup, te = %.4f s' % (tse))
                 sys.stdout.flush()
 
 

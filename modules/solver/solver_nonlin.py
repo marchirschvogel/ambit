@@ -37,7 +37,7 @@ class solver_nonlinear:
         self.pb = pb
         self.nprob = len(pb)
 
-        self.prntdbg = self.pb[0].print_debug
+        self.printenh = self.pb[0].print_enhanced_info
 
         self.x, self.is_ghosted = [[]]*self.nprob, [[]]*self.nprob
         self.nfields, self.ptype = [], []
@@ -235,7 +235,8 @@ class solver_nonlinear:
                 self.ksp[npr].setNormType(self.linnormtype) # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
 
                 # get matrices to set ksp operators
-                self.jacobian_problem_actions(0., npr, 0)
+                if self.pb[npr].rom:
+                    self.jacobian_problem_actions(0., npr, 0.)
                 K_full_nest = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
                 P_nest = K_full_nest
                 if self.merge_prec_mat:
@@ -308,37 +309,37 @@ class solver_nonlinear:
                     elif self.block_precond[npr] == 'schur2x2':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
+                        bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'simple2x2':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.simple_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
+                        bj = preconditioner.simple_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur3x3':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
+                        bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur4x4':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_4x4(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
+                        bj = preconditioner.schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgs2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
+                        bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'jacobi2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.prntdbg, self.comm)
+                        bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     else:
@@ -417,7 +418,7 @@ class solver_nonlinear:
             off=0
             for n in range(self.nfields[npr]):
                 if n==0:
-                    if self.pb[npr].rom is not None: # currently, ROM is only implemented for the first variable in the system!
+                    if self.pb[npr].rom: # currently, ROM is only implemented for the first variable in the system!
                         off += self.pb[npr].rom.V.getLocalSize()[1]
                     else:
                         off += self.x[npr][0].getLocalSize()
@@ -525,9 +526,9 @@ class solver_nonlinear:
                         tms = time.time()
                         K_full = K_full_nest.convert("aij")
                         tme = time.time() - tms
-                        if self.prntdbg:
+                        if self.printenh:
                             if self.comm.rank == 0:
-                                print('       === MAT merge time, te = %.4f s' % (tme))
+                                print('       === MAT merge, te = %.4f s' % (tme))
                                 sys.stdout.flush()
 
                         r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
@@ -556,9 +557,9 @@ class solver_nonlinear:
                             tms = time.time()
                             P_nest = P_nest.convert("aij")
                             tme = time.time() - tms
-                            if self.prntdbg:
+                            if self.printenh:
                                 if self.comm.rank == 0:
-                                    print('       === PREC MAT merge time, te = %.4f s' % (tme))
+                                    print('       === PREC MAT merge, te = %.4f s' % (tme))
                                     sys.stdout.flush()
 
                         self.ksp[npr].setOperators(K_full_nest, P_nest)
@@ -606,7 +607,7 @@ class solver_nonlinear:
                     self.incnorms[npr]['inc'+str(n+1)] = del_x_sol[npr][n].norm()
 
                 # reconstruct full-length increment vector
-                if self.pb[npr].rom is not None:
+                if self.pb[npr].rom:
                     self.pb[npr].rom.reconstruct_solution_increment(del_x_sol[npr], del_x[npr])
 
                 # norm from last step for potential PTC adaption - prior to res update
@@ -716,7 +717,15 @@ class solver_nonlinear:
 
         # compute residual
         if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
+
+        tes = time.time()
         self.pb[npr].assemble_residual(t, subsolver=self.subsol)
+
+        tee = time.time() - tes
+        if self.printenh:
+            if self.comm.rank == 0:
+                print('       === Residual assemble, te = %.4f s' % (tee))
+                sys.stdout.flush()
 
         if self.pb[npr].rom:
             self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom, x=self.x[npr][0])
@@ -729,8 +738,16 @@ class solver_nonlinear:
 
     def jacobian_problem_actions(self, t, npr, k_PTC):
 
+        tes = time.time()
+
         # compute Jacobian
         self.pb[npr].assemble_stiffness(t, subsolver=self.subsol)
+
+        tee = time.time() - tes
+        if self.printenh:
+            if self.comm.rank == 0:
+                print('       === Jacobian assemble, te = %.4f s' % (tee))
+                sys.stdout.flush()
 
         if self.pb[npr].rom:
             self.pb[npr].rom.reduce_stiffness(self.pb[npr].K_list, self.pb[npr].K_list_rom, self.pb[npr].K_list_tmp)

@@ -31,7 +31,7 @@ def main():
                             'results_to_write'      : ['displacement','velocity','pressure','cauchystress'], # see io_routines.py for what to write
                             'simname'               : 'my_simulation_name', # how to name the output (attention: there is no warning, results will be overwritten if existent)
                             'restart_step'          : 0, # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
-                            'print_debug'           : False} # OPTIONAL: some extra level of printing for debugging (default: False)
+                            'print_enhanced_info'   : False} # OPTIONAL: some extra level of printing, e.g. assembly, ROM projection, preconditioner setup times, ... (default: False)
 
     # for all problem types
     SOLVER_PARAMS        = {'solve_type'            : 'direct', # direct, iterative
@@ -141,8 +141,7 @@ def main():
                             'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
                             'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
                             'filesource'            : 'petscvector', # OPTIONAL: source of snapshot/mode data: 'petscvector' or 'rawtxt' (default: 'petscvector')
-                            'write_pod_modes'       : False, # OPTIONAL: whether to write out POD modes (default: False)
-                            'print_projection_info' : False} # OPTIONAL: whether to print infos for projection operations (default: False)
+                            'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type
     MULTISCALE_GR_PARAMS = {'gandr_trigger_phase'   : 'end_diastole', # 'end_diastole', 'end_systole'

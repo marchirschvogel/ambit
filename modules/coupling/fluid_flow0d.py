@@ -75,7 +75,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.localsolve = self.pbf.localsolve
 
         self.sub_solve = True
-        self.print_debug = self.pbf.io.print_debug
+        self.print_enhanced_info = self.pbf.io.print_enhanced_info
 
         # 3D fluxes
         self.constr, self.constr_old = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
@@ -218,12 +218,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.row_ids)):
             self.k_sv_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
 
+        # derivative of 0D residual w.r.t. solid displacements
         self.K_sv = PETSc.Mat().createAIJ(size=((self.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_sv.setUp()
-
-        # derivative of 0D residual w.r.t. solid displacements (use transpose, since more efficient assembly)
-        self.K_sv_t = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.num_coupling_surf)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.K_sv_t.setUp()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -372,17 +369,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         # set rows
         for i in range(len(self.row_ids)):
-            self.K_sv_t[irs:ire, self.row_ids[i]] = self.k_sv_vec[i][irs:ire]
+            self.K_sv[self.row_ids[i], irs:ire] = self.k_sv_vec[i][irs:ire]
 
-        self.K_sv_t.assemble()
+        self.K_sv.assemble()
 
         if bool(self.residual_scale):
             self.K_vs.scale(self.residual_scale[0])
-            self.K_sv_t.scale(self.residual_scale[2])
+            self.K_sv.scale(self.residual_scale[2])
             self.K_lm.scale(self.residual_scale[2])
 
         self.K_list[0][2] = self.K_vs
-        self.K_list[2][0] = self.K_sv.createTranspose(self.K_sv_t)
+        self.K_list[2][0] = self.K_sv
 
 
     def get_index_sets(self, isoptions={}):

@@ -64,7 +64,7 @@ class FSIProblem(problem_base):
 
         self.localsolve = False
         self.sub_solve = False
-        self.print_debug = self.io.print_debug
+        self.print_enhanced_info = self.io.print_enhanced_info
 
 
     def get_problem_var_list(self):

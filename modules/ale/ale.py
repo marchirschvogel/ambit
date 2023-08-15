@@ -137,7 +137,7 @@ class AleProblem(problem_base):
 
         self.set_variational_forms()
 
-        self.print_debug = self.io.print_debug
+        self.print_enhanced_info = self.io.print_enhanced_info
 
         # number of fields involved
         self.nfields = 1

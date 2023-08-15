@@ -76,9 +76,6 @@ class ModelOrderReduction():
         try: self.exclude_from_snap = self.params['exclude_from_snap']
         except: self.exclude_from_snap = []
 
-        try: self.print_projection_info = self.params['print_projection_info']
-        except: self.print_projection_info = False
-
         # mode partitions are either determined by the mode files or partition files
         if bool(self.modes_from_files):
             self.num_partitions = len(self.modes_from_files)
@@ -545,7 +542,7 @@ class ModelOrderReduction():
                 r_list_rom[n] = r_list[n]
 
         tee = time.time() - tes
-        if self.print_projection_info:
+        if self.pb.print_enhanced_info:
             if self.pb.comm.rank == 0:
                 print('       === Computed V^{T} * r[0], te = %.4f s' % (tee))
                 sys.stdout.flush()
@@ -571,14 +568,13 @@ class ModelOrderReduction():
                 if K_list[0][n] is not None:
                     self.V.transposeMatMult(K_list[0][n], result=K_list_rom[0][n]) # V^T * K_{0,n+1}
                 if K_list[n][0] is not None:
-                    # K_list[n][0].matMult(self.V, result=K_list_rom[n][0]) # K_{n+1,0} * V - TODO: Why not working for offdiagonal transposed 3D-0D block?
-                    K_list_rom[n][0] = K_list[n][0].matMult(self.V) # K_{n+1,0} * V
+                    K_list[n][0].matMult(self.V, result=K_list_rom[n][0]) # K_{n+1,0} * V
                 # no reduction for all other matrices not referring to first field index
                 for m in range(1,nfields):
                     K_list_rom[n][m] = K_list[n][m]
 
         tee = time.time() - tes
-        if self.print_projection_info:
+        if self.pb.print_enhanced_info:
             if self.pb.comm.rank == 0:
                 print('       === Computed V^{T} * K * V, te = %.4f s' % (tee))
                 sys.stdout.flush()
@@ -600,7 +596,7 @@ class ModelOrderReduction():
 
         tee = time.time() - tes
 
-        if self.print_projection_info:
+        if self.pb.print_enhanced_info:
             if self.pb.comm.rank == 0:
                 print('       === Computed V * dx_rom[0], te = %.4f s' % (tee))
                 sys.stdout.flush()

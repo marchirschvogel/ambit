@@ -337,7 +337,7 @@ class FluidmechanicsProblem(problem_base):
 
         self.pbrom = self # self-pointer needed for ROM solver access
         self.V_rom = self.V_v
-        self.print_debug = self.io.print_debug
+        self.print_enhanced_info = self.io.print_enhanced_info
 
         # number of fields involved
         self.nfields = 2

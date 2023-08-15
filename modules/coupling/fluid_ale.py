@@ -80,7 +80,7 @@ class FluidmechanicsAleProblem(problem_base):
         self.numdof = self.pbf.numdof + self.pba.numdof
 
         self.sub_solve = False
-        self.print_debug = self.pbf.io.print_debug
+        self.print_enhanced_info = self.pbf.io.print_enhanced_info
 
         # number of fields involved
         self.nfields = 3

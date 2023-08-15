@@ -98,7 +98,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         else:
             self.sub_solve = False
 
-        self.print_debug = self.pbs.io.print_debug
+        self.print_enhanced_info = self.pbs.io.print_enhanced_info
 
         # 3D fluxes
         self.constr, self.constr_old = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
@@ -338,12 +338,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.row_ids)):
             self.k_su_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
 
+        # derivative of 0D residual w.r.t. solid displacements
         self.K_su = PETSc.Mat().createAIJ(size=((sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_su.setUp()
-
-        # derivative of 0D residual w.r.t. solid displacements (use transpose, since more efficient assembly)
-        self.K_su_t = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(sze_coup)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.K_su_t.setUp()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -526,24 +523,17 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         # set rows
         for i in range(len(self.row_ids)):
-            self.K_su_t[irs:ire, self.row_ids[i]] = self.k_su_vec[i][irs:ire]
+            self.K_su[self.row_ids[i], irs:ire] = self.k_su_vec[i][irs:ire]
 
-        self.K_su_t.assemble()
-
-        # # set rows
-        # for i in range(len(self.row_ids)):
-        #     self.K_su[self.row_ids[i], irs:ire] = self.k_su_vec[i][irs:ire]
-        #
-        # self.K_su.assemble()
+        self.K_su.assemble()
 
         if bool(self.residual_scale):
             self.K_us.scale(self.residual_scale[0])
-            self.K_su_t.scale(self.residual_scale[1+off])
+            self.K_su.scale(self.residual_scale[1+off])
             self.K_list[1+off][1+off].scale(self.residual_scale[1+off])
 
         self.K_list[0][1+off] = self.K_us
-        self.K_list[1+off][0] = self.K_su.createTranspose(self.K_su_t)
-        # self.K_list[1+off][0] = self.K_su
+        self.K_list[1+off][0] = self.K_su
 
 
     def get_index_sets(self, isoptions={}):

@@ -84,7 +84,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.numdof = self.pbf.numdof + self.pbf0.lm.getSize() + self.pba.numdof
 
         self.sub_solve = True
-        self.print_debug = self.pbf.io.print_debug
+        self.print_enhanced_info = self.pbf.io.print_enhanced_info
 
         # number of fields involved
         self.nfields = 4
@@ -147,12 +147,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
             matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
 
+            # derivative of 0D residual w.r.t. ALE displacements
             self.K_sd = PETSc.Mat().createAIJ(size=((self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
             self.K_sd.setUp()
-
-            # derivative of 0D residual w.r.t. solid displacements (use transpose, since more efficient assembly)
-            self.K_sd_t = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.pbf0.num_coupling_surf)), bsize=None, nnz=None, csr=None, comm=self.comm)
-            self.K_sd_t.setUp()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -221,14 +218,14 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         # set rows
         for i in range(len(self.pbf0.row_ids)):
-            self.K_sd_t[irs:ire, self.pbf0.row_ids[i]] = self.k_sd_vec[i][irs:ire]
+            self.K_sd[self.pbf0.row_ids[i], irs:ire] = self.k_sd_vec[i][irs:ire]
 
-        self.K_sd_t.assemble()
+        self.K_sd.assemble()
 
         if bool(self.residual_scale):
-            self.K_sd_t.scale(self.residual_scale[2])
+            self.K_sd.scale(self.residual_scale[2])
 
-        self.K_list[2][3] = self.K_sd.createTranspose(self.K_sd_t)
+        self.K_list[2][3] = self.K_sd
         self.K_list[3][3] = self.pba.K_list[0][0]
 
 

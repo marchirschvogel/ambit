@@ -363,7 +363,7 @@ class SolidmechanicsProblem(problem_base):
 
         self.pbrom = self # self-pointer needed for ROM solver access
         self.V_rom = self.V_u
-        self.print_debug = self.io.print_debug
+        self.print_enhanced_info = self.io.print_enhanced_info
 
 
     def get_problem_var_list(self):
@@ -866,6 +866,8 @@ class SolidmechanicsProblem(problem_base):
 
         if bool(self.residual_scale):
             self.scale_jacobian_list(self.K_list, self.residual_scale)
+
+
 
 
     def get_index_sets(self, isoptions={}):

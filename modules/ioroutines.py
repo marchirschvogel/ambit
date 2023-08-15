@@ -60,8 +60,8 @@ class IO:
         try: self.indicate_results_by = io_params['indicate_results_by']
         except: self.indicate_results_by = 'time'
 
-        try: self.print_debug = io_params['print_debug']
-        except: self.print_debug = False
+        try: self.print_enhanced_info = io_params['print_enhanced_info']
+        except: self.print_enhanced_info = False
 
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}

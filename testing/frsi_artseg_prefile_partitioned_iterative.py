@@ -28,7 +28,8 @@ def main():
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',
                             'results_to_write'      : [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']], # first fluid, then ale results
-                            'simname'               : 'frsi_artseg_prefile_partitioned'}
+                            'simname'               : 'frsi_artseg_prefile_partitioned',
+                            'print_enhanced_info'   : True}
 
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'numsnapshots'          : 1,
@@ -37,8 +38,7 @@ def main():
                             'eigenvalue_cutoff'     : 1.0e-8,
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
-                            'filesource'            : 'rawtxt',
-                            'print_projection_info' : True}
+                            'filesource'            : 'rawtxt'}
 
     SOLVER_PARAMS        = {'solve_type'            : ['iterative','direct'],
                             'iterative_solver'      : 'gmres',
