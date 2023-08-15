@@ -61,11 +61,16 @@ class SignallingNetworkProblem(problem_base):
         self.numdof = self.signet.numdof
 
         # vectors and matrices
-        self.dK = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.dK.setUp()
+        self.dK_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.dK_.setUp()
+
+        self.K_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_.setUp()
 
         self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K.setUp()
+
+        self.r = self.K.createVecLeft()
 
         self.s, self.s_old, self.s_mid = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft()
         self.sTc, self.sTc_old = self.K.createVecLeft(), self.K.createVecLeft()
@@ -95,6 +100,13 @@ class SignallingNetworkProblem(problem_base):
 
         self.odemodel = self.signet
 
+        # number of fields involved
+        self.nfields=1
+
+        # residual and matrix lists
+        self.r_list = [None]*self.nfields
+        self.K_list = [[None]*self.nfields for _ in range(self.nfields)]
+
 
     def assemble_residual(self, t):
 
@@ -102,35 +114,36 @@ class SignallingNetworkProblem(problem_base):
 
         theta = self.thetasn_timint(t)
 
+        self.df.assemble(), self.df_old.assemble()
+        self.f.assemble(), self.f_old.assemble()
+
         # signet rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
-        r = self.K.createVecLeft()
+        self.r.zeroEntries()
+        
+        self.r.axpy(1./self.dt, self.df)
+        self.r.axpy(-1./self.dt, self.df_old)
 
-        r.axpy(1./self.dt, self.df)
-        r.axpy(-1./self.dt, self.df_old)
+        self.r.axpy(theta, self.f)
+        self.r.axpy(1.-theta, self.f_old)
 
-        r.axpy(theta, self.f)
-        r.axpy(1.-theta, self.f_old)
-
-        return r
+        self.r_list[0] = self.r
 
 
     def assemble_stiffness(self, t):
 
-        self.signet.evaluate(self.s, t, None, None, self.dK, self.K, self.c, self.y, self.aux)
+        self.signet.evaluate(self.s, t, None, None, self.dK_, self.K_, self.c, self.y, self.aux)
 
         theta = self.thetasn_timint(t)
 
-        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K.setUp()
-
-        self.dK.assemble()
+        self.dK_.assemble()
+        self.K_.assemble()
         self.K.assemble()
-        K.assemble()
 
-        K.axpy(1./self.dt, self.dK)
-        K.axpy(theta, self.K)
+        self.K.zeroEntries()
+        self.K.axpy(1./self.dt, self.dK_)
+        self.K.axpy(theta, self.K_)
 
-        return K
+        self.K_list[0][0] = self.K
 
 
     def thetasn_timint(self, t):
@@ -247,11 +260,17 @@ class SignallingNetworkProblem(problem_base):
         pass
 
 
+    def destroy(self):
+        pass
+
+
 
 class SignallingNetworkSolver(solver_base):
 
 
     def initialize_nonlinear_solver(self):
+
+        self.evaluate_system_initial()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_ode([self.pb], self.solver_params)

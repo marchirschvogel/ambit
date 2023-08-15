@@ -150,6 +150,8 @@ class ModelOrderReduction():
 
             self.VTV.destroy()
 
+            self.Vtu_, self.penterm_ = self.V.createVecRight(), self.V.createVecRight()
+
         self.S_d.destroy()
 
 
@@ -496,26 +498,51 @@ class ModelOrderReduction():
                 mat[i,:] = np.zeros(ncol)
 
 
+    def set_reduced_data_structures_residual(self, r_list, r_list_rom):
+
+        # projection of main block: residual
+        r_list_rom[0] = self.V.createVecRight()
+        self.V.multTranspose(r_list[0], r_list_rom[0]) # V^T * r_u
+
+
+    def set_reduced_data_structures_matrix(self, K_list, K_list_rom, K_list_tmp):
+
+        # projection of main block: system matrix
+        K_list_tmp[0][0] = K_list[0][0].matMult(self.V) # K_00 * V
+        K_list_rom[0][0] = self.V.transposeMatMult(K_list_tmp[0][0]) # V^T * K_00 * V
+
+        nfields = len(K_list)
+
+        # now the offdiagonal blocks
+        if nfields > 1:
+            for n in range(1,nfields):
+                if K_list[0][n] is not None:
+                    K_list_rom[0][n] = self.V.transposeMatMult(K_list[0][n]) # V^T * K_{0,n+1}
+                if K_list[n][0] is not None:
+                    K_list_rom[n][0] = K_list[n][0].matMult(self.V) # K_{n+1,0} * V
+
+
     # online functions
-    def reduce_residual(self, r_list, del_x, x):
+    def reduce_residual(self, r_list, r_list_rom, x=None):
 
         tes = time.time()
 
-        # projection of main block: residual, and increment
-        r_u_, del_u_ = self.V.createVecRight(), self.V.createVecRight()
-        self.V.multTranspose(r_list[0], r_u_) # V^T * r_u
+        nfields = len(r_list)
+
+        # projection of main block: residual
+        # r_list_rom[0].destroy()
+        # r_list_rom[0] = self.V.createVecRight()
+        self.V.multTranspose(r_list[0], r_list_rom[0]) # V^T * r_u
 
         # deal with penalties that may be added to reduced residual to penalize certain modes
         if bool(self.redbasisvec_penalties):
-            u_ = r_u_.duplicate()
-            self.V.multTranspose(x, u_) # V^T * u
-            penterm_ = self.V.createVecRight()
-            self.Cpen.mult(u_, penterm_) # Cpen * V^T * u
-            r_u_.axpy(1.0, penterm_) # add penalty term to reduced residual
-            u_.destroy(), penterm_.destroy()
+            self.V.multTranspose(x, self.Vtu_) # V^T * u
+            self.Cpen.mult(self.Vtu_, self.penterm_) # Cpen * V^T * u
+            r_list_rom[0].axpy(1.0, self.penterm_) # add penalty term to reduced residual
 
-        r_list[0].destroy(), del_x[0].destroy() # destroy, since we re-define the references
-        r_list[0], del_x[0] = r_u_, del_u_
+        if nfields > 1: # only implemented for the first var in list so far!
+            for n in range(1,nfields):
+                r_list_rom[n] = r_list[n]
 
         tee = time.time() - tes
         if self.print_projection_info:
@@ -523,37 +550,66 @@ class ModelOrderReduction():
                 print('       === Computed V^{T} * r[0], te = %.4f s' % (tee))
                 sys.stdout.flush()
 
-        return del_u_
 
-
-    def reduce_stiffness(self, K_list, nfields):
+    def reduce_stiffness(self, K_list, K_list_rom, K_list_tmp):
 
         tes = time.time()
 
-        # projection of main block: system matrix
-        KV = K_list[0][0].matMult(self.V) # K_00 * V
-        K_list[0][0].destroy() # destroy, since we re-define the reference
-        K_list[0][0] = self.V.transposeMatMult(KV) # V^T * K_00 * V
-        KV.destroy()
+        nfields = len(K_list)
+
+        # projection of main block: stiffness
+        K_list[0][0].matMult(self.V, result=K_list_tmp[0][0]) # K_00 * V
+        self.V.transposeMatMult(K_list_tmp[0][0], result=K_list_rom[0][0]) # V^T * K_00 * V
 
         # deal with penalties that may be added to reduced residual to penalize certain modes
         if bool(self.redbasisvec_penalties):
-            K_list[0][0].aypx(1.0, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
+            K_list_rom[0][0].aypx(1.0, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
 
         # now the offdiagonal blocks
         if nfields > 1:
-            for n in range(nfields-1):
-                if K_list[0][n+1] is not None:
-                    VtK = self.V.transposeMatMult(K_list[0][n+1]) # V^T * K_{0,n+1}
-                    K_list[0][n+1].destroy() # destroy, since we re-define the reference
-                    K_list[0][n+1] = VtK
-                if K_list[n+1][0] is not None:
-                    KV = K_list[n+1][0].matMult(self.V) # K_{n+1,0} * V
-                    K_list[n+1][0].destroy() # destroy, since we re-define the reference
-                    K_list[n+1][0] = KV
+            for n in range(1,nfields):
+                if K_list[0][n] is not None:
+                    self.V.transposeMatMult(K_list[0][n], result=K_list_rom[0][n]) # V^T * K_{0,n+1}
+                if K_list[n][0] is not None:
+                    # K_list[n][0].matMult(self.V, result=K_list_rom[n][0]) # K_{n+1,0} * V - TODO: Why not working for offdiagonal transposed 3D-0D block?
+                    K_list_rom[n][0] = K_list[n][0].matMult(self.V) # K_{n+1,0} * V
+                # no reduction for all other matrices not referring to first field index
+                for m in range(1,nfields):
+                    K_list_rom[n][m] = K_list[n][m]
 
         tee = time.time() - tes
         if self.print_projection_info:
             if self.pb.comm.rank == 0:
                 print('       === Computed V^{T} * K * V, te = %.4f s' % (tee))
                 sys.stdout.flush()
+
+
+    def reconstruct_solution_increment(self, del_x_rom, del_x):
+
+        tes = time.time()
+
+        nfields = len(del_x)
+
+        # del_x[0].destroy()
+        # del_x[0] = self.V.createVecLeft()
+        self.V.mult(del_x_rom[0], del_x[0]) # V * dx_red
+
+        if nfields > 1: # only implemented for the first var in list so far!
+            for n in range(1,nfields):
+                del_x[n] = del_x_rom[n]
+
+        tee = time.time() - tes
+
+        if self.print_projection_info:
+            if self.pb.comm.rank == 0:
+                print('       === Computed V * dx_rom[0], te = %.4f s' % (tee))
+                sys.stdout.flush()
+
+
+    def destroy(self):
+
+        self.V.destroy()
+        if bool(self.redbasisvec_penalties):
+            self.CpenVTV.destroy()
+            self.Vtu_.destroy()
+            self.penterm_.destroy()

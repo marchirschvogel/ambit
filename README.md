@@ -1,6 +1,6 @@
 # README #
 
-* Ambit -- A FEniCS-based cardiovascular physics solver
+* Ambit - A FEniCS-based cardiovascular physics solver
 
 3D nonlinear solid and fluid mechanics finite element Python code using FEniCS and PETSc libraries, supporting
 

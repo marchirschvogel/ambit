@@ -339,6 +339,13 @@ class FluidmechanicsProblem(problem_base):
         self.V_rom = self.V_v
         self.print_debug = self.io.print_debug
 
+        # number of fields involved
+        self.nfields = 2
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
+        self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)],  [[None]*self.nfields for _ in range(self.nfields)]
+
 
     def get_problem_var_list(self):
 
@@ -700,6 +707,31 @@ class FluidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
 
+    def set_problem_vector_matrix_structures(self, rom=None):
+
+        self.r_v = fem.petsc.create_vector(self.res_v)
+        if self.num_dupl > 1:
+            self.r_p = fem.petsc.create_vector_block(self.res_p)
+        else:
+            self.r_p = fem.petsc.create_vector(self.res_p)
+
+        self.K_vv = fem.petsc.create_matrix(self.jac_vv)
+        if self.num_dupl > 1:
+            self.K_vp = fem.petsc.create_matrix_block(self.jac_vp_)
+            self.K_pv = fem.petsc.create_matrix_block(self.jac_pv_)
+        else:
+            self.K_vp = fem.petsc.create_matrix(self.jac_vp)
+            self.K_pv = fem.petsc.create_matrix(self.jac_pv)
+
+        if self.stabilization is not None:
+            if self.num_dupl > 1:
+                self.K_pp = fem.petsc.create_matrix_block(self.jac_pp_)
+            else:
+                self.K_pp = fem.petsc.create_matrix(self.jac_pp)
+        else:
+            self.K_pp = None
+
+
     def assemble_residual(self, t, subsolver=None):
 
         # NOTE: we do not linearize integrated pressure-dependent valves w.r.t. p,
@@ -710,76 +742,82 @@ class FluidmechanicsProblem(problem_base):
         #     self.evaluate_robin_valve(t)
 
         # assemble velocity rhs vector
-        r_v = fem.petsc.assemble_vector(self.res_v)
-        fem.apply_lifting(r_v, [self.jac_vv], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
-        r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(r_v, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
+        with self.r_v.localForm() as r_local: r_local.set(0.0)
+        fem.petsc.assemble_vector(self.r_v, self.res_v)
+        fem.apply_lifting(self.r_v, [self.jac_vv], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
+        self.r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(self.r_v, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
 
         # assemble pressure rhs vector
+        with self.r_p.localForm() as r_local: r_local.set(0.0)
         if self.num_dupl > 1:
-            r_p = fem.petsc.assemble_vector_block(self.res_p, self.dummat, bcs=[]) # ghosts are updated inside assemble_vector_block
+            fem.petsc.assemble_vector_block(self.r_p, self.res_p, self.dummat, bcs=[]) # ghosts are updated inside assemble_vector_block
         else:
-            r_p = fem.petsc.assemble_vector(self.res_p)
-            r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.petsc.assemble_vector(self.r_p, self.res_p)
+            self.r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
-        r_list = [r_v, r_p]
+        self.r_list[0] = self.r_v
+        self.r_list[1] = self.r_p
 
         if bool(self.residual_scale):
-            self.scale_residual_list(r_list, self.residual_scale)
-
-        return r_list
+            self.scale_residual_list(self.r_list, self.residual_scale)
 
 
     def assemble_stiffness(self, t, subsolver=None):
 
         # assemble system matrix
-        K_vv = fem.petsc.assemble_matrix(self.jac_vv, self.bc.dbcs)
-        K_vv.assemble()
+        self.K_vv.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_vv, self.jac_vv, self.bc.dbcs)
+        self.K_vv.assemble()
 
         # assemble system matrices
+        self.K_vp.zeroEntries()
         if self.num_dupl > 1:
-            K_vp = fem.petsc.assemble_matrix_block(self.jac_vp_, self.bc.dbcs)
+            fem.petsc.assemble_matrix_block(self.K_vp, self.jac_vp_, self.bc.dbcs)
         else:
-            K_vp = fem.petsc.assemble_matrix(self.jac_vp, self.bc.dbcs)
-        K_vp.assemble()
+            fem.petsc.assemble_matrix(self.K_vp, self.jac_vp, self.bc.dbcs)
+        self.K_vp.assemble()
 
+        self.K_pv.zeroEntries()
         if self.num_dupl > 1:
-            K_pv = fem.petsc.assemble_matrix_block(self.jac_pv_, []) # currently, we do not consider pressure DBCs
+            fem.petsc.assemble_matrix_block(self.K_pv, self.jac_pv_, []) # currently, we do not consider pressure DBCs
         else:
-            K_pv = fem.petsc.assemble_matrix(self.jac_pv, []) # currently, we do not consider pressure DBCs
-        K_pv.assemble()
+            fem.petsc.assemble_matrix(self.K_pv, self.jac_pv, []) # currently, we do not consider pressure DBCs
+        self.K_pv.assemble()
 
         if self.stabilization is not None:
+            self.K_pp.zeroEntries()
             if self.num_dupl > 1:
-                K_pp = fem.petsc.assemble_matrix_block(self.jac_pp_, []) # currently, we do not consider pressure DBCs
+                fem.petsc.assemble_matrix_block(self.K_pp, self.jac_pp_, []) # currently, we do not consider pressure DBCs
             else:
-                K_pp = fem.petsc.assemble_matrix(self.jac_pp, []) # currently, we do not consider pressure DBCs
-            K_pp.assemble()
+                fem.petsc.assemble_matrix(self.K_pp, self.jac_pp, []) # currently, we do not consider pressure DBCs
+            self.K_pp.assemble()
         else:
-            K_pp = None
+            self.K_pp = None
 
-        K_list = [[K_vv, K_vp], [K_pv, K_pp]]
+        self.K_list[0][0] = self.K_vv
+        self.K_list[0][1] = self.K_vp
+        self.K_list[1][0] = self.K_pv
+        self.K_list[1][1] = self.K_pp
 
         if bool(self.residual_scale):
-            self.scale_jacobian_list(K_list, self.residual_scale)
-
-        return K_list
+            self.scale_jacobian_list(self.K_list, self.residual_scale)
 
 
-    def get_index_sets(self, isoptions={}, rom=None):
+    def get_index_sets(self, isoptions={}):
 
-        if rom is not None: # currently, ROM can only be on (subset of) first variable
-            vvec_or0 = rom.V.getOwnershipRangeColumn()[0]
-            vvec_ls = rom.V.getLocalSize()[1]
+        if self.rom is not None: # currently, ROM can only be on (subset of) first variable
+            vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
+            vvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
-            vvec_ls = self.pbf.v.vector.getLocalSize()
+            vvec_or0 = self.v.vector.getOwnershipRange()[0]
+            vvec_ls = self.v.vector.getLocalSize()
 
         offset_v = vvec_or0 + self.p.vector.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
-            iset_r = PETSc.IS().createStride(len(rom.im_rom_r), first=offset_v, step=1, comm=self.comm) # same offset, since contained in v
+            iset_r = PETSc.IS().createGeneral(self.rom.im_rom_r, comm=self.comm)
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
@@ -975,15 +1013,22 @@ class FluidmechanicsProblem(problem_base):
         pass
 
 
+    def destroy(self):
+        pass
+
+
 
 class FluidmechanicsSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_vector_matrix_structures()
+
+        self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
 
     def solve_initial_state(self):
@@ -1089,7 +1134,7 @@ class FluidmechanicsSolverPrestr(FluidmechanicsSolver):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
 
     def solve_initial_state(self):

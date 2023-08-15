@@ -58,7 +58,7 @@ class block_precond():
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
         self.check_field_size()
-        self.init_mat_vec()
+        self.init_mat_vec(pc)
 
 
     def view(self, pc, vw):
@@ -81,10 +81,16 @@ class schur_2x2(block_precond):
         assert(self.nfields==2)
 
 
-    def init_mat_vec(self):
-        self.A, self.Bt, self.B, self.C = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
-        self.Smod = PETSc.Mat()
+    def init_mat_vec(self, pc):
 
+        _, self.P = pc.getOperators()
+
+        self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
+        self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
+        self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
+        self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        self.Smod = PETSc.Mat()
         self.By1, self.Bty2 = PETSc.Vec(), PETSc.Vec()
 
 
@@ -97,12 +103,18 @@ class schur_2x2(block_precond):
         _, self.P = pc.getOperators()
 
         self.A.destroy(), self.Bt.destroy(), self.B.destroy(), self.C.destroy()
-        self.Smod.destroy()
-
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
         self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        # TODO: Why not working for certain matrices???
+        # self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
+        # self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
+        # self.P.createSubMatrix(self.iset[1],self.iset[0], submat=self.B)
+        # self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
+
+        self.Smod.destroy()
 
         adinv_vec = self.A.getDiagonal()
         # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
@@ -200,10 +212,21 @@ class schur_3x3(block_precond):
         assert(self.nfields==3)
 
 
-    def init_mat_vec(self):
-        self.A, self.Bt, self.Dt, self.B, self.C, self.Et, self.D, self.E, self.R = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
-        self.Smod, self.Tmod, self.Wmod = PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
+    def init_mat_vec(self, pc):
 
+        _, self.P = pc.getOperators()
+
+        self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
+        self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
+        self.Dt = self.P.createSubMatrix(self.iset[0],self.iset[2])
+        self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
+        self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+        self.Et = self.P.createSubMatrix(self.iset[1],self.iset[2])
+        self.D  = self.P.createSubMatrix(self.iset[2],self.iset[0])
+        self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
+        self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
+
+        self.Smod, self.Tmod, self.Wmod = PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
         self.DBt = PETSc.Mat()
         self.By1, self.Dy1, self.DBty2, self.Ey2, self.Tmody3, self.Bty2, self.Dty3 = PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec(), PETSc.Vec()
 
@@ -217,8 +240,6 @@ class schur_3x3(block_precond):
         _, self.P = pc.getOperators()
 
         self.A.destroy(), self.Bt.destroy(), self.Dt.destroy(), self.B.destroy(), self.C.destroy(), self.Et.destroy(), self.D.destroy(), self.E.destroy(), self.R.destroy()
-        self.Smod.destroy(), self.Tmod.destroy(), self.Wmod.destroy()
-
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
         self.Dt = self.P.createSubMatrix(self.iset[0],self.iset[2])
@@ -228,6 +249,19 @@ class schur_3x3(block_precond):
         self.D  = self.P.createSubMatrix(self.iset[2],self.iset[0])
         self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
+
+        # TODO: Why not working for certain matrices???
+        # self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
+        # self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
+        # self.P.createSubMatrix(self.iset[0],self.iset[2], submat=self.Dt)
+        # self.P.createSubMatrix(self.iset[1],self.iset[0], submat=self.B)
+        # self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
+        # self.P.createSubMatrix(self.iset[1],self.iset[2], submat=self.Et)
+        # self.P.createSubMatrix(self.iset[2],self.iset[0], submat=self.D)
+        # self.P.createSubMatrix(self.iset[2],self.iset[1], submat=self.E)
+        # self.P.createSubMatrix(self.iset[2],self.iset[2], submat=self.R)
+
+        self.Smod.destroy(), self.Tmod.destroy(), self.Wmod.destroy()
 
         adinv_vec = self.A.getDiagonal()
         # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
@@ -403,17 +437,19 @@ class schur_4x4(schur_3x3):
         assert(self.nfields==4)
 
 
-    def init_mat_vec(self):
-        super().init_mat_vec()
-        self.G = PETSc.Mat()
+    def init_mat_vec(self, pc):
+        super().init_mat_vec(pc)
+
+        self.G = self.P.createSubMatrix(self.iset[3],self.iset[3])
 
 
     def setUp(self, pc):
         super().setUp(pc)
 
         self.G.destroy()
-
         self.G = self.P.createSubMatrix(self.iset[3],self.iset[3])
+
+        # self.P.createSubMatrix(self.iset[3],self.iset[3], submat=self.G)
 
 
     # computes y = P^{-1} x
@@ -518,8 +554,14 @@ class bgs_2x2(block_precond):
         assert(self.nfields==2)
 
 
-    def init_mat_vec(self):
-        self.A, self.Bt, self.B, self.C = PETSc.Mat(), PETSc.Mat(), PETSc.Mat(), PETSc.Mat()
+    def init_mat_vec(self, pc):
+
+        _, self.P = pc.getOperators()
+
+        self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
+        self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
+        self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
+        self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
 
         self.By1, self.Bty2 = PETSc.Vec(), PETSc.Vec()
 
@@ -533,11 +575,15 @@ class bgs_2x2(block_precond):
         _, self.P = pc.getOperators()
 
         self.A.destroy(), self.Bt.destroy(), self.B.destroy(), self.C.destroy()
-
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
         self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        # self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
+        # self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
+        # self.P.createSubMatrix(self.iset[1],self.iset[0], submat=self.B)
+        # self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
         # some auxiliary vecs needed in apply
         self.By1.destroy(), self.Bty2.destroy()
@@ -605,8 +651,12 @@ class jacobi_2x2(block_precond):
         assert(self.nfields==2)
 
 
-    def init_mat_vec(self):
-        self.A, self.C = PETSc.Mat(), PETSc.Mat()
+    def init_mat_vec(self, pc):
+
+        _, self.P = pc.getOperators()
+
+        self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
+        self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
 
         self.By1, self.Bty2 = PETSc.Vec(), PETSc.Vec()
 
@@ -620,9 +670,11 @@ class jacobi_2x2(block_precond):
         _, self.P = pc.getOperators()
 
         self.A.destroy(), self.C.destroy()
-
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        # self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
+        # self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
         tse = time.time() - tss
         if self.prntdbg:

@@ -82,6 +82,13 @@ class FluidmechanicsAleProblem(problem_base):
         self.sub_solve = False
         self.print_debug = self.pbf.io.print_debug
 
+        # number of fields involved
+        self.nfields = 3
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
+        self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)],  [[None]*self.nfields for _ in range(self.nfields)]
+
 
     def get_problem_var_list(self):
 
@@ -127,7 +134,6 @@ class FluidmechanicsAleProblem(problem_base):
                     #         self.K_dv[i,i] = -self.pbf.timefac*self.pbf.dt
                     #
                     # self.K_dv.assemble()
-
 
                 elif self.coupling_fluid_ale[j]['type'] == 'weak_dirichlet':
 
@@ -251,60 +257,72 @@ class FluidmechanicsAleProblem(problem_base):
                 sys.stdout.flush()
 
 
-    def assemble_residual(self, t, subsolver=None):
+    def set_problem_vector_matrix_structures(self):
 
-        r_list = [None]*3
+        self.pbf.set_problem_vector_matrix_structures()
+        self.pba.set_problem_vector_matrix_structures()
+
+        if self.coupling_strategy=='monolithic':
+
+            self.K_vd = fem.petsc.create_matrix(self.jac_vd)
+            if self.have_weak_dirichlet_fluid_ale:
+                self.K_dv = fem.petsc.create_matrix(self.jac_dv)
+            else:
+                self.K_dv = None
+
+            if self.pbf.num_dupl > 1:
+                self.K_pd = fem.petsc.create_matrix_block(self.jac_pd_)
+            else:
+                self.K_pd = fem.petsc.create_matrix(self.jac_pd)
+
+
+    def assemble_residual(self, t, subsolver=None):
 
         self.evaluate_residual_dbc_coupling()
 
-        r_list_fluid = self.pbf.assemble_residual(t)
+        self.pbf.assemble_residual(t)
+        self.pba.assemble_residual(t)
 
-        r_list_ale = self.pba.assemble_residual(t)
-
-        r_list[0] = r_list_fluid[0]
-        r_list[1] = r_list_fluid[1]
-        r_list[2] = r_list_ale[0]
-
-        return r_list
+        self.r_list[0] = self.pbf.r_list[0]
+        self.r_list[1] = self.pbf.r_list[1]
+        self.r_list[2] = self.pba.r_list[0]
 
 
     def assemble_stiffness(self, t, subsolver=None):
 
-        K_list = [[None]*3 for _ in range(3)]
-
         # if self.have_dbc_fluid_ale:
             #K_list[2][0] = self.K_dv
         if self.have_weak_dirichlet_fluid_ale:
-            K_dv = fem.petsc.assemble_matrix(self.jac_dv, self.pba.bc.dbcs)
-            K_dv.assemble()
-            K_list[2][0] = K_dv
+            self.K_dv.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_dv, self.jac_dv, self.pba.bc.dbcs)
+            self.K_dv.assemble()
+            self.K_list[2][0] = self.K_dv
 
-        K_list_fluid = self.pbf.assemble_stiffness(t)
+        self.pbf.assemble_stiffness(t)
+        self.pba.assemble_stiffness(t)
 
-        K_list_ale = self.pba.assemble_stiffness(t)
-
-        K_list[0][0] = K_list_fluid[0][0]
-        K_list[0][1] = K_list_fluid[0][1]
+        self.K_list[0][0] = self.pbf.K_list[0][0]
+        self.K_list[0][1] = self.pbf.K_list[0][1]
 
         # derivative of fluid momentum w.r.t. ALE displacement
-        K_vd = fem.petsc.assemble_matrix(self.jac_vd, self.pbf.bc.dbcs)
-        K_vd.assemble()
-        K_list[0][2] = K_vd
+        self.K_vd.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_vd, self.jac_vd, self.pbf.bc.dbcs)
+        self.K_vd.assemble()
+        self.K_list[0][2] = self.K_vd
 
-        K_list[1][0] = K_list_fluid[1][0]
-        K_list[1][1] = K_list_fluid[1][1]
+        self.K_list[1][0] = self.pbf.K_list[1][0]
+        self.K_list[1][1] = self.pbf.K_list[1][1]
 
         # derivative of fluid continuity w.r.t. ALE displacement
+        self.K_pd.zeroEntries()
         if self.pbf.num_dupl > 1:
-            K_pd = fem.petsc.assemble_matrix_block(self.jac_pd_, [])
+            fem.petsc.assemble_matrix_block(self.K_pd, self.jac_pd_, [])
         else:
-            K_pd = fem.petsc.assemble_matrix(self.jac_pd, [])
-        K_pd.assemble()
-        K_list[1][2] = K_pd
+            fem.petsc.assemble_matrix(self.K_pd, self.jac_pd, [])
+        self.K_pd.assemble()
+        self.K_list[1][2] = self.K_pd
 
-        K_list[2][2] = K_list_ale[0][0]
-
-        return K_list
+        self.K_list[2][2] = self.pba.K_list[0][0]
 
 
     def evaluate_residual_dbc_coupling(self):
@@ -324,11 +342,11 @@ class FluidmechanicsAleProblem(problem_base):
             w_vec.destroy()
 
 
-    def get_index_sets(self, isoptions={}, rom=None):
+    def get_index_sets(self, isoptions={}):
 
-        if rom is not None: # currently, ROM can only be on (subset of) first variable
-            vvec_or0 = rom.V.getOwnershipRangeColumn()[0]
-            vvec_ls = rom.V.getLocalSize()[1]
+        if self.rom is not None: # currently, ROM can only be on (subset of) first variable
+            vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
+            vvec_ls = self.rom.V.getLocalSize()[1]
         else:
             vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
             vvec_ls = self.pbf.v.vector.getLocalSize()
@@ -337,7 +355,7 @@ class FluidmechanicsAleProblem(problem_base):
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
-            iset_r = PETSc.IS().createGeneral(rom.im_rom_r, comm=self.comm)
+            iset_r = PETSc.IS().createGeneral(self.rom.im_rom_r, comm=self.comm)
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
@@ -471,18 +489,27 @@ class FluidmechanicsAleProblem(problem_base):
         self.pba.check_abort(t)
 
 
+    def destroy(self):
+
+        self.pbf.destroy()
+        self.pba.destroy()
+
+
 
 class FluidmechanicsAleSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_vector_matrix_structures()
+
+        self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
         if self.pb.coupling_strategy=='monolithic':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
         elif self.pb.coupling_strategy=='partitioned':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf,self.pb.pba], self.solver_params, cp=self.pb, rom=self.rom)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf,self.pb.pba], self.solver_params, cp=self.pb)
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
@@ -520,6 +547,42 @@ class FluidmechanicsAleSolver(solver_base):
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
+
+
+    # we overload this function here in order to take care of the partitioned solve,
+    # where the ROM needs to be an object of the fluid, not the coupled problem
+    def evaluate_assemble_system_initial(self):
+
+        # evaluate old initial state of model
+        self.evaluate_system_initial()
+
+        if self.pb.coupling_strategy=='monolithic':
+
+            self.pb.assemble_residual(self.pb.t_init)
+            self.pb.assemble_stiffness(self.pb.t_init)
+
+            # create ROM matrix structures
+            if self.pb.rom:
+                self.pb.rom.set_reduced_data_structures_residual(self.pb.r_list, self.pb.r_list_rom)
+                self.pb.K_list_tmp = [[None]]
+                self.pb.rom.set_reduced_data_structures_matrix(self.pb.K_list, self.pb.K_list_rom, self.pb.K_list_tmp)
+
+        elif self.pb.coupling_strategy=='partitioned':
+
+            self.pb.pbf.rom = self.pb.rom
+
+            self.pb.assemble_residual(self.pb.t_init)
+            self.pb.pbf.assemble_stiffness(self.pb.t_init)
+            self.pb.pba.assemble_stiffness(self.pb.t_init)
+
+            # create ROM matrix structures
+            if self.pb.pbf.rom:
+                self.pb.pbf.rom.set_reduced_data_structures_residual(self.pb.pbf.r_list, self.pb.pbf.r_list_rom)
+                self.pb.pbf.K_list_tmp = [[None]]
+                self.pb.pbf.rom.set_reduced_data_structures_matrix(self.pb.pbf.K_list, self.pb.pbf.K_list_rom, self.pb.pbf.K_list_tmp)
+
+        else:
+            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
 
     def solve_nonlinear_problem(self, t):

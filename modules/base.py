@@ -46,6 +46,7 @@ class problem_base():
 
         # ROM problem - will be overridden by derived model problems
         self.pbrom = self
+        self.rom = None
         self.have_rom = False
 
 
@@ -106,6 +107,10 @@ class problem_base():
         raise RuntimeError("Problem misses function implementation!")
 
 
+    def destroy(self):
+        raise RuntimeError("Problem misses function implementation!")
+
+
     def scale_residual_list(self, rlist, fac):
 
         for n in range(len(rlist)):
@@ -119,6 +124,7 @@ class problem_base():
                 if Klist[n][m] is not None: Klist[n][m].scale(fac[n])
 
 
+
 class solver_base():
 
     def __init__(self, problem, solver_params):
@@ -127,18 +133,45 @@ class solver_base():
 
         self.solver_params = solver_params
 
+        # print header
+        utilities.print_problem(self.pb.problem_physics, self.pb.simname, self.pb.comm, self.pb.numdof)
+
+        # model order reduction stuff
         if self.pb.pbrom.have_rom:
             import mor
-            self.rom = mor.ModelOrderReduction(self.pb.pbrom)
+            self.pb.rom = mor.ModelOrderReduction(self.pb.pbrom)
             # prepare reduced-order basis (offline phase): perform Proper Orthogonal Decomposition, or read in pre-computed modes
-            self.rom.prepare_rob()
+            self.pb.rom.prepare_rob()
         else:
-            self.rom = None
+            self.pb.rom = None
+
+        # read restart information if requested
+        self.pb.read_restart(self.pb.simname, self.pb.restart_step)
 
         self.initialize_nonlinear_solver()
 
         self.wt, self.ni, self.li = 0., 0, 0
         self.wt_, self.ni_, self.li_ = [], [], []
+
+
+    def evaluate_system_initial(self):
+
+        # evaluate old initial state of model
+        self.pb.evaluate_initial()
+
+
+    def evaluate_assemble_system_initial(self):
+
+        self.evaluate_system_initial()
+
+        self.pb.assemble_residual(self.pb.t_init)
+        self.pb.assemble_stiffness(self.pb.t_init)
+
+        # create ROM matrix structures
+        if self.pb.rom:
+            self.pb.rom.set_reduced_data_structures_residual(self.pb.r_list, self.pb.r_list_rom)
+            self.pb.K_list_tmp = [[None]]
+            self.pb.rom.set_reduced_data_structures_matrix(self.pb.K_list, self.pb.K_list_rom, self.pb.K_list_tmp)
 
 
     # routines that should be implemented by derived model solver
@@ -158,20 +191,13 @@ class solver_base():
 
         start = time.time()
 
-        # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.simname, self.pb.comm, self.pb.numdof)
-
-        # read restart information if requested
-        self.pb.read_restart(self.pb.simname, self.pb.restart_step)
-
-        # evaluate old initial state of model
-        self.pb.evaluate_initial()
-
         # any pre-solve that has to be done (e.g. prestress or consistent initial accelerations)
         self.solve_initial_state()
 
         # any output that needs to be written initially (e.g. mesh data)
         self.pb.write_output_ini()
+
+        utilities.print_sep(self.pb.comm)
 
         # Ambit main time loop
         for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
@@ -279,5 +305,26 @@ class solver_base():
 
     def destroy(self):
 
+        # destroy problem-specific stuff first
+        self.pb.destroy()
+
+        # now destroy the residuals and jacobian vectors and matrices
+        for n in range(self.pb.nfields):
+            self.pb.r_list[n].destroy()
+            for m in range(self.pb.nfields):
+                if self.pb.K_list[n][m] is not None:
+                    self.pb.K_list[n][m].destroy()
+
+        # destroy ROM-specific ones
+        if self.pb.pbrom.rom:
+            self.pb.pbrom.rom.destroy()
+            self.pb.pbrom.K_list_tmp[0][0].destroy()
+            for n in range(self.pb.pbrom.nfields):
+                self.pb.pbrom.r_list_rom[n].destroy()
+                for m in range(self.pb.pbrom.nfields):
+                    if self.pb.pbrom.K_list_rom[n][m] is not None:
+                        self.pb.pbrom.K_list_rom[n][m].destroy()
+
+        # destroy ksp solver objects
         for npr in range(self.solnln.nprob):
             self.solnln.ksp[npr].destroy()

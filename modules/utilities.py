@@ -12,80 +12,99 @@ import basix
 
 
 # print header at beginning of simulation
-def print_problem(ptype, sname, comm, numdof=0):
+def print_problem_header(comm):
 
     if comm.rank == 0:
         print("#####################################   AMBIT   #######################################")
-        sys.stdout.flush()
         print("#################### A FEniCS-based cardiovascular physics solver #####################")
         sys.stdout.flush()
 
+
+def print_problem(ptype, sname, comm, numdof=0):
+
+        print_problem_header(comm)
+
         if ptype == 'solid':
-            print("###################### Welcome to finite strain solid mechanics #######################")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("###################### Welcome to finite strain solid mechanics #######################")
+                sys.stdout.flush()
 
         elif ptype == 'fluid':
-            print("############### Welcome to incompressible Navier-Stokes fluid mechanics ###############")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("############### Welcome to incompressible Navier-Stokes fluid mechanics ###############")
+                sys.stdout.flush()
 
         elif ptype == 'ale':
-            print("############################## Welcome to ALE mechanics ###############################")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("############################## Welcome to ALE mechanics ###############################")
+                sys.stdout.flush()
 
         elif ptype == 'fluid_ale':
-            print("#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###")
+                sys.stdout.flush()
 
         elif ptype == 'fsi':
-            print("################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################")
+                sys.stdout.flush()
 
         elif ptype == 'solid_flow0d':
-            print("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########")
+                sys.stdout.flush()
 
         elif ptype == 'solid_flow0d_multiscale_gandr':
-            print("################# Welcome to multiscale growth and remodeling (G & R) #################")
-            print("############## Small time scale: Monolithic 3D-0D coupled solid-flow0d ################")
-            print("####################### Large time scale: Static solid G & R ##########################\n")
-            sys.stdout.flush()
-            return
+            if comm.rank == 0:
+                print("################# Welcome to multiscale growth and remodeling (G & R) #################")
+                print("############## Small time scale: Monolithic 3D-0D coupled solid-flow0d ################")
+                print("####################### Large time scale: Static solid G & R ##########################\n")
+                sys.stdout.flush()
+                return
 
         elif ptype == 'solid_constraint':
-            print("############# Welcome to Lagrange multiplier constraint solid mechanics ###############")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("############# Welcome to Lagrange multiplier constraint solid mechanics ###############")
+                sys.stdout.flush()
 
         elif ptype == 'fluid_flow0d':
-            print("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########")
+                sys.stdout.flush()
 
         elif ptype == 'fluid_ale_flow0d':
-            print("######## Welcome to monolithic coupling of 3D ALE fluid mechanics and 0D flow #########")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("######## Welcome to monolithic coupling of 3D ALE fluid mechanics and 0D flow #########")
+                sys.stdout.flush()
 
         elif ptype == 'flow0d':
-            print("######################### Welcome to lumped-parameter 0D flow #########################")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("######################### Welcome to lumped-parameter 0D flow #########################")
+                sys.stdout.flush()
 
         elif ptype == 'signet':
-            print("######################### Welcome to signalling network models ########################")
-            sys.stdout.flush()
+            if comm.rank == 0:
+                print("######################### Welcome to signalling network models ########################")
+                sys.stdout.flush()
 
         else:
             raise NameError("Unknown problem type!")
 
+        print_sep(comm)
+        if comm.rank == 0:
+            print("Number of degrees of freedom: %i" % (numdof))
+            print("Number of cores: %i" % (comm.size))
+            print("File name: %s" % (sys.argv[0]))
+            print("Output specifier name: %s" % (sname))
+            sys.stdout.flush()
+        print_sep(comm)
 
-        print("#######################################################################################")
-        sys.stdout.flush()
 
-        print("Number of degrees of freedom: %i" % (numdof))
-        print("Number of cores: %i" % (comm.size))
-        print("File name: %s" % (sys.argv[0]))
-        print("Output specifier name: %s" % (sname))
-        sys.stdout.flush()
+def print_sep(comm):
 
-        print("#######################################################################################")
-        sys.stdout.flush()
+    lensep = 87
+    if comm.rank == 0:
+        print("#"*lensep)
 
 
 # print prestress info

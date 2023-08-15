@@ -338,7 +338,7 @@ class cardiovascular0Dbase(ode):
         chamber_funcs=[]
 
         ci=0
-        for ch in ['lv','rv','la','ra']:
+        for i, ch in enumerate(['lv','rv','la','ra']):
 
             if self.chmodels[ch]['type']=='0D_elast':
 
@@ -348,19 +348,15 @@ class cardiovascular0Dbase(ode):
                 if ch == 'ra': E_max, E_min = self.E_at_max_r, self.E_at_min_r
 
                 # time-varying elastance model (y should be normalized activation function provided by user)
-                E_ch_t = (E_max - E_min) * y[ci] + E_min
+                E_ch_t = (E_max - E_min) * y[i] + E_min
 
                 chamber_funcs.append(E_ch_t)
-
-                ci+=1
 
             elif self.chmodels[ch]['type']=='0D_elast_prescr':
 
-                E_ch_t = y[ci]
+                E_ch_t = y[i]
 
                 chamber_funcs.append(E_ch_t)
-
-                ci+=1
 
             else:
 

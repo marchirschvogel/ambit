@@ -60,6 +60,17 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.print_debug = self.pbs.io.print_debug
 
+        # 3D constraint variable (volume or flux)
+        self.constr, self.constr_old = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
+
+        # number of fields involved
+        if self.pbs.incompressible_2field: self.nfields=3
+        else: self.nfields=2
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
+        self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)], [[None]*self.nfields for _ in range(self.nfields)]
+
 
     def get_problem_var_list(self):
 
@@ -83,9 +94,6 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         # Lagrange multipliers
         self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
-
-        # 3D constraint variable (volume or flux)
-        self.constr, self.constr_old = [], []
 
         self.work_coupling, self.work_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
 
@@ -145,6 +153,10 @@ class SolidmechanicsConstraintProblem(problem_base):
     def set_problem_residual_jacobian_forms(self):
 
         self.pbs.set_problem_residual_jacobian_forms()
+        self.set_problem_residual_jacobian_forms_coupling()
+
+
+    def set_problem_residual_jacobian_forms_coupling(self):
 
         tes = time.time()
         if self.comm.rank == 0:
@@ -166,24 +178,60 @@ class SolidmechanicsConstraintProblem(problem_base):
             sys.stdout.flush()
 
 
+    def set_problem_vector_matrix_structures(self):
+
+        self.pbs.set_problem_vector_matrix_structures()
+        self.set_problem_vector_matrix_structures_coupling()
+
+
+    def set_problem_vector_matrix_structures_coupling(self):
+
+        self.r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
+
+        self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_lm.setUp()
+        sze_coup = self.num_coupling_surf
+        self.row_ids = list(range(self.num_coupling_surf))
+        self.col_ids = list(range(self.num_coupling_surf))
+
+        # setup offdiagonal matrices
+        locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
+        matsize = self.pbs.V_u.dofmap.index_map.size_global * self.pbs.V_u.dofmap.index_map_bs
+
+        # derivative of solid residual w.r.t. 0D pressures
+        self.k_us_vec = []
+        for i in range(len(self.col_ids)):
+            self.k_us_vec.append(fem.petsc.create_vector(self.dforce_form[i]))
+
+        self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(sze_coup)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_us.setUp()
+
+        self.k_su_vec = []
+        for i in range(len(self.row_ids)):
+            self.k_su_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
+
+        self.K_su = PETSc.Mat().createAIJ(size=((sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_su.setUp()
+
+        # derivative of 0D residual w.r.t. solid displacements (use transpose, since more efficient assembly)
+        self.K_su_t = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(sze_coup)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_su_t.setUp()
+
+
     def assemble_residual(self, t, subsolver=None):
 
-        if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
-
-        r_list = [None]*(2+off)
+        if self.pbs.incompressible_2field: off = 1
+        else: off = 0
 
         # add to solid momentum equation
         self.set_pressure_fem(self.lm, self.coupfuncs)
 
         # solid main blocks
-        r_list_solid = self.pbs.assemble_residual(t)
+        self.pbs.assemble_residual(t)
 
-        r_list[0] = r_list_solid[0]
+        self.r_list[0] = self.pbs.r_list[0]
         if self.pbs.incompressible_2field:
-            r_list[1] = r_list_solid[1]
+            self.r_list[1] = self.pbs.r_list[1]
 
         ls, le = self.lm.getOwnershipRange()
 
@@ -198,110 +246,78 @@ class SolidmechanicsConstraintProblem(problem_base):
             val.append(self.pbs.ti.timecurves(curvenumber)(t)), val_old.append(self.pbs.ti.timecurves(curvenumber)(t-self.dt))
 
         # Lagrange multiplier coupling residual
-        r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
         for i in range(ls,le):
-            r_lm[i] = self.constr[i] - val[i]
+            self.r_lm[i] = self.constr[i] - val[i]
 
-        r_lm.assemble()
+        self.r_lm.assemble()
 
-        r_list[1+off] = r_lm
+        self.r_list[1+off] = self.r_lm
 
         if bool(self.residual_scale):
             self.scale_residual_list([r_lm], [self.residual_scale[1+off]])
 
-        return r_list
-
 
     def assemble_stiffness(self, t, subsolver=None):
 
-        if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
-
-        K_list = [[None]*(2+off) for _ in range(2+off)]
+        if self.pbs.incompressible_2field: off = 1
+        else: off = 0
 
         # add to solid momentum equation
         self.set_pressure_fem(self.lm, self.coupfuncs)
 
         # solid main blocks
-        K_list_solid = self.pbs.assemble_stiffness(t)
+        self.pbs.assemble_stiffness(t)
 
-        K_list[0][0] = K_list_solid[0][0]
+        self.K_list[0][0] = self.pbs.K_list[0][0]
         if self.pbs.incompressible_2field:
-            K_list[0][1] = K_list_solid[0][1]
-            K_list[1][0] = K_list_solid[1][0]
-            K_list[1][1] = K_list_solid[1][1] # should be only non-zero if we have stress-mediated growth...
-
-        # rows and columns for offdiagonal matrices
-        row_ids = list(range(self.num_coupling_surf))
-        col_ids = list(range(self.num_coupling_surf))
+            self.K_list[0][1] = self.pbs.K_list[0][1]
+            self.K_list[1][0] = self.pbs.K_list[1][0]
+            self.K_list[1][1] = self.pbs.K_list[1][1] # should be only non-zero if we have stress-mediated growth...
 
         # offdiagonal s-u rows
-        k_su_rows=[]
-        for i in range(len(row_ids)):
-            k_su_vec = fem.petsc.assemble_vector(self.dcq_form[i])
-            k_su_rows.append(k_su_vec)
+        for i in range(len(self.row_ids)):
+            with self.k_su_vec[i].localForm() as r_local: r_local.set(0.0)
+            fem.petsc.assemble_vector(self.k_su_vec[i], self.dcq_form[i])
+            self.k_su_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # offdiagonal u-s columns
-        k_us_cols=[]
-        for i in range(len(col_ids)):
-            k_us_vec = fem.petsc.assemble_vector(self.dforce_form[i])
+        for i in range(len(self.col_ids)):
+            with self.k_us_vec[i].localForm() as r_local: r_local.set(0.0)
+            fem.petsc.assemble_vector(self.k_us_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
             # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
-            fem.apply_lifting(k_us_vec, [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
-            k_us_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(k_us_vec, self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
-            k_us_cols.append(k_us_vec) # already multiplied by time-integration factor
+            fem.apply_lifting(self.k_us_vec[i], [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
+            self.k_us_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
 
-        # ghost update on k_su_rows
-        for i in range(len(row_ids)):
-            k_su_rows[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-
-        # setup offdiagonal matrices
-        locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
-        matsize = self.pbs.V_u.dofmap.index_map.size_global * self.pbs.V_u.dofmap.index_map_bs
         # row ownership range of uu block
-        irs, ire = K_list[0][0].getOwnershipRange()
-
-        # derivative of fluid residual w.r.t. 0D pressures
-        K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.num_coupling_surf)), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K_us.setUp()
+        irs, ire = self.pbs.K_list[0][0].getOwnershipRange()
 
         # set columns
-        for i in range(len(col_ids)):
-            K_us[irs:ire, col_ids[i]] = k_us_cols[i][irs:ire]
+        for i in range(len(self.col_ids)):
+            self.K_us[irs:ire, self.col_ids[i]] = self.k_us_vec[i][irs:ire]
 
-        K_us.assemble()
-
-        # derivative of 0D residual w.r.t. solid displacements (use transpose, since more efficient assembly)
-        K_su_t = K_us.duplicate()
+        self.K_us.assemble()
 
         # set rows
-        for i in range(len(row_ids)):
-            K_su_t[irs:ire, row_ids[i]] = k_su_rows[i][irs:ire]
+        for i in range(len(self.row_ids)):
+            self.K_su_t[irs:ire, self.row_ids[i]] = self.k_su_vec[i][irs:ire]
 
-        K_su_t.assemble()
+        self.K_su_t.assemble()
 
         if bool(self.residual_scale):
-            K_us.scale(self.residual_scale[0])
-            K_su_t.scale(self.residual_scale[1+off])
-            K_lm.scale(self.residual_scale[1+off])
+            self.K_us.scale(self.residual_scale[0])
+            self.K_su_t.scale(self.residual_scale[1+off])
+            self.K_lm.scale(self.residual_scale[1+off])
 
-        K_list[0][1+off] = K_us
-        K_list[1+off][0] = K_su_t.createTranspose(K_su_t)
-
-        # destroy PETSc vectors
-        for i in range(len(row_ids)): k_su_rows[i].destroy()
-        for i in range(len(col_ids)): k_us_cols[i].destroy()
-
-        return K_list
+        self.K_list[0][1+off] = self.K_us
+        self.K_list[1+off][0] = self.K_su.createTranspose(self.K_su_t)
 
 
-    def get_index_sets(self, isoptions={}, rom=None):
+    def get_index_sets(self, isoptions={}):
 
-        if rom is not None: # currently, ROM can only be on (subset of) first variable
-            uvec_or0 = rom.V.getOwnershipRangeColumn()[0]
-            uvec_ls = rom.V.getLocalSize()[1]
+        if self.rom is not None: # currently, ROM can only be on (subset of) first variable
+            uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
+            uvec_ls = self.rom.V.getLocalSize()[1]
         else:
             uvec_or0 = self.pbs.u.vector.getOwnershipRange()[0]
             uvec_ls = self.pbs.u.vector.getLocalSize()
@@ -354,13 +370,12 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.set_pressure_fem(self.lm_old, self.coupfuncs_old)
 
-        self.constr, self.constr_old = [], []
         for i in range(self.num_coupling_surf):
             lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
             con = fem.assemble_scalar(self.cq_form[i])
             con = self.comm.allgather(con)
-            self.constr.append(sum(con))
-            self.constr_old.append(sum(con))
+            self.constr[i] = sum(con)
+            self.constr_old[i] = sum(con)
 
 
     def write_output_ini(self):
@@ -432,15 +447,26 @@ class SolidmechanicsConstraintProblem(problem_base):
         pass
 
 
+    def destroy(self):
+
+        self.pbs.destroy()
+
+        for i in range(len(self.col_ids)): self.k_us_vec[i].destroy()
+        for i in range(len(self.row_ids)): self.k_su_vec[i].destroy()
+
+
 
 class SolidmechanicsConstraintSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_vector_matrix_structures()
+
+        self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
         if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
             solver_params_prestr = copy.deepcopy(self.solver_params)

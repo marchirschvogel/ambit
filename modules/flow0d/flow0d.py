@@ -128,11 +128,16 @@ class Flow0DProblem(problem_base):
         self.numdof = self.cardvasc0D.numdof
 
         # vectors and matrices
-        self.dK = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.dK.setUp()
+        self.dK_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.dK_.setUp()
+
+        self.K_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_.setUp()
 
         self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K.setUp()
+
+        self.r = self.K.createVecLeft()
 
         self.s, self.s_old, self.s_mid = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft()
         self.sTc, self.sTc_old = self.K.createVecLeft(), self.K.createVecLeft()
@@ -145,7 +150,7 @@ class Flow0DProblem(problem_base):
 
         self.s_set = self.K.createVecLeft() # set point for multiscale analysis
 
-        self.c, self.y = [], []
+        self.c, self.y = [], [0]*4
 
         self.auxdata, self.auxdata_old = {}, {} # auxiliary data that can be set by other fields (e.g. fluxes from the 3D monitor)
 
@@ -164,6 +169,13 @@ class Flow0DProblem(problem_base):
 
         self.theta_ost = time_params['theta_ost']
 
+        # number of fields involved
+        self.nfields=1
+
+        # residual and matrix lists
+        self.r_list = [None]*self.nfields
+        self.K_list = [[None]*self.nfields for _ in range(self.nfields)]
+
 
     def assemble_residual(self, t):
 
@@ -171,16 +183,17 @@ class Flow0DProblem(problem_base):
 
         theta = self.theta0d_timint(t)
 
-        # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
-        r = self.K.createVecLeft()
-
         self.df.assemble(), self.df_old.assemble()
-        r.axpy(1./self.dt, self.df)
-        r.axpy(-1./self.dt, self.df_old)
-
         self.f.assemble(), self.f_old.assemble()
-        r.axpy(theta, self.f)
-        r.axpy(1.-theta, self.f_old)
+
+        # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
+        self.r.zeroEntries()
+
+        self.r.axpy(1./self.dt, self.df)
+        self.r.axpy(-1./self.dt, self.df_old)
+
+        self.r.axpy(theta, self.f)
+        self.r.axpy(1.-theta, self.f_old)
 
         # if we have prescribed variable values over time
         if bool(self.prescribed_variables):
@@ -198,34 +211,32 @@ class Flow0DProblem(problem_base):
                     val = self.auxdata['q'][monid]
                 else:
                     raise ValueError("Unknown type to prescribe a variable.")
-                self.cardvasc0D.set_prescribed_variables_residual(self.s, r, val, varindex)
+                self.cardvasc0D.set_prescribed_variables_residual(self.s, self.r, val, varindex)
 
-        return r
+        self.r_list[0] = self.r
 
 
     def assemble_stiffness(self, t):
 
-        self.cardvasc0D.evaluate(self.s, t, None, None, self.dK, self.K, self.c, self.y, self.aux)
+        self.cardvasc0D.evaluate(self.s, t, None, None, self.dK_, self.K_, self.c, self.y, self.aux)
 
         theta = self.theta0d_timint(t)
 
-        K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        K.setUp()
-
-        self.dK.assemble()
+        self.dK_.assemble()
+        self.K_.assemble()
         self.K.assemble()
-        K.assemble()
 
-        K.axpy(1./self.dt, self.dK)
-        K.axpy(theta, self.K)
+        self.K.zeroEntries()
+        self.K.axpy(1./self.dt, self.dK_)
+        self.K.axpy(theta, self.K_)
 
         # if we have prescribed variable values over time
         if bool(self.prescribed_variables):
             for a in self.prescribed_variables:
                 varindex = self.cardvasc0D.varmap[a]
-                self.cardvasc0D.set_prescribed_variables_stiffness(K, varindex)
+                self.cardvasc0D.set_prescribed_variables_stiffness(self.K, varindex)
 
-        return K
+        self.K_list[0][0] = self.K
 
 
     def theta0d_timint(self, t):
@@ -295,12 +306,12 @@ class Flow0DProblem(problem_base):
         # activation curves
         if bool(self.chamber_models):
             ci=0
-            for ch in ['lv','rv','la','ra']:
+            for i, ch in enumerate(['lv','rv','la','ra']):
                 if self.chamber_models[ch]['type']=='0D_elast':
-                    self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(t)
+                    self.y[i] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(t)
                     ci+=1
                 if self.chamber_models[ch]['type']=='0D_elast_prescr':
-                    self.y[ci] = self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(t)
+                    self.y[i] = self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(t)
                     ci+=1
                 if self.chamber_models[ch]['type']=='0D_prescr':
                     self.c[self.len_c_3d0d+ci] = self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(t)
@@ -334,13 +345,11 @@ class Flow0DProblem(problem_base):
 
         # evaluate old state
         if self.excitation_curve is not None:
-            self.c = []
             self.c.append(self.ti.timecurves(self.excitation_curve)(self.t_init))
         if bool(self.chamber_models):
-            self.y = []
-            for ch in ['lv','rv','la','ra']:
-                if self.chamber_models[ch]['type']=='0D_elast': self.y.append(self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(self.t_init))
-                if self.chamber_models[ch]['type']=='0D_elast_prescr': self.y.append(self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(self.t_init))
+            for i, ch in enumerate(['lv','rv','la','ra']):
+                if self.chamber_models[ch]['type']=='0D_elast': self.y[i] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(self.t_init)
+                if self.chamber_models[ch]['type']=='0D_elast_prescr': self.y[i] = self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(self.t_init)
                 if self.chamber_models[ch]['type']=='0D_prescr': self.c.append(self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(self.t_init))
 
         # if we have prescribed variable values over time
@@ -438,10 +447,18 @@ class Flow0DProblem(problem_base):
             return True
 
 
+    def destroy(self):
+
+        self.dK_.destroy()
+        self.K_.destroy()
+
+
 
 class Flow0DSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
+
+        self.evaluate_system_initial()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_ode([self.pb], self.solver_params)

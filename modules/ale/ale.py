@@ -139,6 +139,13 @@ class AleProblem(problem_base):
 
         self.print_debug = self.io.print_debug
 
+        # number of fields involved
+        self.nfields = 1
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
+        self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)],  [[None]*self.nfields for _ in range(self.nfields)]
+
 
     def get_problem_var_list(self):
 
@@ -195,34 +202,41 @@ class AleProblem(problem_base):
             sys.stdout.flush()
 
 
+    def set_problem_vector_matrix_structures(self):
+
+        self.r_d = fem.petsc.create_vector(self.res_d)
+        self.K_dd = fem.petsc.create_matrix(self.jac_dd)
+
+        self.r_list[0] = self.r_d
+        self.K_list[0][0] = self.K_dd
+
+
     def assemble_residual(self, t, subsolver=None):
 
         # assemble rhs vector
-        r_d = fem.petsc.assemble_vector(self.res_d)
-        fem.apply_lifting(r_d, [self.jac_dd], [self.bc.dbcs], x0=[self.d.vector], scale=-1.0)
-        r_d.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(r_d, self.bc.dbcs, x0=self.d.vector, scale=-1.0)
+        with self.r_d.localForm() as r_local: r_local.set(0.0)
+        fem.petsc.assemble_vector(self.r_d, self.res_d)
+        fem.apply_lifting(self.r_d, [self.jac_dd], [self.bc.dbcs], x0=[self.d.vector], scale=-1.0)
+        self.r_d.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(self.r_d, self.bc.dbcs, x0=self.d.vector, scale=-1.0)
 
-        r_list = [r_d]
+        self.r_list[0] = self.r_d
 
         if bool(self.residual_scale):
-            self.scale_residual_list(r_list, self.residual_scale)
-
-        return r_list
+            self.scale_residual_list(self.r_list, self.residual_scale)
 
 
     def assemble_stiffness(self, t, subsolver=None):
 
         # assemble system matrix
-        K_dd = fem.petsc.assemble_matrix(self.jac_dd, self.bc.dbcs)
-        K_dd.assemble()
+        self.K_dd.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_dd, self.jac_dd, self.bc.dbcs)
+        self.K_dd.assemble()
 
-        K_list = [[K_dd]]
+        self.K_list[0][0] = self.K_dd
 
         if bool(self.residual_scale):
-            self.scale_jacobian_list(K_list, self.residual_scale)
-
-        return K_list
+            self.scale_jacobian_list(self.K_list, self.residual_scale)
 
 
     ### now the base routines for this problem
@@ -296,12 +310,20 @@ class AleProblem(problem_base):
         pass
 
 
+    def destroy(self):
+
+        self.r_d.destroy()
+        self.K_dd.destroy()
+
 
 class AleSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_vector_matrix_structures()
+
+        self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)

@@ -202,6 +202,13 @@ class FSIProblem(problem_base):
             sys.stdout.flush()
 
 
+    def set_problem_vector_matrix_structures():
+
+        # solid + ALE-fluid
+        self.pbs.set_problem_vector_matrix_structures()
+        self.pbfa.set_problem_vector_matrix_structures()
+
+
     def assemble_residual(self, t, subsolver=None):
 
         if self.pbs.incompressible_2field:
@@ -369,12 +376,20 @@ class FSIProblem(problem_base):
         self.pbfa.check_abort(t)
 
 
+    def destroy(self):
+
+        super().destroy()
+
+
 
 class FSISolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_vector_matrix_structures()
+
+        self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)

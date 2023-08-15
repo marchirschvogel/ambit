@@ -590,6 +590,14 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_lin_prestress_up = ufl.derivative(self.weakform_prestress_u, self.p, self.dp)
                 self.weakform_lin_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
 
+        # number of fields involved
+        if self.incompressible_2field: self.nfields=2
+        else: self.nfields=1
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
+        self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)],  [[None]*self.nfields for _ in range(self.nfields)]
+
 
     # reference coordinates
     def x_ref_expr(self, x):
@@ -777,72 +785,96 @@ class SolidmechanicsProblem(problem_base):
             sys.stdout.flush()
 
 
+    def set_problem_vector_matrix_structures(self):
+
+        self.r_u = fem.petsc.create_vector(self.res_u)
+        self.K_uu = fem.petsc.create_matrix(self.jac_uu)
+
+        if self.incompressible_2field:
+            self.r_p = fem.petsc.create_vector(self.res_p)
+
+            self.K_up = fem.petsc.create_matrix(self.jac_up)
+            self.K_pu = fem.petsc.create_matrix(self.jac_pu)
+
+            if self.jac_pp is not None:
+                self.K_pp = fem.petsc.create_matrix(self.jac_pp)
+            else:
+                self.K_pp = None
+
+
     def assemble_residual(self, t, subsolver=None):
 
         # assemble rhs vector
-        r_u = fem.petsc.assemble_vector(self.res_u)
-        fem.apply_lifting(r_u, [self.jac_uu], [self.bc.dbcs], x0=[self.u.vector], scale=-1.0)
-        r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(r_u, self.bc.dbcs, x0=self.u.vector, scale=-1.0)
+        with self.r_u.localForm() as r_local: r_local.set(0.0)
+        fem.petsc.assemble_vector(self.r_u, self.res_u)
+        fem.apply_lifting(self.r_u, [self.jac_uu], [self.bc.dbcs], x0=[self.u.vector], scale=-1.0)
+        self.r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(self.r_u, self.bc.dbcs, x0=self.u.vector, scale=-1.0)
 
         if self.incompressible_2field:
 
             # assemble pressure rhs vector
-            r_p = fem.petsc.assemble_vector(self.res_p)
-            r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            with self.r_p.localForm() as r_local: r_local.set(0.0)
+            fem.petsc.assemble_vector(self.r_p, self.res_p)
+            self.r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
-            r_list = [r_u, r_p]
+            self.r_list[0] = self.r_u
+            self.r_list[1] = self.r_p
 
         else:
 
-            r_list = [r_u]
+            self.r_list[0] = self.r_u
 
         if bool(self.residual_scale):
-            self.scale_residual_list(r_list, self.residual_scale)
-
-        return r_list
+            self.scale_residual_list(self.r_list, self.residual_scale)
 
 
     def assemble_stiffness(self, t, subsolver=None):
 
         # assemble system matrix
-        K_uu = fem.petsc.assemble_matrix(self.jac_uu, self.bc.dbcs)
-        K_uu.assemble()
+        self.K_uu.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_uu, self.jac_uu, self.bc.dbcs)
+        self.K_uu.assemble()
 
         if self.incompressible_2field:
 
             # assemble system matrices
-            K_up = fem.petsc.assemble_matrix(self.jac_up, self.bc.dbcs)
-            K_up.assemble()
-            K_pu = fem.petsc.assemble_matrix(self.jac_pu, []) # currently, we do not consider pressure DBCs
-            K_pu.assemble()
+            self.K_up.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_up, self.jac_up, self.bc.dbcs)
+            self.K_up.assemble()
+
+            self.K_pu.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_pu, self.jac_pu, []) # currently, we do not consider pressure DBCs
+            self.K_pu.assemble()
 
             # for stress-mediated volumetric growth, K_pp is not zero!
             if self.jac_pp is not None:
-                K_pp = fem.petsc.assemble_matrix(self.jac_pp, [])
-                K_pp.assemble()
+                self.K_pp.zeroEntries()
+                fem.petsc.assemble_matrix(self.K_pp, self.jac_pp, [])
+                self.K_pp.assemble()
             else:
-                K_pp = None
+                self.K_pp = None
 
-            K_list = [[K_uu, K_up], [K_pu, K_pp]]
+            self.K_list[0][0] = self.K_uu
+            self.K_list[0][1] = self.K_up
+            self.K_list[1][0] = self.K_pu
+            self.K_list[1][1] = self.K_pp
 
         else:
 
-            K_list = [[K_uu]]
+            self.K_list[0][0] = self.K_uu
 
         if bool(self.residual_scale):
-            self.scale_jacobian_list(K_list, self.residual_scale)
-
-        return K_list
+            self.scale_jacobian_list(self.K_list, self.residual_scale)
 
 
-    def get_index_sets(self, isoptions={}, rom=None):
+    def get_index_sets(self, isoptions={}):
 
         assert(self.incompressible_2field) # index sets only needed for 2-field problem
 
-        if rom is not None: # currently, ROM can only be on (subset of) first variable
-            uvec_or0 = rom.V.getOwnershipRangeColumn()[0]
-            uvec_ls = rom.V.getLocalSize()[1]
+        if self.rom is not None: # currently, ROM can only be on (subset of) first variable
+            uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
+            uvec_ls = self.rom.V.getLocalSize()[1]
         else:
             uvec_or0 = self.u.vector.getOwnershipRange()[0]
             uvec_ls = self.u.vector.getLocalSize()
@@ -939,15 +971,22 @@ class SolidmechanicsProblem(problem_base):
             return True
 
 
+    def destroy(self):
+        pass
+
+
 
 class SolidmechanicsSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_vector_matrix_structures()
+
+        self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
 
     def solve_initial_state(self):
@@ -1038,7 +1077,7 @@ class SolidmechanicsSolverPrestr(SolidmechanicsSolver):
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, rom=self.rom)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
 
     def solve_initial_state(self):
