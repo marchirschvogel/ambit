@@ -28,7 +28,7 @@ import ioparams
 # standard nonlinear solver for FEM problems
 class solver_nonlinear:
 
-    def __init__(self, pb, solver_params, cp=None):
+    def __init__(self, pb, solver_params, subsolver=None, cp=None):
 
         ioparams.check_params_solver(solver_params)
 
@@ -80,7 +80,9 @@ class solver_nonlinear:
             self.indp2 = self.lsp+2 # indent length for partitioned problem print
             self.lsp += 54
 
-        self.indlen = 1
+        self.indlen_ = [1]*self.nprob
+        # currently, we only have setup the output for two partitioned problems (will there ever be cases with more...?)
+        if self.nprob>1: self.indlen_[1] = self.indp2
 
         self.r_list_sol = [[]]*self.nprob
         self.K_list_sol = [[]]*self.nprob
@@ -93,11 +95,16 @@ class solver_nonlinear:
                 self.r_list_sol[npr] = self.pb[npr].r_list
                 self.K_list_sol[npr] = self.pb[npr].K_list
 
-        # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
-        if self.pb[0].sub_solve:
-            self.subsol = solver_nonlinear_ode([self.pb[0].pb0], solver_params['subsolver_params'])
-        else:
-            self.subsol = None
+        # nested and merged (monolithic) residual and matrix objects
+        self.r_full_nest = [None]*self.nprob
+        self.K_full_nest = [None]*self.nprob
+        self.P_full_nest = [None]*self.nprob
+
+        self.r_full_merged = [None]*self.nprob
+        self.K_full_merged = [None]*self.nprob
+        self.P_full_merged = [None]*self.nprob
+
+        self.subsol = subsolver
 
         self.initialize_petsc_solver()
 
@@ -187,11 +194,6 @@ class solver_nonlinear:
         for k in is_option_keys:
             if k not in self.iset_options.keys(): self.iset_options[k] = False
 
-        if any(list(self.iset_options.values())):
-            self.merge_prec_mat = True
-        else:
-            self.merge_prec_mat = False
-
         self.iset = [[]]*self.nprob
 
         try: self.print_local_iter = solver_params['print_local_iter']
@@ -223,25 +225,36 @@ class solver_nonlinear:
             # create solver
             self.ksp[npr] = PETSc.KSP().create(self.comm)
 
+            # get reduced matrices to set ksp operators
+            if self.pb[npr].rom:
+                self.jacobian_problem_actions(0., npr, 0.)
+
             if self.solvetype[npr]=='direct':
 
                 self.ksp[npr].setType("preonly")
                 self.ksp[npr].getPC().setType("lu")
                 self.ksp[npr].getPC().setFactorSolverType(self.direct_solver)
 
+                # prepare merged matrix structure
+                if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
+                    self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
+                    self.K_full_merged[npr] = self.K_full_nest[npr].convert("aij")
+
             elif self.solvetype[npr]=='iterative':
 
                 self.ksp[npr].setInitialGuessNonzero(False)
                 self.ksp[npr].setNormType(self.linnormtype) # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
 
-                # get matrices to set ksp operators
-                if self.pb[npr].rom:
-                    self.jacobian_problem_actions(0., npr, 0.)
-                K_full_nest = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
-                P_nest = K_full_nest
-                if self.merge_prec_mat:
-                    P_nest = P_nest.convert("aij")
-                self.ksp[npr].setOperators(K_full_nest, P_nest)
+                self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
+                self.P_full_nest[npr] = self.K_full_nest[npr]
+
+                if not self.block_precond[npr] == 'fieldsplit':
+                    self.P_full_merged[npr] = self.P_full_nest[npr].convert("aij")
+                    P = self.P_full_merged[npr]
+                else:
+                    P = self.P_full_nest[npr]
+
+                self.ksp[npr].setOperators(self.K_full_nest[npr], P)
 
                 # block iterative method
                 if self.nfields[npr] > 1:
@@ -472,8 +485,8 @@ class solver_nonlinear:
 
         for npr in range(self.nprob):
 
-            if npr==0: self.indlen=1
-            else: self.indlen=self.indp2
+            if npr==0: self.indlen=self.indlen_[0]
+            else: self.indlen=self.indlen_[1]
 
             self.solutils.print_nonlinear_iter(header=True, ptype=self.ptype[npr])
 
@@ -497,8 +510,8 @@ class solver_nonlinear:
             # problem loop (in case of partitioned solves)
             for npr in range(self.nprob):
 
-                if npr==0: self.indlen=1
-                else: self.indlen=self.indp2
+                if npr==0: self.indlen=self.indlen_[0]
+                else: self.indlen=self.indlen_[1]
 
                 # assemble Jacobian
                 self.jacobian_problem_actions(t, npr, k_PTC)
@@ -511,10 +524,10 @@ class solver_nonlinear:
                     tes = time.time()
 
                     # nested residual vector
-                    r_full_nest = PETSc.Vec().createNest(self.r_list_sol[npr])
+                    self.r_full_nest[npr] = PETSc.Vec().createNest(self.r_list_sol[npr])
 
                     # nested matrix
-                    K_full_nest = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
+                    self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
 
                     te += time.time() - tes
 
@@ -524,21 +537,21 @@ class solver_nonlinear:
                         tes = time.time()
 
                         tms = time.time()
-                        K_full = K_full_nest.convert("aij")
+                        self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
                         tme = time.time() - tms
                         if self.printenh:
                             if self.comm.rank == 0:
-                                print('       === MAT merge, te = %.4f s' % (tme))
+                                print(' '*self.indlen_[npr] + '      === MAT merge, te = %.4f s' % (tme))
                                 sys.stdout.flush()
 
-                        r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
+                        self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_full_nest[npr].getArray())
 
-                        del_full = K_full.createVecLeft()
-                        self.ksp[npr].setOperators(K_full)
+                        del_full = self.K_full_merged[npr].createVecLeft()
+                        self.ksp[npr].setOperators(self.K_full_merged[npr])
                         te += time.time() - tes
 
                         tss = time.time()
-                        self.ksp[npr].solve(-r_full, del_full)
+                        self.ksp[npr].solve(-self.r_full_merged[npr], del_full)
                         ts = time.time() - tss
 
                     # for nested iterative solver
@@ -547,36 +560,42 @@ class solver_nonlinear:
                         tes = time.time()
 
                         # use same matrix as preconditioner
-                        P_nest = K_full_nest
+                        self.P_full_nest[npr] = self.K_full_nest[npr]
 
                         del_full = PETSc.Vec().createNest(del_x_sol[npr])
 
                         # if index sets do not align with the nested matrix structure
                         # anymore, we need a merged matrix to extract the submats
-                        if self.merge_prec_mat:
+                        if not self.block_precond[npr] == 'fieldsplit':
                             tms = time.time()
-                            P_nest = P_nest.convert("aij")
+                            self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
+                            P = self.P_full_merged[npr]
                             tme = time.time() - tms
                             if self.printenh:
                                 if self.comm.rank == 0:
-                                    print('       === PREC MAT merge, te = %.4f s' % (tme))
+                                    print(' '*self.indlen_[npr] + '      === PREC MAT merge, te = %.4f s' % (tme))
                                     sys.stdout.flush()
+                        else:
+                            P = self.P_full_nest[npr]
 
-                        self.ksp[npr].setOperators(K_full_nest, P_nest)
+                        self.ksp[npr].setOperators(self.K_full_nest[npr], P)
 
-                        r_full_nest.assemble()
+                        self.r_full_nest[npr].assemble()
 
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':
-                            r_full = PETSc.Vec().createWithArray(r_full_nest.getArray())
-                            r_full.assemble()
+                            self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_full_nest[npr].getArray())
+                            self.r_full_merged[npr].assemble()
                             del_full = PETSc.Vec().createWithArray(del_full.getArray())
-                            r_full_nest = r_full
+                            r = self.r_full_merged[npr]
+                        else:
+                            r = self.r_full_nest[npr]
 
                         te += time.time() - tes
 
                         tss = time.time()
-                        self.ksp[npr].solve(-r_full_nest, del_full)
+                        self.ksp[npr].solve(-r, del_full)
+
                         ts = time.time() - tss
 
                         self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
@@ -638,9 +657,6 @@ class solver_nonlinear:
                 # destroy PETSc stuff...
                 if self.nfields[npr] > 1:
                     del_full.destroy()
-                    # r_full_nest.destroy(), K_full_nest.destroy(), del_full.destroy()
-                    # if self.solvetype[npr]=='direct': r_full.destroy(), K_full.destroy()
-                    # if self.solvetype[npr]=='iterative': P_nest.destroy()
 
                 # get converged state of each problem
                 converged.append(self.solutils.check_converged(self.resnorms[npr], self.incnorms[npr], self.tolerances[npr], ptype=self.ptype[npr]))
@@ -724,7 +740,7 @@ class solver_nonlinear:
         tee = time.time() - tes
         if self.printenh:
             if self.comm.rank == 0:
-                print('       === Residual assemble, te = %.4f s' % (tee))
+                print(' '*self.indlen_[npr] + '      === Residual assemble, te = %.4f s' % (tee))
                 sys.stdout.flush()
 
         if self.pb[npr].rom:
@@ -746,7 +762,7 @@ class solver_nonlinear:
         tee = time.time() - tes
         if self.printenh:
             if self.comm.rank == 0:
-                print('       === Jacobian assemble, te = %.4f s' % (tee))
+                print(' '*self.indlen_[npr] + '      === Jacobian assemble, te = %.4f s' % (tee))
                 sys.stdout.flush()
 
         if self.pb[npr].rom:
@@ -824,6 +840,17 @@ class solver_nonlinear:
 
             raise RuntimeError("Local Newton did not converge after %i iterations!" % (it_local))
 
+
+    def destroy(self):
+
+        for npr in range(self.nprob):
+            if self.r_full_nest[npr] is not None: self.r_full_nest[npr].destroy()
+            if self.K_full_nest[npr] is not None: self.K_full_nest[npr].destroy()
+            if self.P_full_nest[npr] is not None: self.P_full_nest[npr].destroy()
+
+            if self.r_full_merged[npr] is not None: self.r_full_merged[npr].destroy()
+            if self.K_full_merged[npr] is not None: self.K_full_merged[npr].destroy()
+            if self.P_full_merged[npr] is not None: self.P_full_merged[npr].destroy()
 
 
 # solver for pure ODE (0D) problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)
@@ -950,3 +977,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         else:
 
             raise RuntimeError("Newton for ODE system did not converge after %i iterations!" % (it))
+
+
+    def destroy(self):
+        pass

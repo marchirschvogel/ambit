@@ -527,8 +527,6 @@ class ModelOrderReduction():
         nfields = len(r_list)
 
         # projection of main block: residual
-        # r_list_rom[0].destroy()
-        # r_list_rom[0] = self.V.createVecRight()
         self.V.multTranspose(r_list[0], r_list_rom[0]) # V^T * r_u
 
         # deal with penalties that may be added to reduced residual to penalize certain modes
@@ -586,8 +584,6 @@ class ModelOrderReduction():
 
         nfields = len(del_x)
 
-        # del_x[0].destroy()
-        # del_x[0] = self.V.createVecLeft()
         self.V.mult(del_x_rom[0], del_x[0]) # V * dx_red
 
         if nfields > 1: # only implemented for the first var in list so far!

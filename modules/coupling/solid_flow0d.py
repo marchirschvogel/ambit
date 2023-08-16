@@ -746,10 +746,16 @@ class SolidmechanicsFlow0DSolver(solver_base):
         self.pb.set_problem_residual_jacobian_forms()
         self.pb.set_problem_vector_matrix_structures()
 
-        self.evaluate_assemble_system_initial()
+        # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
+        if self.pb.sub_solve:
+            self.subsol = solver_nonlin.solver_nonlinear_ode([self.pb.pb0], self.solver_params['subsolver_params'])
+        else:
+            self.subsol = None
+
+        self.evaluate_assemble_system_initial(subsolver=self.subsol)
 
         # initialize nonlinear solver class
-        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, subsolver=self.subsol)
 
         if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
             # initialize solid mechanics solver

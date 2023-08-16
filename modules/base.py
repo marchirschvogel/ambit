@@ -160,12 +160,12 @@ class solver_base():
         self.pb.evaluate_initial()
 
 
-    def evaluate_assemble_system_initial(self):
+    def evaluate_assemble_system_initial(self, subsolver=None):
 
         self.evaluate_system_initial()
 
-        self.pb.assemble_residual(self.pb.t_init)
-        self.pb.assemble_stiffness(self.pb.t_init)
+        self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern
+        self.pb.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
 
         # create ROM matrix structures
         if self.pb.rom:
@@ -324,6 +324,9 @@ class solver_base():
                 for m in range(self.pb.pbrom.nfields):
                     if self.pb.pbrom.K_list_rom[n][m] is not None:
                         self.pb.pbrom.K_list_rom[n][m].destroy()
+
+        # destroy solver data structures
+        self.solnln.destroy()
 
         # destroy ksp solver objects
         for npr in range(self.solnln.nprob):

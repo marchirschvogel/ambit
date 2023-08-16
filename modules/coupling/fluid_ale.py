@@ -551,7 +551,7 @@ class FluidmechanicsAleSolver(solver_base):
 
     # we overload this function here in order to take care of the partitioned solve,
     # where the ROM needs to be an object of the fluid, not the coupled problem
-    def evaluate_assemble_system_initial(self):
+    def evaluate_assemble_system_initial(self, subsolver=None):
 
         # evaluate old initial state of model
         self.evaluate_system_initial()

@@ -386,13 +386,19 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         self.pb.set_problem_residual_jacobian_forms()
         self.pb.set_problem_vector_matrix_structures()
 
-        self.evaluate_assemble_system_initial()
+        # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
+        if self.pb.sub_solve:
+            self.subsol = solver_nonlin.solver_nonlinear_ode([self.pb.pb0], self.solver_params['subsolver_params'])
+        else:
+            self.subsol = None
+
+        self.evaluate_assemble_system_initial(subsolver=self.subsol)
 
         # initialize nonlinear solver class
         if self.pb.coupling_strategy=='monolithic':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, subsolver=self.subsol)
         elif self.pb.coupling_strategy=='partitioned':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf0,self.pb.pba], self.solver_params, cp=self.pb)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf0,self.pb.pba], self.solver_params, subsolver=self.subsol, cp=self.pb)
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
@@ -430,6 +436,42 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
+
+
+    # we overload this function here in order to take care of the partitioned solve,
+    # where the ROM needs to be an object of the fluid, not the coupled problem
+    def evaluate_assemble_system_initial(self, subsolver=None):
+
+        # evaluate old initial state of model
+        self.evaluate_system_initial()
+
+        if self.pb.coupling_strategy=='monolithic':
+
+            self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern)
+            self.pb.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
+
+            # create ROM matrix structures
+            if self.pb.rom:
+                self.pb.rom.set_reduced_data_structures_residual(self.pb.r_list, self.pb.r_list_rom)
+                self.pb.K_list_tmp = [[None]]
+                self.pb.rom.set_reduced_data_structures_matrix(self.pb.K_list, self.pb.K_list_rom, self.pb.K_list_tmp)
+
+        elif self.pb.coupling_strategy=='partitioned':
+
+            self.pb.pbf0.rom = self.pb.rom
+
+            self.pb.assemble_residual(self.pb.t_init, subsolver=None)
+            self.pb.pbf0.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
+            self.pb.pba.assemble_stiffness(self.pb.t_init)
+
+            # create ROM matrix structures
+            if self.pb.pbf0.rom:
+                self.pb.pbf0.rom.set_reduced_data_structures_residual(self.pb.pbf0.r_list, self.pb.pbf0.r_list_rom)
+                self.pb.pbf0.K_list_tmp = [[None]]
+                self.pb.pbf0.rom.set_reduced_data_structures_matrix(self.pb.pbf0.K_list, self.pb.pbf0.K_list_rom, self.pb.pbf0.K_list_tmp)
+
+        else:
+            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
 
     def solve_nonlinear_problem(self, t):

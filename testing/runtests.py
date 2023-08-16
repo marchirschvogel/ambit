@@ -103,7 +103,8 @@ if category=='solid_flow0d' or category=='all':
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
     errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
 
-    errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber_iterative 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber_iterative.py'])
+    errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber_bgs2x2 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber_bgs2x2.py'])
+    errs['solid_flow0d_monodir_4elwindkesselLsZ_chamber_bgs2x2fieldsplit 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_4elwindkesselLsZ_chamber_bgs2x2fieldsplit.py'])
 
     errs['solid_flow0d_monodir2field_4elwindkesselLpZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir2field_4elwindkesselLpZ_chamber.py'])
     errs['solid_flow0d_monodir2field_4elwindkesselLpZ_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir2field_4elwindkesselLpZ_chamber.py'])
@@ -115,9 +116,9 @@ if category=='solid_flow0d' or category=='all':
     errs['solid_flow0d_monodir_syspul_2Dheart_prestress 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py'])
     errs['solid_flow0d_monodir_syspul_2Dheart_prestress 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py', str(3)]) # tests restart from step 3
 
-    errs['solid_flow0d_monodir_flux_syspulcap_3Dheart_iterative 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_flux_syspulcap_3Dheart_iterative.py'])
+    errs['solid_flow0d_monodir_flux_syspulcap_3Dheart_simple2x2 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monodir_flux_syspulcap_3Dheart_simple2x2.py'])
 
-    errs['solid_flow0d_monodir2field_flux_syspulcap_3Dheart_iterative 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monodir2field_flux_syspulcap_3Dheart_iterative.py'])
+    errs['solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3.py'])
 
     errs['solid_flow0d_monodir_syspulcor_2Dheart_ROM 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_syspulcor_2Dheart_ROM.py'])
 
@@ -128,13 +129,13 @@ if category=='solid_constraint' or category=='all':
 if category=='frsi' or category=='fluid_ale' or category=='all':
     errs['frsi_artseg_prefile 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_prefile.py'])
     errs['frsi_artseg_prefile 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile.py'])
-    errs['frsi_artseg_prefile_partitioned_iterative 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile_partitioned_iterative.py'])
+    errs['frsi_artseg_prefile_partitioned_schur3x3 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'frsi_artseg_prefile_partitioned_schur3x3.py'])
 
     errs['frsi_artseg_modepartitionunity 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'frsi_artseg_modepartitionunity.py'])
     errs['frsi_artseg_modepartitionunity 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'frsi_artseg_modepartitionunity.py'])
     errs['frsi_artseg_modepartitionunity 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'frsi_artseg_modepartitionunity.py', str(2)])
 
-    errs['frsi_artseg_prefile_iterative 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'frsi_artseg_prefile_iterative.py'])
+    errs['frsi_artseg_prefile_schur4x4 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'frsi_artseg_prefile_schur4x4.py'])
 
 if category=='ale' or category=='all':
     errs['ale_linelast 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'ale_linelast.py'])
