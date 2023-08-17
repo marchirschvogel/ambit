@@ -27,6 +27,12 @@ class block_precond():
 
     def create(self, pc):
 
+        # get reference to preconditioner matrix object
+        _, self.P = pc.getOperators()
+
+        self.check_field_size()
+        operator_mats = self.init_mat_vec(pc)
+
         self.ksp_fields = []
         # create field ksps
         for n in range(self.nfields):
@@ -42,24 +48,23 @@ class block_precond():
                 self.ksp_fields[n].getPC().setType(amgtype)
                 if amgtype=="hypre":
                     self.ksp_fields[n].getPC().setHYPREType("boomeramg")
-                # TODO: Some additional hypre options we might wanna set...
+                # set operators and setup field prec
+                self.ksp_fields[n].getPC().setOperators(operator_mats[n])
+                self.ksp_fields[n].getPC().setUp()
+                # TODO: Some additional hypre options we might wanna set... which are optimal here???
                 # opts = PETSc.Options()
+                # opts.setValue('pc_hypre_parasails_reuse', True) # - does this exist???
                 # opts.setValue('pc_hypre_boomeramg_cycle_type', 'v') # v, w
                 # opts.setValue('pc_hypre_boomeramg_max_iter', 1)
                 # opts.setValue('pc_hypre_boomeramg_relax_type_all',  'symmetric-SOR/Jacobi')
                 # self.ksp_fields[n].getPC().setFromOptions()
+                # print(self.ksp_fields[n].getPC().view())
             elif self.precond_fields[n]['prec'] == 'direct':
                 self.ksp_fields[n].setType("preonly")
                 self.ksp_fields[n].getPC().setType("lu")
                 self.ksp_fields[n].getPC().setFactorSolverType("mumps")
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
-
-        # get reference to preconditioner matrix object
-        _, self.P = pc.getOperators()
-
-        self.check_field_size()
-        self.init_mat_vec(pc)
 
 
     def view(self, pc, vw):
@@ -98,12 +103,18 @@ class schur_2x2(block_precond):
         self.Adinv_Bt = self.Adinv.matMult(self.Bt)
         self.B_Adinv_Bt = self.B.matMult(self.Adinv_Bt)
 
+        # need to set Smod here to get the data structures right
+        self.Smod.aypx(0., self.C, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.Smod.axpy(-1., self.B_Adinv_Bt)
+
         self.x1, self.x2 = self.A.createVecLeft(), self.Smod.createVecLeft()
         self.y1, self.y2 = self.A.createVecLeft(), self.Smod.createVecLeft()
         self.z1, self.z2 = self.A.createVecLeft(), self.Smod.createVecLeft()
 
         self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+
+        return [self.A, self.Smod]
 
 
     def setUp(self, pc):
@@ -130,7 +141,7 @@ class schur_2x2(block_precond):
 
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
         # compute self.Smod = self.C - B_Adinv_Bt
-        self.Smod.aypx(0., self.C)
+        self.Smod.aypx(0., self.C, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
 
         tse = time.time() - tss
@@ -234,7 +245,9 @@ class schur_3x3(block_precond):
 
         self.D_Adinv_Dt = self.D.matMult(self.Adinv_Dt)
 
-        # need to set Tmod here to get the data structures right
+        # need to set Smod and Tmod here to get the data structures right
+        self.Smod.aypx(0., self.C, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.Smod.axpy(-1., self.B_Adinv_Bt)
         self.Tmod.aypx(0., self.Et, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
         self.Tmod.axpy(-1., self.B_Adinv_Dt)
 
@@ -258,6 +271,8 @@ class schur_3x3(block_precond):
         self.x1, self.x2, self.x3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
         self.y1, self.y2, self.y3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
         self.z1, self.z2, self.z3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
+
+        return [self.A, self.Smod, self.Wmod]
 
 
     def setUp(self, pc):
@@ -428,12 +443,14 @@ class schur_4x4(schur_3x3):
 
 
     def init_mat_vec(self, pc):
-        super().init_mat_vec(pc)
+        opmats = super().init_mat_vec(pc)
 
         self.G = self.P.createSubMatrix(self.iset[3],self.iset[3])
 
         self.x4 = self.G.createVecLeft()
         self.y4 = self.G.createVecLeft()
+
+        return [opmats[0], opmats[1], opmats[2], self.G]
 
 
     def setUp(self, pc):
@@ -537,6 +554,8 @@ class bgs_2x2(block_precond):
         self.y1, self.y2 = self.A.createVecLeft(), self.C.createVecLeft()
         self.z2 = self.C.createVecLeft()
 
+        return [self.A, self.C]
+
 
     def setUp(self, pc):
 
@@ -604,6 +623,8 @@ class jacobi_2x2(block_precond):
 
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        return [self.A, self.C]
 
 
     def setUp(self, pc):
