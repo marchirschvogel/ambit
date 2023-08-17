@@ -204,28 +204,22 @@ class schur_3x3(block_precond):
         self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
-        self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-
         self.Adinv = self.A.duplicate(copy=False)
-        self.Adinv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
 
         self.adinv_vec = self.A.getDiagonal()
 
         self.Smod = self.C.duplicate(copy=False)
-        self.Smod.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
-        self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
         self.smoddinv_vec = self.Smod.getDiagonal()
         # the matrix to later insert the diagonal
         self.Smoddinv = self.Smod.duplicate(copy=False)
+        self.Smoddinv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False) # needed here for later diagonal setting
 
         self.Tmod = self.Et.duplicate(copy=False)
-        self.Tmod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.Wmod = self.R.duplicate(copy=False)
-        self.Wmod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         self.Adinv_Bt = self.Adinv.matMult(self.Bt)
         self.DBt = self.D.matMult(self.Adinv_Bt)
-        self.DBt.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         self.B_Adinv_Bt = self.B.matMult(self.Adinv_Bt)
 

@@ -868,8 +868,6 @@ class SolidmechanicsProblem(problem_base):
             self.scale_jacobian_list(self.K_list, self.residual_scale)
 
 
-
-
     def get_index_sets(self, isoptions={}):
 
         assert(self.incompressible_2field) # index sets only needed for 2-field problem
