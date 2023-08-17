@@ -259,11 +259,11 @@ class solver_nonlinear:
 
                 if self.merge_prec_mat:
                     self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
-                    P = self.P_full_merged[npr]
+                    self.P = self.P_full_merged[npr]
                 else:
-                    P = self.P_full_nest[npr]
+                    self.P = self.P_full_nest[npr]
 
-                self.ksp[npr].setOperators(self.K_full_nest[npr], P)
+                self.ksp[npr].setOperators(self.K_full_nest[npr], self.P)
 
                 # block iterative method
                 if self.nfields[npr] > 1:
@@ -587,20 +587,21 @@ class solver_nonlinear:
 
                         # if index sets do not align with the nested matrix structure
                         # anymore, we need a merged matrix to extract the submats
-                        if self.merge_prec_mat and (self.ni_all % self.rebuild_prec_every_it == 0):
-                            tms = time.time()
-                            self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
-                            P = self.P_full_merged[npr]
-                            tme = time.time() - tms
-                            if self.printenh:
-                                if self.comm.rank == 0:
-                                    print(' '*self.indlen_[npr] + '      === PREC MAT merge, te = %.4f s' % (tme))
-                                    sys.stdout.flush()
-                        else:
-                            P = self.P_full_nest[npr]
+                        if self.ni_all % self.rebuild_prec_every_it == 0:
+                            if self.merge_prec_mat:
+                                tms = time.time()
+                                self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
+                                self.P = self.P_full_merged[npr]
+                                tme = time.time() - tms
+                                if self.printenh:
+                                    if self.comm.rank == 0:
+                                        print(' '*self.indlen_[npr] + '      === PREC MAT merge, te = %.4f s' % (tme))
+                                        sys.stdout.flush()
+                            else:
+                                self.P = self.P_full_nest[npr]
 
                         # set operators for linear system solve: Jacobian and preconditioner (we use the same here)
-                        self.ksp[npr].setOperators(self.K_full_nest[npr], P)
+                        self.ksp[npr].setOperators(self.K_full_nest[npr], self.P)
 
                         self.r_full_nest[npr].assemble()
 
