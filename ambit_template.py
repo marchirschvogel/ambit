@@ -58,6 +58,7 @@ def main():
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
                             'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 1)
                             'indexset_options'      : {'rom_to_new' : False, 'lms_to_pres' : False}, # OPTIONAL: some options for the index sets (default: {})
+                            'rebuild_prec_every_it' : 1, # OPTIONAL: rebuild the preconditioner every rebuild_prec_every_it iterations (default: 1)
                             # for local Newton (only for inelastic nonlinear materials at Gauss points, i.e. deformation-dependent growth)
                             'print_local_iter'      : False, # OPTIONAL: if we want to print iterations of local Newton (default: False)
                             'tol_res_local'         : 1.0e-10, # OPTIONAL: local Newton residual inf-norm tolerance (default: 1.0e-10)

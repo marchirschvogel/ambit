@@ -35,6 +35,8 @@ if category=='solid' or category=='all':
     errs['solid_robin_genalpha 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_genalpha.py'])
     errs['solid_robin_genalpha 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha.py'])
     errs['solid_robin_genalpha 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_robin_genalpha.py', str(8)])
+    
+    errs['solid_robin_genalpha_amg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha_amg.py'])
 
     errs['solid_robin_visco 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_visco.py'])
 

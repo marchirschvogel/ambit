@@ -53,6 +53,7 @@ def main():
                             'res_lin_monitor'       : 'abs',
                             'print_liniter_every'   : 50,
                             'indexset_options'      : {'rom_to_new' : True},
+                            'rebuild_prec_every_it' : 3,
                             'tol_res'               : [[1.0e-8,1.0e-8],[1.0e-3]],
                             'tol_inc'               : [[1.0e-4,1.0e-4],[1.0e-3]]}
 

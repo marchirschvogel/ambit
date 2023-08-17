@@ -109,6 +109,7 @@ class solver_nonlinear:
         self.initialize_petsc_solver()
 
         self.li_s = [] # linear iterations over all solves
+        self.ni_all = 0 # all nonlinear iterations over all solves (to determine prec updates for instance)
 
         self.cp = cp
 
@@ -204,6 +205,9 @@ class solver_nonlinear:
         try: self.print_local_iter = solver_params['print_local_iter']
         except: self.print_local_iter = False
 
+        try: self.rebuild_prec_every_it = solver_params['rebuild_prec_every_it']
+        except: self.rebuild_prec_every_it = 1
+
         try: self.tol_res_local = solver_params['tol_res_local']
         except: self.tol_res_local = 1.0e-10
 
@@ -267,9 +271,6 @@ class solver_nonlinear:
                     self.iset[npr] = self.pb[npr].get_index_sets(isoptions=self.iset_options)
 
                     self.ksp[npr].setType(self.iterative_solver) # cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html
-
-                    # TODO: how to use this adaptively...
-                    #self.ksp.getPC().setReusePreconditioner(True)
 
                     if self.block_precond[npr] == 'fieldsplit':
 
@@ -572,6 +573,11 @@ class solver_nonlinear:
                     # for nested iterative solver
                     elif self.solvetype[npr]=='iterative':
 
+                        if self.ni_all % self.rebuild_prec_every_it == 0:
+                            self.ksp[npr].getPC().setReusePreconditioner(False)
+                        else:
+                            self.ksp[npr].getPC().setReusePreconditioner(True)
+
                         tes = time.time()
 
                         # use same matrix as preconditioner
@@ -581,7 +587,7 @@ class solver_nonlinear:
 
                         # if index sets do not align with the nested matrix structure
                         # anymore, we need a merged matrix to extract the submats
-                        if self.merge_prec_mat:
+                        if self.merge_prec_mat and (self.ni_all % self.rebuild_prec_every_it == 0):
                             tms = time.time()
                             self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
                             P = self.P_full_merged[npr]
@@ -693,6 +699,7 @@ class solver_nonlinear:
 
             # iteration update after all problems have been solved
             it += 1
+            self.ni_all += 1
 
             # now check if errors occurred
             if any(err):

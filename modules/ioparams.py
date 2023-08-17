@@ -61,6 +61,7 @@ def check_params_solver(params):
                     'ptc',
                     'ptc_randadapt_range',
                     'res_lin_monitor',
+                    'rebuild_prec_every_it',
                     'solve_type',
                     'solve_type_prestr',
                     'subsolver_params',
