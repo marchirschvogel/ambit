@@ -577,8 +577,7 @@ class solver_nonlinear:
 
                         del_full = PETSc.Vec().createNest(del_x_sol[npr])
 
-                        # if index sets do not align with the nested matrix structure
-                        # anymore, we need a merged matrix to extract the submats
+                        # re-build preconditioner if requested (default is every iteration)
                         if self.ni_all % self.rebuild_prec_every_it == 0:
 
                             self.ksp[npr].getPC().setReusePreconditioner(False)
@@ -586,6 +585,8 @@ class solver_nonlinear:
                             # use same matrix as preconditioner
                             self.P_full_nest[npr] = self.K_full_nest[npr]
 
+                            # if index sets do not align with the nested matrix structure
+                            # anymore, we need a merged matrix to extract the submats
                             if self.merge_prec_mat:
                                 tms = time.time()
                                 self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
