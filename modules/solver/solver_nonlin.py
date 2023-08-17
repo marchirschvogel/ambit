@@ -477,8 +477,7 @@ class solver_nonlinear:
                         del_x_rom[npr][n] = self.pb[npr].rom.V.createVecRight()
                         del_x_rom[npr][n].set(0.0)
                     else:
-                        del_x_rom[npr][n] = self.x[npr][n].duplicate()
-                        del_x_rom[npr][n].set(0.0)
+                        del_x_rom[npr][n] = del_x[npr][n]
                 # start vector (needed for reset of Newton in case of divergence)
                 x_start[npr][n] = self.x[npr][n].duplicate()
                 self.x[npr][n].assemble()
@@ -739,7 +738,7 @@ class solver_nonlinear:
                 # destroy PETSc vectors
                 for npr in range(self.nprob):
                     for n in range(self.nfields[npr]):
-                        del_x_sol[npr][n].destroy(), x_start[npr][n].destroy(), del_x[npr][n].destroy()#, del_x_rom[npr][n].destroy()
+                        del_x_sol[npr][n].destroy(), x_start[npr][n].destroy(), del_x[npr][n].destroy()
                     if self.pb[npr].sub_solve: s_start.destroy()
 
                 # reset to normal Newton if PTC was used in a divcont action

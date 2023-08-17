@@ -90,6 +90,8 @@ class schur_2x2(block_precond):
 
         self.Adinv = self.A.duplicate(copy=False)
         self.adinv_vec = self.A.getDiagonal()
+        # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
+        # self.adinv_vec = self.A.getRowSum()
 
         self.Smod = self.C.duplicate(copy=False)
 
@@ -115,8 +117,8 @@ class schur_2x2(block_precond):
 
         self.A.getDiagonal(result=self.adinv_vec)
         # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
-        # adinv_vec = self.A.getRowSum()
-        # adinv_vec.abs()
+        # self.A.getRowSum(result=self.adinv_vec)
+        # self.adinv_vec.abs()
 
         self.adinv_vec.reciprocal()
 
@@ -206,10 +208,15 @@ class schur_3x3(block_precond):
         self.Adinv = self.A.duplicate(copy=False)
 
         self.adinv_vec = self.A.getDiagonal()
+        # TODO: Check if this might be a better approximation (cf. Elman et al. 2008)
+        #self.adinv_vec =  self.A.getRowSum()
 
         self.Smod = self.C.duplicate(copy=False)
 
         self.smoddinv_vec = self.Smod.getDiagonal()
+        # TODO: Check if this might be a better approximation
+        # self.smoddinv_vec = self.Smod.getRowSum()
+
         # the matrix to later insert the diagonal
         self.Smoddinv = self.Smod.duplicate(copy=False)
         self.Smoddinv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False) # needed here for later diagonal setting
