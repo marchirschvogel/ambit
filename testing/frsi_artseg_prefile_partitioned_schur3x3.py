@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-# FrSI test case of an axially clamped, prestressed arterial segment
-# partitioned solution strategy
+"""
+FrSI test case of an axially clamped, prestressed arterial segment
+- partitioned solution strategy between fluid and ALE
+"""
 
 import ambit
 

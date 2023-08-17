@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+ATTENTION: 0D VAD model not yet fully functional!
+"""
+
 import ambit
 
 import sys, traceback
@@ -8,7 +12,7 @@ from pathlib import Path
 
 import resultcheck
 
-#ATTENTION: 0D VAD model not yet functional!
+
 
 def main():
 

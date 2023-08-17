@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+solid 3D-0D coupling: incompressible hollow solid chamber coupled to 2-element windkessel model
+monolithic coupling via multiplier constraint (a more general coupling way that subs out the 0D model to an extra solve)
+"""
+
 import ambit
 
 import sys, time, traceback
@@ -40,9 +45,9 @@ def main():
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : '2elwindkessel',
                             'parameters'            : {'C' : 10.0, 'R' : 100.0, 'p_ref' : 0.0}}
 
-    FEM_PARAMS           = {'order_disp'            : 1,
+    FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,
-                            'quad_degree'           : 1,
+                            'quad_degree'           : 5,
                             'incompressible_2field' : True}
 
     COUPLING_PARAMS      = {'surface_ids'           : [[3]],
@@ -79,7 +84,7 @@ def main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 9.0742817444402890E-01
+    s_corr[0] = 4.1613784331931276E+00
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# stress-mediated volumetric growth of an incompressible block (p2p1 interpolation)
+"""
+solid mechanics: stress-mediated volumetric growth of an incompressible block (p2p1 interpolation)
+"""
 
 import ambit
 

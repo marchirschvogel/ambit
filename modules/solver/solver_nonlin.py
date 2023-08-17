@@ -101,8 +101,8 @@ class solver_nonlinear:
         self.P_full_nest = [None]*self.nprob
 
         self.r_full_merged = [None]*self.nprob
-        self.K_full_merged = [None]*self.nprob
-        self.P_full_merged = [None]*self.nprob
+        self.K_full_merged = [PETSc.Mat()]*self.nprob
+        self.P_full_merged = [PETSc.Mat()]*self.nprob
 
         self.subsol = subsolver
 
@@ -194,6 +194,11 @@ class solver_nonlinear:
         for k in is_option_keys:
             if k not in self.iset_options.keys(): self.iset_options[k] = False
 
+        if any(list(self.iset_options.values())):
+            self.merge_prec_mat = True
+        else:
+            self.merge_prec_mat = False
+
         self.iset = [[]]*self.nprob
 
         try: self.print_local_iter = solver_params['print_local_iter']
@@ -238,7 +243,7 @@ class solver_nonlinear:
                 # prepare merged matrix structure
                 if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
                     self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
-                    self.K_full_merged[npr] = self.K_full_nest[npr].convert("aij")
+                    self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
 
             elif self.solvetype[npr]=='iterative':
 
@@ -248,8 +253,8 @@ class solver_nonlinear:
                 self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
                 self.P_full_nest[npr] = self.K_full_nest[npr]
 
-                if not self.block_precond[npr] == 'fieldsplit':
-                    self.P_full_merged[npr] = self.P_full_nest[npr].convert("aij")
+                if self.merge_prec_mat:
+                    self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
                     P = self.P_full_merged[npr]
                 else:
                     P = self.P_full_nest[npr]
@@ -279,7 +284,7 @@ class solver_nonlinear:
                         elif self.fieldsplit_type=='gauss_seidel_sym':
                             splittype = PETSc.PC.CompositeType.SYMMETRIC_MULTIPLICATIVE # symmetric block Gauss-Seidel
                         elif self.fieldsplit_type=='schur':
-                            assert(self.nfields==2)
+                            assert(self.nfields[npr]==2)
                             splittype = PETSc.PC.CompositeType.SCHUR # block Schur - for 2x2 block systems only
                         else:
                             raise ValueError("Unknown fieldsplit_type option.")
@@ -296,6 +301,7 @@ class solver_nonlinear:
                         else: raise RuntimeError("Currently, no more than 5 fields/index sets are supported.")
 
                         # get the preconditioners for each block
+                        self.ksp[npr].getPC().setUp()
                         ksp_fields = self.ksp[npr].getPC().getFieldSplitSubKSP()
 
                         assert(nsets==len(self.precond_fields[npr])) # sanity check
@@ -384,6 +390,11 @@ class solver_nonlinear:
     # solve for consistent initial acceleration a_old
     def solve_consistent_ini_acc(self, res_a, jac_aa, a_old):
 
+        tss = time.time()
+        if self.comm.rank == 0:
+            print('Solve for consistent initial acceleration...')
+            sys.stdout.flush()
+
         # create solver
         ksp = PETSc.KSP().create(self.comm)
 
@@ -413,6 +424,11 @@ class solver_nonlinear:
 
         r_a.destroy(), M_a.destroy()
         ksp.destroy()
+
+        tse = time.time() - tss
+        if self.comm.rank == 0:
+            print('Solve for consistent initial acceleration finished, ts = %.4f s' % (tse))
+            sys.stdout.flush()
 
 
     def solve_local(self, localdata):
@@ -523,11 +539,11 @@ class solver_nonlinear:
 
                     tes = time.time()
 
+                    # nested matrix references have been updated - we should call assemble again (?)
+                    self.K_full_nest[npr].assemble()
+
                     # nested residual vector
                     self.r_full_nest[npr] = PETSc.Vec().createNest(self.r_list_sol[npr])
-
-                    # nested matrix
-                    self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
 
                     te += time.time() - tes
 
@@ -536,9 +552,8 @@ class solver_nonlinear:
 
                         tes = time.time()
 
-                        tms = time.time()
                         self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
-                        tme = time.time() - tms
+                        tme = time.time() - tes
                         if self.printenh:
                             if self.comm.rank == 0:
                                 print(' '*self.indlen_[npr] + '      === MAT merge, te = %.4f s' % (tme))
@@ -566,7 +581,7 @@ class solver_nonlinear:
 
                         # if index sets do not align with the nested matrix structure
                         # anymore, we need a merged matrix to extract the submats
-                        if not self.block_precond[npr] == 'fieldsplit':
+                        if self.merge_prec_mat:
                             tms = time.time()
                             self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
                             P = self.P_full_merged[npr]
@@ -578,6 +593,7 @@ class solver_nonlinear:
                         else:
                             P = self.P_full_nest[npr]
 
+                        # set operators for linear system solve: Jacobian and preconditioner (we use the same here)
                         self.ksp[npr].setOperators(self.K_full_nest[npr], P)
 
                         self.r_full_nest[npr].assemble()
@@ -594,6 +610,7 @@ class solver_nonlinear:
                         te += time.time() - tes
 
                         tss = time.time()
+                        # solve the linear system
                         self.ksp[npr].solve(-r, del_full)
 
                         ts = time.time() - tss
@@ -609,10 +626,11 @@ class solver_nonlinear:
 
                 else:
 
-                    # solve linear system
+                    # set operators for linear system solve
                     self.ksp[npr].setOperators(self.K_list_sol[npr][0][0])
 
                     tss = time.time()
+                    # solve the linear system
                     self.ksp[npr].solve(-self.r_list_sol[npr][0], del_x_sol[npr][0])
                     ts = time.time() - tss
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-### LV FSI
+"""
+FSI of arterial segment: stabilized equal-order formulation, compressible solid
+TODO: Not yet fully implemented!
+"""
 
 import ambit
 

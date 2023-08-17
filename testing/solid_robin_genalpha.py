@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
-# tests:
-# - solid St. Venant-Kirchhoff material
-# - Generalized-alpha time integration
-# - Robin conditions
-# - own read-/write function for restarts (only working for nodal fields!)
+"""
+- solid mechanics
+- elastic St. Venant-Kirchhoff material
+- Generalized-alpha time integration
+- Robin conditions
+- own read-/write function for restarts (only working for nodal fields!)
+"""
 
 import ambit
 

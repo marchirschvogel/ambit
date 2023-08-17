@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+solid 3D-0D coupling: compressible hollow solid chamber coupled to 4-element windkessel model (inertance serial to impedance, LsZ),
+- monolithic coupling via direct monolithic integration of 0D model into system
+- iterative solve with Gauss Seidel implementation via PETSc's fieldsplit (should give the same as the other test with the own bgs2x2 implementation)
+"""
+
 import ambit
 
 import sys, traceback

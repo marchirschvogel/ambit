@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-### block that grows in fiber direction triggered by fiber stretch and remodels to softer material
-# TODO: Somehow, this does not converge quadratically at the end (seems irrespective of remodeling,
-# but likely to be attributed to the growth in fiber direction) ---> check linearization terms!
+"""
+solid mechanics with growth
+block that grows in fiber direction triggered by fiber stretch and remodels to softer material
+TODO: Somehow, this does not converge quadratically at the end (seems irrespective of remodeling,
+but likely to be attributed to the growth in fiber direction) ---> check linearization terms!
 
-# only one hex element in this testcase - cannot be run on multiple cores!
+only one hex element in this testcase - cannot be run on multiple cores!
+"""
 
 import ambit
 

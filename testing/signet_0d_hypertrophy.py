@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+0D signalling network model for cardiac hypertrophy: not yet fully tested!
+"""
+
 import ambit
 
 import sys, traceback

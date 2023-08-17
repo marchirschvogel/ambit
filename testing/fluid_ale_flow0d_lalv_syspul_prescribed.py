@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-# LA-LV patient-specific prescribed ALE motion problem
+"""
+LA-LV patient-specific prescribed ALE motion problem
 
-# tests:
-# - ALE-fluid coupled to 0D circulation model
-# - prescribed ALE motion via volume Dirichlet condition
-# - duplicate pressure nodes (discontinuity) at mitral valve plane
-# - dt scaling of residual
+tests:
+- ALE-fluid coupled to 0D circulation model
+- prescribed ALE motion via volume Dirichlet condition
+- duplicate pressure nodes (discontinuity) at mitral valve plane
+- dt scaling of residual
+"""
 
 import ambit
 

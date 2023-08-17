@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-"""
-transient incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
-- stabilized P1P1 elements for velocity and pressure
-- Backward-Euler time stepping scheme
-- 2 material domains in fluid (w/ same parameters though)
-- internal valve, requiring duplicate pressure nodes at that internal surface
-- works currently only with mixed dolfinx branch (USE_MIXED_DOLFINX_BRANCH)
-- checkpoint writing of domain-wise discontinuous pressure field
-"""
+# tests:
+# - steady incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
+# - Stabilized P1P1 elements for velocity and pressure
+# - Backward-Euler time stepping scheme
+# - 2 material domains in fluid (w/ same parameters though)
+# - Schur2x2 block preconditioner
 
 import ambit
 
@@ -22,34 +19,33 @@ import resultcheck
 def main():
     
     basepath = str(Path(__file__).parent.absolute())
-
-    # reads in restart step from the command line
-    try: restart_step = int(sys.argv[1])
-    except: restart_step = 0
+    
 
     IO_PARAMS           = {'problem_type'          : 'fluid',
-                           'USE_MIXED_DOLFINX_BRANCH' : True,
-                           'duplicate_mesh_domains': [1,2],
                            'mesh_domain'           : basepath+'/input/cylinder_domain.xdmf',
                            'mesh_boundary'         : basepath+'/input/cylinder_boundary.xdmf',
                            'write_results_every'   : 1,
-                           'write_restart_every'   : 9,
-                           'restart_step'          : restart_step,
                            'output_path'           : basepath+'/tmp/',
                            'results_to_write'      : ['velocity','pressure'],
-                           'simname'               : 'fluid_p1p1_stab_cylinder_valve'}
+                           'simname'               : 'fluid_p1p1_stab_cylinder'}
 
-    SOLVER_PARAMS       = {'solve_type'            : 'direct',
-                           'direct_solver'         : 'mumps',
+    SOLVER_PARAMS       = {'solve_type'            : 'iterative',
+                           'iterative_solver'      : 'fgmres',
+                           'block_precond'         : 'schur2x2',
+                           'precond_fields'        : [{'prec':'amg'}, {'prec':'amg'}], # v, p
+                           'tol_lin_rel'           : 1.0e-5,
+                           'tol_lin_abs'           : 1.0e-30,
+                           'res_lin_monitor'       : 'rel',
+                           'print_liniter_every'   : 10,
                            'tol_res'               : 1.0e-8,
                            'tol_inc'               : 1.0e-8}
 
     TIME_PARAMS_FLUID   = {'maxtime'               : 1.0,
                            'numstep'               : 10,
-                           #'numstep_stop'          : 3,
+                           'numstep_stop'          : 2,
                            'timint'                : 'ost',
                            'theta_ost'             : 1.0,
-                           'fluid_governing_type'  : 'navierstokes_transient'}
+                           'fluid_governing_type'  : 'navierstokes_steady'}
     
     FEM_PARAMS          = {'order_vel'             : 1,
                            'order_pres'            : 1,
@@ -68,21 +64,11 @@ def main():
     class time_curves():
         
         def tc1(self, t):
-            t_ramp = 1.0
-            pmax = 1.0
-            return 0.5*(-(pmax))*(1.-np.cos(np.pi*t/t_ramp))
-
-        def tc2(self, t):
-            pmax = 0.5
-            return -pmax
+            return -0.001*np.sin(2.*np.pi*t/TIME_PARAMS_FLUID['maxtime'])
 
 
-    BC_DICT        = { 'dirichlet'   : [{'id' : [1], 'dir' : 'all', 'val' : 0.}],
-                       'neumann'     : [{'id' : [2], 'dir' : 'normal_cur', 'curve' : 1},
-                                        {'id' : [4], 'dir' : 'normal_cur', 'curve' : 2}],
-                       'robin_valve' : [{'id' : [5], 'type' : 'dp_smooth', 'beta_max' : 1e3, 'beta_min' : 1e-3, 'epsilon' : 1e-6, 'dp_monitor_id' : 0}], # 5 is internal surface (valve)
-                       'dp_monitor'  : [{'id' : [5], 'upstream_domain' : 2, 'downstream_domain' : 1}], 
-                       'flux_monitor': [{'id' : [5], 'on_subdomain' : True, 'internal' : False, 'domain' : 2}] }
+    BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}], # lateral surf
+                          'neumann' : [{'id' : [4], 'dir' : 'xyz_cur', 'curve' : [0,0,1]}]} # inflow; 2,3 are outflows
 
 
     # problem setup
@@ -101,13 +87,16 @@ def main():
     v_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 2.8961592602855979E+00 # x
-    v_corr[1] = 1.1646607897463809E+03 # y
-    v_corr[2] = -9.9702473473169971E+02 # z
+    v_corr[0] = 3.0401864063179573E-01 # x
+    v_corr[1] = -3.7615292073863640E+00 # y
+    v_corr[2] = -7.5782395441818418E-02 # z
+
+    p_corr[0] = -2.1474832854517510E-04
 
     check1 = resultcheck.results_check_node(problem.mp.v, check_node, v_corr, problem.mp.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
+    check2 = resultcheck.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p', readtol=1e-4)
 
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    success = resultcheck.success_check([check1,check2], problem.mp.comm)
 
     return success
 

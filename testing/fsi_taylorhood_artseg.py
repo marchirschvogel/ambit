@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-### LV FSI
+"""
+FSI of arterial segment: Q2-Q1 Taylor-Hood for both fluid and incompressible solid
+TODO: Not yet fully implemented!
+"""
 
 import ambit
 

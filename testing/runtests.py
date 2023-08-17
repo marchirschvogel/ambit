@@ -69,6 +69,8 @@ if category=='fluid' or category=='all':
 
     errs['fluid_p1p1_stab_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder.py'])
     errs['fluid_p1p1_stab_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'fluid_p1p1_stab_cylinder.py'])
+    
+    errs['fluid_p1p1_stab_cylinder_schur2x2 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'fluid_p1p1_stab_cylinder_schur2x2.py'])
 
     if branch=='mixed':
         errs['fluid_p1p1_stab_cylinder_valve 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder_valve.py'])

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# steel block falling for 1 s due to Earth gravity, acting in negative z direction
+"""
+steel block falling for 1 s due to Earth gravity, acting in negative z direction
+"""
 
 import ambit
 

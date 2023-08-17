@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+4-element Windkessel, inertance serial to impedance (LsZ)
+"""
+
 import ambit
 
 import sys, traceback

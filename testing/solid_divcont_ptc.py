@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# - tests solver divergence continue action with PTC on detection of large residual values/nans
+"""
+tests solver divergence continue action with PTC on detection of large residual values/nans
+"""
 
 import ambit
 

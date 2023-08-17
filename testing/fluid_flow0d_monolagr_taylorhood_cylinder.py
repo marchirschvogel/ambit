@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-# tests:
-# - monolithic 3D-0D coupling of incompressible Navier-Stokes with 2-element Windkessel model
+"""
+monolithic 3D-0D coupling of incompressible Navier-Stokes with 2-element Windkessel model
+"""
 
 import ambit
 

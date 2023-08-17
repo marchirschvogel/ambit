@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+solid mechanics with Lagrange multiplier constraint: chamber with enclosed cavity whose volume is prescibed over time
+"""
+
 import ambit
 
 import sys, time, traceback

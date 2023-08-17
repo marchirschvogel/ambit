@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# FrSI test case of an axially clamped, prestressed arterial segment
+"""
+FrSI test case of an axially clamped, prestressed arterial segment
+"""
 
 import ambit
 

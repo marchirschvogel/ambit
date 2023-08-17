@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-# tests:
-# - dummy linear-elastic ALE solid
-# - physically irrelevant deformation, just testing the correct functionality of the standalone ALE class
+"""
+dummy linear-elastic ALE solid
+physically irrelevant deformation, just testing the correct functionality of the standalone ALE class, incl. output writing
+"""
 
 import ambit
 

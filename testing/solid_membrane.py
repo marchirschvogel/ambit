@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+surface membrane model, simple deformation modes - tests correct quasi-static membrane stress response
+"""
+
 import ambit
 
 import sys, traceback
@@ -8,7 +12,6 @@ from pathlib import Path
 
 import resultcheck
 
-# surface membrane model, simple deformation modes - tests correct quasi-static membrane stress response
 
 def main():
 

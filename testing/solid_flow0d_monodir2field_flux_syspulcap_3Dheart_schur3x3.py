@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-### 3D biventricular generic heart, testing of:
-# - incompressible Neo-Hookean material (p2p1 interpolation), viscous Green material
-# - 3D-0D monolithic solution of 3D heart w/ syspulcap circulation (flux coupling)
-# - Robin BCs in xyz and normal direction (spring and dashpot)
-# - OST time-integration for solid
-# - 3x3 block iterative method for incompressible solid coupled to 0D model
+"""
+3D biventricular generic heart, testing of:
+- incompressible Neo-Hookean material (p2p1 interpolation), viscous Green material
+- 3D-0D monolithic solution of 3D heart w/ syspulcap circulation (flux coupling)
+- Robin BCs in xyz and normal direction (spring and dashpot)
+- OST time-integration for solid
+- 3x3 block iterative method for incompressible solid coupled to 0D model
+"""
 
 import ambit
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# prescribed growth of an idealized LV geometry to theta = 2
+"""
+solid mechanics: prescribed growth of an idealized LV geometry to theta = 2
+"""
 
 import ambit
 

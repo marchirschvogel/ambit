@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-# FrSI test case of an axially clamped, prestressed arterial segment
-# tests a 4x4 iterative solver with a decoupled solve on the 4th (ALE) block
+"""
+FrSI test case of an axially clamped, prestressed arterial segment
+- iterative schur4x4 solution
+"""
 
 import ambit
 

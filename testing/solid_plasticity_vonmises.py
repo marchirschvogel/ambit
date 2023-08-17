@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+tests:
+- solid mechanics: finite strain plasticity
+TODO:  NOT YET FULLY IMPLEMENTED!
+"""
+
 import ambit
 
 import sys, traceback
@@ -8,7 +14,6 @@ from pathlib import Path
 
 import resultcheck
 
-# TODO: FINITE STRAIN PLASTICITY NOT YET WORKING !!!!!!!!!!!!!!!!
 
 def main():
 

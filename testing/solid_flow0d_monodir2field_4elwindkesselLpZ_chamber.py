@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+solid 3D-0D coupling: incompressible hollow solid chamber coupled to 4-element windkessel model (inertance parallel to impedance, LpZ),
+- monolithic coupling via direct monolithic integration of 0D model into system
+- direct solve
+"""
+
 import ambit
 
 import sys, traceback
@@ -39,9 +45,9 @@ def main():
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : '4elwindkesselLpZ',
                             'parameters'            : {'R' : 1.0e3, 'C' : 0.0, 'Z' : 10.0, 'L' : 5.0, 'p_ref' : 0.0}}
 
-    FEM_PARAMS           = {'order_disp'            : 1,
+    FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,
-                            'quad_degree'           : 2,
+                            'quad_degree'           : 5,
                             'incompressible_2field' : True}
 
     COUPLING_PARAMS      = {'surface_ids'           : [[3]],
@@ -77,10 +83,10 @@ def main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 8.6484650873435367E+00
-    s_corr[1] = -2.9820617286280569E+00
-    s_corr[2] = -8.5948391584497758E-03
-    s_corr[3] = 2.8463464067727982E-03
+    s_corr[0] = 6.6112734346791608E+00
+    s_corr[1] = -5.0536832486004135E-01
+    s_corr[2] = -6.5698331560523982E-03
+    s_corr[3] = 4.1830472040250060E-04
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)

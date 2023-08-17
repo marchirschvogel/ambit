@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
-## perfectly incompressible materials tested on uniaxial stress state, using p2p1 interpolation, hexahedral elements, one load step:
-# blocks of L_x = L_y = L_z = 1.0
-# tests the following materials:
-# - Neo-Hookean
-# - Mooney Rivlin
-# - Holzapfel-Ogden
-# - write of standard solid mechanics output
+"""
+solid mechanics
+perfectly incompressible materials tested on uniaxial stress state, using p2p1 interpolation, hexahedral elements, one load step:
+blocks of L_x = L_y = L_z = 1.0
+materials:
+- Neo-Hookean
+- Mooney Rivlin
+- Holzapfel-Ogden
+- write of standard solid mechanics output
+"""
 
 import ambit
 

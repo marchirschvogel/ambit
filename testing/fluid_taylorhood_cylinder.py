@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-# tests:
-# - incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
-# - Taylor-Hood P2P1 elements for velocity and pressure
-# - Backward-Euler time stepping scheme
-# - output writing of fluid quantities
+"""
+incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
+- Taylor-Hood P2P1 elements for velocity and pressure
+- Backward-Euler time stepping scheme
+- output writing of fluid quantities
+"""
 
 import ambit
 

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+- solid mechanics
+- basic rate-dependent solid material
+"""
+
 import ambit
 
 import sys, traceback
@@ -7,8 +12,6 @@ import numpy as np
 from pathlib import Path
 
 import resultcheck
-
-# purely viscous block testing basic rate-dependent solid material
 
 def main():
 

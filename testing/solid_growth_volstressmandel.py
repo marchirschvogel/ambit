@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# stress-mediated volumetric growth of a block (compressible formulation, nu = 0.49)
+"""
+solid mechanics: stress-mediated volumetric growth of a block (compressible formulation, nu = 0.49)
+"""
 
 import ambit
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-# FrSI test case of an axially clamped arterial segment
-# tests:
-# - mode partition of unity partitioning
-# - mode penalties
-# - ALE transient Stokes flow (Taylor-Hood elements)
-# - weak Dirichlet condition from fluid to ALE
+"""
+FrSI test case of an axially clamped arterial segment
+- mode partition of unity partitioning
+- mode penalties
+- ALE transient Stokes flow (Taylor-Hood elements)
+- weak Dirichlet condition from fluid to ALE
+"""
 
 import ambit
 

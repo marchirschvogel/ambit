@@ -55,6 +55,9 @@ class block_precond():
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
+        # get reference to preconditioner matrix object
+        _, self.P = pc.getOperators()
+
         self.check_field_size()
         self.init_mat_vec(pc)
 
@@ -79,8 +82,6 @@ class schur_2x2(block_precond):
 
 
     def init_mat_vec(self, pc):
-
-        _, self.P = pc.getOperators()
 
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
@@ -107,8 +108,6 @@ class schur_2x2(block_precond):
     def setUp(self, pc):
 
         tss = time.time()
-
-        _, self.P = pc.getOperators()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
@@ -149,9 +148,9 @@ class schur_2x2(block_precond):
 
         # 1) solve A * y_1 = x_1
         self.ksp_fields[0].setOperators(self.A)
-        self.ksp_fields[0].solve(x1, y1)
+        self.ksp_fields[0].solve(self.x1, self.y1)
 
-        self.B.mult(y1, self.By1)
+        self.B.mult(self.y1, self.By1)
 
         # compute z2 = x2 - self.By1
         self.z2.axpby(1., 0., self.x2)
@@ -159,9 +158,9 @@ class schur_2x2(block_precond):
 
         # 2) solve Smod * y_2 = z_2
         self.ksp_fields[1].setOperators(self.Smod)
-        self.ksp_fields[1].solve(z2, y2)
+        self.ksp_fields[1].solve(self.z2, self.y2)
 
-        self.Bt.mult(y2, self.Bty2)
+        self.Bt.mult(self.y2, self.Bty2)
 
         # compute z1 = x1 - self.Bty2
         self.z1.axpby(1., 0., self.x1)
@@ -195,8 +194,6 @@ class schur_3x3(block_precond):
 
     def init_mat_vec(self, pc):
 
-        _, self.P = pc.getOperators()
-
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
         self.Dt = self.P.createSubMatrix(self.iset[0],self.iset[2])
@@ -207,25 +204,28 @@ class schur_3x3(block_precond):
         self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
+        self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
         self.Adinv = self.A.duplicate(copy=False)
         self.Adinv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
-        # self.Adinv.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
         self.adinv_vec = self.A.getDiagonal()
 
         self.Smod = self.C.duplicate(copy=False)
         self.Smod.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
-        # self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.smoddinv_vec = self.Smod.getDiagonal()
         # the matrix to later insert the diagonal
         self.Smoddinv = self.Smod.duplicate(copy=False)
 
         self.Tmod = self.Et.duplicate(copy=False)
+        self.Tmod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.Wmod = self.R.duplicate(copy=False)
-
+        self.Wmod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         self.Adinv_Bt = self.Adinv.matMult(self.Bt)
         self.DBt = self.D.matMult(self.Adinv_Bt)
-        # self.DBt.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.DBt.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         self.B_Adinv_Bt = self.B.matMult(self.Adinv_Bt)
 
@@ -263,8 +263,6 @@ class schur_3x3(block_precond):
     def setUp(self, pc):
 
         tss = time.time()
-
-        _, self.P = pc.getOperators()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
@@ -350,6 +348,8 @@ class schur_3x3(block_precond):
         x.getSubVector(self.iset[0], subvec=self.x1)
         x.getSubVector(self.iset[1], subvec=self.x2)
         x.getSubVector(self.iset[2], subvec=self.x3)
+
+        tss = time.time()
 
         # 1) solve A * y_1 = x_1
         self.ksp_fields[0].setOperators(self.A)
@@ -525,8 +525,6 @@ class bgs_2x2(block_precond):
 
     def init_mat_vec(self, pc):
 
-        _, self.P = pc.getOperators()
-
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0],self.iset[1])
         self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
@@ -543,8 +541,6 @@ class bgs_2x2(block_precond):
     def setUp(self, pc):
 
         tss = time.time()
-
-        _, self.P = pc.getOperators()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
@@ -606,8 +602,6 @@ class jacobi_2x2(block_precond):
 
     def init_mat_vec(self, pc):
 
-        _, self.P = pc.getOperators()
-
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
 
@@ -615,8 +609,6 @@ class jacobi_2x2(block_precond):
     def setUp(self, pc):
 
         tss = time.time()
-
-        _, self.P = pc.getOperators()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)

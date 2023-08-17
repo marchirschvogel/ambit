@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
-### 2D biventricular generic heart, testing of:
-# - Mooney-Rivlin material
-# - active stress with Frank-Starling law
-# - Robin BC in normal direction (spring)
+"""
+solid mechanics, 2D biventricular generic heart, testing of:
+- Mooney-Rivlin material
+- active stress with Frank-Starling law
+- Robin BC in normal direction (spring)
+"""
 
 import ambit
 
