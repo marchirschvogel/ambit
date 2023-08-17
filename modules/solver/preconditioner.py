@@ -90,7 +90,6 @@ class schur_2x2(block_precond):
 
         self.Adinv = self.A.duplicate(copy=False)
         self.adinv_vec = self.A.getDiagonal()
-        self.Adinv.setDiagonal(self.adinv_vec, addv=PETSc.InsertMode.INSERT)
 
         self.Smod = self.C.duplicate(copy=False)
 
