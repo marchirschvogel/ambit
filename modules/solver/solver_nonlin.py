@@ -573,21 +573,19 @@ class solver_nonlinear:
                     # for nested iterative solver
                     elif self.solvetype[npr]=='iterative':
 
-                        if self.ni_all % self.rebuild_prec_every_it == 0:
-                            self.ksp[npr].getPC().setReusePreconditioner(False)
-                        else:
-                            self.ksp[npr].getPC().setReusePreconditioner(True)
-
                         tes = time.time()
-
-                        # use same matrix as preconditioner
-                        self.P_full_nest[npr] = self.K_full_nest[npr]
 
                         del_full = PETSc.Vec().createNest(del_x_sol[npr])
 
                         # if index sets do not align with the nested matrix structure
                         # anymore, we need a merged matrix to extract the submats
                         if self.ni_all % self.rebuild_prec_every_it == 0:
+
+                            self.ksp[npr].getPC().setReusePreconditioner(False)
+
+                            # use same matrix as preconditioner
+                            self.P_full_nest[npr] = self.K_full_nest[npr]
+
                             if self.merge_prec_mat:
                                 tms = time.time()
                                 self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
@@ -599,6 +597,10 @@ class solver_nonlinear:
                                         sys.stdout.flush()
                             else:
                                 self.P = self.P_full_nest[npr]
+
+                        else:
+
+                            self.ksp[npr].getPC().setReusePreconditioner(True)
 
                         # set operators for linear system solve: Jacobian and preconditioner (we use the same here)
                         self.ksp[npr].setOperators(self.K_full_nest[npr], self.P)
