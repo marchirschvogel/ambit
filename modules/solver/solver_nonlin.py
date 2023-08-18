@@ -101,8 +101,8 @@ class solver_nonlinear:
         self.P_full_nest = [None]*self.nprob
 
         self.r_full_merged = [None]*self.nprob
-        self.K_full_merged = [PETSc.Mat()]*self.nprob
-        self.P_full_merged = [PETSc.Mat()]*self.nprob
+        self.K_full_merged = [None]*self.nprob
+        self.P_full_merged = [None]*self.nprob
 
         self.subsol = subsolver
 
@@ -178,10 +178,11 @@ class solver_nonlinear:
         try: self.lin_norm_type = solver_params['lin_norm_type']
         except: self.lin_norm_type = 'unpreconditioned'
 
+        # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
         if self.lin_norm_type=='preconditioned':
-            self.linnormtype = 1
+            self.linnormtype = PETSc.KSP.NormType.NORM_PRECONDITIONED
         elif self.lin_norm_type=='unpreconditioned':
-            self.linnormtype = 2
+            self.linnormtype = PETSc.KSP.NormType.NORM_UNPRECONDITIONED
         else:
             raise ValueError("Unknown lin_norm_type option!")
 
@@ -247,17 +248,20 @@ class solver_nonlinear:
                 # prepare merged matrix structure
                 if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
                     self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
+                    self.K_full_merged[npr] = PETSc.Mat()
                     self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
 
             elif self.solvetype[npr]=='iterative':
 
                 self.ksp[npr].setInitialGuessNonzero(False)
-                self.ksp[npr].setNormType(self.linnormtype) # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
+                self.ksp[npr].setNormType(self.linnormtype)
 
                 self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
                 self.P_full_nest[npr] = self.K_full_nest[npr]
 
+                # prepare merged preconditioner matrix structure
                 if self.merge_prec_mat:
+                    self.P_full_merged[npr] = PETSc.Mat()
                     self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
                     self.P = self.P_full_merged[npr]
                 else:
