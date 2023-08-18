@@ -375,7 +375,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pbf0.destroy()
         self.pba.destroy()
 
-        for i in range(len(self.pbf0.row_ids)): self.k_sd_vec[i].destroy()
+        if self.coupling_strategy=='monolithic':
+            for i in range(len(self.pbf0.row_ids)): self.k_sd_vec[i].destroy()
 
 
 

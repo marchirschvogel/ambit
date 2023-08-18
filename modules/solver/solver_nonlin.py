@@ -763,10 +763,14 @@ class solver_nonlinear:
         if self.pb[npr].localsolve:
             self.solve_local(localdata)
 
-        # compute residual
-        if self.cp is not None: self.cp.evaluate_residual_dbc_coupling()
+        # if we have two problems in a partitioned solve which exchange DBCs, we need to take care
+        # of this separately by calling a coupled problem function
+        if self.cp is not None:
+            self.cp.evaluate_residual_dbc_coupling()
 
         tes = time.time()
+
+        # compute residual
         self.pb[npr].assemble_residual(t, subsolver=self.subsol)
 
         tee = time.time() - tes
@@ -775,6 +779,7 @@ class solver_nonlinear:
                 print(' '*self.indlen_[npr] + '      === Residual assemble, te = %.4f s' % (tee))
                 sys.stdout.flush()
 
+        # apply model order reduction of residual
         if self.pb[npr].rom:
             self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom, x=self.x[npr][0])
 
@@ -797,6 +802,7 @@ class solver_nonlinear:
                 print(' '*self.indlen_[npr] + '      === Jacobian assemble, te = %.4f s' % (tee))
                 sys.stdout.flush()
 
+        # apply model order reduction of stiffness
         if self.pb[npr].rom:
             self.pb[npr].rom.reduce_stiffness(self.pb[npr].K_list, self.pb[npr].K_list_rom, self.pb[npr].K_list_tmp)
 
