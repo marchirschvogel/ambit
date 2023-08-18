@@ -723,6 +723,8 @@ class solver_nonlinear:
                     print("PTC factor: %.4f" % (k_PTC))
                     sys.stdout.flush()
 
+                counter_adapt += 1
+
                 for npr in range(self.nprob):
 
                     # reset solver
@@ -733,8 +735,6 @@ class solver_nonlinear:
 
                     # re-set residual actions
                     self.residual_problem_actions(t, npr, localdata)
-
-                    counter_adapt += 1
 
             # check if all problems have converged
             if all(converged):
