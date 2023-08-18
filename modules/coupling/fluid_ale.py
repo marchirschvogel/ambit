@@ -77,7 +77,10 @@ class FluidmechanicsAleProblem(problem_base):
 
         self.set_variational_forms()
 
-        self.numdof = self.pbf.numdof + self.pba.numdof
+        if self.coupling_strategy == 'monolithic':
+            self.numdof = self.pbf.numdof + self.pba.numdof
+        else:
+            self.numdof = [self.pbf.numdof, self.pba.numdof]
 
         self.sub_solve = False
         self.print_enhanced_info = self.pbf.io.print_enhanced_info

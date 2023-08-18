@@ -20,7 +20,7 @@ def print_problem_header(comm):
         sys.stdout.flush()
 
 
-def print_problem(ptype, sname, comm, numdof=0):
+def print_problem(ptype, sname, comm, numdof):
 
         print_problem_header(comm)
 
@@ -92,7 +92,10 @@ def print_problem(ptype, sname, comm, numdof=0):
 
         print_sep(comm)
         if comm.rank == 0:
-            print("Number of degrees of freedom: %i" % (numdof))
+            if isinstance(numdof, list):
+                print("Number of degrees of freedom: %i + %i" % (numdof[0],numdof[1]))
+            else:
+                print("Number of degrees of freedom: %i" % (numdof))
             print("Number of cores: %i" % (comm.size))
             print("File name: %s" % (sys.argv[0]))
             print("Output specifier name: %s" % (sname))
