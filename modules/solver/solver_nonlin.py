@@ -523,12 +523,12 @@ class solver_nonlinear:
 
         while it < self.maxiter and counter_adapt < max_adapt:
 
-            tes = time.time()
-
             converged, err = [], []
 
             # problem loop (in case of partitioned solves)
             for npr in range(self.nprob):
+
+                tes = time.time()
 
                 if npr==0: self.indlen=self.indlen_[0]
                 else: self.indlen=self.indlen_[1]
