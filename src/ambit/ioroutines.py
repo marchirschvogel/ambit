@@ -676,7 +676,8 @@ class IO_fluid(IO):
                         if bool(self.duplicate_mesh_domains):
                             m=0
                             for j in self.duplicate_mesh_domains:
-                                p_out = fem.Function(self.V_out_scalar)
+                                V_out_scalar_sub = fem.FunctionSpace(self.submshes_emap[j][0], ("CG", self.mesh_degree))
+                                p_out = fem.Function(V_out_scalar_sub)
                                 p_out.interpolate(pb.p_[m])
                                 self.resultsfiles[res+str(j)].write_function(p_out, indicator)
                                 m+=1

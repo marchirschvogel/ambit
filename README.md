@@ -63,9 +63,9 @@ Still experimental / to-do:
 
 ``fenicsdocker``
 
-* Have a look at example input files in ambit/testing and the file ambit_template.py in the main folder as example of all available input options
+* Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options
 
-* Best, check if all testcases run and pass, by navigating to ambit/testing and executing
+* Best, check if all testcases run and pass, by navigating to ambit/tests and executing
 
 ``./runtests.py``
 
