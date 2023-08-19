@@ -507,10 +507,6 @@ class simple_2x2(schur_2x2):
         self.ksp_fields[1].solve(self.z2, self.y2)
 
         # 3) update y_1
-        # form diag(A)^{-1}
-        self.Adinv.setDiagonal(self.adinv_vec, addv=PETSc.InsertMode.INSERT)
-
-        self.Adinv.matMult(self.Bt, result=self.Adinv_Bt)  # diag(A)^{-1} * Bt
         self.Adinv_Bt.mult(self.y2, self.Bty2)
         # compute y1 -= self.Bty2
         self.y1.axpy(-1., self.Bty2)

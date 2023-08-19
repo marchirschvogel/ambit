@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-solid mechanics with Lagrange multiplier constraint: chamber with enclosed cavity whose volume is prescibed over time
+solid mechanics with Lagrange multiplier constraint: incompressible chamber with enclosed cavity whose volume is prescibed over time
 """
 
 import ambit
@@ -35,9 +35,9 @@ def main():
                             'timint'                : 'ost',
                             'theta_ost'             : 0.5}
 
-    FEM_PARAMS           = {'order_disp'            : 1,
+    FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,
-                            'quad_degree'           : 1,
+                            'quad_degree'           : 5,
                             'incompressible_2field' : True}
 
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[3]],
@@ -76,9 +76,9 @@ def main():
     u_corr = np.zeros(3*len(check_node))
 
     ## correct results
-    u_corr[0] = 7.1440094913591246E-01 # x
-    u_corr[1] = -1.1768897247463314E-02 # y
-    u_corr[2] = 4.5878411920493023E-03 # z
+    u_corr[0] = 6.2559851561638546E-01 # x
+    u_corr[1] = 1.6295349430772595E-02 # y
+    u_corr[2] = -1.6268062830756734E-02 # z
 
     check1 = resultcheck.results_check_node(problem.mp.pbs.u, check_node, u_corr, problem.mp.pbs.V_u, problem.mp.comm, tol=tol, nm='u')
     success = resultcheck.success_check([check1], problem.mp.comm)

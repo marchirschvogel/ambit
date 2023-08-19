@@ -1,7 +1,7 @@
 testing/tmp/
 __pycache__/
-modules/__pycache__/
-modules/ext/
+src/ambit/__pycache__/
+ext/
 *.aux
 *.log
 *.synctex.gz

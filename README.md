@@ -47,17 +47,17 @@ Still experimental / to-do:
 
 * Either, FEniCS-x from a Docker container can be used, or it can be installed from source (see https://github.com/FEniCS/dolfinx if needed)
 
-* Assuming Docker is installed (if not, see e.g. https://docs.docker.com/engine/security/rootless), get latest tested Ambit-compatible digest (24 Jul 2023) of dolfinx Docker image:
+* Assuming Docker is installed (if not, see e.g. https://docs.docker.com/engine/security/rootless), get latest tested Ambit-compatible digest (19 Aug 2023) of dolfinx Docker image:
 
-``docker pull dolfinx/dolfinx@sha256:ac772dd8f3152b14aa79211efceadbae5967c2cfdc547383a82c02b62e1238fe``
+``docker pull dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76``
 
 * Put the following shortcut in .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
 
-``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/shared/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:ac772dd8f3152b14aa79211efceadbae5967c2cfdc547383a82c02b62e1238fe'``
+``alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/shared/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76'``
 
 * If 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
 
-``cd ambit && mkdir modules/ext && pip3 install --target=modules/ext mpmath --no-deps --no-cache-dir && pip3 install --target=modules/ext sympy --no-deps --no-cache-dir && cd ..``
+``cd ambit && mkdir modules/ext && pip3 install --target=ext mpmath --no-deps --no-cache-dir && pip3 install --target=ext sympy --no-deps --no-cache-dir && cd ..``
 
 * Launch the container in a konsole/terminal window by simply typing
 
