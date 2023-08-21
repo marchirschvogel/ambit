@@ -89,6 +89,7 @@ class kinematics:
         else:
             return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
 
+
     # fluid deformation gradient (relevant on boundary for FrSI): F = I + duf/dx0
     def F(self, uf_):
 

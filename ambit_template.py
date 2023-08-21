@@ -49,6 +49,7 @@ def main():
                             # iterative linear solver settings (only apply for solve_type 'iterative') - solver can only be GMRES
                             'iterative_solver'      : 'gmres', # OPTIONAL: type of iterative solver, cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html (default: 'gmres')
                             'precond_fields'        : [{'prec':'amg','solve':'preonly'}, {'prec':'direct'}], # OPTIONAL: field-specific preconditioners (dict list has to have length of fields) (default: [])
+                            'schur_block_scaling'   : 'diag', # OPTIONAL: scaling type for approximate Schur complement (for schur preconditioners): 'diag', 'rowsum', 'none' (default: 'diag')
                             'block_precond'         : 'fieldsplit', # OPTIONAL: block preconditioner option: 'bgs2x2', 'jacobi2x2', 'simple2x2', 'schur2x2', 'schur3x3', 'schur4x4', 'fieldsplit' (PETSc split implementation) (default: 'fieldsplit')
                             'fieldsplit_type'       : 'jacobi', # OPTIONAL: PETSc fieldsplit block preconditioner type: 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
                             'tol_lin_rel'           : 1.0e-5, # OPTIONAL: relative linear solver tolerance (default: 1.0e-5)
@@ -56,7 +57,7 @@ def main():
                             'lin_norm_type'         : 'unpreconditioned', # OPTIONAL: type of iterative linear solver norm: 'preconditioned' or 'unpreconditioned' (default: 'unpreconditioned')
                             'res_lin_monitor'       : 'rel', # OPTIONAL: which linear solver tolerance to monitor, 'abs' or 'rel' (default: 'rel')
                             'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
-                            'print_liniter_every'   : 50, # OPTIONAL: how often to print linear iterations (default: 1)
+                            'print_liniter_every'   : 10, # OPTIONAL: how often to print linear iterations (default: 1)
                             'indexset_options'      : {'rom_to_new' : False, 'lms_to_pres' : False}, # OPTIONAL: some options for the index sets (default: {})
                             'rebuild_prec_every_it' : 1, # OPTIONAL: rebuild the preconditioner every rebuild_prec_every_it iterations (default: 1)
                             # for local Newton (only for inelastic nonlinear materials at Gauss points, i.e. deformation-dependent growth)

@@ -137,11 +137,14 @@ class variationalform(variationalform_base):
         return (-(beta*ufl.dot((v-w), self.var_v)))(fcts)*dboundary
 
     # Robin condition (dashpot) in normal direction
-    # TeX: \int\limits_{\Gamma} c\,(\boldsymbol{n}\otimes \boldsymbol{n})\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a =
-    #       \int\limits_{\Gamma} c\,(\boldsymbol{v}\cdot \boldsymbol{n})\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
+    # TeX: \int\limits_{\Gamma} c\,(\boldsymbol{n}\otimes \boldsymbol{n})\boldsymbol{v}\cdot\delta\boldsymbol{v}\,\mathrm{d}a
     def deltaW_ext_robin_dashpot_normal_cur(self, v, c_n, dboundary, Fale=None):
 
-        return -c_n*(ufl.dot(v, self.n)*ufl.dot(self.n, self.var_v)*dboundary)
+        return -c_n*(ufl.dot(ufl.outer(self.n,self.n)*v, self.var_v)*dboundary)
+
+    def deltaW_ext_robin_dashpot_normal_cross(self, v, c_c, dboundary, Fale=None):
+        I = ufl.Identity(len(v))
+        return -c_c*(ufl.dot((I - ufl.outer(self.n,self.n))*v, self.var_v)*dboundary)
 
 
     ### SUPG/PSPG stabilization - cf. Tezduyar and Osawa (2000), "Finite element stabilization parameters computed from element matrices and vectors"

@@ -137,9 +137,9 @@ class variationalform(variationalform_base):
     def deltaW_ext_robin_spring_normal_ref(self, u, k_n, dboundary, u_prestr=None):
 
         if u_prestr is not None:
-            return -k_n*(ufl.dot(u + u_prestr, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
+            return -k_n*(ufl.dot(ufl.outer(self.n0,self.n0)*(u + u_prestr), self.var_u)*dboundary)
         else:
-            return -k_n*(ufl.dot(u, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
+            return -k_n*(ufl.dot(ufl.outer(self.n0,self.n0)*u, self.var_u)*dboundary)
 
     # Robin condition (dashpot)
     # TeX: \int\limits_{\Gamma_0} c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
@@ -155,7 +155,7 @@ class variationalform(variationalform_base):
     def deltaW_ext_robin_dashpot_normal_ref(self, v, c_n, dboundary):
 
         if not isinstance(v, ufl.constantvalue.Zero):
-            return -c_n*(ufl.dot(v, self.n0)*ufl.dot(self.n0, self.var_u)*dboundary)
+            return -c_n*(ufl.dot(ufl.outer(self.n0,self.n0)*v, self.var_u)*dboundary)
         else:
             return ufl.as_ufl(0)
 

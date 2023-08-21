@@ -37,6 +37,8 @@ class solver_nonlinear:
         self.pb = pb
         self.nprob = len(pb)
 
+        self.solver_params = solver_params
+
         self.printenh = self.pb[0].print_enhanced_info
 
         self.x, self.is_ghosted = [[]]*self.nprob, [[]]*self.nprob
@@ -48,7 +50,7 @@ class solver_nonlinear:
             self.nfields.append(self.pb[npr].nfields)
             self.ptype.append(self.pb[npr].problem_physics)
 
-        self.set_solver_params(solver_params)
+        self.set_solver_params(self.solver_params)
 
         # list of dicts for tolerances, residual, and increment norms
         self.tolerances, self.resnorms, self.incnorms = [], [], []
@@ -333,37 +335,37 @@ class solver_nonlinear:
                     elif self.block_precond[npr] == 'schur2x2':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
+                        bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'simple2x2':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.simple_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
+                        bj = preconditioner.simple_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur3x3':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
+                        bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur4x4':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
+                        bj = preconditioner.schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgs2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
+                        bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'jacobi2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.comm)
+                        bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     else:

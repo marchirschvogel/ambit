@@ -62,6 +62,7 @@ def check_params_solver(params):
                     'ptc_randadapt_range',
                     'res_lin_monitor',
                     'rebuild_prec_every_it',
+                    'schur_block_scaling',
                     'solve_type',
                     'solve_type_prestr',
                     'subsolver_params',

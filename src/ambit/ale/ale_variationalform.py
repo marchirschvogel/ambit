@@ -40,7 +40,7 @@ class variationalform(variationalform_base):
     ### External virtual work
 
     # Neumann load
-    # TeX: \int\limits_{\Gamma_0} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
+    # TeX: \int\limits_{\Gamma_0} \hat{\boldsymbol{t}} \cdot \delta\boldsymbol{d} \,\mathrm{d}A
     def deltaW_ext_neumann_ref(self, func, dboundary):
 
         return ufl.dot(func, self.var_d)*dboundary
@@ -54,13 +54,13 @@ class variationalform(variationalform_base):
 
 
     # Robin condition
-    # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
+    # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{d}\cdot\delta\boldsymbol{d}\,\mathrm{d}A
     def deltaW_ext_robin_spring(self, u, k, dboundary, upre=None):
 
         return -k*(ufl.dot(u, self.var_d)*dboundary)
 
     # Robin condition in normal direction
-    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}\otimes \boldsymbol{n})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
+    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}\otimes \boldsymbol{n})\,k\,\boldsymbol{d}\cdot\delta\boldsymbol{d}\,\mathrm{d}A
     def deltaW_ext_robin_spring_normal_ref(self, u, k_n, dboundary, upre=None):
 
-        return -k_n*(ufl.dot(u, self.n0)*ufl.dot(self.n0, self.var_d)*dboundary)
+        return -k_n*(ufl.dot(ufl.outer(self.n0,self.n0)*u, self.var_d)*dboundary)
