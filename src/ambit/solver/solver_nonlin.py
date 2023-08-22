@@ -701,7 +701,7 @@ class solver_nonlinear:
                 # adaptive PTC (for 3D block K_00 only!)
                 if self.divcont=='PTC':
 
-                    self.maxiter = 250 # should be enough...
+                    self.maxiter = 100 # should be enough...
 
                     # collect errors
                     err.append(self.solutils.catch_solver_errors(self.resnorms[npr]['res1'], incnorm=self.incnorms[npr]['inc1'], maxval=self.maxresval))

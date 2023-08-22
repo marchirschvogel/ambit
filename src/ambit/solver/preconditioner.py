@@ -24,8 +24,14 @@ class block_precond():
         # extra level of printing
         self.printenh = printenh
 
-        try: self.schur_block_scaling = solparams['schur_block_scaling']
-        except: self.schur_block_scaling = 'diag'
+        # type of scaling for approximation of Schur complement
+        try: schur_block_scaling = solparams['schur_block_scaling']
+        except: schur_block_scaling = ['diag']*2
+
+        if isinstance(schur_block_scaling, list):
+            self.schur_block_scaling = schur_block_scaling
+        else:
+            self.schur_block_scaling = [schur_block_scaling]*2
 
 
     def create(self, pc):
@@ -98,11 +104,11 @@ class schur_2x2(block_precond):
 
         self.Adinv = self.A.duplicate(copy=False)
 
-        if self.schur_block_scaling=='diag':
+        if self.schur_block_scaling[0]=='diag':
             self.adinv_vec = self.A.getDiagonal()
-        elif self.schur_block_scaling=='rowsum':
+        elif self.schur_block_scaling[0]=='rowsum':
             self.adinv_vec = self.A.getRowSum()
-        elif self.schur_block_scaling=='none':
+        elif self.schur_block_scaling[0]=='none':
             self.adinv_vec = self.A.createVecLeft()
             self.adinv_vec.set(1.0)
         else:
@@ -136,13 +142,13 @@ class schur_2x2(block_precond):
         self.P.createSubMatrix(self.iset[1],self.iset[0], submat=self.B)
         self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
-        if self.schur_block_scaling=='diag':
+        if self.schur_block_scaling[0]=='diag':
             self.A.getDiagonal(result=self.adinv_vec)
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling=='rowsum':
+        elif self.schur_block_scaling[0]=='rowsum':
             self.A.getRowSum(result=self.adinv_vec)
             self.adinv_vec.abs()
-        elif self.schur_block_scaling=='none':
+        elif self.schur_block_scaling[0]=='none':
             self.adinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
@@ -232,11 +238,11 @@ class schur_3x3(block_precond):
 
         self.Adinv = self.A.duplicate(copy=False)
 
-        if self.schur_block_scaling=='diag':
+        if self.schur_block_scaling[0]=='diag':
             self.adinv_vec = self.A.getDiagonal()
-        elif self.schur_block_scaling=='rowsum':
+        elif self.schur_block_scaling[0]=='rowsum':
             self.adinv_vec = self.A.getRowSum()
-        elif self.schur_block_scaling=='none':
+        elif self.schur_block_scaling[0]=='none':
             self.adinv_vec = self.A.createVecLeft()
             self.adinv_vec.set(1.0)
         else:
@@ -244,11 +250,11 @@ class schur_3x3(block_precond):
 
         self.Smod = self.C.duplicate(copy=False)
 
-        if self.schur_block_scaling=='diag':
+        if self.schur_block_scaling[1]=='diag':
             self.smoddinv_vec = self.Smod.getDiagonal()
-        elif self.schur_block_scaling=='rowsum':
+        elif self.schur_block_scaling[1]=='rowsum':
             self.smoddinv_vec = self.Smod.getRowSum()
-        elif self.schur_block_scaling=='none':
+        elif self.schur_block_scaling[1]=='none':
             self.smoddinv_vec = self.Smod.createVecLeft()
             self.smoddinv_vec.set(1.0)
         else:
@@ -315,14 +321,14 @@ class schur_3x3(block_precond):
         self.P.createSubMatrix(self.iset[2],self.iset[1], submat=self.E)
         self.P.createSubMatrix(self.iset[2],self.iset[2], submat=self.R)
 
-        if self.schur_block_scaling=='diag':
+        if self.schur_block_scaling[0]=='diag':
             self.A.getDiagonal(result=self.adinv_vec)
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling=='rowsum':
+        elif self.schur_block_scaling[0]=='rowsum':
             self.A.getRowSum(result=self.adinv_vec)
             self.adinv_vec.abs()
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling=='none':
+        elif self.schur_block_scaling[0]=='none':
             self.adinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
@@ -350,14 +356,14 @@ class schur_3x3(block_precond):
 
         # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
 
-        if self.schur_block_scaling=='diag':
+        if self.schur_block_scaling[1]=='diag':
             self.Smod.getDiagonal(result=self.smoddinv_vec)
             self.smoddinv_vec.reciprocal()
-        elif self.schur_block_scaling=='rowsum':
+        elif self.schur_block_scaling[1]=='rowsum':
             self.Smod.getRowSum(result=self.smoddinv_vec)
             self.smoddinv_vec.abs()
             self.smoddinv_vec.reciprocal()
-        elif self.schur_block_scaling=='none':
+        elif self.schur_block_scaling[1]=='none':
             self.smoddinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
