@@ -177,7 +177,7 @@ class IO:
 
         outfile = io.XDMFFile(self.comm, self.output_path_pre+'/results_'+pb.simname+'_'+name+'.xdmf', 'w')
         outfile.write_mesh(self.mesh)
-        func_out = fem.Function(self.V_out_vector)
+        func_out = fem.Function(self.V_out_vector, name=func.name)
         func_out.interpolate(func)
         outfile.write_function(func_out, t)
 
@@ -362,21 +362,21 @@ class IO_solid(IO):
                 for res in pb.results_to_write:
 
                     if res=='displacement':
-                        u_out = fem.Function(self.V_out_vector)
+                        u_out = fem.Function(self.V_out_vector, name=pb.u.name)
                         u_out.interpolate(pb.u)
                         self.resultsfiles[res].write_function(u_out, indicator)
                     elif res=='velocity': # passed in v is not a function but form, so we have to project
                         self.v_proj = project(pb.vel, pb.V_u, pb.dx_, nm="Velocity") # class variable for testing
-                        v_out = fem.Function(self.V_out_vector)
+                        v_out = fem.Function(self.V_out_vector, name=self.v_proj.name)
                         v_out.interpolate(self.v_proj)
                         self.resultsfiles[res].write_function(v_out, indicator)
                     elif res=='acceleration': # passed in a is not a function but form, so we have to project
                         self.a_proj = project(pb.acc, pb.V_u, pb.dx_, nm="Acceleration") # class variable for testing
-                        a_out = fem.Function(self.V_out_vector)
+                        a_out = fem.Function(self.V_out_vector, name=self.a_proj.name)
                         a_out.interpolate(self.a_proj)
                         self.resultsfiles[res].write_function(a_out, indicator)
                     elif res=='pressure':
-                        p_out = fem.Function(self.V_out_scalar)
+                        p_out = fem.Function(self.V_out_scalar, name=pb.p.name)
                         p_out.interpolate(pb.p)
                         self.resultsfiles[res].write_function(p_out, indicator)
                     elif res=='cauchystress':
@@ -384,7 +384,7 @@ class IO_solid(IO):
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
-                        cauchystress_out = fem.Function(self.V_out_tensor)
+                        cauchystress_out = fem.Function(self.V_out_tensor, name=cauchystress.name)
                         cauchystress_out.interpolate(cauchystress)
                         self.resultsfiles[res].write_function(cauchystress_out, indicator)
                     elif res=='cauchystress_nodal':
@@ -392,7 +392,7 @@ class IO_solid(IO):
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         cauchystress_nodal = project(stressfuncs, pb.V_tensor, pb.dx_, nm="CauchyStress_nodal")
-                        cauchystress_nodal_out = fem.Function(self.V_out_tensor)
+                        cauchystress_nodal_out = fem.Function(self.V_out_tensor, name=cauchystress_nodal.name)
                         cauchystress_nodal_out.interpolate(cauchystress_nodal)
                         self.resultsfiles[res].write_function(cauchystress_nodal_out, indicator)
                     elif res=='cauchystress_principal':
@@ -401,7 +401,7 @@ class IO_solid(IO):
                             evals, _, _ = spectral_decomposition_3x3(pb.ma[n].sigma(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                             stressfuncs_eval.append(ufl.as_vector(evals)) # written as vector
                         cauchystress_principal = project(stressfuncs_eval, pb.Vd_vector, pb.dx_, nm="CauchyStress_princ")
-                        cauchystress_principal_out = fem.Function(self.V_out_vector)
+                        cauchystress_principal_out = fem.Function(self.V_out_vector, name=cauchystress_principal.name)
                         cauchystress_principal_out.interpolate(cauchystress_principal)
                         self.resultsfiles[res].write_function(cauchystress_principal_out, indicator)
                     elif res=='cauchystress_membrane':
@@ -409,7 +409,7 @@ class IO_solid(IO):
                         for n in range(len(pb.bstress)):
                             stressfuncs.append(pb.bstress[n])
                         cauchystress_membrane = project(stressfuncs, pb.Vd_tensor, pb.dbmem, nm="CauchyStress_membrane")
-                        cauchystress_membrane_out = fem.Function(self.V_out_tensor)
+                        cauchystress_membrane_out = fem.Function(self.V_out_tensor, name=cauchystress_membrane.name)
                         cauchystress_membrane_out.interpolate(cauchystress_membrane)
                         self.resultsfiles[res].write_function(cauchystress_membrane_out, indicator)
                     elif res=='cauchystress_membrane_principal':
@@ -418,7 +418,7 @@ class IO_solid(IO):
                             evals, _, _ = spectral_decomposition_3x3(pb.bstress[n])
                             stressfuncs.append(ufl.as_vector(evals)) # written as vector
                         self.cauchystress_membrane_principal = project(stressfuncs, pb.Vd_vector, pb.dbmem, nm="CauchyStress_membrane_princ")
-                        cauchystress_membrane_principal_out = fem.Function(self.V_out_vector)
+                        cauchystress_membrane_principal_out = fem.Function(self.V_out_vector, name=self.cauchystress_membrane_principal.name)
                         cauchystress_membrane_principal_out.interpolate(self.cauchystress_membrane_principal)
                         self.resultsfiles[res].write_function(cauchystress_membrane_principal_out, indicator)
                     elif res=='trmandelstress':
@@ -426,7 +426,7 @@ class IO_solid(IO):
                         for n in range(pb.num_domains):
                             stressfuncs.append(tr(pb.ma[n].M(pb.u,pb.p,pb.vel,ivar=pb.internalvars)))
                         trmandelstress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress")
-                        trmandelstress_out = fem.Function(self.V_out_scalar)
+                        trmandelstress_out = fem.Function(self.V_out_scalar, name=trmandelstress.name)
                         trmandelstress_out.interpolate(trmandelstress)
                         self.resultsfiles[res].write_function(trmandelstress_out, indicator)
                     elif res=='trmandelstress_e':
@@ -435,7 +435,7 @@ class IO_solid(IO):
                             if pb.mat_growth[n]: stressfuncs.append(tr(pb.ma[n].M_e(pb.u,pb.p,pb.vel,pb.ki.C(pb.u),ivar=pb.internalvars)))
                             else: stressfuncs.append(ufl.as_ufl(0))
                         trmandelstress_e = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="trMandelStress_e")
-                        trmandelstress_e_out = fem.Function(self.V_out_scalar)
+                        trmandelstress_e_out = fem.Function(self.V_out_scalar, name=trmandelstress_e.name)
                         trmandelstress_e_out.interpolate(trmandelstress_e)
                         self.resultsfiles[res].write_function(trmandelstress_e_out, indicator)
                     elif res=='vonmises_cauchystress':
@@ -443,7 +443,7 @@ class IO_solid(IO):
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma_vonmises(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         vonmises_cauchystress = project(stressfuncs, pb.Vd_scalar, pb.dx_, nm="vonMises_CauchyStress")
-                        vonmises_cauchystress_out = fem.Function(self.V_out_scalar)
+                        vonmises_cauchystress_out = fem.Function(self.V_out_scalar, name=vonmises_cauchystress.name)
                         vonmises_cauchystress_out.interpolate(vonmises_cauchystress)
                         self.resultsfiles[res].write_function(vonmises_cauchystress_out, indicator)
                     elif res=='pk1stress':
@@ -451,7 +451,7 @@ class IO_solid(IO):
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].P(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         pk1stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK1Stress")
-                        pk1stress_out = fem.Function(self.V_out_tensor)
+                        pk1stress_out = fem.Function(self.V_out_tensor, name=pk1stress.name)
                         pk1stress_out.interpolate(pk1stress)
                         self.resultsfiles[res].write_function(pk1stress_out, indicator)
                     elif res=='pk2stress':
@@ -459,41 +459,41 @@ class IO_solid(IO):
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].S(pb.u,pb.p,pb.vel,ivar=pb.internalvars))
                         pk2stress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="PK2Stress")
-                        pk2stress_out = fem.Function(self.V_out_tensor)
+                        pk2stress_out = fem.Function(self.V_out_tensor, name=pk2stress.name)
                         pk2stress_out.interpolate(pk2stress)
                         self.resultsfiles[res].write_function(pk2stress_out, indicator)
                     elif res=='jacobian':
                         jacobian = project(pb.ki.J(pb.u), pb.Vd_scalar, pb.dx_, nm="Jacobian")
-                        jacobian_out = fem.Function(self.V_out_scalar)
+                        jacobian_out = fem.Function(self.V_out_scalar, name=jacobian.name)
                         jacobian_out.interpolate(jacobian)
                         self.resultsfiles[res].write_function(jacobian_out, indicator)
                     elif res=='glstrain':
                         glstrain = project(pb.ki.E(pb.u), pb.Vd_tensor, pb.dx_, nm="GreenLagrangeStrain")
-                        glstrain_out = fem.Function(self.V_out_tensor)
+                        glstrain_out = fem.Function(self.V_out_tensor, name=glstrain.name)
                         glstrain_out.interpolate(glstrain)
                         self.resultsfiles[res].write_function(glstrain_out, indicator)
                     elif res=='glstrain_principal':
                         evals, _, _ = spectral_decomposition_3x3(pb.ki.E(pb.u))
                         evals_gl = ufl.as_vector(evals) # written as vector
                         glstrain_principal = project(evals_gl, pb.Vd_vector, pb.dx_, nm="GreenLagrangeStrain_princ")
-                        glstrain_principal_out = fem.Function(self.V_out_vector)
+                        glstrain_principal_out = fem.Function(self.V_out_vector, name=glstrain_principal.name)
                         glstrain_principal_out.interpolate(glstrain_principal)
                         self.resultsfiles[res].write_function(glstrain_principal_out, indicator)
                     elif res=='eastrain':
                         eastrain = project(pb.ki.e(pb.u), pb.Vd_tensor, pb.dx_, nm="EulerAlmansiStrain")
-                        eastrain_out = fem.Function(self.V_out_tensor)
+                        eastrain_out = fem.Function(self.V_out_tensor, name=eastrain.name)
                         eastrain_out.interpolate(eastrain)
                         self.resultsfiles[res].write_function(eastrain_out, indicator)
                     elif res=='eastrain_principal':
                         evals, _, _ = spectral_decomposition_3x3(pb.ki.e(pb.u))
                         evals_ea = ufl.as_vector(evals) # written as vector
                         eastrain_principal = project(evals_gl, pb.Vd_vector, pb.dx_, nm="EulerAlmansiStrain_princ")
-                        eastrain_principal_out = fem.Function(self.V_out_vector)
+                        eastrain_principal_out = fem.Function(self.V_out_vector, name=eastrain_principal.name)
                         eastrain_principal_out.interpolate(eastrain_principal)
                         self.resultsfiles[res].write_function(eastrain_principal_out, indicator)
                     elif res=='fiberstretch':
                         fiberstretch = project(pb.ki.fibstretch(pb.u,pb.fib_func[0]), pb.Vd_scalar, pb.dx_, nm="FiberStretch")
-                        fiberstretch_out = fem.Function(self.V_out_scalar)
+                        fiberstretch_out = fem.Function(self.V_out_scalar, name=fiberstretch.name)
                         fiberstretch_out.interpolate(fiberstretch)
                         self.resultsfiles[res].write_function(fiberstretch_out, indicator)
                     elif res=='fiberstretch_e':
@@ -502,11 +502,11 @@ class IO_solid(IO):
                             if pb.mat_growth[n]: stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(pb.u),pb.theta,pb.fib_func[0]))
                             else: stretchfuncs.append(ufl.as_ufl(0))
                         fiberstretch_e = project(stretchfuncs, pb.Vd_scalar, pb.dx_, nm="FiberStretch_e")
-                        fiberstretch_e_out = fem.Function(self.V_out_scalar)
+                        fiberstretch_e_out = fem.Function(self.V_out_scalar, name=fiberstretch_e.name)
                         fiberstretch_e_out.interpolate(fiberstretch_e)
                         self.resultsfiles[res].write_function(fiberstretch_e_out, indicator)
                     elif res=='theta':
-                        theta_out = fem.Function(self.V_out_scalar)
+                        theta_out = fem.Function(self.V_out_scalar, name=pb.theta.name)
                         theta_out.interpolate(pb.theta)
                         self.resultsfiles[res].write_function(theta_out, indicator)
                     elif res=='phi_remod':
@@ -515,11 +515,11 @@ class IO_solid(IO):
                             if pb.mat_remodel[n]: phifuncs.append(pb.ma[n].phi_remod(pb.theta))
                             else: phifuncs.append(ufl.as_ufl(0))
                         phiremod = project(phifuncs, pb.Vd_scalar, pb.dx_, nm="phiRemodel")
-                        phiremod_out = fem.Function(self.V_out_scalar)
+                        phiremod_out = fem.Function(self.V_out_scalar, name=phiremod.name)
                         phiremod_out.interpolate(phiremod)
                         self.resultsfiles[res].write_function(phiremod_out, indicator)
                     elif res=='tau_a':
-                        tau_out = fem.Function(self.V_out_scalar)
+                        tau_out = fem.Function(self.V_out_scalar, name=pb.tau_a.name)
                         tau_out.interpolate(pb.tau_a)
                         self.resultsfiles[res].write_function(tau_out, indicator)
                     elif res=='fibers':
@@ -664,12 +664,12 @@ class IO_fluid(IO):
                 for res in pb.results_to_write:
 
                     if res=='velocity':
-                        v_out = fem.Function(self.V_out_vector)
+                        v_out = fem.Function(self.V_out_vector, name=pb.v.name)
                         v_out.interpolate(pb.v)
                         self.resultsfiles[res].write_function(v_out, indicator)
                     elif res=='acceleration': # passed in a is not a function but form, so we have to project
                         a_proj = project(pb.acc, pb.V_v, pb.dx_, nm="Acceleration")
-                        a_out = fem.Function(self.V_out_vector)
+                        a_out = fem.Function(self.V_out_vector, name=a_proj.name)
                         a_out.interpolate(a_proj)
                         self.resultsfiles[res].write_function(a_out, indicator)
                     elif res=='pressure':
@@ -677,12 +677,12 @@ class IO_fluid(IO):
                             m=0
                             for j in self.duplicate_mesh_domains:
                                 V_out_scalar_sub = fem.FunctionSpace(self.submshes_emap[j][0], ("CG", self.mesh_degree))
-                                p_out = fem.Function(V_out_scalar_sub)
+                                p_out = fem.Function(V_out_scalar_sub, name=pb.p_[m].name)
                                 p_out.interpolate(pb.p_[m])
                                 self.resultsfiles[res+str(j)].write_function(p_out, indicator)
                                 m+=1
                         else:
-                            p_out = fem.Function(self.V_out_scalar)
+                            p_out = fem.Function(self.V_out_scalar, name=pb.p_[0].name)
                             p_out.interpolate(pb.p_[0])
                             self.resultsfiles[res].write_function(p_out, indicator)
                     elif res=='cauchystress':
@@ -690,12 +690,12 @@ class IO_fluid(IO):
                         for n in range(pb.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(pb.v,pb.p))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx_, nm="CauchyStress")
-                        cauchystress_out = fem.Function(self.V_out_tensor)
+                        cauchystress_out = fem.Function(self.V_out_tensor, name=cauchystress.name)
                         cauchystress_out.interpolate(cauchystress)
                         self.resultsfiles[res].write_function(cauchystress_out, indicator)
                     elif res=='fluiddisplacement': # passed in uf is not a function but form, so we have to project
                         uf_proj = project(pb.ufluid, pb.V_v, pb.dx_, nm="FluidDisplacement")
-                        uf_out = fem.Function(self.V_out_vector)
+                        uf_out = fem.Function(self.V_out_vector, name=uf_proj.name)
                         uf_out.interpolate(uf_proj)
                         self.resultsfiles[res].write_function(uf_out, indicator)
                     elif res=='fibers':
@@ -706,7 +706,7 @@ class IO_fluid(IO):
                         for n in range(len(pb.bstress)):
                             stressfuncs.append(pb.bstress[n])
                         cauchystress_membrane = project(stressfuncs, pb.Vd_tensor, pb.dbmem, nm="CauchyStress_membrane")
-                        cauchystress_membrane_out = fem.Function(self.V_out_tensor)
+                        cauchystress_membrane_out = fem.Function(self.V_out_tensor, name=cauchystress_membrane.name)
                         cauchystress_membrane_out.interpolate(cauchystress_membrane)
                         self.resultsfiles[res].write_function(cauchystress_membrane_out, indicator)
                     elif res=='counters':
@@ -818,12 +818,12 @@ class IO_ale(IO):
                 for res in pb.results_to_write:
 
                     if res=='aledisplacement':
-                        d_out = fem.Function(self.V_out_vector)
+                        d_out = fem.Function(self.V_out_vector, name=pb.d.name)
                         d_out.interpolate(pb.d)
                         self.resultsfiles[res].write_function(d_out, indicator)
                     elif res=='alevelocity':
                         w_proj = project(pb.wel, pb.V_d, pb.dx_, nm="AleVelocity")
-                        w_out = fem.Function(self.V_out_vector)
+                        w_out = fem.Function(self.V_out_vector, name=w_proj.name)
                         w_out.interpolate(w_proj)
                         self.resultsfiles[res].write_function(w_out, indicator)
                     elif res=='counters':
