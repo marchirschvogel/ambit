@@ -60,11 +60,10 @@ class constitutive:
 
             m += 1
 
-        # TeX: S_{\mathrm{vol}} = -p\boldsymbol{I}
+        # TeX: \sigma_{\mathrm{vol}} = -p\boldsymbol{I}
         stress += -p_ * self.I
 
         return stress
-
 
 
 

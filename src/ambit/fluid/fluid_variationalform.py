@@ -58,10 +58,12 @@ class variationalform(variationalform_base):
 
     # TeX: \int\limits_{\Omega}\boldsymbol{\sigma} : \boldsymbol{\nabla}(\delta\boldsymbol{v})\,\mathrm{d}v
     def deltaW_int(self, sig, ddomain, Fale=None):
+
         return ufl.inner(sig, ufl.grad(self.var_v))*ddomain
 
     # TeX: \int\limits_{\Omega}\boldsymbol{\nabla}\cdot\boldsymbol{v}\,\delta p\,\mathrm{d}v
     def deltaW_int_pres(self, v, var_p, ddomain, w=None, Fale=None):
+
         return ufl.div(v)*var_p*ddomain
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, Fale=None):
@@ -88,7 +90,7 @@ class variationalform(variationalform_base):
 
         return -ufl.div(sig)
 
-    def res_p_strong(self, v):
+    def res_p_strong(self, v, Fale=None):
 
         return ufl.div(v)
 
@@ -162,17 +164,21 @@ class variationalform(variationalform_base):
 
 
     # reduced stabilization scheme - cf. Hoffman and Johnson (2006), "A new approach to computational turbulence modeling"
-    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None):
+    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None, symmetric=False):
 
-        return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_v)*v) + \
-                 delta2 * ufl.div(v)*ufl.div(self.var_v) + \
-                 delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_v)*v) ) * ddomain
+        if symmetric: # modification to make the effective stress symmetric
+            return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.sym(ufl.grad(self.var_v))*v) + \
+                     delta2 * ufl.div(v)*ufl.div(self.var_v) + \
+                     delta3 * ufl.dot(ufl.grad(p), ufl.sym(ufl.grad(self.var_v))*v) ) * ddomain
+        else:
+            return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_v)*v) + \
+                     delta2 * ufl.div(v)*ufl.div(self.var_v) + \
+                     delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_v)*v) ) * ddomain
 
     def stab_p(self, delta1, delta3, v, p, var_p, rho, ddomain, w=None, Fale=None):
 
         return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(var_p)) + \
                             delta3 * ufl.dot(ufl.grad(p), ufl.grad(var_p)) ) * ddomain
-
 
     ### Flux coupling conditions
 
@@ -379,11 +385,16 @@ class variationalform_ale(variationalform):
         J = ufl.det(Fale)
         return tau_lsic * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) * rho*self.res_p_strong(v, Fale=Fale) * J*ddomain
 
-    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None):
+    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None, symmetric=False):
         J = ufl.det(Fale)
-        return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.grad(self.var_v)*v) + \
-                 delta2 * ufl.inner(ufl.grad(v),ufl.inv(Fale).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) + \
-                 delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.grad(self.var_v)*ufl.inv(Fale)*v) ) * J*ddomain
+        if symmetric: # modification to make the effective stress symmetric
+            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.sym(ufl.grad(self.var_v))*v) + \
+                     delta2 * ufl.inner(ufl.grad(v),ufl.inv(Fale).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) + \
+                     delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.sym(ufl.grad(self.var_v))*ufl.inv(Fale)*v) ) * J*ddomain
+        else:
+            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.grad(self.var_v)*v) + \
+                     delta2 * ufl.inner(ufl.grad(v),ufl.inv(Fale).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) + \
+                     delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.grad(self.var_v)*ufl.inv(Fale)*v) ) * J*ddomain
 
     def stab_p(self, delta1, delta3, v, p, var_p, rho, ddomain, w=None, Fale=None):
         J = ufl.det(Fale)
