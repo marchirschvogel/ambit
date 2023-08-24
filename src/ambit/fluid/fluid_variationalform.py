@@ -388,11 +388,11 @@ class variationalform_ale(variationalform):
     def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, Fale=None, symmetric=False):
         J = ufl.det(Fale)
         if symmetric: # modification to make the effective stress symmetric
-            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.sym(ufl.grad(self.var_v))*v) + \
+            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.sym(ufl.grad(self.var_v)*ufl.inv(Fale))*v) + \
                      delta2 * ufl.inner(ufl.grad(v),ufl.inv(Fale).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) + \
-                     delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.sym(ufl.grad(self.var_v))*ufl.inv(Fale)*v) ) * J*ddomain
+                     delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.sym(ufl.grad(self.var_v)*ufl.inv(Fale))*v) ) * J*ddomain
         else:
-            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.grad(self.var_v)*v) + \
+            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(Fale)*(v-w), ufl.grad(self.var_v)*ufl.inv(Fale)*v) + \
                      delta2 * ufl.inner(ufl.grad(v),ufl.inv(Fale).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(Fale).T) + \
                      delta3 * ufl.dot(ufl.inv(Fale).T*ufl.grad(p), ufl.grad(self.var_v)*ufl.inv(Fale)*v) ) * J*ddomain
 

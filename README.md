@@ -59,6 +59,8 @@ Still experimental / to-do:
 
 ``cd ambit && mkdir ext && pip3 install --target=ext mpmath --no-deps --no-cache-dir && pip3 install --target=ext sympy --no-deps --no-cache-dir && cd ..``
 
+(if this fails, add ``--system`` to each of the pip3 install commands)
+
 * Launch the container in a konsole/terminal window by simply typing
 
 ``fenicsdocker``

@@ -6,6 +6,7 @@ LA-LV patient-specific prescribed ALE motion problem
 tests:
 - ALE-fluid coupled to 0D circulation model
 - prescribed ALE motion via volume Dirichlet condition
+- stress-symmetric version of reduced stabilization scheme in ALE form
 - duplicate pressure nodes (discontinuity) at mitral valve plane
 - dt scaling of residual
 """
@@ -69,7 +70,7 @@ def main():
     FEM_PARAMS_FLUID     = {'order_vel'             : 1, 
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]} }
+                            'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : True} }
     
     FEM_PARAMS_ALE       = {'order_disp'            : 1, 
                             'quad_degree'           : 5}
@@ -129,28 +130,27 @@ def main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 3.8884292384177323E+04
-    s_corr[1] = 5.5564853812131965E+04
-    s_corr[2] = -5.5565805703047903E+04
-    s_corr[3] = -9.5189091593945774E-01
-    s_corr[4] = 1.0924979624709913E+01
-    s_corr[5] = -9.5189091593945774E-01
-    s_corr[6] = 1.0924985336055409E+01
-    s_corr[7] = 2.1047096618500651E+04
+    s_corr[0] = 3.8884225645636441E+04
+    s_corr[1] = 5.5564787069235186E+04
+    s_corr[2] = -5.5565738964507014E+04
+    s_corr[3] = -9.5189527182505618E-01
+    s_corr[4] = 1.0924979624683258E+01
+    s_corr[5] = -9.5189527182505618E-01
+    s_corr[6] = 1.0924985336054888E+01
+    s_corr[7] = 2.1047096618499872E+04
     s_corr[8] = 2.2871777634299062E+00
-    s_corr[9] = 9.5236185798506893E+04
+    s_corr[9] = 9.5236185798506907E+04
     s_corr[10] = 1.4906158530701109E+03
     s_corr[11] = 1.5093042657425306E-03
-    s_corr[12] = -2.2265151472645575E-01
+    s_corr[12] = -2.2265151472645578E-01
     s_corr[13] = 1.8688412672419695E-05
-    s_corr[14] = 2.2265338356772300E+00
-    s_corr[15] = 3.5951841419870310E+04
-    s_corr[16] = 1.6872562143791758E+00
-    s_corr[17] = 3.2939985580304328E+03
-    s_corr[18] = 3.7057114799582978E+03
-    s_corr[19] = 2.5897105611472634E+03
-    s_corr[20] = 7.0911408288186403E+03
-
+    s_corr[14] = 2.2265338356772304E+00
+    s_corr[15] = 3.5951841419860786E+04
+    s_corr[16] = 1.6872562143793188E+00
+    s_corr[17] = 3.2938805917873260E+03
+    s_corr[18] = 3.7061242690836889E+03
+    s_corr[19] = 2.5892849487072353E+03
+    s_corr[20] = 7.0912716140204884E+03
 
     check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = resultcheck.success_check([check1], problem.mp.comm)
