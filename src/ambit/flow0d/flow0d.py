@@ -67,10 +67,10 @@ class Flow0DProblem(problem_base):
         except: valvelaws = {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}
 
         try: self.cq = coupling_params['coupling_quantity']
-        except: self.cq = ['volume']
+        except: self.cq = ['volume']*5
 
         try: self.vq = coupling_params['variable_quantity']
-        except: self.vq = ['pressure']
+        except: self.vq = ['pressure']*5
 
         try: self.eps_periodic = time_params['eps_periodic']
         except: self.eps_periodic = 1.0e-20
@@ -110,6 +110,9 @@ class Flow0DProblem(problem_base):
         elif model_params['modeltype'] == '4elwindkesselLpZ':
             from cardiovascular0D_4elwindkesselLpZ import cardiovascular0D4elwindkesselLpZ
             self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], self.cq, self.vq, init=True, comm=self.comm)
+        elif model_params['modeltype'] == 'CRLinoutlink':
+            from cardiovascular0D_CRLinoutlink import cardiovascular0DCRLinoutlink
+            self.cardvasc0D = cardiovascular0DCRLinoutlink(model_params['parameters'], self.cq, self.vq, init=True, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from cardiovascular0D_syspul import cardiovascular0Dsyspul
             self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, comm=self.comm)

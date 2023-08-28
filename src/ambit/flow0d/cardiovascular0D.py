@@ -171,9 +171,11 @@ class cardiovascular0Dbase(ode):
 
             elif self.chmodels[ch]['type']=='0D_prescr':
                 if self.cq[i] == 'volume':
+                    assert(self.vq[i]=='pressure')
                     self.switch_V[i] = 1
                     self.cname.append('V_'+chn)
                 elif self.cq[i] == 'flux':
+                    assert(self.vq[i]=='pressure')
                     self.switch_V[i] = 0
                     self.cname.append('Q_'+chn)
                 elif self.cq[i] == 'pressure':
@@ -190,11 +192,13 @@ class cardiovascular0Dbase(ode):
 
             elif self.chmodels[ch]['type']=='3D_solid':
                 if self.cq[i] == 'volume':
+                    assert(self.vq[i]=='pressure')
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling
                     self.c_ids.append(self.cindex_ch[i]) # coupling quantity indices for coupling
                     self.cname.append('V_'+chn)
                     self.switch_V[i], self.vname[i] = 1, 'p_'+chn
                 elif self.cq[i] == 'flux':
+                    assert(self.vq[i]=='pressure')
                     self.cname.append('Q_'+chn)
                     self.switch_V[i], self.vname[i] = 0, 'p_'+chn
                     self.v_ids.append(self.vindex_ch[i]) # variable indices for coupling

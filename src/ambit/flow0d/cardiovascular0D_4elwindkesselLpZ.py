@@ -42,23 +42,6 @@ class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
         self.cq = cq
         self.vq = vq
 
-        self.v_ids = [0]
-        self.c_ids = [2]
-
-        if self.cq[0] == 'volume':
-            self.switch_V, self.cname, self.vname = 1, 'V', 'p'
-        elif self.cq[0] == 'flux':
-            self.switch_V, self.cname, self.vname = 0, 'Q', 'p'
-        elif self.cq[0] == 'pressure':
-            if self.vq[0] == 'flux':
-                self.switch_V, self.cname, self.vname = 0, 'p', 'Q'
-            elif self.vq[0] == 'volume':
-                self.switch_V, self.cname, self.vname = 1, 'p', 'V'
-            else:
-                raise ValueError("Unknown variable quantity!")
-        else:
-            raise NameError("Unknown coupling quantity!")
-
         # set up arrays
         self.setup_arrays()
 
@@ -76,6 +59,25 @@ class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
 
         # number of degrees of freedom
         self.numdof = 4
+
+        self.v_ids = [0]
+        self.c_ids = [2]
+
+        if self.cq[0] == 'volume':
+            assert(self.vq[0]=='pressure')
+            self.switch_V, self.cname, self.vname = 1, 'V', 'p'
+        elif self.cq[0] == 'flux':
+            assert(self.vq[0]=='pressure')
+            self.switch_V, self.cname, self.vname = 0, 'Q', 'p'
+        elif self.cq[0] == 'pressure':
+            if self.vq[0] == 'flux':
+                self.switch_V, self.cname, self.vname = 0, 'p', 'Q'
+            elif self.vq[0] == 'volume':
+                self.switch_V, self.cname, self.vname = 1, 'p', 'V'
+            else:
+                raise ValueError("Unknown variable quantity!")
+        else:
+            raise NameError("Unknown coupling quantity!")
 
         self.set_solve_arrays()
 

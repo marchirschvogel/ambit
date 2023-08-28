@@ -116,6 +116,8 @@ if category=='solid_flow0d' or category=='all':
     errs['solid_flow0d_monolagr2field_2elwindkessel_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monolagr2field_2elwindkessel_chamber.py'])
     errs['solid_flow0d_monolagr2field_2elwindkessel_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolagr2field_2elwindkessel_chamber.py'])
 
+    errs['solid_flow0d_monolagr_CRLinoutlink_chambers 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_flow0d_monolagr_CRLinoutlink_chambers.py'])
+
     errs['solid_flow0d_monodir_syspul_2Dheart_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py'])
     errs['solid_flow0d_monodir_syspul_2Dheart_prestress 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py'])
     errs['solid_flow0d_monodir_syspul_2Dheart_prestress 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_flow0d_monodir_syspul_2Dheart_prestress.py', str(3)]) # tests restart from step 3

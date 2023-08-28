@@ -150,6 +150,12 @@ class SolidmechanicsFlow0DProblem(problem_base):
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
 
+            try: coupling_quantity = self.coupling_params['coupling_quantity'][n]
+            except: coupling_quantity = 'volume'
+
+            try: variable_quantity = self.coupling_params['variable_quantity'][n]
+            except: variable_quantity = 'pressure'
+
             self.pr0D = expression.template()
 
             self.coupfuncs.append(fem.Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbs.Vd_scalar))
@@ -160,20 +166,20 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
                 ds_vq = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
 
-                if self.coupling_params['coupling_quantity'][n] == 'volume':
-                    assert(self.coupling_type == 'monolithic_direct')
+                if coupling_quantity == 'volume':
+                    assert(self.coupling_type == 'monolithic_direct' and variable_quantity == 'pressure')
                     cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
                     cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
-                elif self.coupling_params['coupling_quantity'][n] == 'flux':
-                    assert(self.coupling_type == 'monolithic_direct')
+                elif coupling_quantity == 'flux':
+                    assert(self.coupling_type == 'monolithic_direct' and variable_quantity == 'pressure')
                     cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
                     cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
-                elif self.coupling_params['coupling_quantity'][n] == 'pressure':
+                elif coupling_quantity == 'pressure':
                     assert(self.coupling_type == 'monolithic_lagrange')
-                    if self.coupling_params['variable_quantity'][n] == 'volume':
+                    if variable_quantity == 'volume':
                         cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
                         cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
-                    elif self.coupling_params['variable_quantity'][n] == 'flux':
+                    elif variable_quantity == 'flux':
                         cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
                         cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
                     else:
