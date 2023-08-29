@@ -319,10 +319,10 @@ class solver_nonlinear:
 
                 # solution increment
                 if self.nfields[npr] > 1:
-                    self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
-                    # need to merge for non-fieldsplit-type preconditioners
                     if not self.block_precond[npr] == 'fieldsplit':
-                        self.del_full = PETSc.Vec().createWithArray(self.del_full.getArray())
+                        self.del_full = self.K_full_nest[npr].createVecLeft()
+                    else:
+                        self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
                 # prepare merged preconditioner matrix structure
                 if self.merge_prec_mat:
@@ -581,7 +581,9 @@ class solver_nonlinear:
                                 print(' '*self.indlen_[npr] + '      === MAT merge, te = %.4f s' % (tme))
                                 sys.stdout.flush()
 
-                        self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_full_nest[npr].getArray())
+                        r_arr = self.r_full_nest[npr].getArray(readonly=True)
+                        self.r_full_merged[npr] = PETSc.Vec().createWithArray(r_arr)
+                        del r_arr
 
                         self.ksp[npr].setOperators(self.K_full_merged[npr])
                         te += time.time() - tes
@@ -628,7 +630,9 @@ class solver_nonlinear:
 
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':
-                            self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_full_nest[npr].getArray())
+                            r_arr = self.r_full_nest[npr].getArray(readonly=True)
+                            self.r_full_merged[npr] = PETSc.Vec().createWithArray(r_arr)
+                            del r_arr
                             r = self.r_full_merged[npr]
                         else:
                             r = self.r_full_nest[npr]
