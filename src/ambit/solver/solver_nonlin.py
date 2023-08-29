@@ -110,6 +110,56 @@ class solver_nonlinear:
 
         self.initialize_petsc_solver()
 
+        # offset array for multi-field systems
+        self.offsetarr = [[]]*self.nprob
+        for npr in range(self.nprob):
+
+            self.offsetarr[npr] = [0]
+            off=0
+            for n in range(self.nfields[npr]):
+                if n==0:
+                    if self.pb[npr].rom: # currently, ROM is only implemented for the first variable in the system!
+                        off += self.pb[npr].rom.V.getLocalSize()[1]
+                    else:
+                        off += self.x[npr][0].getLocalSize()
+                else:
+                    off += self.x[npr][n].getLocalSize()
+
+                self.offsetarr[npr].append(off)
+
+        self.del_x, self.del_x_rom, self.x_start = [], [], []
+        self.del_x_sol = [[]]*self.nprob
+
+        for npr in range(self.nprob):
+
+            self.del_x.append([[]]*self.nfields[npr])
+            self.x_start.append([[]]*self.nfields[npr])
+            self.del_x_rom.append([[]]*self.nfields[npr])
+
+        for npr in range(self.nprob):
+
+            for n in range(self.nfields[npr]):
+                # solution increments for Newton
+                self.del_x[npr][n] = self.x[npr][n].duplicate()
+                self.del_x[npr][n].set(0.0)
+                if self.pb[npr].rom and npr==0:
+                    if n==0:
+                        self.del_x_rom[npr][n] = self.pb[npr].rom.V.createVecRight()
+                        self.del_x_rom[npr][n].set(0.0)
+                    else:
+                        self.del_x_rom[npr][n] = self.del_x[npr][n]
+                # start vector (needed for reset of Newton in case of divergence)
+                self.x_start[npr][n] = self.x[npr][n].duplicate()
+                self.x[npr][n].assemble()
+                if self.pb[npr].sub_solve: # can only be a 0D model so far...
+                    self.s_start = self.pb[npr].pb0.s.duplicate()
+                    self.pb[npr].pb0.s.assemble()
+
+            if self.pb[npr].rom:
+                self.del_x_sol[npr] = self.del_x_rom[npr]
+            else:
+                self.del_x_sol[npr] = self.del_x[npr]
+
         self.li_s = [] # linear iterations over all solves
         self.ni_all = 0 # all nonlinear iterations over all solves (to determine prec updates for instance)
 
@@ -446,57 +496,16 @@ class solver_nonlinear:
 
     def newton(self, t, localdata={}):
 
-        # offset array for multi-field systems
-        self.offsetarr = [[]]*self.nprob
-        for npr in range(self.nprob):
 
-            self.offsetarr[npr] = [0]
-            off=0
+
+        # set start vectors
+        for npr in range(self.nprob):
             for n in range(self.nfields[npr]):
-                if n==0:
-                    if self.pb[npr].rom: # currently, ROM is only implemented for the first variable in the system!
-                        off += self.pb[npr].rom.V.getLocalSize()[1]
-                    else:
-                        off += self.x[npr][0].getLocalSize()
-                else:
-                    off += self.x[npr][n].getLocalSize()
-
-                self.offsetarr[npr].append(off)
-
-        del_x, del_x_rom, x_start = [], [], []
-        del_x_sol = [[]]*self.nprob
-
-        for npr in range(self.nprob):
-
-            del_x.append([[]]*self.nfields[npr])
-            x_start.append([[]]*self.nfields[npr])
-            del_x_rom.append([[]]*self.nfields[npr])
-
-        for npr in range(self.nprob):
-
-            for n in range(self.nfields[npr]):
-                # solution increments for Newton
-                del_x[npr][n] = self.x[npr][n].duplicate()
-                del_x[npr][n].set(0.0)
-                if self.pb[npr].rom and npr==0:
-                    if n==0:
-                        del_x_rom[npr][n] = self.pb[npr].rom.V.createVecRight()
-                        del_x_rom[npr][n].set(0.0)
-                    else:
-                        del_x_rom[npr][n] = del_x[npr][n]
-                # start vector (needed for reset of Newton in case of divergence)
-                x_start[npr][n] = self.x[npr][n].duplicate()
-                self.x[npr][n].assemble()
-                x_start[npr][n].axpby(1.0, 0.0, self.x[npr][n])
+                self.x_start[npr][n].axpby(1.0, 0.0, self.x[npr][n])
                 if self.pb[npr].sub_solve: # can only be a 0D model so far...
-                    s_start = self.pb[npr].pb0.s.duplicate()
-                    self.pb[npr].pb0.s.assemble()
-                    s_start.axpby(1.0, 0.0, self.pb[npr].pb0.s)
+                    self.s_start.axpby(1.0, 0.0, self.pb[npr].pb0.s)
 
-            if self.pb[npr].rom:
-                del_x_sol[npr] = del_x_rom[npr]
-            else:
-                del_x_sol[npr] = del_x[npr]
+
 
         # Newton iteration index
         it = 0
@@ -580,7 +589,7 @@ class solver_nonlinear:
 
                         tes = time.time()
 
-                        del_full = PETSc.Vec().createNest(del_x_sol[npr])
+                        del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
                         # re-build preconditioner if requested (default is every iteration)
                         if self.ni_all % self.rebuild_prec_every_it == 0:
@@ -637,7 +646,7 @@ class solver_nonlinear:
                         raise NameError("Unknown solvetype!")
 
                     for n in range(self.nfields[npr]):
-                        del_x_sol[npr][n].array[:] = del_full.array_r[self.offsetarr[npr][n]:self.offsetarr[npr][n+1]]
+                        self.del_x_sol[npr][n].array[:] = del_full.array_r[self.offsetarr[npr][n]:self.offsetarr[npr][n+1]]
 
                 else:
 
@@ -646,7 +655,7 @@ class solver_nonlinear:
 
                     tss = time.time()
                     # solve the linear system
-                    self.ksp[npr].solve(-self.r_list_sol[npr][0], del_x_sol[npr][0])
+                    self.ksp[npr].solve(-self.r_list_sol[npr][0], self.del_x_sol[npr][0])
                     ts = time.time() - tss
 
                     if self.solvetype[npr]=='iterative':
@@ -656,18 +665,18 @@ class solver_nonlinear:
 
                 # get increment norm
                 for n in range(self.nfields[npr]):
-                    self.incnorms[npr]['inc'+str(n+1)] = del_x_sol[npr][n].norm()
+                    self.incnorms[npr]['inc'+str(n+1)] = self.del_x_sol[npr][n].norm()
 
                 # reconstruct full-length increment vector
                 if self.pb[npr].rom:
-                    self.pb[npr].rom.reconstruct_solution_increment(del_x_sol[npr], del_x[npr])
+                    self.pb[npr].rom.reconstruct_solution_increment(self.del_x_sol[npr], self.del_x[npr])
 
                 # norm from last step for potential PTC adaption - prior to res update
                 res_norm_main_last = self.resnorms[npr]['res1']
 
                 # update variables
                 for n in range(self.nfields[npr]):
-                    self.x[npr][n].axpy(1.0, del_x[npr][n])
+                    self.x[npr][n].axpy(1.0, self.del_x[npr][n])
                     if self.is_ghosted[npr][n]==1:
                         self.x[npr][n].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     if self.is_ghosted[npr][n]==2:
@@ -713,6 +722,11 @@ class solver_nonlinear:
             # now check if errors occurred
             if any(err):
 
+                # destroy PETSc vectors that have been created
+                for npr in range(self.nprob):
+                    if self.r_full_nest[npr] is not None: self.r_full_nest[npr].destroy()
+                    if self.r_full_merged[npr] is not None: self.r_full_merged[npr].destroy()
+
                 self.PTC = True
                 # reset Newton step
                 it, k_PTC = 1, self.k_PTC_initial
@@ -731,21 +745,15 @@ class solver_nonlinear:
 
                     # reset solver
                     for n in range(self.nfields[npr]):
-                        self.reset_step(self.x[npr][n], x_start[npr][n], self.is_ghosted[npr][n])
+                        self.reset_step(self.x[npr][n], self.x_start[npr][n], self.is_ghosted[npr][n])
                         if self.pb[npr].sub_solve: # can only be a 0D model so far...
-                            self.reset_step(self.pb[npr].pb0.s, s_start, 0)
+                            self.reset_step(self.pb[npr].pb0.s, self.s_start, 0)
 
                     # re-set residual actions
                     self.residual_problem_actions(t, npr, localdata)
 
             # check if all problems have converged
             if all(converged):
-
-                # destroy PETSc vectors
-                for npr in range(self.nprob):
-                    for n in range(self.nfields[npr]):
-                        del_x_sol[npr][n].destroy(), x_start[npr][n].destroy(), del_x[npr][n].destroy()
-                    if self.pb[npr].sub_solve: s_start.destroy()
 
                 # reset to normal Newton if PTC was used in a divcont action
                 if self.divcont=='PTC':
@@ -884,6 +892,16 @@ class solver_nonlinear:
     def destroy(self):
 
         for npr in range(self.nprob):
+
+            for n in range(self.nfields[npr]):
+                self.del_x_sol[npr][n].destroy()
+                self.x_start[npr][n].destroy()
+                self.del_x[npr][n].destroy()
+                if self.pb[npr].rom and npr==0:
+                    self.del_x_rom[npr][n].destroy()
+            if self.pb[npr].sub_solve:
+                self.s_start.destroy()
+
             if self.r_full_nest[npr] is not None: self.r_full_nest[npr].destroy()
             if self.K_full_nest[npr] is not None: self.K_full_nest[npr].destroy()
             if self.P_full_nest[npr] is not None: self.P_full_nest[npr].destroy()

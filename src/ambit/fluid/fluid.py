@@ -1113,6 +1113,7 @@ class FluidmechanicsSolver(solver_base):
             if self.pb.comm.rank == 0:
                 print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.")
                 sys.stdout.flush()
+            self.solnln.destroy()
             os._exit(0)
 
         # reset state
@@ -1129,6 +1130,7 @@ class FluidmechanicsSolver(solver_base):
         # set flag to false again
         self.pb.prestress_initial = False
         self.pb.set_problem_residual_jacobian_forms()
+        self.solnln.destroy()
 
 
 # prestress solver, to be called from other (coupled) problems
