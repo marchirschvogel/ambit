@@ -50,8 +50,9 @@ def project(v, V, dx_, bcs=[], nm=None):
     ksp = PETSc.KSP().create(A.getComm())
 
     ksp.setType("preonly")
-    ksp.getPC().setType("lu")
-    ksp.getPC().setFactorSolverType("mumps")
+    pc = ksp.getPC()
+    pc.setType("lu")
+    pc.setFactorSolverType("mumps")
 
     ksp.setOperators(A)
     ksp.solve(b, function.vector)

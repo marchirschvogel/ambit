@@ -48,30 +48,31 @@ class block_precond():
             self.ksp_fields.append( PETSc.KSP().create(self.comm) )
         # set the options
         for n in range(self.nfields):
+            pc_field = self.ksp_fields[n].getPC()
             if self.precond_fields[n]['prec'] == 'amg':
                 try: solvetype = self.precond_fields[n]['solve']
                 except: solvetype = "preonly"
                 self.ksp_fields[n].setType(solvetype)
                 try: amgtype = self.precond_fields[n]['amgtype']
                 except: amgtype = "hypre"
-                self.ksp_fields[n].getPC().setType(amgtype)
+                pc_field.setType(amgtype)
                 if amgtype=="hypre":
-                    self.ksp_fields[n].getPC().setHYPREType("boomeramg")
+                    pc_field.setHYPREType("boomeramg")
                 # set operators and setup field prec
-                self.ksp_fields[n].getPC().setOperators(operator_mats[n])
-                self.ksp_fields[n].getPC().setUp()
+                pc_field.setOperators(operator_mats[n])
+                pc_field.setUp()
                 # TODO: Some additional hypre options we might wanna set... which are optimal here???
                 # opts = PETSc.Options()
                 # opts.setValue('pc_hypre_parasails_reuse', True) # - does this exist???
                 # opts.setValue('pc_hypre_boomeramg_cycle_type', 'v') # v, w
                 # opts.setValue('pc_hypre_boomeramg_max_iter', 1)
                 # opts.setValue('pc_hypre_boomeramg_relax_type_all',  'symmetric-SOR/Jacobi')
-                # self.ksp_fields[n].getPC().setFromOptions()
-                # print(self.ksp_fields[n].getPC().view())
+                # pc_field.setFromOptions()
+                # print(pc_fieldself.ksp_fields[n].getPC().view())
             elif self.precond_fields[n]['prec'] == 'direct':
                 self.ksp_fields[n].setType("preonly")
-                self.ksp_fields[n].getPC().setType("lu")
-                self.ksp_fields[n].getPC().setFactorSolverType("mumps")
+                pc_field.setType("lu")
+                pc_field.setFactorSolverType("mumps")
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 

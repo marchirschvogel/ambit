@@ -296,11 +296,14 @@ class solver_nonlinear:
             self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
             self.r_full_nest[npr] = PETSc.Vec().createNest(self.r_list_sol[npr])
 
+            # preconditioner object (also used in direct solver context)
+            self.pc = self.ksp[npr].getPC()
+
             if self.solvetype[npr]=='direct':
 
                 self.ksp[npr].setType("preonly")
-                self.ksp[npr].getPC().setType("lu")
-                self.ksp[npr].getPC().setFactorSolverType(self.direct_solver)
+                self.pc.setType("lu")
+                self.pc.setFactorSolverType(self.direct_solver)
 
                 # prepare merged matrix structure
                 if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
@@ -344,7 +347,7 @@ class solver_nonlinear:
                     if self.block_precond[npr] == 'fieldsplit':
 
                         # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
-                        self.ksp[npr].getPC().setType("fieldsplit")
+                        self.pc.setType("fieldsplit")
                         # cf. https://petsc.org/main/manualpages/PC/PCCompositeType
 
                         if self.fieldsplit_type=='jacobi':
@@ -359,77 +362,78 @@ class solver_nonlinear:
                         else:
                             raise ValueError("Unknown fieldsplit_type option.")
 
-                        self.ksp[npr].getPC().setFieldSplitType(splittype)
+                        self.pc.setFieldSplitType(splittype)
 
                         nsets = len(self.iset[npr])
 
                         # normally, nsets = self.nfields, but for a surface-projected ROM (FrSI) problem, we have one more index set than fields
-                        if nsets==2:   self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]))
-                        elif nsets==3: self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]))
-                        elif nsets==4: self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]),("f4", self.iset[npr][3]))
-                        elif nsets==5: self.ksp[npr].getPC().setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]),("f4", self.iset[npr][3]),("f5", self.iset[npr][4]))
+                        if nsets==2:   self.pc.setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]))
+                        elif nsets==3: self.pc.setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]))
+                        elif nsets==4: self.pc.setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]),("f4", self.iset[npr][3]))
+                        elif nsets==5: self.pc.setFieldSplitIS(("f1", self.iset[npr][0]),("f2", self.iset[npr][1]),("f3", self.iset[npr][2]),("f4", self.iset[npr][3]),("f5", self.iset[npr][4]))
                         else: raise RuntimeError("Currently, no more than 5 fields/index sets are supported.")
 
                         # get the preconditioners for each block
-                        self.ksp[npr].getPC().setUp()
-                        ksp_fields = self.ksp[npr].getPC().getFieldSplitSubKSP()
+                        self.pc.setUp()
+                        ksp_fields = self.pc.getFieldSplitSubKSP()
 
                         assert(nsets==len(self.precond_fields[npr])) # sanity check
 
                         # set field-specific preconditioners
                         for n in range(nsets):
 
+                            pc_field = ksp_fields[n].getPC()
                             if self.precond_fields[npr][n]['prec'] == 'amg':
                                 try: solvetype = self.precond_fields[npr][n]['solve']
                                 except: solvetype = "preonly"
                                 ksp_fields[n].setType(solvetype)
                                 try: amgtype = self.precond_fields[npr][n]['amgtype']
                                 except: amgtype = "hypre"
-                                ksp_fields[n].getPC().setType(amgtype)
+                                pc_field.setType(amgtype)
                                 if amgtype=="hypre":
-                                    ksp_fields[n].getPC().setHYPREType("boomeramg")
+                                    pc_field.setHYPREType("boomeramg")
                             elif self.precond_fields[npr][n]['prec'] == 'direct':
                                 ksp_fields[n].setType("preonly")
-                                ksp_fields[n].getPC().setType("lu")
-                                ksp_fields[n].getPC().setFactorSolverType("mumps")
+                                pc_field.setType("lu")
+                                pc_field.setFactorSolverType("mumps")
                             else:
                                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
                     elif self.block_precond[npr] == 'schur2x2':
 
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        self.pc.setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
-                        self.ksp[npr].getPC().setPythonContext(bj)
+                        self.pc.setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'simple2x2':
 
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        self.pc.setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.simple_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
-                        self.ksp[npr].getPC().setPythonContext(bj)
+                        self.pc.setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur3x3':
 
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        self.pc.setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
-                        self.ksp[npr].getPC().setPythonContext(bj)
+                        self.pc.setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur4x4':
 
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        self.pc.setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
-                        self.ksp[npr].getPC().setPythonContext(bj)
+                        self.pc.setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgs2x2': # can also be called via PETSc's fieldsplit
 
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        self.pc.setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
-                        self.ksp[npr].getPC().setPythonContext(bj)
+                        self.pc.setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'jacobi2x2': # can also be called via PETSc's fieldsplit
 
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        self.pc.setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
-                        self.ksp[npr].getPC().setPythonContext(bj)
+                        self.pc.setPythonContext(bj)
 
                     else:
                         raise ValueError("Unknown block_precond option!")
@@ -437,9 +441,9 @@ class solver_nonlinear:
                 else:
 
                     if self.precond_fields[npr][0]['prec'] == 'amg':
-                        self.ksp[npr].getPC().setType("hypre")
-                        self.ksp[npr].getPC().setMGLevels(3)
-                        self.ksp[npr].getPC().setHYPREType("boomeramg")
+                        self.pc.setType("hypre")
+                        self.pc.setMGLevels(3)
+                        self.pc.setHYPREType("boomeramg")
                     else:
                         raise ValueError("Currently, only 'amg' is supported as single-field preconditioner.")
 
@@ -467,16 +471,17 @@ class solver_nonlinear:
 
         # create solver
         ksp = PETSc.KSP().create(self.comm)
+        pc = ksp.getPC()
 
         if self.solvetype[0]=='direct':
             ksp.setType("preonly")
-            ksp.getPC().setType("lu")
-            ksp.getPC().setFactorSolverType(self.direct_solver)
+            pc.setType("lu")
+            pc.setFactorSolverType(self.direct_solver)
         elif self.solvetype[0]=='iterative':
             ksp.setType(self.iterative_solver)
-            ksp.getPC().setType("hypre")
-            ksp.getPC().setMGLevels(3)
-            ksp.getPC().setHYPREType("boomeramg")
+            pc.setType("hypre")
+            pc.setMGLevels(3)
+            pc.setHYPREType("boomeramg")
         else:
             raise NameError("Unknown solvetype!")
 
@@ -600,7 +605,7 @@ class solver_nonlinear:
                         # re-build preconditioner if requested (default is every iteration)
                         if self.ni_all % self.rebuild_prec_every_it == 0:
 
-                            self.ksp[npr].getPC().setReusePreconditioner(False)
+                            self.pc.setReusePreconditioner(False)
 
                             # use same matrix as preconditioner
                             self.P_full_nest[npr] = self.K_full_nest[npr]
@@ -621,12 +626,10 @@ class solver_nonlinear:
 
                         else:
 
-                            self.ksp[npr].getPC().setReusePreconditioner(True)
+                            self.pc.setReusePreconditioner(True)
 
                         # set operators for linear system solve: Jacobian and preconditioner (we use the same here)
                         self.ksp[npr].setOperators(self.K_full_nest[npr], self.P)
-
-                        self.r_full_nest[npr].assemble()
 
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':
@@ -965,8 +968,9 @@ class solver_nonlinear_ode(solver_nonlinear):
         # create solver
         self.ksp[0] = PETSc.KSP().create(self.comm)
         self.ksp[0].setType("preonly")
-        self.ksp[0].getPC().setType("lu")
-        self.ksp[0].getPC().setFactorSolverType(self.direct_solver)
+        pc = self.ksp[0].getPC()
+        pc.setType("lu")
+        pc.setFactorSolverType(self.direct_solver)
 
         # solution increment
         self.del_s = self.pb.K.createVecLeft()
