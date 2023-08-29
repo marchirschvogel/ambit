@@ -133,21 +133,3 @@ class cardiovascular0DCRLinoutlink(cardiovascular0Dbase):
                 print('{:<5s}{:<3s}{:<10.3f}'.format(self.vname[i],' = ',var_sq[self.varmap[self.vname[i]]]))
 
             sys.stdout.flush()
-
-
-
-
-# def postprocess_groups(groups, indpertaftercyl=0):
-#
-#     # index 0
-#     groups.append({'pres_time'        : ['p'],
-#                    'tex'              : ['$p$'],
-#                    'lines'            : [2]})
-#     # index 1
-#     groups.append({'vol_time'         : ['V'],
-#                    'tex'              : ['$V$'],
-#                    'lines'            : [2]})
-    ## index 1
-    #groups.append({'flux_time'        : ['Q'],
-                   #'tex'              : ['$Q$'],
-                   #'lines'            : [2]})

@@ -462,13 +462,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             # now the LM matrix - via finite differencing
             # store df, f, and aux vectors prior to perturbation solves
-            df_tmp, f_tmp, aux_tmp, s_pert_sq = self.pb0.K.createVecLeft(), self.pb0.K.createVecLeft(), np.zeros(self.pb0.numdof), np.zeros(self.pb0.numdof)
-            df_tmp.axpby(1.0, 0.0, self.pb0.df)
-            f_tmp.axpby(1.0, 0.0, self.pb0.f)
-            aux_tmp[:] = self.pb0.aux[:]
+            self.pb0.df_tmp.axpby(1.0, 0.0, self.pb0.df)
+            self.pb0.f_tmp.axpby(1.0, 0.0, self.pb0.f)
+            self.pb0.aux_tmp[:] = self.pb0.aux[:]
             # store 0D state variable prior to perturbation solves
-            s_tmp = self.pb0.K.createVecLeft()
-            s_tmp.axpby(1.0, 0.0, self.pb0.s)
+            self.pb0.s_tmp.axpby(1.0, 0.0, self.pb0.s)
 
             # finite differencing for LM siffness matrix
             if subsolver is not None:
@@ -482,14 +480,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
                         self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] # restore LM
 
             # restore df, f, and aux vectors for correct time step update
-            self.pb0.df.axpby(1.0, 0.0, df_tmp)
-            self.pb0.f.axpby(1.0, 0.0, f_tmp)
-            self.pb0.aux[:] = aux_tmp[:]
+            self.pb0.df.axpby(1.0, 0.0, self.pb0.df_tmp)
+            self.pb0.f.axpby(1.0, 0.0, self.pb0.f_tmp)
+            self.pb0.aux[:] = self.pb0.aux_tmp[:]
             # restore 0D state variable
-            self.pb0.s.axpby(1.0, 0.0, s_tmp)
-
-            df_tmp.destroy(), f_tmp.destroy(), s_tmp.destroy()
-            del aux_tmp, lm_sq, s_sq, s_pert_sq
+            self.pb0.s.axpby(1.0, 0.0, self.pb0.s_tmp)
 
             self.K_lm.assemble()
 

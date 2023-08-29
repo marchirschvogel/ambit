@@ -120,21 +120,3 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
             print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]))
 
             sys.stdout.flush()
-
-
-
-
-def postprocess_groups(groups, indpertaftercyl=0):
-
-    # index 0
-    groups.append({'pres_time'        : ['p'],
-                   'tex'              : ['$p$'],
-                   'lines'            : [2]})
-    # index 1
-    groups.append({'vol_time'         : ['V'],
-                   'tex'              : ['$V$'],
-                   'lines'            : [2]})
-    ## index 1
-    #groups.append({'flux_time'        : ['Q'],
-                   #'tex'              : ['$Q$'],
-                   #'lines'            : [2]})

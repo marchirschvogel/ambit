@@ -148,6 +148,9 @@ class Flow0DProblem(problem_base):
         self.df, self.df_old = self.K.createVecLeft(), self.K.createVecLeft()
         self.f, self.f_old   = self.K.createVecLeft(), self.K.createVecLeft()
 
+        # tmp vectors for perturbation solves (for LM-coupled 3D-0D problems)
+        self.s_tmp, self.df_tmp, self.f_tmp, self.aux_tmp, self.s_pert_sq = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft(), np.zeros(self.numdof), np.zeros(self.numdof)
+
         self.aux, self.aux_old, self.aux_mid = np.zeros(self.numdof), np.zeros(self.numdof), np.zeros(self.numdof)
         self.auxTc, self.auxTc_old = np.zeros(self.numdof), np.zeros(self.numdof)
 
