@@ -722,7 +722,6 @@ class solver_nonlinear:
 
                 # destroy PETSc vectors that have been created
                 for npr in range(self.nprob):
-                    if self.r_full_nest[npr] is not None: self.r_full_nest[npr].destroy()
                     if self.r_full_merged[npr] is not None: self.r_full_merged[npr].destroy()
 
                 self.PTC = True
