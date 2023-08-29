@@ -108,8 +108,6 @@ class solver_nonlinear:
 
         self.subsol = subsolver
 
-        self.initialize_petsc_solver()
-
         # offset array for multi-field systems
         self.offsetarr = [[]]*self.nprob
         for npr in range(self.nprob):
@@ -159,6 +157,8 @@ class solver_nonlinear:
                 self.del_x_sol[npr] = self.del_x_rom[npr]
             else:
                 self.del_x_sol[npr] = self.del_x[npr]
+
+        self.initialize_petsc_solver()
 
         self.li_s = [] # linear iterations over all solves
         self.ni_all = 0 # all nonlinear iterations over all solves (to determine prec updates for instance)
@@ -287,9 +287,14 @@ class solver_nonlinear:
             # create solver
             self.ksp[npr] = PETSc.KSP().create(self.comm)
 
-            # get reduced matrices to set ksp operators
+            # perform initial matrix and residual reduction to set the correct arrays
             if self.pb[npr].rom:
-                self.jacobian_problem_actions(0., npr, 0.)
+                self.pb[npr].rom.reduce_stiffness(self.pb[npr].K_list, self.pb[npr].K_list_rom, self.pb[npr].K_list_tmp)
+                self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom, x=self.x[npr][0])
+
+            # create nested matrix and residual structures
+            self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
+            self.r_full_nest[npr] = PETSc.Vec().createNest(self.r_list_sol[npr])
 
             if self.solvetype[npr]=='direct':
 
@@ -299,17 +304,25 @@ class solver_nonlinear:
 
                 # prepare merged matrix structure
                 if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
-                    self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
+
                     self.K_full_merged[npr] = PETSc.Mat()
                     self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
+                    # solution increment
+                    self.del_full = self.K_full_merged[npr].createVecLeft()
 
             elif self.solvetype[npr]=='iterative':
 
                 self.ksp[npr].setInitialGuessNonzero(False)
                 self.ksp[npr].setNormType(self.linnormtype)
 
-                self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
                 self.P_full_nest[npr] = self.K_full_nest[npr]
+
+                # solution increment
+                if self.nfields[npr] > 1:
+                    self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
+                    # need to merge for non-fieldsplit-type preconditioners
+                    if not self.block_precond[npr] == 'fieldsplit':
+                        self.del_full = PETSc.Vec().createWithArray(self.del_full.getArray())
 
                 # prepare merged preconditioner matrix structure
                 if self.merge_prec_mat:
@@ -496,16 +509,12 @@ class solver_nonlinear:
 
     def newton(self, t, localdata={}):
 
-
-
         # set start vectors
         for npr in range(self.nprob):
             for n in range(self.nfields[npr]):
                 self.x_start[npr][n].axpby(1.0, 0.0, self.x[npr][n])
                 if self.pb[npr].sub_solve: # can only be a 0D model so far...
                     self.s_start.axpby(1.0, 0.0, self.pb[npr].pb0.s)
-
-
 
         # Newton iteration index
         it = 0
@@ -554,11 +563,9 @@ class solver_nonlinear:
 
                     tes = time.time()
 
-                    # nested matrix references have been updated - we should call assemble again (?)
+                    # nested residual and matrix references have been updated - we should call assemble again (?)
+                    self.r_full_nest[npr].assemble()
                     self.K_full_nest[npr].assemble()
-
-                    # nested residual vector
-                    self.r_full_nest[npr] = PETSc.Vec().createNest(self.r_list_sol[npr])
 
                     te += time.time() - tes
 
@@ -576,20 +583,17 @@ class solver_nonlinear:
 
                         self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_full_nest[npr].getArray())
 
-                        del_full = self.K_full_merged[npr].createVecLeft()
                         self.ksp[npr].setOperators(self.K_full_merged[npr])
                         te += time.time() - tes
 
                         tss = time.time()
-                        self.ksp[npr].solve(-self.r_full_merged[npr], del_full)
+                        self.ksp[npr].solve(-self.r_full_merged[npr], self.del_full)
                         ts = time.time() - tss
 
                     # for nested iterative solver
                     elif self.solvetype[npr]=='iterative':
 
                         tes = time.time()
-
-                        del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
                         # re-build preconditioner if requested (default is every iteration)
                         if self.ni_all % self.rebuild_prec_every_it == 0:
@@ -625,8 +629,6 @@ class solver_nonlinear:
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':
                             self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_full_nest[npr].getArray())
-                            self.r_full_merged[npr].assemble()
-                            del_full = PETSc.Vec().createWithArray(del_full.getArray())
                             r = self.r_full_merged[npr]
                         else:
                             r = self.r_full_nest[npr]
@@ -635,7 +637,7 @@ class solver_nonlinear:
 
                         tss = time.time()
                         # solve the linear system
-                        self.ksp[npr].solve(-r, del_full)
+                        self.ksp[npr].solve(-r, self.del_full)
 
                         ts = time.time() - tss
 
@@ -646,7 +648,7 @@ class solver_nonlinear:
                         raise NameError("Unknown solvetype!")
 
                     for n in range(self.nfields[npr]):
-                        self.del_x_sol[npr][n].array[:] = del_full.array_r[self.offsetarr[npr][n]:self.offsetarr[npr][n+1]]
+                        self.del_x_sol[npr][n].array[:] = self.del_full.array_r[self.offsetarr[npr][n]:self.offsetarr[npr][n+1]]
 
                 else:
 
@@ -695,10 +697,6 @@ class solver_nonlinear:
                 te += time.time() - tes
 
                 self.solutils.print_nonlinear_iter(it, resnorms=self.resnorms[npr], incnorms=self.incnorms[npr], ts=ts, te=te, ptype=self.ptype[npr])
-
-                # destroy PETSc stuff...
-                if self.nfields[npr] > 1:
-                    del_full.destroy()
 
                 # get converged state of each problem
                 converged.append(self.solutils.check_converged(self.resnorms[npr], self.incnorms[npr], self.tolerances[npr], ptype=self.ptype[npr]))
@@ -902,6 +900,9 @@ class solver_nonlinear:
             if self.pb[npr].sub_solve:
                 self.s_start.destroy()
 
+            if self.nfields[npr] > 1:
+                self.del_full.destroy()
+
             if self.r_full_nest[npr] is not None: self.r_full_nest[npr].destroy()
             if self.K_full_nest[npr] is not None: self.K_full_nest[npr].destroy()
             if self.P_full_nest[npr] is not None: self.P_full_nest[npr].destroy()
@@ -964,6 +965,9 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.ksp[0].getPC().setType("lu")
         self.ksp[0].getPC().setFactorSolverType(self.direct_solver)
 
+        # solution increment
+        self.del_s = self.pb.K.createVecLeft()
+
 
     def newton(self, t, print_iter=True, sub=False):
 
@@ -975,8 +979,6 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.ni, self.li = 0, 0 # nonlinear and linear iteration counters (latter probably never relevant for ODE problems...)
 
         tes = time.time()
-
-        del_s = self.pb.K.createVecLeft()
 
         # compute initial residual
         self.pb.assemble_residual(t)
@@ -1003,19 +1005,19 @@ class solver_nonlinear_ode(solver_nonlinear):
             te = time.time() - tes
 
             tss = time.time()
-            self.ksp[0].solve(-self.pb.r_list[0], del_s)
+            self.ksp[0].solve(-self.pb.r_list[0], self.del_s)
             ts = time.time() - tss
 
             tes = time.time()
 
             # update solution
-            self.pb.s.axpy(1.0, del_s)
+            self.pb.s.axpy(1.0, self.del_s)
 
             # compute new residual after updated solution
             self.pb.assemble_residual(t)
 
             # get norms
-            self.resnorms['res1'], self.incnorms['inc1'] = self.pb.r_list[0].norm(), del_s.norm()
+            self.resnorms['res1'], self.incnorms['inc1'] = self.pb.r_list[0].norm(), self.del_s.norm()
 
             te += time.time() - tes
 
@@ -1026,7 +1028,6 @@ class solver_nonlinear_ode(solver_nonlinear):
             # check if converged
             converged = self.solutils.check_converged(self.resnorms, self.incnorms, self.tolerances[0], ptype='flow0d')
             if converged:
-                del_s.destroy()
                 if print_iter and sub:
                     if self.comm.rank == 0:
                         print('       ****************************************************\n')
@@ -1041,4 +1042,5 @@ class solver_nonlinear_ode(solver_nonlinear):
 
     def destroy(self):
 
+        self.del_s.destroy()
         self.ksp[0].destroy()
