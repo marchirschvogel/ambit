@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import sys, time
+import numpy as np
 from petsc4py import PETSc
 
 ### PETSc PC types:
@@ -128,6 +129,8 @@ class schur_2x2(block_precond):
         self.y1, self.y2 = self.A.createVecLeft(), self.Smod.createVecLeft()
         self.z1, self.z2 = self.A.createVecLeft(), self.Smod.createVecLeft()
 
+        self.arr_y1, self.arr_y2 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize())
+
         self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
 
@@ -208,14 +211,13 @@ class schur_2x2(block_precond):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        arr_y1, arr_y2 = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
+        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
 
-        y.setValues(self.iset[0], arr_y1)
-        y.setValues(self.iset[1], arr_y2)
+        y.setValues(self.iset[0], self.arr_y1)
+        y.setValues(self.iset[1], self.arr_y2)
 
         y.assemble()
 
-        del arr_y1, arr_y2
 
 
 # special MH Schur complement 3x3 preconditioner
@@ -304,6 +306,8 @@ class schur_3x3(block_precond):
         self.x1, self.x2, self.x3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
         self.y1, self.y2, self.y3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
         self.z1, self.z2, self.z3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
+
+        self.arr_y1, self.arr_y2, self.arr_y3 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize()), np.zeros(self.y3.getLocalSize())
 
         return [self.A, self.Smod, self.Wmod]
 
@@ -466,15 +470,13 @@ class schur_3x3(block_precond):
         x.restoreSubVector(self.iset[2], subvec=self.x3)
 
         # set into y vector
-        arr_y1, arr_y2, arr_y3 = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True), self.y3.getArray(readonly=True)
+        self.arr_y1[:], self.arr_y2[:], self.arr_y3[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True), self.y3.getArray(readonly=True)
 
-        y.setValues(self.iset[0], arr_y1)
-        y.setValues(self.iset[1], arr_y2)
-        y.setValues(self.iset[2], arr_y3)
+        y.setValues(self.iset[0], self.arr_y1)
+        y.setValues(self.iset[1], self.arr_y2)
+        y.setValues(self.iset[2], self.arr_y3)
 
         y.assemble()
-
-        del arr_y1, arr_y2, arr_y3
 
 
 
@@ -492,6 +494,8 @@ class schur_4x4(schur_3x3):
 
         self.x4 = self.G.createVecLeft()
         self.y4 = self.G.createVecLeft()
+
+        self.arr_y4 = np.zeros(self.y4.getLocalSize())
 
         return [opmats[0], opmats[1], opmats[2], self.G]
 
@@ -516,13 +520,12 @@ class schur_4x4(schur_3x3):
         x.restoreSubVector(self.iset[3], subvec=self.x4)
 
         # set into y vector
-        arr_y4 = self.y4.getArray(readonly=True)
+        self.arr_y4[:] = self.y4.getArray(readonly=True)
 
-        y.setValues(self.iset[3], arr_y4)
+        y.setValues(self.iset[3], self.arr_y4)
 
         y.assemble()
 
-        del arr_y4
 
 
 # Schur complement preconditioner replacing the last solve with a diag(A)^{-1} update
@@ -559,14 +562,13 @@ class simple_2x2(schur_2x2):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        arr_y1, arr_y2 = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
+        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
 
-        y.setValues(self.iset[0], arr_y1)
-        y.setValues(self.iset[1], arr_y2)
+        y.setValues(self.iset[0], self.arr_y1)
+        y.setValues(self.iset[1], self.arr_y2)
 
         y.assemble()
 
-        del arr_y1, arr_y2
 
 
 # own 2x2 Block Gauss-Seidel (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
@@ -592,6 +594,8 @@ class bgs_2x2(block_precond):
         self.x1, self.x2 = self.A.createVecLeft(), self.C.createVecLeft()
         self.y1, self.y2 = self.A.createVecLeft(), self.C.createVecLeft()
         self.z2 = self.C.createVecLeft()
+
+        self.arr_y1, self.arr_y2 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize())
 
         return [self.A, self.C]
 
@@ -638,14 +642,12 @@ class bgs_2x2(block_precond):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        arr_y1, arr_y2 = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
+        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
 
-        y.setValues(self.iset[0], arr_y1)
-        y.setValues(self.iset[1], arr_y2)
+        y.setValues(self.iset[0], self.arr_y1)
+        y.setValues(self.iset[1], self.arr_y2)
 
         y.assemble()
-
-        del arr_y1, arr_y2
 
 
 
@@ -700,11 +702,9 @@ class jacobi_2x2(block_precond):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        arr_y1, arr_y2 = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
+        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
 
-        y.setValues(self.iset[0], arr_y1)
-        y.setValues(self.iset[1], arr_y2)
+        y.setValues(self.iset[0], self.arr_y1)
+        y.setValues(self.iset[1], self.arr_y2)
 
         y.assemble()
-
-        del arr_y1, arr_y2
