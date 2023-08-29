@@ -425,7 +425,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.ksp[0].destroy()
+            self.solverprestr.solnln.destroy()
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:

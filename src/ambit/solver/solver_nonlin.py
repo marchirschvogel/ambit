@@ -910,6 +910,8 @@ class solver_nonlinear:
             if self.K_full_merged[npr] is not None: self.K_full_merged[npr].destroy()
             if self.P_full_merged[npr] is not None: self.P_full_merged[npr].destroy()
 
+            self.ksp[npr].destroy()
+
 
 # solver for pure ODE (0D) problems (e.g. a system of first order ODEs integrated with One-Step-Theta method)
 class solver_nonlinear_ode(solver_nonlinear):

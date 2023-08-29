@@ -327,7 +327,3 @@ class solver_base():
 
         # destroy solver data structures
         self.solnln.destroy()
-
-        # destroy ksp solver objects
-        for npr in range(self.solnln.nprob):
-            self.solnln.ksp[npr].destroy()
