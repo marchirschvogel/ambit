@@ -1040,4 +1040,5 @@ class solver_nonlinear_ode(solver_nonlinear):
 
 
     def destroy(self):
-        pass
+
+        self.ksp[0].destroy()
