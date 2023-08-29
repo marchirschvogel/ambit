@@ -314,6 +314,7 @@ class solver_nonlinear:
                     self.del_full = self.K_full_merged[npr].createVecLeft()
 
                     self.r_arr = np.zeros(self.r_full_nest[npr].getLocalSize())
+                    self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_arr)
 
             elif self.solvetype[npr]=='iterative':
 
@@ -327,6 +328,7 @@ class solver_nonlinear:
                     if not self.block_precond[npr] == 'fieldsplit':
                         self.del_full = self.K_full_nest[npr].createVecLeft()
                         self.r_arr = np.zeros(self.r_full_nest[npr].getLocalSize())
+                        self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_arr)
                     else:
                         self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
@@ -591,7 +593,7 @@ class solver_nonlinear:
                         tmp=self.r_full_nest[npr].getArray(readonly=True)
 
                         self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
-                        self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_arr)
+                        self.r_full_merged[npr].placeArray(self.r_arr)
 
                         self.ksp[npr].setOperators(self.K_full_merged[npr])
                         te += time.time() - tes
@@ -599,6 +601,8 @@ class solver_nonlinear:
                         tss = time.time()
                         self.ksp[npr].solve(-self.r_full_merged[npr], self.del_full)
                         ts = time.time() - tss
+
+                        self.r_full_merged[npr].resetArray()
 
                     # for nested iterative solver
                     elif self.solvetype[npr]=='iterative':
@@ -637,7 +641,7 @@ class solver_nonlinear:
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':
                             self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
-                            self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_arr)
+                            self.r_full_merged[npr].placeArray(self.r_arr)
                             r = self.r_full_merged[npr]
                         else:
                             r = self.r_full_nest[npr]
@@ -651,6 +655,9 @@ class solver_nonlinear:
                         ts = time.time() - tss
 
                         self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
+
+                        if not self.block_precond[npr] == 'fieldsplit':
+                            self.r_full_merged[npr].resetArray()
 
                     else:
 
@@ -728,10 +735,6 @@ class solver_nonlinear:
 
             # now check if errors occurred
             if any(err):
-
-                # destroy PETSc vectors that have been created
-                for npr in range(self.nprob):
-                    if self.r_full_merged[npr] is not None: self.r_full_merged[npr].destroy()
 
                 self.PTC = True
                 # reset Newton step
