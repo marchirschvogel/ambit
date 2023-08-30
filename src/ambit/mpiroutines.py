@@ -45,6 +45,8 @@ def allgather_vec(var, comm):
     for i in range(len(var_arr)):
         var_all += var_arr[i]
 
+    del var_tmp
+
     return var_all
 
 
@@ -64,5 +66,7 @@ def allgather_mat(var, comm):
 
     for i in range(len(var_arr)):
         var_all += var_arr[i]
+
+    del var_tmp
 
     return var_all

@@ -274,48 +274,38 @@ class timeintegration_solid(timeintegration):
 
 
     def update_fields_newmark(self, u, u_old, v_old, a_old):
-        # update fields at the end of each time step
-        # get vectors (references)
-        u_vec, u0_vec  = u.vector, u_old.vector
-        v0_vec, a0_vec = v_old.vector, a_old.vector
-        u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
 
         # use update functions using vector arguments
-        a_vec = self.update_a_newmark(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
-        v_vec = self.update_v_newmark(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        a_vec = self.update_a_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
+        v_vec = self.update_v_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
 
-        self.update_a_v_u(a_old, v_old, u_old, a_vec, v_vec, u_vec)
+        self.update_a_v_u(a_old, v_old, u_old, a_vec, v_vec, u)
 
 
     def update_fields_ost(self, u, u_old, v_old, a_old):
-        # update fields at the end of each time step
-        # get vectors (references)
-        u_vec, u0_vec  = u.vector, u_old.vector
-        v0_vec, a0_vec = v_old.vector, a_old.vector
-        u_vec.assemble(), u0_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
 
         # use update functions using vector arguments
-        a_vec = self.update_a_ost(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
-        v_vec = self.update_v_ost(u_vec, u0_vec, v0_vec, a0_vec, ufl=False)
+        a_vec = self.update_a_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
+        v_vec = self.update_v_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
 
-        self.update_a_v_u(a_old, v_old, u_old, a_vec, v_vec, u_vec)
+        self.update_a_v_u(a_old, v_old, u_old, a_vec, v_vec, u)
 
 
-    def update_a_v_u(self, a_old, v_old, u_old, a, v, u):
+    def update_a_v_u(self, a_old, v_old, u_old, a_vec, v_vec, u):
 
         # update acceleration: a_old <- a
-        a_old.vector.axpby(1.0, 0.0, a)
+        a_old.vector.axpby(1.0, 0.0, a_vec)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_old <- v
-        v_old.vector.axpby(1.0, 0.0, v)
+        v_old.vector.axpby(1.0, 0.0, v_vec)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update displacement: u_old <- u
-        u_old.vector.axpby(1.0, 0.0, u)
+        u_old.vector.axpby(1.0, 0.0, u.vector)
         u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        a.destroy(), v.destroy() # auxiliary vectors that have been created, so destroy
+        a_vec.destroy(), v_vec.destroy() # auxiliary vectors that have been created, so destroy
 
 
     def compute_genalpha_params(self, rho_inf): # cf. Chung and Hulbert (1993)
@@ -489,61 +479,49 @@ class timeintegration_fluid(timeintegration):
 
 
     def update_fields_ost(self, v, v_old, a_old, uf_old=None):
-        # update fields at the end of each time step
-        # get vectors (references)
-        v_vec, v0_vec  = v.vector, v_old.vector
-        a0_vec = a_old.vector
-        v_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
 
         # use update functions using vector arguments
-        a_vec = self.update_a_ost(v_vec, v0_vec, a0_vec, ufl=False)
+        a_vec = self.update_a_ost(v.vector, v_old.vector, a_old.vector, ufl=False)
 
         if uf_old is not None:
 
-            uf0_vec = uf_old.vector
             # use update functions using vector arguments
-            uf_vec = self.update_uf_ost(v_vec, v0_vec, uf0_vec, ufl=False)
+            uf_vec = self.update_uf_ost(v.vector, v_old.vector, uf_old.vector, ufl=False)
 
-        self.update_a_v(a_old, v_old, a_vec, v_vec, uf_old=uf_old, uf=uf_vec)
+        self.update_a_v(a_old, v_old, a_vec, v, uf_old=uf_old, uf_vec=uf_vec)
 
 
     def update_fields_genalpha(self, v, v_old, a_old, uf_old=None):
-        # update fields at the end of each time step
-        # get vectors (references)
-        v_vec, v0_vec  = v.vector, v_old.vector
-        a0_vec = a_old.vector
-        v_vec.assemble(), v0_vec.assemble(), a0_vec.assemble()
 
         # use update functions using vector arguments
-        a_vec = self.update_a_genalpha(v_vec, v0_vec, a0_vec, ufl=False)
+        a_vec = self.update_a_genalpha(v.vector, v_old.vector, a_old.vector, ufl=False)
 
         if uf_old is not None:
 
-            uf0_vec = uf_old.vector
             # use update functions using vector arguments
-            uf_vec = self.update_uf_genalpha(v_vec, v0_vec, uf0_vec, ufl=False)
+            uf_vec = self.update_uf_genalpha(v.vector, v_old.vector, uf_old.vector, ufl=False)
 
-        self.update_a_v(a_old, v_old, a_vec, v_vec, uf_old=uf_old, uf=uf_vec)
+        self.update_a_v(a_old, v_old, a_vec, v, uf_old=uf_old, uf_vec=uf_vec)
 
 
-    def update_a_v(self, a_old, v_old, a, v, uf_old=None, uf=None):
+    def update_a_v(self, a_old, v_old, a_vec, v, uf_old=None, uf_vec=None):
         # update acceleration: a_old <- a
-        a_old.vector.axpby(1.0, 0.0, a)
+        a_old.vector.axpby(1.0, 0.0, a_vec)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_old <- v
-        v_old.vector.axpby(1.0, 0.0, v)
+        v_old.vector.axpby(1.0, 0.0, v.vector)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if uf_old is not None:
 
             # update fluid displacement: uf_old <- uf
-            uf_old.vector.axpby(1.0, 0.0, uf)
+            uf_old.vector.axpby(1.0, 0.0, uf_vec)
             uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-            uf.destroy() # auxiliary vector that has been created, so destroy
+            uf_vec.destroy() # auxiliary vector that has been created, so destroy
 
-        a.destroy() # auxiliary vector that has been created, so destroy
+        a_vec.destroy() # auxiliary vector that has been created, so destroy
 
 
     def compute_genalpha_params(self, rho_inf): # cf. Jansen et al. (2000)
@@ -599,21 +577,16 @@ class timeintegration_ale(timeintegration_fluid):
 
 
     def update_fields(self, d, d_old, w_old):
-        # update fields at the end of each time step
-        # get vectors (references)
-        d_vec, d0_vec  = d.vector, d_old.vector
-        w0_vec = w_old.vector
-        d_vec.assemble(), d0_vec.assemble(), w0_vec.assemble()
 
         # use update functions using vector arguments
-        w_vec = self.update_w_ost(d_vec, d0_vec, w0_vec, ufl=False)
+        w_vec = self.update_w_ost(d.vector, d_old.vector, w_old.vector, ufl=False)
 
         # update velocity: w_old <- w
         w_old.vector.axpby(1.0, 0.0, w_vec)
         w_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update displacement: d_old <- d
-        d_old.vector.axpby(1.0, 0.0, d_vec)
+        d_old.vector.axpby(1.0, 0.0, d.vector)
         d_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         w_vec.destroy() # auxiliary vector that has been created, so destroy

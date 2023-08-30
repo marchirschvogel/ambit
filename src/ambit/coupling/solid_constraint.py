@@ -368,7 +368,6 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.set_pressure_fem(self.lm_old, self.coupfuncs_old)
 
         for i in range(self.num_coupling_surf):
-            lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
             con = fem.assemble_scalar(self.cq_form[i])
             con = self.comm.allgather(con)
             self.constr[i] = sum(con)

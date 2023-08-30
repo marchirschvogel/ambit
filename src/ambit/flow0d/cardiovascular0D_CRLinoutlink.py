@@ -133,3 +133,5 @@ class cardiovascular0DCRLinoutlink(cardiovascular0Dbase):
                 print('{:<5s}{:<3s}{:<10.3f}'.format(self.vname[i],' = ',var_sq[self.varmap[self.vname[i]]]))
 
             sys.stdout.flush()
+
+        if not isinstance(var, np.ndarray): del var_sq

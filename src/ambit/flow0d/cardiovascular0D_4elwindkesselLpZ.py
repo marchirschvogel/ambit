@@ -150,3 +150,5 @@ class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
             print('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',var_sq[2]))
 
             sys.stdout.flush()
+
+        if not isinstance(var, np.ndarray): del var_sq

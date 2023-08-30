@@ -639,6 +639,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         else:
             is_periodic = False
 
+        if not isinstance(varTc, np.ndarray): del varTc_sq, varTc_old_sq
+
         return is_periodic
 
 
@@ -664,6 +666,8 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ven_sys',' = ',var_sq[self.varmap['p_ven_sys']],'   ','p_ven_pul',' = ',var_sq[self.varmap['p_ven_pul']]))
 
             sys.stdout.flush()
+
+        if not isinstance(var, np.ndarray): del var_sq
 
 
 
@@ -1236,6 +1240,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
         else:
             is_periodic = False
 
+        if not isinstance(varTc, np.ndarray): del varTc_sq, varTc_old_sq
+
         return is_periodic
 
 
@@ -1261,6 +1267,8 @@ class cardiovascular0Dsyspulcapcor(cardiovascular0Dsyspulcap):
             print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ven_sys',' = ',var_sq[self.varmap['p_ven_sys']],'   ','p_ven_pul',' = ',var_sq[self.varmap['p_ven_pul']]))
 
             sys.stdout.flush()
+
+        if not isinstance(var, np.ndarray): del var_sq
 
 
 

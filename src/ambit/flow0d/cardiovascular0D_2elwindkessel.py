@@ -120,3 +120,5 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
             print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]))
 
             sys.stdout.flush()
+
+        if not isinstance(var, np.ndarray): del var_sq

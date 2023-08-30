@@ -59,6 +59,9 @@ class ode:
             for i in range(self.numdof):
                 a[i] = self.a__[i](x_sq, c, t, fnc)
 
+        # deallocate sequential array if x was a PETSc vector that has been gathered
+        if not isinstance(x, np.ndarray): del x_sq
+
 
     # symbolic stiffness matrix contributions ddf_/dx, df_/dx
     def set_stiffness(self):
@@ -200,6 +203,8 @@ class ode:
 
                 f.close()
 
+        if not isinstance(var, np.ndarray): del var_sq
+
 
     # write restart routine for ODE models
     def write_restart(self, path, nm, N, var):
@@ -217,6 +222,8 @@ class ode:
                 f.write('%.16E\n' % (var_sq[i]))
 
             f.close()
+
+        if not isinstance(var, np.ndarray): del var_sq
 
 
     # read restart routine for ODE models
@@ -255,6 +262,8 @@ class ode:
 
             f1.close()
             f2.close()
+
+        if not isinstance(varTc_old, np.ndarray): del varTc_old_sq, varTc_sq
 
 
     # if we want to set the initial conditions from a txt file

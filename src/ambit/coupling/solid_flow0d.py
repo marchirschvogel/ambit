@@ -410,6 +410,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             self.r_list[1+off] = self.r_lm
 
+            del lm_sq, s_sq
+
         if bool(self.residual_scale):
             self.scale_residual_list([self.r_list[1+off]], [self.residual_scale[1+off]])
 
@@ -489,6 +491,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.K_lm.assemble()
 
             self.K_list[1+off][1+off] = self.K_lm
+
+            del lm_sq, s_sq
 
         # offdiagonal s-u rows
         for i in range(len(self.row_ids)):

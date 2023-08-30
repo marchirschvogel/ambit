@@ -793,6 +793,8 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
             sys.stdout.flush()
 
+        if not isinstance(var, np.ndarray): del var_sq
+
 
 
 

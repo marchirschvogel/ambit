@@ -268,6 +268,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.r_list[2] = self.r_lm
 
+        del lm_sq, s_sq
+
         if bool(self.residual_scale):
             self.scale_residual_list([self.r_lm], [self.residual_scale[2]])
 
@@ -337,6 +339,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.K_lm.assemble()
 
         self.K_list[2][2] = self.K_lm
+
+        del lm_sq, s_sq
 
         # offdiagonal s-v rows
         for i in range(len(self.row_ids)):

@@ -117,11 +117,11 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         self.a_[0] = self.c_[0]
 
 
-    def initialize(self, x, iniparam):
+    def initialize(self, var, iniparam):
 
-        x[0] = iniparam[self.vname+'_0']
-        x[1] = iniparam['q_0']
-        x[2] = iniparam['s_0']
+        var[0] = iniparam[self.vname+'_0']
+        var[1] = iniparam['q_0']
+        var[2] = iniparam['s_0']
 
 
     def initialize_lm(self, var, iniparam):
@@ -129,18 +129,20 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         if 'p_0' in iniparam.keys(): var[0] = iniparam['p_0']
 
 
-    def print_to_screen(self, x, a):
+    def print_to_screen(self, var, aux):
 
-        if isinstance(x, np.ndarray): x_sq = x
-        else: x_sq = allgather_vec(x, self.comm)
+        if isinstance(var, np.ndarray): var_sq = var
+        else: var_sq = allgather_vec(var, self.comm)
 
         if self.comm.rank == 0:
 
             print("Output of 0D model (4elwindkesselLsZ):")
 
-            print('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',a[0]))
+            print('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]))
 
-            print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',x_sq[0]))
-            print('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',x_sq[1]))
+            print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]))
+            print('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',var_sq[1]))
 
             sys.stdout.flush()
+
+        if not isinstance(var, np.ndarray): del var_sq

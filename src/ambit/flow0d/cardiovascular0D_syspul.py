@@ -521,6 +521,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         else:
             is_periodic = False
 
+        if not isinstance(varTc, np.ndarray): del varTc_sq, varTc_old_sq
+
         return is_periodic
 
 
@@ -549,6 +551,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             if self.cormodel is not None: self.corcirc.print_to_screen(var_sq, aux)
             if self.vadmodel is not None: self.vadcirc.print_to_screen(var_sq, aux)
 
+        if not isinstance(var, np.ndarray): del var_sq
 
 
 
