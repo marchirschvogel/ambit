@@ -1,7 +1,9 @@
+dist/
 tests/tmp/
 __pycache__/
 src/ambit/__pycache__/
 ext/
+*.egg-info/
 *.aux
 *.log
 *.synctex.gz
