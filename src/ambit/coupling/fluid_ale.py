@@ -332,17 +332,15 @@ class FluidmechanicsAleProblem(problem_base):
 
         if self.have_dbc_fluid_ale:
             # we need a vector representation of ufluid to apply in ALE DBCs
-            uf_vec = self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufl=False)
-            self.ufa.vector.axpby(1.0, 0.0, uf_vec)
+            self.pbf.ti.update_uf_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, ufout=self.pbf.uf.vector, ufl=False)
+            self.ufa.vector.axpby(1.0, 0.0, self.pbf.uf.vector)
             self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            uf_vec.destroy()
 
         if self.have_dbc_ale_fluid:
             # we need a vector representation of w to apply in fluid DBCs
-            w_vec = self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, ufl=False)
-            self.wf.vector.axpby(1.0, 0.0, w_vec)
+            self.pba.ti.update_w_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, wout=self.pba.w.vector, ufl=False)
+            self.wf.vector.axpby(1.0, 0.0, self.pba.w.vector)
             self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            w_vec.destroy()
 
 
     def get_index_sets(self, isoptions={}):

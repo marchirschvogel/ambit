@@ -170,13 +170,13 @@ class timeintegration_solid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, u, u_old, v_old, a_old, p, p_old, internalvars, internalvars_old):
+    def update_timestep(self, u, u_old, v, v_old, a, a_old, p, p_old, internalvars, internalvars_old):
 
         # now update old kinematic fields with new quantities
         if self.timint == 'genalpha':
-            self.update_fields_newmark(u, u_old, v_old, a_old)
+            self.update_fields_newmark(u, u_old, v, v_old, a, a_old)
         if self.timint == 'ost':
-            self.update_fields_ost(u, u_old, v_old, a_old)
+            self.update_fields_ost(u, u_old, v, v_old, a, a_old)
 
         # update pressure variable
         if self.incompressible_2field:
@@ -192,7 +192,7 @@ class timeintegration_solid(timeintegration):
         self.update_time_funcs()
 
 
-    def update_a_newmark(self, u, u_old, v_old, a_old, ufl=True):
+    def update_a_newmark(self, u, u_old, v_old, a_old, aout=None, ufl=True):
         # update formula for acceleration
         if ufl: # ufl form
             dt_ = self.dt
@@ -202,17 +202,13 @@ class timeintegration_solid(timeintegration):
             dt_ = float(self.dt)
             beta_ = float(self.beta)
 
-            aout = a_old.duplicate()
-
             aout.axpby(-(1.-2.*beta_)/(2.*beta_), 0.0, a_old)
             aout.axpy(-1./(beta_*dt_), v_old)
             aout.axpy(1./(beta_*dt_*dt_), u)
             aout.axpy(-1./(beta_*dt_*dt_), u_old)
 
-            return aout
 
-
-    def update_a_ost(self, u, u_old, v_old, a_old, ufl=True):
+    def update_a_ost(self, u, u_old, v_old, a_old, aout=None, ufl=True):
         # update formula for acceleration
         if ufl: # ufl form
             dt_ = self.dt
@@ -222,17 +218,13 @@ class timeintegration_solid(timeintegration):
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
 
-            aout = a_old.duplicate()
-
             aout.axpby(-(1.-theta_)/theta_, 0.0, a_old)
             aout.axpy(-1./(theta_*theta_*dt_), v_old)
             aout.axpy(1./(theta_*theta_*dt_*dt_), u)
             aout.axpy(-1./(theta_*theta_*dt_*dt_), u_old)
 
-            return aout
 
-
-    def update_v_newmark(self, u, u_old, v_old, a_old, ufl=True):
+    def update_v_newmark(self, u, u_old, v_old, a_old, vout=None, ufl=True):
         # update formula for velocity
         if ufl: # ufl form
             dt_ = self.dt
@@ -244,17 +236,13 @@ class timeintegration_solid(timeintegration):
             gamma_ = float(self.gamma)
             beta_ = float(self.beta)
 
-            vout = v_old.duplicate()
-
             vout.axpby(-(gamma_-beta_)/beta_, 0.0, v_old)
             vout.axpy(-(gamma_-2.*beta_)/(2.*beta_) * dt_, a_old)
             vout.axpy(gamma_/(beta_*dt_), u)
             vout.axpy(-gamma_/(beta_*dt_), u_old)
 
-            return vout
 
-
-    def update_v_ost(self, u, u_old, v_old, a_old, ufl=True):
+    def update_v_ost(self, u, u_old, v_old, a_old, vout=None, ufl=True):
         # update formula for velocity
         if ufl: # ufl form
             dt_ = self.dt
@@ -264,48 +252,42 @@ class timeintegration_solid(timeintegration):
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
 
-            vout = v_old.duplicate()
-
             vout.axpby(-(1.-theta_)/theta_, 0.0, v_old)
             vout.axpy(1./(theta_*dt_), u)
             vout.axpy(-1./(theta_*dt_), u_old)
 
-            return vout
 
-
-    def update_fields_newmark(self, u, u_old, v_old, a_old):
+    def update_fields_newmark(self, u, u_old, v, v_old, a, a_old):
 
         # use update functions using vector arguments
-        a_vec = self.update_a_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
-        v_vec = self.update_v_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
+        self.update_a_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, aout=a.vector, ufl=False)
+        self.update_v_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, vout=v.vector, ufl=False)
 
-        self.update_a_v_u(a_old, v_old, u_old, a_vec, v_vec, u)
+        self.update_a_v_u(a_old, v_old, u_old, a, v, u)
 
 
-    def update_fields_ost(self, u, u_old, v_old, a_old):
+    def update_fields_ost(self, u, u_old, v, v_old, a, a_old):
 
         # use update functions using vector arguments
-        a_vec = self.update_a_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
-        v_vec = self.update_v_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, ufl=False)
+        self.update_a_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, aout=a.vector, ufl=False)
+        self.update_v_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, vout=v.vector, ufl=False)
 
-        self.update_a_v_u(a_old, v_old, u_old, a_vec, v_vec, u)
+        self.update_a_v_u(a_old, v_old, u_old, a, v, u)
 
 
-    def update_a_v_u(self, a_old, v_old, u_old, a_vec, v_vec, u):
+    def update_a_v_u(self, a_old, v_old, u_old, a, v, u):
 
         # update acceleration: a_old <- a
-        a_old.vector.axpby(1.0, 0.0, a_vec)
+        a_old.vector.axpby(1.0, 0.0, a.vector)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_old <- v
-        v_old.vector.axpby(1.0, 0.0, v_vec)
+        v_old.vector.axpby(1.0, 0.0, v.vector)
         v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update displacement: u_old <- u
         u_old.vector.axpby(1.0, 0.0, u.vector)
         u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-        a_vec.destroy(), v_vec.destroy() # auxiliary vectors that have been created, so destroy
 
 
     def compute_genalpha_params(self, rho_inf): # cf. Chung and Hulbert (1993)
@@ -376,13 +358,13 @@ class timeintegration_fluid(timeintegration):
         return timefac_m, timefac
 
 
-    def update_timestep(self, v, v_old, a_old, p, p_old, internalvars, internalvars_old, uf_old=None):
+    def update_timestep(self, v, v_old, a, a_old, p, p_old, internalvars, internalvars_old, uf=None, uf_old=None):
 
         # update old fields with new quantities
         if self.timint == 'ost':
-            self.update_fields_ost(v, v_old, a_old, uf_old=uf_old)
+            self.update_fields_ost(v, v_old, a, a_old, uf=uf, uf_old=uf_old)
         if self.timint == 'genalpha':
-            self.update_fields_genalpha(v, v_old, a_old, uf_old=uf_old)
+            self.update_fields_genalpha(v, v_old, a, a_old, uf=uf, uf_old=uf_old)
 
         # update pressure variable
         p_old.vector.axpby(1.0, 0.0, p.vector)
@@ -402,7 +384,7 @@ class timeintegration_fluid(timeintegration):
         self.update_time_funcs()
 
 
-    def update_a_ost(self, v, v_old, a_old, ufl=True):
+    def update_a_ost(self, v, v_old, a_old, aout=None, ufl=True):
         # update formula for acceleration
         if ufl: # ufl form
             dt_ = self.dt
@@ -412,16 +394,12 @@ class timeintegration_fluid(timeintegration):
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
 
-            aout = a_old.duplicate()
-
             aout.axpby(-(1.-theta_)/theta_, 0.0, a_old)
             aout.axpy(1./(theta_*dt_), v)
             aout.axpy(-1./(theta_*dt_), v_old)
 
-            return aout
 
-
-    def update_a_genalpha(self, v, v_old, a_old, ufl=True):
+    def update_a_genalpha(self, v, v_old, a_old, aout=None, ufl=True):
         # update formula for acceleration
         if ufl: # ufl form
             dt_ = self.dt
@@ -431,16 +409,12 @@ class timeintegration_fluid(timeintegration):
             dt_ = float(self.dt)
             gamma_ = float(self.gamma)
 
-            aout = uf_old.duplicate()
-
             aout.axpby(-(1.-gamma_)/gamma_, 0.0, a_old)
             aout.axpy(1./(gamma_*dt_), v)
             aout.axpy(-1./(gamma_*dt_), v_old)
 
-            return aout
 
-
-    def update_uf_ost(self, v, v_old, uf_old, ufl=True):
+    def update_uf_ost(self, v, v_old, uf_old, ufout=None, ufl=True):
         # update formula for integrated fluid displacement uf
         if ufl: # ufl form
             dt_ = self.dt
@@ -450,16 +424,12 @@ class timeintegration_fluid(timeintegration):
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
 
-            ufout = uf_old.duplicate()
-
             ufout.axpby(1., 0.0, uf_old)
             ufout.axpy(theta_*dt_, v)
             ufout.axpy((1.-theta_)*dt_, v_old)
 
-            return ufout
 
-
-    def update_uf_genalpha(self, v, v_old, uf_old, ufl=True):
+    def update_uf_genalpha(self, v, v_old, uf_old, ufout=None, ufl=True):
         # update formula for integrated fluid displacement uf
         if ufl: # ufl form
             dt_ = self.dt
@@ -469,44 +439,40 @@ class timeintegration_fluid(timeintegration):
             dt_ = float(self.dt)
             gamma_ = float(self.gamma)
 
-            ufout = uf_old.duplicate()
-
             ufout.axpby(1., 0.0, uf_old)
             ufout.axpy(gamma_*dt_, v)
             ufout.axpy((1.-gamma_)*dt_, v_old)
 
-            return ufout
 
-
-    def update_fields_ost(self, v, v_old, a_old, uf_old=None):
+    def update_fields_ost(self, v, v_old, a, a_old, uf=None, uf_old=None):
 
         # use update functions using vector arguments
-        a_vec = self.update_a_ost(v.vector, v_old.vector, a_old.vector, ufl=False)
+        self.update_a_ost(v.vector, v_old.vector, a_old.vector, aout=a.vector, ufl=False)
 
         if uf_old is not None:
 
             # use update functions using vector arguments
-            uf_vec = self.update_uf_ost(v.vector, v_old.vector, uf_old.vector, ufl=False)
+            self.update_uf_ost(v.vector, v_old.vector, uf_old.vector, ufout=uf.vector, ufl=False)
 
-        self.update_a_v(a_old, v_old, a_vec, v, uf_old=uf_old, uf_vec=uf_vec)
+        self.update_a_v(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
 
 
-    def update_fields_genalpha(self, v, v_old, a_old, uf_old=None):
+    def update_fields_genalpha(self, v, v_old, w, a_old, uf_old=None):
 
         # use update functions using vector arguments
-        a_vec = self.update_a_genalpha(v.vector, v_old.vector, a_old.vector, ufl=False)
+        self.update_a_genalpha(v.vector, v_old.vector, a_old.vector, aout=a.vector, ufl=False)
 
         if uf_old is not None:
 
             # use update functions using vector arguments
-            uf_vec = self.update_uf_genalpha(v.vector, v_old.vector, uf_old.vector, ufl=False)
+            self.update_uf_genalpha(v.vector, v_old.vector, uf_old.vector, ufout=uf.vector, ufl=False)
 
-        self.update_a_v(a_old, v_old, a_vec, v, uf_old=uf_old, uf_vec=uf_vec)
+        self.update_a_v(a_old, v_old, a_vec, v, uf_old=uf_old, uf=uf)
 
 
-    def update_a_v(self, a_old, v_old, a_vec, v, uf_old=None, uf_vec=None):
+    def update_a_v(self, a_old, v_old, a, v, uf_old=None, uf=None):
         # update acceleration: a_old <- a
-        a_old.vector.axpby(1.0, 0.0, a_vec)
+        a_old.vector.axpby(1.0, 0.0, a.vector)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update velocity: v_old <- v
@@ -516,12 +482,8 @@ class timeintegration_fluid(timeintegration):
         if uf_old is not None:
 
             # update fluid displacement: uf_old <- uf
-            uf_old.vector.axpby(1.0, 0.0, uf_vec)
+            uf_old.vector.axpby(1.0, 0.0, uf.vector)
             uf_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-            uf_vec.destroy() # auxiliary vector that has been created, so destroy
-
-        a_vec.destroy() # auxiliary vector that has been created, so destroy
 
 
     def compute_genalpha_params(self, rho_inf): # cf. Jansen et al. (2000)
@@ -537,10 +499,10 @@ class timeintegration_fluid(timeintegration):
 # ALE time integration class
 class timeintegration_ale(timeintegration_fluid):
 
-    def update_timestep(self, d, d_old, w_old):
+    def update_timestep(self, d, d_old, w, w_old):
 
         # update old fields with new quantities
-        self.update_fields(d, d_old, w_old)
+        self.update_fields(d, d_old, w, w_old)
 
         # update time dependent load curves
         self.update_time_funcs()
@@ -557,7 +519,7 @@ class timeintegration_ale(timeintegration_fluid):
         return wel
 
 
-    def update_w_ost(self, d, d_old, w_old, ufl=True):
+    def update_w_ost(self, d, d_old, w_old, wout=None, ufl=True):
         # update formula for domain velocity
         if ufl: # ufl form
             dt_ = self.dt
@@ -567,29 +529,23 @@ class timeintegration_ale(timeintegration_fluid):
             dt_ = float(self.dt)
             theta_ = float(self.theta_ost)
 
-            wout = w_old.duplicate()
-
             wout.axpby(-(1.-theta_)/theta_, 0.0, w_old)
             wout.axpy(1./(theta_*dt_), d)
             wout.axpy(-1./(theta_*dt_), d_old)
 
-            return wout
 
-
-    def update_fields(self, d, d_old, w_old):
+    def update_fields(self, d, d_old, w, w_old):
 
         # use update functions using vector arguments
-        w_vec = self.update_w_ost(d.vector, d_old.vector, w_old.vector, ufl=False)
+        self.update_w_ost(d.vector, d_old.vector, w_old.vector, wout=w.vector, ufl=False)
 
         # update velocity: w_old <- w
-        w_old.vector.axpby(1.0, 0.0, w_vec)
+        w_old.vector.axpby(1.0, 0.0, w.vector)
         w_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # update displacement: d_old <- d
         d_old.vector.axpby(1.0, 0.0, d.vector)
         d_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-        w_vec.destroy() # auxiliary vector that has been created, so destroy
 
 
 

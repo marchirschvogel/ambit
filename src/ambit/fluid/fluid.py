@@ -206,7 +206,10 @@ class FluidmechanicsProblem(problem_base):
         # values of previous time step
         self.v_old  = fem.Function(self.V_v)
         self.a_old  = fem.Function(self.V_v)
+        # auxiliary acceleration vector
+        self.a     = fem.Function(self.V_v, name="Acceleration")
         # a fluid displacement
+        self.uf     = fem.Function(self.V_v, name="FluidDisplacement")
         self.uf_old = fem.Function(self.V_v)
         # active stress for reduced solid
         self.tau_a  = fem.Function(self.Vd_scalar, name="tau_a")
@@ -990,7 +993,7 @@ class FluidmechanicsProblem(problem_base):
     def update(self):
 
         # update - velocity, acceleration, pressure, all internal variables, all time functions
-        self.ti.update_timestep(self.v, self.v_old, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, uf_old=self.uf_old)
+        self.ti.update_timestep(self.v, self.v_old, self.a, self.a_old, self.p, self.p_old, self.internalvars, self.internalvars_old, uf=self.uf, uf_old=self.uf_old)
         # update monitor dicts
         if self.have_flux_monitor:
             for k in self.qv_: self.qv_old_[k] = self.qv_[k]
