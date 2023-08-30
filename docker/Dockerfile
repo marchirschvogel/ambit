@@ -2,7 +2,6 @@
 FROM ghcr.io/fenics/dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76
 
 ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
-ENV PYTHONPATH "${PYTHONPATH}"
 
 # install pip and git with apt
 RUN apt-get update && \

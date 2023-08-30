@@ -56,6 +56,17 @@ python3 -m pip install ambit-fe
 python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
 ```
 
+Alternatively, you can build an Ambit docker container using the Dockerfile in the folder docker/ by typing
+```
+docker build -f Dockerfile .
+```
+
+and then launch the container with
+```
+docker run -ti -v $HOME:/home/shared -w /home/shared/ --env HOME=/home/shared <IMAGE_ID>
+```
+replacing ``<IMAGE_ID>`` with the ID of the created Docker image (find out by typing ``docker images``)
+
 * Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options
 
 * Best, check if all testcases run and pass, by navigating to ambit/tests and executing

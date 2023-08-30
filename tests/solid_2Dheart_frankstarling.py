@@ -14,7 +14,6 @@ import numpy as np
 from pathlib import Path
 
 
-
 def main():
 
     basepath = str(Path(__file__).parent.absolute())
