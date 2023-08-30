@@ -48,7 +48,7 @@ docker pull dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa
 
 * Ambit can then be installed using pip:
 ```
-python3 -m pip install ambit-fe
+python3 -m pip install ambit_fe
 ```
 
 * Alternatively, clone the repository
