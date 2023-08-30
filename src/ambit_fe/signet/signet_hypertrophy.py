@@ -9,8 +9,8 @@
 import numpy as np
 import sympy as sp
 
-from mpiroutines import allgather_vec
-from oderoutines import ode
+from ..mpiroutines import allgather_vec
+from ..oderoutines import ode
 
 # signalling network model, from Ryall et al. (2012) "Network Reconstruction and Systems Analysis of Cardiac Myocyte Hypertrophy Signaling", The Journal of Biological Chemistry 287(50)
 # adopted form supplementary MATLAB code provided by authors
@@ -325,3 +325,5 @@ class signethypertrophy(ode):
         else: var_sq = allgather_vec(var, self.comm)
 
         pass
+
+        if not isinstance(var, np.ndarray): del var_sq

@@ -9,7 +9,8 @@
 import ufl
 from petsc4py import PETSc
 
-from fluid_material import materiallaw
+from .fluid_material import materiallaw
+
 
 # fluid kinematics and constitutive class
 

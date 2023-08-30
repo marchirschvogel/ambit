@@ -6,13 +6,12 @@ solid 3D-0D coupling: compressible hollow solid chamber coupled to 4-element win
 - iterative solve with Gauss Seidel implementation via PETSc's fieldsplit (should give the same as the other test with the own bgs2x2 implementation)
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -78,7 +77,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -94,8 +93,8 @@ def main():
     s_corr[1] = -9.1004836216937203E-03
     s_corr[2] = -1.6375196030721982E-02
 
-    check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

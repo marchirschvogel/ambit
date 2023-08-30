@@ -13,15 +13,15 @@ import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 
-import ale_kinematics_constitutive
-import ale_variationalform
-import timeintegration
-import utilities
-import solver_nonlin
-import boundaryconditions
-import ioparams
+from . import ale_kinematics_constitutive
+from . import ale_variationalform
+from .. import timeintegration
+from .. import utilities
+from ..solver import solver_nonlin
+from .. import boundaryconditions
+from .. import ioparams
 
-from base import problem_base, solver_base
+from ..base import problem_base, solver_base
 
 
 # Arbitrary Lagrangian Eulerian (ALE) mechanics problem

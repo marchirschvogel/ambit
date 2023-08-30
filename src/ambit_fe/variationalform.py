@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
-from mathutils import spectral_decomposition_3x3
+from .mathutils import spectral_decomposition_3x3
 
 # variational form base class
 class variationalform_base:

@@ -14,17 +14,18 @@ import ufl
 import basix
 from petsc4py import PETSc
 
-import solid_kinematics_constitutive
-import solid_variationalform
-import timeintegration
-import utilities, mathutils
-import solver_nonlin
-import boundaryconditions
-import ioparams
-from projection import project
-from solid_material import activestress_activation
+from . import solid_kinematics_constitutive
+from . import solid_variationalform
+from .. import timeintegration
+from .. import utilities, mathutils
+from .. import boundaryconditions
+from .. import ioparams
+from ..solver import solver_nonlin
+from ..solver.projection import project
+from . import solid_material
+from .solid_material import activestress_activation
 
-from base import problem_base, solver_base
+from ..base import problem_base, solver_base
 
 
 # solid mechanics governing equation
@@ -33,7 +34,6 @@ from base import problem_base, solver_base
 
 # can be solved together with constraint J = 1 (2-field variational principle with u and p as degrees of freedom)
 #J-1 = 0 \quad \text{in} \; \Omega_{0} \times [0, T]
-
 
 class SolidmechanicsProblem(problem_base):
 

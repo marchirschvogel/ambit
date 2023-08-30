@@ -8,7 +8,8 @@
 
 import sys, time
 import numpy as np
-import utilities
+from . import utilities
+
 
 class problem_base():
 
@@ -138,8 +139,8 @@ class solver_base():
 
         # model order reduction stuff
         if self.pb.pbrom.have_rom:
-            import mor
-            self.pb.rom = mor.ModelOrderReduction(self.pb.pbrom)
+            from .mor import mor_main
+            self.pb.rom = mor_main.ModelOrderReduction(self.pb.pbrom)
             # prepare reduced-order basis (offline phase): perform Proper Orthogonal Decomposition, or read in pre-computed modes
             self.pb.rom.prepare_rob()
         else:

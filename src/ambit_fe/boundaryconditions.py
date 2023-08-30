@@ -10,7 +10,7 @@ import numpy as np
 from dolfinx import fem, mesh
 import ufl
 
-import expression
+from . import expression
 
 
 class boundary_cond():

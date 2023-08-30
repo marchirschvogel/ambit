@@ -11,13 +11,12 @@ tests:
 - dt scaling of residual
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -117,7 +116,7 @@ def main():
     
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS_ALE_FLUID,COUPLING_PARAMS_FLUID_FLOW0D])
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS_ALE_FLUID,COUPLING_PARAMS_FLUID_FLOW0D])
 
     
     # problem solve
@@ -152,8 +151,8 @@ def main():
     s_corr[19] = 2.5892849487072353E+03
     s_corr[20] = 7.0912716140204884E+03
 
-    check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

@@ -10,7 +10,7 @@ import sys, time
 import numpy as np
 import sympy as sp
 
-from mpiroutines import allgather_vec, allgather_vec_entry
+from .mpiroutines import allgather_vec, allgather_vec_entry
 
 
 class ode:

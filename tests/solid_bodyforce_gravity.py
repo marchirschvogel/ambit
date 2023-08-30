@@ -4,13 +4,12 @@
 steel block falling for 1 s due to Earth gravity, acting in negative z direction
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -61,7 +60,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -88,10 +87,10 @@ def main():
     a_corr[1] = 0.0 # y
     a_corr[2] = -9.81 # z - should be -g
 
-    check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol_u, nm='u')
-    check2 = resultcheck.results_check_node(problem.mp.io.v_proj, check_node, v_corr, problem.mp.V_u, problem.mp.comm, tol=tol_v, nm='v')
-    check3 = resultcheck.results_check_node(problem.mp.io.a_proj, check_node, a_corr, problem.mp.V_u, problem.mp.comm, tol=tol_a, nm='a')
-    success = resultcheck.success_check([check1,check2,check3], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol_u, nm='u')
+    check2 = ambit_fe.resultcheck.results_check_node(problem.mp.io.v_proj, check_node, v_corr, problem.mp.V_u, problem.mp.comm, tol=tol_v, nm='v')
+    check3 = ambit_fe.resultcheck.results_check_node(problem.mp.io.a_proj, check_node, a_corr, problem.mp.V_u, problem.mp.comm, tol=tol_a, nm='a')
+    success = ambit_fe.resultcheck.success_check([check1,check2,check3], problem.mp.comm)
 
     return success
 

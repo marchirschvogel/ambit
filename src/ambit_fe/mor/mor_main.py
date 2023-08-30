@@ -11,8 +11,9 @@ import time, sys, copy, math
 from dolfinx import fem, io
 from petsc4py import PETSc
 import numpy as np
-import ioparams
-from meshutils import gather_surface_dof_indices
+
+from .. import ioparams
+from ..meshutils import gather_surface_dof_indices
 
 
 class ModelOrderReduction():

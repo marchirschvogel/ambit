@@ -10,8 +10,8 @@ import sys
 import numpy as np
 import sympy as sp
 
-from cardiovascular0D import cardiovascular0Dbase
-from mpiroutines import allgather_vec
+from .cardiovascular0D import cardiovascular0Dbase
+from ..mpiroutines import allgather_vec
 
 # here we make use of sympy for symbolic differention...
 

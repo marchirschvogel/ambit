@@ -10,8 +10,8 @@ import sys
 import numpy as np
 import sympy as sp
 
-from cardiovascular0D import cardiovascular0Dbase
-from mpiroutines import allgather_vec
+from .cardiovascular0D import cardiovascular0Dbase
+from ..mpiroutines import allgather_vec
 
 ### 2-element windkessel: C dp/dt + (p-p_ref)/R = Q, with Q:=-dV/dt (Poiseuille's flow for C=0)
 # (can be reproduced with 4elwindkesselLsZ by setting Z, L = 0)

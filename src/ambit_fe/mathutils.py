@@ -11,6 +11,7 @@ import numpy as np
 from dolfinx import fem
 from petsc4py import PETSc
 
+
 def spectral_decomposition_3x3(A):
     """Eigenvalues and eigenprojectors of a 3x3 (real-valued) tensor A.
     Provides the spectral decomposition A = sum_{a=0}^{3} lambda_a * E_a

@@ -3,13 +3,12 @@
 """
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -64,7 +63,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -115,8 +114,8 @@ def main():
     s_corr[36] = -5.5966144109129673E+04
 
 
-    check1 = resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

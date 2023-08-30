@@ -13,13 +13,13 @@ import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 
-import solver_nonlin
-import expression, ioparams
-from mpiroutines import allgather_vec
+from ..solver import solver_nonlin
+from .. import expression, ioparams
+from ..mpiroutines import allgather_vec
 
-from fluid import FluidmechanicsProblem
-from flow0d import Flow0DProblem
-from base import problem_base, solver_base
+from ..fluid.fluid_main import FluidmechanicsProblem
+from ..flow0d.flow0d_main import Flow0DProblem
+from ..base import problem_base, solver_base
 
 
 class FluidmechanicsFlow0DProblem(problem_base):

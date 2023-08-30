@@ -13,13 +13,13 @@ import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 
-import solver_nonlin
-import expression, ioparams
+from ..solver import solver_nonlin
+from .. import expression, ioparams
 
-from fluid import FluidmechanicsProblem, FluidmechanicsSolverPrestr
-from ale import AleProblem
-from base import problem_base, solver_base
-from meshutils import gather_surface_dof_indices
+from ..fluid.fluid_main import FluidmechanicsProblem, FluidmechanicsSolverPrestr
+from ..ale.ale_main import AleProblem
+from ..base import problem_base, solver_base
+from ..meshutils import gather_surface_dof_indices
 
 
 class FluidmechanicsAleProblem(problem_base):

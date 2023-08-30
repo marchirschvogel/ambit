@@ -8,8 +8,10 @@
 
 import sys
 import numpy as np
-from mpiroutines import allgather_vec
 from petsc4py import PETSc
+
+from . import mpiroutines
+from .mpiroutines import allgather_vec
 
 
 # check the result of a node (specified by coordinates) in the full parallel (ghosted) dof vector

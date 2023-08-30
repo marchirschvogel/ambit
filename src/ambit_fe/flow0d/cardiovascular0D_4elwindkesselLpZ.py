@@ -10,8 +10,8 @@ import sys
 import numpy as np
 import sympy as sp
 
-from cardiovascular0D import cardiovascular0Dbase
-from mpiroutines import allgather_vec
+from .cardiovascular0D import cardiovascular0Dbase
+from ..mpiroutines import allgather_vec
 
 ### this implements a 4-element windkessel model with an inertance L parallel to an impedance Z, all in series
 # to a compliance C parallel to a resistance R, with the original equation

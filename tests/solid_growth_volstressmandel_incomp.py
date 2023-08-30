@@ -4,13 +4,12 @@
 solid mechanics: stress-mediated volumetric growth of an incompressible block (p2p1 interpolation)
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -66,7 +65,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -87,10 +86,10 @@ def main():
 
     p_corr[0] = 1.6523471374159470E+01
 
-    check1 = resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
-    check2 = resultcheck.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p')
+    check1 = ambit_fe.resultcheck.results_check_node(problem.mp.u, check_node, u_corr, problem.mp.V_u, problem.mp.comm, tol=tol, nm='u')
+    check2 = ambit_fe.resultcheck.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p')
 
-    success = resultcheck.success_check([check1,check2], problem.mp.comm)
+    success = ambit_fe.resultcheck.success_check([check1,check2], problem.mp.comm)
 
     return success
 

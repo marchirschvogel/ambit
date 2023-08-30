@@ -9,11 +9,11 @@
 import numpy as np
 from petsc4py import PETSc
 
-import timeintegration
-import solver_nonlin
-import ioparams
+from .. import timeintegration
+from ..solver import solver_nonlin
+from .. import ioparams
 
-from base import problem_base, solver_base
+from ..base import problem_base, solver_base
 
 # framework of signalling network models
 
@@ -119,7 +119,7 @@ class SignallingNetworkProblem(problem_base):
 
         # signet rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         self.r.zeroEntries()
-        
+
         self.r.axpy(1./self.dt, self.df)
         self.r.axpy(-1./self.dt, self.df_old)
 

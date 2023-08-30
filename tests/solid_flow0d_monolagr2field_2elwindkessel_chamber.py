@@ -5,13 +5,12 @@ solid 3D-0D coupling: incompressible hollow solid chamber coupled to 2-element w
 monolithic coupling via multiplier constraint (a more general coupling way that subs out the 0D model to an extra solve)
 """
 
-import ambit
+import ambit_fe
 
 import sys, time, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -72,7 +71,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -86,8 +85,8 @@ def main():
     # correct 0D results
     s_corr[0] = 4.1613784331931276E+00
 
-    check1 = resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

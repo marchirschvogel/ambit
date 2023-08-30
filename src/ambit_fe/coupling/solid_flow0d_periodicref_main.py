@@ -9,7 +9,7 @@
 import time, sys
 from petsc4py import PETSc
 
-from solid_flow0d import SolidmechanicsFlow0DSolver
+from ..solid_flow0d import SolidmechanicsFlow0DSolver
 
 
 class SolidmechanicsFlow0DPeriodicRefSolver():

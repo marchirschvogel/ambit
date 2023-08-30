@@ -5,13 +5,12 @@ dummy linear-elastic ALE solid
 physically irrelevant deformation, just testing the correct functionality of the standalone ALE class, incl. output writing
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -60,7 +59,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -79,8 +78,8 @@ def main():
     d_corr[1] = -2.8747954454702261E-02 # y
     d_corr[2] = -2.7537530121857001E-02 # z
 
-    check1 = resultcheck.results_check_node(problem.mp.d, check_node, d_corr, problem.mp.V_d, problem.mp.comm, tol=tol, nm='d')
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_node(problem.mp.d, check_node, d_corr, problem.mp.V_d, problem.mp.comm, tol=tol, nm='d')
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

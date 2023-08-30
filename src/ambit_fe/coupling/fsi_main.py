@@ -13,13 +13,13 @@ import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 
-import solver_nonlin
-import ioparams
+from ..solver import solver_nonlin
+import ..ioparams
 
-from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
-from fluid_ale import FluidmechanicsAleProblem
+from ..solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
+from ..fluid_ale import FluidmechanicsAleProblem
 
-from base import problem_base, solver_base
+from ..base import problem_base, solver_base
 
 
 class FSIProblem(problem_base):

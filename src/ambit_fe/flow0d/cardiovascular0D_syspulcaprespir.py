@@ -10,8 +10,8 @@ import sys, math
 import numpy as np
 import sympy as sp
 
-from cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-from mpiroutines import allgather_vec
+from .cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
+from ..mpiroutines import allgather_vec
 
 # respiratory and gas transport part of syspulcap model (Diss Hirschvogel, p. 58ff.)
 # builds upon syspulcap model

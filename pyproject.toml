@@ -2,8 +2,8 @@
 requires = ["setuptools>=61.0.0", "wheel"]
 
 [project]
-name = "ambit_fe"
-version = "1.0.2"
+name = "ambit-fe"
+version = "1.0.4"
 description = "A FEniCS-based cardiovascular physics solver"
 authors = [{name = "Marc Hirschvogel", email = "marc.hirschvogel@deepambit.com"}]
 license = {file = "LICENSE"}
@@ -19,8 +19,7 @@ keywords = [
 ]
 dependencies = [
     "mpmath",
-    "sympy",
-    "numpy"
+    "sympy"
 ]
 
 [project.urls]

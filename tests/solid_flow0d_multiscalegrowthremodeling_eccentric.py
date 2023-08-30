@@ -6,13 +6,12 @@
 # - active stress
 # - 3D-0D monolithic solution of 2D heart w/ syspulcap circulation (volume coupling)
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -137,7 +136,7 @@ def main():
     BC_DICT              = { 'dirichlet' : [{'id' : [4], 'dir' : 'all', 'val' : 0.0}]}
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID_SMALL, TIME_PARAMS_SOLID_LARGE, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, multiscale_params=MULTISCALE_GR_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -184,8 +183,8 @@ def main():
     s_corr[32]    = 2.8638179712861844E+00
     s_corr[33]    = 1.2057400362096410E+04
 
-    check1 = resultcheck.results_check_vec(problem.mp.pbsmall.pb0.s, s_corr, problem.mp.comm, tol=tol)
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pbsmall.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

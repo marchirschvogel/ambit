@@ -13,10 +13,12 @@ from dolfinx import fem, io, mesh
 import ufl
 # import adios4dolfinx
 
-from projection import project
-from mpiroutines import allgather_vec
-import meshutils, expression, ioparams
-from mathutils import spectral_decomposition_3x3
+#from solver import projection
+from .solver.projection import project
+from .mpiroutines import allgather_vec
+from . import meshutils, expression, ioparams
+from . import mathutils
+from .mathutils import spectral_decomposition_3x3
 
 
 class IO:

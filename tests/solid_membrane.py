@@ -4,13 +4,12 @@
 surface membrane model, simple deformation modes - tests correct quasi-static membrane stress response
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -86,7 +85,7 @@ def main():
                                          {'id' : [28], 'dir' : 'y', 'curve' : 1}] } # pure shear
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -125,8 +124,8 @@ def main():
     cauchy_corr[13] = 0.26997176
     cauchy_corr[14] = 0.
 
-    check1 = resultcheck.results_check_node(problem.mp.io.cauchystress_membrane_principal, check_node, cauchy_corr, problem.mp.Vd_vector, problem.mp.comm, tol=tol, nm='sigma')
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_node(problem.mp.io.cauchystress_membrane_principal, check_node, cauchy_corr, problem.mp.Vd_vector, problem.mp.comm, tol=tol, nm='sigma')
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

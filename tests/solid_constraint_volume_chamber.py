@@ -4,13 +4,12 @@
 solid mechanics with Lagrange multiplier constraint: incompressible chamber with enclosed cavity whose volume is prescibed over time
 """
 
-import ambit
+import ambit_fe
 
 import sys, time, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -62,7 +61,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -80,8 +79,8 @@ def main():
     u_corr[1] = 1.6295349430772595E-02 # y
     u_corr[2] = -1.6268062830756734E-02 # z
 
-    check1 = resultcheck.results_check_node(problem.mp.pbs.u, check_node, u_corr, problem.mp.pbs.V_u, problem.mp.comm, tol=tol, nm='u')
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbs.u, check_node, u_corr, problem.mp.pbs.V_u, problem.mp.comm, tol=tol, nm='u')
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

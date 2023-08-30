@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
-from ale_material import materiallaw
+from .ale_material import materiallaw
 
 # ALE kinematics and constitutive class
 

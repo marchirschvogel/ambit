@@ -13,17 +13,17 @@ import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 
-import fluid_kinematics_constitutive
-import fluid_variationalform
-import timeintegration
-import utilities
-import solver_nonlin
-import boundaryconditions
-import meshutils, expression, ioparams
-from projection import project
-from solid_material import activestress_activation
+from . import fluid_kinematics_constitutive
+from . import fluid_variationalform
+from .. import timeintegration
+from .. import utilities
+from .. import boundaryconditions
+from .. import meshutils, expression, ioparams
+from ..solver import solver_nonlin
+from ..solver.projection import project
+from ..solid.solid_material import activestress_activation
 
-from base import problem_base, solver_base
+from ..base import problem_base, solver_base
 
 # fluid mechanics, governed by incompressible Navier-Stokes equations:
 

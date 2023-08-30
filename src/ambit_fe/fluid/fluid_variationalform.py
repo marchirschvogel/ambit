@@ -7,7 +7,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
-from variationalform import variationalform_base
+from ..variationalform import variationalform_base
+
 
 # fluid mechanics variational forms class
 # Principle of Virtual Power

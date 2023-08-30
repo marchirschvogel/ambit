@@ -12,9 +12,9 @@ from dolfinx import fem
 import ufl
 from petsc4py import PETSc
 
-import utilities
-from solid import SolidmechanicsProblem, SolidmechanicsSolver
-from solid_flow0d import SolidmechanicsFlow0DProblem, SolidmechanicsFlow0DSolver
+from . import utilities
+from ..solid import SolidmechanicsProblem, SolidmechanicsSolver
+from ..solid_flow0d import SolidmechanicsFlow0DProblem, SolidmechanicsFlow0DSolver
 
 
 class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():

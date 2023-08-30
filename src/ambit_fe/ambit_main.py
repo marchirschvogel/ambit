@@ -7,7 +7,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from mpi4py import MPI
-import ioroutines
+from . import ioroutines
+
 
 class Ambit():
 
@@ -23,115 +24,116 @@ class Ambit():
 
         if problem_type == 'solid':
 
-            import solid
+            from .solid import solid_main
 
             io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid.SolidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
-            self.ms = solid.SolidmechanicsSolver(self.mp, solver_params)
+            self.mp = solid_main.SolidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+            self.ms = solid_main.SolidmechanicsSolver(self.mp, solver_params)
 
         elif problem_type == 'fluid':
 
-            import fluid
+            from .fluid import fluid_main
 
             io = ioroutines.IO_fluid(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid.FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
-            self.ms = fluid.FluidmechanicsSolver(self.mp, solver_params)
+            self.mp = fluid_main.FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+            self.ms = fluid_main.FluidmechanicsSolver(self.mp, solver_params)
 
         elif problem_type == 'ale':
 
-            import ale
+            from .ale import ale_main
 
             io = ioroutines.IO_ale(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = ale.AleProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
-            self.ms = ale.AleSolver(self.mp, solver_params)
+            self.mp = ale_main.AleProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+            self.ms = ale_main.AleSolver(self.mp, solver_params)
 
         elif problem_type == 'fluid_ale':
 
-            import fluid_ale
+            from .coupling import fluid_ale_main
 
             io = ioroutines.IO_fluid_ale(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid_ale.FluidmechanicsAleProblem(io_params, time_params, fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
-            self.ms = fluid_ale.FluidmechanicsAleSolver(self.mp, solver_params)
+            self.mp = fluid_ale_main.FluidmechanicsAleProblem(io_params, time_params, fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.ms = fluid_ale_main.FluidmechanicsAleSolver(self.mp, solver_params)
 
         elif problem_type == 'fluid_ale_flow0d':
 
-            import fluid_ale_flow0d
+            from .coupling import fluid_ale_flow0d_main
 
             io = ioroutines.IO_fluid_ale(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid_ale_flow0d.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm)
-            self.ms = fluid_ale_flow0d.FluidmechanicsAleFlow0DSolver(self.mp, solver_params)
+            self.mp = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm)
+            self.ms = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'flow0d':
 
-            import flow0d
+            from .flow0d import flow0d_main
 
-            self.mp = flow0d.Flow0DProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm)
-            self.ms = flow0d.Flow0DSolver(self.mp, solver_params)
+            self.mp = flow0d_main.Flow0DProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm)
+            self.ms = flow0d_main.Flow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_flow0d':
 
-            import solid_flow0d
+            from .coupling import solid_flow0d_main
 
             io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid_flow0d.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
-            self.ms = solid_flow0d.SolidmechanicsFlow0DSolver(self.mp, solver_params)
+            self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.ms = solid_flow0d_main.SolidmechanicsFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_flow0d_periodicref':
 
-            import solid_flow0d, solid_flow0d_periodicref
+            from .coupling import solid_flow0d_main
+            from .coupling import solid_flow0d_periodicref_main
 
             io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid_flow0d.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
-            self.ms = solid_flow0d_periodicref.SolidmechanicsFlow0DPeriodicRefSolver(self.mp, solver_params)
+            self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.ms = solid_flow0d_periodicref_main.SolidmechanicsFlow0DPeriodicRefSolver(self.mp, solver_params)
 
         elif problem_type == 'fluid_flow0d':
 
-            import fluid_flow0d
+            from .coupling import fluid_flow0d_main
 
             io = ioroutines.IO_fluid(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid_flow0d.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
-            self.ms = fluid_flow0d.FluidmechanicsFlow0DSolver(self.mp, solver_params)
+            self.mp = fluid_flow0d_main.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.ms = fluid_flow0d_main.FluidmechanicsFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_flow0d_multiscale_gandr':
 
-            import solid_flow0d_growthremodel
+            from .multiscale import solid_flow0d_growthremodel_main
 
             io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, io, comm=self.comm)
-            self.ms = solid_flow0d_growthremodel.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params)
+            self.mp = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, io, comm=self.comm)
+            self.ms = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params)
 
         elif problem_type == 'fsi':
 
             raise RuntimeError("Monolithic FSI not yet fully implemented!")
 
-            import fsi
+            from .coupling import fsi_main
 
             io = ioroutines.IO_fsi(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
@@ -165,21 +167,21 @@ class Ambit():
 
         elif problem_type == 'solid_constraint':
 
-            import solid_constraint
+            from .coupling import solid_constraint_main
 
             io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid_constraint.SolidmechanicsConstraintProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
-            self.ms = solid_constraint.SolidmechanicsConstraintSolver(self.mp, solver_params)
+            self.mp = solid_constraint_main.SolidmechanicsConstraintProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.ms = solid_constraint_main.SolidmechanicsConstraintSolver(self.mp, solver_params)
 
         elif problem_type == 'signet':
 
-            import signet
+            from .signet import signet_main
 
-            self.mp = signet.SignallingNetworkProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm)
-            self.ms = signet.SignallingNetworkSolver(self.mp, solver_params)
+            self.mp = signet_main.SignallingNetworkProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm)
+            self.ms = signet_main.SignallingNetworkSolver(self.mp, solver_params)
 
         else:
             raise NameError("Unknown problem type!")

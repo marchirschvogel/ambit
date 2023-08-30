@@ -46,31 +46,14 @@ Still experimental / to-do:
 docker pull dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76
 ```
 
-* Ambit can then be installed using pip:
+* Ambit can then be installed using pip, either the current release,
 ```
-python3 -m pip install ambit_fe
-```
-
-* Alternatively, clone the repository
-```
-git clone https://github.com/marchirschvogel/ambit.git
+python3 -m pip install ambit-fe
 ```
 
-* and add the following shortcut to your .bashrc (replacing <PATH_TO_AMBIT_FOLDER> with the path to the ambit folder):
+* or latest development version:
 ```
-alias fenicsdocker='docker run -ti -v $HOME:/home/shared -v <PATH_TO_AMBIT_FOLDER>:/home/shared/ambit -w /home/shared/ --env-file <PATH_TO_AMBIT_FOLDER>/.env.list --rm dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76'
-```
-
-* If 0D models should be used, it seems that we have to install sympy (not part of docker container anymore) - in the folder where you pulled ambit to, do:
-```
-cd ambit && mkdir ext && pip3 install --target=ext mpmath --no-deps --no-cache-dir && pip3 install --target=ext sympy --no-deps --no-cache-dir && cd ..
-```
-
-(if this fails, add ``--system`` to each of the pip3 install commands)
-
-* Launch the container in a konsole/terminal window by simply typing
-```
-fenicsdocker
+python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
 ```
 
 * Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options

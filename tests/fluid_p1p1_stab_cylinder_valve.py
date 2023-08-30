@@ -10,13 +10,12 @@ transient incompressible Navier-Stokes flow in a cylinder with axial Neumann and
 - checkpoint writing of domain-wise discontinuous pressure field
 """
 
-import ambit
+import ambit_fe
 
 import sys, traceback
 import numpy as np
 from pathlib import Path
 
-import resultcheck
 
 
 def main():
@@ -86,7 +85,7 @@ def main():
 
 
     # problem setup
-    problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -105,9 +104,9 @@ def main():
     v_corr[1] = 1.1646607897463809E+03 # y
     v_corr[2] = -9.9702473473169971E+02 # z
 
-    check1 = resultcheck.results_check_node(problem.mp.v, check_node, v_corr, problem.mp.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
+    check1 = ambit_fe.resultcheck.results_check_node(problem.mp.v, check_node, v_corr, problem.mp.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
 
-    success = resultcheck.success_check([check1], problem.mp.comm)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
 

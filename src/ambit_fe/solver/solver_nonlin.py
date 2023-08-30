@@ -12,10 +12,10 @@ import numpy as np
 from petsc4py import PETSc
 from dolfinx import fem
 
-from projection import project
-from solver_utils import sol_utils
-import preconditioner
-import ioparams
+from .projection import project
+from .solver_utils import sol_utils
+from . import preconditioner
+from .. import ioparams
 
 ### useful infos for PETSc mats, vecs, solvers...
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Mat-class.html

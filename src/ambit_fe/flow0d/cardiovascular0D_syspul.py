@@ -10,8 +10,8 @@ import sys, math
 import numpy as np
 import sympy as sp
 
-from cardiovascular0D import cardiovascular0Dbase
-from mpiroutines import allgather_vec
+from .cardiovascular0D import cardiovascular0Dbase
+from ..mpiroutines import allgather_vec
 
 # systemic and pulmonary closed-loop circulation model, each heart chamber can be treated individually,
 # either as 0D elastance model, volume or flux coming from a 3D solid, or interface fluxes from a 3D fluid model
@@ -183,10 +183,10 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
             # initialize coronary circulation model
             if self.cormodel == 'ZCRp_CRd':
-                from cardiovascular0D_coronary import coronary_circ_ZCRp_CRd
+                from .cardiovascular0D_coronary import coronary_circ_ZCRp_CRd
                 self.corcirc = coronary_circ_ZCRp_CRd(self.params, self.varmap, self.auxmap, self.vs)
             elif self.cormodel == 'ZCRp_CRd_lr':
-                from cardiovascular0D_coronary import coronary_circ_ZCRp_CRd_lr
+                from .cardiovascular0D_coronary import coronary_circ_ZCRp_CRd_lr
                 self.corcirc = coronary_circ_ZCRp_CRd_lr(self.params, self.varmap, self.auxmap, self.vs)
             else:
                 raise NameError("Unknown coronary circulation model!")
@@ -200,7 +200,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
             # initialize VAD model
             if self.vadmodel == 'lvad':
-                from cardiovascular0D_vad import vad_circ
+                from .cardiovascular0D_vad import vad_circ
                 self.vadcirc = vad_circ(self.params, self.varmap, self.auxmap)
             else:
                 raise NameError("Unknown VAD model!")

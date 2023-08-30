@@ -10,8 +10,8 @@ import sys
 from petsc4py import PETSc
 import ufl
 
-from projection import project
-import expression
+from . import expression
+
 
 class timeintegration():
 

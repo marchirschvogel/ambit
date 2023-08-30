@@ -10,8 +10,8 @@ import sys
 import numpy as np
 import sympy as sp
 
-from cardiovascular0D import cardiovascular0Dbase
-from mpiroutines import allgather_vec
+from .cardiovascular0D import cardiovascular0Dbase
+from ..mpiroutines import allgather_vec
 
 # two RC models (2-element Windkessels) in series linking an in- to an outflow
 

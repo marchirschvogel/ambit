@@ -9,8 +9,8 @@
 import ufl
 from petsc4py import PETSc
 
-from solid_material import materiallaw, growth, growthfunction
-from projection import project
+from .solid_material import materiallaw, growth, growthfunction
+
 
 # nonlinear finite strain kinematics and constitutive class
 

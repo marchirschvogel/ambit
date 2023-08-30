@@ -13,13 +13,13 @@ import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 
-import solver_nonlin
-import expression, ioparams
-from projection import project
-from mpiroutines import allgather_vec, allgather_vec_entry
+from ..solver import solver_nonlin
+from .. import expression, ioparams
+from ..solver.projection import project
+from ..mpiroutines import allgather_vec, allgather_vec_entry
 
-from solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
-from base import problem_base, solver_base
+from ..solid.solid_main import SolidmechanicsProblem, SolidmechanicsSolverPrestr
+from ..base import problem_base, solver_base
 
 
 class SolidmechanicsConstraintProblem(problem_base):
