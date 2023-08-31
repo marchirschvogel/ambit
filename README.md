@@ -58,6 +58,12 @@ Alternatively, you can pull a pre-built Docker image with FEniCSx and Ambit inst
 docker pull ghcr.io/marchirschvogel/ambit:latest
 ```
 
+If mixed-domain functionality should be used (needed for FSI or fluid problems with valve planes that need a duplicate pressure space), a mixed container based on
+another [dolfinx branch]https://github.com/FEniCS/dolfinx/tree/jpdean/mixed_domain) can be pulled:
+```
+docker pull ghcr.io/marchirschvogel/ambit:mixed
+```
+
 ### Usage ###
 
 Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options
@@ -66,6 +72,7 @@ Best, check if all testcases run and pass, by navigating to ambit/tests and exec
 ```
 ./runtests.py
 ```
+(if the ``mixed`` container is used, you can execute ``./runtests.py -b mixed`` which will execute the additional tests requiring the mixed dolfinx branch, too)
 
 * Build your input file and run it with the command
 ```
