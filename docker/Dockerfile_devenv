@@ -2,7 +2,7 @@
 FROM ghcr.io/fenics/dolfinx/dev-env@sha256:fd50a8e829595e3ef33933a42997e96446053d04ff0d3c09884e7b6b91be8646
 
 LABEL org.opencontainers.image.source=https://github.com/marchirschvogel/ambit
-LABEL org.opencontainers.image.description="ambit_mixed"
+LABEL org.opencontainers.image.description="ambit_devenv"
 LABEL org.opencontainers.image.licenses=MIT
 
 ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
@@ -32,9 +32,8 @@ RUN mkdir -p dolfinx/cpp/build && cd dolfinx/cpp/build && cmake .. && make insta
 
 RUN cd dolfinx/python && pip3 -v install --no-deps --no-cache-dir . && cd ../..
 
-# install Python module - dev version
-RUN git clone https://github.com/marchirschvogel/ambit.git
-RUN python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
+# install Python modules that are additionally needed by Ambit
+RUN pip3 -v install --no-deps --no-cache-dir mpmath && pip3 -v install --no-deps --no-cache-dir sympy
 
 # remove contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp

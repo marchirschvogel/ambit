@@ -64,6 +64,11 @@ another [dolfinx branch](https://github.com/FEniCS/dolfinx/tree/jpdean/mixed_dom
 docker pull ghcr.io/marchirschvogel/ambit:mixed
 ```
 
+If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit (including the dolfinx mixed branch):
+```
+docker pull ghcr.io/marchirschvogel/ambit:devenv
+```
+
 ### Usage ###
 
 Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options
