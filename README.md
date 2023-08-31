@@ -39,37 +39,30 @@ Still experimental / to-do:
 - ... whatever might be wanted in some future ...
 
 
-### Install ###
+### Installation ###
 
-* First, you need to [install FEniCSx](https://github.com/FEniCS/dolfinx#installation), either from source or using latest tested Ambit-compatible digest (19 Aug 2023) of dolfinx Docker image:
-```
-docker pull dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76
-```
+In order to use Ambit, you need to [install FEniCSx](https://github.com/FEniCS/dolfinx#installation) (latest Ambit-compatible dolfinx development version dates to 19 Aug 2023)
 
-* Ambit can then be installed using pip, either the current release,
+Ambit can then be installed using pip, either the current release,
 ```
 python3 -m pip install ambit-fe
 ```
 
-* or latest development version:
+or latest development version:
 ```
 python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
 ```
 
-Alternatively, you can build an Ambit docker container using the Dockerfile in the folder docker/ by typing
+Alternatively, you can pull a pre-built Docker image with FEniCSx and Ambit installed:
 ```
-docker build -f Dockerfile .
+docker pull ghcr.io/marchirschvogel/ambit:latest
 ```
 
-and then launch the container with
-```
-docker run -ti -v $HOME:/home/shared -w /home/shared/ --env HOME=/home/shared <IMAGE_ID>
-```
-replacing ``<IMAGE_ID>`` with the ID of the created Docker image (find out by typing ``docker images``)
+### Usage ###
 
-* Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options
+Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options
 
-* Best, check if all testcases run and pass, by navigating to ambit/tests and executing
+Best, check if all testcases run and pass, by navigating to ambit/tests and executing
 ```
 ./runtests.py
 ```
