@@ -308,8 +308,8 @@ class solver_nonlinear:
                 # prepare merged matrix structure
                 if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
 
-                    self.K_full_merged[npr] = PETSc.Mat()
-                    self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
+                    Kfullnesttmp = self.K_full_nest[npr].duplicate(copy=False)
+                    self.K_full_merged[npr] = Kfullnesttmp.convert("aij")
                     # solution increment
                     self.del_full = self.K_full_merged[npr].createVecLeft()
 
@@ -334,8 +334,8 @@ class solver_nonlinear:
 
                 # prepare merged preconditioner matrix structure
                 if self.merge_prec_mat:
-                    self.P_full_merged[npr] = PETSc.Mat()
-                    self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
+                    Pfullnesttmp = self.P_full_nest[npr].duplicate(copy=False)
+                    self.P_full_merged[npr] = Pfullnesttmp.convert("aij")
                     self.P = self.P_full_merged[npr]
                 else:
                     self.P = self.P_full_nest[npr]
