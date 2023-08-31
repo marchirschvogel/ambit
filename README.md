@@ -43,7 +43,7 @@ Still experimental / to-do:
 
 In order to use Ambit, you need to [install FEniCSx](https://github.com/FEniCS/dolfinx#installation) (latest Ambit-compatible dolfinx development version dates to 19 Aug 2023)
 
-Ambit can then be installed using pip, either the current release,
+Ambit can then be installed using pip, either the current release
 ```
 python3 -m pip install ambit-fe
 ```
@@ -59,7 +59,7 @@ docker pull ghcr.io/marchirschvogel/ambit:latest
 ```
 
 If mixed-domain functionality should be used (needed for FSI or fluid problems with valve planes that need a duplicate pressure space), a mixed container based on
-another [dolfinx branch]https://github.com/FEniCS/dolfinx/tree/jpdean/mixed_domain) can be pulled:
+another [dolfinx branch](https://github.com/FEniCS/dolfinx/tree/jpdean/mixed_domain) can be pulled:
 ```
 docker pull ghcr.io/marchirschvogel/ambit:mixed
 ```
