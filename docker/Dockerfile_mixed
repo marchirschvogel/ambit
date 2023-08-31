@@ -1,4 +1,4 @@
-# Ambit-compatible dolfinx Docker image (19 Aug 2023)
+# Ambit-compatible dolfinx dev-env Docker image
 FROM ghcr.io/fenics/dolfinx/dev-env@sha256:fd50a8e829595e3ef33933a42997e96446053d04ff0d3c09884e7b6b91be8646
 
 LABEL org.opencontainers.image.source=https://github.com/marchirschvogel/ambit
