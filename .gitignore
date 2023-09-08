@@ -1,5 +1,6 @@
 dist/
 build/
+libext/
 tests/tmp/
 __pycache__/
 *.egg-info/

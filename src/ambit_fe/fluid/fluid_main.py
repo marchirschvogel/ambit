@@ -318,7 +318,7 @@ class FluidmechanicsProblem(problem_base):
 
             if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
                 for i in range(len(fibarray)):
-                    fib_proj = project(self.fib_func[i], self.V_v, self.dx_, nm='Fiber'+str(i+1))
+                    fib_proj = project(self.fib_func[i], self.V_v, self.dx_, nm='Fiber'+str(i+1), comm=self.comm)
                     self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
 
         else:
@@ -616,7 +616,7 @@ class FluidmechanicsProblem(problem_base):
                 tau_a_.append(ufl.as_ufl(0))
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_) # TODO: Should be self.dbmem here, but yields error; why?
+        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_, comm=self.comm) # TODO: Should be self.dbmem here, but yields error; why?
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 

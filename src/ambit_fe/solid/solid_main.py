@@ -306,7 +306,7 @@ class SolidmechanicsProblem(problem_base):
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
-            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx_)
+            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx_, comm=self.comm)
             self.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.growth_thres.interpolate(growth_thres_proj)
 
@@ -321,7 +321,7 @@ class SolidmechanicsProblem(problem_base):
 
             if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
                 for i in range(len(fibarray)):
-                    fib_proj = project(self.fib_func[i], self.V_u, self.dx_, nm='Fiber'+str(i+1))
+                    fib_proj = project(self.fib_func[i], self.V_u, self.dx_, nm='Fiber'+str(i+1), comm=self.comm)
                     self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
 
         else:
@@ -629,7 +629,7 @@ class SolidmechanicsProblem(problem_base):
 
                     amp_old_.append(ufl.as_ufl(0))
 
-            amp_old_proj = project(amp_old_, self.Vd_scalar, self.dx_)
+            amp_old_proj = project(amp_old_, self.Vd_scalar, self.dx_, comm=self.comm)
             self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.amp_old.interpolate(amp_old_proj)
 
@@ -654,7 +654,7 @@ class SolidmechanicsProblem(problem_base):
                 tau_a_.append(ufl.as_ufl(0))
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_)
+        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_, comm=self.comm)
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -975,6 +975,7 @@ class SolidmechanicsProblem(problem_base):
 
 
     def destroy(self):
+        # self.v.vector.destroy()
         pass
 
 

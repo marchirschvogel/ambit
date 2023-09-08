@@ -49,31 +49,30 @@ class block_precond():
             self.ksp_fields.append( PETSc.KSP().create(self.comm) )
         # set the options
         for n in range(self.nfields):
-            pc_field = self.ksp_fields[n].getPC()
             if self.precond_fields[n]['prec'] == 'amg':
                 try: solvetype = self.precond_fields[n]['solve']
                 except: solvetype = "preonly"
                 self.ksp_fields[n].setType(solvetype)
                 try: amgtype = self.precond_fields[n]['amgtype']
                 except: amgtype = "hypre"
-                pc_field.setType(amgtype)
+                self.ksp_fields[n].getPC().setType(amgtype)
                 if amgtype=="hypre":
-                    pc_field.setHYPREType("boomeramg")
+                    self.ksp_fields[n].getPC().setHYPREType("boomeramg")
                 # set operators and setup field prec
-                pc_field.setOperators(operator_mats[n])
-                pc_field.setUp()
+                self.ksp_fields[n].getPC().setOperators(operator_mats[n])
+                self.ksp_fields[n].getPC().setUp()
                 # TODO: Some additional hypre options we might wanna set... which are optimal here???
                 # opts = PETSc.Options()
                 # opts.setValue('pc_hypre_parasails_reuse', True) # - does this exist???
                 # opts.setValue('pc_hypre_boomeramg_cycle_type', 'v') # v, w
                 # opts.setValue('pc_hypre_boomeramg_max_iter', 1)
                 # opts.setValue('pc_hypre_boomeramg_relax_type_all',  'symmetric-SOR/Jacobi')
-                # pc_field.setFromOptions()
-                # print(pc_fieldself.ksp_fields[n].getPC().view())
+                # self.ksp_fields[n].getPC().setFromOptions()
+                # print(self.ksp_fields[n].getPC().view())
             elif self.precond_fields[n]['prec'] == 'direct':
                 self.ksp_fields[n].setType("preonly")
-                pc_field.setType("lu")
-                pc_field.setFactorSolverType("mumps")
+                self.ksp_fields[n].getPC().setType("lu")
+                self.ksp_fields[n].getPC().setFactorSolverType("mumps")
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
@@ -104,7 +103,12 @@ class schur_2x2(block_precond):
         self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
 
-        self.Adinv = self.A.duplicate(copy=False)
+        # the matrix to later insert the diagonal
+        self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
+        self.Adinv.setUp()
+        self.Adinv.assemble()
+        # set 1's to get correct allocation pattern
+        self.Adinv.shift(1.)
 
         if self.schur_block_scaling[0]=='diag':
             self.adinv_vec = self.A.getDiagonal()
@@ -116,13 +120,12 @@ class schur_2x2(block_precond):
         else:
             raise ValueError("Unknown schur_block_scaling option!")
 
-        self.Smod = self.C.duplicate(copy=False)
+        self.Smod = self.C.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
 
         self.Adinv_Bt = self.Adinv.matMult(self.Bt)
         self.B_Adinv_Bt = self.B.matMult(self.Adinv_Bt)
 
         # need to set Smod here to get the data structures right
-        self.Smod.aypx(0., self.C, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
 
         self.x1, self.x2 = self.A.createVecLeft(), self.Smod.createVecLeft()
@@ -133,6 +136,10 @@ class schur_2x2(block_precond):
 
         self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+
+        # do we need these???
+        self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         return [self.A, self.Smod]
 
@@ -165,7 +172,7 @@ class schur_2x2(block_precond):
 
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
         # compute self.Smod = self.C - B_Adinv_Bt
-        self.Smod.aypx(0., self.C, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.C.copy(result=self.Smod)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
 
         tse = time.time() - tss
@@ -239,7 +246,12 @@ class schur_3x3(block_precond):
         self.E  = self.P.createSubMatrix(self.iset[2],self.iset[1])
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
-        self.Adinv = self.A.duplicate(copy=False)
+        # the matrix to later insert the diagonal
+        self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
+        self.Adinv.setUp()
+        self.Adinv.assemble()
+        # set 1's to get correct allocation pattern
+        self.Adinv.shift(1.)
 
         if self.schur_block_scaling[0]=='diag':
             self.adinv_vec = self.A.getDiagonal()
@@ -251,7 +263,7 @@ class schur_3x3(block_precond):
         else:
             raise ValueError("Unknown schur_block_scaling option!")
 
-        self.Smod = self.C.duplicate(copy=False)
+        self.Smod = self.C.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
 
         if self.schur_block_scaling[1]=='diag':
             self.smoddinv_vec = self.Smod.getDiagonal()
@@ -264,11 +276,14 @@ class schur_3x3(block_precond):
             raise ValueError("Unknown schur_block_scaling option!")
 
         # the matrix to later insert the diagonal
-        self.Smoddinv = self.Smod.duplicate(copy=False)
-        self.Smoddinv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False) # needed here for later diagonal setting
+        self.Smoddinv = PETSc.Mat().createAIJ(self.C.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
+        self.Smoddinv.setUp()
+        self.Smoddinv.assemble()
+        # set 1's to get correct allocation pattern
+        self.Smoddinv.shift(1.)
 
-        self.Tmod = self.Et.duplicate(copy=False)
-        self.Wmod = self.R.duplicate(copy=False)
+        self.Tmod = self.Et.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.Wmod = self.R.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
 
         self.Adinv_Bt = self.Adinv.matMult(self.Bt)
         self.DBt = self.D.matMult(self.Adinv_Bt)
@@ -281,9 +296,7 @@ class schur_3x3(block_precond):
         self.D_Adinv_Dt = self.D.matMult(self.Adinv_Dt)
 
         # need to set Smod and Tmod here to get the data structures right
-        self.Smod.aypx(0., self.C, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
-        self.Tmod.aypx(0., self.Et, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
         self.Tmod.axpy(-1., self.B_Adinv_Dt)
 
         self.Smoddinv_Tmod = self.Smoddinv.matMult(self.Tmod)
@@ -308,6 +321,11 @@ class schur_3x3(block_precond):
         self.z1, self.z2, self.z3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
 
         self.arr_y1, self.arr_y2, self.arr_y3 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize()), np.zeros(self.y3.getLocalSize())
+
+        # do we need these???
+        self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.Wmod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         return [self.A, self.Smod, self.Wmod]
 
@@ -347,7 +365,7 @@ class schur_3x3(block_precond):
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
         # compute self.Smod = self.C - B_Adinv_Bt
 
-        self.Smod.aypx(0., self.C, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.C.copy(result=self.Smod)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
 
         # --- Tmod = Et - B diag(A)^{-1} Dt
@@ -356,7 +374,8 @@ class schur_3x3(block_precond):
         self.B.matMult(self.Adinv_Dt, result=self.B_Adinv_Dt)  # B diag(A)^{-1} Dt
 
         # compute self.Tmod = self.Et - B_Adinv_Dt
-        self.Tmod.aypx(0., self.Et, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        #self.Tmod.aypx(0., self.Et, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.Et.copy(result=self.Tmod)
         self.Tmod.axpy(-1., self.B_Adinv_Dt)
 
         # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
@@ -391,7 +410,7 @@ class schur_3x3(block_precond):
         self.D.matMult(self.Adinv_Dt, result=self.D_Adinv_Dt)                              # D diag(A)^{-1} Dt
 
         # compute self.Wmod = self.R - D_Adinv_Dt - E_Smoddinv_Tmod + D_Adinv_Bt_Smoddinv_Tmod
-        self.Wmod.aypx(0., self.R, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.R.copy(result=self.Wmod)
         self.Wmod.axpy(-1., self.D_Adinv_Dt)
         self.Wmod.axpy(-1., self.E_Smoddinv_Tmod)
         self.Wmod.axpy(1., self.D_Adinv_Bt_Smoddinv_Tmod)
@@ -497,6 +516,9 @@ class schur_4x4(schur_3x3):
 
         self.arr_y4 = np.zeros(self.y4.getLocalSize())
 
+        # do we need this???
+        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
         return [opmats[0], opmats[1], opmats[2], self.G]
 
 
@@ -597,6 +619,10 @@ class bgs_2x2(block_precond):
 
         self.arr_y1, self.arr_y2 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize())
 
+        # do we need these???
+        self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.C.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
         return [self.A, self.C]
 
 
@@ -650,6 +676,12 @@ class bgs_2x2(block_precond):
         y.assemble()
 
 
+    # def destroy():
+    #
+    #     print("dudeöööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööö")
+    #     exit()
+
+
 
 # own 2x2 Jacobi (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
 # P = [A  0], --> P^{-1} = [A^{-1}  0  ]
@@ -664,6 +696,10 @@ class jacobi_2x2(block_precond):
 
         self.A  = self.P.createSubMatrix(self.iset[0],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
+
+        # do we need these???
+        self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.C.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         return [self.A, self.C]
 

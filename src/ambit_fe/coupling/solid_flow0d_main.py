@@ -244,7 +244,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
                     growth_thresolds.append(ufl.as_ufl(0))
 
-            growth_thres_proj = project(growth_thresolds, self.pbs.Vd_scalar, self.pbs.dx_)
+            growth_thres_proj = project(growth_thresolds, self.pbs.Vd_scalar, self.pbs.dx_, comm=self.comm)
             self.pbs.growth_param_funcs['growth_thres'].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.pbs.growth_param_funcs['growth_thres'].interpolate(growth_thres_proj)
 

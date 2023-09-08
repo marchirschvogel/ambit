@@ -1,0 +1,41 @@
+{% set version = "2020.2" %}
+
+package:
+  name: ambit-fe
+  version: {{ 1.0.5 }}
+
+source:
+  url: https://github.com/marchirschvogel/ambit
+
+build:
+  number: 0
+  skip: True  # [win or py<36]
+  noarch: python
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  build:
+    - python
+    - pip
+  run:
+    - python
+    - mpmath
+    - sympy
+test:
+  imports:
+    - ambit_fe
+
+about:
+  home: https://github.com/marchirschvogel/ambit
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: 'Ambit - A FEniCS-based cardiovascular physics solver'
+
+  description: |
+    Ambit - A FEniCS-based cardiovascular physics solver
+  doc_url: https://github.com/marchirschvogel/ambit
+  dev_url: https://github.com/marchirschvogel/ambit
+extra:
+  recipe-maintainers:
+    - marchirschvogel

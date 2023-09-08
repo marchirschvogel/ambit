@@ -11,7 +11,7 @@ import ufl
 from petsc4py import PETSc
 
 
-def project(v, V, dx_, bcs=[], nm=None):
+def project(v, V, dx_, bcs=[], nm=None, comm=None):
 
     w = ufl.TestFunction(V)
     Pv = ufl.TrialFunction(V)
@@ -48,19 +48,18 @@ def project(v, V, dx_, bcs=[], nm=None):
     b.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
     fem.petsc.set_bc(b, bcs)
 
-    ksp = PETSc.KSP().create(A.getComm())
+    ksp = PETSc.KSP().create(comm)
 
     ksp.setType("preonly")
-    pc = ksp.getPC()
-    pc.setType("lu")
-    pc.setFactorSolverType("mumps")
+    ksp.getPC().setType("lu")
+    ksp.getPC().setFactorSolverType("mumps")
 
     ksp.setOperators(A)
     ksp.solve(b, function.vector)
 
-    function.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
     b.destroy(), A.destroy()
     ksp.destroy()
+
+    function.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     return function
