@@ -55,13 +55,7 @@ python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
 
 Alternatively, you can pull a pre-built Docker image with FEniCSx and Ambit installed:
 ```
-docker pull ghcr.io/marchirschvogel/ambit:latest
-```
-
-If mixed-domain functionality should be used (needed for FSI or fluid problems with valve planes that need a duplicate pressure space), a mixed container based on
-another [dolfinx branch](https://github.com/FEniCS/dolfinx/tree/jpdean/mixed_domain) can be pulled:
-```
-docker pull ghcr.io/marchirschvogel/ambit:mixed
+docker pull ghcr.io/marchirschvogel/ambit:v1.0.6
 ```
 
 If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit (including the dolfinx mixed branch):
@@ -77,7 +71,6 @@ Best, check if all testcases run and pass, by navigating to ambit/tests and exec
 ```
 ./runtests.py
 ```
-(if the ``mixed`` container is used, you can execute ``./runtests.py -b mixed`` which will execute the additional tests requiring the mixed dolfinx branch, too)
 
 * Build your input file and run it with the command
 ```
