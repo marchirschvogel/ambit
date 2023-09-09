@@ -676,12 +676,6 @@ class bgs_2x2(block_precond):
         y.assemble()
 
 
-    # def destroy():
-    #
-    #     print("dudeöööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööööö")
-    #     exit()
-
-
 
 # own 2x2 Jacobi (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
 # P = [A  0], --> P^{-1} = [A^{-1}  0  ]

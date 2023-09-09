@@ -55,7 +55,7 @@ python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
 
 Alternatively, you can pull a pre-built Docker image with FEniCSx and Ambit installed:
 ```
-docker pull ghcr.io/marchirschvogel/ambit:v1.0.6
+docker pull ghcr.io/marchirschvogel/ambit:latest
 ```
 
 If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit (including the dolfinx mixed branch):

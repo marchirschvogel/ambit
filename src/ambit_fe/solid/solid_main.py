@@ -975,7 +975,6 @@ class SolidmechanicsProblem(problem_base):
 
 
     def destroy(self):
-        # self.v.vector.destroy()
         pass
 
 
