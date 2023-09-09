@@ -18,7 +18,7 @@ WORKDIR /tmp
 
 # install Python module
 RUN git clone https://github.com/marchirschvogel/ambit.git
-RUN python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
+RUN python3 -m pip install git+https://github.com/marchirschvogel/ambit.git --no-cache-dir
 
 # remove contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp
