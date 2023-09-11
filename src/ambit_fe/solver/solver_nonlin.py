@@ -384,20 +384,19 @@ class solver_nonlinear:
                         # set field-specific preconditioners
                         for n in range(nsets):
 
-                            pc_field = ksp_fields[n].getPC()
                             if self.precond_fields[npr][n]['prec'] == 'amg':
                                 try: solvetype = self.precond_fields[npr][n]['solve']
                                 except: solvetype = "preonly"
                                 ksp_fields[n].setType(solvetype)
                                 try: amgtype = self.precond_fields[npr][n]['amgtype']
                                 except: amgtype = "hypre"
-                                pc_field.setType(amgtype)
+                                ksp_fields[n].getPC().setType(amgtype)
                                 if amgtype=="hypre":
-                                    pc_field.setHYPREType("boomeramg")
+                                    ksp_fields[n].getPC().setHYPREType("boomeramg")
                             elif self.precond_fields[npr][n]['prec'] == 'direct':
                                 ksp_fields[n].setType("preonly")
-                                pc_field.setType("lu")
-                                pc_field.setFactorSolverType("mumps")
+                                ksp_fields[n].getPC().setType("lu")
+                                ksp_fields[n].getPC().setFactorSolverType("mumps")
                             else:
                                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
@@ -586,7 +585,6 @@ class solver_nonlinear:
                             if self.comm.rank == 0:
                                 print(' '*self.indlen_[npr] + '      === MAT merge, te = %.4f s' % (tme))
                                 sys.stdout.flush()
-                        tmp=self.r_full_nest[npr].getArray(readonly=True)
 
                         self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
                         self.r_full_merged[npr].placeArray(self.r_arr)
