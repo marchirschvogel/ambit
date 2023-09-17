@@ -53,7 +53,7 @@ class SignallingNetworkProblem(problem_base):
 
         # initialize signet model class
         if model_params['modeltype'] == 'hypertrophy':
-            from signet_hypertrophy import signethypertrophy
+            from .signet_hypertrophy import signethypertrophy
             self.signet = signethypertrophy(model_params['parameters'], comm=self.comm)
         else:
             raise NameError("Unknown signet modeltype!")

@@ -81,6 +81,7 @@ def check_params_solver(params):
 def check_params_fem_solid(params):
 
     valid_params = ['incompressible_2field',
+                    'lin_remodeling_full',
                     'order_disp',
                     'order_pres',
                     'pressure_at_midpoint',
@@ -171,6 +172,7 @@ def check_params_time_flow0d(params):
     valid_params = ['eps_periodic',
                     'initial_backwardeuler',
                     'initial_conditions',
+                    'initial_file',
                     'maxtime',
                     'numstep',
                     'numstep_stop',

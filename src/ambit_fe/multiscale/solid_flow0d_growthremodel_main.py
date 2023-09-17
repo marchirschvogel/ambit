@@ -12,12 +12,13 @@ from dolfinx import fem
 import ufl
 from petsc4py import PETSc
 
-from . import utilities
-from ..solid import SolidmechanicsProblem, SolidmechanicsSolver
-from ..solid_flow0d import SolidmechanicsFlow0DProblem, SolidmechanicsFlow0DSolver
+from .. import utilities
+from ..solid.solid_main import SolidmechanicsProblem, SolidmechanicsSolver
+from ..coupling.solid_flow0d_main import SolidmechanicsFlow0DProblem, SolidmechanicsFlow0DSolver
+from ..base import problem_base, solver_base
 
 
-class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
+class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(problem_base):
 
     def __init__(self, io_params, time_params_solid_small, time_params_solid_large, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, multiscale_params, io, comm=None):
 
@@ -80,7 +81,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         self.tol_outer = multiscale_params['tol_outer']
 
         # override by tol_small
-        self.pbsmall.pbf.eps_periodic = self.tol_small
+        self.pbsmall.pb0.eps_periodic = self.tol_small
         self.pblarge.tol_stop_large = self.tol_large
 
         # store to ensure prestressed state is kept throughout the whole cycle (small scale prestress_initial gets set to False after initial prestress)
@@ -92,9 +93,9 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
         self.simname_large = self.pblarge.simname + '_large'
 
         if gandr_trigger_phase == 'end_diastole':
-            self.pbsmall.t_gandr_setpoint = self.pbsmall.pbf.cardvasc0D.t_ed
+            self.pbsmall.t_gandr_setpoint = self.pbsmall.pb0.cardvasc0D.t_ed
         elif gandr_trigger_phase == 'end_systole':
-            self.pbsmall.t_gandr_setpoint = self.pbsmall.pbf.cardvasc0D.t_es
+            self.pbsmall.t_gandr_setpoint = self.pbsmall.pb0.cardvasc0D.t_es
         else:
             raise NameError("Unknown growth multiscale_trigger_phase")
 
@@ -125,15 +126,15 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
 
 
 
-class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
+class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(solver_base):
 
-    def __init__(self, problem, solver_params_solid, solver_params_flow0d):
+    def __init__(self, problem, solver_params):
 
         self.pb = problem
 
         # initialize solver instances
-        self.solversmall = SolidmechanicsFlow0DSolver(self.pb.pbsmall, solver_params_solid, solver_params_flow0d)
-        self.solverlarge = SolidmechanicsSolver(self.pb.pblarge, solver_params_solid)
+        self.solversmall = SolidmechanicsFlow0DSolver(self.pb.pbsmall, solver_params)
+        self.solverlarge = SolidmechanicsSolver(self.pb.pblarge, solver_params)
 
         # read restart information
         if self.pb.restart_cycle > 0:
@@ -141,7 +142,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pblarge.simname = self.pb.simname_large + str(self.pb.restart_cycle)
             self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle)
             self.pb.pblarge.io.readcheckpoint(self.pb.pblarge, self.pb.restart_cycle)
-            self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle)
+            self.pb.pbsmall.pb0.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle)
             # no need to do after restart
             self.pb.pbsmall.pbs.prestress_initial = False
             # induce the perturbation
@@ -163,7 +164,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             wts = time.time()
 
             # time offset from previous small scale times
-            self.pb.pbsmall.t_prev = (self.pb.pbsmall.pbf.ti.cycle[0]-1) * self.pb.pbsmall.pbf.cardvasc0D.T_cycl
+            self.pb.pbsmall.t_prev = (self.pb.pbsmall.pb0.ti.cycle[0]-1) * self.pb.pbsmall.pb0.cardvasc0D.T_cycl
 
             # change output names
             self.pb.pbsmall.pbs.simname = self.pb.simname_small + str(N)
@@ -183,15 +184,15 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
                 if self.pb.write_checkpoints:
                     # write checkpoint for potential restarts
                     self.pb.pbsmall.pbs.io.writecheckpoint(self.pb.pbsmall.pbs, N)
-                    self.pb.pbsmall.pbf.write_restart(self.pb.pbsmall.pbs.simname, N, ms=True)
+                    self.pb.pbsmall.pb0.write_restart(self.pb.pbsmall.pbs.simname, N, ms=True)
 
             else:
 
                 # read small scale checkpoint if we restart from this scale
                 self.pb.pbsmall.pbs.io.readcheckpoint(self.pb.pbsmall.pbs, self.pb.restart_cycle+1)
-                self.pb.pbsmall.pbf.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle+1, ms=True)
+                self.pb.pbsmall.pb0.readrestart(self.pb.pbsmall.pbs.simname, self.pb.restart_cycle+1, ms=True)
                 # induce the perturbation
-                if not self.pb.pbsmall.pbf.have_induced_pert: self.pb.pbsmall.induce_perturbation()
+                if not self.pb.pbsmall.pb0.have_induced_pert: self.pb.pbsmall.induce_perturbation()
                 # no need to do after restart
                 self.pb.pbsmall.pbs.prestress_initial = False
                 # set flag to False again
@@ -295,7 +296,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver():
             self.pb.pblarge.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # pressures from growth set point
-        self.pb.pbsmall.pbf.cardvasc0D.set_pressure_fem(self.pb.pbsmall.pbf.s_set, self.pb.pbsmall.pbf.cardvasc0D.v_ids, self.pb.pbsmall.pr0D, self.pb.neumann_funcs)
+        self.pb.pbsmall.pb0.cardvasc0D.set_pressure_fem(self.pb.pbsmall.pb0.s_set, self.pb.pbsmall.pb0.cardvasc0D.v_ids, self.pb.pbsmall.pr0D, self.pb.neumann_funcs)
 
         # growth thresholds from set point
         self.pb.pblarge.growth_thres.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.vector)
