@@ -264,6 +264,9 @@ class FluidmechanicsProblem(problem_base):
 
         self.mor_params = mor_params
 
+        # sanity check
+        if bool(self.mor_params): assert(self.have_rom)
+
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)
 

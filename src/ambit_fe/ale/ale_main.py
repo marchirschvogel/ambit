@@ -111,6 +111,11 @@ class AleProblem(problem_base):
 
         self.numdof = self.d.vector.getSize()
 
+        self.mor_params = mor_params
+
+        # sanity check
+        if bool(self.mor_params): assert(self.have_rom)
+
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(time_params, fem_params, time_curves, self.t_init, self.comm)
 
