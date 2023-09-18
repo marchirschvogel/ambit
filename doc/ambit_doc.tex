@@ -441,19 +441,19 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 -- Stabilization \verb\supg_pspg2\:\\
 -- velocity residual operator (\ref{eq:res_v_fluid_ale}) is augmented with the following terms:
 \begin{align}
-r_v \leftarrow r_v &+ \int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,\bs{v}) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V \\
+r_v \leftarrow r_v &+ \int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V \\
 & + \int\limits_{\Om_0} J\,d_2\,(\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}}) (\bs{\nabla}_{0}\delta\bs{v} : \bs{F}^{-\mathrm{T}})\,\mathrm{d}V\\
 &+ \int\limits_{\Om_0} J\,d_3\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V 
 \end{align}
 - pressure residual operator (\ref{eq:res_p_fluid_ale}) is augmented with the following terms:
 \begin{align}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,\bs{v}) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V \\
+r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V \\
 &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_3\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V 
 \end{align}
 
 -- discrete linear system
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \textcolor{orange}{\bs{\mathsf{K}}_{dv}}  & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale}
+\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale}
 \end{align}
 -- note that we get a $\bs{\mathsf{K}}_{pp}$ if we have stabilization
 
@@ -522,7 +522,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 -- discrete linear system
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \zerom & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \textcolor{orange}{\bs{\mathsf{K}}_{dv}}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale_0d}
+\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \zerom & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale_0d}
 \end{align}
 
 

@@ -34,7 +34,10 @@ def main():
     MODEL_PARAMS      = {'modeltype'             : 'syspulcapcor',
                          'coronary_model'        : 'ZCRp_CRd',
                          'parameters'            : param(),
-                         'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
+                         'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2},
+                                                    'rv' : {'type' : '0D_elast', 'activation_curve' : 2},
+                                                    'la' : {'type' : '0D_elast', 'activation_curve' : 1},
+                                                    'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
 
 
     # define your time curves here (syntax: tcX refers to curve X)

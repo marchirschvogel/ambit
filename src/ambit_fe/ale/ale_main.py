@@ -79,9 +79,10 @@ class AleProblem(problem_base):
 
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
-        # check if we want to use model order reduction and if yes, initialize MOR class
-        try: self.have_rom = io_params['use_model_order_red']
-        except: self.have_rom = False
+        # model order reduction
+        self.mor_params = mor_params
+        if bool(self.mor_params): self.have_rom = True
+        else: self.have_rom = False
 
         # create finite element objects
         P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -110,11 +111,6 @@ class AleProblem(problem_base):
         self.w_old = fem.Function(self.V_d)
 
         self.numdof = self.d.vector.getSize()
-
-        self.mor_params = mor_params
-
-        # sanity check
-        if bool(self.mor_params): assert(self.have_rom)
 
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(time_params, fem_params, time_curves, self.t_init, self.comm)

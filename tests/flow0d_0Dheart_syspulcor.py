@@ -40,8 +40,14 @@ def main():
     MODEL_PARAMS      = {'modeltype'             : 'syspul',
                          'coronary_model'        : 'ZCRp_CRd',
                          'parameters'            : param(),
-                         'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 2}, 'la' : {'type' : '0D_elast', 'activation_curve' : 1}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 1}},
-                         'valvelaws'             : {'av' : ['smooth_pres_momentum',0], 'mv' : ['pwlin_pres'], 'pv' : ['pwlin_pres'], 'tv' : ['pwlin_pres']}}
+                         'chamber_models'        : {'lv' : {'type' : '0D_elast', 'activation_curve' : 2},
+                                                    'rv' : {'type' : '0D_elast', 'activation_curve' : 2},
+                                                    'la' : {'type' : '0D_elast', 'activation_curve' : 1},
+                                                    'ra' : {'type' : '0D_elast', 'activation_curve' : 1}},
+                         'valvelaws'             : {'av' : ['smooth_pres_momentum',0],
+                                                    'mv' : ['pwlin_pres'],
+                                                    'pv' : ['pwlin_pres'],
+                                                    'tv' : ['pwlin_pres']}}
 
 
     # define your time curves here (syntax: tcX refers to curve X)

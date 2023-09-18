@@ -126,9 +126,10 @@ class FluidmechanicsProblem(problem_base):
         if self.stabilization is None and self.order_vel == self.order_pres:
             raise ValueError("Equal order velocity and pressure interpolation is not recommended for non-stabilized Navier-Stokes!")
 
-        # check if we want to use model order reduction and if yes, initialize MOR class
-        try: self.have_rom = io_params['use_model_order_red']
-        except: self.have_rom = False
+        # model order reduction
+        self.mor_params = mor_params
+        if bool(self.mor_params): self.have_rom = True
+        else: self.have_rom = False
 
         # ALE fluid problem variables
         self.alevar = alevar
@@ -261,11 +262,6 @@ class FluidmechanicsProblem(problem_base):
         self.internalvars, self.internalvars_old = {}, {}
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
-
-        self.mor_params = mor_params
-
-        # sanity check
-        if bool(self.mor_params): assert(self.have_rom)
 
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, comm=self.comm)

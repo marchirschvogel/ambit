@@ -24,7 +24,6 @@ def main():
     except: restart_step = 0
 
     IO_PARAMS            = {'problem_type'          : 'fluid_ale',
-                            'use_model_order_red'   : True,
                             'write_results_every'   : 1,
                             'write_restart_every'   : 2,
                             'restart_step'          : restart_step,

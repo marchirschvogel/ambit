@@ -32,7 +32,10 @@ def main():
 
     MODEL_PARAMS      = {'modeltype'             : 'syspulcaprespir',
                          'parameters'            : param(),
-                         'chamber_models'        : {'lv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 1}, 'rv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 2}, 'la' : {'type' : '0D_elast_prescr', 'elastance_curve' : 3}, 'ra' : {'type' : '0D_elast_prescr', 'elastance_curve' : 4}}}
+                         'chamber_models'        : {'lv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 1},
+                                                    'rv' : {'type' : '0D_elast_prescr', 'elastance_curve' : 2},
+                                                    'la' : {'type' : '0D_elast_prescr', 'elastance_curve' : 3},
+                                                    'ra' : {'type' : '0D_elast_prescr', 'elastance_curve' : 4}}}
 
 
     # define your time curves here (syntax: tcX refers to curve X)

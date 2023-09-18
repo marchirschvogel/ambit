@@ -29,7 +29,6 @@ def check_params_io(params):
                     'results_to_write',
                     'simname',
                     'USE_MIXED_DOLFINX_BRANCH',
-                    'use_model_order_red',
                     'volume_laplace',
                     'write_results_every',
                     'write_results_every_0D',

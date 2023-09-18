@@ -16,7 +16,6 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fluid_ale',
-                            'use_model_order_red'   : True,
                             'write_results_every'   : 2,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-# tests:
-# - steady incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
-# - Stabilized P1P1 elements for velocity and pressure
-# - Backward-Euler time stepping scheme
-# - 2 material domains in fluid (w/ same parameters though)
-# - Schur2x2 block preconditioner
+"""
+steady incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
+- stabilized P1P1 elements for velocity and pressure
+- Backward-Euler time stepping scheme
+- 2 material domains in fluid (w/ same parameters though)
+- Schur2x2 block preconditioner
+"""
 
 import ambit_fe
 

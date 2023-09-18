@@ -61,8 +61,14 @@ def main():
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul',
                             'coronary_model'        : None,
                             'parameters'            : param(),
-                            'chamber_models'        : {'lv' : {'type' : '3D_fluid', 'num_inflows':0, 'num_outflows':1}, 'rv' : {'type' : '0D_elast', 'activation_curve' : 1}, 'la' : {'type' : '3D_fluid', 'num_inflows':4, 'num_outflows':0}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 2}},
-                            'valvelaws'             : {'av' : ['pwlin_time'], 'mv' : ['pwlin_pres'], 'pv' : ['pwlin_pres'], 'tv' : ['pwlin_pres']},
+                            'chamber_models'        : {'lv' : {'type' : '3D_fluid', 'num_inflows':0, 'num_outflows':1},
+                                                       'rv' : {'type' : '0D_elast', 'activation_curve' : 1},
+                                                       'la' : {'type' : '3D_fluid', 'num_inflows':4, 'num_outflows':0},
+                                                       'ra' : {'type' : '0D_elast', 'activation_curve' : 2}},
+                            'valvelaws'             : {'av' : ['pwlin_time'], # time-controlled aortic valve
+                                                       'mv' : ['pwlin_pres'], # overridden by prescibed q_vin_l - mitral valve is an immersed surface in 3D!
+                                                       'pv' : ['pwlin_pres'],
+                                                       'tv' : ['pwlin_pres']},
                             'prescribed_variables'  : {'q_vin_l' : {'flux_monitor' : 0}}}
 
     FEM_PARAMS_FLUID     = {'order_vel'             : 1, 

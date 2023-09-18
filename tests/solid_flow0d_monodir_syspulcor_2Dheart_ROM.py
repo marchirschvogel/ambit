@@ -23,7 +23,6 @@ def main():
     except: restart_step = 0
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d',
-                            'use_model_order_red'   : True,
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : [basepath+'/input/fib_fiber_nodal_2D.txt',basepath+'/input/fib_sheet_nodal_2D.txt'],
