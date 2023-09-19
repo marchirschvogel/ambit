@@ -51,39 +51,33 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
 
     if model == 'syspul':
 
-        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspul', str(fpath)+'/../flow0d/cardiovascular0D_syspul.py')
-        module_name = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module_name)
-        module_name.postprocess_groups_syspul(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        postprocess_groups_syspul(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcap':
 
-        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspulcap', str(fpath)+'/../flow0d/cardiovascular0D_syspulcap.py')
-        module_name = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module_name)
-        module_name.postprocess_groups_syspulcap(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        postprocess_groups_syspulcap(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcapcor':
 
-        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspulcap', str(fpath)+'/../flow0d/cardiovascular0D_syspulcap.py')
-        module_name = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module_name)
-        module_name.postprocess_groups_syspulcapcor(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        postprocess_groups_syspulcapcor(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
 
     elif model == 'syspulcaprespir':
 
-        spec = importlib.util.spec_from_file_location('cardiovascular0D_syspulcaprespir', str(fpath)+'/../flow0d/cardiovascular0D_syspulcaprespir.py')
-        module_name = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module_name)
-        module_name.postprocess_groups_syspulcaprespir(groups,coronarymodel,indpertaftercyl,multiscalegandr)
+        postprocess_groups_syspulcaprespir(groups,coronarymodel,indpertaftercyl,multiscalegandr)
         iscirculation = True
         calculate_function_params = calc_func_params
+
+    elif model == '2elwindkessel':
+
+        # TODO: Should we implement this?
+        iscirculation = False
+        pass
 
     elif model == '4elwindkesselLsZ':
 
@@ -97,11 +91,11 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
         iscirculation = False
         pass
 
-    elif model == '2elwindkessel':
+    elif model == 'CRLinoutlink':
 
-        import cardiovascular0D_2elwindkessel
-        cardiovascular0D_2elwindkessel.postprocess_groups(groups,indpertaftercyl)
+        # TODO: Should we implement this?
         iscirculation = False
+        pass
 
     else:
 
@@ -690,6 +684,385 @@ def postprocess0D(path, sname, nstep_cycl, T_cycl, t_ed, t_es, model, coronarymo
             subprocess.call(['rm', path+'/plot0d_'+sname+'/'+list(groups[g].keys())[0]+'-inc.eps'])
             # delete gnuplot file
             subprocess.call(['rm', path+'/plot_'+list(groups[g].keys())[0]+'.p'])
+
+
+# settings for the variables to plot
+def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, multiscalegandr=False):
+
+    # index 0
+    groups.append({'pres_time_sys_l'  : ['p_at_l', 'p_v_l', 'p_ar_sys', 'p_ard_sys', 'p_ven_sys'],
+                'tex'              : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ar,d}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                'lines'            : [1, 2, 3, 5, 15]})
+    # index 1
+    groups.append({'pres_time_pul_r'  : ['p_at_r', 'p_v_r', 'p_ar_pul', 'p_ven_pul'],
+                'tex'              : ['$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
+                'lines'            : [16, 17, 18, 20]})
+    # index 2
+    groups.append({'flux_time_sys_l'  : ['q_vin_l', 'q_vout_l', 'q_ar_sys', 'q_ven1_sys', 'q_ven2_sys'],
+                'tex'              : ['$q_{\\\mathrm{v,in}}^{\\\ell}$', '$q_{\\\mathrm{v,out}}^{\\\ell}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,1}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,2}}^{\\\mathrm{sys}}$'],
+                'lines'            : [1, 2, 3, 15, 151]})
+    # index 3
+    groups.append({'flux_time_pul_r'  : ['q_vin_r', 'q_vout_r', 'q_ar_pul', 'q_ven1_pul', 'q_ven2_pul', 'q_ven3_pul', 'q_ven4_pul', 'q_ven5_pul'],
+                'tex'              : ['$q_{\\\mathrm{v,in}}^{r}$', '$q_{\\\mathrm{v,out}}^{r}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,1}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,2}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,3}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,4}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,5}}^{\\\mathrm{pul}}$'],
+                'lines'            : [16, 17, 18, 20, 201, 202, 203, 204]})
+    # index 4
+    groups.append({'vol_time_l_r'     : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r'],
+                'tex'              : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$'],
+                'lines'            : [1, 2, 16, 17]})
+    # index 5
+    groups.append({'vol_time_compart' : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r', 'V_ar_sys', 'V_ven_sys', 'V_ar_pul', 'V_ven_pul'],
+                'tex'              : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
+                'lines'            : [1, 2, 16, 17, 3, 15, 18, 20]})
+    # index 6
+    groups.append({'flux_time_compart' : ['Q_at_l', 'Q_v_l', 'Q_at_r', 'Q_v_r'],
+                'tex'              : ['$Q_{\\\mathrm{at}}^{\\\ell}$', '$Q_{\\\mathrm{v}}^{\\\ell}$', '$Q_{\\\mathrm{at}}^{r}$', '$Q_{\\\mathrm{v}}^{r}$'],
+                'lines'            : [1, 2, 16, 17]})
+
+    if coronarymodel == 'ZCRp_CRd_lr' or coronarymodel == 'std_lr':
+
+        # index 6
+        groups.append({'flux_time_cor'  : ['q_corp_sys_l_in', 'q_corp_sys_l', 'q_corp_sys_r_in', 'q_corp_sys_r', 'q_cord_sys_l', 'q_cord_sys_r'],
+                    'tex'              : ['$q_{\\\mathrm{cor,p,in}}^{\\\mathrm{sys},\\\ell}$', '$q_{\\\mathrm{cor,p}}^{\\\mathrm{sys},\\\ell}$', '$q_{\\\mathrm{cor,p,in}}^{\\\mathrm{sys},r}$', '$q_{\\\mathrm{cor,p}}^{\\\mathrm{sys},r}$', '$q_{\\\mathrm{cor,d}}^{\\\mathrm{sys},\\\ell}$', '$q_{\\\mathrm{cor,d}}^{\\\mathrm{sys},r}$'],
+                    'lines'            : [1, 5, 2, 6, 12, 14]})
+
+        groups[5]['vol_time_compart'].append('V_corp_sys_l')
+        groups[5]['vol_time_compart'].append('V_corp_sys_r')
+        groups[5]['vol_time_compart'].append('V_cord_sys_l')
+        groups[5]['vol_time_compart'].append('V_cord_sys_r')
+
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,p}}^{\\\mathrm{sys},\\\ell}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,p}}^{\\\mathrm{sys},r}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,d}}^{\\\mathrm{sys},\\\ell}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,d}}^{\\\mathrm{sys},r}$')
+
+        groups[5]['lines'].append(5)
+        groups[5]['lines'].append(6)
+        groups[5]['lines'].append(10)
+        groups[5]['lines'].append(11)
+
+    elif coronarymodel == 'ZCRp_CRd' or coronarymodel == 'std':
+
+        # index 6
+        groups.append({'flux_time_cor'  : ['q_corp_sys_in', 'q_corp_sys', 'q_ven2_sys'],
+                    'tex'              : ['$q_{\\\mathrm{cor,p,in}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{cor,p}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{cor,d}}^{\\\mathrm{sys}}$'],
+                    'lines'            : [1, 5, 12]})
+
+        groups[5]['vol_time_compart'].append('V_corp_sys')
+        groups[5]['vol_time_compart'].append('V_cord_sys')
+
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,p}}^{\\\mathrm{sys}}$')
+        groups[5]['tex'].append('$V_{\\\mathrm{cor,d}}^{\\\mathrm{sys}}$')
+
+        groups[5]['lines'].append(5)
+        groups[5]['lines'].append(10)
+
+    elif coronarymodel is None:
+
+        pass
+
+    else:
+        raise RuntimeError("You've specified a non-existent coronarymodel!")
+
+    # all volumes summed up for conservation check
+    groups[5]['vol_time_compart'].append('V_all')
+    groups[5]['tex'].append('$\\\sum V$')
+    groups[5]['lines'].append(99)
+
+    # pv loops are only considered for the last cycle
+
+    if indpertaftercyl > 0: # for comparison of healthy/baseline and perturbed states
+        if multiscalegandr:
+            # index 6
+            groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_gandr', 'pV_v_r_gandr', 'pV_v_l_last', 'pV_v_r_last', 'pV_v_l_baseline', 'pV_v_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [21, 22, 102, 117, 97, 98]})
+            # index 7
+            groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_gandr', 'pV_at_r_gandr', 'pV_at_l_last', 'pV_at_r_last', 'pV_at_l_baseline', 'pV_at_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [23, 24, 101, 116, 97, 98]})
+        else:
+            # index 6
+            groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_last', 'pV_v_r_last', 'pV_v_l_baseline', 'pV_v_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [2, 17, 97, 98]})
+            # index 7
+            groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last', 'pV_at_l_baseline', 'pV_at_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [1, 16, 97, 98]})
+    else:
+        # index 6
+        groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_last', 'pV_v_r_last'],
+                    'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$'],
+                    'lines'                    : [2, 17]})
+        # index 7
+        groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last'],
+                    'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$'],
+                    'lines'                    : [1, 16]})
+
+    # now append all the values again but with suffix PERIODIC, since we want to plot both:
+    # values over all heart cycles as well as only for the periodic cycle
+    # index 8
+    groups.append({'pres_time_sys_l_PERIODIC'  : list(groups[0].values())[0],
+                'tex'                       : list(groups[0].values())[1],
+                'lines'                     : list(groups[0].values())[2]})
+    # index 9
+    groups.append({'pres_time_pul_r_PERIODIC'  : list(groups[1].values())[0],
+                'tex'                       : list(groups[1].values())[1],
+                'lines'                     : list(groups[1].values())[2]})
+    # index 10
+    groups.append({'flux_time_sys_l_PERIODIC'  : list(groups[2].values())[0],
+                'tex'                       : list(groups[2].values())[1],
+                'lines'                     : list(groups[2].values())[2]})
+    # index 11
+    groups.append({'flux_time_pul_r_PERIODIC'  : list(groups[3].values())[0],
+                'tex'                       : list(groups[3].values())[1],
+                'lines'                     : list(groups[3].values())[2]})
+    # index 12
+    groups.append({'vol_time_l_r_PERIODIC'     : list(groups[4].values())[0],
+                'tex'                       : list(groups[4].values())[1],
+                'lines'                     : list(groups[4].values())[2]})
+    # index 13
+    groups.append({'vol_time_compart_PERIODIC' : list(groups[5].values())[0],
+                'tex'                       : list(groups[5].values())[1],
+                'lines'                     : list(groups[5].values())[2]})
+    # index 14
+    groups.append({'flux_time_compart_PERIODIC' : list(groups[6].values())[0],
+                'tex'                       : list(groups[6].values())[1],
+                'lines'                     : list(groups[6].values())[2]})
+
+    if coronarymodel is not None:
+        # index 14
+        groups.append({'flux_time_cor_PERIODIC' : list(groups[6].values())[0],
+                    'tex'                       : list(groups[6].values())[1],
+                    'lines'                     : list(groups[6].values())[2]})
+
+
+def postprocess_groups_syspulcap(groups, indpertaftercyl=0, multiscalegandr=False):
+
+    # index 0
+    groups.append({'pres_time_sys_l'  : ['p_at_l', 'p_v_l', 'p_ar_sys', 'p_arperi_sys', 'p_venspl_sys', 'p_venespl_sys', 'p_venmsc_sys', 'p_vencer_sys', 'p_vencor_sys', 'p_ven_sys'],
+                'tex'                 : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ar,peri}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                'lines'               : [1, 2, 3, 4, 10, 11, 12, 13, 14, 15]})
+    # index 1
+    groups.append({'pres_time_pul_r'  : ['p_at_r', 'p_v_r', 'p_ar_pul', 'p_cap_pul', 'p_ven_pul'],
+                'tex'                 : ['$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{cap}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
+                'lines'               : [16, 17, 18, 19, 20]})
+    # index 2
+    groups.append({'flux_time_sys_l'  : ['q_vin_l', 'q_vout_l', 'q_ar_sys', 'q_arspl_sys', 'q_arespl_sys', 'q_armsc_sys', 'q_arcer_sys', 'q_arcor_sys', 'q_venspl_sys', 'q_venespl_sys', 'q_venmsc_sys', 'q_vencer_sys', 'q_vencor_sys', 'q_ven_sys'],
+                'tex'                 : ['$q_{\\\mathrm{v,in}}^{\\\ell}$', '$q_{\\\mathrm{v,out}}^{\\\ell}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,spl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,espl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,msc}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,cer}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,cor}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                'lines'               : [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]})
+    # index 3
+    groups.append({'flux_time_pul_r'  : ['q_vin_r', 'q_vout_r', 'q_ar_pul', 'q_cap_pul', 'q_ven_pul'],
+                'tex'                 : ['$q_{\\\mathrm{v,in}}^{r}$', '$q_{\\\mathrm{v,out}}^{r}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{cap}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
+                'lines'               : [16, 17, 18, 19, 20]})
+    # index 4
+    groups.append({'vol_time_l_r'     : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r'],
+                'tex'                 : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$'],
+                'lines'               : [1, 2, 16, 17]})
+    # index 5
+    groups.append({'vol_time_compart' : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r', 'V_ar_sys', 'V_arperi_sys', 'V_venspl_sys', 'V_venespl_sys', 'V_venmsc_sys', 'V_vencer_sys', 'V_vencor_sys', 'V_ven_sys', 'V_ar_pul', 'V_cap_pul', 'V_ven_pul'],
+                'tex'                 : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar,peri}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$V_{\\\mathrm{cap}}^{\\\mathrm{pul}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
+                'lines'               : [1, 2, 16, 17, 3, 4, 10, 11, 12, 13, 14, 15, 18, 19, 20]})
+
+    # all volumes summed up for conservation check
+    groups[5]['vol_time_compart'].append('V_all')
+    groups[5]['tex'].append('$\\\sum V$')
+    groups[5]['lines'].append(99)
+
+    # pv loops are only considered for the last cycle
+
+    if indpertaftercyl > 0: # for comparison of healthy/baseline and perturbed states
+        if multiscalegandr:
+            # index 6
+            groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_gandr', 'pV_v_r_gandr', 'pV_v_l_last', 'pV_v_r_last', 'pV_v_l_baseline', 'pV_v_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [21, 22, 102, 117, 97, 98]})
+            # index 7
+            groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_gandr', 'pV_at_r_gandr', 'pV_at_l_last', 'pV_at_r_last', 'pV_at_l_baseline', 'pV_at_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [23, 24, 101, 116, 97, 98]})
+        else:
+            # index 6
+            groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_last', 'pV_v_r_last', 'pV_v_l_baseline', 'pV_v_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [2, 17, 97, 98]})
+            # index 7
+            groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last', 'pV_at_l_baseline', 'pV_at_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [1, 16, 97, 98]})
+    else:
+        # index 6
+        groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_last', 'pV_v_r_last'],
+                       'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$'],
+                       'lines'                    : [2, 17]})
+        # index 7
+        groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last'],
+                       'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$'],
+                       'lines'                    : [1, 16]})
+
+    # now append all the values again but with suffix PERIODIC, since we want to plot both:
+    # values over all heart cycles as well as only for the periodic cycle
+
+    # index 8
+    groups.append({'pres_time_sys_l_PERIODIC'  : list(groups[0].values())[0],
+                   'tex'                       : list(groups[0].values())[1],
+                   'lines'                     : list(groups[0].values())[2]})
+    # index 9
+    groups.append({'pres_time_pul_r_PERIODIC'  : list(groups[1].values())[0],
+                   'tex'                       : list(groups[1].values())[1],
+                   'lines'                     : list(groups[1].values())[2]})
+    # index 10
+    groups.append({'flux_time_sys_l_PERIODIC'  : list(groups[2].values())[0],
+                   'tex'                       : list(groups[2].values())[1],
+                   'lines'                     : list(groups[2].values())[2]})
+    # index 11
+    groups.append({'flux_time_pul_r_PERIODIC'  : list(groups[3].values())[0],
+                   'tex'                       : list(groups[3].values())[1],
+                   'lines'                     : list(groups[3].values())[2]})
+    # index 12
+    groups.append({'vol_time_l_r_PERIODIC'     : list(groups[4].values())[0],
+                   'tex'                       : list(groups[4].values())[1],
+                   'lines'                     : list(groups[4].values())[2]})
+    # index 13
+    groups.append({'vol_time_compart_PERIODIC' : list(groups[5].values())[0],
+                   'tex'                       : list(groups[5].values())[1],
+                   'lines'                     : list(groups[5].values())[2]})
+
+
+def postprocess_groups_syspulcapcor(groups, coronarymodel=None, indpertaftercyl=0, multiscalegandr=False):
+
+    # index 0
+    groups.append({'pres_time_sys_l'  : ['p_at_l', 'p_v_l', 'p_ar_sys', 'p_arperi_sys', 'p_venspl_sys', 'p_venespl_sys', 'p_venmsc_sys', 'p_vencer_sys', 'p_vencor_sys', 'p_ven_sys'],
+                'tex'                 : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ar,peri}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                'lines'               : [1, 2, 3, 4, 10, 11, 12, 13, 14, 15]})
+    # index 1
+    groups.append({'pres_time_pul_r'  : ['p_at_r', 'p_v_r', 'p_ar_pul', 'p_cap_pul', 'p_ven_pul'],
+                'tex'                 : ['$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{cap}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
+                'lines'               : [16, 17, 18, 19, 20]})
+    # index 2
+    groups.append({'flux_time_sys_l'  : ['q_vin_l', 'q_vout_l', 'q_ar_sys', 'q_arspl_sys', 'q_arespl_sys', 'q_armsc_sys', 'q_arcer_sys', 'q_arcor_sys', 'q_venspl_sys', 'q_venespl_sys', 'q_venmsc_sys', 'q_vencer_sys', 'q_ven1_sys', 'q_ven2_sys'],
+                'tex'                 : ['$q_{\\\mathrm{v,in}}^{\\\ell}$', '$q_{\\\mathrm{v,out}}^{\\\ell}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,spl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,espl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,msc}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,cer}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ar,cor}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,1}}^{\\\mathrm{sys}}$', '$q_{\\\mathrm{ven,2}}^{\\\mathrm{sys}}$'],
+                'lines'               : [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]})
+    # index 3
+    groups.append({'flux_time_pul_r'  : ['q_vin_r', 'q_vout_r', 'q_ar_pul', 'q_cap_pul', 'q_ven1_pul', 'q_ven2_pul', 'q_ven3_pul', 'q_ven4_pul'],
+                'tex'                 : ['$q_{\\\mathrm{v,in}}^{r}$', '$q_{\\\mathrm{v,out}}^{r}$', '$q_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{cap}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,1}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,2}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,3}}^{\\\mathrm{pul}}$', '$q_{\\\mathrm{ven,4}}^{\\\mathrm{pul}}$'],
+                'lines'               : [16, 17, 18, 19, 20, 201, 202, 203]})
+    # index 4
+    groups.append({'vol_time_l_r'     : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r'],
+                'tex'                 : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$'],
+                'lines'               : [1, 2, 16, 17]})
+    # index 5
+    groups.append({'vol_time_compart' : ['V_at_l', 'V_v_l', 'V_at_r', 'V_v_r', 'V_ar_sys', 'V_arcor_sys', 'V_arperi_sys', 'V_venspl_sys', 'V_venespl_sys', 'V_venmsc_sys', 'V_vencer_sys', 'V_vencor_sys', 'V_ven_sys', 'V_ar_pul', 'V_cap_pul', 'V_ven_pul'],
+                'tex'                 : ['$V_{\\\mathrm{at}}^{\\\ell}$', '$V_{\\\mathrm{v}}^{\\\ell}$', '$V_{\\\mathrm{at}}^{r}$', '$V_{\\\mathrm{v}}^{r}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar,cor}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar,peri}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{sys}}$', '$V_{\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$V_{\\\mathrm{cap}}^{\\\mathrm{pul}}$', '$V_{\\\mathrm{ven}}^{\\\mathrm{pul}}$'],
+                'lines'               : [1, 2, 16, 17, 3, 9, 4, 10, 11, 12, 13, 14, 15, 18, 19, 20]})
+
+    # all volumes summed up for conservation check
+    groups[5]['vol_time_compart'].append('V_all')
+    groups[5]['tex'].append('$\\\sum V$')
+    groups[5]['lines'].append(99)
+
+    # pv loops are only considered for the last cycle
+
+    if indpertaftercyl > 0: # for comparison of healthy/baseline and perturbed states
+        if multiscalegandr:
+            # index 6
+            groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_gandr', 'pV_v_r_gandr', 'pV_v_l_last', 'pV_v_r_last', 'pV_v_l_baseline', 'pV_v_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [21, 22, 102, 117, 97, 98]})
+            # index 7
+            groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_gandr', 'pV_at_r_gandr', 'pV_at_l_last', 'pV_at_r_last', 'pV_at_l_baseline', 'pV_at_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{G\\&R}}$', '$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [23, 24, 101, 116, 97, 98]})
+        else:
+            # index 6
+            groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_last', 'pV_v_r_last', 'pV_v_l_baseline', 'pV_v_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{v}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{v}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [2, 17, 97, 98]})
+            # index 7
+            groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last', 'pV_at_l_baseline', 'pV_at_r_baseline'],
+                        'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{at}}^{\\\ell,\\\mathrm{ref}}$', '$p_{\\\mathrm{at}}^{r,\\\mathrm{ref}}$'],
+                        'lines'                    : [1, 16, 97, 98]})
+    else:
+        # index 6
+        groups.append({'pres_vol_v_l_r_PERIODIC'  : ['pV_v_l_last', 'pV_v_r_last'],
+                       'tex'                      : ['$p_{\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{v}}^{r}$'],
+                       'lines'                    : [2, 17]})
+        # index 7
+        groups.append({'pres_vol_at_l_r_PERIODIC' : ['pV_at_l_last', 'pV_at_r_last'],
+                       'tex'                      : ['$p_{\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{at}}^{r}$'],
+                       'lines'                    : [1, 16]})
+
+    # now append all the values again but with suffix PERIODIC, since we want to plot both:
+    # values over all heart cycles as well as only for the periodic cycle
+
+    # index 8
+    groups.append({'pres_time_sys_l_PERIODIC'  : list(groups[0].values())[0],
+                   'tex'                       : list(groups[0].values())[1],
+                   'lines'                     : list(groups[0].values())[2]})
+    # index 9
+    groups.append({'pres_time_pul_r_PERIODIC'  : list(groups[1].values())[0],
+                   'tex'                       : list(groups[1].values())[1],
+                   'lines'                     : list(groups[1].values())[2]})
+    # index 10
+    groups.append({'flux_time_sys_l_PERIODIC'  : list(groups[2].values())[0],
+                   'tex'                       : list(groups[2].values())[1],
+                   'lines'                     : list(groups[2].values())[2]})
+    # index 11
+    groups.append({'flux_time_pul_r_PERIODIC'  : list(groups[3].values())[0],
+                   'tex'                       : list(groups[3].values())[1],
+                   'lines'                     : list(groups[3].values())[2]})
+    # index 12
+    groups.append({'vol_time_l_r_PERIODIC'     : list(groups[4].values())[0],
+                   'tex'                       : list(groups[4].values())[1],
+                   'lines'                     : list(groups[4].values())[2]})
+    # index 13
+    groups.append({'vol_time_compart_PERIODIC' : list(groups[5].values())[0],
+                   'tex'                       : list(groups[5].values())[1],
+                   'lines'                     : list(groups[5].values())[2]})
+
+
+
+def postprocess_groups_syspulcaprespir(groups, coronarymodel=None, indpertaftercyl=0,multiscalegandr=False):
+
+    postprocess_groups_syspulcap(groups,indpertaftercyl,multiscalegandr)
+
+    # index 14
+    groups.append({'ppO2_time_sys_l'  : ['ppO2_at_l', 'ppO2_v_l', 'ppO2_ar_sys', 'ppO2_arspl_sys', 'ppO2_arespl_sys', 'ppO2_armsc_sys', 'ppO2_arcer_sys', 'ppO2_arcor_sys', 'ppO2_venspl_sys', 'ppO2_venespl_sys', 'ppO2_venmsc_sys', 'ppO2_vencer_sys', 'ppO2_vencor_sys', 'ppO2_ven_sys'],
+                   'tex'              : ['$p_{\\\mathrm{O}_2,\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{O}_2,\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                   'lines'            : [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]})
+    # index 15
+    groups.append({'ppCO2_time_sys_l' : ['ppCO2_at_l', 'ppCO2_v_l', 'ppCO2_ar_sys', 'ppCO2_arspl_sys', 'ppCO2_arespl_sys', 'ppCO2_armsc_sys', 'ppCO2_arcer_sys', 'ppCO2_arcor_sys', 'ppCO2_venspl_sys', 'ppCO2_venespl_sys', 'ppCO2_venmsc_sys', 'ppCO2_vencer_sys', 'ppCO2_vencor_sys', 'ppCO2_ven_sys'],
+                   'tex'              : ['$p_{\\\mathrm{CO}_2,\\\mathrm{at}}^{\\\ell}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{v}}^{\\\ell}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven,spl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven,espl}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven,msc}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven,cer}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven,cor}}^{\\\mathrm{sys}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven}}^{\\\mathrm{sys}}$'],
+                   'lines'            : [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]})
+    # index 16
+    groups.append({'ppO2_time_pul_r'  : ['ppO2_at_r', 'ppO2_v_r', 'ppO2_ar_pul', 'ppO2_ven_pul', 'ppO2_cap_pul'],
+                   'tex'              : ['$p_{\\\mathrm{O}_2,\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{O}_2,\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{ven}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{O}_2,\\\mathrm{cap}}^{\\\mathrm{pul}}$'],
+                   'lines'            : [16, 17, 18, 19, 20]})
+    # index 17
+    groups.append({'ppCO2_time_pul_r' : ['ppCO2_at_r', 'ppCO2_v_r', 'ppCO2_ar_pul', 'ppCO2_ven_pul', 'ppCO2_cap_pul'],
+                   'tex'              : ['$p_{\\\mathrm{CO}_2,\\\mathrm{at}}^{r}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{v}}^{r}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ar}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{ven}}^{\\\mathrm{pul}}$', '$p_{\\\mathrm{CO}_2,\\\mathrm{cap}}^{\\\mathrm{pul}}$'],
+                   'lines'            : [16, 17, 18, 19, 20]})
+
+    # now append all the values again but with suffix PERIODIC, since we want to plot both:
+    # values over all heart cycles as well as only for the periodic cycle
+
+    # index 18
+    groups.append({'ppO2_time_sys_l_PERIODIC'  : list(groups[14].values())[0],
+                   'tex'                       : list(groups[14].values())[1],
+                   'lines'                     : list(groups[14].values())[2]})
+    # index 19
+    groups.append({'ppCO2_time_sys_l_PERIODIC' : list(groups[15].values())[0],
+                   'tex'                       : list(groups[15].values())[1],
+                   'lines'                     : list(groups[15].values())[2]})
+    # index 20
+    groups.append({'ppO2_time_pul_r_PERIODIC'  : list(groups[16].values())[0],
+                   'tex'                       : list(groups[16].values())[1],
+                   'lines'                     : list(groups[16].values())[2]})
+    # index 21
+    groups.append({'ppCO2_time_pul_r_PERIODIC' : list(groups[17].values())[0],
+                   'tex'                       : list(groups[17].values())[1],
+                   'lines'                     : list(groups[17].values())[2]})
+
 
 
 if __name__ == "__main__":
