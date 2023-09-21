@@ -151,9 +151,12 @@ class variationalform(variationalform_base):
 
 
     ### SUPG/PSPG stabilization - cf. Tezduyar and Osawa (2000), "Finite element stabilization parameters computed from element matrices and vectors"
-    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, w=None, Fale=None):
+    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, w=None, Fale=None, symmetric=False):
 
-        return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, res_v_strong) * ddomain
+        if symmetric: # modification to make the effective stress symmetric
+            return (1./rho) * ufl.dot(tau_supg*rho*ufl.sym(ufl.grad(self.var_v))*v, res_v_strong) * ddomain
+        else:
+            return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, res_v_strong) * ddomain
 
     def stab_pspg(self, a, v, p, var_p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
 
@@ -374,9 +377,12 @@ class variationalform_ale(variationalform):
 
 
     ### SUPG/PSPG stabilization
-    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, w=None, Fale=None):
+    def stab_supg(self, a, v, p, res_v_strong, tau_supg, rho, ddomain, w=None, Fale=None, symmetric=False):
         J = ufl.det(Fale)
-        return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*ufl.inv(Fale)*(v-w), res_v_strong) * J*ddomain
+        if symmetric: # modification to make the effective stress symmetric
+            return (1./rho) * ufl.dot(tau_supg*rho*ufl.sym(ufl.grad(self.var_v)*ufl.inv(Fale))*v, res_v_strong) * J*ddomain
+        else:
+            return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*ufl.inv(Fale)*v, res_v_strong) * J*ddomain
 
     def stab_pspg(self, a, v, p, var_p, res_v_strong, tau_pspg, rho, ddomain, Fale=None):
         J = ufl.det(Fale)

@@ -491,6 +491,9 @@ class FluidmechanicsProblem(problem_base):
 
             h = self.io.hd0 # cell diameter (could also use max edge length self.io.emax0, but seems to yield similar/same results)
 
+            try: symm = self.stabilization['symmetric']
+            except: symm = False
+
             # full scheme
             if self.stabilization['scheme']=='supg_pspg':
 
@@ -521,8 +524,8 @@ class FluidmechanicsProblem(problem_base):
 
                     # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
                     if self.fluid_governing_type=='navierstokes_transient' or self.fluid_governing_type=='navierstokes_steady':
-                        self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p_[j], residual_v_strong, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'])
-                        self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old_[j], residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'])
+                        self.deltaW_int     += self.vf.stab_supg(self.acc, self.v, self.p_[j], residual_v_strong, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w'], Fale=self.alevar['Fale'], symmetric=symm)
+                        self.deltaW_int_old += self.vf.stab_supg(self.a_old, self.v_old, self.p_old_[j], residual_v_strong_old, tau_supg, self.rho[n], self.dx_[n], w=self.alevar['w_old'], Fale=self.alevar['Fale_old'], symmetric=symm)
                     # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
                     self.deltaW_p[n]     += self.vf.stab_pspg(self.acc, self.v, self.p_[j], self.var_p_[j], residual_v_strong, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale'])
                     self.deltaW_p_old[n] += self.vf.stab_pspg(self.a_old, self.v_old, self.p_old_[j], self.var_p_[j], residual_v_strong_old, tau_pspg, self.rho[n], self.dx_[n], Fale=self.alevar['Fale_old'])
@@ -532,9 +535,6 @@ class FluidmechanicsProblem(problem_base):
 
             # reduced scheme: missing transient NS term as well as divergence stress term of strong residual
             if self.stabilization['scheme']=='supg_pspg2':
-
-                try: symm = self.stabilization['symmetric']
-                except: symm = False
 
                 # optimized for first-order
                 assert(self.order_vel==1)

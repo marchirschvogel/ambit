@@ -364,7 +364,6 @@ class schur_3x3(block_precond):
 
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
         # compute self.Smod = self.C - B_Adinv_Bt
-
         self.C.copy(result=self.Smod)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
 
@@ -374,7 +373,6 @@ class schur_3x3(block_precond):
         self.B.matMult(self.Adinv_Dt, result=self.B_Adinv_Dt)  # B diag(A)^{-1} Dt
 
         # compute self.Tmod = self.Et - B_Adinv_Dt
-        #self.Tmod.aypx(0., self.Et, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
         self.Et.copy(result=self.Tmod)
         self.Tmod.axpy(-1., self.B_Adinv_Dt)
 
