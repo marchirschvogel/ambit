@@ -738,9 +738,9 @@ class SolidmechanicsProblem(problem_base):
 
     def set_problem_residual_jacobian_forms(self):
 
-        tes = time.time()
+        ts = time.time()
         if self.comm.rank == 0:
-            print('FEM form compilation for solid...')
+            print('FEM form compilation for solid...', end=" ")
             sys.stdout.flush()
 
         if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
@@ -783,13 +783,18 @@ class SolidmechanicsProblem(problem_base):
                     self.jac_up = fem.form(self.weakform_lin_prestress_up)
                     self.jac_pu = fem.form(self.weakform_lin_prestress_pu)
 
-        tee = time.time() - tes
+        te = time.time() - ts
         if self.comm.rank == 0:
-            print('FEM form compilation for solid finished, te = %.2f s' % (tee))
+            print('t = %.4f s' % (te))
             sys.stdout.flush()
 
 
     def set_problem_vector_matrix_structures(self):
+
+        ts = time.time()
+        if self.comm.rank == 0:
+            print('Creating vector and matrix structures for solid...', end=" ")
+            sys.stdout.flush()
 
         self.r_u = fem.petsc.create_vector(self.res_u)
         self.K_uu = fem.petsc.create_matrix(self.jac_uu)
@@ -804,6 +809,11 @@ class SolidmechanicsProblem(problem_base):
                 self.K_pp = fem.petsc.create_matrix(self.jac_pp)
             else:
                 self.K_pp = None
+
+        te = time.time() - ts
+        if self.comm.rank == 0:
+            print('t = %.4f s' % (te))
+            sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -1001,6 +1011,12 @@ class SolidmechanicsSolver(solver_base):
 
         # consider consistent initial acceleration
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
+
+            ts = time.time()
+            if self.pb.comm.rank == 0:
+                print('Setting forms and solving for consistent initial acceleration...', end=" ")
+                sys.stdout.flush()
+
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
 
@@ -1009,6 +1025,11 @@ class SolidmechanicsSolver(solver_base):
             # solve for consistent initial acceleration a_old
             res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)
+
+            te = time.time() - ts
+            if self.pb.comm.rank == 0:
+                print('t = %.4f s' % (te))
+                sys.stdout.flush()
 
 
     def solve_nonlinear_problem(self, t):

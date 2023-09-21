@@ -76,11 +76,10 @@ class ode:
     # make Lambda functions out of symbolic Sympy expressions
     def lambdify_expressions(self):
 
-        if self.comm.rank == 0:
-            print("ODE model: Calling lambdify for expressions...")
-            sys.stdout.flush()
-
         ts = time.time()
+        if self.comm.rank == 0:
+            print("ODE model: Calling lambdify for residual expressions...", end=" ")
+            sys.stdout.flush()
 
         for i in range(self.numdof):
             self.df__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.df_[i], 'numpy')
@@ -88,12 +87,14 @@ class ode:
             self.a__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.a_[i], 'numpy')
 
         te = time.time() - ts
-
         if self.comm.rank == 0:
-            print("ODE model: Finished lambdify for residual expressions, %.4f s" % (te))
+            print('t = %.4f s' % (te))
             sys.stdout.flush()
 
         ts = time.time()
+        if self.comm.rank == 0:
+            print("ODE model: Calling lambdify for stiffness expressions...", end=" ")
+            sys.stdout.flush()
 
         for i in range(self.numdof):
             for j in range(self.numdof):
@@ -103,9 +104,8 @@ class ode:
                 else:                               self.K__[i][j] = lambda a, b, c, d : 0
 
         te = time.time() - ts
-
         if self.comm.rank == 0:
-            print("ODE model: Finished lambdify for stiffness expressions, %.4f s" % (te))
+            print('t = %.4f s' % (te))
             sys.stdout.flush()
 
 

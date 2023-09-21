@@ -13,7 +13,6 @@ def main():
     # all possible input parameters
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d', # solid, fluid, fluid_ale, flow0d, solid_flow0d, fluid_flow0d, fluid_ale_flow0d, solid_flow0d_multiscale_gandr, solid_constraint
-                            'use_model_order_red'   : False, # Model Order Reduction via Proper Orthogonal Decomposition (POD), for solid or fluid mechanics and 3D0D coupled problems (default: False); specify parameters in ROM_PARAMS (see below)
                             'mesh_domain'           : basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')

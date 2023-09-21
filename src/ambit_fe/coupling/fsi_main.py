@@ -403,6 +403,12 @@ class FSISolver(solver_base):
 
         # consider consistent initial acceleration of solid
         if self.pb.pbs.timint != 'static' and self.pb.restart_step == 0:
+
+            tss = time.time()
+            if self.pb.comm.rank == 0:
+                print('Setting forms and solving for consistent initial solid acceleration...', end=" ")
+                sys.stdout.flush()
+
             # weak form at initial state for consistent initial acceleration solve
             weakform_a_solid = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old
 
@@ -415,8 +421,19 @@ class FSISolver(solver_base):
                 res_a_solid, jac_aa_solid = fem.form(weakform_a_solid), fem.form(weakform_lin_aa_solid)
             self.solnln.solve_consistent_ini_acc(res_a_solid, jac_aa_solid, self.pb.pbs.a_old)
 
+            tse = time.time() - tss
+            if self.pb.comm.rank == 0:
+                print('ts = %.4f s' % (tse))
+                sys.stdout.flush()
+
         # consider consistent initial acceleration of fluid
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.restart_step == 0:
+
+            ts = time.time()
+            if self.pb.comm.rank == 0:
+                print('Setting forms and solving for consistent initial fluid acceleration...', end=" ")
+                sys.stdout.flush()
+
             # weak form at initial state for consistent initial acceleration solve
             weakform_a_fluid = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
 
@@ -428,6 +445,11 @@ class FSISolver(solver_base):
             else:
                 res_a_fluid, jac_aa_fluid = fem.form(weakform_a_fluid), fem.form(weakform_lin_aa_fluid)
             self.solnln.solve_consistent_ini_acc(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
+
+            te = time.time() - ts
+            if self.pb.comm.rank == 0:
+                print('t = %.4f s' % (te))
+                sys.stdout.flush()
 
 
     def solve_nonlinear_problem(self, t):

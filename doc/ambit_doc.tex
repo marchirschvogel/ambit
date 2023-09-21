@@ -14,7 +14,7 @@
 \usepackage{bbm}
 \usepackage{floatrow}
 \usepackage{subfig}
-%\usepackage{adjustbox}
+\usepackage{adjustbox}
 \usepackage{caption}
 \usepackage{epsfig}
 \usepackage{amsfonts}
@@ -220,6 +220,10 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 \begin{align}
 \delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{\bs{t}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}A \label{eq:deltaWext_pk1}
 \end{align}
+%add to the dict of boundary conditions:\\
+%\adjustbox{width=.95\columnwidth}{%
+%\verb\"neumann" : [{"id" : [<IDs>], "dir" : "xyz_ref", "curve" : [<#X>,<#Y>,<#Z>]}\
+%}%
 \item Neumann pressure load in current normal direction:
 \begin{align}
 \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{p}(t)\,J \bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{u} \,\mathrm{d}A \label{eq:deltaWext_cur_p}

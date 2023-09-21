@@ -187,9 +187,9 @@ class AleProblem(problem_base):
 
     def set_problem_residual_jacobian_forms(self):
 
-        tes = time.time()
+        ts = time.time()
         if self.comm.rank == 0:
-            print('FEM form compilation for ALE...')
+            print('FEM form compilation for solid...', end=" ")
             sys.stdout.flush()
 
         if self.io.USE_MIXED_DOLFINX_BRANCH:
@@ -199,19 +199,29 @@ class AleProblem(problem_base):
             self.res_d = fem.form(self.weakform_d)
             self.jac_dd = fem.form(self.weakform_lin_dd)
 
-        tee = time.time() - tes
+        te = time.time() - ts
         if self.comm.rank == 0:
-            print('FEM form compilation for ALE finished, te = %.2f s' % (tee))
+            print('t = %.4f s' % (te))
             sys.stdout.flush()
 
 
     def set_problem_vector_matrix_structures(self):
+
+        ts = time.time()
+        if self.comm.rank == 0:
+            print('Creating vector and matrix structures for ALE...', end=" ")
+            sys.stdout.flush()
 
         self.r_d = fem.petsc.create_vector(self.res_d)
         self.K_dd = fem.petsc.create_matrix(self.jac_dd)
 
         self.r_list[0] = self.r_d
         self.K_list[0][0] = self.K_dd
+
+        te = time.time() - ts
+        if self.comm.rank == 0:
+            print('t = %.4f s' % (te))
+            sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):

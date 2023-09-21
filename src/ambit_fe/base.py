@@ -163,10 +163,20 @@ class solver_base():
 
     def evaluate_assemble_system_initial(self, subsolver=None):
 
+        ts = time.time()
+        if self.pb.comm.rank == 0:
+            print('Evaluate and assemble initial system...', end=" ")
+            sys.stdout.flush()
+
         self.evaluate_system_initial()
 
         self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern
         self.pb.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
+
+        te = time.time() - ts
+        if self.pb.comm.rank == 0:
+            print('t = %.4f s' % (te))
+            sys.stdout.flush()
 
         # create ROM matrix structures
         if self.pb.rom:

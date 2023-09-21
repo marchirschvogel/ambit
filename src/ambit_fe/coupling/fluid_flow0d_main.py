@@ -166,9 +166,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def set_problem_residual_jacobian_forms_coupling(self):
 
-        tes = time.time()
+        ts = time.time()
         if self.comm.rank == 0:
-            print('FEM form compilation for fluid-0D coupling...')
+            print('FEM form compilation for fluid-0D coupling...', end=" ")
             sys.stdout.flush()
 
         self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
@@ -180,9 +180,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
             self.dforce_form.append(fem.form(self.dforce[i]))
 
-        tee = time.time() - tes
+        te = time.time() - ts
         if self.comm.rank == 0:
-            print('FEM form compilation for fluid-0D finished, te = %.2f s' % (tee))
+            print('t = %.4f s' % (te))
             sys.stdout.flush()
 
 
@@ -193,6 +193,11 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
 
     def set_problem_vector_matrix_structures_coupling(self):
+
+        ts = time.time()
+        if self.comm.rank == 0:
+            print('Creating vector and matrix structures for fluid-0D coupling...', end=" ")
+            sys.stdout.flush()
 
         self.r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
@@ -221,6 +226,11 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # derivative of 0D residual w.r.t. solid displacements
         self.K_sv = PETSc.Mat().createAIJ(size=((self.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_sv.setUp()
+
+        te = time.time() - ts
+        if self.comm.rank == 0:
+            print('t = %.4f s' % (te))
+            sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -594,6 +604,12 @@ class FluidmechanicsFlow0DSolver(solver_base):
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
+
+            ts = time.time()
+            if self.pb.comm.rank == 0:
+                print('Setting forms and solving for consistent initial acceleration...', end=" ")
+                sys.stdout.flush()
+
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.power_coupling_old
 
@@ -605,6 +621,11 @@ class FluidmechanicsFlow0DSolver(solver_base):
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
+
+            te = time.time() - ts
+            if self.pb.comm.rank == 0:
+                print('t = %.4f s' % (te))
+                sys.stdout.flush()
 
 
     def solve_nonlinear_problem(self, t):

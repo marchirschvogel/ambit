@@ -357,6 +357,9 @@ class ModelOrderReduction():
     def build_reduced_basis(self):
 
         ts = time.time()
+        if self.pb.comm.rank == 0:
+            print('ROM: Building reduced basis operator...', end=" ")
+            sys.stdout.flush()
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
         self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions,self.locmatsize_u), csr=None, comm=self.pb.comm)
@@ -380,15 +383,17 @@ class ModelOrderReduction():
             self.Cpen.assemble()
 
         te = time.time() - ts
-
         if self.pb.comm.rank==0:
-            print("Built reduced basis operator for ROM. Time: %.4f s" % (te))
+            print("t = %.4f s" % (te))
             sys.stdout.flush()
 
 
     def build_reduced_surface_basis(self):
 
         ts = time.time()
+        if self.pb.comm.rank == 0:
+            print('ROM: Building reduced basis operator for ROM on boundary id(s) '+str(self.surface_rom)+'...', end=" ")
+            sys.stdout.flush()
 
         # number of non-reduced "bulk" dofs
         ndof_bulk = self.matsize_u - len(self.fd_set)
@@ -470,9 +475,8 @@ class ModelOrderReduction():
             self.Cpen.assemble()
 
         te = time.time() - ts
-
         if self.pb.comm.rank==0:
-            print("Built reduced basis operator for ROM on boundary id(s) "+str(self.surface_rom)+". Time: %.4f s" % (te))
+            print("t = %.4f s" % (te))
             sys.stdout.flush()
 
 
@@ -498,12 +502,27 @@ class ModelOrderReduction():
 
     def set_reduced_data_structures_residual(self, r_list, r_list_rom):
 
+        ts = time.time()
+        if self.pb.comm.rank == 0:
+            print('ROM: Project residual, V^{T} * r[0]...', end=" ")
+            sys.stdout.flush()
+
         # projection of main block: residual
         r_list_rom[0] = self.V.createVecRight()
         self.V.multTranspose(r_list[0], r_list_rom[0]) # V^T * r_u
 
+        te = time.time() - ts
+        if self.pb.comm.rank == 0:
+            print('t = %.4f s' % (te))
+            sys.stdout.flush()
+
 
     def set_reduced_data_structures_matrix(self, K_list, K_list_rom, K_list_tmp):
+
+        ts = time.time()
+        if self.pb.comm.rank == 0:
+            print('ROM: Project Jacobian, V^{T} * K * V...', end=" ")
+            sys.stdout.flush()
 
         # projection of main block: system matrix
         K_list_tmp[0][0] = K_list[0][0].matMult(self.V) # K_00 * V
@@ -518,6 +537,11 @@ class ModelOrderReduction():
                     K_list_rom[0][n] = self.V.transposeMatMult(K_list[0][n]) # V^T * K_{0,n+1}
                 if K_list[n][0] is not None:
                     K_list_rom[n][0] = K_list[n][0].matMult(self.V) # K_{n+1,0} * V
+
+        te = time.time() - ts
+        if self.pb.comm.rank == 0:
+            print('t = %.4f s' % (te))
+            sys.stdout.flush()
 
 
     # online functions
@@ -543,7 +567,7 @@ class ModelOrderReduction():
         tee = time.time() - tes
         if self.pb.print_enhanced_info:
             if self.pb.comm.rank == 0:
-                print('       === Computed V^{T} * r[0], te = %.4f s' % (tee))
+                print('       === ROM: Computed V^{T} * r[0], t = %.4f s' % (tee))
                 sys.stdout.flush()
 
 
@@ -575,7 +599,7 @@ class ModelOrderReduction():
         tee = time.time() - tes
         if self.pb.print_enhanced_info:
             if self.pb.comm.rank == 0:
-                print('       === Computed V^{T} * K * V, te = %.4f s' % (tee))
+                print('       === ROM: Computed V^{T} * K * V, te = %.4f s' % (tee))
                 sys.stdout.flush()
 
 
@@ -595,7 +619,7 @@ class ModelOrderReduction():
 
         if self.pb.print_enhanced_info:
             if self.pb.comm.rank == 0:
-                print('       === Computed V * dx_rom[0], te = %.4f s' % (tee))
+                print('       === ROM: Computed V * dx_rom[0], te = %.4f s' % (tee))
                 sys.stdout.flush()
 
 

@@ -465,11 +465,6 @@ class solver_nonlinear:
     # solve for consistent initial acceleration a_old
     def solve_consistent_ini_acc(self, res_a, jac_aa, a_old):
 
-        tss = time.time()
-        if self.comm.rank == 0:
-            print('Solve for consistent initial acceleration...')
-            sys.stdout.flush()
-
         # create solver
         ksp = PETSc.KSP().create(self.comm)
 
@@ -499,11 +494,6 @@ class solver_nonlinear:
 
         r_a.destroy(), M_a.destroy()
         ksp.destroy()
-
-        tse = time.time() - tss
-        if self.comm.rank == 0:
-            print('Solve for consistent initial acceleration finished, ts = %.4f s' % (tse))
-            sys.stdout.flush()
 
 
     def solve_local(self, localdata):

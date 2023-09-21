@@ -230,9 +230,9 @@ class FluidmechanicsAleProblem(problem_base):
 
         if self.coupling_strategy=='monolithic':
 
-            tes = time.time()
+            ts = time.time()
             if self.comm.rank == 0:
-                print('FEM form compilation for fluid-ALE coupling...')
+                print('FEM form compilation for fluid-ALE coupling...', end=" ")
                 sys.stdout.flush()
 
             if not bool(self.pbf.io.duplicate_mesh_domains):
@@ -254,9 +254,9 @@ class FluidmechanicsAleProblem(problem_base):
                 if self.have_weak_dirichlet_fluid_ale:
                     self.jac_dv = fem.form(self.weakform_lin_dv)
 
-            tee = time.time() - tes
+            te = time.time() - ts
             if self.comm.rank == 0:
-                print('FEM form compilation for fluid-ALE coupling finished, te = %.2f s' % (tee))
+                print('t = %.4f s' % (te))
                 sys.stdout.flush()
 
 
@@ -266,6 +266,11 @@ class FluidmechanicsAleProblem(problem_base):
         self.pba.set_problem_vector_matrix_structures()
 
         if self.coupling_strategy=='monolithic':
+
+            ts = time.time()
+            if self.comm.rank == 0:
+                print('Creating vector and matrix structures for fluid-ALE coupling...', end=" ")
+                sys.stdout.flush()
 
             self.K_vd = fem.petsc.create_matrix(self.jac_vd)
             if self.have_weak_dirichlet_fluid_ale:
@@ -277,6 +282,11 @@ class FluidmechanicsAleProblem(problem_base):
                 self.K_pd = fem.petsc.create_matrix_block(self.jac_pd_)
             else:
                 self.K_pd = fem.petsc.create_matrix(self.jac_pd)
+
+            te = time.time() - ts
+            if self.comm.rank == 0:
+                print('t = %.4f s' % (te))
+                sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -537,6 +547,12 @@ class FluidmechanicsAleSolver(solver_base):
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
+
+            ts = time.time()
+            if self.pb.comm.rank == 0:
+                print('Setting forms and solving for consistent initial acceleration...', end=" ")
+                sys.stdout.flush()
+
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
 
@@ -548,6 +564,11 @@ class FluidmechanicsAleSolver(solver_base):
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
+
+            te = time.time() - ts
+            if self.pb.comm.rank == 0:
+                print('t = %.4f s' % (te))
+                sys.stdout.flush()
 
 
     # we overload this function here in order to take care of the partitioned solve,

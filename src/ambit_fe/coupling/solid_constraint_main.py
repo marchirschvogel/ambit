@@ -160,7 +160,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         tes = time.time()
         if self.comm.rank == 0:
-            print('FEM form compilation for solid-constraint coupling...')
+            print('FEM form compilation for solid-constraint coupling... ', end="")
             sys.stdout.flush()
 
         self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
@@ -174,7 +174,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         tee = time.time() - tes
         if self.comm.rank == 0:
-            print('FEM form compilation for solid-constraint finished, te = %.2f s' % (tee))
+            print('te = %.2f s' % (tee))
             sys.stdout.flush()
 
 
@@ -185,6 +185,11 @@ class SolidmechanicsConstraintProblem(problem_base):
 
 
     def set_problem_vector_matrix_structures_coupling(self):
+
+        tes = time.time()
+        if self.comm.rank == 0:
+            print('Creating vector and matrix structures for solid-constraint coupling... ', end="")
+            sys.stdout.flush()
 
         self.r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
@@ -213,6 +218,11 @@ class SolidmechanicsConstraintProblem(problem_base):
         # derivative of 0D residual w.r.t. solid displacements
         self.K_su = PETSc.Mat().createAIJ(size=((sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_su.setUp()
+
+        tee = time.time() - tes
+        if self.comm.rank == 0:
+            print('te = %.2f s' % (tee))
+            sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -487,6 +497,12 @@ class SolidmechanicsConstraintSolver(solver_base):
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
+
+            ts = time.time()
+            if self.pb.comm.rank == 0:
+                print('Setting forms and solving for consistent initial acceleration...', end=" ")
+                sys.stdout.flush()
+
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
 
@@ -495,6 +511,11 @@ class SolidmechanicsConstraintSolver(solver_base):
             # solve for consistent initial acceleration a_old
             res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbs.a_old)
+
+            te = time.time() - ts
+            if self.pb.comm.rank == 0:
+                print('t = %.4f s' % (te))
+                sys.stdout.flush()
 
 
     def solve_nonlinear_problem(self, t):

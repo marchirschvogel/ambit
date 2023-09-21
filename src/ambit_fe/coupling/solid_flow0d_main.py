@@ -313,6 +313,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
     def set_problem_vector_matrix_structures_coupling(self):
 
+        ts = time.time()
+        if self.comm.rank == 0:
+            print('Creating vector and matrix structures for solid-0D coupling...', end=" ")
+            sys.stdout.flush()
+
         self.r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
         # Lagrange multiplier stiffness matrix (currently treated with FD!)
@@ -347,6 +352,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
         # derivative of 0D residual w.r.t. solid displacements
         self.K_su = PETSc.Mat().createAIJ(size=((sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_su.setUp()
+
+        te = time.time() - ts
+        if self.comm.rank == 0:
+            print('t = %.4f s' % (te))
+            sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -785,6 +795,12 @@ class SolidmechanicsFlow0DSolver(solver_base):
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
+
+            ts = time.time()
+            if self.pb.comm.rank == 0:
+                print('Setting forms and solving for consistent initial acceleration...', end=" ")
+                sys.stdout.flush()
+
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
 
@@ -793,6 +809,11 @@ class SolidmechanicsFlow0DSolver(solver_base):
             # solve for consistent initial acceleration a_old
             res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbs.a_old)
+
+            te = time.time() - ts
+            if self.pb.comm.rank == 0:
+                print('t = %.4f s' % (te))
+                sys.stdout.flush()
 
 
     def solve_nonlinear_problem(self, t):

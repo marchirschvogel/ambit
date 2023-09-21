@@ -283,8 +283,8 @@ class IO:
     def readin_fibers(self, fibarray, V_fib, dx_, order_disp):
 
         ts = time.time()
-        if self.comm.rank==0:
-            print("Reading in fibers ...")
+        if self.comm.rank == 0:
+            print("Reading in fibers...", end=" ")
             sys.stdout.flush()
 
         fib_func_input, fib_func = [], []
@@ -322,8 +322,8 @@ class IO:
             si+=1
 
         te = time.time() - ts
-        if self.comm.rank==0:
-            print("Finished fiber read-in. Time: %.4f s" % (te))
+        if self.comm.rank == 0:
+            print('t = %.4f s' % (te))
             sys.stdout.flush()
 
         return fib_func
