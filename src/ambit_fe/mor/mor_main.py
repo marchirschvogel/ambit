@@ -392,7 +392,7 @@ class ModelOrderReduction():
 
         ts = time.time()
         if self.pb.comm.rank == 0:
-            print('ROM: Building reduced basis operator for ROM on boundary id(s) '+str(self.surface_rom)+'...', end=" ")
+            print('ROM: Building reduced basis operator on boundary id(s) '+str(self.surface_rom)+'...', end=" ")
             sys.stdout.flush()
 
         # number of non-reduced "bulk" dofs
