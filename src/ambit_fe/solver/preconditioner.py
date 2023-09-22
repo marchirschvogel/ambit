@@ -253,7 +253,7 @@ class schur_3x3(block_precond):
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
         # the matrix to later insert the diagonal
-        self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
         self.Adinv.setUp()
         self.Adinv.assemble()
         # set 1's to get correct allocation pattern
@@ -282,7 +282,7 @@ class schur_3x3(block_precond):
             raise ValueError("Unknown schur_block_scaling option!")
 
         # the matrix to later insert the diagonal
-        self.Smoddinv = PETSc.Mat().createAIJ(self.C.getSizes(), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.Smoddinv = PETSc.Mat().createAIJ(self.C.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
         self.Smoddinv.setUp()
         self.Smoddinv.assemble()
         # set 1's to get correct allocation pattern
