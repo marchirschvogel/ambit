@@ -14,10 +14,8 @@ import basix
 # print header at beginning of simulation
 def print_problem_header(comm):
 
-    if comm.rank == 0:
-        print("#####################################   AMBIT   #######################################")
-        print("#################### A FEniCS-based cardiovascular physics solver #####################")
-        sys.stdout.flush()
+    print_status("#####################################   AMBIT   #######################################", comm)
+    print_status("#################### A FEniCS-based cardiovascular physics solver #####################", comm)
 
 
 def print_problem(ptype, sname, comm, numdof):
@@ -25,108 +23,85 @@ def print_problem(ptype, sname, comm, numdof):
         print_problem_header(comm)
 
         if ptype == 'solid':
-            if comm.rank == 0:
-                print("###################### Welcome to finite strain solid mechanics #######################")
-                sys.stdout.flush()
+            print_status("###################### Welcome to finite strain solid mechanics #######################", comm)
 
         elif ptype == 'fluid':
-            if comm.rank == 0:
-                print("############### Welcome to incompressible Navier-Stokes fluid mechanics ###############")
-                sys.stdout.flush()
+            print_status("############### Welcome to incompressible Navier-Stokes fluid mechanics ###############", comm)
 
         elif ptype == 'ale':
-            if comm.rank == 0:
-                print("############################## Welcome to ALE mechanics ###############################")
-                sys.stdout.flush()
+            print_status("############################## Welcome to ALE mechanics ###############################", comm)
 
         elif ptype == 'fluid_ale':
-            if comm.rank == 0:
-                print("#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###")
-                sys.stdout.flush()
+            print_status("#### Welcome to incompressible Navier-Stokes fluid mechanics in ALE reference frame ###", comm)
 
         elif ptype == 'fsi':
-            if comm.rank == 0:
-                print("################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################")
-                sys.stdout.flush()
+            print_status("################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################", comm)
 
         elif ptype == 'solid_flow0d':
-            if comm.rank == 0:
-                print("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########")
-                sys.stdout.flush()
+            print_status("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########", comm)
 
         elif ptype == 'solid_flow0d_multiscale_gandr':
-            if comm.rank == 0:
-                print("################# Welcome to multiscale growth and remodeling (G & R) #################")
-                print("############## Small time scale: Monolithic 3D-0D coupled solid-flow0d ################")
-                print("####################### Large time scale: Static solid G & R ##########################\n")
-                sys.stdout.flush()
-                return
+            print_status("################# Welcome to multiscale growth and remodeling (G & R) #################", comm)
+            print_status("############## Small time scale: Monolithic 3D-0D coupled solid-flow0d ################", comm)
+            print_status("####################### Large time scale: Static solid G & R ##########################\n", comm)
+            return
 
         elif ptype == 'solid_constraint':
-            if comm.rank == 0:
-                print("############# Welcome to Lagrange multiplier constraint solid mechanics ###############")
-                sys.stdout.flush()
+            print_status("############# Welcome to Lagrange multiplier constraint solid mechanics ###############", comm)
 
         elif ptype == 'fluid_flow0d':
-            if comm.rank == 0:
-                print("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########")
-                sys.stdout.flush()
+            print_status("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########", comm)
 
         elif ptype == 'fluid_ale_flow0d':
-            if comm.rank == 0:
-                print("######## Welcome to monolithic coupling of 3D ALE fluid mechanics and 0D flow #########")
-                sys.stdout.flush()
+            print_status("######## Welcome to monolithic coupling of 3D ALE fluid mechanics and 0D flow #########", comm)
 
         elif ptype == 'flow0d':
-            if comm.rank == 0:
-                print("######################### Welcome to lumped-parameter 0D flow #########################")
-                sys.stdout.flush()
+            print_status("######################### Welcome to lumped-parameter 0D flow #########################", comm)
 
         elif ptype == 'signet':
-            if comm.rank == 0:
-                print("######################### Welcome to signalling network models ########################")
-                sys.stdout.flush()
+            print_status("######################### Welcome to signalling network models ########################", comm)
 
         else:
             raise NameError("Unknown problem type!")
 
         print_sep(comm)
-        if comm.rank == 0:
-            if isinstance(numdof, list):
-                print("Number of degrees of freedom: %i + %i" % (numdof[0],numdof[1]))
-            else:
-                print("Number of degrees of freedom: %i" % (numdof))
-            print("Number of cores: %i" % (comm.size))
-            print("File name: %s" % (sys.argv[0]))
-            print("Output specifier name: %s" % (sname))
-            sys.stdout.flush()
+
+
+        if isinstance(numdof, list):
+            print_status("Number of degrees of freedom: %i + %i" % (numdof[0],numdof[1]), comm)
+        else:
+            print_status("Number of degrees of freedom: %i" % (numdof), comm)
+        print_status("Number of cores: %i" % (comm.size), comm)
+        print_status("File name: %s" % (sys.argv[0]), comm)
+        print_status("Output specifier name: %s" % (sname), comm)
+
         print_sep(comm)
 
 
 def print_sep(comm):
 
     lensep = 87
-    if comm.rank == 0:
-        print("#"*lensep)
+    print_status("#"*lensep, comm)
 
 
 # print prestress info
 def print_prestress(inst, comm):
 
     if inst=='start':
-        if comm.rank == 0:
-            print("Started prestressing...")
-            sys.stdout.flush()
+        print_status('Started prestressing...', comm)
 
     if inst=='updt':
-        if comm.rank == 0:
-            print("Performed MULF update...")
-            sys.stdout.flush()
+        print_status('Performed MULF update...', comm)
 
     if inst=='end':
-        if comm.rank == 0:
-            print("Finished prestressing.")
-            sys.stdout.flush()
+        print_status('Finished prestressing.', comm)
+
+
+def print_status(message, comm, e="\n"):
+
+    if comm.rank == 0:
+        print(message, end=e)
+        sys.stdout.flush()
 
 
 # copies material parameters to be represented as a dolfinx constant (avoids re-compilation upon parameter change)

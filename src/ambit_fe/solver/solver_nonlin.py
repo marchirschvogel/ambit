@@ -16,6 +16,7 @@ from .projection import project
 from .solver_utils import sol_utils
 from . import preconditioner
 from .. import ioparams
+from .. import utilities
 
 ### useful infos for PETSc mats, vecs, solvers...
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Mat-class.html
@@ -105,6 +106,7 @@ class solver_nonlinear:
         self.r_full_merged = [None]*self.nprob
         self.K_full_merged = [None]*self.nprob
         self.P_full_merged = [None]*self.nprob
+        self.P = [None]*self.nprob
 
         self.subsol = subsolver
 
@@ -284,9 +286,6 @@ class solver_nonlinear:
 
         for npr in range(self.nprob):
 
-            # create solver
-            self.ksp[npr] = PETSc.KSP().create(self.comm)
-
             # perform initial matrix and residual reduction to set the correct arrays
             if self.pb[npr].rom:
                 self.pb[npr].rom.reduce_stiffness(self.pb[npr].K_list, self.pb[npr].K_list_rom, self.pb[npr].K_list_tmp)
@@ -297,6 +296,9 @@ class solver_nonlinear:
             self.r_full_nest[npr] = PETSc.Vec().createNest(self.r_list_sol[npr])
 
             if self.solvetype[npr]=='direct':
+
+                # create solver
+                self.ksp[npr] = PETSc.KSP().create(self.comm)
 
                 self.ksp[npr].setType("preonly")
                 self.ksp[npr].getPC().setType("lu")
@@ -325,9 +327,6 @@ class solver_nonlinear:
 
             elif self.solvetype[npr]=='iterative':
 
-                self.ksp[npr].setInitialGuessNonzero(False)
-                self.ksp[npr].setNormType(self.linnormtype)
-
                 self.P_full_nest[npr] = self.K_full_nest[npr]
 
                 # solution increment
@@ -340,7 +339,7 @@ class solver_nonlinear:
                         self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
                 # prepare merged preconditioner matrix structure
-                if self.merge_prec_mat:
+                if self.merge_prec_mat and self.nfields[npr] > 1:
 
                     ts = time.time()
                     if self.comm.rank == 0:
@@ -349,7 +348,7 @@ class solver_nonlinear:
 
                     Pfullnesttmp = self.P_full_nest[npr].duplicate(copy=False)
                     self.P_full_merged[npr] = Pfullnesttmp.convert("aij")
-                    self.P = self.P_full_merged[npr]
+                    self.P[npr] = self.P_full_merged[npr]
 
                     te = time.time() - ts
                     if self.comm.rank == 0:
@@ -357,9 +356,15 @@ class solver_nonlinear:
                         sys.stdout.flush()
 
                 else:
-                    self.P = self.P_full_nest[npr]
+                    self.P[npr] = self.P_full_nest[npr]
 
-                self.ksp[npr].setOperators(self.K_full_nest[npr], self.P)
+                # create solver
+                self.ksp[npr] = PETSc.KSP().create(self.comm)
+
+                self.ksp[npr].setOperators(self.K_full_nest[npr], self.P[npr])
+
+                self.ksp[npr].setInitialGuessNonzero(False)
+                self.ksp[npr].setNormType(self.linnormtype)
 
                 # block iterative method
                 if self.nfields[npr] > 1:
@@ -628,21 +633,21 @@ class solver_nonlinear:
                             if self.merge_prec_mat:
                                 tms = time.time()
                                 self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
-                                self.P = self.P_full_merged[npr]
+                                self.P[npr] = self.P_full_merged[npr]
                                 tme = time.time() - tms
                                 if self.printenh:
                                     if self.comm.rank == 0:
                                         print(' '*self.indlen_[npr] + '      === PREC MAT merge, te = %.4f s' % (tme))
                                         sys.stdout.flush()
                             else:
-                                self.P = self.P_full_nest[npr]
+                                self.P[npr] = self.P_full_nest[npr]
 
                         else:
 
                             self.ksp[npr].getPC().setReusePreconditioner(True)
 
                         # set operators for linear system solve: Jacobian and preconditioner (we use the same here)
-                        self.ksp[npr].setOperators(self.K_full_nest[npr], self.P)
+                        self.ksp[npr].setOperators(self.K_full_nest[npr], self.P[npr])
 
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':

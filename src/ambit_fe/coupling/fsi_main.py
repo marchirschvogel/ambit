@@ -15,6 +15,7 @@ from petsc4py import PETSc
 
 from ..solver import solver_nonlin
 import ..ioparams
+from .. import utilities
 
 from ..solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from ..fluid_ale import FluidmechanicsAleProblem
@@ -183,7 +184,7 @@ class FSIProblem(problem_base):
         self.pbs.set_problem_residual_jacobian_forms()
         self.pbfa.set_problem_residual_jacobian_forms()
 
-        tes = time.time()
+        ts = time.time()
         if self.comm.rank == 0:
             print('FEM form compilation for FSI coupling...')
             sys.stdout.flush()
@@ -196,10 +197,8 @@ class FSIProblem(problem_base):
         self.jac_ul = fem.form(self.weakform_lin_ul, entity_maps=self.io.entity_maps)
         self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
 
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('FEM form compilation for FSI coupling finished, te = %.2f s' % (tee))
-            sys.stdout.flush()
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
 
     def set_problem_vector_matrix_structures():
@@ -404,10 +403,8 @@ class FSISolver(solver_base):
         # consider consistent initial acceleration of solid
         if self.pb.pbs.timint != 'static' and self.pb.restart_step == 0:
 
-            tss = time.time()
-            if self.pb.comm.rank == 0:
-                print('Setting forms and solving for consistent initial solid acceleration...', end=" ")
-                sys.stdout.flush()
+            ts = time.time()
+            utilities.print_status("Setting forms and solving for consistent initial solid acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
             weakform_a_solid = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old
@@ -421,18 +418,14 @@ class FSISolver(solver_base):
                 res_a_solid, jac_aa_solid = fem.form(weakform_a_solid), fem.form(weakform_lin_aa_solid)
             self.solnln.solve_consistent_ini_acc(res_a_solid, jac_aa_solid, self.pb.pbs.a_old)
 
-            tse = time.time() - tss
-            if self.pb.comm.rank == 0:
-                print('ts = %.4f s' % (tse))
-                sys.stdout.flush()
+            te = time.time() - ts
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
         # consider consistent initial acceleration of fluid
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.restart_step == 0:
 
             ts = time.time()
-            if self.pb.comm.rank == 0:
-                print('Setting forms and solving for consistent initial fluid acceleration...', end=" ")
-                sys.stdout.flush()
+            utilities.print_status("Setting forms and solving for consistent initial fluid acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
             weakform_a_fluid = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
@@ -447,9 +440,7 @@ class FSISolver(solver_base):
             self.solnln.solve_consistent_ini_acc(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
 
             te = time.time() - ts
-            if self.pb.comm.rank == 0:
-                print('t = %.4f s' % (te))
-                sys.stdout.flush()
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     def solve_nonlinear_problem(self, t):

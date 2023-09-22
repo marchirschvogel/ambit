@@ -15,6 +15,7 @@ from petsc4py import PETSc
 
 from ..solver import solver_nonlin
 from .. import ioparams
+from .. import utilities
 
 from .fluid_ale_main import FluidmechanicsAleProblem
 from .fluid_flow0d_main import FluidmechanicsFlow0DProblem
@@ -119,20 +120,16 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         if self.coupling_strategy=='monolithic':
 
-            tes = time.time()
-            if self.comm.rank == 0:
-                print('FEM form compilation for ALE-0D coupling...', end=" ")
-                sys.stdout.flush()
+            ts = time.time()
+            utilities.print_status("FEM form compilation for ALE-0D coupling...", self.comm, e=" ")
 
             self.dcqd_form = []
 
             for i in range(self.pbf0.num_coupling_surf):
                 self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i]))
 
-            tee = time.time() - tes
-            if self.comm.rank == 0:
-                print('te = %.2f s' % (tee))
-                sys.stdout.flush()
+            te = time.time() - ts
+            utilities.print_status("t = %.4f s" % (te), self.comm)
 
 
     def set_problem_vector_matrix_structures(self):
@@ -141,11 +138,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pbf0.set_problem_vector_matrix_structures_coupling()
 
         if self.coupling_strategy=='monolithic':
-
-            ts = time.time()
-            if self.comm.rank == 0:
-                print('Creating vector and matrix structures for ALE-0D coupling...', end=" ")
-                sys.stdout.flush()
 
             self.k_sd_vec = []
             for i in range(len(self.pbf0.row_ids)):
@@ -158,11 +150,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             # derivative of 0D residual w.r.t. ALE displacements
             self.K_sd = PETSc.Mat().createAIJ(size=((self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
             self.K_sd.setUp()
-
-            te = time.time() - ts
-            if self.comm.rank == 0:
-                print('t = %.4f s' % (te))
-                sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -441,9 +428,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
 
             ts = time.time()
-            if self.pb.comm.rank == 0:
-                print('Setting forms and solving for consistent initial acceleration...', end=" ")
-                sys.stdout.flush()
+            utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
@@ -458,9 +443,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
             te = time.time() - ts
-            if self.pb.comm.rank == 0:
-                print('t = %.4f s' % (te))
-                sys.stdout.flush()
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     # we overload this function here in order to take care of the partitioned solve,

@@ -10,6 +10,8 @@ import sys, time
 import numpy as np
 from petsc4py import PETSc
 
+from .. import utilities
+
 ### PETSc PC types:
 # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC.Type-class.html
 
@@ -36,6 +38,9 @@ class block_precond():
 
 
     def create(self, pc):
+
+        ts = time.time()
+        utilities.print_status("Creating preconditioner objects...", self.comm, e=" ")
 
         # get reference to preconditioner matrix object
         _, self.P = pc.getOperators()
@@ -75,6 +80,9 @@ class block_precond():
                 self.ksp_fields[n].getPC().setFactorSolverType("mumps")
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
 
     def view(self, pc, vw):
@@ -146,7 +154,7 @@ class schur_2x2(block_precond):
 
     def setUp(self, pc):
 
-        tss = time.time()
+        ts = time.time()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
@@ -175,11 +183,9 @@ class schur_2x2(block_precond):
         self.C.copy(result=self.Smod)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
 
-        tse = time.time() - tss
+        te = time.time() - ts
         if self.printenh:
-            if self.comm.rank == 0:
-                print('       === PREC setup done, te = %.4f s' % (tse))
-                sys.stdout.flush()
+            utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
     # computes y = P^{-1} x
@@ -247,7 +253,7 @@ class schur_3x3(block_precond):
         self.R  = self.P.createSubMatrix(self.iset[2],self.iset[2])
 
         # the matrix to later insert the diagonal
-        self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
+        self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.Adinv.setUp()
         self.Adinv.assemble()
         # set 1's to get correct allocation pattern
@@ -276,7 +282,7 @@ class schur_3x3(block_precond):
             raise ValueError("Unknown schur_block_scaling option!")
 
         # the matrix to later insert the diagonal
-        self.Smoddinv = PETSc.Mat().createAIJ(self.C.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
+        self.Smoddinv = PETSc.Mat().createAIJ(self.C.getSizes(), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.Smoddinv.setUp()
         self.Smoddinv.assemble()
         # set 1's to get correct allocation pattern
@@ -332,7 +338,7 @@ class schur_3x3(block_precond):
 
     def setUp(self, pc):
 
-        tss = time.time()
+        ts = time.time()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
@@ -401,6 +407,7 @@ class schur_3x3(block_precond):
 
         self.D.matMult(self.Adinv_Bt_Smoddinv_Tmod, result=self.D_Adinv_Bt_Smoddinv_Tmod)  # D diag(A)^{-1} ( Bt diag(Smod)^{-1} Tmod )
 
+        # TODO: Check: Is this slow??
         self.D.matMult(self.Adinv_Bt, result=self.DBt)                                     # D diag(A)^{-1} Bt for later use
 
         self.E.matMult(self.Smoddinv_Tmod, result=self.E_Smoddinv_Tmod)                    # E diag(Smod)^{-1} Tmod
@@ -413,11 +420,9 @@ class schur_3x3(block_precond):
         self.Wmod.axpy(-1., self.E_Smoddinv_Tmod)
         self.Wmod.axpy(1., self.D_Adinv_Bt_Smoddinv_Tmod)
 
-        tse = time.time() - tss
+        te = time.time() - ts
         if self.printenh:
-            if self.comm.rank == 0:
-                print('       === PREC setup, te = %.4f s' % (tse))
-                sys.stdout.flush()
+            utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
     # computes y = P^{-1} x
@@ -626,18 +631,16 @@ class bgs_2x2(block_precond):
 
     def setUp(self, pc):
 
-        tss = time.time()
+        ts = time.time()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
         self.P.createSubMatrix(self.iset[1],self.iset[0], submat=self.B)
         self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
-        tse = time.time() - tss
+        te = time.time() - ts
         if self.printenh:
-            if self.comm.rank == 0:
-                print('       === PREC setup, te = %.4f s' % (tse))
-                sys.stdout.flush()
+            utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
     # computes y = P^{-1} x
@@ -698,16 +701,14 @@ class jacobi_2x2(block_precond):
 
     def setUp(self, pc):
 
-        tss = time.time()
+        ts = time.time()
 
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
-        tse = time.time() - tss
+        te = time.time() - ts
         if self.printenh:
-            if self.comm.rank == 0:
-                print('       === PREC setup, te = %.4f s' % (tse))
-                sys.stdout.flush()
+            utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
     # computes y = P^{-1} x

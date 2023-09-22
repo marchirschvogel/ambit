@@ -10,7 +10,7 @@ import sys
 from petsc4py import PETSc
 import ufl
 
-from . import expression
+from . import expression, utilities
 
 
 class timeintegration():

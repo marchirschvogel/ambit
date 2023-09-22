@@ -12,6 +12,7 @@ from dolfinx import fem, io
 from petsc4py import PETSc
 import numpy as np
 
+from .. import utilities
 from .. import ioparams
 from ..meshutils import gather_surface_dof_indices
 
@@ -160,18 +161,14 @@ class ModelOrderReduction():
 
         ts = time.time()
 
-        if self.pb.comm.rank==0:
-            print("Performing Proper Orthogonal Decomposition (POD) ...")
-            sys.stdout.flush()
+        utilities.print_status("Performing Proper Orthogonal Decomposition (POD)...", self.pb.comm)
 
         # gather snapshots (mostly displacements or velocities)
         for h in range(self.numhdms):
 
             for i in range(self.numsnapshots):
 
-                if self.pb.comm.rank==0:
-                    print("Reading snapshot %i ..." % (i+1))
-                    sys.stdout.flush()
+                utilities.print_status("Reading snapshot %i ..." % (i+1), self.pb.comm)
 
                 step = self.snapshotoffset + (i+1)*self.snapshotincr
 
@@ -221,9 +218,7 @@ class ModelOrderReduction():
         nconv = eigsolver.getConverged()
 
         if self.print_eigenproblem:
-            if self.pb.comm.rank==0:
-                print("Number of converged eigenpairs: %d" % nconv)
-                sys.stdout.flush()
+            utilities.print_status("Number of converged eigenpairs: %d" % (nconv), self.pb.comm)
 
         evecs, evals = [], []
         self.numredbasisvec_true = 0
@@ -234,23 +229,17 @@ class ModelOrderReduction():
             vi, _ = C_d.getVecs()
 
             if self.print_eigenproblem:
-                if self.pb.comm.rank==0:
-                    print("   k                        ||Ax-kx||/||kx||")
-                    print("   ----------------------   ----------------")
-                    sys.stdout.flush()
+                utilities.print_status("   k                        ||Ax-kx||/||kx||", self.pb.comm)
+                utilities.print_status("   ----------------------   ----------------", self.pb.comm)
 
             for i in range(len(self.redbasisvec_indices)):
                 k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
                 error = eigsolver.computeError(self.redbasisvec_indices[i])
                 if self.print_eigenproblem:
                     if k.imag != 0.0:
-                        if self.pb.comm.rank==0:
-                            print('{:<3s}{:<4.4e}{:<1s}{:<4.4e}{:<1s}{:<3s}{:<4.4e}'.format(' ',k.real,'+',k.imag,'j',' ',error))
-                            sys.stdout.flush()
+                        utilities.print_status("{:<3s}{:<4.4e}{:<1s}{:<4.4e}{:<1s}{:<3s}{:<4.4e}".format(" ",k.real,"+",k.imag,"j"," ",error), self.pb.comm)
                     else:
-                        if self.pb.comm.rank==0:
-                            print('{:<3s}{:<4.4e}{:<15s}{:<4.4e}'.format(' ',k.real,' ',error))
-                            sys.stdout.flush()
+                        utilities.print_status("{:<3s}{:<4.4e}{:<15s}{:<4.4e}".format(" ",k.real," ",error), self.pb.comm)
 
                 # store
                 evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
@@ -259,9 +248,7 @@ class ModelOrderReduction():
                 if k.real > self.eigenvalue_cutoff: self.numredbasisvec_true += 1
 
         if len(self.redbasisvec_indices) != self.numredbasisvec_true:
-            if self.pb.comm.rank==0:
-                print("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),self.numredbasisvec_true))
-                sys.stdout.flush()
+            utilities.print_status("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),self.numredbasisvec_true), self.pb.comm)
 
         # pop out undesired ones
         for i in range(len(self.redbasisvec_indices)-self.numredbasisvec_true):
@@ -285,9 +272,7 @@ class ModelOrderReduction():
 
         te = time.time() - ts
 
-        if self.pb.comm.rank==0:
-            print("POD done... Time: %.4f s" % (te))
-            sys.stdout.flush()
+        utilities.print_status("POD done... Time: %.4f s" % (te), self.pb.comm)
 
 
     def write_modes(self):
@@ -312,15 +297,11 @@ class ModelOrderReduction():
         for h in range(self.num_partitions):
 
             if self.num_partitions > 1:
-                if self.pb.comm.rank==0:
-                    print("Modes for partition %i:" % (h+1))
-                    sys.stdout.flush()
+                utilities.print_status("Modes for partition %i:" % (h+1), self.pb.comm)
 
             for i in range(self.numredbasisvec_true):
 
-                if self.pb.comm.rank==0:
-                    print("Reading mode %i ..." % (i+1))
-                    sys.stdout.flush()
+                utilities.print_status("Reading mode %i ..." % (i+1), self.pb.comm)
 
                 field = fem.Function(self.Vspace)
                 self.pb.io.readfunction(field, self.modes_from_files[h].replace('*',str(i+1)))
@@ -335,9 +316,7 @@ class ModelOrderReduction():
         # own read function: requires plain txt format of type val x z y
         for h in range(self.num_partitions):
 
-            if self.pb.comm.rank==0:
-                print("Reading partition %i ..." % (h+1))
-                sys.stdout.flush()
+            utilities.print_status("Reading partition %i ..." % (h+1), self.pb.comm)
 
             self.part.append( fem.Function(self.Vspace_sc) )
             self.pb.io.readfunction(self.part[-1], self.partitions[h])
@@ -357,9 +336,7 @@ class ModelOrderReduction():
     def build_reduced_basis(self):
 
         ts = time.time()
-        if self.pb.comm.rank == 0:
-            print('ROM: Building reduced basis operator...', end=" ")
-            sys.stdout.flush()
+        utilities.print_status("ROM: Building reduced basis operator...", self.pb.comm, e=" ")
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
         self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions,self.locmatsize_u), csr=None, comm=self.pb.comm)
@@ -383,17 +360,13 @@ class ModelOrderReduction():
             self.Cpen.assemble()
 
         te = time.time() - ts
-        if self.pb.comm.rank==0:
-            print("t = %.4f s" % (te))
-            sys.stdout.flush()
+        utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     def build_reduced_surface_basis(self):
 
         ts = time.time()
-        if self.pb.comm.rank == 0:
-            print('ROM: Building reduced basis operator on boundary id(s) '+str(self.surface_rom)+'...', end=" ")
-            sys.stdout.flush()
+        utilities.print_status("ROM: Building reduced basis operator on boundary id(s) "+str(self.surface_rom)+"...", self.pb.comm, e=" ")
 
         # number of non-reduced "bulk" dofs
         ndof_bulk = self.matsize_u - len(self.fd_set)
@@ -475,9 +448,7 @@ class ModelOrderReduction():
             self.Cpen.assemble()
 
         te = time.time() - ts
-        if self.pb.comm.rank==0:
-            print("t = %.4f s" % (te))
-            sys.stdout.flush()
+        utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     # eliminate all rows in matrix but from a set of surface IDs
@@ -503,26 +474,20 @@ class ModelOrderReduction():
     def set_reduced_data_structures_residual(self, r_list, r_list_rom):
 
         ts = time.time()
-        if self.pb.comm.rank == 0:
-            print('ROM: Project residual, V^{T} * r[0]...', end=" ")
-            sys.stdout.flush()
+        utilities.print_status("ROM: Project residual, V^{T} * r[0]...", self.pb.comm, e=" ")
 
         # projection of main block: residual
         r_list_rom[0] = self.V.createVecRight()
         self.V.multTranspose(r_list[0], r_list_rom[0]) # V^T * r_u
 
         te = time.time() - ts
-        if self.pb.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
+        utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     def set_reduced_data_structures_matrix(self, K_list, K_list_rom, K_list_tmp):
 
         ts = time.time()
-        if self.pb.comm.rank == 0:
-            print('ROM: Project Jacobian, V^{T} * K * V...', end=" ")
-            sys.stdout.flush()
+        utilities.print_status("ROM: Project Jacobian, V^{T} * K * V...", self.pb.comm, e=" ")
 
         # projection of main block: system matrix
         K_list_tmp[0][0] = K_list[0][0].matMult(self.V) # K_00 * V
@@ -539,15 +504,13 @@ class ModelOrderReduction():
                     K_list_rom[n][0] = K_list[n][0].matMult(self.V) # K_{n+1,0} * V
 
         te = time.time() - ts
-        if self.pb.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
+        utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     # online functions
     def reduce_residual(self, r_list, r_list_rom, x=None):
 
-        tes = time.time()
+        ts = time.time()
 
         nfields = len(r_list)
 
@@ -564,16 +527,14 @@ class ModelOrderReduction():
             for n in range(1,nfields):
                 r_list_rom[n] = r_list[n]
 
-        tee = time.time() - tes
+        te = time.time() - ts
         if self.pb.print_enhanced_info:
-            if self.pb.comm.rank == 0:
-                print('       === ROM: Computed V^{T} * r[0], t = %.4f s' % (tee))
-                sys.stdout.flush()
+            utilities.print_status("       === ROM: Computed V^{T} * r[0], t = %.4f s" % (te), self.pb.comm)
 
 
     def reduce_stiffness(self, K_list, K_list_rom, K_list_tmp):
 
-        tes = time.time()
+        ts = time.time()
 
         nfields = len(K_list)
 
@@ -596,16 +557,14 @@ class ModelOrderReduction():
                 for m in range(1,nfields):
                     K_list_rom[n][m] = K_list[n][m]
 
-        tee = time.time() - tes
+        te = time.time() - ts
         if self.pb.print_enhanced_info:
-            if self.pb.comm.rank == 0:
-                print('       === ROM: Computed V^{T} * K * V, te = %.4f s' % (tee))
-                sys.stdout.flush()
+            utilities.print_status("       === ROM: Computed V^{T} * K * V, te = %.4f s" % (te), self.pb.comm)
 
 
     def reconstruct_solution_increment(self, del_x_rom, del_x):
 
-        tes = time.time()
+        ts = time.time()
 
         nfields = len(del_x)
 
@@ -615,12 +574,10 @@ class ModelOrderReduction():
             for n in range(1,nfields):
                 del_x[n] = del_x_rom[n]
 
-        tee = time.time() - tes
+        te = time.time() - ts
 
         if self.pb.print_enhanced_info:
-            if self.pb.comm.rank == 0:
-                print('       === ROM: Computed V * dx_rom[0], te = %.4f s' % (tee))
-                sys.stdout.flush()
+            utilities.print_status("       === ROM: Computed V * dx_rom[0], te = %.4f s" % (te), self.pb.comm)
 
 
     def destroy(self):

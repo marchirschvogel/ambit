@@ -14,7 +14,7 @@ import ufl
 from petsc4py import PETSc
 
 from ..solver import solver_nonlin
-from .. import expression, ioparams
+from .. import utilities, expression, ioparams
 from ..solver.projection import project
 from ..mpiroutines import allgather_vec, allgather_vec_entry
 
@@ -158,10 +158,8 @@ class SolidmechanicsConstraintProblem(problem_base):
 
     def set_problem_residual_jacobian_forms_coupling(self):
 
-        tes = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation for solid-constraint coupling... ', end="")
-            sys.stdout.flush()
+        ts = time.time()
+        utilities.print_status("FEM form compilation for solid-constraint coupling...", self.comm, e=" ")
 
         self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
 
@@ -172,10 +170,8 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
             self.dforce_form.append(fem.form(self.dforce[i]))
 
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('te = %.2f s' % (tee))
-            sys.stdout.flush()
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
 
     def set_problem_vector_matrix_structures(self):
@@ -499,9 +495,7 @@ class SolidmechanicsConstraintSolver(solver_base):
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
 
             ts = time.time()
-            if self.pb.comm.rank == 0:
-                print('Setting forms and solving for consistent initial acceleration...', end=" ")
-                sys.stdout.flush()
+            utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old - self.pb.work_coupling_old
@@ -513,9 +507,7 @@ class SolidmechanicsConstraintSolver(solver_base):
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbs.a_old)
 
             te = time.time() - ts
-            if self.pb.comm.rank == 0:
-                print('t = %.4f s' % (te))
-                sys.stdout.flush()
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     def solve_nonlinear_problem(self, t):

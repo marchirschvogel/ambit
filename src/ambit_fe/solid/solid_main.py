@@ -674,10 +674,9 @@ class SolidmechanicsProblem(problem_base):
         gr = self.comm.allgather(gr)
         self.growth_rate = sum(gr)
 
-        if self.comm.rank == 0:
-            print('Solid growth rate: %.4e' % (self.growth_rate))
-            sys.stdout.flush()
+        utilities.print_status('Solid growth rate: %.4e' % (self.growth_rate), self.comm)
 
+        if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
                 if np.isclose(t,self.dt): mode='wt'
                 else: mode='a'
@@ -739,9 +738,7 @@ class SolidmechanicsProblem(problem_base):
     def set_problem_residual_jacobian_forms(self):
 
         ts = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation for solid...', end=" ")
-            sys.stdout.flush()
+        utilities.print_status("FEM form compilation for solid...", self.comm, e=" ")
 
         if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
@@ -784,17 +781,10 @@ class SolidmechanicsProblem(problem_base):
                     self.jac_pu = fem.form(self.weakform_lin_prestress_pu)
 
         te = time.time() - ts
-        if self.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
 
     def set_problem_vector_matrix_structures(self):
-
-        ts = time.time()
-        if self.comm.rank == 0:
-            print('Creating vector and matrix structures for solid...', end=" ")
-            sys.stdout.flush()
 
         self.r_u = fem.petsc.create_vector(self.res_u)
         self.K_uu = fem.petsc.create_matrix(self.jac_uu)
@@ -809,11 +799,6 @@ class SolidmechanicsProblem(problem_base):
                 self.K_pp = fem.petsc.create_matrix(self.jac_pp)
             else:
                 self.K_pp = None
-
-        te = time.time() - ts
-        if self.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -1013,9 +998,7 @@ class SolidmechanicsSolver(solver_base):
         if self.pb.timint != 'static' and self.pb.restart_step == 0:
 
             ts = time.time()
-            if self.pb.comm.rank == 0:
-                print('Setting forms and solving for consistent initial acceleration...', end=" ")
-                sys.stdout.flush()
+            utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
@@ -1027,9 +1010,7 @@ class SolidmechanicsSolver(solver_base):
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)
 
             te = time.time() - ts
-            if self.pb.comm.rank == 0:
-                print('t = %.4f s' % (te))
-                sys.stdout.flush()
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     def solve_nonlinear_problem(self, t):

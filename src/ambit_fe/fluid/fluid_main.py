@@ -631,9 +631,7 @@ class FluidmechanicsProblem(problem_base):
     def set_problem_residual_jacobian_forms(self):
 
         ts = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation for fluid...', end=" ")
-            sys.stdout.flush()
+        utilities.print_status("FEM form compilation for fluid...", self.comm, e=" ")
 
         if not bool(self.io.duplicate_mesh_domains):
             if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
@@ -707,17 +705,10 @@ class FluidmechanicsProblem(problem_base):
                     self.jac_pp = fem.form(self.weakform_lin_prestress_pp)
 
         te = time.time() - ts
-        if self.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
 
     def set_problem_vector_matrix_structures(self, rom=None):
-
-        ts = time.time()
-        if self.comm.rank == 0:
-            print('Creating vector and matrix structures for fluid...', end=" ")
-            sys.stdout.flush()
 
         self.r_v = fem.petsc.create_vector(self.res_v)
         if self.num_dupl > 1:
@@ -740,11 +731,6 @@ class FluidmechanicsProblem(problem_base):
                 self.K_pp = fem.petsc.create_matrix(self.jac_pp)
         else:
             self.K_pp = None
-
-        te = time.time() - ts
-        if self.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -1051,10 +1037,8 @@ class FluidmechanicsSolver(solver_base):
         # consider consistent initial acceleration
         if (self.pb.fluid_governing_type == 'navierstokes_transient' or self.pb.fluid_governing_type == 'stokes_transient') and self.pb.restart_step == 0:
 
-            tss = time.time()
-            if self.pb.comm.rank == 0:
-                print('Setting forms and solving for consistent initial acceleration...', end=" ")
-                sys.stdout.flush()
+            ts = time.time()
+            utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
@@ -1068,10 +1052,8 @@ class FluidmechanicsSolver(solver_base):
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)
 
-            tse = time.time() - tss
-            if self.pb.comm.rank == 0:
-                print('ts = %.4f s' % (tse))
-                sys.stdout.flush()
+            te = time.time() - ts
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
 
     def solve_nonlinear_problem(self, t):

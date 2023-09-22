@@ -9,6 +9,8 @@
 import sys
 import numpy as np
 
+from .. import utilities
+
 
 class sol_utils():
 
@@ -200,7 +202,7 @@ class sol_utils():
 
                 if numres==1:
                     if not sub:
-                        print(('{:<'+str(self.solver.indlen)+'s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',te,' ',ts))
+                        print(("{:<"+str(self.solver.indlen)+"s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}").format(' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',te,' ',ts))
                     else:
                         print(('{:<'+str(self.solver.indlen)+'s}{:<6s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}').format(' ',' ',it,'| ',resnorms['res1'],' ',incnorms['inc1'],'  |  ',te,' ',ts))
                 elif numres==2:

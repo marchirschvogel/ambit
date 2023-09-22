@@ -13,6 +13,7 @@ from petsc4py import PETSc
 from .. import timeintegration
 from ..solver import solver_nonlin
 from .. import ioparams
+from .. import utilities
 
 from ..base import problem_base, solver_base
 
@@ -330,9 +331,7 @@ class Flow0DProblem(problem_base):
 
             if self.ti.cycle[0] > self.perturb_after_cylce:
 
-                if self.comm.rank == 0:
-                    print(">>> Induced cardiovascular disease type: %s" % (self.perturb_type))
-                    sys.stdout.flush()
+                utilities.print_status(">>> Induced cardiovascular disease type: %s" % (self.perturb_type), self.comm)
 
                 self.cardvasc0D.induce_perturbation(self.perturb_type, self.perturb_factor)
                 self.have_induced_pert = True
@@ -447,9 +446,7 @@ class Flow0DProblem(problem_base):
         is_periodic = self.cardvasc0D.cycle_check(self.s, self.sTc, self.sTc_old, self.aux, self.auxTc, self.auxTc_old, t, self.ti.cycle, self.ti.cycleerror, self.eps_periodic, check=self.periodic_checktype, inioutpath=self.output_path_0D, nm=self.simname, induce_pert_after_cycl=self.perturb_after_cylce)
 
         if is_periodic:
-            if self.comm.rank == 0:
-                print("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.ti.cycle[0]-1,self.ti.cycleerror[0]))
-                sys.stdout.flush()
+            utilities.print_status("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.ti.cycle[0]-1,self.ti.cycleerror[0]), self.comm)
             return True
 
 
