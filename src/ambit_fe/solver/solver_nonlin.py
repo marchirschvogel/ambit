@@ -305,6 +305,11 @@ class solver_nonlinear:
                 # prepare merged matrix structure
                 if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
 
+                    ts = time.time()
+                    if self.comm.rank == 0:
+                        print('Creating merged solver residual and Jacobian data structures...', end=" ")
+                        sys.stdout.flush()
+
                     Kfullnesttmp = self.K_full_nest[npr].duplicate(copy=False)
                     self.K_full_merged[npr] = Kfullnesttmp.convert("aij")
                     # solution increment
@@ -312,6 +317,11 @@ class solver_nonlinear:
 
                     self.r_arr = np.zeros(self.r_full_nest[npr].getLocalSize())
                     self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_arr)
+
+                    te = time.time() - ts
+                    if self.comm.rank == 0:
+                        print('t = %.4f s' % (te))
+                        sys.stdout.flush()
 
             elif self.solvetype[npr]=='iterative':
 
@@ -331,9 +341,21 @@ class solver_nonlinear:
 
                 # prepare merged preconditioner matrix structure
                 if self.merge_prec_mat:
+
+                    ts = time.time()
+                    if self.comm.rank == 0:
+                        print('Creating merged solver preconditioner data structures...', end=" ")
+                        sys.stdout.flush()
+
                     Pfullnesttmp = self.P_full_nest[npr].duplicate(copy=False)
                     self.P_full_merged[npr] = Pfullnesttmp.convert("aij")
                     self.P = self.P_full_merged[npr]
+
+                    te = time.time() - ts
+                    if self.comm.rank == 0:
+                        print('t = %.4f s' % (te))
+                        sys.stdout.flush()
+
                 else:
                     self.P = self.P_full_nest[npr]
 
