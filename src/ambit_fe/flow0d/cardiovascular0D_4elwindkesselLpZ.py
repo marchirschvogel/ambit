@@ -12,6 +12,7 @@ import sympy as sp
 
 from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
+from .. import utilities
 
 ### this implements a 4-element windkessel model with an inertance L parallel to an impedance Z, all in series
 # to a compliance C parallel to a resistance R, with the original equation
@@ -139,16 +140,12 @@ class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
-        if self.comm.rank == 0:
+        utilities.print_status("Output of 0D model (4elwindkesselLpZ):", self.comm)
 
-            print("Output of 0D model (4elwindkesselLpZ):")
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]), self.comm)
 
-            print('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]))
-
-            print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]))
-            print('{:<1s}{:<3s}{:<10.3f}'.format('g',' = ',var_sq[1]))
-            print('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',var_sq[2]))
-
-            sys.stdout.flush()
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]), self.comm)
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format('g',' = ',var_sq[1]), self.comm)
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',var_sq[2]), self.comm)
 
         if not isinstance(var, np.ndarray): del var_sq

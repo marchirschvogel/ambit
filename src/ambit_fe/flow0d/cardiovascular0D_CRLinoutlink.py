@@ -12,6 +12,7 @@ import sympy as sp
 
 from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
+from .. import utilities
 
 # two RC models (2-element Windkessels) in series linking an in- to an outflow
 
@@ -123,15 +124,11 @@ class cardiovascular0DCRLinoutlink(cardiovascular0Dbase):
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
-        if self.comm.rank == 0:
+        utilities.print_status("Output of 0D model (CRLinoutlink):", self.comm)
 
-            print("Output of 0D model (CRLinoutlink):")
-
-            for i in range(len(self.cname)):
-                print('{:<5s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]))
-            for i in range(len(self.vname)):
-                print('{:<5s}{:<3s}{:<10.3f}'.format(self.vname[i],' = ',var_sq[self.varmap[self.vname[i]]]))
-
-            sys.stdout.flush()
+        for i in range(len(self.cname)):
+            utilities.print_status('{:<5s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]), self.comm)
+        for i in range(len(self.vname)):
+            utilities.print_status('{:<5s}{:<3s}{:<10.3f}'.format(self.vname[i],' = ',var_sq[self.varmap[self.vname[i]]]), self.comm)
 
         if not isinstance(var, np.ndarray): del var_sq

@@ -898,10 +898,7 @@ class FluidmechanicsProblem(problem_base):
             pd = self.comm.allgather(pd)
             pd_[m] = sum(pd)
 
-            if prnt:
-                if self.comm.rank == 0:
-                    print("dp ID "+str(self.bc_dict['dp_monitor'][m]['id'])+": pu = %.4e, pd = %.4e" % (pu_[m],pd_[m]))
-                    sys.stdout.flush()
+            if prnt: utilities.print_status("dp ID "+str(self.bc_dict['dp_monitor'][m]['id'])+": pu = %.4e, pd = %.4e" % (pu_[m],pd_[m]), self.comm)
 
 
     def evaluate_flux_monitor(self, qv_, q_, prnt=True):
@@ -912,10 +909,7 @@ class FluidmechanicsProblem(problem_base):
             q = self.comm.allgather(q)
             qv_[m] = sum(q)
 
-            if prnt:
-                if self.comm.rank == 0:
-                    print("Flux ID "+str(self.bc_dict['flux_monitor'][m]['id'])+": q = %.4e" % (qv_[m]))
-                    sys.stdout.flush()
+            if prnt: utilities.print_status("Flux ID "+str(self.bc_dict['flux_monitor'][m]['id'])+": q = %.4e" % (qv_[m]), self.comm)
 
 
     ### now the base routines for this problem
@@ -1115,9 +1109,7 @@ class FluidmechanicsSolver(solver_base):
                     m+=1
             else:
                 self.pb.io.writefunction(self.pb.p_[0], self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_pressure_pre.txt')
-            if self.pb.comm.rank == 0:
-                print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.")
-                sys.stdout.flush()
+            utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.", self.pb.comm)
             os._exit(0)
 
         # reset state

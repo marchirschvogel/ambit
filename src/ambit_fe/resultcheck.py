@@ -10,7 +10,7 @@ import sys
 import numpy as np
 from petsc4py import PETSc
 
-from . import mpiroutines
+from . import mpiroutines, utilities
 from .mpiroutines import allgather_vec
 
 
@@ -68,13 +68,9 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec', rea
 
     for i in range(len(check_node)):
         for j in range(bs):
-            if comm.rank == 0:
-                print(nm+"[%i]    = %.16E,    CORR = %.16E,    err = %.16E" % (bs*i+j, u_sq[bs*dof_indices_unique[i]+j], u_corr[bs*i+j], errs[bs*i+j]))
-                sys.stdout.flush()
+            utilities.print_status(nm+"[%i]    = %.16E,    CORR = %.16E,    err = %.16E" % (bs*i+j, u_sq[bs*dof_indices_unique[i]+j], u_corr[bs*i+j], errs[bs*i+j]), comm)
 
-    if comm.rank == 0:
-        print("Max error: %E" % (max(errs)))
-        sys.stdout.flush()
+    utilities.print_status("Max error: %E" % (max(errs)), comm)
 
     return success
 
@@ -90,15 +86,11 @@ def success_check(succ, comm):
 
     if success:
 
-        if comm.rank == 0:
-            print("Test passed. :-)")
-            sys.stdout.flush()
+        utilities.print_status("Test passed. :-)", comm)
 
     else:
 
-        if comm.rank == 0:
-            print("!!!Test failed!!!")
-            sys.stdout.flush()
+        utilities.print_status("!!!Test failed!!!", comm)
 
     return success
 
@@ -118,8 +110,6 @@ def results_check_vec(vec, vec_corr, comm, tol=1.0e-6):
             success = False
 
     for i in range(len(vec_sq)):
-        if comm.rank == 0:
-            print("vec[%i]    = %.16E,    CORR = %E,    err = %E" % (i,vec_sq[i], vec_corr[i], errs[i]))
-            sys.stdout.flush()
+        utilities.print_status("vec[%i]    = %.16E,    CORR = %E,    err = %E" % (i,vec_sq[i], vec_corr[i], errs[i]), comm)
 
     return success

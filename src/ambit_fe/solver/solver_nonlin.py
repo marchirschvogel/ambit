@@ -308,9 +308,7 @@ class solver_nonlinear:
                 if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
 
                     ts = time.time()
-                    if self.comm.rank == 0:
-                        print('Creating merged solver residual and Jacobian data structures...', end=" ")
-                        sys.stdout.flush()
+                    utilities.print_status("Creating merged solver residual and Jacobian data structures...", self.comm, e=" ")
 
                     Kfullnesttmp = self.K_full_nest[npr].duplicate(copy=False)
                     self.K_full_merged[npr] = Kfullnesttmp.convert("aij")
@@ -321,9 +319,7 @@ class solver_nonlinear:
                     self.r_full_merged[npr] = PETSc.Vec().createWithArray(self.r_arr)
 
                     te = time.time() - ts
-                    if self.comm.rank == 0:
-                        print('t = %.4f s' % (te))
-                        sys.stdout.flush()
+                    utilities.print_status("t = %.4f s" % (te), self.comm)
 
             elif self.solvetype[npr]=='iterative':
 
@@ -342,18 +338,14 @@ class solver_nonlinear:
                 if self.merge_prec_mat and self.nfields[npr] > 1:
 
                     ts = time.time()
-                    if self.comm.rank == 0:
-                        print('Creating merged solver preconditioner data structures...', end=" ")
-                        sys.stdout.flush()
+                    utilities.print_status("Creating merged solver preconditioner data structures...", self.comm, e=" ")
 
                     Pfullnesttmp = self.P_full_nest[npr].duplicate(copy=False)
                     self.P_full_merged[npr] = Pfullnesttmp.convert("aij")
                     self.P[npr] = self.P_full_merged[npr]
 
                     te = time.time() - ts
-                    if self.comm.rank == 0:
-                        print('t = %.4f s' % (te))
-                        sys.stdout.flush()
+                    utilities.print_status("t = %.4f s" % (te), self.comm)
 
                 else:
                     self.P[npr] = self.P_full_nest[npr]
@@ -599,9 +591,7 @@ class solver_nonlinear:
                         self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
                         tme = time.time() - tes
                         if self.printenh:
-                            if self.comm.rank == 0:
-                                print(' '*self.indlen_[npr] + '      === MAT merge, te = %.4f s' % (tme))
-                                sys.stdout.flush()
+                            utilities.print_status(" "*self.indlen_[npr] + "      === MAT merge, te = %.4f s" % (tme), self.comm)
 
                         self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
                         self.r_full_merged[npr].placeArray(self.r_arr)
@@ -636,9 +626,7 @@ class solver_nonlinear:
                                 self.P[npr] = self.P_full_merged[npr]
                                 tme = time.time() - tms
                                 if self.printenh:
-                                    if self.comm.rank == 0:
-                                        print(' '*self.indlen_[npr] + '      === PREC MAT merge, te = %.4f s' % (tme))
-                                        sys.stdout.flush()
+                                    utilities.print_status(" "*self.indlen_[npr] + "      === PREC MAT merge, te = %.4f s" % (tme), self.comm)
                             else:
                                 self.P[npr] = self.P_full_nest[npr]
 
@@ -755,9 +743,7 @@ class solver_nonlinear:
                 if counter_adapt>0:
                     k_PTC *= np.random.uniform(self.PTC_randadapt_range[0], self.PTC_randadapt_range[1])
 
-                if self.comm.rank == 0:
-                    print("PTC factor: %.4f" % (k_PTC))
-                    sys.stdout.flush()
+                utilities.print_status("PTC factor: %.4f" % (k_PTC), self.comm)
 
                 counter_adapt += 1
 
@@ -805,9 +791,7 @@ class solver_nonlinear:
 
         tee = time.time() - tes
         if self.printenh:
-            if self.comm.rank == 0:
-                print(' '*self.indlen_[npr] + '      === Residual assemble, te = %.4f s' % (tee))
-                sys.stdout.flush()
+            utilities.print_status(" "*self.indlen_[npr] + "      === Residual assemble, t = %.4f s" % (tee), self.comm)
 
         # apply model order reduction of residual
         if self.pb[npr].rom:
@@ -828,9 +812,7 @@ class solver_nonlinear:
 
         tee = time.time() - tes
         if self.printenh:
-            if self.comm.rank == 0:
-                print(' '*self.indlen_[npr] + '      === Jacobian assemble, te = %.4f s' % (tee))
-                sys.stdout.flush()
+            utilities.print_status(" "*self.indlen_[npr] + "      === Jacobian assemble, t = %.4f s" % (tee), self.comm)
 
         # apply model order reduction of stiffness
         if self.pb[npr].rom:
@@ -892,9 +874,7 @@ class solver_nonlinear:
                 inc_norms[i] = increments[i].vector.norm(norm_type=3)
 
             if self.print_local_iter:
-                if self.comm.rank == 0:
-                    print("      (it_local = %i, res: %.4e, inc: %.4e)" % (it_local,np.sum(res_norms),np.sum(inc_norms)))
-                    sys.stdout.flush()
+                utilities.print_status("      (it_local = %i, res: %.4e, inc: %.4e)" % (it_local,np.sum(res_norms),np.sum(inc_norms)), self.comm)
 
             # increase iteration index
             it_local += 1
@@ -1052,9 +1032,7 @@ class solver_nonlinear_ode(solver_nonlinear):
             converged = self.solutils.check_converged(self.resnorms, self.incnorms, self.tolerances[0], ptype='flow0d')
             if converged:
                 if print_iter and sub:
-                    if self.comm.rank == 0:
-                        print('       ****************************************************\n')
-                        sys.stdout.flush()
+                    utilities.print_status("       ****************************************************\n", self.comm)
                 self.ni = it-1
                 break
 

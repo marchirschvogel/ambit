@@ -255,28 +255,26 @@ class solver_base():
         # destroy stuff
         self.destroy()
 
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for computation: %.4f s (= %.2f min)\n' % ( time.time()-start, (time.time()-start)/60. ))
+        utilities.print_status("Program complete. Time for computation: %.4f s (= %.2f min)\n" % ( time.time()-start, (time.time()-start)/60. ), self.pb.comm)
 
-            print('{:<55s}{:<1.4f}{:<2s}'.format('Total solution time of all steps: ',self.wt,' s'))
-            print('{:<55s}{:<1.4f}{:<2s}'.format('Average solution time per time step: ',self.wt/N,' s'))
-            print('{:<55s}{:<1.4f}{:<2s}'.format('Maximum solution time of a time step: ',max(self.wt_),' s'))
-            print(' ')
-            print('{:<55s}{:<1d}'.format('Total number of nonlinear iterations: ',self.ni))
-            print('{:<55s}{:<1.1f}'.format('Average number of nonlinear iterations per time step: ',self.ni/N))
-            print('{:<55s}{:<1d}'.format('Maximum number of nonlinear iterations in a time step: ',max(self.ni_)))
+        utilities.print_status("{:<55s}{:<1.4f}{:<2s}".format("Total solution time of all steps: ",self.wt," s"), self.pb.comm)
+        utilities.print_status("{:<55s}{:<1.4f}{:<2s}".format("Average solution time per time step: ",self.wt/N," s"), self.pb.comm)
+        utilities.print_status("{:<55s}{:<1.4f}{:<2s}".format("Maximum solution time of a time step: ",max(self.wt_)," s"), self.pb.comm)
+        utilities.print_status(" ", self.pb.comm)
+        utilities.print_status("{:<55s}{:<1d}".format("Total number of nonlinear iterations: ",self.ni), self.pb.comm)
+        utilities.print_status("{:<55s}{:<1.1f}".format("Average number of nonlinear iterations per time step: ",self.ni/N), self.pb.comm)
+        utilities.print_status("{:<55s}{:<1d}".format("Maximum number of nonlinear iterations in a time step: ",max(self.ni_)), self.pb.comm)
 
-            if self.solnln.solvetype[0]=='iterative':
-                print(' ')
-                print('{:<55s}{:<1d}'.format('Total number of linear iterations: ',self.li))
-                print('{:<55s}{:<1.1f}'.format('Average number of linear iterations per time step: ',self.li/N))
-                print('{:<55s}{:<1d}'.format('Maximum number of linear iterations in a time step: ',max(self.li_)))
-                print('{:<55s}{:<1.1f}'.format('Average number of linear iterations per solve: ',self.li/self.ni))
-                print('{:<55s}{:<1d}'.format('Maximum number of linear iterations in a solve: ',max(self.solnln.li_s)))
+        if self.solnln.solvetype[0]=="iterative":
 
-            print("-"*63)
+            utilities.print_status(" ", self.pb.comm)
+            utilities.print_status("{:<55s}{:<1d}".format("Total number of linear iterations: ",self.li), self.pb.comm)
+            utilities.print_status("{:<55s}{:<1.1f}".format("Average number of linear iterations per time step: ",self.li/N), self.pb.comm)
+            utilities.print_status("{:<55s}{:<1d}".format("Maximum number of linear iterations in a time step: ",max(self.li_)), self.pb.comm)
+            utilities.print_status("{:<55s}{:<1.1f}".format("Average number of linear iterations per solve: ",self.li/self.ni), self.pb.comm)
+            utilities.print_status("{:<55s}{:<1d}".format("Maximum number of linear iterations in a solve: ",max(self.solnln.li_s)), self.pb.comm)
 
-            sys.stdout.flush()
+        utilities.print_status("-"*63, self.pb.comm)
 
 
     def update_counters(self, wt, t):

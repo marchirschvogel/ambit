@@ -12,6 +12,7 @@ import sympy as sp
 
 from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
+from .. import utilities
 
 # systemic and pulmonary closed-loop circulation model, each heart chamber can be treated individually,
 # either as 0D elastance model, volume or flux coming from a 3D solid, or interface fluxes from a 3D fluid model
@@ -533,22 +534,18 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         nc = len(self.c_)
 
-        if self.comm.rank == 0:
+        utilities.print_status("Output of 0D vascular model (syspul):", self.comm)
 
-            print("Output of 0D vascular model (syspul):")
+        for i in range(nc):
+            utilities.print_status('{:<9s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]), self.comm)
 
-            for i in range(nc):
-                print('{:<9s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]))
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[2],' = ',var_sq[self.varmap[self.vname[2]]],'   ',self.vname[3],' = ',var_sq[self.varmap[self.vname[3]]]), self.comm)
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[0],' = ',var_sq[self.varmap[self.vname[0]]],'   ',self.vname[1],' = ',var_sq[self.varmap[self.vname[1]]]), self.comm)
 
-            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[2],' = ',var_sq[self.varmap[self.vname[2]]],'   ',self.vname[3],' = ',var_sq[self.varmap[self.vname[3]]]))
-            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[0],' = ',var_sq[self.varmap[self.vname[0]]],'   ',self.vname[1],' = ',var_sq[self.varmap[self.vname[1]]]))
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[4],' = ',var_sq[self.varmap[self.vname[4]]],'   ','p_ar_pul',' = ',var_sq[self.varmap['p_ar_pul']]), self.comm)
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ven_sys',' = ',var_sq[self.varmap['p_ven_sys']],'   ','p_ven_pul',' = ',var_sq[self.varmap['p_ven_pul']]), self.comm)
 
-            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[4],' = ',var_sq[self.varmap[self.vname[4]]],'   ','p_ar_pul',' = ',var_sq[self.varmap['p_ar_pul']]))
-            print('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ven_sys',' = ',var_sq[self.varmap['p_ven_sys']],'   ','p_ven_pul',' = ',var_sq[self.varmap['p_ven_pul']]))
-
-            sys.stdout.flush()
-
-            if self.cormodel is not None: self.corcirc.print_to_screen(var_sq, aux)
-            if self.vadmodel is not None: self.vadcirc.print_to_screen(var_sq, aux)
+        if self.cormodel is not None: self.corcirc.print_to_screen(var_sq, aux, self.comm)
+        if self.vadmodel is not None: self.vadcirc.print_to_screen(var_sq, aux, self.comm)
 
         if not isinstance(var, np.ndarray): del var_sq

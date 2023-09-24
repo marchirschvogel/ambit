@@ -63,14 +63,10 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
             # check if below tolerance
             if abs(self.pb.pbf.ti.cycleerror[0]) <= self.pb.pbf.eps_periodic:
-                if self.pb.comm.rank == 0:
-                    print("Periodicity on reference configuration reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]))
-                    sys.stdout.flush()
+                utilities.print_status("Periodicity on reference configuration reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]), self.pb.comm)
                 break
 
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for full computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            sys.stdout.flush()
+        utilities.print_status("Program complete. Time for full computation: %.4f s (= %.2f min)" % ( time.time()-start, (time.time()-start)/60. ), self.pb.comm)
 
 
     # set state to zero

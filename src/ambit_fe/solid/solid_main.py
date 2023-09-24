@@ -1062,9 +1062,7 @@ class SolidmechanicsSolver(solver_base):
             self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_displacement_pre.txt')
             if self.pb.incompressible_2field:
                 self.pb.io.writefunction(self.pb.p, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_pressure_pre.txt')
-            if self.pb.comm.rank == 0:
-                print("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.")
-                sys.stdout.flush()
+            utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.", self.pb.comm)
             os._exit(0)
 
         # reset PTC flag to what it was

@@ -182,11 +182,6 @@ class SolidmechanicsConstraintProblem(problem_base):
 
     def set_problem_vector_matrix_structures_coupling(self):
 
-        tes = time.time()
-        if self.comm.rank == 0:
-            print('Creating vector and matrix structures for solid-constraint coupling... ', end="")
-            sys.stdout.flush()
-
         self.r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
         self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
@@ -199,12 +194,12 @@ class SolidmechanicsConstraintProblem(problem_base):
         locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
         matsize = self.pbs.V_u.dofmap.index_map.size_global * self.pbs.V_u.dofmap.index_map_bs
 
-        # derivative of solid residual w.r.t. 0D pressures
         self.k_us_vec = []
         for i in range(len(self.col_ids)):
             self.k_us_vec.append(fem.petsc.create_vector(self.dforce_form[i]))
 
-        self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(sze_coup)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        # derivative of solid residual w.r.t. 0D pressures
+        self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(PETSc.DECIDE,sze_coup)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_us.setUp()
 
         self.k_su_vec = []
@@ -212,13 +207,28 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.k_su_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
 
         # derivative of 0D residual w.r.t. solid displacements
-        self.K_su = PETSc.Mat().createAIJ(size=((sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_su = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_su.setUp()
 
-        tee = time.time() - tes
-        if self.comm.rank == 0:
-            print('te = %.2f s' % (tee))
-            sys.stdout.flush()
+        self.dofs_coupling = [[]]*self.num_coupling_surf
+
+        self.k_us_subvec, self.k_su_subvec = [], []
+        self.arr_us, self.arr_su = [], []
+
+        for n in range(self.num_coupling_surf):
+
+            nds_c_local = [[]]*len(self.surface_c_ids[n])
+            for i in range(len(self.surface_c_ids[n])):
+                nds_c_local[i] = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[self.pbs.io.mt_b1.values == self.surface_c_ids[n][i]])
+            nds_c_local_flat = [item for sublist in nds_c_local for item in sublist]
+            nds_c = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(nds_c_local_flat), dtype=np.int32)
+            self.dofs_coupling[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_c, comm=self.comm)
+
+            self.k_su_subvec.append( self.k_su_vec[n].getSubVector(self.dofs_coupling[n]) )
+            self.arr_su.append( np.zeros(self.k_su_subvec[-1].getLocalSize()) )
+
+            self.k_us_subvec.append( self.k_us_vec[n].getSubVector(self.dofs_coupling[n]) )
+            self.arr_us.append( np.zeros(self.k_us_subvec[-1].getLocalSize()) )
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -292,18 +302,21 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.k_us_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
 
-        # row ownership range of uu block
-        irs, ire = self.pbs.K_list[0][0].getOwnershipRange()
-
         # set columns
         for i in range(len(self.col_ids)):
-            self.K_us[irs:ire, self.col_ids[i]] = self.k_us_vec[i][irs:ire]
+            self.k_us_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_us_subvec[i])
+            self.arr_us[i][:] = self.k_us_subvec[i].getArray(readonly=True)
+            self.K_us.setValues(self.dofs_coupling[i], self.col_ids[i], self.arr_us[i], addv=PETSc.InsertMode.INSERT)
+            self.k_us_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_us_subvec[i])
 
         self.K_us.assemble()
 
         # set rows
         for i in range(len(self.row_ids)):
-            self.K_su[self.row_ids[i], irs:ire] = self.k_su_vec[i][irs:ire]
+            self.k_su_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_su_subvec[i])
+            self.arr_su[i][:] = self.k_su_subvec[i].getArray(readonly=True)
+            self.K_su.setValues(self.row_ids[i], self.dofs_coupling[i], self.arr_su[i], addv=PETSc.InsertMode.INSERT)
+            self.k_su_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_su_subvec[i])
 
         self.K_su.assemble()
 

@@ -9,6 +9,8 @@
 import sys
 import sympy as sp
 
+from .. import utilities
+
 # coronary model with a 3-element Windkessel (ZCR, proximal part) in series with a 2-element Windkessel (CR, distal part)
 # according to Vieira et al. (2018) "Patient-specific modeling of right coronary circulation vulnerability post-liver transplant in Alagille’s syndrome", PLoS ONE 13(11), e0205829
 # here their R_e is Z_corp_sys, C_e is C_corp_sys, R_p is R_corp_sys, C_i is C_cord_sys, and R_d is R_cord_sys
@@ -96,12 +98,11 @@ class coronary_circ_ZCRp_CRd():
         except: var[self.varmap['q_ven'+str(self.vs+1)+'_sys']]    = iniparam['q_ven_sys_0']
 
 
-    def print_to_screen(self, var_sq, aux):
+    def print_to_screen(self, var_sq, aux, comm):
 
-        print("Output of 0D coronary model (ZCRp_CRd):")
+        utilities.print_status("Output of 0D coronary model (ZCRp_CRd):", comm)
 
-        print('{:<10s}{:<3s}{:<7.3f}'.format('p_cord_sys',' = ',var_sq[self.varmap['p_cord_sys']]))
-        sys.stdout.flush()
+        utilities.print_status('{:<10s}{:<3s}{:<7.3f}'.format('p_cord_sys',' = ',var_sq[self.varmap['p_cord_sys']]), comm)
 
 
 # equivalent model to ZCRp_CRd, but individually for left and right coronary arteries
@@ -246,9 +247,8 @@ class coronary_circ_ZCRp_CRd_lr():
         except: var[self.varmap['q_ven'+str(self.vs+1)+'_sys']]    = iniparam['q_ven_sys_0']
 
 
-    def print_to_screen(self, var_sq, aux):
+    def print_to_screen(self, var_sq, aux, comm):
 
-        print("Output of 0D coronary model (ZCRp_CRd_lr):")
+        utilities.print_status("Output of 0D coronary model (ZCRp_CRd_lr):", comm)
 
-        print('{:<12s}{:<3s}{:<7.3f}{:<3s}{:<12s}{:<3s}{:<7.3f}'.format('p_cord_sys_l',' = ',var_sq[self.varmap['p_cord_sys_l']],'   ','p_cord_sys_r',' = ',var_sq[self.varmap['p_cord_sys_r']]))
-        sys.stdout.flush()
+        utilities.print_status('{:<12s}{:<3s}{:<7.3f}{:<3s}{:<12s}{:<3s}{:<7.3f}'.format('p_cord_sys_l',' = ',var_sq[self.varmap['p_cord_sys_l']],'   ','p_cord_sys_r',' = ',var_sq[self.varmap['p_cord_sys_r']]), comm)

@@ -185,9 +185,7 @@ class FSIProblem(problem_base):
         self.pbfa.set_problem_residual_jacobian_forms()
 
         ts = time.time()
-        if self.comm.rank == 0:
-            print('FEM form compilation for FSI coupling...')
-            sys.stdout.flush()
+        utilities.print_status("FEM form compilation for FSI coupling...", self.comm, e=" ")
 
         self.res_l = fem.form(self.weakform_l, entity_maps=self.io.entity_maps)
 

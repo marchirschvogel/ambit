@@ -188,7 +188,7 @@ class AleProblem(problem_base):
     def set_problem_residual_jacobian_forms(self):
 
         ts = time.time()
-        utilities.print_status("FEM form compilation for fluid...", self.comm, e=" ")
+        utilities.print_status("FEM form compilation for ALE...", self.comm, e=" ")
 
         if self.io.USE_MIXED_DOLFINX_BRANCH:
             self.res_d = fem.form(self.weakform_d, entity_maps=self.io.entity_maps)

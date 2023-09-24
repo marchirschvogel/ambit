@@ -10,6 +10,7 @@ import sys, time
 import numpy as np
 import sympy as sp
 
+from . import utilities
 from .mpiroutines import allgather_vec, allgather_vec_entry
 
 
@@ -77,9 +78,7 @@ class ode:
     def lambdify_expressions(self):
 
         ts = time.time()
-        if self.comm.rank == 0:
-            print("ODE model: Calling lambdify for residual expressions...", end=" ")
-            sys.stdout.flush()
+        utilities.print_status("ODE model: Calling lambdify for residual expressions...", self.comm, e=" ")
 
         for i in range(self.numdof):
             self.df__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.df_[i], 'numpy')
@@ -87,14 +86,10 @@ class ode:
             self.a__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.a_[i], 'numpy')
 
         te = time.time() - ts
-        if self.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
+        utilities.print_status('t = %.4f s' % (te), self.comm)
 
         ts = time.time()
-        if self.comm.rank == 0:
-            print("ODE model: Calling lambdify for stiffness expressions...", end=" ")
-            sys.stdout.flush()
+        utilities.print_status("ODE model: Calling lambdify for stiffness expressions...", self.comm, e=" ")
 
         for i in range(self.numdof):
             for j in range(self.numdof):
@@ -104,9 +99,7 @@ class ode:
                 else:                               self.K__[i][j] = lambda a, b, c, d : 0
 
         te = time.time() - ts
-        if self.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
+        utilities.print_status('t = %.4f s' % (te), self.comm)
 
 
     # set prescribed variable values for residual

@@ -16,7 +16,7 @@ import ufl
 #from solver import projection
 from .solver.projection import project
 from .mpiroutines import allgather_vec
-from . import meshutils, expression, ioparams
+from . import meshutils, expression, ioparams, utilities
 from . import mathutils
 from .mathutils import spectral_decomposition_3x3
 
@@ -283,9 +283,7 @@ class IO:
     def readin_fibers(self, fibarray, V_fib, dx_, order_disp):
 
         ts = time.time()
-        if self.comm.rank == 0:
-            print("Reading in fibers...", end=" ")
-            sys.stdout.flush()
+        utilities.print_status("Reading in fibers...", self.comm, e=" ")
 
         fib_func_input, fib_func = [], []
 
@@ -322,9 +320,7 @@ class IO:
             si+=1
 
         te = time.time() - ts
-        if self.comm.rank == 0:
-            print('t = %.4f s' % (te))
-            sys.stdout.flush()
+        utilities.print_status('t = %.4f s' % (te), self.comm)
 
         return fib_func
 

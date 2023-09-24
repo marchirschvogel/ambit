@@ -12,6 +12,7 @@ import sympy as sp
 
 from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
+from .. import utilities
 
 ### 2-element windkessel: C dp/dt + (p-p_ref)/R = Q, with Q:=-dV/dt (Poiseuille's flow for C=0)
 # (can be reproduced with 4elwindkesselLsZ by setting Z, L = 0)
@@ -112,13 +113,9 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
-        if self.comm.rank == 0:
+        utilities.print_status("Output of 0D model (2elwindkessel):", self.comm)
 
-            print("Output of 0D model (2elwindkessel):")
-
-            print('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]))
-            print('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]))
-
-            sys.stdout.flush()
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]), self.comm)
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]), self.comm)
 
         if not isinstance(var, np.ndarray): del var_sq

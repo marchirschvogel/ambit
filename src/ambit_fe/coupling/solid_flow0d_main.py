@@ -14,7 +14,7 @@ import ufl
 from petsc4py import PETSc
 
 from ..solver import solver_nonlin
-from .. import utilities, expression, ioparams
+from .. import utilities, expression, ioparams, meshutils
 from ..solver.projection import project
 from ..mpiroutines import allgather_vec
 
@@ -221,9 +221,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         eps = 1.0e-14
         if t >= self.t_gandr_setpoint-eps and t < self.t_gandr_setpoint+self.pbs.dt-eps:
 
-            if self.comm.rank == 0:
-                print('Set homeostatic growth thresholds...')
-                sys.stdout.flush()
+            utilities.print_status("Set homeostatic growth thresholds...", self.comm)
             time.sleep(1)
 
             growth_thresolds = []
@@ -256,9 +254,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         eps = 1.0e-14
         if t >= self.t_gandr_setpoint-eps and t < self.t_gandr_setpoint+self.pbs.dt-eps:
 
-            if self.comm.rank == 0:
-                print('Set growth triggers...')
-                sys.stdout.flush()
+            utilities.print_status("Set growth triggers...", self.comm)
             time.sleep(1)
 
             self.pbs.u_set.vector.axpby(1.0, 0.0, self.pbs.u.vector)
@@ -328,12 +324,12 @@ class SolidmechanicsFlow0DProblem(problem_base):
         locmatsize = self.pbs.V_u.dofmap.index_map.size_local * self.pbs.V_u.dofmap.index_map_bs
         matsize = self.pbs.V_u.dofmap.index_map.size_global * self.pbs.V_u.dofmap.index_map_bs
 
-        # derivative of solid residual w.r.t. 0D pressures
         self.k_us_vec = []
         for i in range(len(self.col_ids)):
             self.k_us_vec.append(fem.petsc.create_vector(self.dforce_form[i]))
 
-        self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(sze_coup)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        # derivative of solid residual w.r.t. 0D pressures
+        self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(PETSc.DECIDE,sze_coup)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_us.setUp()
 
         self.k_su_vec = []
@@ -341,8 +337,35 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.k_su_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
 
         # derivative of 0D residual w.r.t. solid displacements
-        self.K_su = PETSc.Mat().createAIJ(size=((sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_su = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sze_coup),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_su.setUp()
+
+        self.dofs_coupling_vq, self.dofs_coupling_p = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
+
+        self.k_us_subvec, self.k_su_subvec = [], []
+        self.arr_us, self.arr_su = [], []
+
+        for n in range(self.num_coupling_surf):
+
+            nds_vq_local = [[]]*len(self.surface_vq_ids[n])
+            for i in range(len(self.surface_vq_ids[n])):
+                nds_vq_local[i] = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[self.pbs.io.mt_b1.values == self.surface_vq_ids[n][i]])
+            nds_vq_local_flat = [item for sublist in nds_vq_local for item in sublist]
+            nds_vq = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(nds_vq_local_flat), dtype=np.int32)
+            self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_vq, comm=self.comm)
+
+            self.k_su_subvec.append( self.k_su_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
+            self.arr_su.append( np.zeros(self.k_su_subvec[-1].getLocalSize()) )
+
+            nds_p_local = [[]]*len(self.surface_p_ids[n])
+            for i in range(len(self.surface_p_ids[n])):
+                nds_p_local[i] = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[self.pbs.io.mt_b1.values == self.surface_p_ids[n][i]])
+            nds_p_local_flat = [item for sublist in nds_p_local for item in sublist]
+            nds_p = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(nds_p_local_flat), dtype=np.int32)
+            self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_p, comm=self.comm)
+
+            self.k_us_subvec.append( self.k_us_vec[n].getSubVector(self.dofs_coupling_p[n]) )
+            self.arr_us.append( np.zeros(self.k_us_subvec[-1].getLocalSize()) )
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -513,18 +536,21 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.k_us_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
 
-        # row ownership range of uu block
-        irs, ire = self.pbs.K_list[0][0].getOwnershipRange()
-
         # set columns
         for i in range(len(self.col_ids)):
-            self.K_us[irs:ire, self.col_ids[i]] = self.k_us_vec[i][irs:ire]
+            self.k_us_vec[i].getSubVector(self.dofs_coupling_p[i], subvec=self.k_us_subvec[i])
+            self.arr_us[i][:] = self.k_us_subvec[i].getArray(readonly=True)
+            self.K_us.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.arr_us[i], addv=PETSc.InsertMode.INSERT)
+            self.k_us_vec[i].restoreSubVector(self.dofs_coupling_p[i], subvec=self.k_us_subvec[i])
 
         self.K_us.assemble()
 
         # set rows
         for i in range(len(self.row_ids)):
-            self.K_su[self.row_ids[i], irs:ire] = self.k_su_vec[i][irs:ire]
+            self.k_su_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_su_subvec[i])
+            self.arr_su[i][:] = self.k_su_subvec[i].getArray(readonly=True)
+            self.K_su.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.arr_su[i], addv=PETSc.InsertMode.INSERT)
+            self.k_su_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_su_subvec[i])
 
         self.K_su.assemble()
 

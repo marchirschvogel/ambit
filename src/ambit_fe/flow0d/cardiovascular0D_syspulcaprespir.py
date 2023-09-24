@@ -12,6 +12,7 @@ import sympy as sp
 
 from .cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
 from ..mpiroutines import allgather_vec
+from .. import utilities
 
 # respiratory and gas transport part of syspulcap model (Diss Hirschvogel, p. 58ff.)
 # builds upon syspulcap model
@@ -782,15 +783,11 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         if isinstance(var, np.ndarray): var_sq = var
         else: var_sq = allgather_vec(var, self.comm)
 
-        if self.comm.rank == 0:
+        utilities.print_status("Output of 0D respiratory model (syspulcaprespir):", self.comm)
 
-            print("Output of 0D respiratory model (syspulcaprespir):")
+        utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('SO2_ar_sys',' = ',aux[self.auxmap['SO2_ar_sys']],'   ','SO2_ar_pul',' = ',aux[self.auxmap['SO2_ar_pul']]), self.comm)
 
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('SO2_ar_sys',' = ',aux[self.auxmap['SO2_ar_sys']],'   ','SO2_ar_pul',' = ',aux[self.auxmap['SO2_ar_pul']]))
-
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppO2_ar_sys',' = ',var_sq[self.varmap['ppO2_ar_sys']],'   ','ppO2_ar_pul',' = ',var_sq[self.varmap['ppO2_ar_pul']]))
-            print('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_sq[self.varmap['ppCO2_ar_sys']],'   ','ppCO2_ar_pul',' = ',var_sq[self.varmap['ppCO2_ar_pul']]))
-
-            sys.stdout.flush()
+        utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppO2_ar_sys',' = ',var_sq[self.varmap['ppO2_ar_sys']],'   ','ppO2_ar_pul',' = ',var_sq[self.varmap['ppO2_ar_pul']]), self.comm)
+        utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_sq[self.varmap['ppCO2_ar_sys']],'   ','ppCO2_ar_pul',' = ',var_sq[self.varmap['ppCO2_ar_pul']]), self.comm)
 
         if not isinstance(var, np.ndarray): del var_sq

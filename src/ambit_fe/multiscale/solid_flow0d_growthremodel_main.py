@@ -174,9 +174,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(solver_base):
 
             if not self.pb.restart_from_small:
 
-                if self.pb.comm.rank == 0:
-                    print("Solving small scale 3D-0D coupled solid-flow0d problem:")
-                    sys.stdout.flush()
+                utilities.print_status("Solving small scale 3D-0D coupled solid-flow0d problem:", self.pb.comm)
 
                 # solve small scale 3D-0D coupled solid-flow0d problem with fixed growth
                 self.solversmall.solve_problem()
@@ -207,9 +205,7 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(solver_base):
             # compute volume prior to G&R
             vol_prior = self.compute_volume_large()
 
-            if self.pb.comm.rank == 0:
-                print("Solving large scale solid growth and remodeling problem:")
-                sys.stdout.flush()
+            utilities.print_status("Solving large scale solid growth and remodeling problem:", self.pb.comm)
 
             # solve large scale static G&R solid problem with fixed loads
             self.solverlarge.solve_problem()
@@ -223,17 +219,13 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(solver_base):
 
             # relative volume increase over large scale run
             volchange = (vol_after - vol_prior)/vol_prior
-            if self.pb.comm.rank == 0:
-                print('Volume change due to growth: %.4e' % (volchange))
-                sys.stdout.flush()
+            utilities.print_status("Volume change due to growth: %.4e" % (volchange), self.pb.comm)
 
             # check if below tolerance
             if abs(volchange) <= self.pb.tol_outer:
                 break
 
-        if self.pb.comm.rank == 0: # only proc 0 should print this
-            print('Program complete. Time for full multiscale computation: %.4f s (= %.2f min)' % ( time.time()-start, (time.time()-start)/60. ))
-            sys.stdout.flush()
+        utilities.print_status("Program complete. Time for full multiscale computation: %.4f s (= %.2f min)" % ( time.time()-start, (time.time()-start)/60. ), self.pb.comm)
 
 
     def set_state_small(self):
@@ -314,8 +306,6 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(solver_base):
         vol = self.pb.comm.allgather(vol)
         volume_large = sum(vol)
 
-        if self.pb.comm.rank == 0:
-            print('Volume of myocardium: %.4e' % (volume_large))
-            sys.stdout.flush()
+        utilities.print_status("Volume of myocardium: %.4e" % (volume_large), self.pb.comm)
 
         return volume_large

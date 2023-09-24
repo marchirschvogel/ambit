@@ -202,12 +202,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
         locmatsize = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
         matsize = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
 
-        # derivative of solid residual w.r.t. 0D pressures
         self.k_vs_vec = []
         for i in range(len(self.col_ids)):
             self.k_vs_vec.append(fem.petsc.create_vector(self.dforce_form[i]))
 
-        self.K_vs = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(self.num_coupling_surf)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        # derivative of solid residual w.r.t. 0D pressures
+        self.K_vs = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(PETSc.DECIDE,self.num_coupling_surf)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_vs.setUp()
 
         self.k_sv_vec = []
@@ -215,8 +215,35 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.k_sv_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
 
         # derivative of 0D residual w.r.t. solid displacements
-        self.K_sv = PETSc.Mat().createAIJ(size=((self.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+        self.K_sv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_sv.setUp()
+
+        self.dofs_coupling_vq, self.dofs_coupling_p = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
+
+        self.k_vs_subvec, self.k_sv_subvec = [], []
+        self.arr_vs, self.arr_sv = [], []
+
+        for n in range(self.num_coupling_surf):
+
+            nds_vq_local = [[]]*len(self.surface_vq_ids[n])
+            for i in range(len(self.surface_vq_ids[n])):
+                nds_vq_local[i] = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[self.pbf.io.mt_b1.values == self.surface_vq_ids[n][i]])
+            nds_vq_local_flat = [item for sublist in nds_vq_local for item in sublist]
+            nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(nds_vq_local_flat), dtype=np.int32)
+            self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_vq, comm=self.comm)
+
+            self.k_sv_subvec.append( self.k_sv_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
+            self.arr_sv.append( np.zeros(self.k_sv_subvec[-1].getLocalSize()) )
+
+            nds_p_local = [[]]*len(self.surface_p_ids[n])
+            for i in range(len(self.surface_p_ids[n])):
+                nds_p_local[i] = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[self.pbf.io.mt_b1.values == self.surface_p_ids[n][i]])
+            nds_p_local_flat = [item for sublist in nds_p_local for item in sublist]
+            nds_p = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(nds_p_local_flat), dtype=np.int32)
+            self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_p, comm=self.comm)
+
+            self.k_vs_subvec.append( self.k_vs_vec[n].getSubVector(self.dofs_coupling_p[n]) )
+            self.arr_vs.append( np.zeros(self.k_vs_subvec[-1].getLocalSize()) )
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -353,18 +380,21 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.k_vs_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(self.k_vs_vec[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
 
-        # row ownership range of vv block
-        irs, ire = self.pbf.K_list[0][0].getOwnershipRange()
-
         # set columns
         for i in range(len(self.col_ids)):
-            self.K_vs[irs:ire, self.col_ids[i]] = self.k_vs_vec[i][irs:ire]
+            self.k_vs_vec[i].getSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
+            self.arr_vs[i][:] = self.k_vs_subvec[i].getArray(readonly=True)
+            self.K_vs.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.arr_vs[i], addv=PETSc.InsertMode.INSERT)
+            self.k_vs_vec[i].restoreSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
 
         self.K_vs.assemble()
 
         # set rows
         for i in range(len(self.row_ids)):
-            self.K_sv[self.row_ids[i], irs:ire] = self.k_sv_vec[i][irs:ire]
+            self.k_sv_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
+            self.arr_sv[i][:] = self.k_sv_subvec[i].getArray(readonly=True)
+            self.K_sv.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.arr_sv[i], addv=PETSc.InsertMode.INSERT)
+            self.k_sv_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
 
         self.K_sv.assemble()
 

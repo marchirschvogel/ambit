@@ -9,6 +9,8 @@
 import sys
 import sympy as sp
 
+from .. import utilities
+
 
 class vad_circ():
 
@@ -56,7 +58,7 @@ class vad_circ():
 
 
 
-    def print_to_screen(self, var_sq, aux):
+    def print_to_screen(self, var_sq, aux, comm):
 
-        print("Output of 0D VAD model (type):")
+        utilities.print_status("Output of 0D VAD model (type):", comm)
         ### Implement your printout routine here

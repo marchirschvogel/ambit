@@ -139,17 +139,34 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         if self.coupling_strategy=='monolithic':
 
-            self.k_sd_vec = []
-            for i in range(len(self.pbf0.row_ids)):
-                self.k_sd_vec.append(fem.petsc.create_vector(self.dcqd_form[i]))
-
             # setup offdiagonal matrix
             locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
             matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
 
-            # derivative of 0D residual w.r.t. ALE displacements
-            self.K_sd = PETSc.Mat().createAIJ(size=((self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
+            self.k_sd_vec = []
+            for i in range(len(self.pbf0.row_ids)):
+                self.k_sd_vec.append(fem.petsc.create_vector(self.dcqd_form[i]))
+
+            # derivative of 0D residual w.r.t. solid displacements
+            self.K_sd = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
             self.K_sd.setUp()
+
+            self.dofs_coupling_vq = [[]]*self.pbf0.num_coupling_surf
+
+            self.k_sd_subvec = []
+            self.arr_sd = []
+
+            for n in range(self.pbf0.num_coupling_surf):
+
+                nds_vq_local = [[]]*len(self.pbf0.surface_vq_ids[n])
+                for i in range(len(self.pbf0.surface_vq_ids[n])):
+                    nds_vq_local[i] = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[self.pba.io.mt_b1.values == self.pbf0.surface_vq_ids[n][i]])
+                nds_vq_local_flat = [item for sublist in nds_vq_local for item in sublist]
+                nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(nds_vq_local_flat), dtype=np.int32)
+                self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_vq, comm=self.comm)
+
+                self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
+                self.arr_sd.append( np.zeros(self.k_sd_subvec[-1].getLocalSize()) )
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -214,11 +231,12 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             fem.petsc.assemble_vector(self.k_sd_vec[i], self.dcqd_form[i])
             self.k_sd_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
-        irs, ire = self.pbf.K_list[0][0].getOwnershipRange()
-
         # set rows
         for i in range(len(self.pbf0.row_ids)):
-            self.K_sd[self.pbf0.row_ids[i], irs:ire] = self.k_sd_vec[i][irs:ire]
+            self.k_sd_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
+            self.arr_sd[i][:] = self.k_sd_subvec[i].getArray(readonly=True)
+            self.K_sd.setValues(self.pbf0.row_ids[i], self.dofs_coupling_vq[i], self.arr_sd[i], addv=PETSc.InsertMode.INSERT)
+            self.k_sd_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
 
         self.K_sd.assemble()
 

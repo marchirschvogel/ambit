@@ -381,19 +381,15 @@ class FluidmechanicsAleProblem(problem_base):
         d = fem.Function(self.pba.Vcoord)
         d.interpolate(self.pba.d)
         self.io.mesh.geometry.x[:,:self.pba.dim] += d.x.array.reshape((-1, self.pba.dim))
-        if self.comm.rank == 0:
-            print('Updating mesh...')
-            sys.stdout.flush()
+        utilities.print_status("Updating mesh...", self.comm)
 
 
     def print_warning_ale(self):
-        if self.comm.rank == 0:
-            print(' ')
-            print('*********************************************************************************************************************')
-            print('*** Warning: You are solving Navier-Stokes by only updating the frame after each time step! This is inconsistent! ***')
-            print('*********************************************************************************************************************')
-            print(' ')
-            sys.stdout.flush()
+        utilities.print_status(" ", self.comm)
+        utilities.print_status("*********************************************************************************************************************", self.comm)
+        utilities.print_status("*** Warning: You are solving Navier-Stokes by only updating the frame after each time step! This is inconsistent! ***", self.comm)
+        utilities.print_status("*********************************************************************************************************************", self.comm)
+        utilities.print_status(" ", self.comm)
 
 
     ### now the base routines for this problem
