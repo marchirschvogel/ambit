@@ -147,13 +147,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             for i in range(len(self.pbf0.row_ids)):
                 self.k_sd_vec.append(fem.petsc.create_vector(self.dcqd_form[i]))
 
-            # derivative of 0D residual w.r.t. solid displacements
-            self.K_sd = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=None, csr=None, comm=self.comm)
-            self.K_sd.setUp()
-
             self.dofs_coupling_vq = [[]]*self.pbf0.num_coupling_surf
 
-            self.k_sd_subvec = []
+            self.k_sd_subvec, sze_sd = [], []
             self.arr_sd = []
 
             for n in range(self.pbf0.num_coupling_surf):
@@ -167,6 +163,13 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
                 self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
                 self.arr_sd.append( np.zeros(self.k_sd_subvec[-1].getLocalSize()) )
+
+                sze_sd.append(self.k_sd_subvec[-1].getSize())
+
+            # derivative of 0D residual w.r.t. solid displacements
+            self.K_sd = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_sd), csr=None, comm=self.comm)
+            self.K_sd.setUp()
+            self.K_sd.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
 
 
     def assemble_residual(self, t, subsolver=None):
