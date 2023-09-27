@@ -79,7 +79,7 @@ class block_precond():
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
 
             # set operators and setup field prec
-            self.ksp_fields[n].getPC().setOperators(operator_mats[n])
+            self.ksp_fields[n].setOperators(operator_mats[n])
             self.ksp_fields[n].getPC().setUp()
 
         te = time.time() - ts
