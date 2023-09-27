@@ -63,9 +63,6 @@ class block_precond():
                 self.ksp_fields[n].getPC().setType(amgtype)
                 if amgtype=="hypre":
                     self.ksp_fields[n].getPC().setHYPREType("boomeramg")
-                # set operators and setup field prec
-                self.ksp_fields[n].getPC().setOperators(operator_mats[n])
-                self.ksp_fields[n].getPC().setUp()
                 # TODO: Some additional hypre options we might wanna set... which are optimal here???
                 # opts = PETSc.Options()
                 # opts.setValue('pc_hypre_parasails_reuse', True) # - does this exist???
@@ -80,6 +77,10 @@ class block_precond():
                 self.ksp_fields[n].getPC().setFactorSolverType("mumps")
             else:
                 raise ValueError("Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner.")
+
+            # set operators and setup field prec
+            self.ksp_fields[n].getPC().setOperators(operator_mats[n])
+            self.ksp_fields[n].getPC().setUp()
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -196,7 +197,6 @@ class schur_2x2(block_precond):
         x.getSubVector(self.iset[1], subvec=self.x2)
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(self.x1, self.y1)
 
         self.B.mult(self.y1, self.By1)
@@ -206,7 +206,6 @@ class schur_2x2(block_precond):
         self.z2.axpy(-1., self.By1)
 
         # 2) solve Smod * y_2 = z_2
-        self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(self.z2, self.y2)
 
         self.Bt.mult(self.y2, self.Bty2)
@@ -216,7 +215,6 @@ class schur_2x2(block_precond):
         self.z1.axpy(-1., self.Bty2)
 
         # 3) solve A * y_1 = z_1
-        self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(self.z1, self.y1)
 
         # restore/clean up
@@ -436,7 +434,6 @@ class schur_3x3(block_precond):
         tss = time.time()
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(self.x1, self.y1)
 
         self.B.mult(self.y1, self.By1)
@@ -446,7 +443,6 @@ class schur_3x3(block_precond):
         self.z2.axpy(-1., self.By1)
 
         # 2) solve Smod * y_2 = z_2
-        self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(self.z2, self.y2)
 
         self.D.mult(self.y1, self.Dy1)
@@ -460,7 +456,6 @@ class schur_3x3(block_precond):
         self.z3.axpy(-1., self.Ey2)
 
         # 3) solve Wmod * y_3 = z_3
-        self.ksp_fields[2].setOperators(self.Wmod)
         self.ksp_fields[2].solve(self.z3, self.y3)
 
         self.Tmod.mult(self.y3, self.Tmody3)
@@ -471,7 +466,6 @@ class schur_3x3(block_precond):
         self.z2.axpy(-1., self.Tmody3)
 
         # 4) solve Smod * y_2 = z_2
-        self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(self.z2, self.y2)
 
         self.Bt.mult(self.y2, self.Bty2)
@@ -483,7 +477,6 @@ class schur_3x3(block_precond):
         self.z1.axpy(-1., self.Dty3)
 
         # 5) solve A * y_1 = z_1
-        self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(self.z1, self.y1)
 
         # restore/clean up
@@ -537,8 +530,7 @@ class schur_4x4(schur_3x3):
 
         x.getSubVector(self.iset[3], subvec=self.x4)
 
-        # solve A * y_4 = x_4
-        self.ksp_fields[3].setOperators(self.G)
+        # solve G * y_4 = x_4
         self.ksp_fields[3].solve(self.x4, self.y4)
 
         # restore/clean up
@@ -564,7 +556,6 @@ class simple_2x2(schur_2x2):
         x.getSubVector(self.iset[1], subvec=self.x2)
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(self.x1, self.y1)
 
         self.B.mult(self.y1, self.By1)
@@ -574,7 +565,6 @@ class simple_2x2(schur_2x2):
         self.z2.axpy(-1., self.By1)
 
         # 2) solve Smod * y_2 = z_2
-        self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[1].solve(self.z2, self.y2)
 
         # 3) update y_1
@@ -651,7 +641,6 @@ class bgs_2x2(block_precond):
         x.getSubVector(self.iset[1], subvec=self.x2)
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(self.x1, self.y1)
 
         self.B.mult(self.y1, self.By1)
@@ -661,7 +650,6 @@ class bgs_2x2(block_precond):
         self.z2.axpy(-1., self.By1)
 
         # 2) solve C * y_2 = z_2
-        self.ksp_fields[1].setOperators(self.C)
         self.ksp_fields[1].solve(self.z2, self.y2)
 
         # restore/clean up
@@ -719,11 +707,9 @@ class jacobi_2x2(block_precond):
         x.getSubVector(self.iset[1], subvec=self.x2)
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[0].solve(self.x1, self.y1)
 
         # 2) solve C * y_2 = x_2
-        self.ksp_fields[1].setOperators(self.C)
         self.ksp_fields[1].solve(self.x2, self.y2)
 
         # restore/clean up

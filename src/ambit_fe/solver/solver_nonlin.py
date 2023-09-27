@@ -295,6 +295,8 @@ class solver_nonlinear:
             self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
             self.r_full_nest[npr] = PETSc.Vec().createNest(self.r_list_sol[npr])
 
+            #self.K_full_nest[npr].setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
             if self.solvetype[npr]=='direct':
 
                 # create solver
@@ -305,7 +307,7 @@ class solver_nonlinear:
                 self.ksp[npr].getPC().setFactorSolverType(self.direct_solver)
 
                 # prepare merged matrix structure
-                if self.solvetype[npr]=='direct' and self.nfields[npr] > 1:
+                if self.nfields[npr] > 1:
 
                     ts = time.time()
                     utilities.print_status("Creating merged solver residual and Jacobian data structures...", self.comm, e=" ")
@@ -321,6 +323,12 @@ class solver_nonlinear:
                     te = time.time() - ts
                     utilities.print_status("t = %.4f s" % (te), self.comm)
 
+                    self.ksp[npr].setOperators(self.K_full_merged[npr])
+
+                else:
+
+                    self.ksp[npr].setOperators(self.K_list_sol[npr][0][0])
+
             elif self.solvetype[npr]=='iterative':
 
                 self.P_full_nest[npr] = self.K_full_nest[npr]
@@ -335,20 +343,24 @@ class solver_nonlinear:
                         self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
                 # prepare merged preconditioner matrix structure
-                if self.merge_prec_mat and self.nfields[npr] > 1:
+                if self.nfields[npr] > 1:
+                    if self.merge_prec_mat:
 
-                    ts = time.time()
-                    utilities.print_status("Creating merged solver preconditioner data structures...", self.comm, e=" ")
+                        ts = time.time()
+                        utilities.print_status("Creating merged solver preconditioner data structures...", self.comm, e=" ")
 
-                    Pfullnesttmp = self.P_full_nest[npr].duplicate(copy=False)
-                    self.P_full_merged[npr] = Pfullnesttmp.convert("aij")
-                    self.P[npr] = self.P_full_merged[npr]
+                        Pfullnesttmp = self.P_full_nest[npr].duplicate(copy=False)
+                        self.P_full_merged[npr] = Pfullnesttmp.convert("aij")
+                        self.P[npr] = self.P_full_merged[npr]
 
-                    te = time.time() - ts
-                    utilities.print_status("t = %.4f s" % (te), self.comm)
+                        te = time.time() - ts
+                        utilities.print_status("t = %.4f s" % (te), self.comm)
+
+                    else:
+                        self.P[npr] = self.P_full_nest[npr]
 
                 else:
-                    self.P[npr] = self.P_full_nest[npr]
+                    self.P[npr] = self.K_list_sol[npr][0][0]
 
                 # create solver
                 self.ksp[npr] = PETSc.KSP().create(self.comm)
@@ -578,8 +590,8 @@ class solver_nonlinear:
                     tes = time.time()
 
                     # nested residual and matrix references have been updated - we should call assemble again (?)
-                    self.r_full_nest[npr].assemble()
-                    self.K_full_nest[npr].assemble()
+                    # self.r_full_nest[npr].assemble()
+                    # self.K_full_nest[npr].assemble()
 
                     te += time.time() - tes
 
@@ -596,7 +608,6 @@ class solver_nonlinear:
                         self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
                         self.r_full_merged[npr].placeArray(self.r_arr)
 
-                        self.ksp[npr].setOperators(self.K_full_merged[npr])
                         te += time.time() - tes
 
                         tss = time.time()
@@ -634,9 +645,6 @@ class solver_nonlinear:
 
                             self.ksp[npr].getPC().setReusePreconditioner(True)
 
-                        # set operators for linear system solve: Jacobian and preconditioner (we use the same here)
-                        self.ksp[npr].setOperators(self.K_full_nest[npr], self.P[npr])
-
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':
                             self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
@@ -650,7 +658,6 @@ class solver_nonlinear:
                         tss = time.time()
                         # solve the linear system
                         self.ksp[npr].solve(-r, self.del_full)
-
                         ts = time.time() - tss
 
                         self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
@@ -666,9 +673,6 @@ class solver_nonlinear:
                         self.del_x_sol[npr][n].array[:] = self.del_full.array_r[self.offsetarr[npr][n]:self.offsetarr[npr][n+1]]
 
                 else:
-
-                    # set operators for linear system solve
-                    self.ksp[npr].setOperators(self.K_list_sol[npr][0][0])
 
                     tss = time.time()
                     # solve the linear system
@@ -964,9 +968,9 @@ class solver_nonlinear_ode(solver_nonlinear):
         # create solver
         self.ksp[0] = PETSc.KSP().create(self.comm)
         self.ksp[0].setType("preonly")
-        pc = self.ksp[0].getPC()
-        pc.setType("lu")
-        pc.setFactorSolverType(self.direct_solver)
+        self.ksp[0].getPC().setType("lu")
+        self.ksp[0].getPC().setFactorSolverType(self.direct_solver)
+        self.ksp[0].setOperators(self.pb.K_list[0][0])
 
         # solution increment
         self.del_s = self.pb.K.createVecLeft()
@@ -1002,12 +1006,10 @@ class solver_nonlinear_ode(solver_nonlinear):
             # compute Jacobian
             self.pb.assemble_stiffness(t)
 
-            # solve linear system
-            self.ksp[0].setOperators(self.pb.K_list[0][0])
-
             te = time.time() - tes
 
             tss = time.time()
+            # solve linear system
             self.ksp[0].solve(-self.pb.r_list[0], self.del_s)
             ts = time.time() - tss
 

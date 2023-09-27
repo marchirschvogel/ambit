@@ -183,6 +183,9 @@ class Flow0DProblem(problem_base):
         self.r_list = [None]*self.nfields
         self.K_list = [[None]*self.nfields for _ in range(self.nfields)]
 
+        self.K_list[0][0] = self.K
+        self.r_list[0] = self.r
+
 
     def assemble_residual(self, t):
 

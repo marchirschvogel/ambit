@@ -165,7 +165,7 @@ class solver_base():
 
         self.evaluate_system_initial()
 
-        self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern
+        self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern of lm-lm block
         self.pb.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
 
         # create ROM matrix structures
