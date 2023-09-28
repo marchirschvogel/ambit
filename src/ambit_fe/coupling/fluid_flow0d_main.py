@@ -304,8 +304,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def assemble_stiffness(self, t, subsolver=None):
 
-        K_list = [[None]*3 for _ in range(3)]
-
         # Lagrange multipliers (pressures) to be passed to 0D model
         lm_sq = allgather_vec(self.lm, self.comm)
 
