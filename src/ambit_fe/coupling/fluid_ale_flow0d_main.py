@@ -166,7 +166,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
                 sze_sd.append(self.k_sd_subvec[-1].getSize())
 
-            # derivative of 0D residual w.r.t. solid displacements
+            # derivative of multiplier constraint w.r.t. fluid velocities
             self.K_sd = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_sd), csr=None, comm=self.comm)
             self.K_sd.setUp()
             self.K_sd.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
@@ -236,6 +236,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         # set rows
         for i in range(len(self.pbf0.row_ids)):
+            # NOTE: only set the surface-subset of the k_sd vector entries to avoid placing unnecessary zeros!
             self.k_sd_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
             self.arr_sd[i][:] = self.k_sd_subvec[i].getArray(readonly=True)
             self.K_sd.setValues(self.pbf0.row_ids[i], self.dofs_coupling_vq[i], self.arr_sd[i], addv=PETSc.InsertMode.INSERT)

@@ -309,6 +309,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         # set columns
         for i in range(len(self.col_ids)):
+            # NOTE: only set the surface-subset of the k_us vector entries to avoid placing unnecessary zeros!
             self.k_us_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_us_subvec[i])
             self.arr_us[i][:] = self.k_us_subvec[i].getArray(readonly=True)
             self.K_us.setValues(self.dofs_coupling[i], self.col_ids[i], self.arr_us[i], addv=PETSc.InsertMode.INSERT)
@@ -318,6 +319,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         # set rows
         for i in range(len(self.row_ids)):
+            # NOTE: only set the surface-subset of the k_su vector entries to avoid placing unnecessary zeros!
             self.k_su_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_su_subvec[i])
             self.arr_su[i][:] = self.k_su_subvec[i].getArray(readonly=True)
             self.K_su.setValues(self.row_ids[i], self.dofs_coupling[i], self.arr_su[i], addv=PETSc.InsertMode.INSERT)

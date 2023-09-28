@@ -363,11 +363,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             sze_us.append(self.k_us_subvec[-1].getSize())
 
-        # derivative of solid residual w.r.t. 0D pressures
+        # derivative of solid residual w.r.t. 0D pressures/multipliers
         self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(PETSc.DECIDE,sze_coup)), bsize=None, nnz=self.num_coupling_surf, csr=None, comm=self.comm)
         self.K_us.setUp()
 
-        # derivative of 0D residual w.r.t. solid displacements
+        # derivative of 0D residual/multiplier constraints w.r.t. solid displacements
         self.K_su = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sze_coup),(locmatsize,matsize)), bsize=None, nnz=max(sze_su), csr=None, comm=self.comm)
         self.K_su.setUp()
         self.K_su.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
@@ -543,6 +543,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         # set columns
         for i in range(len(self.col_ids)):
+            # NOTE: only set the surface-subset of the k_us vector entries to avoid placing unnecessary zeros!
             self.k_us_vec[i].getSubVector(self.dofs_coupling_p[i], subvec=self.k_us_subvec[i])
             self.arr_us[i][:] = self.k_us_subvec[i].getArray(readonly=True)
             self.K_us.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.arr_us[i], addv=PETSc.InsertMode.INSERT)
@@ -552,6 +553,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         # set rows
         for i in range(len(self.row_ids)):
+            # NOTE: only set the surface-subset of the k_su vector entries to avoid placing unnecessary zeros!
             self.k_su_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_su_subvec[i])
             self.arr_su[i][:] = self.k_su_subvec[i].getArray(readonly=True)
             self.K_su.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.arr_su[i], addv=PETSc.InsertMode.INSERT)

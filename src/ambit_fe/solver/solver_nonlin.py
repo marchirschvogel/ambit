@@ -331,10 +331,10 @@ class solver_nonlinear:
 
             elif self.solvetype[npr]=='iterative':
 
-                self.P_full_nest[npr] = self.K_full_nest[npr]
-
-                # solution increment
                 if self.nfields[npr] > 1:
+
+                    self.P_full_nest[npr] = self.K_full_nest[npr]
+
                     if not self.block_precond[npr] == 'fieldsplit':
                         self.del_full = self.K_full_nest[npr].createVecLeft()
                         self.r_arr = np.zeros(self.r_full_nest[npr].getLocalSize())
@@ -342,8 +342,7 @@ class solver_nonlinear:
                     else:
                         self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
-                # prepare merged preconditioner matrix structure
-                if self.nfields[npr] > 1:
+                    # prepare merged preconditioner matrix structure
                     if self.merge_prec_mat:
 
                         ts = time.time()
@@ -357,9 +356,11 @@ class solver_nonlinear:
                         utilities.print_status("t = %.4f s" % (te), self.comm)
 
                     else:
+
                         self.P[npr] = self.P_full_nest[npr]
 
                 else:
+
                     self.P[npr] = self.K_list_sol[npr][0][0]
 
                 # create solver
