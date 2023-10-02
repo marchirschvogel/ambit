@@ -141,8 +141,6 @@ class schur_2x2(block_precond):
         self.y1, self.y2 = self.A.createVecLeft(), self.Smod.createVecLeft()
         self.z1, self.z2 = self.A.createVecLeft(), self.Smod.createVecLeft()
 
-        self.arr_y1, self.arr_y2 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize())
-
         self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
         self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
 
@@ -184,6 +182,10 @@ class schur_2x2(block_precond):
         self.C.copy(result=self.Smod)
         self.Smod.axpy(-1., self.B_Adinv_Bt)
 
+        # operator values have changed - do we need to re-set them?
+        self.ksp_fields[0].setOperators(self.A)
+        self.ksp_fields[1].setOperators(self.Smod)
+
         te = time.time() - ts
         if self.printenh:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
@@ -222,10 +224,8 @@ class schur_2x2(block_precond):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
-
-        y.setValues(self.iset[0], self.arr_y1)
-        y.setValues(self.iset[1], self.arr_y2)
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[1], self.y2.array)
 
         y.assemble()
 
@@ -324,8 +324,6 @@ class schur_3x3(block_precond):
         self.y1, self.y2, self.y3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
         self.z1, self.z2, self.z3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
 
-        self.arr_y1, self.arr_y2, self.arr_y3 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize()), np.zeros(self.y3.getLocalSize())
-
         # do we need these???
         self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
@@ -418,6 +416,11 @@ class schur_3x3(block_precond):
         self.Wmod.axpy(-1., self.E_Smoddinv_Tmod)
         self.Wmod.axpy(1., self.D_Adinv_Bt_Smoddinv_Tmod)
 
+        # operator values have changed - do we need to re-set them?
+        self.ksp_fields[0].setOperators(self.A)
+        self.ksp_fields[1].setOperators(self.Smod)
+        self.ksp_fields[2].setOperators(self.Wmod)
+
         te = time.time() - ts
         if self.printenh:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
@@ -485,11 +488,9 @@ class schur_3x3(block_precond):
         x.restoreSubVector(self.iset[2], subvec=self.x3)
 
         # set into y vector
-        self.arr_y1[:], self.arr_y2[:], self.arr_y3[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True), self.y3.getArray(readonly=True)
-
-        y.setValues(self.iset[0], self.arr_y1)
-        y.setValues(self.iset[1], self.arr_y2)
-        y.setValues(self.iset[2], self.arr_y3)
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[1], self.y2.array)
+        y.setValues(self.iset[2], self.y3.array)
 
         y.assemble()
 
@@ -523,6 +524,9 @@ class schur_4x4(schur_3x3):
 
         self.P.createSubMatrix(self.iset[3],self.iset[3], submat=self.G)
 
+        # operator values have changed - do we need to re-set it?
+        self.ksp_fields[3].setOperators(self.G)
+
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
@@ -537,9 +541,7 @@ class schur_4x4(schur_3x3):
         x.restoreSubVector(self.iset[3], subvec=self.x4)
 
         # set into y vector
-        self.arr_y4[:] = self.y4.getArray(readonly=True)
-
-        y.setValues(self.iset[3], self.arr_y4)
+        y.setValues(self.iset[3], self.y4.array)
 
         y.assemble()
 
@@ -577,10 +579,8 @@ class simple_2x2(schur_2x2):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
-
-        y.setValues(self.iset[0], self.arr_y1)
-        y.setValues(self.iset[1], self.arr_y2)
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[1], self.y2.array)
 
         y.assemble()
 
@@ -610,8 +610,6 @@ class bgs_2x2(block_precond):
         self.y1, self.y2 = self.A.createVecLeft(), self.C.createVecLeft()
         self.z2 = self.C.createVecLeft()
 
-        self.arr_y1, self.arr_y2 = np.zeros(self.y1.getLocalSize()), np.zeros(self.y2.getLocalSize())
-
         # do we need these???
         self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.C.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
@@ -627,6 +625,10 @@ class bgs_2x2(block_precond):
         self.P.createSubMatrix(self.iset[0],self.iset[1], submat=self.Bt)
         self.P.createSubMatrix(self.iset[1],self.iset[0], submat=self.B)
         self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
+
+        # operator values have changed - do we need to re-set them?
+        self.ksp_fields[0].setOperators(self.A)
+        self.ksp_fields[1].setOperators(self.C)
 
         te = time.time() - ts
         if self.printenh:
@@ -657,10 +659,8 @@ class bgs_2x2(block_precond):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
-
-        y.setValues(self.iset[0], self.arr_y1)
-        y.setValues(self.iset[1], self.arr_y2)
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[1], self.y2.array)
 
         y.assemble()
 
@@ -694,6 +694,10 @@ class jacobi_2x2(block_precond):
         self.P.createSubMatrix(self.iset[0],self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
+        # operator values have changed - do we need to re-set them?
+        self.ksp_fields[0].setOperators(self.A)
+        self.ksp_fields[1].setOperators(self.C)
+
         te = time.time() - ts
         if self.printenh:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
@@ -717,9 +721,7 @@ class jacobi_2x2(block_precond):
         x.restoreSubVector(self.iset[1], subvec=self.x2)
 
         # set into y vector
-        self.arr_y1[:], self.arr_y2[:] = self.y1.getArray(readonly=True), self.y2.getArray(readonly=True)
-
-        y.setValues(self.iset[0], self.arr_y1)
-        y.setValues(self.iset[1], self.arr_y2)
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[1], self.y2.array)
 
         y.assemble()

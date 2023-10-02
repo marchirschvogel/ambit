@@ -17,6 +17,7 @@ def check_params_io(params):
                     'mesh_domain',
                     'mesh_boundary',
                     'meshfile_type',
+                    'ode_parallel',
                     'order_fib_input',
                     'output_midpoint_0D',
                     'output_path',

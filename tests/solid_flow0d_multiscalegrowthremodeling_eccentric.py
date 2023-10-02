@@ -24,7 +24,8 @@ def main():
                             'write_results_every'   : 1,
                             'output_path'           : basepath+'/tmp',
                             'results_to_write'      : ['displacement','theta','phi_remod','fiberstretch_e'],
-                            'simname'               : 'multiscale_eccentric_mr3'}
+                            'simname'               : 'multiscale_eccentric_mr3',
+                            'ode_parallel'          : True}
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-6],

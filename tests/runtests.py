@@ -35,7 +35,7 @@ if category=='solid' or category=='all':
     errs['solid_robin_genalpha 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_genalpha.py'])
     errs['solid_robin_genalpha 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha.py'])
     errs['solid_robin_genalpha 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'solid_robin_genalpha.py', str(8)])
-    
+
     errs['solid_robin_genalpha_amg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_genalpha_amg.py'])
 
     errs['solid_robin_visco 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_visco.py'])
@@ -45,7 +45,7 @@ if category=='solid' or category=='all':
 
     errs['solid_robin_static_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_robin_static_prestress.py'])
     errs['solid_robin_static_prestress 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_robin_static_prestress.py'])
-    
+
     errs['solid_divcont_ptc 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'solid_divcont_ptc.py'])
 
     errs['solid_growth_volstressmandel 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'solid_growth_volstressmandel.py'])
@@ -71,7 +71,7 @@ if category=='fluid' or category=='all':
 
     errs['fluid_p1p1_stab_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'fluid_p1p1_stab_cylinder.py'])
     errs['fluid_p1p1_stab_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'fluid_p1p1_stab_cylinder.py'])
-    
+
     errs['fluid_p1p1_stab_cylinder_schur2x2 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'fluid_p1p1_stab_cylinder_schur2x2.py'])
 
     if branch=='mixed':
@@ -88,17 +88,13 @@ if category=='fluid_ale_flow0d' or category=='all':
 
 if category=='flow0d' or category=='all':
     errs['flow0d_0Dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
-    errs['flow0d_0Dvol_4elwindkesselLsZ 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLsZ.py'])
-
     errs['flow0d_0Dvol_4elwindkesselLpZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dvol_4elwindkesselLpZ.py'])
-    errs['flow0d_0Dvol_4elwindkesselLpZ 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dvol_4elwindkesselLpZ.py'])
 
     errs['flow0d_0Dheart_syspul 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspul.py'])
-    errs['flow0d_0Dheart_syspul 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py'])
-    errs['flow0d_0Dheart_syspul 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspul.py', str(450)]) # tests restart from step 450
+    errs['flow0d_0Dheart_syspul 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspul.py', str(450)]) # tests restart from step 450
 
-    errs['flow0d_0Dheart_syspulcor 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcor.py'])
-    errs['flow0d_0Dheart_syspulcap 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcap.py'])
+    errs['flow0d_0Dheart_syspulcor 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspulcor.py'])
+    errs['flow0d_0Dheart_syspulcap 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspulcap.py'])
 
     errs['flow0d_0Dheart_syspulcaprespir_periodic 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py'])
     errs['flow0d_0Dheart_syspulcaprespir_periodic 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'flow0d_0Dheart_syspulcaprespir_periodic.py'])
@@ -146,7 +142,7 @@ if category=='frsi' or category=='fluid_ale' or category=='all':
 if category=='ale' or category=='all':
     errs['ale_linelast 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'ale_linelast.py'])
     errs['ale_linelast 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'ale_linelast.py'])
-    
+
 
 err = 0
 for e in range(len(errs)):

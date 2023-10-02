@@ -99,7 +99,7 @@ def main():
     s_corr[2] = 2.3053217861216080E+01
     s_corr[3] = 5.9984815253587698E+00
 
-    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success

@@ -13,9 +13,10 @@ from . import utilities
 
 class problem_base():
 
-    def __init__(self, io_params, time_params, comm):
+    def __init__(self, io_params, time_params, comm=None, comm_sq=None):
 
         self.comm = comm
+        self.comm_sq = comm_sq
 
         self.problem_type = io_params['problem_type']
 

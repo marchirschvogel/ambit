@@ -19,7 +19,7 @@ from .. import utilities
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
-    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, init=True, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, init=True, ode_par=False, comm=None):
 
         self.R_airw = params['R_airw']
         self.L_alv = params['L_alv']
@@ -71,7 +71,7 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
         self.V_tisscor = params['V_tisscor']
 
         # initialize base class
-        super().__init__(params, chmodels, cq, vq, valvelaws, cormodel=cormodel, vadmodel=vadmodel, init=init, comm=comm)
+        super().__init__(params, chmodels, cq, vq, valvelaws, cormodel=cormodel, vadmodel=vadmodel, init=init, ode_par=ode_par, comm=comm)
 
 
     def setup_arrays(self):
@@ -721,9 +721,6 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
     def check_periodic(self, varTc, varTc_old, auxTc, auxTc_old, eps, check, cyclerr):
 
-        if isinstance(varTc, np.ndarray): varTc_sq, varTc_old_sq = varTc, varTc_old
-        else: varTc_sq, varTc_old_sq = allgather_vec(varTc, self.comm), allgather_vec(varTc_old, self.comm)
-
         vals = []
 
         # could get critical here since the respiratory cycle may differ from the heart cycle! So the oscillatory lung dofs should be excluded
@@ -758,9 +755,9 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
             raise NameError("Unknown check option!")
 
         # compute the errors
-        for i in range(len(varTc_sq)):
+        for i in range(len(varTc.array)):
             if i in var_ids and i not in oscillatory_lung_dofs:
-                vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+                vals.append( math.fabs((varTc.array[i]-varTc_old.array[i])/max(1.0,math.fabs(varTc_old.array[i]))) )
 
         for i in range(len(auxTc)):
             if i in aux_ids:
@@ -778,16 +775,14 @@ class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 
     def print_to_screen(self, var, aux):
 
-        cardiovascular0Dsyspulcap.print_to_screen(self, var, aux)
+        if self.ode_parallel: var_arr = allgather_vec(var, self.comm)
+        else: var_arr = var.array
 
-        if isinstance(var, np.ndarray): var_sq = var
-        else: var_sq = allgather_vec(var, self.comm)
+        cardiovascular0Dsyspulcap.print_to_screen(self, var, aux)
 
         utilities.print_status("Output of 0D respiratory model (syspulcaprespir):", self.comm)
 
         utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('SO2_ar_sys',' = ',aux[self.auxmap['SO2_ar_sys']],'   ','SO2_ar_pul',' = ',aux[self.auxmap['SO2_ar_pul']]), self.comm)
 
-        utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppO2_ar_sys',' = ',var_sq[self.varmap['ppO2_ar_sys']],'   ','ppO2_ar_pul',' = ',var_sq[self.varmap['ppO2_ar_pul']]), self.comm)
-        utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_sq[self.varmap['ppCO2_ar_sys']],'   ','ppCO2_ar_pul',' = ',var_sq[self.varmap['ppCO2_ar_pul']]), self.comm)
-
-        if not isinstance(var, np.ndarray): del var_sq
+        utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppO2_ar_sys',' = ',var_arr[self.varmap['ppO2_ar_sys']],'   ','ppO2_ar_pul',' = ',var_arr[self.varmap['ppO2_ar_pul']]), self.comm)
+        utilities.print_status('{:<12s}{:<3s}{:<10.3f}{:<3s}{:<12s}{:<3s}{:<10.3f}'.format('ppCO2_ar_sys',' = ',var_arr[self.varmap['ppCO2_ar_sys']],'   ','ppCO2_ar_pul',' = ',var_arr[self.varmap['ppCO2_ar_pul']]), self.comm)

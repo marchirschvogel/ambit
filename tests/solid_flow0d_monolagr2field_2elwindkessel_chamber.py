@@ -84,7 +84,7 @@ def main():
     # correct 0D results
     s_corr[0] = 4.1613784331931276E+00
 
-    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success

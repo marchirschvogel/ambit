@@ -24,8 +24,8 @@ from ..meshutils import gather_surface_dof_indices
 
 class FluidmechanicsAleProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None):
-        super().__init__(io_params, time_params, comm)
+    def __init__(self, io_params, time_params, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None, comm_sq=None):
+        super().__init__(io_params, time_params, comm=comm)
 
         ioparams.check_params_coupling_fluid_ale(coupling_params)
 

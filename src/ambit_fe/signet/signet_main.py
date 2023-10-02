@@ -19,8 +19,10 @@ from ..base import problem_base, solver_base
 
 class SignallingNetworkProblem(problem_base):
 
-    def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None):
-        super().__init__(io_params, time_params, comm)
+    def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None, comm_sq=None):
+        super().__init__(io_params, time_params, comm=comm, comm_sq=comm_sq)
+
+        ioparams.check_params_io(io_params)
 
         self.problem_physics = 'signet'
 
@@ -51,24 +53,30 @@ class SignallingNetworkProblem(problem_base):
         try: self.initial_backwardeuler = time_params['initial_backwardeuler']
         except: self.initial_backwardeuler = False
 
+        try: self.ode_parallel = io_params['ode_parallel']
+        except: self.ode_parallel = False
+
         # initialize signet model class
         if model_params['modeltype'] == 'hypertrophy':
             from .signet_hypertrophy import signethypertrophy
-            self.signet = signethypertrophy(model_params['parameters'], comm=self.comm)
+            self.signet = signethypertrophy(model_params['parameters'], ode_par=self.ode_parallel, comm=self.comm)
         else:
             raise NameError("Unknown signet modeltype!")
 
         self.numdof = self.signet.numdof
 
         # vectors and matrices
-        self.dK_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.dK_.setUp()
-
-        self.K_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.K_.setUp()
-
-        self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        if self.ode_parallel:
+            self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        else:
+            self.K = PETSc.Mat().create(comm=self.comm_sq)
+            self.K.setType(PETSc.Mat.Type.SEQAIJ)
+            self.K.setSizes(size=(self.numdof,self.numdof))
         self.K.setUp()
+
+        self.K.assemble()
+        self.dK_ = self.K.duplicate(copy=True)
+        self.K_ = self.K.duplicate(copy=True)
 
         self.r = self.K.createVecLeft()
 

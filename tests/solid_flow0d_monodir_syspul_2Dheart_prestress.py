@@ -31,7 +31,8 @@ def main():
                             'results_to_write'      : ['displacement','fibers'],
                             'simname'               : 'solid_flow0d_2Dheart',
                             'write_restart_every'   : 1,
-                            'restart_step'          : restart_step}
+                            'restart_step'          : restart_step,
+                            'ode_parallel'          : True}
 
     SOLVER_PARAMS         = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-6],

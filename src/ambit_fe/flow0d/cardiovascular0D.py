@@ -16,10 +16,10 @@ from ..oderoutines import ode
 
 class cardiovascular0Dbase(ode):
 
-    def __init__(self, init=True, comm=None):
+    def __init__(self, init=True, ode_par=False, comm=None):
 
         # initialize base class
-        super().__init__(init=init, comm=comm)
+        super().__init__(init=init, ode_par=ode_par, comm=comm)
 
         self.T_cycl = 0 # duration of one cardiac cycle (gets overridden by derived syspul* classes)
         self.off_io = 0 # offsets for in-/outflows for coupling indices
@@ -28,8 +28,8 @@ class cardiovascular0Dbase(ode):
     # check for cardiac cycle periodicity
     def cycle_check(self, var, varTc, varTc_old, aux, auxTc, auxTc_old, t, cycle, cyclerr, eps_periodic, check=['allvar'], inioutpath=None, nm='', induce_pert_after_cycl=-1):
 
-        if isinstance(varTc, np.ndarray): vs, ve = 0, len(varTc)
-        else: vs, ve = var.getOwnershipRange()
+        if self.ode_parallel: vs, ve = var.getOwnershipRange()
+        else: vs, ve = 0, len(var.array)
 
         is_periodic = False
 

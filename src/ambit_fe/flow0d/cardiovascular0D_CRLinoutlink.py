@@ -18,9 +18,9 @@ from .. import utilities
 
 class cardiovascular0DCRLinoutlink(cardiovascular0Dbase):
 
-    def __init__(self, params, cq, vq, init=True, comm=None):
+    def __init__(self, params, cq, vq, init=True, ode_par=False, comm=None):
         # initialize base class
-        super().__init__(init=init, comm=comm)
+        super().__init__(init=init, ode_par=ode_par, comm=comm)
 
         # only these options allowed for this model
         assert(all(i=='pressure' for i in cq))
@@ -121,14 +121,12 @@ class cardiovascular0DCRLinoutlink(cardiovascular0Dbase):
 
     def print_to_screen(self, var, aux):
 
-        if isinstance(var, np.ndarray): var_sq = var
-        else: var_sq = allgather_vec(var, self.comm)
+        if self.ode_parallel: var_arr = allgather_vec(var, self.comm)
+        else: var_arr = var.array
 
         utilities.print_status("Output of 0D model (CRLinoutlink):", self.comm)
 
         for i in range(len(self.cname)):
             utilities.print_status('{:<5s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]), self.comm)
         for i in range(len(self.vname)):
-            utilities.print_status('{:<5s}{:<3s}{:<10.3f}'.format(self.vname[i],' = ',var_sq[self.varmap[self.vname[i]]]), self.comm)
-
-        if not isinstance(var, np.ndarray): del var_sq
+            utilities.print_status('{:<5s}{:<3s}{:<10.3f}'.format(self.vname[i],' = ',var_arr[self.varmap[self.vname[i]]]), self.comm)

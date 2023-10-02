@@ -25,7 +25,7 @@ from ..base import problem_base, solver_base
 class SolidmechanicsConstraintProblem(problem_base):
 
     def __init__(self, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None):
-        super().__init__(io_params, time_params_solid, comm)
+        super().__init__(io_params, time_params_solid, comm=comm)
 
         self.problem_physics = 'solid_constraint'
 
@@ -205,7 +205,6 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.dofs_coupling = [[]]*self.num_coupling_surf
 
         self.k_us_subvec, self.k_su_subvec, sze_us, sze_su = [], [], [], []
-        self.arr_us, self.arr_su = [], []
 
         for n in range(self.num_coupling_surf):
 
@@ -217,12 +216,10 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.dofs_coupling[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_c, comm=self.comm)
 
             self.k_su_subvec.append( self.k_su_vec[n].getSubVector(self.dofs_coupling[n]) )
-            self.arr_su.append( np.zeros(self.k_su_subvec[-1].getLocalSize()) )
 
             sze_su.append(self.k_su_subvec[-1].getSize())
 
             self.k_us_subvec.append( self.k_us_vec[n].getSubVector(self.dofs_coupling[n]) )
-            self.arr_us.append( np.zeros(self.k_us_subvec[-1].getLocalSize()) )
 
             sze_us.append(self.k_us_subvec[-1].getSize())
 
@@ -302,17 +299,15 @@ class SolidmechanicsConstraintProblem(problem_base):
         for i in range(len(self.col_ids)):
             with self.k_us_vec[i].localForm() as r_local: r_local.set(0.0)
             fem.petsc.assemble_vector(self.k_us_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
-            # apply dbcs to matrix entries - basically since these are offdiagonal we want a zero there!
-            fem.apply_lifting(self.k_us_vec[i], [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
             self.k_us_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            # set zeros at DBC entries
             fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
 
         # set columns
         for i in range(len(self.col_ids)):
             # NOTE: only set the surface-subset of the k_us vector entries to avoid placing unnecessary zeros!
             self.k_us_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_us_subvec[i])
-            self.arr_us[i][:] = self.k_us_subvec[i].getArray(readonly=True)
-            self.K_us.setValues(self.dofs_coupling[i], self.col_ids[i], self.arr_us[i], addv=PETSc.InsertMode.INSERT)
+            self.K_us.setValues(self.dofs_coupling[i], self.col_ids[i], self.k_us_subvec[i].array, addv=PETSc.InsertMode.INSERT)
             self.k_us_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_us_subvec[i])
 
         self.K_us.assemble()
@@ -321,8 +316,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         for i in range(len(self.row_ids)):
             # NOTE: only set the surface-subset of the k_su vector entries to avoid placing unnecessary zeros!
             self.k_su_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_su_subvec[i])
-            self.arr_su[i][:] = self.k_su_subvec[i].getArray(readonly=True)
-            self.K_su.setValues(self.row_ids[i], self.dofs_coupling[i], self.arr_su[i], addv=PETSc.InsertMode.INSERT)
+            self.K_su.setValues(self.row_ids[i], self.dofs_coupling[i], self.k_su_subvec[i].array, addv=PETSc.InsertMode.INSERT)
             self.k_su_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_su_subvec[i])
 
         self.K_su.assemble()

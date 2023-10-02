@@ -16,52 +16,50 @@ from .mpiroutines import allgather_vec, allgather_vec_entry
 
 class ode:
 
-    def __init__(self, init=True, comm=None):
+    def __init__(self, init=True, ode_par=False, comm=None):
         self.init = init # for output
         self.varmap, self.auxmap = {}, {} # maps for primary and auxiliary variables
-        if comm is not None: self.comm = comm # MPI communicator
+        self.ode_parallel = ode_par # if ODEs should have parallel or serial layout
+        self.comm = comm # MPI communicator
 
 
     # evaluate model at current nonlinear iteration
     def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None, fnc=[]):
 
-        if isinstance(x, np.ndarray): x_sq = x
-        else: x_sq = allgather_vec(x, self.comm)
+        if self.ode_parallel: x_arr = allgather_vec(x, self.comm)
+        else: x_arr = x.array
 
         # ODE lhs (time derivative) residual part df
         if df is not None:
 
             for i in range(self.numdof):
-                df[i] = self.df__[i](x_sq, c, t, fnc)
+                df[i] = self.df__[i](x_arr, c, t, fnc)
 
         # ODE rhs residual part f
         if f is not None:
 
             for i in range(self.numdof):
-                f[i] = self.f__[i](x_sq, c, t, fnc)
+                f[i] = self.f__[i](x_arr, c, t, fnc)
 
         # ODE lhs (time derivative) stiffness part dK (ddf/dx)
         if dK is not None:
 
             for i in range(self.numdof):
                 for j in range(self.numdof):
-                    dK[i,j] = self.dK__[i][j](x_sq, c, t, fnc)
+                    dK[i,j] = self.dK__[i][j](x_arr, c, t, fnc)
 
         # ODE rhs stiffness part K (df/dx)
         if K is not None:
 
             for i in range(self.numdof):
                 for j in range(self.numdof):
-                    K[i,j] = self.K__[i][j](x_sq, c, t, fnc)
+                    K[i,j] = self.K__[i][j](x_arr, c, t, fnc)
 
         # auxiliary variable vector a (for post-processing or periodic state check)
         if a is not None:
 
             for i in range(self.numdof):
-                a[i] = self.a__[i](x_sq, c, t, fnc)
-
-        # deallocate sequential array if x was a PETSc vector that has been gathered
-        if not isinstance(x, np.ndarray): del x_sq
+                a[i] = self.a__[i](x_arr, c, t, fnc)
 
 
     # symbolic stiffness matrix contributions ddf_/dx, df_/dx
@@ -105,8 +103,8 @@ class ode:
     # set prescribed variable values for residual
     def set_prescribed_variables_residual(self, x, r, val, index_prescribed):
 
-        if isinstance(x, np.ndarray): xs, xe = 0, len(x)
-        else: xs, xe = x.getOwnershipRange()
+        if self.ode_parallel: xs, xe = x.getOwnershipRange()
+        else: xs, xe = 0, len(x.array)
 
         # modification of rhs entry
         if index_prescribed in range(xs,xe):
@@ -130,22 +128,26 @@ class ode:
     # time step update
     def update(self, var, df, f, var_old, df_old, f_old, aux, aux_old):
 
-        if isinstance(var, np.ndarray): vs, ve = 0, len(var)
-        else: vs, ve = var.getOwnershipRange()
+        if self.ode_parallel: vs, ve = var.getOwnershipRange()
+        else: vs, ve = 0, len(var.array)
 
         var_old[vs:ve] = var[vs:ve]
         df_old[vs:ve]  = df[vs:ve]
         f_old[vs:ve]   = f[vs:ve]
 
-        # aux vector is always a numpy array
+        # aux vector is a numpy array
         aux_old[:] = aux[:]
 
 
     # midpoint-averaging of state variables (for post-processing)
     def set_output_state(self, var, var_old, var_out, theta, midpoint=True):
 
-        if isinstance(var, np.ndarray): vs, ve = 0, len(var)
-        else: vs, ve = var.getOwnershipRange()
+        if self.ode_parallel:
+            if isinstance(var, np.ndarray): vs, ve = 0, len(var)
+            else: vs, ve = var.getOwnershipRange()
+        else:
+            if isinstance(var, np.ndarray): vs, ve = 0, len(var)
+            else: vs, ve = 0, len(var.array)
 
         if midpoint:
             var_out[vs:ve] = theta*var[vs:ve] + (1.-theta)*var_old[vs:ve]
@@ -167,8 +169,8 @@ class ode:
     # output routine for ODE models
     def write_output(self, path, t, var, aux, nm=''):
 
-        if isinstance(var, np.ndarray): var_sq = var
-        else: var_sq = allgather_vec(var, self.comm)
+        if self.ode_parallel: var_arr = allgather_vec(var, self.comm)
+        else: var_arr = var.array
 
         # mode: 'wt' generates new file, 'a' appends to existing one
         if self.init: mode = 'wt'
@@ -183,7 +185,7 @@ class ode:
                 filename = path+'/results_'+nm+'_'+list(self.varmap.keys())[i]+'.txt'
                 f = open(filename, mode)
 
-                f.write('%.16E %.16E\n' % (t,var_sq[list(self.varmap.values())[i]]))
+                f.write('%.16E %.16E\n' % (t,var_arr[list(self.varmap.values())[i]]))
 
                 f.close()
 
@@ -196,27 +198,27 @@ class ode:
 
                 f.close()
 
-        if not isinstance(var, np.ndarray): del var_sq
-
 
     # write restart routine for ODE models
     def write_restart(self, path, nm, N, var):
 
-        if isinstance(var, np.ndarray): var_sq = var
-        else: var_sq = allgather_vec(var, self.comm)
+        if self.ode_parallel:
+            if isinstance(var, np.ndarray): var_arr = var
+            else: var_arr = allgather_vec(var, self.comm)
+        else:
+            if isinstance(var, np.ndarray): var_arr = var
+            else: var_arr = var.array
 
         if self.comm.rank == 0:
 
             filename = path+'/checkpoint_'+nm+'_'+str(N)+'.txt'
             f = open(filename, 'wt')
 
-            for i in range(len(var_sq)):
+            for i in range(len(var_arr)):
 
-                f.write('%.16E\n' % (var_sq[i]))
+                f.write('%.16E\n' % (var_arr[i]))
 
             f.close()
-
-        if not isinstance(var, np.ndarray): del var_sq
 
 
     # read restart routine for ODE models
@@ -233,8 +235,8 @@ class ode:
     # them in a new simulation starting from a homeostatic state)
     def write_initial(self, path, nm, varTc_old, varTc, auxTc_old, auxTc):
 
-        if isinstance(varTc_old, np.ndarray): varTc_old_sq, varTc_sq = varTc_old, varTc
-        else: varTc_old_sq, varTc_sq = allgather_vec(varTc_old, self.comm), allgather_vec(varTc, self.comm)
+        if self.ode_parallel: varTc_old_arr, varTc_arr = allgather_vec(varTc_old, self.comm), allgather_vec(varTc, self.comm)
+        else: varTc_old_arr, varTc_arr = varTc_old.array, varTc.array
 
         if self.comm.rank == 0:
 
@@ -245,8 +247,8 @@ class ode:
 
             for i in range(len(self.varmap)):
 
-                f1.write('%s %.16E\n' % (list(self.varmap.keys())[i]+'_0',varTc_old_sq[list(self.varmap.values())[i]]))
-                f2.write('%s %.16E\n' % (list(self.varmap.keys())[i]+'_0',varTc_sq[list(self.varmap.values())[i]]))
+                f1.write('%s %.16E\n' % (list(self.varmap.keys())[i]+'_0',varTc_old_arr[list(self.varmap.values())[i]]))
+                f2.write('%s %.16E\n' % (list(self.varmap.keys())[i]+'_0',varTc_arr[list(self.varmap.values())[i]]))
 
             for i in range(len(self.auxmap)):
 
@@ -255,8 +257,6 @@ class ode:
 
             f1.close()
             f2.close()
-
-        if not isinstance(varTc_old, np.ndarray): del varTc_old_sq, varTc_sq
 
 
     # if we want to set the initial conditions from a txt file

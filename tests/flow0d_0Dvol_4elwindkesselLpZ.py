@@ -60,7 +60,7 @@ def main():
     s_corr[2] = 0.0
     s_corr[3] = 0.0
 
-    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
+    check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success

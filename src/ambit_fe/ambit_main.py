@@ -16,6 +16,7 @@ class Ambit():
 
         # MPI communicator
         self.comm = MPI.COMM_WORLD
+        self.comm_sq = MPI.COMM_SELF
 
         problem_type = io_params['problem_type']
 
@@ -74,14 +75,14 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm)
+            self.mp = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'flow0d':
 
             from .flow0d import flow0d_main
 
-            self.mp = flow0d_main.Flow0DProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm)
+            self.mp = flow0d_main.Flow0DProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = flow0d_main.Flow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_flow0d':
@@ -92,7 +93,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = solid_flow0d_main.SolidmechanicsFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_flow0d_periodicref':
@@ -104,7 +105,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = solid_flow0d_periodicref_main.SolidmechanicsFlow0DPeriodicRefSolver(self.mp, solver_params)
 
         elif problem_type == 'fluid_flow0d':
@@ -115,7 +116,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = fluid_flow0d_main.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
+            self.mp = fluid_flow0d_main.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = fluid_flow0d_main.FluidmechanicsFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_flow0d_multiscale_gandr':
@@ -126,7 +127,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            self.mp = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, io, comm=self.comm)
+            self.mp = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, io, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params)
 
         elif problem_type == 'fsi':
@@ -180,7 +181,7 @@ class Ambit():
 
             from .signet import signet_main
 
-            self.mp = signet_main.SignallingNetworkProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm)
+            self.mp = signet_main.SignallingNetworkProblem(io_params, time_params, constitutive_params, time_curves, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = signet_main.SignallingNetworkSolver(self.mp, solver_params)
 
         else:

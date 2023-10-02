@@ -26,7 +26,7 @@ from ..base import problem_base, solver_base
 class FSIProblem(problem_base):
 
     def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, io, ios, iof, mor_params={}, comm=None):
-        super().__init__(io_params, time_params_solid, comm)
+        super().__init__(io_params, time_params_solid, comm=comm)
 
         self.problem_physics = 'fsi'
 

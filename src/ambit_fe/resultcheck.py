@@ -95,7 +95,25 @@ def success_check(succ, comm):
     return success
 
 
-# check the results of a full parallel (non-ghosted) vector
+# check the results of a serial vector
+def results_check_vec_sq(vec, vec_corr, comm, tol=1.0e-6):
+
+    success = True
+
+    errs = np.zeros(len(vec.array))
+
+    for i in range(len(vec.array)):
+        errs[i] = abs(vec.array[i]-vec_corr[i])
+        if errs[i] > tol:
+            success = False
+
+    for i in range(len(vec.array)):
+        utilities.print_status("vec[%i]    = %.16E,    CORR = %E,    err = %E" % (i,vec.array[i], vec_corr[i], errs[i]), comm)
+
+    return success
+
+
+# check the results of a parallel (non-ghosted) vector
 def results_check_vec(vec, vec_corr, comm, tol=1.0e-6):
 
     success = True

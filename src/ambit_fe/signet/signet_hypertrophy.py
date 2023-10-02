@@ -9,7 +9,6 @@
 import numpy as np
 import sympy as sp
 
-from ..mpiroutines import allgather_vec
 from ..oderoutines import ode
 
 # signalling network model, from Ryall et al. (2012) "Network Reconstruction and Systems Analysis of Cardiac Myocyte Hypertrophy Signaling", The Journal of Biological Chemistry 287(50)
@@ -17,10 +16,10 @@ from ..oderoutines import ode
 
 class signethypertrophy(ode):
 
-    def __init__(self, params, init=True, comm=None):
+    def __init__(self, params, init=True, ode_par=False, comm=None):
 
         # initialize base class
-        super().__init__(init=init, comm=comm)
+        super().__init__(init=init, ode_par=ode_par, comm=comm)
 
         # parameters
         self.p1 = params['p1']
@@ -321,9 +320,4 @@ class signethypertrophy(ode):
     # print during simulation
     def print_to_screen(self, var, aux):
 
-        if isinstance(var, np.ndarray): var_sq = var
-        else: var_sq = allgather_vec(var, self.comm)
-
         pass
-
-        if not isinstance(var, np.ndarray): del var_sq

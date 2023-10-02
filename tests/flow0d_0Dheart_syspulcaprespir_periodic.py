@@ -17,7 +17,8 @@ def main():
     IO_PARAMS         = {'problem_type'          : 'flow0d',
                          'write_results_every'   : -999,
                          'output_path'           : basepath+'/tmp/',
-                         'simname'               : 'test'}
+                         'simname'               : 'test',
+                         'ode_parallel'          : True}
 
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-7,
                          'tol_inc'               : 1.0e-7}

@@ -98,11 +98,11 @@ class coronary_circ_ZCRp_CRd():
         except: var[self.varmap['q_ven'+str(self.vs+1)+'_sys']]    = iniparam['q_ven_sys_0']
 
 
-    def print_to_screen(self, var_sq, aux, comm):
+    def print_to_screen(self, var_arr, aux, comm):
 
         utilities.print_status("Output of 0D coronary model (ZCRp_CRd):", comm)
 
-        utilities.print_status('{:<10s}{:<3s}{:<7.3f}'.format('p_cord_sys',' = ',var_sq[self.varmap['p_cord_sys']]), comm)
+        utilities.print_status('{:<10s}{:<3s}{:<7.3f}'.format('p_cord_sys',' = ',var_arr[self.varmap['p_cord_sys']]), comm)
 
 
 # equivalent model to ZCRp_CRd, but individually for left and right coronary arteries
@@ -247,8 +247,8 @@ class coronary_circ_ZCRp_CRd_lr():
         except: var[self.varmap['q_ven'+str(self.vs+1)+'_sys']]    = iniparam['q_ven_sys_0']
 
 
-    def print_to_screen(self, var_sq, aux, comm):
+    def print_to_screen(self, var_arr, aux, comm):
 
         utilities.print_status("Output of 0D coronary model (ZCRp_CRd_lr):", comm)
 
-        utilities.print_status('{:<12s}{:<3s}{:<7.3f}{:<3s}{:<12s}{:<3s}{:<7.3f}'.format('p_cord_sys_l',' = ',var_sq[self.varmap['p_cord_sys_l']],'   ','p_cord_sys_r',' = ',var_sq[self.varmap['p_cord_sys_r']]), comm)
+        utilities.print_status('{:<12s}{:<3s}{:<7.3f}{:<3s}{:<12s}{:<3s}{:<7.3f}'.format('p_cord_sys_l',' = ',var_arr[self.varmap['p_cord_sys_l']],'   ','p_cord_sys_r',' = ',var_arr[self.varmap['p_cord_sys_r']]), comm)

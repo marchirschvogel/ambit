@@ -27,8 +27,8 @@ from ..meshutils import gather_surface_dof_indices
 
 class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}, comm=None):
-        problem_base.__init__(self, io_params, time_params_fluid, comm)
+    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}, comm=None, comm_sq=None):
+        problem_base.__init__(self, io_params, time_params_fluid, comm=comm, comm_sq=comm_sq)
 
         ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
 
@@ -52,7 +52,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pba  = AleProblem(io_params, time_params_fluid, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
         alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
-        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, alevar=alevariables)
+        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq, alevar=alevariables)
 
         self.pbf = self.pbf0.pbf
         self.pb0 = self.pbf0.pb0
@@ -150,7 +150,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.dofs_coupling_vq = [[]]*self.pbf0.num_coupling_surf
 
             self.k_sd_subvec, sze_sd = [], []
-            self.arr_sd = []
 
             for n in range(self.pbf0.num_coupling_surf):
 
@@ -162,7 +161,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
                 self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
                 self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
-                self.arr_sd.append( np.zeros(self.k_sd_subvec[-1].getLocalSize()) )
 
                 sze_sd.append(self.k_sd_subvec[-1].getSize())
 
@@ -238,8 +236,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         for i in range(len(self.pbf0.row_ids)):
             # NOTE: only set the surface-subset of the k_sd vector entries to avoid placing unnecessary zeros!
             self.k_sd_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
-            self.arr_sd[i][:] = self.k_sd_subvec[i].getArray(readonly=True)
-            self.K_sd.setValues(self.pbf0.row_ids[i], self.dofs_coupling_vq[i], self.arr_sd[i], addv=PETSc.InsertMode.INSERT)
+            self.K_sd.setValues(self.pbf0.row_ids[i], self.dofs_coupling_vq[i], self.k_sd_subvec[i].array, addv=PETSc.InsertMode.INSERT)
             self.k_sd_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
 
         self.K_sd.assemble()

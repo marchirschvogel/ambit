@@ -26,9 +26,9 @@ from .. import utilities
 
 class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
-    def __init__(self, params, cq, vq, init=True, comm=None):
+    def __init__(self, params, cq, vq, init=True, ode_par=False, comm=None):
         # initialize base class
-        super().__init__(init=init, comm=comm)
+        super().__init__(init=init, ode_par=ode_par, comm=comm)
 
         # number of degrees of freedom
         self.numdof = 3
@@ -132,14 +132,12 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
     def print_to_screen(self, var, aux):
 
-        if isinstance(var, np.ndarray): var_sq = var
-        else: var_sq = allgather_vec(var, self.comm)
+        if self.ode_parallel: var_arr = allgather_vec(var, self.comm)
+        else: var_arr = var.array
 
         utilities.print_status("Output of 0D model (4elwindkesselLsZ):", self.comm)
 
         utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]), self.comm)
 
-        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_sq[0]), self.comm)
-        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',var_sq[1]), self.comm)
-
-        if not isinstance(var, np.ndarray): del var_sq
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_arr[0]), self.comm)
+        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format('q',' = ',var_arr[1]), self.comm)

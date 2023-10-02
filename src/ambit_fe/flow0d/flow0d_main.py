@@ -21,9 +21,10 @@ from ..base import problem_base, solver_base
 
 class Flow0DProblem(problem_base):
 
-    def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None):
-        super().__init__(io_params, time_params, comm)
+    def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None, comm_sq=None):
+        super().__init__(io_params, time_params, comm=comm, comm_sq=comm_sq)
 
+        ioparams.check_params_io(io_params)
         ioparams.check_params_time_flow0d(time_params)
 
         self.problem_physics = 'flow0d'
@@ -73,6 +74,9 @@ class Flow0DProblem(problem_base):
         try: self.vq = coupling_params['variable_quantity']
         except: self.vq = ['pressure']*5
 
+        try: self.coup_type = coupling_params['coupling_type']
+        except: self.coup_type = None
+
         try: self.eps_periodic = time_params['eps_periodic']
         except: self.eps_periodic = 1.0e-20
 
@@ -94,6 +98,9 @@ class Flow0DProblem(problem_base):
         try: self.initial_backwardeuler = time_params['initial_backwardeuler']
         except: self.initial_backwardeuler = False
 
+        try: self.ode_parallel = io_params['ode_parallel']
+        except: self.ode_parallel = False
+
         try: self.perturb_after_cylce = model_params['perturb_after_cylce']
         except: self.perturb_after_cylce = -1
         # definitely set to -1 if we don't have a perturb type
@@ -104,42 +111,50 @@ class Flow0DProblem(problem_base):
         # initialize 0D model class - currently, we always init with True since restart will generate new output file names (so no need to append to old ones)
         if model_params['modeltype'] == '2elwindkessel':
             from .cardiovascular0D_2elwindkessel import cardiovascular0D2elwindkessel
-            self.cardvasc0D = cardiovascular0D2elwindkessel(model_params['parameters'], self.cq, self.vq, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D2elwindkessel(model_params['parameters'], self.cq, self.vq, init=True, ode_par=self.ode_parallel, comm=self.comm)
         elif model_params['modeltype'] == '4elwindkesselLsZ':
             from .cardiovascular0D_4elwindkesselLsZ import cardiovascular0D4elwindkesselLsZ
-            self.cardvasc0D = cardiovascular0D4elwindkesselLsZ(model_params['parameters'], self.cq, self.vq, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D4elwindkesselLsZ(model_params['parameters'], self.cq, self.vq, init=True, ode_par=self.ode_parallel, comm=self.comm)
         elif model_params['modeltype'] == '4elwindkesselLpZ':
             from .cardiovascular0D_4elwindkesselLpZ import cardiovascular0D4elwindkesselLpZ
-            self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], self.cq, self.vq, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0D4elwindkesselLpZ(model_params['parameters'], self.cq, self.vq, init=True, ode_par=self.ode_parallel, comm=self.comm)
         elif model_params['modeltype'] == 'CRLinoutlink':
             from .cardiovascular0D_CRLinoutlink import cardiovascular0DCRLinoutlink
-            self.cardvasc0D = cardiovascular0DCRLinoutlink(model_params['parameters'], self.cq, self.vq, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0DCRLinoutlink(model_params['parameters'], self.cq, self.vq, init=True, ode_par=self.ode_parallel, comm=self.comm)
         elif model_params['modeltype'] == 'syspul':
             from .cardiovascular0D_syspul import cardiovascular0Dsyspul
-            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspul(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, ode_par=self.ode_parallel, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcap':
             from .cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
-            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcap(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, ode_par=self.ode_parallel, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcapcor':
             from .cardiovascular0D_syspulcap import cardiovascular0Dsyspulcapcor
-            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcapcor(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, ode_par=self.ode_parallel, comm=self.comm)
         elif model_params['modeltype'] == 'syspulcaprespir':
             from .cardiovascular0D_syspulcaprespir import cardiovascular0Dsyspulcaprespir
-            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, comm=self.comm)
+            self.cardvasc0D = cardiovascular0Dsyspulcaprespir(model_params['parameters'], self.chamber_models, self.cq, self.vq, valvelaws=valvelaws, cormodel=self.coronary_model, vadmodel=self.vad_model, init=True, ode_par=self.ode_parallel, comm=self.comm)
         else:
             raise NameError("Unknown 0D modeltype!")
 
         self.numdof = self.cardvasc0D.numdof
 
+        if self.coup_type=='monolithic_direct' and self.comm.size > 1: # for 3D-0D direct coupling, we need a parallel 0D layout
+            assert(self.ode_parallel)
+        if self.coup_type=='monolithic_lagrange' and self.comm.size > 1: # for 3D-0D constraint-like coupling, we want a serial 0D layout
+            assert(not self.ode_parallel)
+
         # vectors and matrices
-        self.dK_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.dK_.setUp()
-
-        self.K_ = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.K_.setUp()
-
-        self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        if self.ode_parallel:
+            self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+        else:
+            self.K = PETSc.Mat().create(comm=self.comm_sq)
+            self.K.setType(PETSc.Mat.Type.SEQAIJ)
+            self.K.setSizes(size=(self.numdof,self.numdof))
         self.K.setUp()
+
+        self.K.assemble()
+        self.dK_ = self.K.duplicate(copy=True)
+        self.K_ = self.K.duplicate(copy=True)
 
         self.r = self.K.createVecLeft()
 
@@ -150,7 +165,7 @@ class Flow0DProblem(problem_base):
         self.f, self.f_old   = self.K.createVecLeft(), self.K.createVecLeft()
 
         # tmp vectors for perturbation solves (for LM-coupled 3D-0D problems)
-        self.s_tmp, self.df_tmp, self.f_tmp, self.aux_tmp, self.s_pert_sq = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft(), np.zeros(self.numdof), np.zeros(self.numdof)
+        self.s_tmp, self.df_tmp, self.f_tmp, self.aux_tmp = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft(), np.zeros(self.numdof)
 
         self.aux, self.aux_old, self.aux_mid = np.zeros(self.numdof), np.zeros(self.numdof), np.zeros(self.numdof)
         self.auxTc, self.auxTc_old = np.zeros(self.numdof), np.zeros(self.numdof)

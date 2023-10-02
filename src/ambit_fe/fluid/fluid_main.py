@@ -35,7 +35,7 @@ from ..base import problem_base, solver_base
 class FluidmechanicsProblem(problem_base):
 
     def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, iof, mor_params={}, comm=None, alevar={}):
-        super().__init__(io_params, time_params, comm)
+        super().__init__(io_params, time_params, comm=comm)
 
         ioparams.check_params_fem_fluid(fem_params)
         ioparams.check_params_time_fluid(time_params)

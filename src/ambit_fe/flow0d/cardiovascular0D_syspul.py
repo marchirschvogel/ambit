@@ -47,9 +47,9 @@ from .. import utilities
 
 class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
-    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, init=True, comm=None):
+    def __init__(self, params, chmodels, cq, vq, valvelaws={'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}, cormodel=None, vadmodel=None, init=True, ode_par=False, comm=None):
         # initialize base class
-        super().__init__(init=init, comm=comm)
+        super().__init__(init=init, ode_par=ode_par, comm=comm)
 
         # parameters
         # circulatory system parameters: resistances (R), compliances (C), inertances (L, I), impedances (Z)
@@ -474,9 +474,6 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
     def check_periodic(self, varTc, varTc_old, auxTc, auxTc_old, eps, check, cyclerr):
 
-        if isinstance(varTc, np.ndarray): varTc_sq, varTc_old_sq = varTc, varTc_old
-        else: varTc_sq, varTc_old_sq = allgather_vec(varTc, self.comm), allgather_vec(varTc_old, self.comm)
-
         vals = []
 
         if check[0]=='allvar':
@@ -507,9 +504,9 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             raise NameError("Unknown check option!")
 
         # compute the errors
-        for i in range(len(varTc_sq)):
+        for i in range(len(varTc.array)):
             if i in var_ids:
-                vals.append( math.fabs((varTc_sq[i]-varTc_old_sq[i])/max(1.0,math.fabs(varTc_old_sq[i]))) )
+                vals.append( math.fabs((varTc.array[i]-varTc_old.array[i])/max(1.0,math.fabs(varTc_old.array[i]))) )
 
         for i in range(len(auxTc)):
             if i in aux_ids:
@@ -522,15 +519,13 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         else:
             is_periodic = False
 
-        if not isinstance(varTc, np.ndarray): del varTc_sq, varTc_old_sq
-
         return is_periodic
 
 
     def print_to_screen(self, var, aux):
 
-        if isinstance(var, np.ndarray): var_sq = var
-        else: var_sq = allgather_vec(var, self.comm)
+        if self.ode_parallel: var_arr = allgather_vec(var, self.comm)
+        else: var_arr = var.array
 
         nc = len(self.c_)
 
@@ -539,13 +534,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         for i in range(nc):
             utilities.print_status('{:<9s}{:<3s}{:<10.3f}'.format(self.cname[i],' = ',aux[self.auxmap[self.cname[i]]]), self.comm)
 
-        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[2],' = ',var_sq[self.varmap[self.vname[2]]],'   ',self.vname[3],' = ',var_sq[self.varmap[self.vname[3]]]), self.comm)
-        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[0],' = ',var_sq[self.varmap[self.vname[0]]],'   ',self.vname[1],' = ',var_sq[self.varmap[self.vname[1]]]), self.comm)
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[2],' = ',var_arr[self.varmap[self.vname[2]]],'   ',self.vname[3],' = ',var_arr[self.varmap[self.vname[3]]]), self.comm)
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[0],' = ',var_arr[self.varmap[self.vname[0]]],'   ',self.vname[1],' = ',var_arr[self.varmap[self.vname[1]]]), self.comm)
 
-        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[4],' = ',var_sq[self.varmap[self.vname[4]]],'   ','p_ar_pul',' = ',var_sq[self.varmap['p_ar_pul']]), self.comm)
-        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ven_sys',' = ',var_sq[self.varmap['p_ven_sys']],'   ','p_ven_pul',' = ',var_sq[self.varmap['p_ven_pul']]), self.comm)
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format(self.vname[4],' = ',var_arr[self.varmap[self.vname[4]]],'   ','p_ar_pul',' = ',var_arr[self.varmap['p_ar_pul']]), self.comm)
+        utilities.print_status('{:<9s}{:<3s}{:<10.3f}{:<3s}{:<9s}{:<3s}{:<10.3f}'.format('p_ven_sys',' = ',var_arr[self.varmap['p_ven_sys']],'   ','p_ven_pul',' = ',var_arr[self.varmap['p_ven_pul']]), self.comm)
 
-        if self.cormodel is not None: self.corcirc.print_to_screen(var_sq, aux, self.comm)
-        if self.vadmodel is not None: self.vadcirc.print_to_screen(var_sq, aux, self.comm)
-
-        if not isinstance(var, np.ndarray): del var_sq
+        if self.cormodel is not None: self.corcirc.print_to_screen(var_arr, aux, self.comm)
+        if self.vadmodel is not None: self.vadcirc.print_to_screen(var_arr, aux, self.comm)

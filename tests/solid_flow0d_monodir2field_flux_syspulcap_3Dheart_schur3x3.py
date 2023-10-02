@@ -27,7 +27,8 @@ def main():
                             'write_results_every'   : -999,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement','pressure'],
-                            'simname'               : 'test'}
+                            'simname'               : 'test',
+                            'ode_parallel'          : True}
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',

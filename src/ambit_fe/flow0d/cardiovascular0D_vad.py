@@ -58,7 +58,7 @@ class vad_circ():
 
 
 
-    def print_to_screen(self, var_sq, aux, comm):
+    def print_to_screen(self, var_arr, aux, comm):
 
         utilities.print_status("Output of 0D VAD model (type):", comm)
         ### Implement your printout routine here

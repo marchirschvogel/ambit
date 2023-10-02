@@ -609,9 +609,13 @@ class solver_nonlinear:
                         self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
                         self.r_full_merged[npr].placeArray(self.r_arr)
 
+                        # operator values have changed - do we need to re-set it?
+                        self.ksp[npr].setOperators(self.K_full_merged[npr])
+
                         te += time.time() - tes
 
                         tss = time.time()
+                        # solve the linear system
                         self.ksp[npr].solve(-self.r_full_merged[npr], self.del_full)
                         ts = time.time() - tss
 
@@ -646,6 +650,9 @@ class solver_nonlinear:
 
                             self.ksp[npr].getPC().setReusePreconditioner(True)
 
+                        # operator values have changed - do we need to re-set it?
+                        self.ksp[npr].setOperators(self.K_full_nest[npr], self.P[npr])
+
                         # need to merge for non-fieldsplit-type preconditioners
                         if not self.block_precond[npr] == 'fieldsplit':
                             self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
@@ -674,6 +681,9 @@ class solver_nonlinear:
                         self.del_x_sol[npr][n].array[:] = self.del_full.array_r[self.offsetarr[npr][n]:self.offsetarr[npr][n+1]]
 
                 else:
+
+                    # operator values have changed - do we need to re-set it?
+                    self.ksp[npr].setOperators(self.K_list_sol[npr][0][0])
 
                     tss = time.time()
                     # solve the linear system
@@ -928,7 +938,7 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         ioparams.check_params_solver(solver_params)
 
-        self.comm = pb[0].comm
+        self.comm, self.comm_sq = pb[0].comm, pb[0].comm_sq
 
         self.pb = pb[0] # only one problem considered here
         self.nprob = 1
@@ -967,7 +977,10 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.ksp = [[]]
 
         # create solver
-        self.ksp[0] = PETSc.KSP().create(self.comm)
+        if self.pb.ode_parallel:
+            self.ksp[0] = PETSc.KSP().create(self.comm)
+        else:
+            self.ksp[0] = PETSc.KSP().create(self.comm_sq)
         self.ksp[0].setType("preonly")
         self.ksp[0].getPC().setType("lu")
         self.ksp[0].getPC().setFactorSolverType(self.direct_solver)

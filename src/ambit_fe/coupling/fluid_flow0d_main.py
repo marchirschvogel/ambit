@@ -24,8 +24,8 @@ from ..base import problem_base, solver_base
 
 class FluidmechanicsFlow0DProblem(problem_base):
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, alevar={}):
-        super().__init__(io_params, time_params_fluid, comm)
+    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, comm_sq=None, alevar={}):
+        super().__init__(io_params, time_params_fluid, comm=comm, comm_sq=comm_sq)
 
         self.problem_physics = 'fluid_flow0d'
 
@@ -61,7 +61,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevar)
-        self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
+        self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm, comm_sq=self.comm_sq)
 
         self.pbrom = self.pbf # ROM problem can only be fluid
 
@@ -213,7 +213,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.dofs_coupling_vq, self.dofs_coupling_p = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
 
         self.k_vs_subvec, self.k_sv_subvec, sze_vs, sze_sv = [], [], [], []
-        self.arr_vs, self.arr_sv = [], []
 
         for n in range(self.num_coupling_surf):
 
@@ -225,7 +224,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
             self.k_sv_subvec.append( self.k_sv_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
-            self.arr_sv.append( np.zeros(self.k_sv_subvec[-1].getLocalSize()) )
 
             sze_sv.append(self.k_sv_subvec[-1].getSize())
 
@@ -237,7 +235,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_p, comm=self.comm)
 
             self.k_vs_subvec.append( self.k_vs_vec[n].getSubVector(self.dofs_coupling_p[n]) )
-            self.arr_vs.append( np.zeros(self.k_vs_subvec[-1].getLocalSize()) )
 
             sze_vs.append(self.k_vs_subvec[-1].getSize())
 
@@ -249,6 +246,11 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.K_sv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_sv), csr=None, comm=self.comm)
         self.K_sv.setUp()
         self.K_sv.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
+
+        # print("K_sv   : ",self.comm.rank,self.K_sv.getOwnershipRange())
+        # print("K_lm   : ",self.comm.rank,self.K_lm.getOwnershipRange())
+        # print("K_vsCOL: ",self.comm.rank,self.K_vs.getOwnershipRangeColumn())
+        # exit()
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -273,7 +275,15 @@ class FluidmechanicsFlow0DProblem(problem_base):
                 self.pb0.c[0] = self.pb0.auxdata['p'][dp_id]
 
         if subsolver is not None:
-            subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+            # only have rank 0 solve the ODE, then broadcast solution
+            if self.comm.rank==0:
+                subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+            self.comm.Barrier()
+            # need to broadcast to all cores
+            self.pb0.s.array[:] = self.comm.bcast(self.pb0.s.array, root=0)
+            self.pb0.df.array[:] = self.comm.bcast(self.pb0.df.array, root=0)
+            self.pb0.f.array[:] = self.comm.bcast(self.pb0.f.array, root=0)
+            self.pb0.aux[:] = self.comm.bcast(self.pb0.aux, root=0)
 
         # add to fluid momentum equation
         self.pb0.cardvasc0D.set_pressure_fem(self.lm, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
@@ -284,19 +294,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.r_list[0] = self.pbf.r_list[0]
         self.r_list[1] = self.pbf.r_list[1]
 
-        s_sq = allgather_vec(self.pb0.s, self.comm)
-
         ls, le = self.lm.getOwnershipRange()
 
         # Lagrange multiplier coupling residual
         for i in range(ls,le):
-            self.r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
+            self.r_lm[i] = self.constr[i] - self.pb0.s[self.pb0.cardvasc0D.v_ids[i]]
 
         self.r_lm.assemble()
 
         self.r_list[2] = self.r_lm
 
-        del lm_sq, s_sq
+        del lm_sq
 
         if bool(self.residual_scale):
             self.scale_residual_list([self.r_lm], [self.residual_scale[2]])
@@ -327,8 +335,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.K_list[1][0] = self.pbf.K_list[1][0]
         self.K_list[1][1] = self.pbf.K_list[1][1] # should be only non-zero if we have stabilization...
 
-        s_sq = allgather_vec(self.pb0.s, self.comm)
-
         # assemble 0D rhs contributions
         self.pb0.df_old.assemble()
         self.pb0.f_old.assemble()
@@ -344,16 +350,19 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # store 0D state variable prior to perturbation solves
         self.pb0.s_tmp.axpby(1.0, 0.0, self.pb0.s)
 
+        ls, le = self.K_lm.getOwnershipRange()
+
         # finite differencing for LM siffness matrix
         if subsolver is not None:
-            for i in range(self.num_coupling_surf):
+            for i in range(ls, le): # row-owning rank calls the ODE solver
                 for j in range(self.num_coupling_surf):
-
                     self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] + self.eps_fd # perturbed LM
                     subsolver.newton(t, print_iter=False)
-                    s_pert_sq = allgather_vec(self.pb0.s, self.comm)
-                    self.K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                    val = -(self.pb0.s[self.pb0.cardvasc0D.v_ids[i]] - self.pb0.s_tmp[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                    self.K_lm.setValue(i, j, val, addv=PETSc.InsertMode.INSERT)
                     self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] # restore LM
+
+        self.comm.Barrier() # do we need this here, since not all processes participate in the ODE solve?
 
         # restore df, f, and aux vectors for correct time step update
         self.pb0.df.axpby(1.0, 0.0, self.pb0.df_tmp)
@@ -366,7 +375,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.K_list[2][2] = self.K_lm
 
-        del lm_sq, s_sq
+        del lm_sq
 
         # offdiagonal s-v rows
         for i in range(len(self.row_ids)):
@@ -378,17 +387,15 @@ class FluidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.col_ids)):
             with self.k_vs_vec[i].localForm() as r_local: r_local.set(0.0)
             fem.petsc.assemble_vector(self.k_vs_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
-            # apply velocity dbcs to matrix entries k_vs - basically since these are offdiagonal we want a zero there!
-            fem.apply_lifting(self.k_vs_vec[i], [self.pbf.jac_vv], [self.pbf.bc.dbcs], x0=[self.pbf.v.vector], scale=0.0)
             self.k_vs_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            # set zeros at DBC entries
             fem.set_bc(self.k_vs_vec[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
 
         # set columns
         for i in range(len(self.col_ids)):
             # NOTE: only set the surface-subset of the k_vs vector entries to avoid placing unnecessary zeros!
             self.k_vs_vec[i].getSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
-            self.arr_vs[i][:] = self.k_vs_subvec[i].getArray(readonly=True)
-            self.K_vs.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.arr_vs[i], addv=PETSc.InsertMode.INSERT)
+            self.K_vs.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.k_vs_subvec[i].array, addv=PETSc.InsertMode.INSERT)
             self.k_vs_vec[i].restoreSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
 
         self.K_vs.assemble()
@@ -397,8 +404,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.row_ids)):
             # NOTE: only set the surface-subset of the k_sv vector entries to avoid placing unnecessary zeros!
             self.k_sv_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
-            self.arr_sv[i][:] = self.k_sv_subvec[i].getArray(readonly=True)
-            self.K_sv.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.arr_sv[i], addv=PETSc.InsertMode.INSERT)
+            self.K_sv.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.k_sv_subvec[i].array, addv=PETSc.InsertMode.INSERT)
             self.k_sv_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
 
         self.K_sv.assemble()

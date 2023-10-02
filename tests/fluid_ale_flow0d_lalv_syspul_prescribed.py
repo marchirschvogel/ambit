@@ -19,7 +19,7 @@ from pathlib import Path
 
 
 def main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     # reads in restart step from the command line
@@ -71,17 +71,17 @@ def main():
                                                        'tv' : ['pwlin_pres']},
                             'prescribed_variables'  : {'q_vin_l' : {'flux_monitor' : 0}}}
 
-    FEM_PARAMS_FLUID     = {'order_vel'             : 1, 
+    FEM_PARAMS_FLUID     = {'order_vel'             : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : True} }
-    
-    FEM_PARAMS_ALE       = {'order_disp'            : 1, 
+
+    FEM_PARAMS_ALE       = {'order_disp'            : 1,
                             'quad_degree'           : 5}
-    
+
     COUPLING_PARAMS_ALE_FLUID = {'coupling_ale_fluid' : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}], # strong_dirichlet, weak_dirichlet
                                  'fluid_on_deformed'  : 'consistent'}
-    
+
     COUPLING_PARAMS_FLUID_FLOW0D = {'surface_ids'   : [[5],[6],[7],[8], [4]],
                             'coupling_quantity'     : ['pressure']*5,
                             'variable_quantity'     : ['flux']*5,
@@ -103,7 +103,7 @@ def main():
     class time_curves():
 
         def tc1(self, t): # RV
-            
+
             return 0.5*(1.-np.cos(2.*np.pi*(t-0.37)/(0.8-0.37))) * (t >= 0.37) * (t <= 0.37 + 0.8-0.37)
 
 
@@ -118,12 +118,12 @@ def main():
     BC_DICT_FLUID        = { 'robin_valve' : [{'id' : [3], 'type' : 'temporal', 'beta_max' : 1e3, 'beta_min' : 0, 'to' : 0.0, 'tc' : 0.37}], # MV
                              'dp_monitor' : [{'id' : [3], 'upstream_domain' : 2, 'downstream_domain' : 1}], # MV
                              'flux_monitor' : [{'id' : [3], 'on_subdomain' : True, 'domain' : 2}] }  # MV
-    
+
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS_ALE_FLUID,COUPLING_PARAMS_FLUID_FLOW0D])
 
-    
+
     # problem solve
     problem.solve_problem()
 
@@ -156,7 +156,7 @@ def main():
     s_corr[19] = 2.5892849487072353E+03
     s_corr[20] = 7.0912716140204884E+03
 
-    check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     return success
@@ -195,7 +195,7 @@ def init():
 
 
 def param():
-    
+
             #resistances (R), compliances (C), intertances (L), arterial characteristic impedances (Z)
     return {'R_ar_sys' : 120.0e-6,
             'C_ar_sys' : 1.377019e4,

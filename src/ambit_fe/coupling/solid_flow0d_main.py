@@ -25,8 +25,8 @@ from ..base import problem_base, solver_base
 
 class SolidmechanicsFlow0DProblem(problem_base):
 
-    def __init__(self, io_params, time_params_solid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None):
-        super().__init__(io_params, time_params_solid, comm)
+    def __init__(self, io_params, time_params_solid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, comm_sq=None):
+        super().__init__(io_params, time_params_solid, comm=comm, comm_sq=comm_sq)
 
         self.problem_physics = 'solid_flow0d'
 
@@ -65,7 +65,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         # initialize problem instances (also sets the variational forms for the solid problem)
         self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm)
+        self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm, comm_sq=self.comm_sq)
 
         self.pbrom = self.pbs # ROM problem can only be solid
 
@@ -335,7 +335,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.dofs_coupling_vq, self.dofs_coupling_p = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
 
         self.k_us_subvec, self.k_su_subvec, sze_us, sze_su = [], [], [], []
-        self.arr_us, self.arr_su = [], []
 
         for n in range(self.num_coupling_surf):
 
@@ -347,7 +346,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
             self.k_su_subvec.append( self.k_su_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
-            self.arr_su.append( np.zeros(self.k_su_subvec[-1].getLocalSize()) )
 
             sze_su.append(self.k_su_subvec[-1].getSize())
 
@@ -359,7 +357,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_p, comm=self.comm)
 
             self.k_us_subvec.append( self.k_us_vec[n].getSubVector(self.dofs_coupling_p[n]) )
-            self.arr_us.append( np.zeros(self.k_us_subvec[-1].getLocalSize()) )
 
             sze_us.append(self.k_us_subvec[-1].getSize())
 
@@ -392,7 +389,15 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
 
             if subsolver is not None:
-                subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+                # only have rank 0 solve the ODE, then broadcast solution
+                if self.comm.rank==0:
+                    subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+                self.comm.Barrier()
+                # need to broadcast to all cores
+                self.pb0.s.array[:] = self.comm.bcast(self.pb0.s.array, root=0)
+                self.pb0.df.array[:] = self.comm.bcast(self.pb0.df.array, root=0)
+                self.pb0.f.array[:] = self.comm.bcast(self.pb0.f.array, root=0)
+                self.pb0.aux[:] = self.comm.bcast(self.pb0.aux, root=0)
 
             # add to solid momentum equation
             self.pb0.cardvasc0D.set_pressure_fem(self.lm, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
@@ -422,19 +427,17 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         if self.coupling_type == 'monolithic_lagrange':
 
-            s_sq = allgather_vec(self.pb0.s, self.comm)
-
             ls, le = self.lm.getOwnershipRange()
 
             # Lagrange multiplier coupling residual
             for i in range(ls,le):
-                self.r_lm[i] = self.constr[i] - s_sq[self.pb0.cardvasc0D.v_ids[i]]
+                self.r_lm[i] = self.constr[i] - self.pb0.s[self.pb0.cardvasc0D.v_ids[i]]
 
             self.r_lm.assemble()
 
             self.r_list[1+off] = self.r_lm
 
-            del lm_sq, s_sq
+            del lm_sq
 
         if bool(self.residual_scale):
             self.scale_residual_list([self.r_list[1+off]], [self.residual_scale[1+off]])
@@ -477,8 +480,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         if self.coupling_type == 'monolithic_lagrange':
 
-            s_sq = allgather_vec(self.pb0.s, self.comm)
-
             # assemble 0D rhs contributions
             self.pb0.df_old.assemble()
             self.pb0.f_old.assemble()
@@ -494,16 +495,19 @@ class SolidmechanicsFlow0DProblem(problem_base):
             # store 0D state variable prior to perturbation solves
             self.pb0.s_tmp.axpby(1.0, 0.0, self.pb0.s)
 
+            ls, le = self.K_lm.getOwnershipRange()
+
             # finite differencing for LM siffness matrix
             if subsolver is not None:
-                for i in range(self.num_coupling_surf):
+                for i in range(ls, le): # row-owning rank calls the ODE solver
                     for j in range(self.num_coupling_surf):
-
                         self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] + self.eps_fd # perturbed LM
                         subsolver.newton(t, print_iter=False)
-                        s_pert_sq = allgather_vec(self.pb0.s, self.comm)
-                        self.K_lm[i,j] = -(s_pert_sq[self.pb0.cardvasc0D.v_ids[i]] - s_sq[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                        val = -(self.pb0.s[self.pb0.cardvasc0D.v_ids[i]] - self.pb0.s_tmp[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
+                        self.K_lm.setValue(i, j, val, addv=PETSc.InsertMode.INSERT)
                         self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] # restore LM
+
+            self.comm.Barrier() # do we need this here, since not all processes participate in the ODE solve?
 
             # restore df, f, and aux vectors for correct time step update
             self.pb0.df.axpby(1.0, 0.0, self.pb0.df_tmp)
@@ -516,7 +520,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             self.K_list[1+off][1+off] = self.K_lm
 
-            del lm_sq, s_sq
+            del lm_sq
 
         # offdiagonal s-u rows
         for i in range(len(self.row_ids)):
@@ -536,17 +540,15 @@ class SolidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.col_ids)):
             with self.k_us_vec[i].localForm() as r_local: r_local.set(0.0)
             fem.petsc.assemble_vector(self.k_us_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
-            # apply displacement dbcs to matrix entries k_us - basically since these are offdiagonal we want a zero there!
-            fem.apply_lifting(self.k_us_vec[i], [self.pbs.jac_uu], [self.pbs.bc.dbcs], x0=[self.pbs.u.vector], scale=0.0)
             self.k_us_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            # set zeros at DBC entries
             fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
 
         # set columns
         for i in range(len(self.col_ids)):
             # NOTE: only set the surface-subset of the k_us vector entries to avoid placing unnecessary zeros!
             self.k_us_vec[i].getSubVector(self.dofs_coupling_p[i], subvec=self.k_us_subvec[i])
-            self.arr_us[i][:] = self.k_us_subvec[i].getArray(readonly=True)
-            self.K_us.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.arr_us[i], addv=PETSc.InsertMode.INSERT)
+            self.K_us.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.k_us_subvec[i].array, addv=PETSc.InsertMode.INSERT)
             self.k_us_vec[i].restoreSubVector(self.dofs_coupling_p[i], subvec=self.k_us_subvec[i])
 
         self.K_us.assemble()
@@ -555,8 +557,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.row_ids)):
             # NOTE: only set the surface-subset of the k_su vector entries to avoid placing unnecessary zeros!
             self.k_su_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_su_subvec[i])
-            self.arr_su[i][:] = self.k_su_subvec[i].getArray(readonly=True)
-            self.K_su.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.arr_su[i], addv=PETSc.InsertMode.INSERT)
+            self.K_su.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.k_su_subvec[i].array, addv=PETSc.InsertMode.INSERT)
             self.k_su_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_su_subvec[i])
 
         self.K_su.assemble()
