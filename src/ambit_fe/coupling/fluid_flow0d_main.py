@@ -247,11 +247,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.K_sv.setUp()
         self.K_sv.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
 
-        # print("K_sv   : ",self.comm.rank,self.K_sv.getOwnershipRange())
-        # print("K_lm   : ",self.comm.rank,self.K_lm.getOwnershipRange())
-        # print("K_vsCOL: ",self.comm.rank,self.K_vs.getOwnershipRangeColumn())
-        # exit()
-
 
     def assemble_residual(self, t, subsolver=None):
 
