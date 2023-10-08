@@ -29,7 +29,7 @@ class block_precond():
 
         # type of scaling for approximation of Schur complement
         try: schur_block_scaling = solparams['schur_block_scaling']
-        except: schur_block_scaling = ['diag']*2
+        except: schur_block_scaling = [{'type' : 'diag', 'val' : 1.0}]*2
 
         if isinstance(schur_block_scaling, list):
             self.schur_block_scaling = schur_block_scaling
@@ -119,11 +119,11 @@ class schur_2x2(block_precond):
         # set 1's to get correct allocation pattern
         self.Adinv.shift(1.)
 
-        if self.schur_block_scaling[0]=='diag':
+        if self.schur_block_scaling[0]['type']=='diag':
             self.adinv_vec = self.A.getDiagonal()
-        elif self.schur_block_scaling[0]=='rowsum':
+        elif self.schur_block_scaling[0]['type']=='rowsum':
             self.adinv_vec = self.A.getRowSum()
-        elif self.schur_block_scaling[0]=='none':
+        elif self.schur_block_scaling[0]['type']=='none':
             self.adinv_vec = self.A.createVecLeft()
             self.adinv_vec.set(1.0)
         else:
@@ -160,21 +160,23 @@ class schur_2x2(block_precond):
         self.P.createSubMatrix(self.iset[1],self.iset[0], submat=self.B)
         self.P.createSubMatrix(self.iset[1],self.iset[1], submat=self.C)
 
-        if self.schur_block_scaling[0]=='diag':
+        if self.schur_block_scaling[0]['type']=='diag':
             self.A.getDiagonal(result=self.adinv_vec)
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling[0]=='rowsum':
+        elif self.schur_block_scaling[0]['type']=='rowsum':
             self.A.getRowSum(result=self.adinv_vec)
             self.adinv_vec.abs()
-        elif self.schur_block_scaling[0]=='none':
+        elif self.schur_block_scaling[0]['type']=='none':
             self.adinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
 
+        self.adinv_vec.scale(self.schur_block_scaling[0]['val'])
+
         # form diag(A)^{-1}
         self.Adinv.setDiagonal(self.adinv_vec, addv=PETSc.InsertMode.INSERT)
 
-        self.Adinv.matMult(self.Bt, result=self.Adinv_Bt) # diag(A)^{-1} Bt
+        self.Adinv.matMult(self.Bt, result=self.Adinv_Bt)      # diag(A)^{-1} Bt
         self.B.matMult(self.Adinv_Bt, result=self.B_Adinv_Bt)  # B diag(A)^{-1} Bt
 
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
@@ -257,11 +259,11 @@ class schur_3x3(block_precond):
         # set 1's to get correct allocation pattern
         self.Adinv.shift(1.)
 
-        if self.schur_block_scaling[0]=='diag':
+        if self.schur_block_scaling[0]['type']=='diag':
             self.adinv_vec = self.A.getDiagonal()
-        elif self.schur_block_scaling[0]=='rowsum':
+        elif self.schur_block_scaling[0]['type']=='rowsum':
             self.adinv_vec = self.A.getRowSum()
-        elif self.schur_block_scaling[0]=='none':
+        elif self.schur_block_scaling[0]['type']=='none':
             self.adinv_vec = self.A.createVecLeft()
             self.adinv_vec.set(1.0)
         else:
@@ -269,11 +271,11 @@ class schur_3x3(block_precond):
 
         self.Smod = self.C.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
 
-        if self.schur_block_scaling[1]=='diag':
+        if self.schur_block_scaling[1]['type']=='diag':
             self.smoddinv_vec = self.Smod.getDiagonal()
-        elif self.schur_block_scaling[1]=='rowsum':
+        elif self.schur_block_scaling[1]['type']=='rowsum':
             self.smoddinv_vec = self.Smod.getRowSum()
-        elif self.schur_block_scaling[1]=='none':
+        elif self.schur_block_scaling[1]['type']=='none':
             self.smoddinv_vec = self.Smod.createVecLeft()
             self.smoddinv_vec.set(1.0)
         else:
@@ -346,23 +348,25 @@ class schur_3x3(block_precond):
         self.P.createSubMatrix(self.iset[2],self.iset[1], submat=self.E)
         self.P.createSubMatrix(self.iset[2],self.iset[2], submat=self.R)
 
-        if self.schur_block_scaling[0]=='diag':
+        if self.schur_block_scaling[0]['type']=='diag':
             self.A.getDiagonal(result=self.adinv_vec)
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling[0]=='rowsum':
+        elif self.schur_block_scaling[0]['type']=='rowsum':
             self.A.getRowSum(result=self.adinv_vec)
             self.adinv_vec.abs()
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling[0]=='none':
+        elif self.schur_block_scaling[0]['type']=='none':
             self.adinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
 
+        self.adinv_vec.scale(self.schur_block_scaling[0]['val'])
+
         # form diag(A)^{-1}
         self.Adinv.setDiagonal(self.adinv_vec, addv=PETSc.InsertMode.INSERT)
 
-        self.Adinv.matMult(self.Bt, result=self.Adinv_Bt)     # diag(A)^{-1} Bt
-        self.B.matMult(self.Adinv_Bt, result=self.B_Adinv_Bt) # B diag(A)^{-1} Bt
+        self.Adinv.matMult(self.Bt, result=self.Adinv_Bt)      # diag(A)^{-1} Bt
+        self.B.matMult(self.Adinv_Bt, result=self.B_Adinv_Bt)  # B diag(A)^{-1} Bt
 
         # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
         # compute self.Smod = self.C - B_Adinv_Bt
@@ -371,7 +375,7 @@ class schur_3x3(block_precond):
 
         # --- Tmod = Et - B diag(A)^{-1} Dt
 
-        self.Adinv.matMult(self.Dt, result=self.Adinv_Dt) # diag(A)^{-1} Dt
+        self.Adinv.matMult(self.Dt, result=self.Adinv_Dt)      # diag(A)^{-1} Dt
         self.B.matMult(self.Adinv_Dt, result=self.B_Adinv_Dt)  # B diag(A)^{-1} Dt
 
         # compute self.Tmod = self.Et - B_Adinv_Dt
@@ -380,17 +384,19 @@ class schur_3x3(block_precond):
 
         # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
 
-        if self.schur_block_scaling[1]=='diag':
+        if self.schur_block_scaling[1]['type']=='diag':
             self.Smod.getDiagonal(result=self.smoddinv_vec)
             self.smoddinv_vec.reciprocal()
-        elif self.schur_block_scaling[1]=='rowsum':
+        elif self.schur_block_scaling[1]['type']=='rowsum':
             self.Smod.getRowSum(result=self.smoddinv_vec)
             self.smoddinv_vec.abs()
             self.smoddinv_vec.reciprocal()
-        elif self.schur_block_scaling[1]=='none':
+        elif self.schur_block_scaling[1]['type']=='none':
             self.smoddinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
+
+        self.smoddinv_vec.scale(self.schur_block_scaling[1]['val'])
 
         # form diag(Smod)^{-1}
         self.Smoddinv.setDiagonal(self.smoddinv_vec, addv=PETSc.InsertMode.INSERT)
@@ -403,7 +409,6 @@ class schur_3x3(block_precond):
 
         self.D.matMult(self.Adinv_Bt_Smoddinv_Tmod, result=self.D_Adinv_Bt_Smoddinv_Tmod)  # D diag(A)^{-1} ( Bt diag(Smod)^{-1} Tmod )
 
-        # TODO: Check: Is this slow??
         self.D.matMult(self.Adinv_Bt, result=self.DBt)                                     # D diag(A)^{-1} Bt for later use
 
         self.E.matMult(self.Smoddinv_Tmod, result=self.E_Smoddinv_Tmod)                    # E diag(Smod)^{-1} Tmod

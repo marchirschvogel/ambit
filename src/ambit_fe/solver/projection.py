@@ -11,7 +11,7 @@ import ufl
 from petsc4py import PETSc
 
 
-def project(v, V, dx_, bcs=[], nm=None, comm=None):
+def project(v, V, dx_, bcs=[], nm=None, comm=None, entity_maps=None):
 
     w = ufl.TestFunction(V)
     Pv = ufl.TrialFunction(V)
@@ -37,7 +37,10 @@ def project(v, V, dx_, bcs=[], nm=None, comm=None):
     # solve linear system for projection
     function = fem.Function(V, name=nm)
 
-    a_form, L_form = fem.form(a), fem.form(L)
+    if entity_maps is not None:
+        a_form, L_form = fem.form(a, entity_maps=entity_maps), fem.form(L, entity_maps=entity_maps)
+    else:
+        a_form, L_form = fem.form(a), fem.form(L)
 
     # assemble linear system
     A = fem.petsc.assemble_matrix(a_form, bcs)

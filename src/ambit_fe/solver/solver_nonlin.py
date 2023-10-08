@@ -590,9 +590,9 @@ class solver_nonlinear:
 
                     tes = time.time()
 
-                    # nested residual and matrix references have been updated - we should call assemble again (?)
-                    # self.r_full_nest[npr].assemble()
-                    # self.K_full_nest[npr].assemble()
+                    # nested residual and matrix references have been updated - we should call assemble again (we need this at least to trigger preconditioner update)
+                    self.r_full_nest[npr].assemble()
+                    self.K_full_nest[npr].assemble()
 
                     te += time.time() - tes
 
