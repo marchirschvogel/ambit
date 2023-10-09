@@ -453,10 +453,11 @@ class SolidmechanicsConstraintProblem(problem_base):
         if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
             lm_sq = allgather_vec(self.lm, self.comm)
             if self.comm.rank == 0:
-                f = open(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt', 'wt')
+                f = open(self.pbs.io.output_path+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
                 for i in range(len(lm_sq)):
                     f.write('%.16E\n' % (lm_sq[i]))
                 f.close()
+            del lm_sq
 
 
     def check_abort(self, t):

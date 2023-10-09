@@ -585,7 +585,13 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pb0.write_restart(sname, N)
 
         if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
-            self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
+            lm_sq = allgather_vec(self.lm, self.comm)
+            if self.comm.rank == 0:
+                f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
+                for i in range(len(lm_sq)):
+                    f.write('%.16E\n' % (lm_sq[i]))
+                f.close()
+            del lm_sq
 
 
     def check_abort(self, t):

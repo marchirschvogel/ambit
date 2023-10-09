@@ -16,6 +16,7 @@ from petsc4py import PETSc
 from ..solver import solver_nonlin
 from .. import ioparams
 from .. import utilities
+from ..mpiroutines import allgather_vec
 
 from .fluid_ale_main import FluidmechanicsAleProblem
 from .fluid_flow0d_main import FluidmechanicsFlow0DProblem
@@ -380,7 +381,13 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pb0.write_restart(sname, N)
 
         if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
-            self.pb0.cardvasc0D.write_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm)
+            lm_sq = allgather_vec(self.pbf0.lm, self.comm)
+            if self.comm.rank == 0:
+                f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
+                for i in range(len(lm_sq)):
+                    f.write('%.16E\n' % (lm_sq[i]))
+                f.close()
+            del lm_sq
 
 
     def check_abort(self, t):
