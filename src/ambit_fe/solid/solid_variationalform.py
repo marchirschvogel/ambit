@@ -15,15 +15,6 @@ from ..variationalform import variationalform_base
 # TeX: \delta \mathcal{W} = \delta \mathcal{W}_{\mathrm{kin}} + \delta \mathcal{W}_{\mathrm{int}} - \delta \mathcal{W}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{u}
 class variationalform(variationalform_base):
 
-    def __init__(self, var_u, du, var_p=None, dp=None, n0=None, x_ref=None):
-        self.var_u = var_u
-        self.var_p = var_p
-        self.du = du
-        self.dp = dp
-
-        self.n0 = n0
-        self.x_ref = x_ref
-
     ### Kinetic virtual work
 
     # TeX: \delta \mathcal{W}_{\mathrm{kin}} := \int\limits_{\Omega_{0}} \rho_{0}\boldsymbol{a} \cdot \delta\boldsymbol{u} \,\mathrm{d}V
@@ -92,84 +83,16 @@ class variationalform(variationalform_base):
         C = F.T*F
         return ufl.inner(Jtang, ufl.derivative(C, u, self.du)) * self.var_p*ddomain
 
-    ### External virtual work
-
-    # Neumann load on reference configuration (1st Piola-Kirchhoff traction)
-    # TeX: \int\limits_{\Gamma_{0}} \hat{\boldsymbol{t}}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
-    def deltaW_ext_neumann_ref(self, func, dboundary):
-
-        return ufl.dot(func, self.var_u)*dboundary
-
-    # Neumann load in reference normal (1st Piola-Kirchhoff traction)
-    # TeX: \int\limits_{\Gamma_{0}} p\,\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_neumann_normal_ref(self, func, dboundary):
-
-        return func*ufl.dot(self.n0, self.var_u)*dboundary
-
-    # Neumann follower load on current configuration (Cauchy traction)
-    # TeX: \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
-    def deltaW_ext_neumann_cur(self, J, F, func, dboundary):
-
-        return J*ufl.dot(ufl.inv(F).T*func, self.var_u)*dboundary
-
-    # Neumann follower load in current normal direction
-    # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_neumann_normal_cur(self, J, F, func, dboundary):
-
-        return func*J*ufl.dot(ufl.inv(F).T*self.n0, self.var_u)*dboundary
-
-    # body force external virtual work
-    # TeX: \int\limits_{\Omega_{0}} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{u}\,\mathrm{d}V
-    def deltaW_ext_bodyforce(self, func, funcdir, ddomain):
-
-        return func*ufl.dot(funcdir, self.var_u)*ddomain
-
-    # Robin condition (spring)
-    # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_robin_spring(self, u, k, dboundary, u_prestr=None):
-
-        if u_prestr is not None:
-            return -k*(ufl.dot(u + u_prestr, self.var_u)*dboundary)
-        else:
-            return -k*(ufl.dot(u, self.var_u)*dboundary)
-
-    # Robin condition (spring) in reference normal direction
-    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_robin_spring_normal_ref(self, u, k_n, dboundary, u_prestr=None):
-
-        if u_prestr is not None:
-            return -k_n*(ufl.dot(ufl.outer(self.n0,self.n0)*(u + u_prestr), self.var_u)*dboundary)
-        else:
-            return -k_n*(ufl.dot(ufl.outer(self.n0,self.n0)*u, self.var_u)*dboundary)
-
-    # Robin condition (dashpot)
-    # TeX: \int\limits_{\Gamma_0} c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_robin_dashpot(self, v, c, dboundary):
-
-        if not isinstance(v, ufl.constantvalue.Zero):
-            return -c*(ufl.dot(v, self.var_u)*dboundary)
-        else:
-            return ufl.as_ufl(0)
-
-    # Robin condition (dashpot) in reference normal direction
-    # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_robin_dashpot_normal_ref(self, v, c_n, dboundary):
-
-        if not isinstance(v, ufl.constantvalue.Zero):
-            return -c_n*(ufl.dot(ufl.outer(self.n0,self.n0)*v, self.var_u)*dboundary)
-        else:
-            return ufl.as_ufl(0)
-
 
     ### Volume / flux coupling conditions
 
     # volume
-    def volume(self, u, J, F, dboundary):
-
+    def volume(self, u, dboundary, F=None):
+        J = ufl.det(F)
         return -(1./3.)*J*ufl.dot(ufl.inv(F).T*self.n0, self.x_ref + u)*dboundary
 
     # flux: Q = -dV/dt
     # TeX: \int\limits_{\Gamma_{0}} J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\boldsymbol{v}\,\mathrm{d}A
-    def flux(self, v, J, F, dboundary):
-
+    def flux(self, v, dboundary, F=None):
+        J = ufl.det(F)
         return J*ufl.dot(ufl.inv(F).T*self.n0, v)*dboundary

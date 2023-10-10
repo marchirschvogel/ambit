@@ -168,20 +168,20 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
                 if coupling_quantity == 'volume':
                     assert(self.coupling_type == 'monolithic_direct' and variable_quantity == 'pressure')
-                    cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
-                    cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
+                    cq_ += self.pbs.vf.volume(self.pbs.u, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                    cq_old_ += self.pbs.vf.volume(self.pbs.u_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
                 elif coupling_quantity == 'flux':
                     assert(self.coupling_type == 'monolithic_direct' and variable_quantity == 'pressure')
-                    cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
-                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
+                    cq_ += self.pbs.vf.flux(self.pbs.vel, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
                 elif coupling_quantity == 'pressure':
                     assert(self.coupling_type == 'monolithic_lagrange')
                     if variable_quantity == 'volume':
                         cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
                         cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
                     elif variable_quantity == 'flux':
-                        cq_ += self.pbs.vf.flux(self.pbs.vel, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
-                        cq_old_ += self.pbs.vf.flux(self.pbs.v_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
+                        cq_ += self.pbs.vf.flux(self.pbs.vel, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                        cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
                     else:
                         raise NameError("Unknown variable quantity! Choose either volume or flux!")
                 else:
@@ -194,11 +194,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
             for i in range(len(self.surface_p_ids[n])):
 
                 ds_p = ufl.ds(subdomain_data=self.pbs.io.mt_b1, subdomain_id=self.surface_p_ids[n][i], metadata={'quadrature_degree': self.pbs.quad_degree})
-                df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_p)
+                df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
 
                 # add to solid rhs contributions
-                self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), self.coupfuncs[-1], ds_p)
-                self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), self.coupfuncs_old[-1], ds_p)
+                self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_old[-1], ds_p, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
 
             self.dforce.append(df_)
 

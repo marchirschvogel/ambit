@@ -96,7 +96,7 @@ def main():
 
     BC_DICT_SOLID        = { 'robin' : [{'type' : 'spring', 'id' : [2,3,4,5], 'dir' : 'normal_ref', 'stiff' : 1e5}]}
 
-    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
+    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_ref', 'curve' : 1}],
                              'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 

@@ -76,8 +76,8 @@ def main():
 
 
     BC_DICT        = { 'dirichlet'   : [{'id' : [1], 'dir' : 'all', 'val' : 0.}],
-                       'neumann'     : [{'id' : [2], 'dir' : 'normal_cur', 'curve' : 1},
-                                        {'id' : [4], 'dir' : 'normal_cur', 'curve' : 2}],
+                       'neumann'     : [{'id' : [2], 'dir' : 'normal_ref', 'curve' : 1},
+                                        {'id' : [4], 'dir' : 'normal_ref', 'curve' : 2}],
                        'robin_valve' : [{'id' : [5], 'type' : 'dp_smooth', 'beta_max' : 1e3, 'beta_min' : 1e-3, 'epsilon' : 1e-6, 'dp_monitor_id' : 0}], # 5 is internal surface (valve)
                        'dp_monitor'  : [{'id' : [5], 'upstream_domain' : 2, 'downstream_domain' : 1}], 
                        'flux_monitor': [{'id' : [5], 'on_subdomain' : True, 'internal' : False, 'domain' : 2}] }

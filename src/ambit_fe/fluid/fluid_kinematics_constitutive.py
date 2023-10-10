@@ -33,9 +33,9 @@ class constitutive:
 
 
     # Cauchy stress core routine
-    def sigma(self, v_, p_, Fale=None):
+    def sigma(self, v_, p_, F=None):
 
-        gamma_ = self.kin.gamma(v_,Fale=Fale)
+        gamma_ = self.kin.gamma(v_,F=F)
 
         stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
 
@@ -82,10 +82,10 @@ class kinematics:
 
 
     # velocity gradient: gamma = 0.5(dv/dx + (dv/dx)^T)
-    def gamma(self, v_, Fale=None):
+    def gamma(self, v_, F=None):
 
-        if Fale is not None:
-            return 0.5*(ufl.grad(v_)*ufl.inv(Fale) + ufl.inv(Fale).T*ufl.grad(v_).T)
+        if F is not None:
+            return 0.5*(ufl.grad(v_)*ufl.inv(F) + ufl.inv(F).T*ufl.grad(v_).T)
         else:
             return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
 

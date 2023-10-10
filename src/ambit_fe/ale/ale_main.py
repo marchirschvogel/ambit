@@ -124,10 +124,10 @@ class AleProblem(problem_base):
             self.ma.append(ale_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)], self.io.mesh))
 
         # initialize ALE variational form class
-        self.vf = ale_variationalform.variationalform(self.var_d, self.io.n0)
+        self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0)
 
         # initialize boundary condition class - same as solid
-        self.bc = boundaryconditions.boundary_cond_solid(fem_params, self.io, self.vf, self.ti)
+        self.bc = boundaryconditions.boundary_cond(fem_params, self.io, self.vf, self.ti)
 
         self.bc_dict = bc_dict
 
