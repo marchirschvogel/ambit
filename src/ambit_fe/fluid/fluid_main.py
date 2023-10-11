@@ -180,6 +180,9 @@ class FluidmechanicsProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
 
+        # coordinate element function space - based on input mesh
+        self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+
         # functions
         self.dv     = ufl.TrialFunction(self.V_v)            # Incremental velocity
         self.var_v  = ufl.TestFunction(self.V_v)             # Test function
@@ -260,6 +263,13 @@ class FluidmechanicsProblem(problem_base):
 
         # dictionaries of internal variables
         self.internalvars, self.internalvars_old = {}, {}
+
+        # reference coordinates
+        self.x_ref = fem.Function(self.V_v)
+        self.x_ref.interpolate(self.x_ref_expr)
+
+        self.x_ref_d = fem.Function(self.Vd_vector)
+        self.x_ref_d.interpolate(self.x_ref_expr)
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
@@ -444,14 +454,16 @@ class FluidmechanicsProblem(problem_base):
 
             self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
 
-            self.actstress, self.wallfields = [], []
+            self.actstress, self.act_curve, self.wallfields = [], [], []
             for nm in range(len(self.bc_dict['membrane'])):
 
                 if 'active_stress' in self.bc_dict['membrane'][nm]['params'].keys():
                     self.mem_active_stress[nm], self.have_active_stress = True, True
 
-                    act_curve = self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])
-                    self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], act_curve))
+                    self.act_curve.append( fem.Function(self.Vd_scalar) )
+                    self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])})
+
+                    self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], self.act_curve[-1], x_ref=self.x_ref_d))
 
                 if 'field' in self.bc_dict['membrane'][nm]['params']['h0'].keys():
                     # wall thickness field for reduced solid
@@ -584,6 +596,17 @@ class FluidmechanicsProblem(problem_base):
                 else: j=n
                 self.weakform_lin_pp.append( ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]) )
 
+        if self.have_active_stress and self.active_stress_trig == 'ode':
+            # active stress for reduced solid (FrSI)
+            self.tau_a_, na = [], 0
+            for nm in range(len(self.bc_dict['membrane'])):
+
+                if self.mem_active_stress[nm]:
+                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.dt))
+                    na+=1
+                else:
+                    self.tau_a_.append(ufl.as_ufl(0))
+
         if self.prestress_initial or self.prestress_initial_only:
             # prestressing weak forms
             self.weakform_prestress_p, self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pv, self.weakform_lin_prestress_pp = [], [], [], []
@@ -603,19 +626,10 @@ class FluidmechanicsProblem(problem_base):
 
 
     # active stress ODE evaluation - for reduced solid model
-    def evaluate_active_stress_ode(self, t):
-
-        tau_a_, na = [], 0
-        for nm in range(len(self.bc_dict['membrane'])):
-
-            if self.mem_active_stress[nm]:
-                tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, t, self.dt))
-                na+=1
-            else:
-                tau_a_.append(ufl.as_ufl(0))
+    def evaluate_active_stress_ode(self):
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_, comm=self.comm) # TODO: Should be self.dbmem here, but yields error; why?
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx_, comm=self.comm) # TODO: Should be self.dbmem here, but yields error; why?
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -625,7 +639,7 @@ class FluidmechanicsProblem(problem_base):
 
         # take care of active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
-            self.evaluate_active_stress_ode(t_abs-t_off)
+            self.evaluate_active_stress_ode()
 
 
     def set_problem_residual_jacobian_forms(self):

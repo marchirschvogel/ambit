@@ -152,6 +152,9 @@ class SolidmechanicsProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
 
+        # coordinate element function space - based on input mesh
+        self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+
         # functions
         self.du    = ufl.TrialFunction(self.V_u)            # Incremental displacement
         self.var_u = ufl.TestFunction(self.V_u)             # Test function
@@ -183,7 +186,7 @@ class SolidmechanicsProblem(problem_base):
         self.theta.vector.set(1.0), self.theta_old.vector.set(1.0)
         self.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # active stress
-        # self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
+        # self.tau_a = fem.Function(self.Vq_scalar, name="tau_a")
         self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
         self.tau_a_old = fem.Function(self.Vd_scalar)
         self.amp_old, self.amp_old_set = fem.Function(self.Vd_scalar), fem.Function(self.Vd_scalar)
@@ -214,6 +217,9 @@ class SolidmechanicsProblem(problem_base):
         self.x_ref = fem.Function(self.V_u)
         self.x_ref.interpolate(self.x_ref_expr)
 
+        self.x_ref_d = fem.Function(self.Vd_vector)
+        self.x_ref_d.interpolate(self.x_ref_expr)
+
         if self.incompressible_2field:
             self.numdof = self.u.vector.getSize() + self.p.vector.getSize()
         else:
@@ -232,7 +238,7 @@ class SolidmechanicsProblem(problem_base):
         self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
 
         self.localsolve, growth_dir = False, None
-        self.actstress = []
+        self.actstress, self.act_curve, self.act_curve_old = [], [], []
         for n in range(self.num_domains):
 
             if 'holzapfelogden_dev' in self.constitutive_models['MAT'+str(n+1)].keys() or 'guccione_dev' in self.constitutive_models['MAT'+str(n+1)].keys():
@@ -247,9 +253,14 @@ class SolidmechanicsProblem(problem_base):
                 if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
-                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['activation_curve'])
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_fiber'], act_curve))
-                    if self.actstress[-1].frankstarling: self.have_frank_starling = True
+                    self.act_curve.append( fem.Function(self.Vd_scalar) )
+                    self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['activation_curve'])})
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_fiber'], self.act_curve[-1], x_ref=self.x_ref_d))
+                    if self.actstress[-1].frankstarling:
+                        self.have_frank_starling = True
+                        self.act_curve_old.append( fem.Function(self.Vd_scalar) )
+                        self.ti.funcs_to_update_old.append({self.act_curve_old[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['activation_curve'])})
+                        self.actstress[-1].act_curve_old = self.act_curve_old[-1]
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['prescribed_curve'])})
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
@@ -262,8 +273,9 @@ class SolidmechanicsProblem(problem_base):
                 if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_iso']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
-                    act_curve = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['activation_curve'])
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_iso'], act_curve))
+                    self.act_curve.append( fem.Function(self.Vd_scalar) )
+                    self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['activation_curve'])})
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_iso'], self.act_curve[-1], x_ref=self.x_ref_d))
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['prescribed_curve'])})
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
@@ -585,6 +597,40 @@ class SolidmechanicsProblem(problem_base):
                 else:
                     self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
 
+        # set forms for active stress
+        if self.have_active_stress and self.active_stress_trig == 'ode':
+            # take care of Frank-Starling law (fiber stretch-dependent contractility)
+            if self.have_frank_starling:
+
+                self.amp_old_, na = [], 0
+                for n in range(self.num_domains):
+
+                    if self.mat_active_stress[n] and self.actstress[na].frankstarling:
+                        # old fiber stretch (needed for Frank-Starling law)
+                        if self.mat_growth[n]: lam_fib_old = self.ma[n].fibstretch_e(self.ki.C(self.u_old), self.theta_old, self.fib_func[0])
+                        else:                  lam_fib_old = self.ki.fibstretch(self.u_old, self.fib_func[0])
+
+                        self.amp_old_.append(self.actstress[na].amp(lam_fib_old, self.amp_old))
+                        na+=1
+                    else:
+                        self.amp_old_.append(ufl.as_ufl(0))
+
+            self.tau_a_, na = [], 0
+            for n in range(self.num_domains):
+
+                if self.mat_active_stress[n]:
+                    # fiber stretch (needed for Frank-Starling law)
+                    if self.actstress[na].frankstarling:
+                        if self.mat_growth[n]: lam_fib = self.ma[n].fibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
+                        else:                  lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
+                    else:
+                        lam_fib = ufl.as_ufl(1)
+
+                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.dt, lam=lam_fib, amp_old=self.amp_old))
+                    na+=1
+                else:
+                    self.tau_a_.append(ufl.as_ufl(0))
+
         if self.prestress_initial or self.prestress_initial_only:
             # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
             self.weakform_prestress_u = self.deltaW_prestr_int - self.deltaW_prestr_ext
@@ -603,59 +649,16 @@ class SolidmechanicsProblem(problem_base):
         self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)],  [[None]*self.nfields for _ in range(self.nfields)]
 
 
-    # reference coordinates
-    def x_ref_expr(self, x):
-        if self.dim==3: return np.stack((x[0],x[1],x[2]))
-        if self.dim==2: return np.stack((x[0],x[1]))
-
-
     # active stress ODE evaluation
-    def evaluate_active_stress_ode(self, t):
+    def evaluate_active_stress_ode(self):
 
-        # take care of Frank-Starling law (fiber stretch-dependent contractility)
         if self.have_frank_starling:
-
-            amp_old_, na = [], 0
-            for n in range(self.num_domains):
-
-                if self.mat_active_stress[n] and self.actstress[na].frankstarling:
-
-                    # old fiber stretch (needed for Frank-Starling law)
-                    if self.mat_growth[n]: lam_fib_old = self.ma[n].fibstretch_e(self.ki.C(self.u_old), self.theta_old, self.fib_func[0])
-                    else:                  lam_fib_old = self.ki.fibstretch(self.u_old, self.fib_func[0])
-
-                    amp_old_.append(self.actstress[na].amp(t-self.dt, lam_fib_old, self.amp_old))
-
-                else:
-
-                    amp_old_.append(ufl.as_ufl(0))
-
-            amp_old_proj = project(amp_old_, self.Vd_scalar, self.dx_, comm=self.comm)
+            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.dx_, comm=self.comm)
             self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.amp_old.interpolate(amp_old_proj)
 
-        tau_a_, na = [], 0
-        for n in range(self.num_domains):
-
-            if self.mat_active_stress[n]:
-
-                # fiber stretch (needed for Frank-Starling law)
-                if self.actstress[na].frankstarling:
-                    if self.mat_growth[n]: lam_fib = self.ma[n].fibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
-                    else:                  lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
-                else:
-                    lam_fib = ufl.as_ufl(1)
-
-                tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, t, self.dt, lam_fib, self.amp_old))
-
-                na+=1
-
-            else:
-
-                tau_a_.append(ufl.as_ufl(0))
-
         # project and interpolate to quadrature function space
-        tau_a_proj = project(tau_a_, self.Vd_scalar, self.dx_, comm=self.comm)
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx_, comm=self.comm)
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -691,7 +694,7 @@ class SolidmechanicsProblem(problem_base):
 
         # take care of active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
-            self.evaluate_active_stress_ode(t_abs-t_off)
+            self.evaluate_active_stress_ode()
 
 
     # compute volumes of a surface from a Laplace problem
@@ -772,6 +775,7 @@ class SolidmechanicsProblem(problem_base):
                     self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
                     self.jac_up = fem.form(self.weakform_lin_prestress_up, entity_maps=self.io.entity_maps)
                     self.jac_pu = fem.form(self.weakform_lin_prestress_pu, entity_maps=self.io.entity_maps)
+                    self.jac_pp = None
             else:
                 self.res_u  = fem.form(self.weakform_prestress_u)
                 self.jac_uu = fem.form(self.weakform_lin_prestress_uu)
@@ -779,6 +783,7 @@ class SolidmechanicsProblem(problem_base):
                     self.res_p  = fem.form(self.weakform_prestress_p)
                     self.jac_up = fem.form(self.weakform_lin_prestress_up)
                     self.jac_pu = fem.form(self.weakform_lin_prestress_pu)
+                    self.jac_pp = None
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)

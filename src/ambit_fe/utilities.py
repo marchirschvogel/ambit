@@ -116,9 +116,10 @@ def mat_params_to_dolfinx_constant(matparams, msh):
                 # submaterial (e.g. used in remodeling)
                 if isinstance(matparams[k1][k2][k3], dict):
                     for k4 in matparams[k1][k2][k3].keys():
-                        for k5 in matparams[k1][k2][k3][k4].keys():
-                            if isinstance(matparams[k1][k2][k3][k4][k5], float):
-                                matparams_new[k1][k2][k3][k4][k5] = fem.Constant(msh, matparams[k1][k2][k3][k4][k5])
+                        if isinstance(matparams[k1][k2][k3][k4], dict):
+                            for k5 in matparams[k1][k2][k3][k4].keys():
+                                if isinstance(matparams[k1][k2][k3][k4][k5], float):
+                                    matparams_new[k1][k2][k3][k4][k5] = fem.Constant(msh, matparams[k1][k2][k3][k4][k5])
 
     return matparams_new
 

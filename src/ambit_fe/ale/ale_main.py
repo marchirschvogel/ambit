@@ -97,7 +97,7 @@ class AleProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
 
-        # coordinate element function space
+        # coordinate element function space - based on input mesh
         self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
 
         # functions
@@ -109,6 +109,13 @@ class AleProblem(problem_base):
         # values of previous time step
         self.d_old = fem.Function(self.V_d)
         self.w_old = fem.Function(self.V_d)
+
+        # reference coordinates
+        self.x_ref = fem.Function(self.V_d)
+        self.x_ref.interpolate(self.x_ref_expr)
+
+        self.x_ref_d = fem.Function(self.Vd_vector)
+        self.x_ref_d.interpolate(self.x_ref_expr)
 
         self.numdof = self.d.vector.getSize()
 
@@ -126,7 +133,7 @@ class AleProblem(problem_base):
         # initialize ALE variational form class
         self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0)
 
-        # initialize boundary condition class - same as solid
+        # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(fem_params, self.io, self.vf, self.ti)
 
         self.bc_dict = bc_dict

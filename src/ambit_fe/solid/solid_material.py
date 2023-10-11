@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
+import numpy as np
 
 
 # returns the 2nd Piola-Kirchhoff stress S for different material laws
@@ -306,7 +307,7 @@ class growthfunction(growth):
 # expression for time-dependent active stress activation function
 class activestress_activation:
 
-    def __init__(self, params, act_curve):
+    def __init__(self, params, act_curve, x_ref=None):
 
         self.params = params
 
@@ -315,16 +316,45 @@ class activestress_activation:
         self.alpha_min = self.params['alpha_min']
 
         self.act_curve = act_curve
+        self.act_curve_old = None
 
         if 'frankstarling' in self.params.keys(): self.frankstarling = self.params['frankstarling']
         else: self.frankstarling = False
 
+        # reference coordinates - needed e.g. for spatial scaling functions of activation
+        self.x_ref = x_ref
+
+        try: self.activation_weight = self.params['activation_weight']
+        except: self.activation_weight = None
+
+        if self.activation_weight is not None:
+            self.act_weight_type = self.activation_weight['type']
+            self.act_weight_radius = self.activation_weight['radius']
+            self.act_weight_center = ufl.as_vector(self.activation_weight['center'])
+            self.act_weight_max = self.activation_weight['w_max']
+            self.act_weight_min = self.activation_weight['w_min']
+
+
+    def distance_to_point(self, p):
+
+        diff_vec = p - self.x_ref
+        return ufl.sqrt(ufl.dot(diff_vec,diff_vec))
+
+
+    def act_weight(self):
+        if self.act_weight_type=='radial_decay':
+            d = self.distance_to_point(self.act_weight_center)
+            # smoothly decaying weight within a defined radius from a maximum to a minimum value
+            return ufl.conditional(ufl.lt(d,self.act_weight_radius), 0.5*(self.act_weight_max-self.act_weight_min)*(1.-ufl.cos(np.pi*d/self.act_weight_radius)) + self.act_weight_min, self.act_weight_max)
+        else:
+            raise ValueError("Unknown act_weight_type!")
+
 
     # activation function for active stress
-    def ua(self, t):
+    def ua(self, actcurve):
 
         # Diss Hirschvogel eq. 2.100
-        return self.act_curve(t)*self.alpha_max + (1.-self.act_curve(t))*self.alpha_min
+        return actcurve*self.alpha_max + (1.-actcurve)*self.alpha_min
 
 
     # Frank-Staring function
@@ -347,23 +377,28 @@ class activestress_activation:
 
     # Frank Starling amplification factor (Diss Hirschvogel eq. 2.106, 3.29)
     # \dot{a}(\lambda_{\mathrm{myo}}) = \dot{g}(\lambda_{\mathrm{myo}}) \,\mathbb{I}_{|u|_{-}>0}
-    def amp(self, t, lam, amp_old):
+    def amp(self, lam, amp_old):
 
-        uabs_minus = ufl.max_value(-ufl.min_value(self.ua(t),0),0)
+        uabs_minus = ufl.max_value(-ufl.min_value(self.ua(self.act_curve_old),0),0)
 
         return ufl.conditional(ufl.gt(uabs_minus,0.), self.g(lam), amp_old)
 
 
     # Backward-Euler integration of active stress
-    def tau_act(self, tau_a_old, t, dt, lam=None, amp_old=None):
+    def tau_act(self, tau_a_old, dt, lam=None, amp_old=None):
 
-        uabs = abs(self.ua(t))
-        uabs_plus = ufl.max_value(self.ua(t),0)
+        uabs = abs(self.ua(self.act_curve))
+        uabs_plus = ufl.max_value(self.ua(self.act_curve),0)
 
-        # Frank Starling amplification factor
+        # amplification/weighting factor
+        amp = 1.0
+
         if self.frankstarling:
-            amp = self.amp(t, lam, amp_old)
-        else:
-            amp = 1.
+            # amplification due to Frank-Starling mechanism
+            amp *= self.amp(lam, amp_old)
+
+        if self.activation_weight is not None:
+            # weighting factor
+            amp *= self.act_weight()
 
         return (tau_a_old + amp*self.sigma0 * uabs_plus*dt) / (1.+uabs*dt)
