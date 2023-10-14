@@ -52,8 +52,8 @@ class SolidmechanicsProblem(problem_base):
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         # for FSI, we want to specify the subdomains
-        try: domain_ids = self.io.io_params['domain_ids_solid']
-        except: domain_ids = np.arange(1,self.num_domains+1)
+        try: self.domain_ids = self.io.io_params['domain_ids_solid']
+        except: self.domain_ids = np.arange(1,self.num_domains+1)
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
@@ -70,15 +70,20 @@ class SolidmechanicsProblem(problem_base):
 
         self.fem_params = fem_params
 
+        # create domain and boundaty integration measures
+        if self.io.mt_d_master is not None:
+            self.dx = ufl.Measure("dx", domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, metadata={'quadrature_degree': self.quad_degree})
+        else:
+            self.dx = ufl.Measure("dx", domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree})
+
+        self.ds = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
+
         # collect domain data
-        self.dx_, self.rho0 = [], []
-        for i, n in enumerate(domain_ids):
-            # integration domains
-            if self.io.mt_d_master is not None: self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
-            else:                               self.dx_.append(ufl.dx(domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree}))
+        self.rho0 = []
+        for n, N in enumerate(self.domain_ids):
             # data for inertial forces: density
             if self.timint != 'static':
-                self.rho0.append(self.constitutive_models['MAT'+str(i+1)]['inertia']['rho0'])
+                self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
 
         try: self.prestress_initial = fem_params['prestress_initial']
         except: self.prestress_initial = False
@@ -319,7 +324,7 @@ class SolidmechanicsProblem(problem_base):
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
-            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx_, comm=self.comm)
+            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.comm)
             self.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.growth_thres.interpolate(growth_thres_proj)
 
@@ -330,11 +335,11 @@ class SolidmechanicsProblem(problem_base):
             for nf in range(len(self.io.fiber_data)):
                 fibarray.append('f'+str(nf+1))
 
-            self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.dx_, self.order_disp)
+            self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.dx, self.domain_ids, self.order_disp)
 
             if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
                 for i in range(len(fibarray)):
-                    fib_proj = project(self.fib_func[i], self.V_u, self.dx_, nm='Fiber'+str(i+1), comm=self.comm)
+                    fib_proj = project(self.fib_func[i], self.V_u, self.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm)
                     self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
 
         else:
@@ -408,38 +413,38 @@ class SolidmechanicsProblem(problem_base):
         self.deltaW_int,  self.deltaW_int_old  = ufl.as_ufl(0), ufl.as_ufl(0)
         self.deltaW_p,    self.deltaW_p_old    = ufl.as_ufl(0), ufl.as_ufl(0)
 
-        for n in range(self.num_domains):
+        for n, N in enumerate(self.domain_ids):
 
             if self.timint != 'static':
                 # kinetic virtual work
-                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx_[n])
-                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.dx_[n])
+                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx(N))
+                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.dx(N))
 
             # internal virtual work
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx_[n])
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.dx_[n])
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(N))
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.dx(N))
 
             # pressure virtual work (for incompressible formulation)
             # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
             if self.mat_growth[n]: J, J_old = self.ma[n].J_e(self.u, self.theta), self.ma[n].J_e(self.u_old, self.theta_old)
             else:                  J, J_old = self.ki.J(self.u), self.ki.J(self.u_old)
-            self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx_[n])
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx_[n])
+            self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx(N))
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx(N))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_body, w_body_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.ds, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.ds, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update)
-            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update_old)
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update_old)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.u_pre)
-            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.u_pre)
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.ds, u_pre=self.u_pre)
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.ds, u_pre=self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, self.dbmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc)
-            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old)
+            w_membrane, self.idmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, self.ds)
+            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, self.ds)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
@@ -447,8 +452,8 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
             # internal virtual work
-            for n in range(self.num_domains):
-                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx_[n])
+            for n, N in enumerate(self.domain_ids):
+                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(N))
             # boundary conditions
             bc_dict_prestr = copy.deepcopy(self.bc_dict)
             # get rid of dashpots
@@ -457,9 +462,9 @@ class SolidmechanicsProblem(problem_base):
                     if r['type'] == 'dashpot': r['visc'] = 0.
             bc_prestr = boundaryconditions.boundary_cond(self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
             if 'neumann_prestress' in bc_dict_prestr.keys():
-                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.ds, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             if 'robin' in bc_dict_prestr.keys():
-                w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.u_pre)
+                w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.ds, u_pre=self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
@@ -527,7 +532,7 @@ class SolidmechanicsProblem(problem_base):
         # point level with deformation-dependent internal variables (i.e. growth or plasticity), we make use of a more explicit formulation
         # of the linearization which involves the fourth-order material tangent operator Ctang ("derivative" cannot take care of the
         # dependence of the internal variables on the deformation if this dependence is nonlinear and cannot be expressed analytically)
-        for n in range(self.num_domains):
+        for n, N in enumerate(self.domain_ids):
 
             # elastic and viscous material tangent operator
             Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, tang=True)
@@ -544,7 +549,7 @@ class SolidmechanicsProblem(problem_base):
             else:
                 Ctang = Cmat
 
-            self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx_[n])
+            self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx(N))
 
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
         self.weakform_lin_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
@@ -554,7 +559,7 @@ class SolidmechanicsProblem(problem_base):
 
             self.weakform_lin_up, self.weakform_lin_pu, self.weakform_lin_pp = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
-            for n in range(self.num_domains):
+            for n, N in enumerate(self.domain_ids):
                 # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
                 if self.mat_growth[n]:
                     J    = self.ma[n].J_e(self.u, self.theta)
@@ -586,16 +591,16 @@ class SolidmechanicsProblem(problem_base):
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
                     dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                     if not isinstance(dthetadp, ufl.constantvalue.Zero):
-                        self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx_[n]
+                        self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx(N)
                 else:
                     Ctang_p = Cmat_p
                     Jtang = Jmat
 
-                self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx_[n])
+                self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx(N))
                 if self.pressure_at_midpoint:
-                    self.weakform_lin_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
+                    self.weakform_lin_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(N))
                 else:
-                    self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx_[n])
+                    self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(N))
 
         # set forms for active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
@@ -653,12 +658,12 @@ class SolidmechanicsProblem(problem_base):
     def evaluate_active_stress_ode(self):
 
         if self.have_frank_starling:
-            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.dx_, comm=self.comm)
+            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.comm)
             self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.amp_old.interpolate(amp_old_proj)
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx_, comm=self.comm)
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.comm)
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -670,8 +675,8 @@ class SolidmechanicsProblem(problem_base):
     def compute_solid_growth_rate(self, N, t):
 
         dtheta_all = ufl.as_ufl(0)
-        for n in range(self.num_domains):
-            dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx_[n]
+        for n, N in enumerate(self.domain_ids):
+            dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx(N)
 
         gr = fem.assemble_scalar(fem.form(dtheta_all))
         gr = self.comm.allgather(gr)
@@ -707,9 +712,9 @@ class SolidmechanicsProblem(problem_base):
         f = fem.Function(self.V_u) # zero source term
 
         a, L = ufl.as_ufl(0), ufl.as_ufl(0)
-        for n in range(self.num_domains):
-            a += ufl.inner(ufl.grad(uf), ufl.grad(vf))*self.dx_[n]
-            L += ufl.dot(f,vf)*self.dx_[n]
+        for n, N in enumerate(self.domain_ids):
+            a += ufl.inner(ufl.grad(uf), ufl.grad(vf))*self.dx(N)
+            L += ufl.dot(f,vf)*self.dx(N)
 
         uf = fem.Function(self.V_u, name="uf")
 
@@ -721,8 +726,8 @@ class SolidmechanicsProblem(problem_base):
         lp.solve()
 
         vol_all = ufl.as_ufl(0)
-        for n in range(self.num_domains):
-            vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx_[n]
+        for n, N in enumerate(self.domain_ids):
+            vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx(N)
 
         vol = fem.assemble_scalar(fem.form(vol_all))
         vol = self.comm.allgather(vol)
@@ -746,7 +751,6 @@ class SolidmechanicsProblem(problem_base):
         if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
-                sys.exit()
                 self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
                 if self.incompressible_2field:
                     self.res_p  = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)

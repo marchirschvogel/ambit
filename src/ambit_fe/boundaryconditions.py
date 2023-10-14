@@ -138,7 +138,7 @@ class boundary_cond():
 
 
     # set Neumann BCs
-    def neumann_bcs(self, bcdict, V, V_real, F=None, funcs_to_update=None, funcs_to_update_vec=None):
+    def neumann_bcs(self, bcdict, V, V_real, ds_, F=None, funcs_to_update=None, funcs_to_update_vec=None):
 
         w = ufl.as_ufl(0)
 
@@ -169,9 +169,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                    w += self.vf.deltaW_ext_neumann_ref(func, db_)
+                    w += self.vf.deltaW_ext_neumann_ref(func, ds_(n['id'][i]))
 
             elif n['dir'] == 'normal_ref': # reference normal
 
@@ -191,9 +189,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_(n['id'][i]))
 
             elif n['dir'] == 'xyz_cur': # current xyz
 
@@ -213,9 +209,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                    w += self.vf.deltaW_ext_neumann_cur(func, db_, F=F)
+                    w += self.vf.deltaW_ext_neumann_cur(func, ds_(n['id'][i]), F=F)
 
             elif n['dir'] == 'normal_cur': # current normal
 
@@ -235,9 +229,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                    w += self.vf.deltaW_ext_neumann_normal_cur(func, db_, F=F)
+                    w += self.vf.deltaW_ext_neumann_normal_cur(func, ds_(n['id'][i]), F=F)
 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
@@ -246,7 +238,7 @@ class boundary_cond():
 
 
     # set Neumann BCs for prestress
-    def neumann_prestress_bcs(self, bcdict, V, V_real, funcs_to_update=None, funcs_to_update_vec=None):
+    def neumann_prestress_bcs(self, bcdict, V, V_real, ds_, funcs_to_update=None, funcs_to_update_vec=None):
 
         w = ufl.as_ufl(0)
 
@@ -277,9 +269,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                    w += self.vf.deltaW_ext_neumann_ref(func, db_)
+                    w += self.vf.deltaW_ext_neumann_ref(func, ds_(n['id'][i]))
 
             elif n['dir'] == 'normal_ref': # reference normal
 
@@ -299,9 +289,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=n['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, db_)
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_(n['id'][i]))
 
             else:
                 raise NameError("Unknown dir option for Neumann prestress BC!")
@@ -310,7 +298,7 @@ class boundary_cond():
 
 
     # set Robin BCs
-    def robin_bcs(self, bcdict, u, v, u_pre=None):
+    def robin_bcs(self, bcdict, u, v, ds_, u_pre=None):
 
         w = ufl.as_ufl(0)
 
@@ -329,25 +317,19 @@ class boundary_cond():
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                        w += self.vf.deltaW_ext_robin_spring(u, r['stiff'], db_, u_pre)
+                        w += self.vf.deltaW_ext_robin_spring(u, r['stiff'], ds_(r['id'][i]), u_pre)
 
                 elif r['dir'] == 'normal_ref': # reference normal
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, r['stiff'], db_, u_pre)
+                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, r['stiff'], ds_(r['id'][i]), u_pre)
 
                 elif r['dir'] == 'normal_cross': # cross normal
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, r['stiff'], db_, u_pre)
+                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, r['stiff'], ds_(r['id'][i]), u_pre)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -359,25 +341,19 @@ class boundary_cond():
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                        w     += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], db_)
+                        w += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], ds_(r['id'][i]))
 
                 elif r['dir'] == 'normal_ref': # reference normal
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], db_)
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], ds_(r['id'][i]))
 
                 elif r['dir'] == 'normal_cross': # cross normal
 
                     for i in range(len(r['id'])):
 
-                        db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, r['visc'], db_)
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, r['visc'], ds_(r['id'][i]))
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -390,9 +366,9 @@ class boundary_cond():
 
 
     # set membrane surface BCs
-    def membranesurf_bcs(self, bcdict, u, v, a, ivar=None, wallfields=[]):
+    def membranesurf_bcs(self, bcdict, u, v, a, ds_, ivar=None, wallfields=[]):
 
-        w, db_, bstress = ufl.as_ufl(0), [], []
+        w, idmem, bstress = ufl.as_ufl(0), [], []
 
         mi=0
         for m in bcdict:
@@ -412,18 +388,18 @@ class boundary_cond():
 
             for i in range(len(m['id'])):
 
-                db_.append(ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=m['id'][i], metadata={'quadrature_degree': self.quad_degree}))
+                idmem.append(m['id'][i])
 
-                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff, wallfield=wallfield)
-                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], db_[-1], ivar=ivar, fibfnc=self.ff, stress=True, wallfield=wallfield))
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_(m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield)
+                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_(m['id'][i]), ivar=ivar, fibfnc=self.ff, stress=True, wallfield=wallfield))
 
             mi+=1
 
-        return w, db_, bstress
+        return w, idmem, bstress
 
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def bodyforce(self, bcdict, V, V_real, funcs_to_update=None):
+    def bodyforce(self, bcdict, V, V_real, dx_, funcs_to_update=None):
 
         w = ufl.as_ufl(0)
 
@@ -452,9 +428,7 @@ class boundary_cond():
 
             for i in range(len(b['id'])):
 
-                dd_ = ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=b['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                w += self.vf.deltaW_ext_bodyforce(func, func_dir, dd_)
+                w += self.vf.deltaW_ext_bodyforce(func, func_dir, dx_(b['id'][i]))
 
         return w
 
@@ -477,19 +451,17 @@ class boundary_cond_fluid(boundary_cond):
 
             for i in range(len(sn['id'])):
 
-                db_ = ufl.ds(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=sn['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
                 par1 = sn['par1']
                 try: par2 = sn['par2']
                 except: par2 = 0.
 
-                w += self.vf.deltaW_ext_stabilized_neumann(v, par1, par2, db_, w=wel, F=F)
+                w += self.vf.deltaW_ext_stabilized_neumann(v, par1, par2, ds_(sn['id'][i]), w=wel, F=F)
 
         return w
 
 
     # set Robin valve BCs
-    def robin_valve_bcs(self, bcdict, v, V_real, beta_, wel=None, F=None):
+    def robin_valve_bcs(self, bcdict, v, V_real, beta_, dS_, wel=None, F=None):
 
         w = ufl.as_ufl(0)
 

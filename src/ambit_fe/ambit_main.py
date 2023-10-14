@@ -144,10 +144,14 @@ class Ambit():
             # io_params['io_solid']['simname'] = io_params['simname'] + '_solid'
             # io_params['io_solid']['problem_type'] = io_params['problem_type']
             ios = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
-            ios.sname += '_solid'
+            #ios.sname += '_solid'
             ios.mesh = io.msh_emap_solid[0]
-            ios.mesh_master = io.mesh
-            ios.mt_d_master, ios.mt_b1_master = io.mt_d_master, io.mt_b1_master
+
+            ios.mesh_master = io.msh_emap_solid[0]
+            ios.mt_d_master, ios.mt_b1_master = io.mt_d_solid, io.mt_b1_solid
+            # ios.mesh_master = io.mesh
+            # ios.mt_d_master, ios.mt_b1_master = io.mt_d_master, io.mt_b1_master
+
             ios.mt_d, ios.mt_b1 = io.mt_d_solid, io.mt_b1_solid
 
             ios.set_mesh_fields(ios.mesh_master) # we want the fields on the master, entity maps will restrict
@@ -155,16 +159,20 @@ class Ambit():
             # io_params['io_fluid']['simname'] = io_params['simname'] + '_fluid'
             # io_params['io_fluid']['problem_type'] = io_params['problem_type']
             iof = ioroutines.IO_fluid_ale(io_params, self.entity_maps, self.comm)
-            iof.sname += '_fluid'
+            #iof.sname += '_fluid'
             iof.mesh = io.msh_emap_fluid[0]
-            iof.mesh_master = io.mesh
-            iof.mt_d_master, iof.mt_b1_master = io.mt_d_master, io.mt_b1_master
+
+            iof.mesh_master = io.msh_emap_fluid[0]
+            iof.mt_d_master, iof.mt_b1_master = io.mt_d_fluid, io.mt_b1_fluid
+            # iof.mesh_master = io.mesh
+            # iof.mt_d_master, iof.mt_b1_master = io.mt_d_master, io.mt_b1_master
+
             iof.mt_d, iof.mt_b1 = io.mt_d_fluid, io.mt_b1_fluid
 
             iof.set_mesh_fields(iof.mesh_master) # we want the fields on the master, entity maps will restrict
 
-            self.mp = fsi.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], bc_dict[0], [bc_dict[1],bc_dict[2]], time_curves, coupling_params, io, ios, iof, mor_params=mor_params, comm=self.comm)
-            self.ms = fsi.FSISolver(self.mp, solver_params)
+            self.mp = fsi_main.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], bc_dict[0], [bc_dict[1],bc_dict[2]], time_curves, coupling_params, io, ios, iof, mor_params=mor_params, comm=self.comm)
+            self.ms = fsi_main.FSISolver(self.mp, solver_params)
 
         elif problem_type == 'solid_constraint':
 

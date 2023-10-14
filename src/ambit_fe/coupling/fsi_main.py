@@ -14,18 +14,17 @@ import ufl
 from petsc4py import PETSc
 
 from ..solver import solver_nonlin
-import ..ioparams
-from .. import utilities
+from .. import ioparams, utilities
 
-from ..solid import SolidmechanicsProblem, SolidmechanicsSolverPrestr
-from ..fluid_ale import FluidmechanicsAleProblem
+from ..solid.solid_main import SolidmechanicsProblem, SolidmechanicsSolverPrestr
+from .fluid_ale_main import FluidmechanicsAleProblem
 
 from ..base import problem_base, solver_base
 
 
 class FSIProblem(problem_base):
 
-    def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, io, ios, iof, mor_params={}, comm=None):
+    def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, fem_params_ale, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, io, ios, iof, mor_params={}, comm=None):
         super().__init__(io_params, time_params_solid, comm=comm)
 
         self.problem_physics = 'fsi'
@@ -42,7 +41,7 @@ class FSIProblem(problem_base):
 
         # initialize problem instances (also sets the variational forms for the solid and fluid problem)
         self.pbs  = SolidmechanicsProblem(io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params, comm=self.comm)
-        self.pbfa = FluidmechanicsAleProblem(io_params, time_params_fluid, fem_params_fluid, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params, comm=self.comm)
+        self.pbfa = FluidmechanicsAleProblem(io_params, time_params_fluid, fem_params_fluid, fem_params_ale, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params, comm=self.comm)
 
         self.pbrom = self.pbs # ROM problem can only be solid so far...
 
@@ -67,6 +66,14 @@ class FSIProblem(problem_base):
         self.sub_solve = False
         self.print_enhanced_info = self.io.print_enhanced_info
 
+        # number of fields involved
+        if self.pbs.incompressible_2field: self.nfields=6
+        else: self.nfields=5
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
+        self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)],  [[None]*self.nfields for _ in range(self.nfields)]
+
 
     def get_problem_var_list(self):
 
@@ -83,7 +90,6 @@ class FSIProblem(problem_base):
 
         P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
         self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
-        # self.V_lm = fem.VectorFunctionSpace(self.io.msh_emap_lm[0], ("CG", self.pbs.order_disp))
 
         # Lagrange multiplier
         self.LM = fem.Function(self.V_lm)
@@ -91,9 +97,6 @@ class FSIProblem(problem_base):
 
         self.dLM = ufl.TrialFunction(self.V_lm)    # incremental LM
         self.var_LM = ufl.TestFunction(self.V_lm)  # LM test function
-
-        dssolid = ufl.dS(domain=self.io.mesh, subdomain_data=self.io.mt_b1, subdomain_id=self.io.surf_interf[0], metadata={'quadrature_degree': self.pbs.quad_degree})
-        dsfluid = ufl.dS(domain=self.pbf.io.mesh, subdomain_data=self.pbf.io.mt_b1, subdomain_id=self.io.surf_interf[0], metadata={'quadrature_degree': self.pbf.quad_degree})
 
         interface_facets = self.io.mt_b1.indices[self.io.mt_b1.values == self.io.surf_interf[0]]
         solid_cells = self.io.mt_d.indices[self.io.mt_d.values == self.io.dom_solid[0]]
@@ -131,28 +134,16 @@ class FSIProblem(problem_base):
         integration_entities = [(interface_id_s, integration_entities_s),
                                 (interface_id_f, integration_entities_f)]
 
-        dS_fsi = ufl.Measure("ds", subdomain_data=integration_entities, domain=self.io.mesh)
+        ds_fsi = ufl.Measure("ds", subdomain_data=integration_entities, domain=self.io.mesh)
 
-        # work_coupling_solid = self.pbs.vf.deltaW_ext_neumann_cur(self.pbs.ki.J(self.pbs.u), self.pbs.ki.F(self.pbs.u), self.LM, db_s_)
-        # work_coupling_solid = self.pbs.vf.deltaW_ext_neumann_ref(self.LM, ds_fsi)
-        # work_coupling_solid_old = self.pbs.vf.deltaW_ext_neumann_cur(self.pbs.ki.J(self.pbs.u_old), self.pbs.ki.F(self.pbs.u_old), self.LM_old, ds_fsi)
-        #
-        # # work_coupling_fluid = self.pbf.vf.deltaW_ext_neumann_cur(self.LM, db_f_, Fale=self.pba.ki.F(self.pba.d))
-        # work_coupling_fluid = self.pbf.vf.deltaW_ext_neumann_ref(self.LM, ds_fsi)
-        # work_coupling_fluid_old = self.pbf.vf.deltaW_ext_neumann_cur(self.LM_old, ds_fsi, Fale=self.pba.ki.F(self.pba.d_old))
-
-        work_coupling_solid = (ufl.dot(self.LM, self.pbs.var_u))('+')*dssolid# dS_fsi(interface_id_s)
-        work_coupling_fluid = (ufl.dot(self.LM, self.pbf.var_v))('+')*dsfluid
-
-        # dbtest = ufl.ds(domain=self.pbs.io.mesh_master, metadata={'quadrature_degree': self.pbs.quad_degree})
-        # # (ufl.dot(self.pbs.u, self.pbs.var_u)) * dbtest
-        # testform = (ufl.dot(self.pbs.u, self.pbs.var_u)) * self.pbs.dx_[0] - (ufl.dot(self.LM, self.pbs.var_u)) * dS_fsi(interface_id_s)
-        # gg = fem.form(testform, entity_maps=self.io.entity_maps)
-        # sys.exit()
+        work_coupling_solid = ufl.dot(self.LM, self.pbs.var_u)*self.pbs.ds(self.io.surf_interf[0])
+        work_coupling_solid_old = ufl.dot(self.LM_old, self.pbs.var_u)*self.pbs.ds(self.io.surf_interf[0])
+        work_coupling_fluid = ufl.dot(self.LM, self.pbf.var_v)*self.pbf.ds(self.io.surf_interf[0])
+        work_coupling_fluid_old = ufl.dot(self.LM_old, self.pbf.var_v)*self.pbf.ds(self.io.surf_interf[0])
 
         # add to solid and fluid virtual work/power
-        self.pbs.weakform_u += self.pbs.timefac * work_coupling_solid #+ (1.-self.pbs.timefac) * work_coupling_solid_old
-        self.pbf.weakform_v += self.pbf.timefac * work_coupling_fluid #+ (1.-self.pbf.timefac) * work_coupling_fluid_old
+        self.pbs.weakform_u += self.pbs.timefac * work_coupling_solid + (1.-self.pbs.timefac) * work_coupling_solid_old
+        self.pbf.weakform_v += self.pbf.timefac * work_coupling_fluid + (1.-self.pbf.timefac) * work_coupling_fluid_old
 
         # add to solid and fluid Jacobian
         self.pbs.weakform_lin_uu += self.pbs.timefac * ufl.derivative(work_coupling_solid, self.pbs.u, self.pbs.du)
@@ -160,14 +151,10 @@ class FSIProblem(problem_base):
 
         self.pbfa.weakform_lin_vd += self.pbf.timefac * ufl.derivative(work_coupling_fluid, self.pba.d, self.pba.dd)
 
-        # now the LM problem
-        # db_x_fsi_ = ufl.dx(domain=self.io.msh_emap_lm[0], metadata={'quadrature_degree': self.pbs.quad_degree})
-
         if self.fsi_governing_type=='solid_governed':
-            self.weakform_l = (ufl.dot((self.pbs.u - self.pbf.ufluid), self.var_LM))*dS_fsi(interface_id_s)#db_x_fsi_
-            # self.weakform_l = (ufl.dot((self.pbs.vel - self.pbf.v), self.var_LM))*db_s_#db_x_fsi_
+            self.weakform_l = (ufl.dot((self.pbs.u), self.var_LM))*ds_fsi(interface_id_s) - (ufl.dot((self.pbf.ufluid), self.var_LM))*ds_fsi(interface_id_f)
         elif self.fsi_governing_type=='fluid_governed':
-            self.weakform_l = (ufl.dot((self.pbf.v - self.pbs.vel), self.var_LM))('+')*dS_fsi#db_x_fsi_
+            self.weakform_l = (ufl.dot((self.pbf.v), self.var_LM))*ds_fsi(interface_id_f) - (ufl.dot((self.pbs.vel), self.var_LM))*ds_fsi(interface_id_s)
         else:
             raise ValueError("Unknown FSI governing type.")
 
@@ -199,88 +186,97 @@ class FSIProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
 
-    def set_problem_vector_matrix_structures():
+    def set_problem_vector_matrix_structures(self):
 
         # solid + ALE-fluid
         self.pbs.set_problem_vector_matrix_structures()
         self.pbfa.set_problem_vector_matrix_structures()
 
+        self.r_l = fem.petsc.create_vector(self.res_l)
+
+        self.K_ul = fem.petsc.create_matrix(self.jac_ul)
+        self.K_vl = fem.petsc.create_matrix(self.jac_vl)
+
+        self.K_lu = fem.petsc.create_matrix(self.jac_lu)
+        self.K_lv = fem.petsc.create_matrix(self.jac_lv)
+
 
     def assemble_residual(self, t, subsolver=None):
 
+        if self.pbs.incompressible_2field: off = 1
+        else: off = 0
+
+        self.pbs.assemble_residual(t)
+        self.pbfa.assemble_residual(t)
+
+        fem.petsc.assemble_vector(self.r_l, self.res_l)
+        self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+
+        self.r_list[0] = self.pbs.r_list[0]
+
         if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
+            self.r_list[1] = self.pbs.r_list[1]
 
-        r_list = [None]*(5+off)
+        self.r_list[1+off] = self.pbfa.r_list[0]
+        self.r_list[2+off] = self.pbfa.r_list[1]
 
-        r_list_solid = self.pbs.assemble_residual(t)
-        r_list_fluid_ale = self.pbfa.assemble_residual(t)
+        self.r_list[3+off] = self.r_l
+        self.r_list[4+off] = self.pbfa.r_list[2]
 
-        r_list[0] = r_list_solid[0]
-        if self.pbs.incompressible_2field:
-            r_list[1] = r_list_solid[1]
-        r_list[1+off] = r_list_fluid_ale[0]
-        r_list[2+off] = r_list_fluid_ale[1]
-        r_l = fem.petsc.assemble_vector(self.res_l)
-        r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        r_list[3+off] = r_l
-        r_list[4+off] = r_list_fluid_ale[2]
-
-        return r_list
+        if bool(self.residual_scale):
+            self.scale_residual_list([self.r_l], [self.residual_scale[3+off]])
 
 
     def assemble_stiffness(self, t, subsolver=None):
 
-        if self.pbs.incompressible_2field:
-            off = 1
-        else:
-            off = 0
+        if self.pbs.incompressible_2field: off = 1
+        else: off = 0
 
-        K_list = [[None]*(5+off) for _ in range(5+off)]
-
-        K_list_solid = self.pbs.assemble_stiffness(t)
-        K_list_fluid_ale = self.pbfa.assemble_stiffness(t)
+        self.pbs.assemble_stiffness(t)
+        self.pbfa.assemble_stiffness(t)
 
         # solid displacement
-        K_list[0][0] = K_list_solid[0][0]
+        self.K_list[0][0] = self.pbs.K_list[0][0]
         if self.pbs.incompressible_2field:
-            K_list[0][1] = K_list_solid[0][1]
-        K_ul = fem.petsc.assemble_matrix(self.jac_ul, self.pbs.bc.dbcs)
-        K_ul.assemble()
-        K_list[0][3+off] = K_ul
+            self.K_list[0][1] = self.pbs.K_list[0][1]
+        fem.petsc.assemble_matrix(self.K_ul, self.jac_ul, self.pbs.bc.dbcs)
+        self.K_ul.assemble()
+        self.K_list[0][3+off] = self.K_ul
 
         # solid pressure
         if self.pbs.incompressible_2field:
-            K_list[1][0] = K_list_solid[1][0]
-            K_list[1][1] = K_list_solid[1][1]
+            self.K_list[1][0] = self.pbs.K_list[1][0]
+            self.K_list[1][1] = self.pbs.K_list[1][1]
 
         # fluid velocity
-        K_list[1+off][1+off] = K_list_fluid_ale[0][0]
-        K_list[1+off][2+off] = K_list_fluid_ale[0][1]
-        K_vl = fem.petsc.assemble_matrix(self.jac_vl, self.pbf.bc.dbcs)
-        K_vl.assemble()
-        K_list[1+off][3+off] = K_vl
-        K_list[1+off][4+off] = K_list_fluid_ale[0][2]
+        self.K_list[1+off][1+off] = self.pbfa.K_list[0][0]
+        self.K_list[1+off][2+off] = self.pbfa.K_list[0][1]
+        fem.petsc.assemble_matrix(self.K_vl, self.jac_vl, self.pbf.bc.dbcs)
+        self.K_vl.assemble()
+        self.K_list[1+off][3+off] = self.K_vl
+        self.K_list[1+off][4+off] = self.pbfa.K_list[0][2]
 
         # fluid pressure
-        K_list[2+off][1+off] = K_list_fluid_ale[1][0]
-        K_list[2+off][2+off] = K_list_fluid_ale[1][1]
-        K_list[2+off][4+off] = K_list_fluid_ale[1][2]
+        self.K_list[2+off][1+off] = self.pbfa.K_list[1][0]
+        self.K_list[2+off][2+off] = self.pbfa.K_list[1][1]
+        self.K_list[2+off][4+off] = self.pbfa.K_list[1][2]
 
         # LM
-        K_lu = fem.petsc.assemble_matrix(self.jac_lu, [])
-        K_lu.assemble()
-        K_list[3+off][0] = K_lu
-        K_lv = fem.petsc.assemble_matrix(self.jac_lv, [])
-        K_lv.assemble()
-        K_list[3+off][1+off] = K_lv
+        fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, [])
+        self.K_lu.assemble()
+        self.K_list[3+off][0] = self.K_lu
+        fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, [])
+        self.K_lv.assemble()
+        self.K_list[3+off][1+off] = self.K_lv
 
         # ALE displacement
-        K_list[4+off][4+off] = K_list_fluid_ale[2][2]
+        self.K_list[4+off][4+off] = self.pbfa.K_list[2][2]
 
-        return K_list
+        if bool(self.residual_scale):
+            self.K_ul.scale(self.residual_scale[0])
+            self.K_lu.scale(self.residual_scale[3+off])
+            self.K_vl.scale(self.residual_scale[1+off])
+            self.K_lv.scale(self.residual_scale[3+off])
 
 
     ### now the base routines for this problem

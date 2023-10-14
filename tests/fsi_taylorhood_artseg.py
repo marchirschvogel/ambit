@@ -55,6 +55,9 @@ def main():
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
     
+    FEM_PARAMS_ALE       = {'order_disp'            : 2,
+                            'quad_degree'           : 5}
+    
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
                             'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
                             'fluid_on_deformed'     : 'consistent'}
@@ -77,26 +80,15 @@ def main():
         def tc1(self, t):
             t_ramp = 2.0
             p0 = 0.0
-            pinfl = 0.1
+            pinfl = 0#0.1
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
-    #BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
+                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    #BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
-                             #'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
-
-    #BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
-
-
-    BC_DICT_SOLID        = { 'robin' : [{'type' : 'spring', 'id' : [2,3,4,5], 'dir' : 'normal_ref', 'stiff' : 1e5}]}
-
-    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_ref', 'curve' : 1}],
+    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
                              'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
@@ -104,8 +96,10 @@ def main():
                                             {'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
+
+
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # problem solve
     problem.solve_problem()

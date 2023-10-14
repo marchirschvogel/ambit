@@ -241,8 +241,7 @@ class solver_base():
             self.pb.print_to_screen()
 
             # solution time for time step
-            wte = time.time()
-            wt = wte - wts
+            wt = time.time() - wts
 
             # print timestep info
             self.print_timestep_info(N, t, self.solnln.ni, self.solnln.li, wt)

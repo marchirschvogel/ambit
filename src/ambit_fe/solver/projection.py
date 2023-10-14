@@ -6,12 +6,13 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import numpy as np
 from dolfinx import fem
 import ufl
 from petsc4py import PETSc
 
 
-def project(v, V, dx_, bcs=[], nm=None, comm=None, entity_maps=None):
+def project(v, V, dx_, domids=np.arange(1,2), bcs=[], nm=None, comm=None, entity_maps=None):
 
     w = ufl.TestFunction(V)
     Pv = ufl.TrialFunction(V)
@@ -19,7 +20,7 @@ def project(v, V, dx_, bcs=[], nm=None, comm=None, entity_maps=None):
     a, L = ufl.as_ufl(0), ufl.as_ufl(0)
     zerofnc = fem.Function(V)
 
-    for n in range(len(dx_)):
+    for n, N in enumerate(domids):
 
         # check if we have passed in a list of functions or a function
         if isinstance(v, list):
@@ -28,11 +29,11 @@ def project(v, V, dx_, bcs=[], nm=None, comm=None, entity_maps=None):
             fnc = v
 
         if not isinstance(fnc, ufl.constantvalue.Zero):
-            a += ufl.inner(Pv, w) * dx_[n]
-            L += ufl.inner(fnc, w) * dx_[n]
+            a += ufl.inner(Pv, w) * dx_(N)
+            L += ufl.inner(fnc, w) * dx_(N)
         else:
-            a += ufl.inner(Pv, w) * dx_[n]
-            L += ufl.inner(zerofnc, w) * dx_[n]
+            a += ufl.inner(Pv, w) * dx_(N)
+            L += ufl.inner(zerofnc, w) * dx_(N)
 
     # solve linear system for projection
     function = fem.Function(V, name=nm)

@@ -43,19 +43,20 @@ class AleProblem(problem_base):
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         # for FSI, we want to specify the subdomains
-        try: domain_ids = self.io.io_params['domain_ids_fluid']
-        except: domain_ids = np.arange(1,self.num_domains+1)
+        try: self.domain_ids = self.io.io_params['domain_ids_fluid']
+        except: self.domain_ids = np.arange(1,self.num_domains+1)
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_disp = fem_params['order_disp']
         self.quad_degree = fem_params['quad_degree']
 
-        # collect domain data
-        self.dx_ = []
-        for i, n in enumerate(domain_ids):
-            # integration domains
-            if self.io.mt_d_master is not None: self.dx_.append(ufl.dx(domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, subdomain_id=n, metadata={'quadrature_degree': self.quad_degree}))
-            else:                               self.dx_.append(ufl.dx(domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree}))
+        # create domain and boundaty integration measures
+        if self.io.mt_d_master is not None:
+            self.dx = ufl.Measure("dx", domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, metadata={'quadrature_degree': self.quad_degree})
+        else:
+            self.dx = ufl.Measure("dx", domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree})
+
+        self.ds = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
 
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in ALE is somehow senseless...
@@ -172,18 +173,18 @@ class AleProblem(problem_base):
         # internal virtual work
         self.deltaW_int = ufl.as_ufl(0)
 
-        for n in range(self.num_domains):
+        for n, N in enumerate(self.domain_ids):
             # internal virtual work
-            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d), self.dx_[n])
+            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d), self.dx(N))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.d, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.ds, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, funcs_to_update=self.ti.funcs_to_update)
+            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update)
         if 'robin' in self.bc_dict.keys():
-            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel)
+            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.ds)
 
         self.deltaW_ext = w_neumann + w_body + w_robin
 
