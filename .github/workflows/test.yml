@@ -1,0 +1,6 @@
+on:
+  push
+steps:
+- name: Test with pytest
+  run: |
+    pytest tests

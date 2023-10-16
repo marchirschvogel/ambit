@@ -549,11 +549,11 @@ class timeintegration_ale(timeintegration_fluid):
 class timeintegration_flow0d(timeintegration):
 
     # initialize base class
-    def __init__(self, time_params, time_curves=None, t_init=0., comm=None, cycle=[1], cycleerror=[1]):
+    def __init__(self, time_params, time_curves=None, t_init=0., comm=None):
         timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
 
-        self.cycle = cycle
-        self.cycleerror = cycleerror
+        self.cycle = [1]
+        self.cycleerror = [1.]
 
 
     # print time step info
