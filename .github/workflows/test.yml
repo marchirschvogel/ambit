@@ -1,6 +1,11 @@
+name: testing
 on:
   push
-steps:
-- name: Test with pytest
-  run: |
-    pytest tests
+jobs:
+  container-job:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/marchirschvogel/ambit:latest
+    steps:
+      - name: Run Ambit tests
+        run: pytest tests
