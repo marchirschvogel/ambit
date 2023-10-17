@@ -2,6 +2,7 @@
 FROM ghcr.io/fenics/dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76
 
 LABEL org.opencontainers.image.source=https://github.com/marchirschvogel/ambit
+LABEL org.opencontainers.image.version=latest
 LABEL org.opencontainers.image.description="ambit"
 LABEL org.opencontainers.image.licenses=MIT
 
