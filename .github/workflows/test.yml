@@ -7,5 +7,9 @@ jobs:
     container:
       image: ghcr.io/marchirschvogel/ambit:latest
     steps:
+      - name: Checkout Ambit
+        run: git clone https://github.com/marchirschvogel/ambit.git
+      - name: Switch to Ambit tests folder
+        run: cd ambit/tests
       - name: Run Ambit tests
-        run: pytest tests
+        run: pytest
