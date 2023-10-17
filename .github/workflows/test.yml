@@ -1,3 +1,4 @@
+# tests installation of Ambit in devenv Docker container and execution of tests
 name: testing
 on:
   push
@@ -5,10 +6,12 @@ jobs:
   container-job:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/marchirschvogel/ambit:latest
+      image: ghcr.io/marchirschvogel/ambit:devenv
     steps:
       - name: Checkout Ambit
         run: git clone https://github.com/marchirschvogel/ambit.git
+      - name: Install latest Ambit dev version
+        run: python3 -m pip install git+https://github.com/marchirschvogel/ambit.git --no-cache-dir
       - name: Switch to Ambit tests folder
         run: cd ambit/tests
       - name: Run Ambit tests
