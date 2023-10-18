@@ -87,6 +87,13 @@ class variationalform(variationalform_base):
         return ufl.div(v)
 
 
+    # stabilized Neumann BC - Esmaily Moghadam et al. 2011
+    def deltaW_ext_stabilized_neumann(self, v, par1, par2, dboundary, w=None, F=None):
+
+        vn = ufl.dot(v,self.n0)
+        return par1*((vn**2.)/(vn**2. + 0.01*par2**2.) * ufl.min_value(vn,0.) * ufl.dot(v,self.var_v)*dboundary) # version from Esmaily Moghadam et al. 2011 if par2 = 0
+
+
     # Robin condition for valve, over internal surface
     def deltaW_ext_robin_valve(self, v, beta, dboundary, fcts='+', w=None, F=None):
 

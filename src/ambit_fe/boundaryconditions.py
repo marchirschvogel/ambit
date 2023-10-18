@@ -144,13 +144,6 @@ class boundary_cond():
 
         for n in bcdict:
 
-            try: bdim_r = n['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1_master
-            if bdim_r==2: mdata = self.io.mt_b2_master
-            if bdim_r==3: mdata = self.io.mt_b3_master
-
             if n['dir'] == 'xyz_ref': # reference xyz
 
                 func = fem.Function(V)
@@ -244,13 +237,6 @@ class boundary_cond():
 
         for n in bcdict:
 
-            try: bdim_r = n['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1_master
-            if bdim_r==2: mdata = self.io.mt_b2_master
-            if bdim_r==3: mdata = self.io.mt_b3_master
-
             if n['dir'] == 'xyz_ref': # reference xyz
 
                 func = fem.Function(V)
@@ -303,13 +289,6 @@ class boundary_cond():
         w = ufl.as_ufl(0)
 
         for r in bcdict:
-
-            try: bdim_r = r['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1_master
-            if bdim_r==2: mdata = self.io.mt_b2_master
-            if bdim_r==3: mdata = self.io.mt_b3_master
 
             if r['type'] == 'spring':
 
@@ -373,13 +352,6 @@ class boundary_cond():
         mi=0
         for m in bcdict:
 
-            try: bdim_r = m['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1_master
-            if bdim_r==2: mdata = self.io.mt_b2_master
-            if bdim_r==3: mdata = self.io.mt_b3_master
-
             # field for variable wall thickness
             if bool(wallfields):
                 wallfield = wallfields[mi]
@@ -436,18 +408,11 @@ class boundary_cond():
 class boundary_cond_fluid(boundary_cond):
 
     # set stabilized Neumann BCs
-    def stabilized_neumann_bcs(self, bcdict, v, wel=None, F=None):
+    def stabilized_neumann_bcs(self, bcdict, v, ds_, wel=None, F=None):
 
         w = ufl.as_ufl(0)
 
         for sn in bcdict:
-
-            try: bdim_r = r['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1_master
-            if bdim_r==2: mdata = self.io.mt_b2_master
-            if bdim_r==3: mdata = self.io.mt_b3_master
 
             for i in range(len(sn['id'])):
 
@@ -472,20 +437,11 @@ class boundary_cond_fluid(boundary_cond):
 
         for r in bcdict:
 
-            try: bdim_r = r['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1_master
-            if bdim_r==2: mdata = self.io.mt_b2_master
-            if bdim_r==3: mdata = self.io.mt_b3_master
-
             beta_.append( fem.Function(V_real) )
 
             for i in range(len(r['id'])):
 
-                db_ = ufl.dS(domain=self.io.mesh_master, subdomain_data=mdata, subdomain_id=r['id'][i], metadata={'quadrature_degree': self.quad_degree})
-
-                w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], db_, fcts='+', w=wel_, F=F)
+                w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_(r['id'][i]), fcts='+', w=wel_, F=F)
 
         return w
 
@@ -501,9 +457,6 @@ class boundary_cond_fluid(boundary_cond):
         for r in bcdict:
 
             q = ufl.as_ufl(0)
-
-            try: bdim_r = r['bdim_reduction']
-            except: bdim_r = 1
 
             try: internal = r['internal']
             except: internal = False
@@ -557,13 +510,6 @@ class boundary_cond_fluid(boundary_cond):
             ja = 1.0
 
         for r in bcdict:
-
-            try: bdim_r = r['bdim_reduction']
-            except: bdim_r = 1
-
-            if bdim_r==1: mdata = self.io.mt_b1_master
-            if bdim_r==2: mdata = self.io.mt_b2_master
-            if bdim_r==3: mdata = self.io.mt_b3_master
 
             dom_u, dom_d = r['upstream_domain'], r['downstream_domain']
 

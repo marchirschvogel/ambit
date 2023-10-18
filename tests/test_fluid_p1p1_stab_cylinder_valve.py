@@ -2,7 +2,7 @@
 
 """
 transient incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
-- stabilized P1P1 elements for velocity and pressure
+- stabilized P1P1 elements for velocity and pressure (full SUPF/PSPG scheme)
 - Backward-Euler time stepping scheme
 - 2 material domains in fluid (w/ same parameters though)
 - internal valve, requiring duplicate pressure nodes at that internal surface
@@ -55,7 +55,7 @@ def test_main():
                            'order_pres'            : 1,
                            'quad_degree'           : 5,
                            'fluid_formulation'     : 'nonconservative', # nonconservative (default), conservative
-                           'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}}
+                           'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}}
 
 
     MATERIALS           = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
@@ -98,12 +98,12 @@ def test_main():
     check_node = []
     check_node.append(np.array([0.0170342, 2.99995, 13.4645]))
 
-    v_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
+    v_corr = np.zeros(3*len(check_node))
 
     # correct results
-    v_corr[0] = 2.8961592602855979E+00 # x
-    v_corr[1] = 1.1646607897463809E+03 # y
-    v_corr[2] = -9.9702473473169971E+02 # z
+    v_corr[0] = 2.8679355190833773E+00 # x
+    v_corr[1] = 1.1644703461381966E+03 # y
+    v_corr[2] = -9.9701079153832620E+02 # z
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.v, check_node, v_corr, problem.mp.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
 

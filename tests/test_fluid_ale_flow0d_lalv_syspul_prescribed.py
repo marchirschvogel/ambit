@@ -119,7 +119,8 @@ def test_main():
 
     BC_DICT_FLUID        = { 'robin_valve' : [{'id' : [3], 'type' : 'temporal', 'beta_max' : 1e3, 'beta_min' : 0, 'to' : 0.0, 'tc' : 0.37}], # MV
                              'dp_monitor' : [{'id' : [3], 'upstream_domain' : 2, 'downstream_domain' : 1}], # MV
-                             'flux_monitor' : [{'id' : [3], 'on_subdomain' : True, 'domain' : 2}] }  # MV
+                             'flux_monitor' : [{'id' : [3], 'on_subdomain' : True, 'domain' : 2}],  # MV
+                             'stabilized_neumann' : [{'id' : [5,6,7,8, 4], 'par1' : 0.205e-6, 'par2' : 1.}] } # par1 should be ~ 0.2*rho
 
 
     # problem setup
@@ -136,27 +137,28 @@ def test_main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 3.8884225645636441E+04
-    s_corr[1] = 5.5564787069235186E+04
-    s_corr[2] = -5.5565738964507014E+04
-    s_corr[3] = -9.5189527182505618E-01
-    s_corr[4] = 1.0924979624683258E+01
-    s_corr[5] = -9.5189527182505618E-01
-    s_corr[6] = 1.0924985336054888E+01
-    s_corr[7] = 2.1047096618499872E+04
+    s_corr[0] = 3.8882867807798226E+04
+    s_corr[1] = 5.5563429211113005E+04
+    s_corr[2] = -5.5564381126668784E+04
+    s_corr[3] = -9.5191555577660569E-01
+    s_corr[4] = 1.0924979624559237E+01
+    s_corr[5] = -9.5191555577660569E-01
+    s_corr[6] = 1.0924985336052572E+01
+    s_corr[7] = 2.1047096618496435E+04
     s_corr[8] = 2.2871777634299062E+00
     s_corr[9] = 9.5236185798506907E+04
     s_corr[10] = 1.4906158530701109E+03
     s_corr[11] = 1.5093042657425306E-03
-    s_corr[12] = -2.2265151472645578E-01
+    s_corr[12] = -2.2265151472645608E-01
     s_corr[13] = 1.8688412672419695E-05
-    s_corr[14] = 2.2265338356772304E+00
-    s_corr[15] = 3.5951841419860786E+04
-    s_corr[16] = 1.6872562143793188E+00
-    s_corr[17] = 3.2938805917873260E+03
-    s_corr[18] = 3.7061242690836889E+03
-    s_corr[19] = 2.5892849487072353E+03
-    s_corr[20] = 7.0912716140204884E+03
+    s_corr[14] = 2.2265338356772331E+00
+    s_corr[15] = 3.5951841419818549E+04
+    s_corr[16] = 1.6872562143799550E+00
+    s_corr[17] = 3.2933879944333407E+03
+    s_corr[18] = 3.7056609678707014E+03
+    s_corr[19] = 2.5876697333575962E+03
+    s_corr[20] = 7.0938427076531352E+03
+
 
     check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
