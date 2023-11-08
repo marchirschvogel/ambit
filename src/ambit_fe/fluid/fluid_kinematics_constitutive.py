@@ -11,8 +11,9 @@ from petsc4py import PETSc
 
 from .fluid_material import materiallaw
 
-
-# fluid kinematics and constitutive class
+"""
+Fluid kinematics and constitutive class
+"""
 
 class constitutive:
 

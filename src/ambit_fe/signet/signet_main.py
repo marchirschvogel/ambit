@@ -15,7 +15,9 @@ from .. import ioparams
 
 from ..base import problem_base, solver_base
 
-# framework of signalling network models
+"""
+Framework of signalling network models
+"""
 
 class SignallingNetworkProblem(problem_base):
 

@@ -11,8 +11,9 @@ from petsc4py import PETSc
 
 from .solid_material import materiallaw, growth, growthfunction
 
-
-# nonlinear finite strain kinematics and constitutive class
+"""
+Nonlinear finite strain kinematics and constitutive class
+"""
 
 class constitutive:
 

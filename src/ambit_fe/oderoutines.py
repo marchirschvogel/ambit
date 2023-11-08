@@ -13,6 +13,9 @@ import sympy as sp
 from . import utilities
 from .mpiroutines import allgather_vec, allgather_vec_entry
 
+"""
+ODE base class
+"""
 
 class ode:
 

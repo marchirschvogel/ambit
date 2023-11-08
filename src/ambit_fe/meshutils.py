@@ -84,3 +84,23 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
             sub_values[child] = all_values[parent]
 
     return mesh.meshtags(childmsh, dim_c, np.arange(num_sub_ent, dtype=np.int32), sub_values)
+
+
+def get_integration_entities(msh, entity_indices, codim, integration_entities):
+
+    dim = msh.topology.dim
+
+    entity_imap = msh.topology.index_map(codim)
+
+    msh.topology.create_connectivity(dim, codim)
+    msh.topology.create_connectivity(codim, dim)
+    c_to_e = msh.topology.connectivity(dim, codim)
+    e_to_c = msh.topology.connectivity(codim, dim)
+    # loop through all relevant entities
+    for entity in entity_indices:
+        # check if this entity is owned
+        if entity < entity_imap.size_local:
+            # get a cell connected to the entity
+            cell = e_to_c.links(entity)[0]
+            local_entity = c_to_e.links(cell).tolist().index(entity)
+            integration_entities.extend([cell, local_entity])

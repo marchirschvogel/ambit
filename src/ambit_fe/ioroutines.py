@@ -36,7 +36,12 @@ class IO:
         except: self.output_path_pre = self.output_path
 
         self.mesh_domain = io_params['mesh_domain']
-        self.mesh_boundary = io_params['mesh_boundary']
+        try: self.mesh_boundary = io_params['mesh_boundary']
+        except: self.mesh_boundary = None
+        try: self.mesh_edge = io_params['mesh_edge']
+        except: self.mesh_edge = None
+        try: self.mesh_point = io_params['mesh_point']
+        except: self.mesh_point = None
 
         try: self.fiber_data = io_params['fiber_data']
         except: self.fiber_data = []
@@ -111,49 +116,73 @@ class IO:
         # for a 2D problem - b1: edge BCs, b2: point BCs
         # 1D problems not supported (currently...)
 
+        self.mt_b1_master, self.mt_b2_master, self.mt_b3_master = None, None, None
+
         if self.mesh.topology.dim == 3:
 
-            try:
+            if self.mesh_boundary is not None:
+
                 self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
                 self.mt_b1_master = self.mt_b1
-            except:
-                pass
 
-            try:
+            if self.mesh_edge is not None:
+
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
-                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
+                with io.XDMFFile(self.comm, self.mesh_edge, 'r', encoding=encoding) as infile:
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
                 self.mt_b2_master = self.mt_b2
-            except:
-                pass
 
-            try:
+                """
+                NOTE: We cannot perform line/edge integrals in 3D in an intuitive manner by
+                defining and using a 1-dimensional ufl ds measure. This is not yet implemented
+                in dolfinx.
+                But, we can use the mixed dimensional branch to create a submesh and collect the
+                integration edges, performing the integration over the 1D boundary using entitiy maps.
+                """
+                if self.USE_MIXED_DOLFINX_BRANCH:
+                    self.mesh_e = mesh.create_submesh(self.mesh, self.mesh.topology.dim-2, self.mt_b2_master.indices[self.mt_b2_master.values == 1])[0:2]
+
+                    edge_imap = self.mesh.topology.index_map(self.mesh.topology.dim-2)
+                    num_edges = edge_imap.size_local + edge_imap.num_ghosts
+
+                    inv_emap = np.full(num_edges, -1)
+                    inv_emap[self.mesh_e[1]] = np.arange(len(self.mesh_e[1]))
+                    self.entity_maps[self.mesh_e[0]] = inv_emap
+
+                    edge_indices = self.mt_b2_master.indices[self.mt_b2_master.values == 1]
+
+                    edge_integration_entities = []
+                    meshutils.get_integration_entities(self.mesh, edge_indices, 1, edge_integration_entities)
+
+                    self.de = ufl.Measure("ds", domain=self.mesh, subdomain_data=[(1, edge_integration_entities)])
+
+                else:
+                    raise RuntimeError("Weak integrations over edges in 3D currently only supported in mixed dolfinx branch.")
+
+            if self.mesh_point is not None:
+
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
-                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b3 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b3')
+                with io.XDMFFile(self.comm, self.mesh_point, 'r', encoding=encoding) as infile:
+                    self.mt_b3 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
                 self.mt_b3_master = self.mt_b3
-            except:
-                pass
 
         elif self.mesh.topology.dim == 2:
 
-            try:
+            if self.mesh_boundary is not None:
+
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
                     self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
                 self.mt_b1_master = self.mt_b1
-            except:
-                pass
 
-            try:
+            if self.mesh_point is not None:
+
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
-                with io.XDMFFile(self.comm, self.mesh_boundary, 'r', encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary+'_b2')
+                with io.XDMFFile(self.comm, self.mesh_point, 'r', encoding=encoding) as infile:
+                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
                 self.mt_b2_master = self.mt_b2
-            except:
-                pass
 
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")

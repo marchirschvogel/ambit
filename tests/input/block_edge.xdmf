@@ -1,0 +1,36 @@
+<Xdmf Version="3.0">
+  <Domain>
+    <Grid Name="Grid">
+      <Geometry GeometryType="XYZ">
+        <DataItem DataType="Float" Dimensions="14 3" Format="XML" Precision="8">
+          0.0 0.0 1.0
+          0.0 0.0 0.0
+          0.0 1.0 1.0
+          0.0 1.0 0.0
+          1.0 0.0 1.0
+          1.0 0.0 0.0
+          1.0 1.0 1.0
+          1.0 1.0 0.0
+          0.0 0.5 0.5
+          1.0 0.5 0.5
+          0.5 0.0 0.5
+          0.5 1.0 0.5
+          0.5 0.5 0.0
+          0.5 0.5 1.0
+        </DataItem>
+      </Geometry>
+      <Topology NodesPerElement="2" NumberOfElements="2" TopologyType="polyline">
+        <DataItem DataType="Int" Dimensions="2 1" Format="XML" Precision="4">
+          4 13
+          13 2
+        </DataItem>
+      </Topology>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="boundaries_surf">
+        <DataItem DataType="Int" Dimensions="2" Format="XML" Precision="4">
+          1
+          1
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

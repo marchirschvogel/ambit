@@ -11519,19 +11519,5 @@
         </DataItem>
       </Attribute>
     </Grid>
-    <Grid Name="Grid_b3">
-      <Topology NodesPerElement="1" NumberOfElements="2" TopologyType="Polyvertex">
-        <DataItem DataType="Int" Dimensions="2 1" Format="XML" Precision="4">
-          13
-          14
-        </DataItem>
-      </Topology>
-      <Attribute AttributeType="Scalar" Center="Node" Name="boundaries_point">
-        <DataItem DataType="Int" Dimensions="2" Format="XML" Precision="4">
-          1
-          2
-        </DataItem>
-      </Attribute>
-    </Grid>
   </Domain>
 </Xdmf>

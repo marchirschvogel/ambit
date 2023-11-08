@@ -9,6 +9,9 @@
 from mpi4py import MPI
 from . import ioroutines
 
+"""
+Ambit main class
+"""
 
 class Ambit():
 

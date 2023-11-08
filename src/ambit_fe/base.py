@@ -10,6 +10,9 @@ import sys, time
 import numpy as np
 from . import utilities
 
+"""
+Ambit problem and solver base classes
+"""
 
 class problem_base():
 

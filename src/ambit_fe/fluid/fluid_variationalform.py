@@ -9,10 +9,12 @@
 import ufl
 from ..variationalform import variationalform_base
 
+"""
+Fluid mechanics variational forms class
+Principle of Virtual Power
+\delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
+"""
 
-# fluid mechanics variational forms class
-# Principle of Virtual Power
-# TeX: \delta \mathcal{P} = \delta \mathcal{P}_{\mathrm{kin}} + \delta \mathcal{P}_{\mathrm{int}} - \delta \mathcal{P}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{v}
 class variationalform(variationalform_base):
 
     ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}

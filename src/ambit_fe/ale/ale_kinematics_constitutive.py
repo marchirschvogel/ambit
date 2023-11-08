@@ -9,7 +9,9 @@
 import ufl
 from .ale_material import materiallaw
 
-# ALE kinematics and constitutive class
+"""
+ALE kinematics and constitutive class
+"""
 
 class constitutive:
 

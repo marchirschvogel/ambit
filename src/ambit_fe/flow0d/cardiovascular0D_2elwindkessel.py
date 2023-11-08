@@ -14,8 +14,10 @@ from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
 from .. import utilities
 
-### 2-element windkessel: C dp/dt + (p-p_ref)/R = Q, with Q:=-dV/dt (Poiseuille's flow for C=0)
-# (can be reproduced with 4elwindkesselLsZ by setting Z, L = 0)
+"""
+2-element windkessel: C dp/dt + (p-p_ref)/R = Q, with Q:=-dV/dt (Poiseuille's flow for C=0)
+(can be reproduced with 4elwindkesselLsZ by setting Z, L = 0)
+"""
 
 class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 

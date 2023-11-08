@@ -9,10 +9,12 @@
 import ufl
 from ..variationalform import variationalform_base
 
+"""
+ALE variational forms class
+Principle of Virtual Work
+\delta \mathcal{W} = \delta \mathcal{W}_{\mathrm{int}} - \delta \mathcal{W}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{u}
+"""
 
-# ALE variational forms class
-# Principle of Virtual Work
-# TeX: \delta \mathcal{W} = \delta \mathcal{W}_{\mathrm{int}} - \delta \mathcal{W}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{u}
 class variationalform(variationalform_base):
 
     def __init__(self, var_d, n0=None):

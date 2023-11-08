@@ -14,7 +14,9 @@ from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
 from .. import utilities
 
-# two RC models (2-element Windkessels) in series linking an in- to an outflow
+"""
+Two RC models (2-element Windkessels) in series linking an in- to an outflow
+"""
 
 class cardiovascular0DCRLinoutlink(cardiovascular0Dbase):
 

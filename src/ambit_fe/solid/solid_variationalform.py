@@ -9,10 +9,12 @@
 import ufl
 from ..variationalform import variationalform_base
 
+"""
+Solid mechanics variational form class
+Principle of Virtual Work
+\delta \mathcal{W} = \delta \mathcal{W}_{\mathrm{kin}} + \delta \mathcal{W}_{\mathrm{int}} - \delta \mathcal{W}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{u}
+"""
 
-# solid mechanics variational base class
-# Principle of Virtual Work
-# TeX: \delta \mathcal{W} = \delta \mathcal{W}_{\mathrm{kin}} + \delta \mathcal{W}_{\mathrm{int}} - \delta \mathcal{W}_{\mathrm{ext}} = 0, \quad \forall \; \delta\boldsymbol{u}
 class variationalform(variationalform_base):
 
     ### Kinetic virtual work

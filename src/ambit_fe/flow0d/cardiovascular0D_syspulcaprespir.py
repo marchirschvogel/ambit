@@ -14,8 +14,10 @@ from .cardiovascular0D_syspulcap import cardiovascular0Dsyspulcap
 from ..mpiroutines import allgather_vec
 from .. import utilities
 
-# respiratory and gas transport part of syspulcap model (Diss Hirschvogel, p. 58ff.)
-# builds upon syspulcap model
+"""
+Respiratory and gas transport part of syspulcap model (Diss Hirschvogel, p. 58ff.)
+Builds upon syspulcap model
+"""
 
 class cardiovascular0Dsyspulcaprespir(cardiovascular0Dsyspulcap):
 

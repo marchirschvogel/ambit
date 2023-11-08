@@ -12,8 +12,12 @@ from petsc4py import PETSc
 
 from .. import utilities
 
-### PETSc PC types:
-# https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC.Type-class.html
+"""
+Ambit preconditioner classes
+
+PETSc PC types:
+https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC.Type-class.html
+"""
 
 class block_precond():
 

@@ -18,6 +18,8 @@ def check_params_io(params):
                     'indicate_results_by',
                     'mesh_domain',
                     'mesh_boundary',
+                    'mesh_edge',
+                    'mesh_point',
                     'meshfile_type',
                     'ode_parallel',
                     'order_fib_input',

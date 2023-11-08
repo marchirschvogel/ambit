@@ -12,6 +12,9 @@ import ufl
 
 from . import expression
 
+"""
+Boundary condition classes for all problems
+"""
 
 class boundary_cond():
 
@@ -22,6 +25,8 @@ class boundary_cond():
         self.ti = ti
         self.ki = ki
         self.ff = ff
+
+        self.dim = self.io.mesh.topology.dim
 
         self.quad_degree = fem_params['quad_degree']
 
@@ -35,12 +40,12 @@ class boundary_cond():
 
         for d in bcdict:
 
-            try: bdim_r = d['bdim_reduction']
-            except: bdim_r = 1
+            try: codim = d['codimension']
+            except: codim = self.dim - 1
 
-            if bdim_r==1: mdata = self.io.mt_b1
-            if bdim_r==2: mdata = self.io.mt_b2
-            if bdim_r==3: mdata = self.io.mt_b3
+            if codim==self.dim-1: mdata = self.io.mt_b1
+            if codim==self.dim-2: mdata = self.io.mt_b2
+            if codim==self.dim-3: mdata = self.io.mt_b3
 
             func = fem.Function(V)
 
@@ -60,33 +65,33 @@ class boundary_cond():
 
             if d['dir'] == 'all':
                 for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])) )
+                    self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, codim, mdata.indices[mdata.values == d['id'][i]])) )
 
             elif d['dir'] == 'x':
                 for i in range(len(d['id'])):
-                    dofs_x = fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])
+                    dofs_x = fem.locate_dofs_topological(V.sub(0), codim, mdata.indices[mdata.values == d['id'][i]])
                     self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
 
             elif d['dir'] == 'y':
                 for i in range(len(d['id'])):
-                    dofs_y = fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])
+                    dofs_y = fem.locate_dofs_topological(V.sub(1), codim, mdata.indices[mdata.values == d['id'][i]])
                     self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
 
             elif d['dir'] == 'z':
                 for i in range(len(d['id'])):
-                    dofs_z = fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mdata.indices[mdata.values == d['id'][i]])
+                    dofs_z = fem.locate_dofs_topological(V.sub(2), codim, mdata.indices[mdata.values == d['id'][i]])
                     self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
 
             elif d['dir'] == '2dimX':
-                dofs_x = fem.locate_dofs_topological(V.sub(0), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimX))
+                dofs_x = fem.locate_dofs_topological(V.sub(0), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimX))
                 self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
 
             elif d['dir'] == '2dimY':
-                dofs_y = fem.locate_dofs_topological(V.sub(1), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimY))
+                dofs_y = fem.locate_dofs_topological(V.sub(1), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimY))
                 self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
 
             elif d['dir'] == '2dimZ':
-                dofs_z = fem.locate_dofs_topological(V.sub(2), self.io.mesh.topology.dim-bdim_r, mesh.locate_entities_boundary(self.io.mesh, self.io.mesh.topology.dim-bdim_r, self.twodimZ))
+                dofs_z = fem.locate_dofs_topological(V.sub(2), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimZ))
                 self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
 
             else:
@@ -121,7 +126,7 @@ class boundary_cond():
                 raise RuntimeError("Need to have 'curve', 'val', or 'file' specified!")
 
             for i in range(len(d['id'])):
-                self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.io.mesh.topology.dim, self.io.mt_d.indices[self.io.mt_d.values == d['id'][i]])) )
+                self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.dim, self.io.mt_d.indices[self.io.mt_d.values == d['id'][i]])) )
 
 
     # function to mark x=0
@@ -144,6 +149,13 @@ class boundary_cond():
 
         for n in bcdict:
 
+            try: codim = n['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
+
             if n['dir'] == 'xyz_ref': # reference xyz
 
                 func = fem.Function(V)
@@ -162,7 +174,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    w += self.vf.deltaW_ext_neumann_ref(func, ds_(n['id'][i]))
+                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n['id'][i]))
 
             elif n['dir'] == 'normal_ref': # reference normal
 
@@ -182,7 +194,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_(n['id'][i]))
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n['id'][i]))
 
             elif n['dir'] == 'xyz_cur': # current xyz
 
@@ -202,7 +214,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    w += self.vf.deltaW_ext_neumann_cur(func, ds_(n['id'][i]), F=F)
+                    w += self.vf.deltaW_ext_neumann_cur(func, ds_[dind](n['id'][i]), F=F)
 
             elif n['dir'] == 'normal_cur': # current normal
 
@@ -222,7 +234,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    w += self.vf.deltaW_ext_neumann_normal_cur(func, ds_(n['id'][i]), F=F)
+                    w += self.vf.deltaW_ext_neumann_normal_cur(func, ds_[dind](n['id'][i]), F=F)
 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
@@ -236,6 +248,13 @@ class boundary_cond():
         w = ufl.as_ufl(0)
 
         for n in bcdict:
+
+            try: codim = n['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
 
             if n['dir'] == 'xyz_ref': # reference xyz
 
@@ -255,7 +274,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    w += self.vf.deltaW_ext_neumann_ref(func, ds_(n['id'][i]))
+                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n['id'][i]))
 
             elif n['dir'] == 'normal_ref': # reference normal
 
@@ -275,7 +294,7 @@ class boundary_cond():
 
                 for i in range(len(n['id'])):
 
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_(n['id'][i]))
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n['id'][i]))
 
             else:
                 raise NameError("Unknown dir option for Neumann prestress BC!")
@@ -290,25 +309,32 @@ class boundary_cond():
 
         for r in bcdict:
 
+            try: codim = r['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
+
             if r['type'] == 'spring':
 
                 if r['dir'] == 'xyz_ref': # reference xyz
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_spring(u, r['stiff'], ds_(r['id'][i]), u_pre)
+                        w += self.vf.deltaW_ext_robin_spring(u, r['stiff'], ds_[dind](r['id'][i]), u_pre)
 
                 elif r['dir'] == 'normal_ref': # reference normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, r['stiff'], ds_(r['id'][i]), u_pre)
+                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, r['stiff'], ds_[dind](r['id'][i]), u_pre)
 
                 elif r['dir'] == 'normal_cross': # cross normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, r['stiff'], ds_(r['id'][i]), u_pre)
+                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, r['stiff'], ds_[dind](r['id'][i]), u_pre)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -320,19 +346,19 @@ class boundary_cond():
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], ds_(r['id'][i]))
+                        w += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], ds_[dind](r['id'][i]))
 
                 elif r['dir'] == 'normal_ref': # reference normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], ds_(r['id'][i]))
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], ds_[dind](r['id'][i]))
 
                 elif r['dir'] == 'normal_cross': # cross normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, r['visc'], ds_(r['id'][i]))
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, r['visc'], ds_[dind](r['id'][i]))
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -352,6 +378,13 @@ class boundary_cond():
         mi=0
         for m in bcdict:
 
+            try: codim = m['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
+
             # field for variable wall thickness
             if bool(wallfields):
                 wallfield = wallfields[mi]
@@ -362,8 +395,8 @@ class boundary_cond():
 
                 idmem.append(m['id'][i])
 
-                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_(m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield)
-                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_(m['id'][i]), ivar=ivar, fibfnc=self.ff, stress=True, wallfield=wallfield))
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield)
+                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, stress=True, wallfield=wallfield))
 
             mi+=1
 
@@ -414,13 +447,20 @@ class boundary_cond_fluid(boundary_cond):
 
         for sn in bcdict:
 
+            try: codim = sn['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
+
             for i in range(len(sn['id'])):
 
                 par1 = sn['par1']
                 try: par2 = sn['par2']
                 except: par2 = 0.
 
-                w += self.vf.deltaW_ext_stabilized_neumann(v, par1, par2, ds_(sn['id'][i]), w=wel, F=F)
+                w += self.vf.deltaW_ext_stabilized_neumann(v, par1, par2, ds_[dind](sn['id'][i]), w=wel, F=F)
 
         return w
 
@@ -431,17 +471,24 @@ class boundary_cond_fluid(boundary_cond):
         w = ufl.as_ufl(0)
 
         if wel is None:
-            wel_ = ufl.constantvalue.zero(self.io.mesh.topology.dim)
+            wel_ = ufl.constantvalue.zero(self.dim)
         else:
             wel_ = wel
 
         for r in bcdict:
 
+            try: codim = r['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
+
             beta_.append( fem.Function(V_real) )
 
             for i in range(len(r['id'])):
 
-                w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_(r['id'][i]), fcts='+', w=wel_, F=F)
+                w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
 
         return w
 
@@ -450,11 +497,18 @@ class boundary_cond_fluid(boundary_cond):
     def flux_monitor_bcs(self, bcdict, v, qdict_, wel=None, F=None):
 
         if wel is None:
-            wel_ = ufl.constantvalue.zero(self.io.mesh.topology.dim)
+            wel_ = ufl.constantvalue.zero(self.dim)
         else:
             wel_ = wel
 
         for r in bcdict:
+
+            try: codim = r['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
 
             q = ufl.as_ufl(0)
 
@@ -498,7 +552,7 @@ class boundary_cond_fluid(boundary_cond):
     def dp_monitor_bcs(self, bcdict, a_u_, a_d_, pint_u_, pint_d_, pdict, wel=None, F=None):
 
         if wel is None:
-            wel_ = ufl.constantvalue.zero(self.io.mesh.topology.dim)
+            wel_ = ufl.constantvalue.zero(self.dim)
         else:
             wel_ = wel
 
@@ -510,6 +564,13 @@ class boundary_cond_fluid(boundary_cond):
             ja = 1.0
 
         for r in bcdict:
+
+            try: codim = r['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
 
             dom_u, dom_d = r['upstream_domain'], r['downstream_domain']
 

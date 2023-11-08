@@ -9,7 +9,10 @@
 import ufl
 from .mathutils import spectral_decomposition_3x3
 
-# variational form base class
+"""
+Variational form base class
+"""
+
 class variationalform_base:
 
     def __init__(self, var_u, var_p=None, du=None, dp=None, n0=None, x_ref=None, formulation=None):

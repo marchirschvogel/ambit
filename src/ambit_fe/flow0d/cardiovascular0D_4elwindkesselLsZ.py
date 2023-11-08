@@ -14,15 +14,15 @@ from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
 from .. import utilities
 
-# here we make use of sympy for symbolic differention...
-
-### this implements a 4-element windkessel model with an inertance L in series to an impedance Z, all in series
-# to a compliance C parallel to a resistance R, with the original equation
-# C dp/dt + (p-p_ref)/R - (1+Z/R)*Q - (CZ + L/R)*dQ/dt - LC*d2Q/dt2 = 0, with Q:=-dV/dt
-### this is implemented as three first order ODEs:
-# C dp/dt + (p-p_ref)/R + (1+Z/R)*q + (CZ + L/R)*s + LC*ds/dt = 0
-# dV/dt - q = 0
-# dq/dt - s = 0
+"""
+This implements a 4-element windkessel model with an inertance L in series to an impedance Z, all in series
+to a compliance C parallel to a resistance R, with the original equation
+C dp/dt + (p-p_ref)/R - (1+Z/R)*Q - (CZ + L/R)*dQ/dt - LC*d2Q/dt2 = 0, with Q:=-dV/dt
+This is implemented as three first order ODEs:
+C dp/dt + (p-p_ref)/R + (1+Z/R)*q + (CZ + L/R)*s + LC*ds/dt = 0
+dV/dt - q = 0
+dq/dt - s = 0
+"""
 
 class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 

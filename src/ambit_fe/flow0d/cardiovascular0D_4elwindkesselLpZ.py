@@ -14,15 +14,16 @@ from .cardiovascular0D import cardiovascular0Dbase
 from ..mpiroutines import allgather_vec
 from .. import utilities
 
-### this implements a 4-element windkessel model with an inertance L parallel to an impedance Z, all in series
-# to a compliance C parallel to a resistance R, with the original equation
-# LC/Z * d2p/dt2 + (L/(RZ) + C)*dp/dt + (p-p_ref)/R - Q - (L/R + L/Z)*dQ/dt - LC*d2Q/dt2 = 0, with Q:=-dV/dt
-### this is implemented as four first order ODEs:
-# LC/Z * dg/dt + (L/(RZ) + C)*g + (p-p_ref)/R + q + (L/R + L/Z)*s + LC*ds/dt = 0
-# dp/dt - g = 0
-# dV/dt - q = 0
-# dq/dt - s = 0
-
+"""
+This implements a 4-element windkessel model with an inertance L parallel to an impedance Z, all in series
+to a compliance C parallel to a resistance R, with the original equation
+LC/Z * d2p/dt2 + (L/(RZ) + C)*dp/dt + (p-p_ref)/R - Q - (L/R + L/Z)*dQ/dt - LC*d2Q/dt2 = 0, with Q:=-dV/dt
+This is implemented as four first order ODEs:
+LC/Z * dg/dt + (L/(RZ) + C)*g + (p-p_ref)/R + q + (L/R + L/Z)*s + LC*ds/dt = 0
+dp/dt - g = 0
+dV/dt - q = 0
+dq/dt - s = 0
+"""
 
 class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
 

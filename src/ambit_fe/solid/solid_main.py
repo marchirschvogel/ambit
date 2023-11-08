@@ -28,12 +28,14 @@ from .solid_material import activestress_activation
 from ..base import problem_base, solver_base
 
 
-# solid mechanics governing equation
+"""
+Solid mechanics governing equation
 
-#\rho_{0} \ddot{\boldsymbol{u}} = \boldsymbol{\nabla}_{0} \cdot (\boldsymbol{F}\boldsymbol{S}) + \hat{\boldsymbol{b}}_{0} \quad \text{in} \; \Omega_{0} \times [0, T]
+\rho_{0} \ddot{\boldsymbol{u}} = \boldsymbol{\nabla}_{0} \cdot (\boldsymbol{F}\boldsymbol{S}) + \hat{\boldsymbol{b}}_{0} \quad \text{in} \; \Omega_{0} \times [0, T]
 
-# can be solved together with constraint J = 1 (2-field variational principle with u and p as degrees of freedom)
-#J-1 = 0 \quad \text{in} \; \Omega_{0} \times [0, T]
+can be solved together with constraint J = 1 (2-field variational principle with u and p as degrees of freedom)
+J-1 = 0 \quad \text{in} \; \Omega_{0} \times [0, T]
+"""
 
 class SolidmechanicsProblem(problem_base):
 
@@ -77,6 +79,8 @@ class SolidmechanicsProblem(problem_base):
             self.dx = ufl.Measure("dx", domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree})
 
         self.ds = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
+        self.de = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b2_master, metadata={'quadrature_degree': self.quad_degree})
+        # self.de = self.io.de
 
         # collect domain data
         self.rho0 = []
@@ -434,17 +438,17 @@ class SolidmechanicsProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_body, w_body_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.ds, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.ds, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, [self.ds,self.de], F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, [self.ds,self.de], F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'bodyforce' in self.bc_dict.keys():
             w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update)
             w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update_old)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.ds, u_pre=self.u_pre)
-            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.ds, u_pre=self.u_pre)
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, [self.ds,self.de], u_pre=self.u_pre)
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, [self.ds,self.de], u_pre=self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, self.idmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, self.ds)
-            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, self.ds)
+            w_membrane, self.idmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, [self.ds,self.de])
+            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, [self.ds,self.de])
 
         # for (quasi-static) prestressing, we need to eliminate dashpots in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
@@ -462,9 +466,9 @@ class SolidmechanicsProblem(problem_base):
                     if r['type'] == 'dashpot': r['visc'] = 0.
             bc_prestr = boundaryconditions.boundary_cond(self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
             if 'neumann_prestress' in bc_dict_prestr.keys():
-                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.ds, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, [self.ds,self.de], funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             if 'robin' in bc_dict_prestr.keys():
-                w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.ds, u_pre=self.u_pre)
+                w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, [self.ds,self.de], u_pre=self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())

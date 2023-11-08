@@ -25,12 +25,14 @@ from ..solid.solid_material import activestress_activation
 
 from ..base import problem_base, solver_base
 
-# fluid mechanics, governed by incompressible Navier-Stokes equations:
+"""
+Fluid mechanics, governed by incompressible Navier-Stokes equations:
 
-#\begin{align}
-#\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \left(\boldsymbol{\nabla}\boldsymbol{v}\right) \boldsymbol{v}\right) = \boldsymbol{\nabla} \cdot \boldsymbol{\sigma} + \hat{\boldsymbol{b}} \quad \text{in} \; \Omega \times [0, T] \\
-#\boldsymbol{\nabla} \cdot \boldsymbol{v} = 0 \quad \text{in} \; \Omega \times [0, T]
-#\end{align}
+\begin{align}
+\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \left(\boldsymbol{\nabla}\boldsymbol{v}\right) \boldsymbol{v}\right) = \boldsymbol{\nabla} \cdot \boldsymbol{\sigma} + \hat{\boldsymbol{b}} \quad \text{in} \; \Omega \times [0, T] \\
+\boldsymbol{\nabla} \cdot \boldsymbol{v} = 0 \quad \text{in} \; \Omega \times [0, T]
+\end{align}
+"""
 
 class FluidmechanicsProblem(problem_base):
 
@@ -66,6 +68,7 @@ class FluidmechanicsProblem(problem_base):
 
         self.ds = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
         self.dS = ufl.Measure("dS", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
+        self.de = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b2_master, metadata={'quadrature_degree': self.quad_degree})
 
         # collect domain data
         self.rho = []
@@ -421,23 +424,23 @@ class FluidmechanicsProblem(problem_base):
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_body, w_body_old, w_robin, w_robin_old, w_stabneumann, w_stabneumann_old, w_robin_valve, w_robin_valve_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.ds, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.ds, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, [self.ds,self.de], F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, [self.ds,self.de], F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
         if 'bodyforce' in self.bc_dict.keys():
             w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update)
             w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, self.ds, F=self.alevar['Fale'])
-            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, self.ds, F=self.alevar['Fale_old'])
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, [self.ds,self.de], F=self.alevar['Fale'])
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, [self.ds,self.de], F=self.alevar['Fale_old'])
         if 'stabilized_neumann' in self.bc_dict.keys():
-            w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, self.ds, wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, self.ds, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, [self.ds,self.de], wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, [self.ds,self.de], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
         if 'robin_valve' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve = True
             self.beta_valve, self.beta_valve_old = [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, self.dS, wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, self.dS, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, [self.dS], wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, [self.dS], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
         if 'flux_monitor' in self.bc_dict.keys():
             self.have_flux_monitor = True
             self.q_, self.q_old_ = [], []
@@ -477,8 +480,8 @@ class FluidmechanicsProblem(problem_base):
                     self.io.readfunction(h0_func, self.bc_dict['membrane'][nm]['params']['h0']['field'])
                     self.wallfields.append(h0_func)
 
-            w_membrane, self.idmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.ds, ivar=self.internalvars, wallfields=self.wallfields)
-            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.ds, ivar=self.internalvars_old, wallfields=self.wallfields)
+            w_membrane, self.idmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, [self.ds,self.de], ivar=self.internalvars, wallfields=self.wallfields)
+            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, [self.ds,self.de], ivar=self.internalvars_old, wallfields=self.wallfields)
 
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial or self.prestress_initial_only:
@@ -488,10 +491,10 @@ class FluidmechanicsProblem(problem_base):
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.dx(N), w=self.alevar['w'], F=self.alevar['Fale'])
             if 'neumann_prestress' in self.bc_dict.keys():
-                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.ds, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, [self.ds,self.de], funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
-                w_membrane_prestr, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.ds, ivar=self.internalvars, wallfields=self.wallfields)
+                w_membrane_prestr, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, [self.ds,self.de], ivar=self.internalvars, wallfields=self.wallfields)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())

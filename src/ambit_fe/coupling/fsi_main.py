@@ -21,6 +21,9 @@ from .fluid_ale_main import FluidmechanicsAleProblem
 
 from ..base import problem_base, solver_base
 
+"""
+FSI problem class
+"""
 
 class FSIProblem(problem_base):
 

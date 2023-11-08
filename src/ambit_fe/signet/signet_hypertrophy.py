@@ -11,8 +11,10 @@ import sympy as sp
 
 from ..oderoutines import ode
 
-# signalling network model, from Ryall et al. (2012) "Network Reconstruction and Systems Analysis of Cardiac Myocyte Hypertrophy Signaling", The Journal of Biological Chemistry 287(50)
-# adopted form supplementary MATLAB code provided by authors
+"""
+Signalling network model, from Ryall et al. (2012) "Network Reconstruction and Systems Analysis of Cardiac Myocyte Hypertrophy Signaling", The Journal of Biological Chemistry 287(50)
+adopted form supplementary MATLAB code provided by authors
+"""
 
 class signethypertrophy(ode):
 

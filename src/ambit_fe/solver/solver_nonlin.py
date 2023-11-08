@@ -18,13 +18,17 @@ from . import preconditioner
 from .. import ioparams
 from .. import utilities
 
-### useful infos for PETSc mats, vecs, solvers...
-# https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Mat-class.html
-# https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Vec-class.html
-# https://www.mcs.anl.gov/petsc/documentation/faq.html
-# https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html
-# https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP-class.html
-# https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC-class.html
+"""
+Ambit nonlinear solver classes
+
+useful infos for PETSc mats, vecs, solvers...
+https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Mat-class.html
+https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.Vec-class.html
+https://www.mcs.anl.gov/petsc/documentation/faq.html
+https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html
+https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP-class.html
+https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC-class.html
+"""
 
 # standard nonlinear solver for FEM problems
 class solver_nonlinear:
@@ -559,7 +563,7 @@ class solver_nonlinear:
 
             tes = time.time()
 
-            # initial redidual actions due to predictor
+            # initial residual actions due to predictor
             self.residual_problem_actions(t, npr, localdata)
 
             te = time.time() - tes
