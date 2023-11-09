@@ -65,14 +65,16 @@ docker pull ghcr.io/marchirschvogel/ambit:devenv
 
 ### Usage ###
 
-Have a look at example input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options
+Check out the examples for the basic problem types in doc/examples to quickly get started running solid, fluid, or 0D model problems. Further, you can have a look
+at input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options.
+
 
 Best, check if all testcases run and pass, by navigating to ambit/tests and executing
 ```
 ./runtests.py
 ```
 
-* Build your input file and run it with the command
+Build your input file and run it with the command
 ```
 mpiexec -n <NUMBER_OF_CORES> python3 your_file.py
 ```
