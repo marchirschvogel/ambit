@@ -1,22 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This example demonstrates how to simulate a cardiac cycle using a lumped-parameter (0D) model for the heart chambers and the entire circulation. Multiple heart beats are run
-until a periodic state criterion is met (which compares variable values at the beginning to those at the end of a cycle, and stops if the relative change is less than
-a specified value, here 'eps_periodic' in the TIME_PARAMS dictionary). The problem is set up such that periodicity is reached after 5 heart cycles.
-
-INSTRUCTIONS:
-Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
-python3 flow0d_heart_cycle.py
-
-For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, make sure to have Gnuplot (and TeX) installed.
-Navigate to the output folder (tmp/) and execute the script flow0d_plot.py (which lies in ambit/src/ambit_fe/postprocess/):
-flow0d_plot.py -s flow0d_heart_cycle -n 100
-A folder 'plot_flow0d_heart_cycle' is created inside tmp/. Look at the results of pressures (p), volumes (V), and fluxes (q,Q) over time.
-Subscripts v, at, ar, ven refer to 'ventricular', 'atrial', 'arterial', and 'venous', respectively. Superscripts l, r, sys, pul refer to 'left', 'right', 'systemic', and
-'pulmonary', respectively.
-Try to understand the time courses of the respective pressures, as well as the plots of ventricular pressure over volume.
-Check that the overall system volume is constant and around 4-5 liters.
+A closed-loop lumped-parameter (0D) systemic and pulmonary circulation model, where the heart chambers are represented as time-varying elastance models.
 """
 
 import ambit_fe
@@ -49,11 +34,12 @@ def main():
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
+    number_of_cycles = 10
     """
     Parameters for the 0D model time integration scheme
     """
-    TIME_PARAMS       = {'maxtime'               : 10*1.0,
-                         'numstep'               : 10*100,
+    TIME_PARAMS       = {'maxtime'               : number_of_cycles*1.0,
+                         'numstep'               : number_of_cycles*100,
                          # the 0D model time integration scheme: we use a One-Step-theta method with theta = 0.5, which corresponds to the trapezoidal rule
                          'timint'                : 'ost',
                          'theta_ost'             : 0.5,
@@ -62,7 +48,7 @@ def main():
                          # the initial conditions of the 0D ODE model (defined below)
                          'initial_conditions'    : init(),
                          # the periodic state criterion tolerance
-                         'eps_periodic'          : 0.03,
+                         'eps_periodic'          : 0.05,
                          # which variables to check for periodicity (default, 'allvar')
                          'periodic_checktype'    : ['allvar']}
 
@@ -87,23 +73,27 @@ def main():
 
         # the activation curves for the contraction of the 0D atria
         def tc1(self, t):
+            
+            tmod = t % param()['T_cycl']
 
             act_dur = 2.*param()['t_ed']
             t0 = 0.
 
-            if t >= t0 and t <= t0 + act_dur:
-                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            if tmod >= t0 and tmod <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(tmod-t0)/act_dur))
             else:
                 return 0.0
 
         # the activation curves for the contraction of the 0D ventricles
         def tc2(self, t):
+            
+            tmod = t % param()['T_cycl']
 
             act_dur = 1.8*(param()['t_es'] - param()['t_ed'])
             t0 = param()['t_ed']
 
-            if t >= t0 and t <= t0 + act_dur:
-                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            if tmod >= t0 and tmod <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(tmod-t0)/act_dur))
             else:
                 return 0.0
 

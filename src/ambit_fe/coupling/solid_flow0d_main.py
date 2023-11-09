@@ -177,8 +177,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 elif coupling_quantity == 'pressure':
                     assert(self.coupling_type == 'monolithic_lagrange')
                     if variable_quantity == 'volume':
-                        cq_ += self.pbs.vf.volume(self.pbs.u, self.pbs.ki.J(self.pbs.u,ext=True), self.pbs.ki.F(self.pbs.u,ext=True), ds_vq)
-                        cq_old_ += self.pbs.vf.volume(self.pbs.u_old, self.pbs.ki.J(self.pbs.u_old,ext=True), self.pbs.ki.F(self.pbs.u_old,ext=True), ds_vq)
+                        cq_ += self.pbs.vf.volume(self.pbs.u, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                        cq_old_ += self.pbs.vf.volume(self.pbs.u_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
                     elif variable_quantity == 'flux':
                         cq_ += self.pbs.vf.flux(self.pbs.vel, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
                         cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
@@ -767,7 +767,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
     def check_abort(self, t):
 
-        self.pb0.check_abort(t)
+        return self.pb0.check_abort(t)
 
 
     def destroy(self):

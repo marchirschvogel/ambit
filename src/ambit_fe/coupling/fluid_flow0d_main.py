@@ -596,7 +596,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def check_abort(self, t):
 
-        self.pb0.check_abort(t)
+        return self.pb0.check_abort(t)
 
 
     def destroy(self):

@@ -461,7 +461,8 @@ class SolidmechanicsConstraintProblem(problem_base):
 
 
     def check_abort(self, t):
-        pass
+
+        return False
 
 
     def destroy(self):

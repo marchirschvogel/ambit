@@ -1,36 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This example demonstrates how to set up and simulate a two-chamber (left and right ventricular) solid mechanics heart model coupled to a closed-loop
-0D circulatory system. A full dynamic heart cycle of duration 1 s is simulated, where the active contraction is modeled by a prescribed active stress approach.
-Passive material behavior of the heart muscle is governed by the Holzapfel-Ogden anisotropic strain energy function and a strain rate-dependent viscous
-model.
-We start the simulation with "prestressing" using the MULF method (Gee et al. 2010, Schein and Gee 2021), which allows to imprint loads without changing the geometry,
-where the solid is loaded to the initial left and right ventricular pressures.
-Thereafter, we kickstart the dynamic simulation with passive ventricular filling by the systole of the atria (0D chamber models). Ventricular systole
-happens in t \in [0.2 s, 0.53 s], hence lasting a third of the whole cycle time. After systole, the heart relaxes and eventually fills to about the same pressure
-as it has been initialized to.
-
-NOTE: For demonstrative purposes, a fairly coarse finite element discretization is chosen here, which by no means yields a spatially converged solution and which
-may be prone to locking phenomena. The user may increse the parameter 'order_disp' in the FEM_PARAMS section from 1 to 2 (and maybe increase 'quad_degree' to 6)
-such that quadratic finite element ansatz functions (instead of linear ones) are used. While this will increase accuracy and mitigate locking, computation time will
-increase.
-
-INSTRUCTIONS:
-Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
-mpiexec -n 1 python3 solid_flow0d_heart_cycle.py
-It is fully sufficient to use one core (mpiexec -n 1) for the presented setup, while you might want to use more (e.g., mpiexec -n 4) is you increase 'order_disp' to 2.
-
-Open the results file results_solid_flow0d_heart_cycle_displacement.xdmf in Paraview, and visualize the deformation over the heart cycle.
-
-For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, make sure to have Gnuplot (and TeX) installed.
-Navigate to the output folder (tmp/) and execute the script flow0d_plot.py (which lies in ambit/src/ambit_fe/postprocess/):
-flow0d_plot.py -s solid_flow0d_heart_cycle
-A folder 'plot_solid_flow0d_heart_cycle' is created inside tmp/. Look at the results of pressures (p), volumes (V), and fluxes (q,Q) over time.
-Subscripts v, at, ar, ven refer to 'ventricular', 'atrial', 'arterial', and 'venous', respectively. Superscripts l, r, sys, pul refer to 'left', 'right', 'systemic', and
-'pulmonary', respectively.
-Try to understand the time courses of the respective pressures, as well as the plots of ventricular pressure over volume.
-Check that the overall system volume is constant and around 4-5 liters.
+A solid mechanics biventricular heart model coupled to a closed-loop lumped-parameter (0D) systemic and pulmonary circulation model.
 """
 
 import ambit_fe
@@ -64,7 +35,7 @@ def main():
                             # which results to write: here, all 3D fields need to be specified, while the 0D model results are output nevertheless
                             'results_to_write'      : ['displacement','fibers'],
                             # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
-                            'simname'               : 'solid_flow0d_heart_cycle'}
+                            'simname'               : 'solid_flow0d_heart_cycle10c'}
                       
     """
     Parameters for the linear and nonlinear solution schemes
@@ -78,13 +49,14 @@ def main():
                             'subsolver_params'      : {'tol_res' : 1e-6,
                                                        'tol_inc' : 1e-6}}
 
+    number_of_cycles = 10
     """
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
     TIME_PARAMS_SOLID    = {# the maximum simulation time - here, we want our heart cycle to last 1 s
-                            'maxtime'               : 1.0,
+                            'maxtime'               : number_of_cycles*1.0,
                             # the number of time steps which the simulation time is divided into - so here, a time step lasts 1/500 s = 0.002 s = 2 ms
-                            'numstep'               : 500,
+                            'numstep'               : number_of_cycles*500,
                             # the solid mechanics time integration scheme: we use the Generalized-alpha method with a spectral radius of 0.8
                             'timint'                : 'genalpha',
                             'rho_inf_genalpha'      : 0.8}
@@ -98,7 +70,11 @@ def main():
                             # do initial time step using backward scheme (theta=1), to avoid fluctuations for quantities whose d/dt is zero
                             'initial_backwardeuler' : True,
                             # the initial conditions of the 0D ODE model (defined below)
-                            'initial_conditions'    : init()}
+                            'initial_conditions'    : init(),
+                            # the periodic state criterion tolerance
+                            'eps_periodic'          : 0.03,
+                            # which variables to check for periodicity (default, 'allvar')
+                            'periodic_checktype'    : ['allvar']}
 
     """
     Parameters for the 0D model
@@ -173,6 +149,8 @@ def main():
 
         # the activation curve for the contraction of the 3D heart ventricles
         def tc1(self, t):
+            
+            tmod = t % param()['T_cycl']
 
             K = 5.
             t_contr, t_relax = 0.2, 0.53
@@ -184,16 +162,18 @@ def main():
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
 
             # Diss Hirschvogel eq. 2.101
-            return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
+            return (K*(tmod-c1)+1.)*((K*(tmod-c1)+1.)>0.) - K*(tmod-c1)*((K*(tmod-c1))>0.) - K*(tmod-c2)*((K*(tmod-c2))>0.) + (K*(tmod-c2)-1.)*((K*(tmod-c2)-1.)>0.)
 
         # the activation curves for the contraction of the 0D atria
         def tc2(self, t):
+            
+            tmod = t % param()['T_cycl']
 
             act_dur = 2.*param()['t_ed']
             t0 = 0.
 
-            if t >= t0 and t <= t0 + act_dur:
-                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            if tmod >= t0 and tmod <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(tmod-t0)/act_dur))
             else:
                 return 0.0
 

@@ -478,8 +478,7 @@ class FluidmechanicsAleProblem(problem_base):
 
     def check_abort(self, t):
 
-        self.pbf.check_abort(t)
-        self.pba.check_abort(t)
+        return False
 
 
     def destroy(self):

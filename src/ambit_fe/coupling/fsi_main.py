@@ -368,8 +368,7 @@ class FSIProblem(problem_base):
 
     def check_abort(self, t):
 
-        self.pbs.check_abort(t)
-        self.pbfa.check_abort(t)
+        return False
 
 
     def destroy(self):

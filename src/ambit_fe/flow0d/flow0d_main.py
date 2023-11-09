@@ -465,7 +465,8 @@ class Flow0DProblem(problem_base):
 
         if is_periodic:
             utilities.print_status("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.ti.cycle[0]-1,self.ti.cycleerror[0]), self.comm)
-            return True
+
+        return is_periodic
 
 
     def destroy(self):

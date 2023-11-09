@@ -392,8 +392,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
     def check_abort(self, t):
 
-        self.pbf0.check_abort(t)
-        self.pba.check_abort(t)
+        return self.pbf0.check_abort(t)
 
 
     def destroy(self):
