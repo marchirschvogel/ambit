@@ -5,8 +5,6 @@ A closed-loop lumped-parameter (0D) systemic and pulmonary circulation model, wh
 """
 
 import ambit_fe
-
-import sys
 import numpy as np
 from pathlib import Path
 

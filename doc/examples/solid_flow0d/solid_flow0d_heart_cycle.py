@@ -5,8 +5,6 @@ A solid mechanics biventricular heart model coupled to a closed-loop lumped-para
 """
 
 import ambit_fe
-
-import sys
 import numpy as np
 from pathlib import Path
 
@@ -34,7 +32,7 @@ def main():
                             'output_path'           : basepath+'/tmp/',
                             # which results to write: here, all 3D fields need to be specified, while the 0D model results are output nevertheless
                             'results_to_write'      : ['displacement','fibers'],
-                            # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
+                            # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5/.txt
                             'simname'               : 'solid_flow0d_heart_cycle'}
                       
     """
