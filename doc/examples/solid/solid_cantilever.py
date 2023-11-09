@@ -72,7 +72,7 @@ def main():
     class time_curves():
 
         def tc1(self, t): # curve controlling transversal load, here linearly ramped from 0 to load
-            load = 1e9 # Pa
+            load = 1e7 # Pa
             return load*t/TIME_PARAMS['maxtime']
 
     """
