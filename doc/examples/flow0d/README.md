@@ -6,7 +6,9 @@ a specified value, here 'eps_periodic' in the TIME_PARAMS dictionary). The probl
 
 ### Instructions ###
 Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+```
 python3 flow0d_heart_cycle.py
+```
 
 For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, make sure to have Gnuplot (and TeX) installed.
 Navigate to the output folder (tmp/) and execute the script flow0d_plot.py (which lies in ambit/src/ambit_fe/postprocess/):
@@ -18,3 +20,10 @@ Subscripts v, at, ar, ven refer to 'ventricular', 'atrial', 'arterial', and 'ven
 'pulmonary', respectively.
 Try to understand the time courses of the respective pressures, as well as the plots of ventricular pressure over volume.
 Check that the overall system volume is constant and around 4-5 liters.
+
+### Solution ###
+
+The solution is depicted in the following figure, showing the time course of volumes and pressures of the circulatory system.
+
+![A. Left heart and systemic pressures over time. B. Right heart and pulmonary pressures over time. C. Left and right ventricular and atrial volumes over time. D. Left and right ventricular pressure-volume relationships of periodic (5th) cycle.](https://github.com/marchirschvogel/ambit/assets/52761273/9df6b4a8-2acc-453d-b79b-fc797abcb2c9)
+**A. Left heart and systemic pressures over time. B. Right heart and pulmonary pressures over time. C. Left and right ventricular and atrial volumes over time. D. Left and right ventricular pressure-volume relationships of periodic (5th) cycle.**
