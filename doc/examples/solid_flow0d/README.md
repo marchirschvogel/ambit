@@ -29,7 +29,7 @@ Open the results file results_solid_flow0d_heart_cycle_displacement.xdmf in Para
 For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, make sure to have Gnuplot (and TeX) installed.
 Navigate to the output folder (tmp/) and execute the script flow0d_plot.py (which lies in ambit/src/ambit_fe/postprocess/):
 ```
-flow0d_plot.py -s solid_flow0d_heart_cycle
+flow0d_plot.py -s solid_flow0d_heart_cycle -V0 117e3 93e3 0 0 0
 ```
 A folder 'plot_solid_flow0d_heart_cycle' is created inside tmp/. Look at the results of pressures (p), volumes (V), and fluxes (q,Q) over time.
 Subscripts v, at, ar, ven refer to 'ventricular', 'atrial', 'arterial', and 'venous', respectively. Superscripts l, r, sys, pul refer to 'left', 'right', 'systemic', and
@@ -43,6 +43,9 @@ which do not coincide). Change the parameter number_of_cycles from 1 to 10 and r
 
 ### High-fidelity solution
 
-This animation shows a high-fidelity solution using a refined mesh and quadratic tetrahedral elements. Compare your solution.
+The figure and animation show a high-fidelity solution using a refined mesh and quadratic tetrahedral elements. Compare your solution from the coarser mesh. What is the deviation
+in ventricular volume?
+
+![A. Snapshot of heart deformation at end-systole, color indicates displacement magnitude. B. Left heart and systemic pressures over time. C. Left and right ventricular pressure-volume relationships.](https://github.com/marchirschvogel/ambit/assets/52761273/f830fc81-2e5a-4abd-9fd9-7b02c101e446)
 
 https://github.com/marchirschvogel/ambit/assets/52761273/61336888-82e1-4484-97ea-b77d3fb4ce2f
