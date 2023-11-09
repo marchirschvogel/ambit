@@ -47,5 +47,6 @@ The figure and animation show a high-fidelity solution using a refined mesh and 
 in ventricular volume?
 
 ![A. Snapshot of heart deformation at end-systole, color indicates displacement magnitude. B. Left heart and systemic pressures over time. C. Left and right ventricular pressure-volume relationships.](https://github.com/marchirschvogel/ambit/assets/52761273/f830fc81-2e5a-4abd-9fd9-7b02c101e446)
+A. Snapshot of heart deformation at end-systole, color indicates displacement magnitude. B. Left heart and systemic pressures over time. C. Left and right ventricular pressure-volume relationships.
 
 https://github.com/marchirschvogel/ambit/assets/52761273/61336888-82e1-4484-97ea-b77d3fb4ce2f
