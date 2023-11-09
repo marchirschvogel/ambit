@@ -22,7 +22,7 @@ Run the simulation, either in one of the provided Docker containers or using you
 ```
 mpiexec -n 1 python3 solid_flow0d_heart_cycle.py
 ```
-It is fully sufficient to use one core (mpiexec -n 1) for the presented setup, while you might want to use more (e.g., mpiexec -n 4) is you increase 'order_disp' to 2.
+It is fully sufficient to use one core (mpiexec -n 1) for the presented setup, while you might want to use more (e.g., mpiexec -n 4) if you increase 'order_disp' to 2.
 
 Open the results file results_solid_flow0d_heart_cycle_displacement.xdmf in Paraview, and visualize the deformation over the heart cycle.
 
