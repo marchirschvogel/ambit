@@ -35,7 +35,7 @@ def main():
                             # which results to write: here, all 3D fields need to be specified, while the 0D model results are output nevertheless
                             'results_to_write'      : ['displacement','fibers'],
                             # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
-                            'simname'               : 'solid_flow0d_heart_cycle10c'}
+                            'simname'               : 'solid_flow0d_heart_cycle'}
                       
     """
     Parameters for the linear and nonlinear solution schemes
@@ -49,7 +49,7 @@ def main():
                             'subsolver_params'      : {'tol_res' : 1e-6,
                                                        'tol_inc' : 1e-6}}
 
-    number_of_cycles = 10
+    number_of_cycles = 1
     """
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
@@ -72,7 +72,7 @@ def main():
                             # the initial conditions of the 0D ODE model (defined below)
                             'initial_conditions'    : init(),
                             # the periodic state criterion tolerance
-                            'eps_periodic'          : 0.03,
+                            'eps_periodic'          : 0.05,
                             # which variables to check for periodicity (default, 'allvar')
                             'periodic_checktype'    : ['allvar']}
 

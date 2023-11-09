@@ -45,4 +45,4 @@ which do not coincide). Change the parameter number_of_cycles from 1 to 10 and r
 
 This animation shows a high-fidelity solution using a refined mesh and quadratic tetrahedral elements. Compare your solution.
 
-https://github.com/marchirschvogel/ambit/doc/examples/solid_flow0d/heart_syspul.mp4
+https://github.com/marchirschvogel/ambit/tree/master/doc/examples/solid_flow0d/heart_syspul.mp4
