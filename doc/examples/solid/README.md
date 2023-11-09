@@ -18,3 +18,6 @@ Open the results file results_solid_cantilever_displacement.xdmf in Paraview, an
 ### Solution
 
 The figure shows the displacement magnitude at the end of the simulation.
+
+![Deformed cantilever, color indicates the magnitude of the displacement.](https://github.com/marchirschvogel/ambit/assets/52761273/8e4cd8e2-8497-477b-9cc2-c926ff4b8707)
+**Deformed cantilever, color indicates the magnitude of the displacement.**
