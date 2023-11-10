@@ -51,7 +51,7 @@ class boundary_cond():
 
             if 'curve' in d.keys():
                 assert('val' not in d.keys())
-                load = expression.template_vector()
+                load = expression.template_vector(dim=self.dim)
                 if d['dir'] == 'all': curve_x, curve_y, curve_z = d['curve'][0], d['curve'][1], d['curve'][2]
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
                 load.val_x, load.val_y, load.val_z = self.ti.timecurves(curve_x)(self.ti.t_init), self.ti.timecurves(curve_y)(self.ti.t_init), self.ti.timecurves(curve_z)(self.ti.t_init)
@@ -107,7 +107,7 @@ class boundary_cond():
             if 'curve' in d.keys():
                 assert('val' not in d.keys())
                 assert('file' not in d.keys())
-                load = expression.template_vector()
+                load = expression.template_vector(dim=self.dim)
                 if d['dir'] == 'all': curve_x, curve_y, curve_z = d['curve'][0], d['curve'][1], d['curve'][2]
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
                 load.val_x, load.val_y, load.val_z = self.ti.timecurves(curve_x)(self.ti.t_init), self.ti.timecurves(curve_y)(self.ti.t_init), self.ti.timecurves(curve_z)(self.ti.t_init)
@@ -162,7 +162,7 @@ class boundary_cond():
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys())
-                    load = expression.template_vector()
+                    load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
@@ -202,7 +202,7 @@ class boundary_cond():
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys())
-                    load = expression.template_vector()
+                    load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
@@ -262,7 +262,7 @@ class boundary_cond():
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys())
-                    load = expression.template_vector()
+                    load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
@@ -413,7 +413,7 @@ class boundary_cond():
             func, func_dir = fem.Function(V_real), fem.Function(V)
 
             # direction needs to be set
-            driection = expression.template_vector()
+            driection = expression.template_vector(dim=self.dim)
             dir_x, dir_y, dir_z = b['dir'][0], b['dir'][1], b['dir'][2]
             dir_norm = np.sqrt(dir_x**2. + dir_y**2. + dir_z**2.)
             driection.val_x, driection.val_y, driection.val_z = dir_x/dir_norm, dir_y/dir_norm, dir_z/dir_norm

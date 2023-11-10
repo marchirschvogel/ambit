@@ -123,7 +123,7 @@ class AleProblem(problem_base):
         self.numdof = self.d.vector.getSize()
 
         # initialize ALE time-integration class
-        self.ti = timeintegration.timeintegration_ale(time_params, fem_params, time_curves, self.t_init, self.comm)
+        self.ti = timeintegration.timeintegration_ale(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, dim=self.dim, comm=self.comm)
 
         # initialize kinematics_constitutive class
         self.ki = ale_kinematics_constitutive.kinematics(self.dim)

@@ -237,7 +237,7 @@ class SolidmechanicsProblem(problem_base):
         self.mor_params = mor_params
 
         # initialize solid time-integration class
-        self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves, self.t_init, self.comm)
+        self.ti = timeintegration.timeintegration_solid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, dim=self.dim, comm=self.comm)
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()

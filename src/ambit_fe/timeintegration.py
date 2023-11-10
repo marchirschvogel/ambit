@@ -18,7 +18,7 @@ Time-integration classes for all problems
 
 class timeintegration():
 
-    def __init__(self, time_params, time_curves=None, t_init=0., comm=None):
+    def __init__(self, time_params, time_curves=None, t_init=0., dim=3, comm=None):
 
         try: self.timint = time_params['timint']
         except: self.timint = 'static'
@@ -30,6 +30,8 @@ class timeintegration():
 
         self.time_curves = time_curves
         self.t_init = t_init
+
+        self.dim = dim
 
         self.comm = comm
 
@@ -62,7 +64,7 @@ class timeintegration():
     def set_time_funcs(self, t, funcs, funcs_vec):
 
         for m in funcs_vec:
-            load = expression.template_vector()
+            load = expression.template_vector(dim=self.dim)
             load.val_x, load.val_y, load.val_z = list(m.values())[0][0](t), list(m.values())[0][1](t), list(m.values())[0][2](t)
             list(m.keys())[0].interpolate(load.evaluate)
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -118,8 +120,8 @@ class timeintegration():
 # Solid mechanics time integration class
 class timeintegration_solid(timeintegration):
 
-    def __init__(self, time_params, fem_params, time_curves=None, t_init=0., comm=None):
-        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
+    def __init__(self, time_params, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
 
         if self.timint == 'genalpha':
 
@@ -303,8 +305,8 @@ class timeintegration_solid(timeintegration):
 # Fluid mechanics time integration class
 class timeintegration_fluid(timeintegration):
 
-    def __init__(self, time_params, fem_params, time_curves=None, t_init=0., comm=None):
-        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
+    def __init__(self, time_params, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
 
         if self.timint == 'ost':
 

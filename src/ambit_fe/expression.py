@@ -20,15 +20,25 @@ class template:
 
 # template vector expression class
 class template_vector:
-    def __init__(self):
+    def __init__(self, dim=3):
+
+        self.dim = dim
+
         self.val_x = 0.0
         self.val_y = 0.0
         self.val_z = 0.0
 
     def evaluate(self, x):
-        return ( np.full(x.shape[1], self.val_x),
-                 np.full(x.shape[1], self.val_y),
-                 np.full(x.shape[1], self.val_z) )
+
+        if self.dim==3:
+            return ( np.full(x.shape[1], self.val_x),
+                     np.full(x.shape[1], self.val_y),
+                     np.full(x.shape[1], self.val_z) )
+        elif self.dim==2:
+            return ( np.full(x.shape[1], self.val_x),
+                     np.full(x.shape[1], self.val_y) )
+        else:
+            raise ValueError("Unknown dimension, %i" % (self.dim))
 
 
 # dummy function
