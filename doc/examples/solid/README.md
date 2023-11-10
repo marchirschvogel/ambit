@@ -9,7 +9,7 @@ The well-known St. Venant-Kirchhoff material is used as constitutive law, which 
 
 ### Instructions ###
 
-Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup and the comments in the input file `solid_cantilever.py`. Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 ```
 mpiexec -n 1 python3 solid_cantilever.py
 ```

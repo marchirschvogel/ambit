@@ -20,7 +20,7 @@ increase.
 
 ### Instructions ###
 
-Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup and the comments in the input file `solid_flow0d_heart_cycle.py`. Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 ```
 mpiexec -n 1 python3 solid_flow0d_heart_cycle.py
 ```
@@ -28,8 +28,8 @@ It is fully sufficient to use one core (mpiexec -n 1) for the presented setup, w
 
 Open the results file results_solid_flow0d_heart_cycle_displacement.xdmf in Paraview, and visualize the deformation over the heart cycle.
 
-For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, make sure to have Gnuplot (and TeX) installed.
-Navigate to the output folder (tmp/) and execute the script flow0d_plot.py (which lies in ambit/src/ambit_fe/postprocess/):
+For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, either use your own tools to plot the text output files (first column is time, second is the respective
+quantity), or make sure to have Gnuplot (and TeX) installed and navigate to the output folder (tmp/) in order to execute the script flow0d_plot.py (which lies in ambit/src/ambit_fe/postprocess/):
 ```
 flow0d_plot.py -s solid_flow0d_heart_cycle -V0 117e3 93e3 0 0 0
 ```
