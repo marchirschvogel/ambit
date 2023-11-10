@@ -2,7 +2,7 @@
 
 This example demonstrates how to couple 3D fluid flow to a 0D lumped-parameter model.
 
-![pipe_0d_setup](https://github.com/marchirschvogel/ambit/assets/52761273/d83cb0d4-74f1-4d5b-b41b-bf9f772bfbd3)
+![pipe_0d_setup](https://github.com/marchirschvogel/ambit/assets/52761273/d83cb0d4-74f1-4d5b-b41b-bf9f772bfbd3) \
 **Simulation setup.**
 
 ### Instructions ###
@@ -19,5 +19,5 @@ Open the results file results_fluid_flow0d_pipe_velocity.xdmf in Paraview, and v
 
 The figure shows the velocity streamlines and magnitude at the end of the simulation.
 
-![Streamlines of velocity at end of simulation, color indicates velcity magnitude.](https://github.com/marchirschvogel/ambit/assets/52761273/00b4819c-25a9-4079-a5f7-03b49de7a9af)
+![Streamlines of velocity at end of simulation, color indicates velcity magnitude.](https://github.com/marchirschvogel/ambit/assets/52761273/00b4819c-25a9-4079-a5f7-03b49de7a9af) \
 **Streamlines of velocity at end of simulation, color indicates velcity magnitude.**
