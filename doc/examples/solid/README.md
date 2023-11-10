@@ -4,7 +4,7 @@ This example demonstrates how to set up a quasi-static solid mechanics elasticit
 is fixed on one end. Quadratic 27-node hexahedral finite elements are used for the discretization of the domain.
 The well-known St. Venant-Kirchhoff material is used as constitutive law, which is a generalization of Hooke's law to the nonlinear realm.
 
-![Simulation setup.](https://github.com/marchirschvogel/ambit/assets/52761273/55463473-93e6-4dd5-82e6-7fce65c3d0a5)
+![Simulation setup.](https://github.com/marchirschvogel/ambit/assets/52761273/55463473-93e6-4dd5-82e6-7fce65c3d0a5) \
 **Simulation setup.**
 
 ### Instructions ###
@@ -21,5 +21,5 @@ Open the results file results_solid_cantilever_displacement.xdmf in Paraview, an
 
 The figure shows the displacement magnitude at the end of the simulation.
 
-![Deformed cantilever, color indicates the magnitude of the displacement.](https://github.com/marchirschvogel/ambit/assets/52761273/32235966-603b-4f79-ac98-a8f898bd6d78)
+![Deformed cantilever, color indicates the magnitude of the displacement.](https://github.com/marchirschvogel/ambit/assets/52761273/32235966-603b-4f79-ac98-a8f898bd6d78) \
 **Deformed cantilever, color indicates the magnitude of the displacement.**
