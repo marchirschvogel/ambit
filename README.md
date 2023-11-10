@@ -4,6 +4,9 @@
 
 3D nonlinear solid and fluid mechanics finite element Python code using FEniCS and PETSc libraries, supporting
 
+https://github.com/marchirschvogel/ambit/assets/52761273/44302c98-a587-4680-b612-4480fc115cb0
+**Heart cycle simulation of a generic bi-ventricular heart model coupled to a closed-loop circulation model.**
+
 * Solid mechanics
   - Finite strain elastodynamics, implementing a range of hyperelastic isotropic and anisotropic as well as viscous constitutive laws
   - Active stress for modeling of cardiac contraction mechanics
