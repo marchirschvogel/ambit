@@ -15,6 +15,8 @@ may be prone to locking phenomena. The user may increse the parameter 'order_dis
 such that quadratic finite element ansatz functions (instead of linear ones) are used. While this will increase accuracy and mitigate locking, computation time will
 increase.
 
+![Simulation setup.](https://github.com/marchirschvogel/ambit/assets/52761273/3ecc5dca-8855-4888-bf30-76d75e216e1a)
+**Simulation setup.**
 
 ### Instructions ###
 
@@ -46,7 +48,7 @@ which do not coincide). Change the parameter number_of_cycles from 1 to 10 and r
 The figure and animation show a high-fidelity solution using a refined mesh and quadratic tetrahedral elements. Compare your solution from the coarser mesh. What is the deviation
 in ventricular volume?
 
-![A. Snapshot of heart deformation at end-systole, color indicates displacement magnitude. B. Left heart and systemic pressures over time. C. Left and right ventricular pressure-volume relationships.](https://github.com/marchirschvogel/ambit/assets/52761273/f830fc81-2e5a-4abd-9fd9-7b02c101e446)
-**A. Snapshot of heart deformation at end-systole, color indicates displacement magnitude. B. Left heart and systemic pressures over time. C. Left and right ventricular pressure-volume relationships.**
+![A. Left heart and systemic pressures over time. B. Left and right ventricular and atrial volumes over time. C. Left and right ventricular pressure-volume relationships. D. Snapshot of heart deformation at end-systole, color indicates displacement magnitude.](https://github.com/marchirschvogel/ambit/assets/52761273/75bd35d4-7203-4320-a375-b4dc28e3d526)
+A. Left heart and systemic pressures over time. B. Left and right ventricular and atrial volumes over time. C. Left and right ventricular pressure-volume relationships. D. Snapshot of heart deformation at end-systole, color indicates displacement magnitude.
 
 https://github.com/marchirschvogel/ambit/assets/52761273/61336888-82e1-4484-97ea-b77d3fb4ce2f
