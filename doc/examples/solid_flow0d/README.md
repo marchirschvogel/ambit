@@ -15,7 +15,7 @@ may be prone to locking phenomena. The user may increse the parameter 'order_dis
 such that quadratic finite element ansatz functions (instead of linear ones) are used. While this will increase accuracy and mitigate locking, computation time will
 increase.
 
-![Simulation setup.](https://github.com/marchirschvogel/ambit/assets/52761273/3ecc5dca-8855-4888-bf30-76d75e216e1a){ width=50% } \
+![Simulation setup.](https://github.com/marchirschvogel/ambit/assets/52761273/3ecc5dca-8855-4888-bf30-76d75e216e1a) \
 **Simulation setup.**
 
 ### Instructions ###
