@@ -3,6 +3,8 @@
 This example demonstrates how to simulate a cardiac cycle using a lumped-parameter (0D) model for the heart chambers and the entire circulation. Multiple heart beats are run
 until a periodic state criterion is met (which compares variable values at the beginning to those at the end of a cycle, and stops if the relative change is less than
 a specified value, here 'eps_periodic' in the TIME_PARAMS dictionary). The problem is set up such that periodicity is reached after 5 heart cycles.
+![Simulation setup.](https://github.com/marchirschvogel/ambit/assets/52761273/65961bd1-37b4-4292-9f6e-bb0f6e432b09) \
+**Simulation setup.**
 
 ### Instructions ###
 Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
@@ -25,5 +27,5 @@ Check that the overall system volume is constant and around 4-5 liters.
 
 The solution is depicted in the following figure, showing the time course of volumes and pressures of the circulatory system.
 
-![A. Left heart and systemic pressures over time. B. Right heart and pulmonary pressures over time. C. Left and right ventricular and atrial volumes over time. D. Left and right ventricular pressure-volume relationships of periodic (5th) cycle.](https://github.com/marchirschvogel/ambit/assets/52761273/9df6b4a8-2acc-453d-b79b-fc797abcb2c9)
+![syspul_results](https://github.com/marchirschvogel/ambit/assets/52761273/72f92718-439f-4578-bbf6-1ad47b0df9e8) \
 **A. Left heart and systemic pressures over time. B. Right heart and pulmonary pressures over time. C. Left and right ventricular and atrial volumes over time. D. Left and right ventricular pressure-volume relationships of periodic (5th) cycle.**
