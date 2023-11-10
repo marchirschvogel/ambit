@@ -19,5 +19,5 @@ Open the results file results_channel_velocity.xdmf and results_channel_pressure
 
 The figure shows the velocity magnitude (top) as well as the pressure (bottom part) at the end of the simulation.
 
-![Velocity streamlines at end of simulation, color indicates magnitude of the velocity.](https://github.com/marchirschvogel/ambit/assets/52761273/fb3445f8-b928-4379-9c91-7c001fb6671b) \
-**Velocity streamlines at end of simulation, color indicates magnitude of the velocity.**
+![Velocity magnitude (top part) and pressure (bottom part) at end of simulation.](https://github.com/marchirschvogel/ambit/assets/52761273/fb3445f8-b928-4379-9c91-7c001fb6671b) \
+**Velocity magnitude (top part) and pressure (bottom part) at end of simulation.**
