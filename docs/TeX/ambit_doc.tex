@@ -178,24 +178,24 @@ Examples of input files for the respective problem types can be found in the fol
 
 \subsubsection{Displacement-based}
 -- Primary variable: displacement $\bs{u}$
-\begin{alignat}{3}
-\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
-\bs{u} &= \hat{\bs{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
-\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
-\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
-\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
-\end{alignat}
+\begin{align}
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
+\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
+\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
+\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
+\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
+\end{align}
 
 \subsubsection{Incompressible mechanics}
 -- Primary variables: displacement $\bs{u}$ and pressure $p$
-\begin{alignat}{3}
-\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
-J(\bs{u})-1 &= 0 \quad &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
-\bs{u} &= \hat{\bs{u}} \quad &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
-\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} \quad &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
-\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_u}\\
-\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) \quad &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_v}
-\end{alignat}
+\begin{align}
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP_inc} \\
+J(\bs{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
+\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
+\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N_inc}\\
+\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_u_inc}\\
+\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_v_inc}
+\end{align}
 
 with velocity and acceleration $\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}$ and $\bs{a}=\frac{\mathrm{d}^2\bs{u}}{\mathrm{d}t^2}$, respectively
 
@@ -291,13 +291,13 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 
 \subsubsection{Strong Form}
 -- Primary variables: velocity $\bs{v}$ and pressure $p$
-\begin{alignat}{3}
-\bs{\nabla} \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) \quad &&\text{in} \; \mathit{\Om}_t \times [0, T], \label{eq:divsigma_ns} \\
-\bs{\nabla}\cdot \bs{v} &= 0 \quad &&\text{in} \; \mathit{\Om}_t \times [0, T],\label{eq:divv_ns}\\
-\bs{v} &= \hat{\bs{v}} \quad &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} \quad &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) \quad &&\text{in} \; \mathit{\Om}_t, \label{eq:ini_v_ns}
-\end{alignat}
+\begin{align}
+\bs{\nabla} \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_t \times [0, T], \label{eq:divsigma_ns} \\
+\bs{\nabla}\cdot \bs{v} &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\label{eq:divv_ns}\\
+\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
+\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t, \label{eq:ini_v_ns}
+\end{align}
 
 with a Newtonian fluid constitutive law
 \begin{align}
@@ -337,7 +337,7 @@ r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \q
 \end{align}
 \item pressure Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= -\int\limits_{\Gm_t^{\mathrm{N}}} \hat{p}(t)\,\bs{n} \cdot \delta\bs{v} \,\mathrm{d}a \label{eq:deltaPext_neumann}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= -\int\limits_{\Gm_t^{\mathrm{N}}} \hat{p}(t)\,\bs{n} \cdot \delta\bs{v} \,\mathrm{d}a \label{eq:deltaPext_neumann_true}
 \end{align}
 \item body force:
 \begin{align}
@@ -397,10 +397,10 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 -- Primary variable: domain displacement $\bs{d}$\\
 
 -- Strong form:
-\begin{alignat}{3}
-\bs{\nabla}_{0} \cdot \bs{\sigma}^{\mathrm{G}}(\bs{d}) &= \bs{0} \quad &&\text{in} \; \mathit{\Om}_0, \label{eq:divsigma_ale} \\
-\bs{d} &= \hat{\bs{d}} \quad &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}}, \label{eq:dbc_ale}
-\end{alignat}
+\begin{align}
+\bs{\nabla}_{0} \cdot \bs{\sigma}^{\mathrm{G}}(\bs{d}) &= \bs{0} &&\text{in} \; \mathit{\Om}_0, \label{eq:divsigma_ale} \\
+\bs{d} &= \hat{\bs{d}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}}, \label{eq:dbc_ale}
+\end{align}
 with
 \begin{align}
 \bs{\sigma}^{\mathrm{G}}(\bs{d}) = E \,\frac{1}{2}\left(\bs{\nabla}_0\bs{d} + (\bs{\nabla}_0\bs{d})^{\mathrm{T}}\right) + \kappa \left(\bs{\nabla}_0 \cdot \bs{d}\right)\,\bs{I}
@@ -414,13 +414,13 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 
 \subsubsection{Strong form}
 -- Primary variables: velocity $\bs{v}$ and pressure $p$
-\begin{alignat}{3}
-\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) \quad &&\text{in} \; \mathit{\Om}_0 \times [0, T], \label{eq:divsigma_ns} \\
-\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 \quad &&\text{in} \; \mathit{\Om}_0 \times [0, T],\label{eq:divv_ns}\\
-\bs{v} &= \hat{\bs{v}} \quad &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} \quad &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) \quad &&\text{in} \; \mathit{\Om}_0, \label{eq:ini_v_ns}
-\end{alignat}
+\begin{align}
+\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T], \label{eq:divsigma_ns_ale} \\
+\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\label{eq:divv_ns}\\
+\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
+\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0, \label{eq:ini_v_ns}
+\end{align}
 
 with a Newtonian fluid constitutive law
 \begin{align}
@@ -461,7 +461,7 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \end{align}
 \item pressure Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale}
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale_true}
 \end{align}
 \item body force:
 \begin{align}
@@ -750,7 +750,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 \subsection{``Syspul'' circulation model}
 
-\begin{alignat}{2}
+\begin{align}
 &\text{left heart and systemic circulation} && \nonumber\\
 &-Q_{\mathrm{at}}^{\ell} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{pul}}}q_{\mathrm{ven},i}^{\mathrm{pul}} - q_{\mathrm{v,in}}^{\ell} && \text{\;left atrium flow balance}\nonumber\\
 &q_{\mathrm{v,in}}^{\ell} = q_{\mathrm{mv}}(p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}) && \text{\;mitral valve momentum}\label{eq:mv_flow}\\
@@ -763,8 +763,8 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 &C_{\mathrm{ven}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{sys}}-\sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}}\ && \text{\;systemic venous flow balance}\nonumber\\
 &L_{\mathrm{ven},i}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ven},i}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ven},i}^{\mathrm{sys}}\, q_{\mathrm{ven},i}^{\mathrm{sys}} = p_{\mathrm{ven}}^{\mathrm{sys}} - p_{\mathrm{at},i}^{r} && \text{\;systemic venous momentum}\nonumber\\
 &\qquad\qquad i \in \{1,...,n_{\mathrm{ven}}^{\mathrm{sys}}\} && \nonumber
-\end{alignat}
-\begin{alignat}{2}
+\end{align}
+\begin{align}
 &\text{right heart and pulmonary circulation} && \nonumber\\
 &-Q_{\mathrm{at}}^{r} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}} q_{\mathrm{ven,cor,out}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r} && \text{\;right atrium flow balance}\nonumber\\
 &q_{\mathrm{v,in}}^{r} = q_{\mathrm{tv}}(p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}) && \text{\;tricuspid valve momentum}\label{eq:tv_flow}\\
@@ -775,7 +775,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 &C_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{pul}} - \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{pul}}}q_{\mathrm{ven},i}^{\mathrm{pul}} && \text{\;pulmonary venous flow balance}\nonumber\\
 &L_{\mathrm{ven},i}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ven},i}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ven},i}^{\mathrm{pul}}\, q_{\mathrm{ven},i}^{\mathrm{pul}}=p_{\mathrm{ven}}^{\mathrm{pul}}-p_{\mathrm{at},i}^{\ell} && \text{\;pulmonary venous momentum}\nonumber\\
 &\qquad\qquad i \in \{1,...,n_{\mathrm{ven}}^{\mathrm{pul}}\} && \nonumber
-\end{alignat}
+\end{align}
 
 with:
 \begin{align}
@@ -842,7 +842,7 @@ with
 \begin{align}
 s=\frac{p-p_{\mathrm{open}}+0.5\epsilon}{\epsilon} \nonumber
 \end{align}
-\textbf{Remarks:}
+\textbf{Remarks:}\\
 $-$ Collapses to valve model \verb.pwlin_pres. for $\epsilon=0$\\
 $-$ Smooth and convex flow-pressure relationship
 
