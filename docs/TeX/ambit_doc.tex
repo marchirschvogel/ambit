@@ -158,7 +158,7 @@ Avenues for future functionality include cardiac electrophysiology, scalar trans
 
 In the following, a brief description of the supported problem types is given, including the strong and weak form of the underlying equations as well as the discrete assembled systems that are solved.\\
 
-Examples of input files for the respective problem types can be found in the folder \verb\doc/examples\ (with detailed setup descriptions) or amogst the test cases in the folder \verb\tests\.
+Examples of input files for the respective problem types can be found in the folder \verb.demos. (with detailed setup descriptions) or amogst the test cases in the folder \verb.tests..
 
 %\begin{figure}[!htp]
 %\centering
@@ -168,9 +168,9 @@ Examples of input files for the respective problem types can be found in the fol
 
 \section{Solid mechanics}
 
--- Example: \verb\doc/examples/solid\\\
+-- Example: \verb.demos/solid.\\
 
--- Problem type: \verb\solid\\\
+-- Problem type: \verb.solid.\\
 
 -- Solid mechanics are formulated in a Total Lagrangian frame
 
@@ -283,9 +283,9 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 
 \subsection{Eulerian reference frame}
 
--- Example: \verb\doc/examples/fluid\\\
+-- Example: \verb.demos/fluid.\\
 
--- Problem type: \verb\fluid\\\
+-- Problem type: \verb.fluid.\\
 
 -- Incompressible Navier-Stokes equations in Eulerian reference frame\\
 
@@ -348,7 +348,7 @@ r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \q
 \subsubsection{Stabilization}\label{subsubsec:stab}
 Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin (SUPG/PSPG) methods are implemented, either using the full or a reduced scheme\\
 
-Full scheme according to \cite{tezduyar2000}: \verb\supg_pspg\:\\
+Full scheme according to \cite{tezduyar2000}: \verb.supg_pspg.:\\
 -- Velocity residual operator (\ref{eq:res_v_fluid}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\bs{\nabla}\delta\bs{v})\,\bs{v} \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) - \bs{\nabla} \cdot \bs{\sigma}(\bs{v},p)\right]\,\mathrm{d}v \\
@@ -360,7 +360,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 \end{align}\\
 
 
-Reduced scheme (optimized for first-order): \verb\supg_pspg2\:\\
+Reduced scheme (optimized for first-order): \verb.supg_pspg2.:\\
 -- Velocity residual operator (\ref{eq:res_v_fluid}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v \\
@@ -381,7 +381,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 
 \subsection{ALE reference frame}
 
--- Problem type: \verb\fluid_ale\\\
+-- Problem type: \verb.fluid_ale.\\
 
 -- Incompressible Navier-Stokes equations in Arbitrary Lagrangian Eulerian (ALE) reference frame\\
 
@@ -470,11 +470,11 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 
 \subsubsection{Stabilization}
 ALE forms of stabilization introduced in sec. \ref{subsubsec:stab}\\
-\verb\supg_pspg\:\\
+\verb.supg_pspg.:\\
 -- Velocity residual operator (\ref{eq:res_v_fluid_ale}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{SUPG}}\,(\bs{\nabla}_0\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\;\cdot \\
- & \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
+& \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
 & + \int\limits_{\Om_0}J\, \tau_{\mathrm{LSIC}}\,\rho\,(\bs{\nabla}_{0}\delta\bs{v} : \bs{F}^{-\mathrm{T}})(\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}})\,\mathrm{d}V
 \end{align}
 -- Pressure residual operator (\ref{eq:res_p_fluid_ale}) is augmented with the following terms:
@@ -483,7 +483,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{PSPG}}\
 & \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V
 \end{align}\\
 
-\verb\supg_pspg2\:\\
+\verb.supg_pspg2.:\\
 -- Velocity residual operator (\ref{eq:res_v_fluid_ale}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V \\
@@ -506,9 +506,9 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 
 \subsection{Solid + 0D flow}
 
--- Example: \verb\doc/examples/solid_flow0d\\\
+-- Example: \verb.demos/solid_flow0d.\\
 
--- Problem type: \verb\solid_flow0d\\\
+-- Problem type: \verb.solid_flow0d.\\
 
 -- (\ref{eq:res_u_solid}) or (\ref{eq:res_u_solid_incomp}) augmented by following term:
 \begin{align}
@@ -533,9 +533,9 @@ r_{\lambda}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\int\limits_
 
 \subsection{Fluid + 0D flow}
 
--- Example: \verb\doc/examples/fluid_flow0d\\\
+-- Example: \verb.demos/fluid_flow0d.\\
 
--- Problem type: \verb\fluid_flow0d\\\
+-- Problem type: \verb.fluid_flow0d.\\
 
 -- (\ref{eq:res_v_fluid}) augmented by following term:
 \begin{align}
@@ -554,7 +554,7 @@ r_{\lambda}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\int\limits_
 \end{align}
 
 \subsection{ALE fluid + 0D flow}
--- Problem type: \verb\fluid_ale_flow0d\\\
+-- Problem type: \verb.fluid_ale_flow0d.\\
 
 -- (\ref{eq:res_v_fluid_ale}) augmented by following term:
 \begin{align}
@@ -577,14 +577,14 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 \subsection{Fluid-Solid Interaction (FSI)}
 
--- Problem type: \verb\fsi\\\
+-- Problem type: \verb.fsi.\\
 
 -- Not yet fully implemented!
 
 
 \subsection{Fluid-Solid Interaction (FSI) + 0D flow}
 
--- Problem type: \verb\fsi_flow0d\\\
+-- Problem type: \verb.fsi_flow0d.\\
 
 -- Not yet fully implemented!
 
@@ -743,9 +743,9 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 \section{0D flow: Lumped parameter models}
 
--- Example: \verb\doc/examples/flow0d\\\
+-- Example: \verb.demos/flow0d.\\
 
--- Problem type: \verb\flow0d\\\
+-- Problem type: \verb.flow0d.\\
 
 \subsection{``Syspul'' circulation model}
 
@@ -803,14 +803,14 @@ where $E_{\mathrm{max}}$ and $E_{\mathrm{min}}$ denote the maximum and minimum e
 
 Flow-pressure relations for the four valves, eq. (\ref{eq:mv_flow}), (\ref{eq:av_flow}), (\ref{eq:tv_flow}), (\ref{eq:pv_flow}), are functions of the pressure difference $p-p_{\mathrm{open}}$ across the valve. The following valve models can be defined:\\
 
-Valve model \verb\pwlin_pres\:
+Valve model \verb.pwlin_pres.:
 \begin{align}
 q(p-p_{\mathrm{open}}) = \frac{p-p_{\mathrm{open}}}{\tilde{R}}, \quad \text{with}\; \tilde{R} = \begin{cases} R_{\max}, & p < p_{\mathrm{open}} \\
 R_{\min}, & p \geq p_{\mathrm{open}} \end{cases}\nonumber
 \end{align}
 \textbf{Remark:} Non-smooth flow-pressure relationship\\
 
-Valve model \verb\pwlin_time\:
+Valve model \verb.pwlin_time.:
 \begin{align}
 q(p-p_{\mathrm{open}}) = \frac{p-p_{\mathrm{open}}}{\tilde{R}},\quad \text{with}\; \tilde{R} = \begin{cases} \begin{cases} R_{\max}, & t < t_{\mathrm{open}} \;\text{and}\; t \geq t_{\mathrm{close}} \\
 R_{\min}, & t \geq t_{\mathrm{open}} \;\text{or}\; t < t_{\mathrm{close}} \end{cases}, & t_{\mathrm{open}} > t_{\mathrm{close}} \\ \begin{cases} R_{\max}, & t < t_{\mathrm{open}} \;\text{or}\; t \geq t_{\mathrm{close}} \\
@@ -818,13 +818,13 @@ R_{\min}, & t \geq t_{\mathrm{open}} \;\text{and}\; t < t_{\mathrm{close}} \end{
 \end{align}
 \textbf{Remark:} Non-smooth flow-pressure relationship with resistance only dependent on timings, not the pressure difference!\\
 
-Valve model \verb\smooth_pres_resistance\:
+Valve model \verb.smooth_pres_resistance.:
 \begin{align}
 q(p-p_{\mathrm{open}}) = \frac{p-p_{\mathrm{open}}}{\tilde{R}},\quad \text{with}\;\tilde{R} = 0.5\left(R_{\max}-R_{\min}\right)\left(\tanh\frac{p-p_{\mathrm{open}}}{\epsilon}+1\right) + R_{\min}\nonumber
 \end{align}
 \textbf{Remark:} Smooth but potentially non-convex flow-pressure relationship!\\
 
-Valve model \verb\smooth_pres_momentum\:
+Valve model \verb.smooth_pres_momentum.:
 \begin{align}
 q(p-p_{\mathrm{open}}) = \begin{cases}\frac{p-p_{\mathrm{open}}}{R_{\max}}, & p < p_{\mathrm{open}}-0.5\epsilon \\ h_{00}p_{0} + h_{10}m_{0}\epsilon + h_{01}p_{1} + h_{11}m_{1}\epsilon, & p \geq p_{\mathrm{open}}-0.5\epsilon \;\text{and}\; p < p_{\mathrm{open}}+0.5\epsilon \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}+0.5\epsilon  \end{cases}\nonumber
 \end{align}
@@ -842,10 +842,10 @@ with
 s=\frac{p-p_{\mathrm{open}}+0.5\epsilon}{\epsilon} \nonumber
 \end{align}
 \textbf{Remarks:}\\
-$-$ Collapses to valve model \verb\pwlin_pres\ for $\epsilon=0$\\
+$-$ Collapses to valve model \verb.pwlin_pres. for $\epsilon=0$\\
 $-$ Smooth and convex flow-pressure relationship\\
 
-Valve model \verb\pw_pres_regurg\:
+Valve model \verb.pw_pres_regurg.:
 \begin{equation}
 q(p-p_{\mathrm{open}}) = \begin{cases} c A_{\mathrm{o}} \sqrt{p-p_{\mathrm{open}}}, & p < p_{\mathrm{open}} \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}  \end{cases}\nonumber
 \end{equation}
@@ -963,6 +963,6 @@ Q_{\mathrm{at}}^{r} := -\frac{\mathrm{d}V_{\mathrm{at}}^{r}}{\mathrm{d}t}, \qqua
 Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumber
 \end{align}
 
-\bibliography{../../../research_doc/literature/references}
+\bibliography{ref}
 
 \end{document}
