@@ -357,10 +357,11 @@ r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\
 -- Pressure residual operator (\ref{eq:res_p_fluid}) is augmented with the following terms:
 \begin{align}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\bs{\nabla}\delta p) \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) - \bs{\nabla} \cdot \bs{\sigma}(\bs{v},p)\right]\,\mathrm{d}v 
-\end{align}\\
+\end{align}
 
 
-Reduced scheme (optimized for first-order): \verb.supg_pspg2.:\\
+Reduced scheme (optimized for first-order): \verb.supg_pspg2.:
+
 -- Velocity residual operator (\ref{eq:res_v_fluid}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v \\
@@ -481,7 +482,7 @@ r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{SUPG}}\
 \begin{align}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{PSPG}}\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p) \;\cdot \\
 & \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V
-\end{align}\\
+\end{align}
 
 \verb.supg_pspg2.:\\
 -- Velocity residual operator (\ref{eq:res_v_fluid_ale}) is augmented with the following terms:
@@ -799,16 +800,16 @@ with the unstressed volume $V_{\mathrm{u}}$ and the time-varying elastance
 \begin{equation}
 E(t)=\left(E_{\mathrm{max}}-E_{\mathrm{min}}\right)\cdot \hat{y}(t)+E_{\mathrm{min}} \label{at_elast},
 \end{equation}
-where $E_{\mathrm{max}}$ and $E_{\mathrm{min}}$ denote the maximum and minimum elastance, respectively. The normalized activation function $\hat{y}(t)$ is input by the user.\\
+where $E_{\mathrm{max}}$ and $E_{\mathrm{min}}$ denote the maximum and minimum elastance, respectively. The normalized activation function $\hat{y}(t)$ is input by the user.
 
-Flow-pressure relations for the four valves, eq. (\ref{eq:mv_flow}), (\ref{eq:av_flow}), (\ref{eq:tv_flow}), (\ref{eq:pv_flow}), are functions of the pressure difference $p-p_{\mathrm{open}}$ across the valve. The following valve models can be defined:\\
+Flow-pressure relations for the four valves, eq. (\ref{eq:mv_flow}), (\ref{eq:av_flow}), (\ref{eq:tv_flow}), (\ref{eq:pv_flow}), are functions of the pressure difference $p-p_{\mathrm{open}}$ across the valve. The following valve models can be defined:
 
 Valve model \verb.pwlin_pres.:
 \begin{align}
 q(p-p_{\mathrm{open}}) = \frac{p-p_{\mathrm{open}}}{\tilde{R}}, \quad \text{with}\; \tilde{R} = \begin{cases} R_{\max}, & p < p_{\mathrm{open}} \\
 R_{\min}, & p \geq p_{\mathrm{open}} \end{cases}\nonumber
 \end{align}
-\textbf{Remark:} Non-smooth flow-pressure relationship\\
+\textbf{Remark:} Non-smooth flow-pressure relationship
 
 Valve model \verb.pwlin_time.:
 \begin{align}
@@ -816,13 +817,13 @@ q(p-p_{\mathrm{open}}) = \frac{p-p_{\mathrm{open}}}{\tilde{R}},\quad \text{with}
 R_{\min}, & t \geq t_{\mathrm{open}} \;\text{or}\; t < t_{\mathrm{close}} \end{cases}, & t_{\mathrm{open}} > t_{\mathrm{close}} \\ \begin{cases} R_{\max}, & t < t_{\mathrm{open}} \;\text{or}\; t \geq t_{\mathrm{close}} \\
 R_{\min}, & t \geq t_{\mathrm{open}} \;\text{and}\; t < t_{\mathrm{close}} \end{cases}, & \text{else} \end{cases}\nonumber
 \end{align}
-\textbf{Remark:} Non-smooth flow-pressure relationship with resistance only dependent on timings, not the pressure difference!\\
+\textbf{Remark:} Non-smooth flow-pressure relationship with resistance only dependent on timings, not the pressure difference!
 
 Valve model \verb.smooth_pres_resistance.:
 \begin{align}
 q(p-p_{\mathrm{open}}) = \frac{p-p_{\mathrm{open}}}{\tilde{R}},\quad \text{with}\;\tilde{R} = 0.5\left(R_{\max}-R_{\min}\right)\left(\tanh\frac{p-p_{\mathrm{open}}}{\epsilon}+1\right) + R_{\min}\nonumber
 \end{align}
-\textbf{Remark:} Smooth but potentially non-convex flow-pressure relationship!\\
+\textbf{Remark:} Smooth but potentially non-convex flow-pressure relationship!
 
 Valve model \verb.smooth_pres_momentum.:
 \begin{align}
@@ -841,15 +842,15 @@ with
 \begin{align}
 s=\frac{p-p_{\mathrm{open}}+0.5\epsilon}{\epsilon} \nonumber
 \end{align}
-\textbf{Remarks:}\\
+\textbf{Remarks:}
 $-$ Collapses to valve model \verb.pwlin_pres. for $\epsilon=0$\\
-$-$ Smooth and convex flow-pressure relationship\\
+$-$ Smooth and convex flow-pressure relationship
 
 Valve model \verb.pw_pres_regurg.:
 \begin{equation}
 q(p-p_{\mathrm{open}}) = \begin{cases} c A_{\mathrm{o}} \sqrt{p-p_{\mathrm{open}}}, & p < p_{\mathrm{open}} \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}  \end{cases}\nonumber
 \end{equation}
-\textbf{Remark:} Model to allow a regurgitant valve in the closed state, degree of regurgitation can be varied by specifying the valve regurgitant area $A_{\mathrm{o}}$\\
+\textbf{Remark:} Model to allow a regurgitant valve in the closed state, degree of regurgitation can be varied by specifying the valve regurgitant area $A_{\mathrm{o}}$
 
 
 Coronary circulation model:
