@@ -42,6 +42,9 @@ Still experimental / to-do:
 - Electrophysiology/scalar transport
 - ... whatever might be wanted in some future ...
 
+### Documentation ###
+
+Documentation can be viewed at https://ambit.readthedocs.io
 
 ### Installation ###
 
