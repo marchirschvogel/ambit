@@ -14,7 +14,10 @@ release = '1.1.3'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["myst_parser"] # to have Markdown working with Sphinx...
+extensions = ["myst_parser", # to have Markdown working with Sphinx...
+              "sphinxcontrib.bibtex"]
+
+bibtex_bibfiles = ['ref.bib']
 
 templates_path = ['_templates']
 exclude_patterns = []

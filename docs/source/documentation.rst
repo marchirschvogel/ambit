@@ -15,7 +15,7 @@ Preface
   multi-physics simulations focusing on – but not limited to – cardiac
   mechanics. Amongst others, it contains re-implementations and
   generalizations of methods developed by the author for his PhD thesis
-  :raw-latex:`\cite{hirschvogel2018}`. Ambit makes use of the
+  :cite:t:`hirschvogel2018`. Ambit makes use of the
   open-source finite element library FEniCS/dolfinx
   (https://fenicsproject.org) :raw-latex:`\cite{logg2012}` along with
   the linear algebra package PETSc (https://petsc.org)
@@ -31,7 +31,7 @@ Preface
   finite strain solid dynamics :raw-latex:`\cite{holzapfel2000}`,
   implementing a range of hyperelastic, viscous, and active material
   models. Specifically, the well-known anisotropic Holzapfel-Ogden
-  :raw-latex:`\cite{holzapfel2009}` and Guccione models
+  :cite:t:`holzapfel2009` and Guccione models
   :raw-latex:`\cite{guccione1995}` for structural description of the
   myocardium are provided, along with a bunch of other models. It
   further implements strain- and stress-mediated volumetric growth
@@ -948,8 +948,4 @@ with:
    Q_{\mathrm{at}}^{r} := -\frac{\mathrm{d}V_{\mathrm{at}}^{r}}{\mathrm{d}t}, \qquad
    Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumber\end{aligned}
 
-   
-.. raw:: latex
-
-   \bibliographystyle{abbrv}
-   \bibliography{ref}
+.. bibliography::
