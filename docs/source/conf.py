@@ -22,7 +22,12 @@ bibtex_bibfiles = ['ref.bib']
 templates_path = ['_templates']
 exclude_patterns = []
 
-
+latex_elements = {
+    'preamble': r'''
+\usepackage[titles]{tocloft}
+\mathchardef\mhyphen="2D
+''',
+}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
