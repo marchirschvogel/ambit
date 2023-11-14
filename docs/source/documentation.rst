@@ -15,11 +15,11 @@ Preface
   multi-physics simulations focusing on – but not limited to – cardiac
   mechanics. Amongst others, it contains re-implementations and
   generalizations of methods developed by the author for his PhD thesis
-  :raw-latex:`\cite{hirschvogel2018}`. Ambit makes use of the
+  :cite:t:`hirschvogel2018`. Ambit makes use of the
   open-source finite element library FEniCS/dolfinx
-  (https://fenicsproject.org) :raw-latex:`\cite{logg2012}` along with
+  (https://fenicsproject.org) :cite:t:`logg2012` along with
   the linear algebra package PETSc (https://petsc.org)
-  :raw-latex:`\cite{petsc-user-ref}`. It is constantly updated to ensure
+  :cite:t:`petsc-user-ref`. It is constantly updated to ensure
   compatibility with a recent dolfinx development version, hence
   guaranteeing a state-of-the-art finite element and linear algebra
   backend.
@@ -28,28 +28,28 @@ Preface
   programming or in-depth knowledge of any library-specific syntax is
   required.
 | Ambit provides general nonlinear (compressible or incompressible)
-  finite strain solid dynamics :raw-latex:`\cite{holzapfel2000}`,
+  finite strain solid dynamics :cite:t:`holzapfel2000`,
   implementing a range of hyperelastic, viscous, and active material
   models. Specifically, the well-known anisotropic Holzapfel-Ogden
-  :cite:t:{holzapfel2009``} and Guccione models
-  :raw-latex:`\cite{guccione1995}` for structural description of the
+  :cite:t:`holzapfel2009` and Guccione models
+  :cite:t:`guccione1995` for structural description of the
   myocardium are provided, along with a bunch of other models. It
   further implements strain- and stress-mediated volumetric growth
-  models :raw-latex:`\cite{goektepe2010}` that allow to model
+  models :cite:t:`goektepe2010` that allow to model
   (maladaptive) ventricular shape and size changes. Inverse mechanics
   approaches to imprint loads into a reference state are implemented
-  using the so-called prestressing method :raw-latex:`\cite{gee2010}` in
-  displacement formulation :raw-latex:`\cite{schein2021}`.
+  using the so-called prestressing method :cite:t:`gee2010` in
+  displacement formulation :cite:t:`schein2021`.
 | Furthermore, fluid dynamics in terms of incompressible
   Navier-Stokes/Stokes equations – either in Eulerian or Arbitrary
   Lagrangian-Eulerian (ALE) reference frames – are implemented.
   Taylor-Hood elements or equal-order approximations with SUPG/PSPG
-  stabilization :raw-latex:`\cite{tezduyar2000}` can be used.
+  stabilization :cite:t:`tezduyar2000` can be used.
 | A variety of reduced 0D lumped models targeted at blood circulation
   modeling are implemented, including 3- and 4-element Windkessel models
-  :raw-latex:`\cite{westerhof2009}` as well as closed-loop full
-  circulation :raw-latex:`\cite{hirschvogel2017}` and coronary flow
-  models :raw-latex:`\cite{arthurs2016}`.
+  :cite:t:`westerhof2009` as well as closed-loop full
+  circulation :cite:t:`hirschvogel2017` and coronary flow
+  models :cite:t:`arthurs2016`.
 | Monolithic multi-physics coupling of solid, fluid, and ALE-fluid with
   0D lumped models is implemented such that cardiovascular simulations
   with realistic boundary conditions can be performed. Monolithic
@@ -59,11 +59,11 @@ Preface
 | Implementations for a recently proposed novel physics- and
   projection-based model reduction for FSI, denoted as
   fluid-reduced-solid interaction (FrSI)
-  :raw-latex:`\cite{hirschvogel2022preprint}`, are provided, along with
+  :cite:t:`hirschvogel2022preprint`, are provided, along with
   POD-based Galerkin model reduction techniques
-  :raw-latex:`\cite{farhat2014}` using full or boundary subspaces.
+  :cite:t:`farhat2014` using full or boundary subspaces.
 | The nonlinear (single- or multi-field) problems are solved with a
-  customized Newton solver with PTC :raw-latex:`\cite{gee2009}`
+  customized Newton solver with PTC :cite:t:`gee2009`
   adaptibity in case of divergence, providing robustness for numerically
   challenging problems. Linear solvers and preconditioners can be chosen
   from the PETSc repertoire, and specific block preconditioners are made
@@ -343,7 +343,7 @@ Stabilization
 | Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin
   (SUPG/PSPG) methods are implemented, either using the full or a
   reduced scheme
-| Full scheme according to :raw-latex:`\cite{tezduyar2000}`:
+| Full scheme according to :cite:t:`tezduyar2000`:
   ``supg_pspg``:
 | – Velocity residual operator (`[eq:res_v_fluid] <#eq:res_v_fluid>`__)
   is augmented with the following terms:
