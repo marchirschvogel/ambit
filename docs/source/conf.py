@@ -24,7 +24,6 @@ exclude_patterns = []
 
 latex_elements = {
     'preamble': r'''
-\usepackage[titles]{tocloft}
 \mathchardef\mhyphen="2D
 ''',
 }
