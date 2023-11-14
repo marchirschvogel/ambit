@@ -31,7 +31,7 @@ Preface
   finite strain solid dynamics :raw-latex:`\cite{holzapfel2000}`,
   implementing a range of hyperelastic, viscous, and active material
   models. Specifically, the well-known anisotropic Holzapfel-Ogden
-  :cite:t:{`holzapfel2009`} and Guccione models
+  :cite:t:{holzapfel2009``} and Guccione models
   :raw-latex:`\cite{guccione1995}` for structural description of the
   myocardium are provided, along with a bunch of other models. It
   further implements strain- and stress-mediated volumetric growth
