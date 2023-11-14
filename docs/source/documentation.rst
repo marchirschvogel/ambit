@@ -4,6 +4,10 @@ Ambit – A FEniCS-based cardiovascular physics solver
 
 :Author: Dr.-Ing. Marc Hirschvogel
 
+.. role:: raw-latex(raw)
+   :format: latex
+..
+
 Preface
 =======
 
@@ -11,11 +15,12 @@ Preface
   multi-physics simulations focusing on – but not limited to – cardiac
   mechanics. Amongst others, it contains re-implementations and
   generalizations of methods developed by the author for his PhD thesis
-  (Hirschvogel 2018). Ambit makes use of the open-source finite element
-  library FEniCS/dolfinx (https://fenicsproject.org) (Logg, Mardal, and
-  Wells 2012) along with the linear algebra package PETSc
-  (https://petsc.org) (Balay et al. 2022). It is constantly updated to
-  ensure compatibility with a recent dolfinx development version, hence
+  :raw-latex:`\cite{hirschvogel2018}`. Ambit makes use of the
+  open-source finite element library FEniCS/dolfinx
+  (https://fenicsproject.org) :raw-latex:`\cite{logg2012}` along with
+  the linear algebra package PETSc (https://petsc.org)
+  :raw-latex:`\cite{petsc-user-ref}`. It is constantly updated to ensure
+  compatibility with a recent dolfinx development version, hence
   guaranteeing a state-of-the-art finite element and linear algebra
   backend.
 | Ambit is designed such that the user only needs to provide input files
@@ -23,27 +28,28 @@ Preface
   programming or in-depth knowledge of any library-specific syntax is
   required.
 | Ambit provides general nonlinear (compressible or incompressible)
-  finite strain solid dynamics (Holzapfel 2000), implementing a range of
-  hyperelastic, viscous, and active material models. Specifically, the
-  well-known anisotropic Holzapfel-Ogden (Holzapfel and Ogden 2009) and
-  Guccione models (Guccione, Costa, and McCulloch 1995) for structural
-  description of the myocardium are provided, along with a bunch of
-  other models. It further implements strain- and stress-mediated
-  volumetric growth models (Göktepe et al. 2010) that allow to model
+  finite strain solid dynamics :raw-latex:`\cite{holzapfel2000}`,
+  implementing a range of hyperelastic, viscous, and active material
+  models. Specifically, the well-known anisotropic Holzapfel-Ogden
+  :raw-latex:`\cite{holzapfel2009}` and Guccione models
+  :raw-latex:`\cite{guccione1995}` for structural description of the
+  myocardium are provided, along with a bunch of other models. It
+  further implements strain- and stress-mediated volumetric growth
+  models :raw-latex:`\cite{goektepe2010}` that allow to model
   (maladaptive) ventricular shape and size changes. Inverse mechanics
   approaches to imprint loads into a reference state are implemented
-  using the so-called prestressing method (Gee, Förster, and Wall 2010)
-  in displacement formulation (Schein and Gee 2021).
+  using the so-called prestressing method :raw-latex:`\cite{gee2010}` in
+  displacement formulation :raw-latex:`\cite{schein2021}`.
 | Furthermore, fluid dynamics in terms of incompressible
   Navier-Stokes/Stokes equations – either in Eulerian or Arbitrary
   Lagrangian-Eulerian (ALE) reference frames – are implemented.
   Taylor-Hood elements or equal-order approximations with SUPG/PSPG
-  stabilization (Tezduyar and Osawa 2000) can be used.
+  stabilization :raw-latex:`\cite{tezduyar2000}` can be used.
 | A variety of reduced 0D lumped models targeted at blood circulation
   modeling are implemented, including 3- and 4-element Windkessel models
-  (Westerhof, Lankhaar, and Westerhof 2009) as well as closed-loop full
-  circulation (Hirschvogel et al. 2017) and coronary flow models
-  (Arthurs et al. 2016).
+  :raw-latex:`\cite{westerhof2009}` as well as closed-loop full
+  circulation :raw-latex:`\cite{hirschvogel2017}` and coronary flow
+  models :raw-latex:`\cite{arthurs2016}`.
 | Monolithic multi-physics coupling of solid, fluid, and ALE-fluid with
   0D lumped models is implemented such that cardiovascular simulations
   with realistic boundary conditions can be performed. Monolithic
@@ -52,11 +58,12 @@ Preface
   backend dolfinx.
 | Implementations for a recently proposed novel physics- and
   projection-based model reduction for FSI, denoted as
-  fluid-reduced-solid interaction (FrSI) (Hirschvogel et al. 2022), are
-  provided, along with POD-based Galerkin model reduction techniques
-  (Farhat et al. 2014) using full or boundary subspaces.
+  fluid-reduced-solid interaction (FrSI)
+  :raw-latex:`\cite{hirschvogel2022preprint}`, are provided, along with
+  POD-based Galerkin model reduction techniques
+  :raw-latex:`\cite{farhat2014}` using full or boundary subspaces.
 | The nonlinear (single- or multi-field) problems are solved with a
-  customized Newton solver with PTC (Gee, Kelley, and Lehoucq 2009)
+  customized Newton solver with PTC :raw-latex:`\cite{gee2009}`
   adaptibity in case of divergence, providing robustness for numerically
   challenging problems. Linear solvers and preconditioners can be chosen
   from the PETSc repertoire, and specific block preconditioners are made
@@ -336,7 +343,8 @@ Stabilization
 | Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin
   (SUPG/PSPG) methods are implemented, either using the full or a
   reduced scheme
-| Full scheme according to (Tezduyar and Osawa 2000): ``supg_pspg``:
+| Full scheme according to :raw-latex:`\cite{tezduyar2000}`:
+  ``supg_pspg``:
 | – Velocity residual operator (`[eq:res_v_fluid] <#eq:res_v_fluid>`__)
   is augmented with the following terms:
 
@@ -940,138 +948,8 @@ with:
    Q_{\mathrm{at}}^{r} := -\frac{\mathrm{d}V_{\mathrm{at}}^{r}}{\mathrm{d}t}, \qquad
    Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumber\end{aligned}
 
-.. container:: references
-   :name: refs
+   
+.. raw:: latex
 
-   .. container::
-      :name: ref-arthurs2016
-
-      Arthurs, C. J., K. D. Lau, K. N. Asrress, S. R. Redwood, and C. A.
-      Figueroa. 2016. “A Mathematical Model of Coronary Blood Flow
-      Control: Simulation of Patient-Specific Three-Dimensional
-      Hemodynamics During Exercise.” *Am J Physiol Heart Circ Physiol*
-      310 (9): H1242–H1258. https://doi.org/10.1152/ajpheart.00517.2015.
-
-   .. container::
-      :name: ref-petsc-user-ref
-
-      Balay, Satish, Shrirang Abhyankar, Mark F. Adams, Steven Benson,
-      Jed Brown, Peter Brune, Kris Buschelman, et al. 2022. “PETSc/TAO
-      Users Manual.” ANL-21/39 - Revision 3.17. Argonne National
-      Laboratory.
-
-   .. container::
-      :name: ref-farhat2014
-
-      Farhat, C., P. Avery, T. Chapman, and J. Cortial. 2014.
-      “Dimensional Reduction of Nonlinear Finite Element Dynamic Models
-      with Finite Rotations and Energy-Based Mesh Sampling and Weighting
-      for Computational Efficiency.” *International Journal for
-      Numerical Methods in Engineering* 98 (9): 625–62.
-      https://doi.org/10.1002/nme.4668.
-
-   .. container::
-      :name: ref-gee2010
-
-      Gee, M. W., Ch. Förster, and W. A. Wall. 2010. “A Computational
-      Strategy for Prestressing Patient-Specific Biomechanical Problems
-      Under Finite Deformation.” *International Journal for Numerical
-      Methods in Biomedical Engineering* 26 (1): 52–72.
-      https://doi.org/10.1002/cnm.1236.
-
-   .. container::
-      :name: ref-gee2009
-
-      Gee, M. W., C. T. Kelley, and R. B. Lehoucq. 2009.
-      “Pseudo-Transient Continuation for Nonlinear Transient
-      Elasticity.” *International Journal for Numerical Methods in
-      Engineering* 78 (10): 1209–19. https://doi.org/10.1002/nme.2527.
-
-   .. container::
-      :name: ref-goektepe2010
-
-      Göktepe, S., O. J. Abilez, K. K. Parker, and E. Kuhl. 2010. “A
-      Multiscale Model for Eccentric and Concentric Cardiac Growth
-      Through Sarcomerogenesis.” *J Theor Biol* 265 (3): 433–42.
-      https://doi.org/10.1016/j.jtbi.2010.04.023.
-
-   .. container::
-      :name: ref-guccione1995
-
-      Guccione, J. M., K. D. Costa, and A. D. McCulloch. 1995. “Finite
-      Element Stress Analysis of Left Ventricular Mechanics in the
-      Beating Dog Heart.” *J Biomech* 28 (10): 1167–77.
-      https://doi.org/10.1016/0021-9290(94)00174-3.
-
-   .. container::
-      :name: ref-hirschvogel2018
-
-      Hirschvogel, M. 2018. *Computational Modeling of Patient-Specific
-      Cardiac Mechanics with Model Reduction-Based Parameter Estimation
-      and Applications to Novel Heart Assist Technologies*. PhD thesis,
-      Technische Universität München.
-
-   .. container::
-      :name: ref-hirschvogel2022preprint
-
-      Hirschvogel, M., M. Balmus, M. Bonini, and D. Nordsletten. 2022.
-      “Fluid-Reduced-Solid Interaction (FrSI): Physics- and
-      Projection-Based Model Reduction for Cardiovascular Applications.”
-      *Preprint, Submitted to Elsevier*.
-      https://doi.org/10.2139/ssrn.4281317.
-
-   .. container::
-      :name: ref-hirschvogel2017
-
-      Hirschvogel, M., M. Bassilious, L. Jagschies, S. M. Wildhirt, and
-      M. W. Gee. 2017. “A Monolithic 3D-0D Coupled Closed-Loop Model of
-      the Heart and the Vascular System: Experiment-Based Parameter
-      Estimation for Patient-Specific Cardiac Mechanics.” *Int J Numer
-      Method Biomed Eng* 33 (8): e2842.
-      https://doi.org/10.1002/cnm.2842.
-
-   .. container::
-      :name: ref-holzapfel2000
-
-      Holzapfel, G. A. 2000. *Nonlinear Solid Mechanics – A Continuum
-      Approach for Engineering*. Wiley Press Chichester.
-
-   .. container::
-      :name: ref-holzapfel2009
-
-      Holzapfel, G. A., and R. W. Ogden. 2009. “Constitutive Modelling
-      of Passive Myocardium: A Structurally Based Framework for Material
-      Characterization.” *Phil Trans R Soc A* 367 (1902): 3445–75.
-      https://doi.org/10.1098/rsta.2009.0091.
-
-   .. container::
-      :name: ref-logg2012
-
-      Logg, A., K.-A. Mardal, and G. N. Wells, eds. 2012. *Automated
-      Solution of Differential Equations by the Finite Element Method –
-      the FEniCS Book*. Springer.
-      https://doi.org/10.1007/978-3-642-23099-8.
-
-   .. container::
-      :name: ref-schein2021
-
-      Schein, A., and M. W. Gee. 2021. “Greedy Maximin Distance Sampling
-      Based Model Order Reduction of Prestressed and Parametrized
-      Abdominal Aortic Aneurysms.” *Advanced Modeling and Simulation in
-      Engineering Sciences* 8 (18).
-      https://doi.org/10.1186/s40323-021-00203-7.
-
-   .. container::
-      :name: ref-tezduyar2000
-
-      Tezduyar, T. E., and Y. Osawa. 2000. “Finite Element Stabilization
-      Parameters Computed from Element Matrices and Vectors.” *Computer
-      Methods in Applied Mechanics and Engineering* 190 (3–4): 411–30.
-      https://doi.org/10.1016/S0045-7825(00)00211-5.
-
-   .. container::
-      :name: ref-westerhof2009
-
-      Westerhof, N., J.-W. Lankhaar, and B. E. Westerhof. 2009. “The
-      Arterial Windkessel.” *Med Biol Eng Comput* 47 (2): H81–H88.
-      https://doi.org/10.1007/s11517-008-0359-2.
+   \bibliographystyle{abbrv}
+   \bibliography{ref}
