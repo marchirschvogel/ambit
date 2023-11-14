@@ -69,7 +69,7 @@ docker pull ghcr.io/marchirschvogel/ambit:devenv
 
 ### Usage ###
 
-Check out the examples for the basic problem types in doc/examples to quickly get started running solid, fluid, or 0D model problems. Further, you can have a look
+Check out the examples for the basic problem types in demos to quickly get started running solid, fluid, or 0D model problems. Further, you can have a look
 at input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options.
 
 
