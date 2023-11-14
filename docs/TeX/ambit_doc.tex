@@ -191,7 +191,7 @@ Examples of input files for the respective problem types can be found in the fol
 \begin{align}
 \bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP_inc} \\
 J(\bs{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
-\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
+\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u_inc}\\
 \bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N_inc}\\
 \bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_u_inc}\\
 \bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_v_inc}
@@ -416,9 +416,9 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 -- Primary variables: velocity $\bs{v}$ and pressure $p$
 \begin{align}
 \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T], \label{eq:divsigma_ns_ale} \\
-\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\label{eq:divv_ns}\\
-\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
+\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\label{eq:divv_ns_ale}\\
+\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns_ale}\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns_ale}\\
 \bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0, \label{eq:ini_v_ns}
 \end{align}
 
@@ -513,13 +513,13 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 
 -- (\ref{eq:res_u_solid}) or (\ref{eq:res_u_solid_incomp}) augmented by following term:
 \begin{align}
-r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fS\mhyphen \mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_0\cdot\delta\bs{u}\,\mathrm{d}A
+r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fS\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_0\cdot\delta\bs{u}\,\mathrm{d}A
 \end{align}
 
 -- Multiplier constraint
 
 \begin{align}
-r_{\lambda}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fS\mhyphen 0d}}}\! J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\bs{v}(\bs{u})\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
+r_{\lambda}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fS\text{-}0d}}}\! J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\bs{v}(\bs{u})\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
 \end{align}
 
 -- Discrete linear system for displacement-based solid
@@ -540,13 +540,13 @@ r_{\lambda}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\int\limits_
 
 -- (\ref{eq:res_v_fluid}) augmented by following term:
 \begin{align}
-r_v \leftarrow r_v + \int\limits_{\Gm_t^{\fF\mhyphen \mathrm{0d}}}\!\mathit{\Lambda}\,\bs{n}\cdot\delta\bs{v}\,\mathrm{d}a
+r_v \leftarrow r_v + \int\limits_{\Gm_t^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\bs{n}\cdot\delta\bs{v}\,\mathrm{d}a
 \end{align}
 
 -- Multiplier constraint
 
 \begin{align}
-r_{\lambda}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_t^{\mathrm{\fF\mhyphen 0d}}}\! \bs{n}\cdot\bs{v}\,\mathrm{d}a - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
+r_{\lambda}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_t^{\mathrm{\fF\text{-}0d}}}\! \bs{n}\cdot\bs{v}\,\mathrm{d}a - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
 \end{align}
 
 -- Discrete linear system
@@ -559,13 +559,13 @@ r_{\lambda}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\int\limits_
 
 -- (\ref{eq:res_v_fluid_ale}) augmented by following term:
 \begin{align}
-r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\mhyphen \mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
+r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
 \end{align}
 
 -- Multiplier constraint
 
 \begin{align}
-r_{\lambda}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fF\mhyphen 0d}}}\! J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot(\bs{v}-\bs{w}(\bs{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
+r_{\lambda}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fF\text{-}0d}}}\! J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot(\bs{v}-\bs{w}(\bs{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
 \end{align}
 
 with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
@@ -597,7 +597,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %\subsection{Physics-reduced solid}
 %
 %\begin{align}
-%\Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\mhyphen\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V = \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A, \label{eq:omega_to_gamma}
+%\Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\text{-}\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V = \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A, \label{eq:omega_to_gamma}
 %\end{align}
 %$h_{0}$: reduced solid's wall thickness parameter
 %
@@ -702,9 +702,9 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %\begin{align}
 %    \tilde{r}_{v}^{\mathrm{s}} (\uf(\bs{v}); \delta\bs{v}) 
 %    & := 
-%    \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}} h_0\,\rho_{0}^{\fS}\,\dot{\bs{v}} \cdot \delta\bs{v} \,\mathrm{d}A_0 
+%    \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}} h_0\,\rho_{0}^{\fS}\,\dot{\bs{v}} \cdot \delta\bs{v} \,\mathrm{d}A_0 
 %    + 
-%    \int\limits_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}} h_0\,\tilde{\bs{P}}_{\fS}(\uf(\bs{v}),\bs{v}) : \tilde{\bs{\nabla}}_{0} \delta\bs{v} \,\mathrm{d}A
+%    \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}} h_0\,\tilde{\bs{P}}_{\fS}(\uf(\bs{v}),\bs{v}) : \tilde{\bs{\nabla}}_{0} \delta\bs{v} \,\mathrm{d}A
 %    \label{eq:fsi_solid_weakform_red}
 %\end{align}
 %
@@ -716,7 +716,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %
 %with 
 %\begin{align}
-%    \mathbb{I}_{\Gm}^{i} = \begin{cases} 1,\;\text{if}\;{i} \in \mathcal{N}_{\Gm_{0}^{\mathrm{\fF\mhyphen\fS}}}, \\ 0,\;\text{else},\end{cases} \label{eq:surf_indicative}
+%    \mathbb{I}_{\Gm}^{i} = \begin{cases} 1,\;\text{if}\;{i} \in \mathcal{N}_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}, \\ 0,\;\text{else},\end{cases} \label{eq:surf_indicative}
 %\end{align}
 %
 %
