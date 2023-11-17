@@ -7,3 +7,4 @@ Contents
 .. toctree::
 
    documentation
+   api

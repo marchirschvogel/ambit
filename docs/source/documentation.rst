@@ -15,11 +15,11 @@ Preface
   multi-physics simulations focusing on – but not limited to – cardiac
   mechanics. Amongst others, it contains re-implementations and
   generalizations of methods developed by the author for his PhD thesis
-  :cite:t:`hirschvogel2018`. Ambit makes use of the
+  :cite:p:`hirschvogel2018`. Ambit makes use of the
   open-source finite element library FEniCS/dolfinx
-  (https://fenicsproject.org) :cite:t:`logg2012` along with
+  (https://fenicsproject.org) :cite:p:`logg2012` along with
   the linear algebra package PETSc (https://petsc.org)
-  :cite:t:`petsc-user-ref`. It is constantly updated to ensure
+  :cite:p:`petsc-user-ref`. It is constantly updated to ensure
   compatibility with a recent dolfinx development version, hence
   guaranteeing a state-of-the-art finite element and linear algebra
   backend.
@@ -28,28 +28,28 @@ Preface
   programming or in-depth knowledge of any library-specific syntax is
   required.
 | Ambit provides general nonlinear (compressible or incompressible)
-  finite strain solid dynamics :cite:t:`holzapfel2000`,
+  finite strain solid dynamics :cite:p:`holzapfel2000`,
   implementing a range of hyperelastic, viscous, and active material
   models. Specifically, the well-known anisotropic Holzapfel-Ogden
-  :cite:t:`holzapfel2009` and Guccione models
-  :cite:t:`guccione1995` for structural description of the
+  :cite:p:`holzapfel2009` and Guccione models
+  :cite:p:`guccione1995` for structural description of the
   myocardium are provided, along with a bunch of other models. It
   further implements strain- and stress-mediated volumetric growth
-  models :cite:t:`goektepe2010` that allow to model
+  models :cite:p:`goektepe2010` that allow to model
   (maladaptive) ventricular shape and size changes. Inverse mechanics
   approaches to imprint loads into a reference state are implemented
-  using the so-called prestressing method :cite:t:`gee2010` in
-  displacement formulation :cite:t:`schein2021`.
+  using the so-called prestressing method :cite:p:`gee2010` in
+  displacement formulation :cite:p:`schein2021`.
 | Furthermore, fluid dynamics in terms of incompressible
   Navier-Stokes/Stokes equations – either in Eulerian or Arbitrary
   Lagrangian-Eulerian (ALE) reference frames – are implemented.
   Taylor-Hood elements or equal-order approximations with SUPG/PSPG
-  stabilization :cite:t:`tezduyar2000` can be used.
+  stabilization :cite:p:`tezduyar2000` can be used.
 | A variety of reduced 0D lumped models targeted at blood circulation
   modeling are implemented, including 3- and 4-element Windkessel models
-  :cite:t:`westerhof2009` as well as closed-loop full
-  circulation :cite:t:`hirschvogel2017` and coronary flow
-  models :cite:t:`arthurs2016`.
+  :cite:p:`westerhof2009` as well as closed-loop full
+  circulation :cite:p:`hirschvogel2017` and coronary flow
+  models :cite:p:`arthurs2016`.
 | Monolithic multi-physics coupling of solid, fluid, and ALE-fluid with
   0D lumped models is implemented such that cardiovascular simulations
   with realistic boundary conditions can be performed. Monolithic
@@ -59,11 +59,11 @@ Preface
 | Implementations for a recently proposed novel physics- and
   projection-based model reduction for FSI, denoted as
   fluid-reduced-solid interaction (FrSI)
-  :cite:t:`hirschvogel2022preprint`, are provided, along with
+  :cite:p:`hirschvogel2022preprint`, are provided, along with
   POD-based Galerkin model reduction techniques
-  :cite:t:`farhat2014` using full or boundary subspaces.
+  :cite:p:`farhat2014` using full or boundary subspaces.
 | The nonlinear (single- or multi-field) problems are solved with a
-  customized Newton solver with PTC :cite:t:`gee2009`
+  customized Newton solver with PTC :cite:p:`gee2009`
   adaptibity in case of divergence, providing robustness for numerically
   challenging problems. Linear solvers and preconditioners can be chosen
   from the PETSc repertoire, and specific block preconditioners are made
@@ -340,7 +340,7 @@ Stabilization
 | Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin
   (SUPG/PSPG) methods are implemented, either using the full or a
   reduced scheme
-| Full scheme according to :cite:t:`tezduyar2000`:
+| Full scheme according to :cite:p:`tezduyar2000`:
   ``supg_pspg``:
 | – Velocity residual operator (`[eq:res_v_fluid] <#eq:res_v_fluid>`__)
   is augmented with the following terms:
@@ -575,111 +575,6 @@ Stabilization
 
 – note that :math:`\boldsymbol{\mathsf{K}}_{pp}` is zero for Taylor-Hood
 elements (without stabilization)
-
-Coupling
-========
-
-Solid + 0D flow
----------------
-
-| – Example: ``demos/solid_flow0d``
-| – Problem type: ``solid_flow0d``
-| – (`[eq:res_u_solid] <#eq:res_u_solid>`__) or
-  (`[eq:res_u_solid_incomp] <#eq:res_u_solid_incomp>`__) augmented by
-  following term:
-
-  .. math::
-
-     \begin{aligned}
-     r_u \leftarrow r_u + \int\limits_{\mathit{\Gamma}_0^{\text{s}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\cdot\delta\boldsymbol{u}\,\mathrm{d}A\end{aligned}
-
-– Multiplier constraint
-
-.. math::
-
-   \begin{aligned}
-   r_{\lambda}(\mathit{\Lambda},\boldsymbol{u};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{s}\text{-}0d}}}\! J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\boldsymbol{v}(\boldsymbol{u})\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}\end{aligned}
-
-– Discrete linear system for displacement-based solid
-
-.. math::
-
-   \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_0d}\end{aligned}
-
-– Discrete linear system for incompressible solid
-
-.. math::
-
-   \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp_0d}\end{aligned}
-
-Fluid + 0D flow
----------------
-
-| – Example: ``demos/fluid_flow0d``
-| – Problem type: ``fluid_flow0d``
-| – (`[eq:res_v_fluid] <#eq:res_v_fluid>`__) augmented by following
-  term:
-
-  .. math::
-
-     \begin{aligned}
-     r_v \leftarrow r_v + \int\limits_{\mathit{\Gamma}_t^{\text{f}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a\end{aligned}
-
-– Multiplier constraint
-
-.. math::
-
-   \begin{aligned}
-   r_{\lambda}(\mathit{\Lambda},\boldsymbol{v};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_t^{\mathrm{\text{f}\text{-}0d}}}\! \boldsymbol{n}\cdot\boldsymbol{v}\,\mathrm{d}a - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}\end{aligned}
-
-– Discrete linear system
-
-.. math::
-
-   \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_0d}\end{aligned}
-
-ALE fluid + 0D flow
--------------------
-
-| – Problem type: ``fluid_ale_flow0d``
-| – (`[eq:res_v_fluid_ale] <#eq:res_v_fluid_ale>`__) augmented by
-  following term:
-
-  .. math::
-
-     \begin{aligned}
-     r_v \leftarrow r_v + \int\limits_{\mathit{\Gamma}_0^{\text{f}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{v}\,\mathrm{d}A\end{aligned}
-
-– Multiplier constraint
-
-.. math::
-
-   \begin{aligned}
-   r_{\lambda}(\mathit{\Lambda},\boldsymbol{v},\boldsymbol{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{f}\text{-}0d}}}\! J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot(\boldsymbol{v}-\boldsymbol{w}(\boldsymbol{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}\end{aligned}
-
-| with
-  :math:`\boldsymbol{w}(\boldsymbol{d})=\frac{\mathrm{d}\boldsymbol{d}}{\mathrm{d}t}`
-| – Discrete linear system
-
-  .. math::
-
-     \begin{aligned}
-     \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale_0d}\end{aligned}
-
-Fluid-Solid Interaction (FSI)
------------------------------
-
-| – Problem type: ``fsi``
-| – Not yet fully implemented!
-
-Fluid-Solid Interaction (FSI) + 0D flow
----------------------------------------
-
-| – Problem type: ``fsi_flow0d``
-| – Not yet fully implemented!
 
 0D flow: Lumped parameter models
 ================================
@@ -941,5 +836,110 @@ with:
    Q_{\mathrm{v}}^{\ell} := -\frac{\mathrm{d}V_{\mathrm{v}}^{\ell}}{\mathrm{d}t}, \qquad
    Q_{\mathrm{at}}^{r} := -\frac{\mathrm{d}V_{\mathrm{at}}^{r}}{\mathrm{d}t}, \qquad
    Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumber\end{aligned}
+
+Multi-physics coupling
+======================
+
+Solid + 0D flow
+---------------
+
+| – Example: ``demos/solid_flow0d``
+| – Problem type: ``solid_flow0d``
+| – (`[eq:res_u_solid] <#eq:res_u_solid>`__) or
+  (`[eq:res_u_solid_incomp] <#eq:res_u_solid_incomp>`__) augmented by
+  following term:
+
+  .. math::
+
+     \begin{aligned}
+     r_u \leftarrow r_u + \int\limits_{\mathit{\Gamma}_0^{\text{s}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\cdot\delta\boldsymbol{u}\,\mathrm{d}A\end{aligned}
+
+– Multiplier constraint
+
+.. math::
+
+   \begin{aligned}
+   r_{\mathit{\Lambda}}(\mathit{\Lambda},\boldsymbol{u};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{s}\text{-}0d}}}\! J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\boldsymbol{v}(\boldsymbol{u})\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}\end{aligned}
+
+– Discrete linear system for displacement-based solid
+
+.. math::
+
+   \begin{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_0d}\end{aligned}
+
+– Discrete linear system for incompressible solid
+
+.. math::
+
+   \begin{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp_0d}\end{aligned}
+
+Fluid + 0D flow
+---------------
+
+| – Example: ``demos/fluid_flow0d``
+| – Problem type: ``fluid_flow0d``
+| – (`[eq:res_v_fluid] <#eq:res_v_fluid>`__) augmented by following
+  term:
+
+  .. math::
+
+     \begin{aligned}
+     r_v \leftarrow r_v + \int\limits_{\mathit{\Gamma}_t^{\text{f}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\boldsymbol{n}\cdot\delta\boldsymbol{v}\,\mathrm{d}a\end{aligned}
+
+– Multiplier constraint
+
+.. math::
+
+   \begin{aligned}
+   r_{\mathit{\Lambda}}(\mathit{\Lambda},\boldsymbol{v};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_t^{\mathrm{\text{f}\text{-}0d}}}\! \boldsymbol{n}\cdot\boldsymbol{v}\,\mathrm{d}a - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}\end{aligned}
+
+– Discrete linear system
+
+.. math::
+
+   \begin{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_0d}\end{aligned}
+
+ALE fluid + 0D flow
+-------------------
+
+| – Problem type: ``fluid_ale_flow0d``
+| – (`[eq:res_v_fluid_ale] <#eq:res_v_fluid_ale>`__) augmented by
+  following term:
+
+  .. math::
+
+     \begin{aligned}
+     r_v \leftarrow r_v + \int\limits_{\mathit{\Gamma}_0^{\text{f}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{v}\,\mathrm{d}A\end{aligned}
+
+– Multiplier constraint
+
+.. math::
+
+   \begin{aligned}
+   r_{\lambda}(\mathit{\Lambda},\boldsymbol{v},\boldsymbol{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{f}\text{-}0d}}}\! J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot(\boldsymbol{v}-\boldsymbol{w}(\boldsymbol{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}\end{aligned}
+
+| with
+  :math:`\boldsymbol{w}(\boldsymbol{d})=\frac{\mathrm{d}\boldsymbol{d}}{\mathrm{d}t}`
+| – Discrete linear system
+
+  .. math::
+
+     \begin{aligned}
+     \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale_0d}\end{aligned}
+
+Fluid-Solid Interaction (FSI)
+-----------------------------
+
+| – Problem type: ``fsi``
+| – Not yet fully implemented!
+
+Fluid-Solid Interaction (FSI) + 0D flow
+---------------------------------------
+
+| – Problem type: ``fsi_flow0d``
+| – Not yet fully implemented!
  
 .. bibliography::

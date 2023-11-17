@@ -15,7 +15,11 @@ release = '1.1.3'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ["myst_parser", # to have Markdown working with Sphinx...
-              "sphinxcontrib.bibtex"]
+              "sphinxcontrib.bibtex",
+              "sphinx.ext.autodoc",
+              "sphinx.ext.autosummary"]
+
+autodoc_mock_imports = ["mpi4py","petsc4py","dolfinx","basix"]
 
 bibtex_bibfiles = ['ref.bib']
 
