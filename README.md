@@ -4,7 +4,7 @@
 
 3D nonlinear solid and fluid mechanics finite element Python code using FEniCS and PETSc libraries
 
-https://github.com/marchirschvogel/ambit/assets/52761273/e2a4564b-80dd-46a8-9265-7c7bf65162fb
+https://github.com/marchirschvogel/ambit/assets/52761273/a438ff55-9b37-4572-a1c5-499dd3cfba73
 
 **Heart cycle simulation of a generic bi-ventricular heart model coupled to a closed-loop circulation model.**
 
