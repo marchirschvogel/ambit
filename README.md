@@ -6,8 +6,7 @@
 
 
 
-https://github.com/marchirschvogel/ambit/assets/52761273/90e483d2-d517-4bcd-900c-e8107026fa14
-
+https://github.com/marchirschvogel/ambit/assets/52761273/bf555110-8b41-47dc-b5bc-2b6d018e11ae
 
 **Heart cycle simulation of a generic bi-ventricular heart model coupled to a closed-loop circulation model.**
 
