@@ -9,13 +9,37 @@
 from mpi4py import MPI
 from . import ioroutines
 
-"""
-Ambit main class
-"""
 
 class Ambit():
+    """
+    Ambit main class
+    """
 
     def __init__(self, io_params, time_params, solver_params, fem_params={}, constitutive_params={}, bc_dict={}, time_curves=None, coupling_params={}, multiscale_params={}, mor_params={}):
+        """
+        Parameters
+        ----------
+        io_params : dict or list of dicts
+            Input/output parameters
+        time_params : dict or list of dicts
+            Time integration parameters
+        solver_params : dict or list of dicts
+            Solver parameters for nonlinear and linear solution schemes
+        fem_params : dict or list of dicts, optional
+            Finite element parameters
+        constitutive_params : dict or list of dicts, optional
+            Material parameters
+        bc_dict : dict, optional
+            Boundary conditions
+        time_curves : class, optional
+            Time functions
+        coupling_params : dict or list of dicts, optional
+            Parameters for multi-physics coupling
+        multiscale_params : dict, optional
+            Parameters for multiscale simulation (growth & remodeling)
+        mor_params : dict, optional
+            Model order reduction parameters
+        """
 
         # MPI communicator
         self.comm = MPI.COMM_WORLD
@@ -200,5 +224,8 @@ class Ambit():
 
 
     def solve_problem(self):
+        """
+        Main solve routine
+        """
 
         self.ms.solve_problem()
