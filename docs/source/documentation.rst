@@ -77,7 +77,7 @@ Preface
   in the folder ``demos`` (with detailed setup descriptions) or amogst
   the test cases in the folder ``tests``.
 
-.. _sec_solid:
+.. _sec:solid:
 
 Solid mechanics
 ===============
@@ -97,11 +97,11 @@ Displacement-based
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq_divP} \\
-   \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq_bc_u}\\
-   \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq_bc_N}\\
-   \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq_ini_u}\\
-   \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq_ini_v}\end{aligned}
+   \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
+   \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
+   \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
+   \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
+   \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}\end{aligned}
 
 Incompressible mechanics
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -112,12 +112,12 @@ Incompressible mechanics
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq_divP_inc} \\
-   J(\boldsymbol{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq_J} \\
-   \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq_bc_u_inc}\\
-   \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\mathit{\Gamma}}_{0}^{\mathrm{N}} \times [0, T], \label{eq_bc_N_inc}\\
-   \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0}, \label{eq_ini_u_inc}\\
-   \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0}, \label{eq_ini_v_inc}\end{aligned}
+   \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP_inc} \\
+   J(\boldsymbol{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
+   \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u_inc}\\
+   \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\mathit{\Gamma}}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N_inc}\\
+   \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0}, \label{eq:ini_u_inc}\\
+   \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0}, \label{eq:ini_v_inc}\end{aligned}
 
 with velocity and acceleration
 :math:`\boldsymbol{v}=\frac{\mathrm{d}\boldsymbol{u}}{\mathrm{d}t}` and
@@ -138,21 +138,21 @@ Displacement-based
   .. math::
 
      \begin{aligned}
-     r(\boldsymbol{u};\delta\boldsymbol{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\label{eq_res_u_solid}\end{aligned}
+     r(\boldsymbol{u};\delta\boldsymbol{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\label{eq:res_u_solid}\end{aligned}
 
   – Kinetic virtual work:
 
   .. math::
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \rho_{0}\,\boldsymbol{a}(\boldsymbol{u}) \cdot \delta\boldsymbol{u} \,\mathrm{d}V \label{eq_deltaWkin}\end{aligned}
+     \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \rho_{0}\,\boldsymbol{a}(\boldsymbol{u}) \cdot \delta\boldsymbol{u} \,\mathrm{d}V \label{eq:deltaWkin}\end{aligned}
 
   – Internal virtual work:
 
   .. math::
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V \label{eq_deltaWint}\end{aligned}
+     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V \label{eq:deltaWint}\end{aligned}
 
   – External virtual work:
 
@@ -161,56 +161,56 @@ Displacement-based
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} \hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq_deltaWext_pk1}\end{aligned}
+      \delta \mathcal{W}_{\mathrm{ext}}(\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} \hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq:deltaWext_pk1}\end{aligned}
 
 -  Neumann pressure load in current normal direction:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} \hat{p}(t)\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq_deltaWext_cur_p}\end{aligned}
+      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} \hat{p}(t)\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq:deltaWext_cur_p}\end{aligned}
 
 -  general Neumann load in current direction:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Gamma}_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq_deltaWext_cur}\end{aligned}
+      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Gamma}_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq:deltaWext_cur}\end{aligned}
 
 -  body force:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \hat{\boldsymbol{b}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}V \label{eq_deltaWext_body}\end{aligned}
+      \delta \mathcal{W}_{\mathrm{ext}}(\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \hat{\boldsymbol{b}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}V \label{eq:deltaWext_body}\end{aligned}
 
 -  generalized Robin condition:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} \left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A \label{eq_deltaWext_rob}\end{aligned}
+      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} \left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A \label{eq:deltaWext_rob}\end{aligned}
 
 -  generalized Robin condition in reference surface normal direction:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} (\boldsymbol{n}_0 \otimes \boldsymbol{n}_0)\left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A \label{eq_deltaWext_robn}\end{aligned}
+      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} (\boldsymbol{n}_0 \otimes \boldsymbol{n}_0)\left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A \label{eq:deltaWext_robn}\end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
 
 .. math::
 
    \begin{aligned}
-   \left.\boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}})\right|_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_solid}\end{aligned}
+   \left.\boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}})\right|_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_solid}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k`:
 
 .. math::
 
    \begin{aligned}
-   \left. \boldsymbol{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\boldsymbol{\mathsf{u}}_{n+1}^{k+1}=-\left. \boldsymbol{\mathsf{r}}_{u} \right|_{n+1}^{k} \label{eq_lin_sys_solid}\end{aligned}
+   \left. \boldsymbol{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\boldsymbol{\mathsf{u}}_{n+1}^{k+1}=-\left. \boldsymbol{\mathsf{r}}_{u} \right|_{n+1}^{k} \label{eq:lin_sys_solid}\end{aligned}
 
 Incompressible mechanics: 2-field displacement and pressure variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -221,44 +221,44 @@ Incompressible mechanics: 2-field displacement and pressure variables
 .. math::
 
    \begin{aligned}
-   r_u(\boldsymbol{u},p;\delta\boldsymbol{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u} \label{eq_res_u_solid_incomp}\\
+   r_u(\boldsymbol{u},p;\delta\boldsymbol{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u} \label{eq:res_u_solid_incomp}\\
    r_p(\boldsymbol{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) = 0, \quad \forall \; \delta p\end{aligned}
 
-| – Kinetic virtual work: (`[eq_deltaWkin] <#eq_deltaWkin>`__)
+| – Kinetic virtual work: (`[eq:deltaWkin] <#eq:deltaWkin>`__)
 | – Internal virtual work:
 
   .. math::
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V \label{eq_deltaWint_incomp}\end{aligned}
+     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V \label{eq:deltaWint_incomp}\end{aligned}
 
   – Pressure virtual work:
 
   .. math::
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) &= \int\limits_{\mathit{\Omega}_{0}} (J(\boldsymbol{u}) - 1) \,\delta p \,\mathrm{d}V \label{eq_deltaWpres}\end{aligned}
+     \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) &= \int\limits_{\mathit{\Omega}_{0}} (J(\boldsymbol{u}) - 1) \,\delta p \,\mathrm{d}V \label{eq:deltaWpres}\end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
 
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_solid_inc}\end{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_solid_inc}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k`:
 
 .. math::
 
    \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{p} \end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_solid_incomp}\end{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{p} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp}\end{aligned}
 
-.. _sec_fluid:
+.. _sec:fluid:
 
 Fluid mechanics
 ===============
 
-.. _subsec_fluid_eulerian:
+.. _subsec:fluid_eulerian:
 
 Eulerian reference frame
 ------------------------
@@ -278,11 +278,11 @@ Strong Form
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \label{eq_divsigma_ns} \\
-   \boldsymbol{\nabla}\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\label{eq_divv_ns}\\
-   \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{D}} \times [0, T], \label{eq_bc_v_ns}\\
-   \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{N}} \times [0, T], \label{eq_bc_N_ns}\\
-   \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_t, \label{eq_ini_v_ns}\end{aligned}
+   \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \label{eq:divsigma_ns} \\
+   \boldsymbol{\nabla}\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\label{eq:divv_ns}\\
+   \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
+   \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
+   \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_t, \label{eq:ini_v_ns}\end{aligned}
 
 with a Newtonian fluid constitutive law
 
@@ -303,8 +303,8 @@ Weak Form
   .. math::
 
      \begin{aligned}
-     r_v(\boldsymbol{v},p;\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p;\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \quad \forall \; \delta\boldsymbol{v} \label{eq_res_v_fluid}\\
-     r_p(\boldsymbol{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v};\delta p), \quad \forall \; \delta p \label{eq_res_p_fluid}\end{aligned}
+     r_v(\boldsymbol{v},p;\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p;\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \quad \forall \; \delta\boldsymbol{v} \label{eq:res_v_fluid}\\
+     r_p(\boldsymbol{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v};\delta p), \quad \forall \; \delta p \label{eq:res_p_fluid}\end{aligned}
 
 – Kinetic virtual power:
 
@@ -336,23 +336,23 @@ Weak Form
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Gamma}_t^{\mathrm{N}}} \hat{\boldsymbol{t}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}a \label{eq_deltaPext_neumann}\end{aligned}
+      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Gamma}_t^{\mathrm{N}}} \hat{\boldsymbol{t}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}a \label{eq:deltaPext_neumann}\end{aligned}
 
 -  pressure Neumann load:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= -\int\limits_{\mathit{\Gamma}_t^{\mathrm{N}}} \hat{p}(t)\,\boldsymbol{n} \cdot \delta\boldsymbol{v} \,\mathrm{d}a \label{eq_deltaPext_neumann_true}\end{aligned}
+      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= -\int\limits_{\mathit{\Gamma}_t^{\mathrm{N}}} \hat{p}(t)\,\boldsymbol{n} \cdot \delta\boldsymbol{v} \,\mathrm{d}a \label{eq:deltaPext_neumann_true}\end{aligned}
 
 -  body force:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_t} \hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V \label{eq_deltaPext_body}\end{aligned}
+      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_t} \hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V \label{eq:deltaPext_body}\end{aligned}
 
-.. _subsubsec_stab:
+.. _subsubsec:stab:
 
 Stabilization
 ~~~~~~~~~~~~~
@@ -362,7 +362,7 @@ Stabilization
   reduced scheme
 | Full scheme according to :cite:p:`tezduyar2000`:
   ``supg_pspg``:
-| – Velocity residual operator (`[eq_res_v_fluid] <#eq_res_v_fluid>`__)
+| – Velocity residual operator (`[eq:res_v_fluid] <#eq:res_v_fluid>`__)
   is augmented with the following terms:
 
   .. math::
@@ -371,7 +371,7 @@ Stabilization
      r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{SUPG}}\,(\boldsymbol{\nabla}\delta\boldsymbol{v})\,\boldsymbol{v} \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) - \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v \\
      & + \int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{LSIC}}\,\rho\,(\boldsymbol{\nabla}\cdot\delta\boldsymbol{v})(\boldsymbol{\nabla}\cdot\boldsymbol{v})\,\mathrm{d}v\end{aligned}
 
-  – Pressure residual operator (`[eq_res_p_fluid] <#eq_res_p_fluid>`__)
+  – Pressure residual operator (`[eq:res_p_fluid] <#eq:res_p_fluid>`__)
   is augmented with the following terms:
 
   .. math::
@@ -381,7 +381,7 @@ Stabilization
 
 Reduced scheme (optimized for first-order): ``supg_pspg2``:
 
-– Velocity residual operator (`[eq_res_v_fluid] <#eq_res_v_fluid>`__) is
+– Velocity residual operator (`[eq:res_v_fluid] <#eq:res_v_fluid>`__) is
 augmented with the following terms:
 
 .. math::
@@ -391,7 +391,7 @@ augmented with the following terms:
    & + \int\limits_{\mathit{\Omega}_t} d_2\,(\boldsymbol{\nabla}\cdot\boldsymbol{v}) (\boldsymbol{\nabla}\cdot\delta\boldsymbol{v})\,\mathrm{d}v\\
    &+ \int\limits_{\mathit{\Omega}_t} d_3\,(\boldsymbol{\nabla}p) \cdot (\boldsymbol{\nabla}\delta\boldsymbol{v})\,\boldsymbol{v}\,\mathrm{d}v \end{aligned}
 
-– Pressure residual operator (`[eq_res_p_fluid] <#eq_res_p_fluid>`__) is
+– Pressure residual operator (`[eq:res_p_fluid] <#eq:res_p_fluid>`__) is
 augmented with the following terms:
 
 .. math::
@@ -405,14 +405,14 @@ augmented with the following terms:
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_fluid}\end{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_fluid}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k`:
 
 .. math::
 
    \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid}\end{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid}\end{aligned}
 
 – Note that :math:`\boldsymbol{\mathsf{K}}_{pp}` is zero for Taylor-Hood
 elements (without stabilization)
@@ -442,8 +442,8 @@ ALE problem
   .. math::
 
      \begin{aligned}
-     \boldsymbol{\nabla}_{0} \cdot \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) &= \boldsymbol{0} &&\text{in} \; \mathit{\mathit{\Omega}}_0, \label{eq_divsigma_ale} \\
-     \boldsymbol{d} &= \hat{\boldsymbol{d}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}}, \label{eq_dbc_ale}\end{aligned}
+     \boldsymbol{\nabla}_{0} \cdot \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) &= \boldsymbol{0} &&\text{in} \; \mathit{\mathit{\Omega}}_0, \label{eq:divsigma_ale} \\
+     \boldsymbol{d} &= \hat{\boldsymbol{d}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}}, \label{eq:dbc_ale}\end{aligned}
 
   with
 
@@ -457,7 +457,7 @@ ALE problem
 .. math::
 
    \begin{aligned}
-   r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) := \int\limits_{\mathit{\Omega}_0}\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) : \boldsymbol{\nabla}_{0}\delta\boldsymbol{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\boldsymbol{d} \label{eq_r_d}\end{aligned}
+   r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) := \int\limits_{\mathit{\Omega}_0}\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) : \boldsymbol{\nabla}_{0}\delta\boldsymbol{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\boldsymbol{d} \label{eq:r_d}\end{aligned}
 
 .. _strong-form-2:
 
@@ -470,11 +470,11 @@ Strong form
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \boldsymbol{F}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\boldsymbol{F}^{-1})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T], \label{eq_divsigma_ns_ale} \\
-   \boldsymbol{\nabla}_{0}\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\label{eq_divv_ns_ale}\\
-   \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \label{eq_bc_v_ns_ale}\\
-   \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \label{eq_bc_N_ns_ale}\\
-   \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_0, \label{eq_ini_v_ns_ale}\end{aligned}
+   \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \boldsymbol{F}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\boldsymbol{F}^{-1})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T], \label{eq:divsigma_ns_ale} \\
+   \boldsymbol{\nabla}_{0}\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\label{eq:divv_ns_ale}\\
+   \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns_ale}\\
+   \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns_ale}\\
+   \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_0, \label{eq:ini_v_ns_ale}\end{aligned}
 
 with a Newtonian fluid constitutive law
 
@@ -495,8 +495,8 @@ Weak form
   .. math::
 
      \begin{aligned}
-     r_v(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = 0, \quad \forall \; \delta\boldsymbol{v} \label{eq_res_v_fluid_ale}\\
-     r_p(\boldsymbol{v},\boldsymbol{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p), \quad \forall \; \delta p \label{eq_res_p_fluid_ale}\end{aligned}
+     r_v(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = 0, \quad \forall \; \delta\boldsymbol{v} \label{eq:res_v_fluid_ale}\\
+     r_p(\boldsymbol{v},\boldsymbol{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p), \quad \forall \; \delta p \label{eq:res_p_fluid_ale}\end{aligned}
 
 – Kinetic virtual power:
 
@@ -528,30 +528,30 @@ Weak form
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Gamma}_0^{\mathrm{N}}} \hat{\boldsymbol{t}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}A \label{eq_deltaPext_neumann_ale}\end{aligned}
+      \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Gamma}_0^{\mathrm{N}}} \hat{\boldsymbol{t}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale}\end{aligned}
 
 -  pressure Neumann load:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= -\int\limits_{\mathit{\Gamma}_0^{\mathrm{N}}} \hat{p}(t)\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{v} \,\mathrm{d}A \label{eq_deltaPext_neumann_ale_true}\end{aligned}
+      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= -\int\limits_{\mathit{\Gamma}_0^{\mathrm{N}}} \hat{p}(t)\,J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale_true}\end{aligned}
 
 -  body force:
 
    .. math::
 
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_0} J\,\hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V \label{eq_deltaPext_body_ale}\end{aligned}
+      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_0} J\,\hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V \label{eq:deltaPext_body_ale}\end{aligned}
 
 Stabilization
 ~~~~~~~~~~~~~
 
 | ALE forms of stabilization introduced in sec.
-  `3.1.3 <#subsubsec_stab>`__
+  `3.1.3 <#subsubsec:stab>`__
 | ``supg_pspg``:
 | – Velocity residual operator
-  (`[eq_res_v_fluid_ale] <#eq_res_v_fluid_ale>`__) is augmented with the
+  (`[eq:res_v_fluid_ale] <#eq:res_v_fluid_ale>`__) is augmented with the
   following terms:
 
   .. math::
@@ -562,7 +562,7 @@ Stabilization
      & + \int\limits_{\mathit{\Omega}_0}J\, \tau_{\mathrm{LSIC}}\,\rho\,(\boldsymbol{\nabla}_{0}\delta\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}})(\boldsymbol{\nabla}_{0}\boldsymbol{v} : \boldsymbol{F}^{-\mathrm{T}})\,\mathrm{d}V\end{aligned}
 
   – Pressure residual operator
-  (`[eq_res_p_fluid_ale] <#eq_res_p_fluid_ale>`__) is augmented with the
+  (`[eq:res_p_fluid_ale] <#eq:res_p_fluid_ale>`__) is augmented with the
   following terms:
 
   .. math::
@@ -573,7 +573,7 @@ Stabilization
 
 | ``supg_pspg2``:
 | – Velocity residual operator
-  (`[eq_res_v_fluid_ale] <#eq_res_v_fluid_ale>`__) is augmented with the
+  (`[eq:res_v_fluid_ale] <#eq:res_v_fluid_ale>`__) is augmented with the
   following terms:
 
   .. math::
@@ -584,7 +584,7 @@ Stabilization
      &+ \int\limits_{\mathit{\Omega}_0} J\,d_3\,(\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}p) \cdot (\boldsymbol{\nabla}_{0}\delta\boldsymbol{v}\,\boldsymbol{F}^{-1})\,\boldsymbol{v}\,\mathrm{d}V\end{aligned}
 
   – Pressure residual operator
-  (`[eq_res_p_fluid_ale] <#eq_res_p_fluid_ale>`__) is augmented with the
+  (`[eq:res_p_fluid_ale] <#eq:res_p_fluid_ale>`__) is augmented with the
   following terms:
 
   .. math::
@@ -598,19 +598,19 @@ Stabilization
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_fluid_ale}\end{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_fluid_ale}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k`:
 
 .. math::
 
    \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{d} \end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid_ale}\end{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale}\end{aligned}
 
 – note that :math:`\boldsymbol{\mathsf{K}}_{pp}` is zero for Taylor-Hood
 elements (without stabilization)
 
-.. _sec_flow0d:
+.. _sec:flow0d:
 
 0D flow: Lumped parameter models
 ================================
@@ -644,9 +644,9 @@ Systemic and pulmonary circulation
    \begin{aligned}
    &\text{left heart and systemic circulation} && \nonumber\\
    &-Q_{\mathrm{at}}^{\ell} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{pul}}}q_{\mathrm{ven},i}^{\mathrm{pul}} - q_{\mathrm{v,in}}^{\ell} && \text{left atrium flow balance}\nonumber\\
-   &q_{\mathrm{v,in}}^{\ell} = q_{\mathrm{mv}}(p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}) && \text{mitral valve momentum}\label{eq_mv_flow}\\
+   &q_{\mathrm{v,in}}^{\ell} = q_{\mathrm{mv}}(p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}) && \text{mitral valve momentum}\label{eq:mv_flow}\\
    &-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell} && \text{left ventricle flow balance}\nonumber\\
-   &q_{\mathrm{v,out}}^{\ell} = q_{\mathrm{av}}(p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}) && \text{aortic valve momentum}\label{eq_av_flow}\\
+   &q_{\mathrm{v,out}}^{\ell} = q_{\mathrm{av}}(p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}) && \text{aortic valve momentum}\label{eq:av_flow}\\
    &-Q_{\mathrm{aort}}^{\mathrm{sys}} = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}}\sum\limits_{i=1}^{2}q_{\mathrm{ar,cor,in},i}^{\mathrm{sys}} && \text{aortic root flow balance}\nonumber\\
    &I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,p}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,p}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,d}}^{\mathrm{sys}} && \text{aortic root inertia}\nonumber\\
    &C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,d}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,p}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}} && \text{systemic arterial flow balance}\nonumber\\
@@ -660,9 +660,9 @@ Systemic and pulmonary circulation
    \begin{aligned}
    &\text{right heart and pulmonary circulation} && \nonumber\\
    &-Q_{\mathrm{at}}^{r} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}} q_{\mathrm{ven,cor,out}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r} && \text{right atrium flow balance}\nonumber\\
-   &q_{\mathrm{v,in}}^{r} = q_{\mathrm{tv}}(p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}) && \text{tricuspid valve momentum}\label{eq_tv_flow}\\
+   &q_{\mathrm{v,in}}^{r} = q_{\mathrm{tv}}(p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}) && \text{tricuspid valve momentum}\label{eq:tv_flow}\\
    &-Q_{\mathrm{v}}^{r} = q_{\mathrm{v,in}}^{r} - q_{\mathrm{v,out}}^{r} && \text{right ventricle flow balance}\nonumber\\
-   &q_{\mathrm{v,out}}^{r} = q_{\mathrm{pv}}(p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}) && \text{pulmonary valve momentum}\label{eq_pv_flow}\\
+   &q_{\mathrm{v,out}}^{r} = q_{\mathrm{pv}}(p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}) && \text{pulmonary valve momentum}\label{eq:pv_flow}\\
    &C_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{v,out}}^{r} - q_{\mathrm{ar}}^{\mathrm{pul}} && \text{pulmonary arterial flow balance}\nonumber\\
    &L_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{pul}}\,q_{\mathrm{ar}}^{\mathrm{pul}}=p_{\mathrm{ar}}^{\mathrm{pul}} -p_{\mathrm{ven}}^{\mathrm{pul}} && \text{pulmonary arterial momentum}\nonumber\\
    &C_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{pul}} - \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{pul}}}q_{\mathrm{ven},i}^{\mathrm{pul}} && \text{pulmonary venous flow balance}\nonumber\\
@@ -703,8 +703,8 @@ maximum and minimum elastance, respectively. The normalized activation
 function :math:`\hat{y}(t)` is input by the user.
 
 Flow-pressure relations for the four valves, eq.
-(`[eq_mv_flow] <#eq_mv_flow>`__), (`[eq_av_flow] <#eq_av_flow>`__),
-(`[eq_tv_flow] <#eq_tv_flow>`__), (`[eq_pv_flow] <#eq_pv_flow>`__), are
+(`[eq:mv_flow] <#eq:mv_flow>`__), (`[eq:av_flow] <#eq:av_flow>`__),
+(`[eq:tv_flow] <#eq:tv_flow>`__), (`[eq:pv_flow] <#eq:pv_flow>`__), are
 functions of the pressure difference :math:`p-p_{\mathrm{open}}` across
 the valve. The following valve models can be defined:
 
@@ -904,20 +904,20 @@ Systemic and pulmonary circulation, capillary flow, and respirory model
 | - Model equations described in :cite:p:`hirschvogel2018`, p.
   51ff., 58ff.
 
-.. _sec_multiphys_coupling:
+.. _sec:multiphys_coupling:
 
 Multi-physics coupling
 ======================
 
-.. _subsec_solid_flow0d:
+.. _subsec:solid_flow0d:
 
 Solid + 0D flow
 ---------------
 
 | – Example: ``demos/solid_flow0d``
 | – Problem type: ``solid_flow0d``
-| – (`[eq_res_u_solid] <#eq_res_u_solid>`__) or
-  (`[eq_res_u_solid_incomp] <#eq_res_u_solid_incomp>`__) augmented by
+| – (`[eq:res_u_solid] <#eq:res_u_solid>`__) or
+  (`[eq:res_u_solid_incomp] <#eq:res_u_solid_incomp>`__) augmented by
   following term:
 
   .. math::
@@ -938,7 +938,7 @@ displacement-based solid:
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{\Lambda}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_solid_0d}\end{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{\Lambda}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_solid_0d}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k` for
 displacement-based solid:
@@ -946,7 +946,7 @@ displacement-based solid:
 .. math::
 
    \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_solid_0d}\end{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_0d}\end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n` for
 incompressible solid:
@@ -954,7 +954,7 @@ incompressible solid:
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\Lambda}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{u}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_solid_0d_inc}\end{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\Lambda}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{u}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_solid_0d_inc}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k` for
 incompressible solid:
@@ -962,16 +962,16 @@ incompressible solid:
 .. math::
 
    \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_solid_incomp_0d}\end{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp_0d}\end{aligned}
 
-.. _subsec_fluid_flow0d:
+.. _subsec:fluid_flow0d:
 
 Fluid + 0D flow
 ---------------
 
 | – Example: ``demos/fluid_flow0d``
 | – Problem type: ``fluid_flow0d``
-| – (`[eq_res_v_fluid] <#eq_res_v_fluid>`__) augmented by following
+| – (`[eq:res_v_fluid] <#eq:res_v_fluid>`__) augmented by following
   term:
 
   .. math::
@@ -991,22 +991,22 @@ Fluid + 0D flow
 .. math::
 
    \begin{aligned}
-   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\Lambda}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{v}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_fluid_0d}\end{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\Lambda}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{v}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_fluid_0d}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k`:
 
 .. math::
 
    \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid_0d}\end{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_0d}\end{aligned}
 
-.. _subsec_fluid_ale_flow0d:
+.. _subsec:fluid_ale_flow0d:
 
 ALE fluid + 0D flow
 -------------------
 
 | – Problem type: ``fluid_ale_flow0d``
-| – (`[eq_res_v_fluid_ale] <#eq_res_v_fluid_ale>`__) augmented by
+| – (`[eq:res_v_fluid_ale] <#eq:res_v_fluid_ale>`__) augmented by
   following term:
 
   .. math::
@@ -1028,16 +1028,16 @@ ALE fluid + 0D flow
   .. math::
 
      \begin{aligned}
-     \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq_nonlin_sys_fluid_ale_0d}\end{aligned}
+     \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_fluid_ale_0d}\end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k`:
 
 .. math::
 
    \begin{aligned}
-   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid_ale_0d}\end{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale_0d}\end{aligned}
 
-.. _subsec_fsi:
+.. _subsec:fsi:
 
 Fluid-Solid Interaction (FSI)
 -----------------------------
@@ -1045,7 +1045,7 @@ Fluid-Solid Interaction (FSI)
 | – Problem type: ``fsi``
 | – Not yet fully implemented!
 
-.. _subsec_fsi_flow0d:
+.. _subsec:fsi_flow0d:
 
 Fluid-Solid Interaction (FSI) + 0D flow
 ---------------------------------------
@@ -1053,17 +1053,17 @@ Fluid-Solid Interaction (FSI) + 0D flow
 | – Problem type: ``fsi_flow0d``
 | – Not yet fully implemented!
 
-.. _sec_demos:
+.. _sec:demos:
 
 Demos
 =====
 
-.. _subsec_demos_solid:
+.. _subsec:demos_solid:
 
 Solid
 -----
 
-- Physics description given in sec. `2 <#sec_solid>`__
+– Physics description given in sec. `2 <#sec:solid>`__
 
 Cantilever under tip load
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1081,10 +1081,10 @@ Cantilever under tip load
 
    Cantilever, problem setup.
 
-[fig_cantilever_setup]
+[fig:cantilever_setup]
 
 Study the setup shown in fig.
-`[fig_cantilever_setup] <#fig_cantilever_setup>`__ and the comments in
+`[fig:cantilever_setup] <#fig:cantilever_setup>`__ and the comments in
 the input file ``solid_cantilever.py`` Run the simulation, either in one
 of the provided Docker containers or using your own FEniCSx/Ambit
 installation, using the command
@@ -1099,7 +1099,7 @@ presented setup.
 Open the results file ``results_solid_cantilever_displacement.xdmf`` in
 Paraview, and visualize the deformation over time.
 
-Figure `[fig_cantilever_results] <#fig_cantilever_results>`__ shows the
+Figure `[fig:cantilever_results] <#fig:cantilever_results>`__ shows the
 displacement magnitude at the end of the simulation.
 
 .. figure:: fig/cantilever_results
@@ -1108,14 +1108,14 @@ displacement magnitude at the end of the simulation.
 
    Cantilever, tip deformation. Color shows displacement magnitude.
 
-[fig_cantilever_results]
+[fig:cantilever_results]
 
-.. _subsec_demos_fluid:
+.. _subsec:demos_fluid:
 
 Fluid
 -----
 
-- Physics description given in sec. `3 <#sec_fluid>`__
+– Physics description given in sec. `3 <#sec:fluid>`__
 
 2D channel flow
 ~~~~~~~~~~~~~~~
@@ -1130,7 +1130,7 @@ velocity, 4-node bilinear quadrilaterals for the pressure).
 
    Channel flow, problem setup.
 
-[fig_channel_setup]
+[fig:channel_setup]
 
 Study the setup and the comments in the input file
 :literal:`fluid_channel.py\``. Run the simulation, either in one of the
@@ -1148,7 +1148,7 @@ setup.
 | ``results_fluid_channel_pressure.xdmf`` in Paraview, and visualize the
   velocity as well as the pressure over time.
 
-Fig. `[fig_channel_results] <#fig_channel_results>`__ shows the velocity
+Fig. `[fig:channel_results] <#fig:channel_results>`__ shows the velocity
 magnitude (top) as well as the pressure (bottom part) at the end of the
 simulation.
 
@@ -1159,9 +1159,9 @@ simulation.
    Velocity magnitude (top part) and pressure (bottom part) at end of
    simulation.
 
-[fig_channel_results]
+[fig:channel_results]
 
-.. _subsec_demos_flow0d:
+.. _subsec:demos_flow0d:
 
 0D flow
 -------
@@ -1185,9 +1185,9 @@ is reached after 5 heart cycles.
 
    0D heart, systemic and pulmonary circulation, problem setup.
 
-[fig_syspul_setup]
+[fig:syspul_setup]
 
-Study the setup in fig. `[fig_syspul_setup] <#fig_syspul_setup>`__ and
+Study the setup in fig. `[fig:syspul_setup] <#fig:syspul_setup>`__ and
 the comments in the input file ``flow0d_heart_cycle.py``. Run the
 simulation, either in one of the provided Docker containers or using
 your own FEniCSx/Ambit installation, using the command
@@ -1217,7 +1217,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
   well as the plots of ventricular pressure over volume. Check that the
   overall system volume is constant and around 4-5 liters.
 | The solution is depicted in fig.
-  `[fig_syspul_results] <#fig_syspul_results>`__, showing the time
+  `[fig:syspul_results] <#fig:syspul_results>`__, showing the time
   course of volumes and pressures of the circulatory system.
 
 .. figure:: fig/syspul_results.png
@@ -1231,9 +1231,9 @@ in ``ambit/src/ambit_fe/postprocess/``):
    atrial volumes over time. D. Left and right ventricular
    pressure-volume relationships of periodic (5th) cycle.
 
-[fig_syspul_results]
+[fig:syspul_results]
 
-.. _subsec_demos:solid_flow0d:
+.. _subsec:demos:solid_flow0d:
 
 Solid + 0D flow
 ---------------
@@ -1255,9 +1255,10 @@ Solid + 0D flow
   initial left and right ventricular pressures. Thereafter, we kickstart
   the dynamic simulation with passive ventricular filling by the systole
   of the atria (0D chamber models). Ventricular systole happens in
-  :math:`t \in [0.2 s, 0.53 s]`, hence lasting a third of the whole
-  cycle time. After systole, the heart relaxes and eventually fills to
-  about the same pressure as it has been initialized to.
+  :math:`t \in [0.2\;\mathrm{s}, 0.53\;\mathrm{s}]`, hence lasting a
+  third of the whole cycle time. After systole, the heart relaxes and
+  eventually fills to about the same pressure as it has been initialized
+  to.
 | NOTE: For demonstrative purposes, a fairly coarse finite element
   discretization is chosen here, which by no means yields a spatially
   converged solution and which may be prone to locking phenomena. The
@@ -1275,10 +1276,10 @@ Solid + 0D flow
    Generic 3D ventricular heart model coupled to a closed-loop systemic
    and pulmonary circulation model.
 
-[fig_heart_syspul_setup]
+[fig:heart_syspul_setup]
 
 Study the setup shown in fig.
-`[fig_heart_syspul_setup] <#fig_heart_syspul_setup>`__ and the comments
+`[fig:heart_syspul_setup] <#fig:heart_syspul_setup>`__ and the comments
 in the input file ``solid_flow0d_heart_cycle.py``. Run the simulation,
 either in one of the provided Docker containers or using your own
 FEniCSx/Ambit installation, using the command
@@ -1323,7 +1324,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
   change in 0D variable quantities from beginning to end of a cycle)
   falls below the value of :literal:`\`eps_periodic'` (set to
   :math:`5 \%`). How many cycles are needed to reach periodicity?
-| Figure `[fig_heart_syspul_results] <#fig_heart_syspul_results>`__
+| Figure `[fig:heart_syspul_results] <#fig:heart_syspul_results>`__
   shows a high-fidelity solution using a refined mesh and quadratic
   tetrahedral elements. Compare your solution from the coarser mesh.
   What is the deviation in ventricular volume?
@@ -1339,9 +1340,9 @@ in ``ambit/src/ambit_fe/postprocess/``):
    ventricular pressure-volume relationships. D. Snapshot of heart
    deformation at end-systole, color indicates displacement magnitude.
 
-[fig_heart_syspul_results]
+[fig:heart_syspul_results]
 
-.. _subsec_demos:fluid_flow0d:
+.. _subsec:demos:fluid_flow0d:
 
 Fluid + 0D flow
 ---------------
@@ -1373,10 +1374,10 @@ Blocked pipe flow with 0D model bypass
 
    Blocked pipe with 0D model bypass, simulation setup.
 
-[fig_pipe_0d_setup]
+[fig:pipe_0d_setup]
 
 Study the setup shown in fig.
-`[fig_pipe_0d_setup] <#fig_pipe_0d_setup>`__ and the comments in the
+`[fig:pipe_0d_setup] <#fig:pipe_0d_setup>`__ and the comments in the
 input file ``fluid_flow0d_pipe.py``. Run the simulation, either in one
 of the provided Docker containers or using your own FEniCSx/Ambit
 installation, using the command
@@ -1404,10 +1405,11 @@ Paraview, and visualize the velocity over time.
 .. figure:: fig/pipe_0d_results.png
    :alt: Streamlines of velocity at end of simulation, color indicates
    velcity magnitude.
-
+   :scale: 5%
+   
    Streamlines of velocity at end of simulation, color indicates velcity
    magnitude.
 
-[fig_pipe_0d_results]
+[fig:pipe_0d_results]
  
 .. bibliography::

@@ -163,10 +163,10 @@ Examples of input files for the respective problem types can be found in the fol
 %\begin{figure}[!htp]
 %\centering
 %\includegraphics[width=0.8\textwidth]{/home/mh/work/publications/paper_ambit/code_design.pdf}
-%\caption{Code design}\label{fig_code_design}
+%\caption{Code design}\label{fig:code_design}
 %\end{figure}
 
-\section{Solid mechanics}\label{sec_solid}
+\section{Solid mechanics}\label{sec:solid}
 
 -- Example: \verb.demos/solid.\\
 
@@ -179,22 +179,22 @@ Examples of input files for the respective problem types can be found in the fol
 \subsubsection{Displacement-based}
 -- Primary variable: displacement $\bs{u}$
 \begin{align}
-\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq_divP} \\
-\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq_bc_u}\\
-\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq_bc_N}\\
-\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq_ini_u}\\
-\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq_ini_v}
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP} \\
+\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u}\\
+\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N}\\
+\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_u}\\
+\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0}, \label{eq:ini_v}
 \end{align}
 
 \subsubsection{Incompressible mechanics}
 -- Primary variables: displacement $\bs{u}$ and pressure $p$
 \begin{align}
-\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq_divP_inc} \\
-J(\bs{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq_J} \\
-\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq_bc_u_inc}\\
-\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T], \label{eq_bc_N_inc}\\
-\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq_ini_u_inc}\\
-\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq_ini_v_inc}
+\bs{\nabla}_{0} \cdot \bs{P}(\bs{u},p,\bs{v}(\bs{u})) + \hat{\bs{b}}_{0} &= \rho_{0} \bs{a}(\bs{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:divP_inc} \\
+J(\bs{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \label{eq:J} \\
+\bs{u} &= \hat{\bs{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T], \label{eq:bc_u_inc}\\
+\bs{t}_{0} = \bs{P}\bs{n}_{0} &= \hat{\bs{t}}_{0} &&\text{on} \; \mathit{\Gm}_{0}^{\mathrm{N}} \times [0, T], \label{eq:bc_N_inc}\\
+\bs{u}(\bs{x}_{0},0) &= \hat{\bs{u}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_u_inc}\\
+\bs{v}(\bs{x}_{0},0) &= \hat{\bs{v}}_{0}(\bs{x}_{0}) &&\text{in} \; \mathit{\Om}_{0}, \label{eq:ini_v_inc}
 \end{align}
 
 with velocity and acceleration $\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}$ and $\bs{a}=\frac{\mathrm{d}^2\bs{u}}{\mathrm{d}t^2}$, respectively
@@ -206,21 +206,21 @@ with velocity and acceleration $\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}$ and
 
 -- Principal of Virtual Work:
 \begin{align}
-r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\label{eq_res_u_solid}
+r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\label{eq:res_u_solid}
 \end{align}
 -- Kinetic virtual work:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \rho_{0}\,\bs{a}(\bs{u}) \cdot \delta\bs{u} \,\mathrm{d}V \label{eq_deltaWkin}
+\delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \rho_{0}\,\bs{a}(\bs{u}) \cdot \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWkin}
 \end{align}
 -- Internal virtual work:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V \label{eq_deltaWint}
+\delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWint}
 \end{align}
 -- External virtual work:\\
 \begin{itemize}
 \item conservative Neumann load:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{\bs{t}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}A \label{eq_deltaWext_pk1}
+\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{\bs{t}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}A \label{eq:deltaWext_pk1}
 \end{align}
 %add to the dict of boundary conditions:\\
 %\adjustbox{width=.95\columnwidth}{%
@@ -228,70 +228,70 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 %}%
 \item Neumann pressure load in current normal direction:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{p}(t)\,J \bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{u} \,\mathrm{d}A \label{eq_deltaWext_cur_p}
+\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \hat{p}(t)\,J \bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{u} \,\mathrm{d}A \label{eq:deltaWext_cur_p}
 \end{align}
 \item general Neumann load in current direction:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Gm_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq_deltaWext_cur}
+\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Gm_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}}_{0}(t) \cdot \delta\boldsymbol{u} \,\mathrm{d}A \label{eq:deltaWext_cur}
 \end{align}
 \item body force:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Om_{0}} \hat{\bs{b}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}V \label{eq_deltaWext_body}
+\delta \mathcal{W}_{\mathrm{ext}}(\delta\bs{u}) &= \int\limits_{\Om_{0}} \hat{\bs{b}}_{0}(t) \cdot \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWext_body}
 \end{align}
 
 \item generalized Robin condition:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A \label{eq_deltaWext_rob}
+\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A \label{eq:deltaWext_rob}
 \end{align} 
 \item generalized Robin condition in reference surface normal direction:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} (\bs{n}_0 \otimes \bs{n}_0)\left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A \label{eq_deltaWext_robn}
+\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} (\bs{n}_0 \otimes \bs{n}_0)\left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A \label{eq:deltaWext_robn}
 \end{align}
 
 \end{itemize}
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{align}
-\left.\ROP_{u}(\bs{\mathsf{u}})\right|_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_solid}
+\left.\ROP_{u}(\bs{\mathsf{u}})\right|_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
-\left. \bs{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\bs{\mathsf{u}}_{n+1}^{k+1}=-\left. \ROP_{u} \right|_{n+1}^{k} \label{eq_lin_sys_solid}
+\left. \bs{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\bs{\mathsf{u}}_{n+1}^{k+1}=-\left. \ROP_{u} \right|_{n+1}^{k} \label{eq:lin_sys_solid}
 \end{align}
 
 
 \subsubsection{Incompressible mechanics: 2-field displacement and pressure variables}
 -- Primary variables: displacement $\bs{u}$ and pressure $p$
 \begin{align}
-r_u(\bs{u},p;\delta\bs{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u} \label{eq_res_u_solid_incomp}\\
+r_u(\bs{u},p;\delta\bs{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u} \label{eq:res_u_solid_incomp}\\
 r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0, \quad \forall \; \delta p
 \end{align}
 
--- Kinetic virtual work: (\ref{eq_deltaWkin})\\
+-- Kinetic virtual work: (\ref{eq:deltaWkin})\\
 -- Internal virtual work:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},p,\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V \label{eq_deltaWint_incomp}
+\delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},p,\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V \label{eq:deltaWint_incomp}
 \end{align}
 -- Pressure virtual work:
 \begin{align}
-\delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) &= \int\limits_{\Om_{0}} (J(\bs{u}) - 1) \,\delta p \,\mathrm{d}V \label{eq_deltaWpres}
+\delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) &= \int\limits_{\Om_{0}} (J(\bs{u}) - 1) \,\delta p \,\mathrm{d}V \label{eq:deltaWpres}
 \end{align}
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_solid_inc}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid_inc}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_solid_incomp}
+\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp}
 \end{align}
 
 
-\section{Fluid mechanics}\label{sec_fluid}
+\section{Fluid mechanics}\label{sec:fluid}
 
-\subsection{Eulerian reference frame}\label{subsec_fluid_eulerian}
+\subsection{Eulerian reference frame}\label{subsec:fluid_eulerian}
 
 -- Example: \verb.demos/fluid.\\
 
@@ -302,11 +302,11 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \subsubsection{Strong Form}
 -- Primary variables: velocity $\bs{v}$ and pressure $p$
 \begin{align}
-\bs{\nabla} \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_t \times [0, T], \label{eq_divsigma_ns} \\
-\bs{\nabla}\cdot \bs{v} &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\label{eq_divv_ns}\\
-\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T], \label{eq_bc_v_ns}\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T], \label{eq_bc_N_ns}\\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t, \label{eq_ini_v_ns}
+\bs{\nabla} \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_t \times [0, T], \label{eq:divsigma_ns} \\
+\bs{\nabla}\cdot \bs{v} &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\label{eq:divv_ns}\\
+\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns}\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns}\\
+\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t, \label{eq:ini_v_ns}
 \end{align}
 
 with a Newtonian fluid constitutive law
@@ -319,8 +319,8 @@ with a Newtonian fluid constitutive law
 
 -- Principle of Virtual Power
 \begin{align}
-r_v(\bs{v},p;\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p;\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v};\delta\bs{v}) = 0, \quad \forall \; \delta\bs{v} \label{eq_res_v_fluid}\\
-r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \quad \forall \; \delta p \label{eq_res_p_fluid}
+r_v(\bs{v},p;\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p;\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v};\delta\bs{v}) = 0, \quad \forall \; \delta\bs{v} \label{eq:res_v_fluid}\\
+r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \quad \forall \; \delta p \label{eq:res_p_fluid}
 \end{align}
 
 -- Kinetic virtual power:
@@ -343,28 +343,28 @@ r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \q
 \begin{itemize}
 \item conservative Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_t^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}a \label{eq_deltaPext_neumann}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_t^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}a \label{eq:deltaPext_neumann}
 \end{align}
 \item pressure Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= -\int\limits_{\Gm_t^{\mathrm{N}}} \hat{p}(t)\,\bs{n} \cdot \delta\bs{v} \,\mathrm{d}a \label{eq_deltaPext_neumann_true}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= -\int\limits_{\Gm_t^{\mathrm{N}}} \hat{p}(t)\,\bs{n} \cdot \delta\bs{v} \,\mathrm{d}a \label{eq:deltaPext_neumann_true}
 \end{align}
 \item body force:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Om_t} \hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V \label{eq_deltaPext_body}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Om_t} \hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V \label{eq:deltaPext_body}
 \end{align}
 \end{itemize}
 
-\subsubsection{Stabilization}\label{subsubsec_stab}
+\subsubsection{Stabilization}\label{subsubsec:stab}
 Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin (SUPG/PSPG) methods are implemented, either using the full or a reduced scheme\\
 
 Full scheme according to \cite{tezduyar2000}: \verb.supg_pspg.:\\
--- Velocity residual operator (\ref{eq_res_v_fluid}) is augmented with the following terms:
+-- Velocity residual operator (\ref{eq:res_v_fluid}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\bs{\nabla}\delta\bs{v})\,\bs{v} \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) - \bs{\nabla} \cdot \bs{\sigma}(\bs{v},p)\right]\,\mathrm{d}v \\
 & + \int\limits_{\Om_t} \tau_{\mathrm{LSIC}}\,\rho\,(\bs{\nabla}\cdot\delta\bs{v})(\bs{\nabla}\cdot\bs{v})\,\mathrm{d}v
 \end{align}
--- Pressure residual operator (\ref{eq_res_p_fluid}) is augmented with the following terms:
+-- Pressure residual operator (\ref{eq:res_p_fluid}) is augmented with the following terms:
 \begin{align}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\bs{\nabla}\delta p) \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) - \bs{\nabla} \cdot \bs{\sigma}(\bs{v},p)\right]\,\mathrm{d}v 
 \end{align}
@@ -372,13 +372,13 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 
 Reduced scheme (optimized for first-order): \verb.supg_pspg2.:
 
--- Velocity residual operator (\ref{eq_res_v_fluid}) is augmented with the following terms:
+-- Velocity residual operator (\ref{eq:res_v_fluid}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v \\
 & + \int\limits_{\Om_t} d_2\,(\bs{\nabla}\cdot\bs{v}) (\bs{\nabla}\cdot\delta\bs{v})\,\mathrm{d}v\\
 &+ \int\limits_{\Om_t} d_3\,(\bs{\nabla}p) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v 
 \end{align}
--- Pressure residual operator (\ref{eq_res_p_fluid}) is augmented with the following terms:
+-- Pressure residual operator (\ref{eq:res_p_fluid}) is augmented with the following terms:
 \begin{align}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta p)\,\mathrm{d}v \\
 &+ \frac{1}{\rho}\int\limits_{\Om_t} d_3\,(\bs{\nabla}p) \cdot (\bs{\nabla}\delta p)\,\mathrm{d}v 
@@ -386,12 +386,12 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_fluid}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid}
+\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid}
 \end{align}
 -- Note that $\bs{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
 
@@ -413,8 +413,8 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 
 -- Strong form:
 \begin{align}
-\bs{\nabla}_{0} \cdot \bs{\sigma}^{\mathrm{G}}(\bs{d}) &= \bs{0} &&\text{in} \; \mathit{\Om}_0, \label{eq_divsigma_ale} \\
-\bs{d} &= \hat{\bs{d}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}}, \label{eq_dbc_ale}
+\bs{\nabla}_{0} \cdot \bs{\sigma}^{\mathrm{G}}(\bs{d}) &= \bs{0} &&\text{in} \; \mathit{\Om}_0, \label{eq:divsigma_ale} \\
+\bs{d} &= \hat{\bs{d}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}}, \label{eq:dbc_ale}
 \end{align}
 with
 \begin{align}
@@ -423,18 +423,18 @@ with
 
 -- weak form:
 \begin{align}
-r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}) : \bs{\nabla}_{0}\delta\bs{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\bs{d} \label{eq_r_d}
+r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}) : \bs{\nabla}_{0}\delta\bs{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\bs{d} \label{eq:r_d}
 \end{align}
 
 
 \subsubsection{Strong form}
 -- Primary variables: velocity $\bs{v}$, pressure $p$, and domain displacement $\bs{d}$
 \begin{align}
-\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T], \label{eq_divsigma_ns_ale} \\
-\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\label{eq_divv_ns_ale}\\
-\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \label{eq_bc_v_ns_ale}\\
-\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \label{eq_bc_N_ns_ale}\\
-\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0, \label{eq_ini_v_ns_ale}
+\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T], \label{eq:divsigma_ns_ale} \\
+\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\label{eq:divv_ns_ale}\\
+\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \label{eq:bc_v_ns_ale}\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \label{eq:bc_N_ns_ale}\\
+\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0, \label{eq:ini_v_ns_ale}
 \end{align}
 
 with a Newtonian fluid constitutive law
@@ -448,8 +448,8 @@ with a Newtonian fluid constitutive law
 
 -- Principle of Virtual Power
 \begin{align}
-r_v(\bs{v},p,\bs{d};\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v},\bs{d};\delta\bs{v}) = 0, \quad \forall \; \delta\bs{v} \label{eq_res_v_fluid_ale}\\
-r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p), \quad \forall \; \delta p \label{eq_res_p_fluid_ale}
+r_v(\bs{v},p,\bs{d};\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v},\bs{d};\delta\bs{v}) = 0, \quad \forall \; \delta\bs{v} \label{eq:res_v_fluid_ale}\\
+r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p), \quad \forall \; \delta p \label{eq:res_p_fluid_ale}
 \end{align}
 
 -- Kinetic virtual power:
@@ -472,41 +472,41 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \begin{itemize}
 \item conservative Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_0^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}A \label{eq_deltaPext_neumann_ale}
+\delta \mathcal{P}_{\mathrm{ext}}(\delta\bs{v}) &= \int\limits_{\Gm_0^{\mathrm{N}}} \hat{\bs{t}}(t) \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale}
 \end{align}
 \item pressure Neumann load:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A \label{eq_deltaPext_neumann_ale_true}
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A \label{eq:deltaPext_neumann_ale_true}
 \end{align}
 \item body force:
 \begin{align}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} J\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V \label{eq_deltaPext_body_ale}
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} J\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V \label{eq:deltaPext_body_ale}
 \end{align}
 \end{itemize}
 
 \subsubsection{Stabilization}
-ALE forms of stabilization introduced in sec. \ref{subsubsec_stab}\\
+ALE forms of stabilization introduced in sec. \ref{subsubsec:stab}\\
 \verb.supg_pspg.:\\
--- Velocity residual operator (\ref{eq_res_v_fluid_ale}) is augmented with the following terms:
+-- Velocity residual operator (\ref{eq:res_v_fluid_ale}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{SUPG}}\,(\bs{\nabla}_0\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\;\cdot \\
 & \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
 & + \int\limits_{\Om_0}J\, \tau_{\mathrm{LSIC}}\,\rho\,(\bs{\nabla}_{0}\delta\bs{v} : \bs{F}^{-\mathrm{T}})(\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}})\,\mathrm{d}V
 \end{align}
--- Pressure residual operator (\ref{eq_res_p_fluid_ale}) is augmented with the following terms:
+-- Pressure residual operator (\ref{eq:res_p_fluid_ale}) is augmented with the following terms:
 \begin{align}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{PSPG}}\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p) \;\cdot \\
 & \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V
 \end{align}
 
 \verb.supg_pspg2.:\\
--- Velocity residual operator (\ref{eq_res_v_fluid_ale}) is augmented with the following terms:
+-- Velocity residual operator (\ref{eq:res_v_fluid_ale}) is augmented with the following terms:
 \begin{align}
 r_v \leftarrow r_v &+ \int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V \\
 & + \int\limits_{\Om_0} J\,d_2\,(\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}}) (\bs{\nabla}_{0}\delta\bs{v} : \bs{F}^{-\mathrm{T}})\,\mathrm{d}V\\
 &+ \int\limits_{\Om_0} J\,d_3\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V
 \end{align}
--- Pressure residual operator (\ref{eq_res_p_fluid_ale}) is augmented with the following terms:
+-- Pressure residual operator (\ref{eq:res_p_fluid_ale}) is augmented with the following terms:
 \begin{align}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V \\
 &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_3\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V
@@ -514,17 +514,17 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_fluid_ale}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid_ale}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid_ale}
+\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale}
 \end{align}
 -- note that $\bs{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
 
 
-\section{0D flow: Lumped parameter models}\label{sec_flow0d}
+\section{0D flow: Lumped parameter models}\label{sec:flow0d}
 
 -- Example: \verb.demos/flow0d.\\
 
@@ -551,9 +551,9 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 \begin{align}
 &\text{left heart and systemic circulation} && \nonumber\\
 &-Q_{\mathrm{at}}^{\ell} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{pul}}}q_{\mathrm{ven},i}^{\mathrm{pul}} - q_{\mathrm{v,in}}^{\ell} && \text{left atrium flow balance}\nonumber\\
-&q_{\mathrm{v,in}}^{\ell} = q_{\mathrm{mv}}(p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}) && \text{mitral valve momentum}\label{eq_mv_flow}\\
+&q_{\mathrm{v,in}}^{\ell} = q_{\mathrm{mv}}(p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}) && \text{mitral valve momentum}\label{eq:mv_flow}\\
 &-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell} && \text{left ventricle flow balance}\nonumber\\
-&q_{\mathrm{v,out}}^{\ell} = q_{\mathrm{av}}(p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}) && \text{aortic valve momentum}\label{eq_av_flow}\\
+&q_{\mathrm{v,out}}^{\ell} = q_{\mathrm{av}}(p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}) && \text{aortic valve momentum}\label{eq:av_flow}\\
 &-Q_{\mathrm{aort}}^{\mathrm{sys}} = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}}\sum\limits_{i=1}^{2}q_{\mathrm{ar,cor,in},i}^{\mathrm{sys}} && \text{aortic root flow balance}\nonumber\\
 &I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,p}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,p}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,d}}^{\mathrm{sys}} && \text{aortic root inertia}\nonumber\\
 &C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,d}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,p}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}} && \text{systemic arterial flow balance}\nonumber\\
@@ -565,9 +565,9 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 \begin{align}
 &\text{right heart and pulmonary circulation} && \nonumber\\
 &-Q_{\mathrm{at}}^{r} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}} q_{\mathrm{ven,cor,out}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r} && \text{right atrium flow balance}\nonumber\\
-&q_{\mathrm{v,in}}^{r} = q_{\mathrm{tv}}(p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}) && \text{tricuspid valve momentum}\label{eq_tv_flow}\\
+&q_{\mathrm{v,in}}^{r} = q_{\mathrm{tv}}(p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}) && \text{tricuspid valve momentum}\label{eq:tv_flow}\\
 &-Q_{\mathrm{v}}^{r} = q_{\mathrm{v,in}}^{r} - q_{\mathrm{v,out}}^{r} && \text{right ventricle flow balance}\nonumber\\
-&q_{\mathrm{v,out}}^{r} = q_{\mathrm{pv}}(p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}) && \text{pulmonary valve momentum}\label{eq_pv_flow}\\
+&q_{\mathrm{v,out}}^{r} = q_{\mathrm{pv}}(p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}) && \text{pulmonary valve momentum}\label{eq:pv_flow}\\
 &C_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{v,out}}^{r} - q_{\mathrm{ar}}^{\mathrm{pul}} && \text{pulmonary arterial flow balance}\nonumber\\
 &L_{\mathrm{ar}}^{\mathrm{pul}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{pul}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{pul}}\,q_{\mathrm{ar}}^{\mathrm{pul}}=p_{\mathrm{ar}}^{\mathrm{pul}} -p_{\mathrm{ven}}^{\mathrm{pul}} && \text{pulmonary arterial momentum}\nonumber\\
 &C_{\mathrm{ven}}^{\mathrm{pul}} \frac{\mathrm{d}p_{\mathrm{ven}}^{\mathrm{pul}}}{\mathrm{d}t} = q_{\mathrm{ar}}^{\mathrm{pul}} - \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{pul}}}q_{\mathrm{ven},i}^{\mathrm{pul}} && \text{pulmonary venous flow balance}\nonumber\\
@@ -600,7 +600,7 @@ E(t)=\left(E_{\mathrm{max}}-E_{\mathrm{min}}\right)\cdot \hat{y}(t)+E_{\mathrm{m
 \end{equation}
 where $E_{\mathrm{max}}$ and $E_{\mathrm{min}}$ denote the maximum and minimum elastance, respectively. The normalized activation function $\hat{y}(t)$ is input by the user.
 
-Flow-pressure relations for the four valves, eq. (\ref{eq_mv_flow}), (\ref{eq_av_flow}), (\ref{eq_tv_flow}), (\ref{eq_pv_flow}), are functions of the pressure difference $p-p_{\mathrm{open}}$ across the valve. The following valve models can be defined:
+Flow-pressure relations for the four valves, eq. (\ref{eq:mv_flow}), (\ref{eq:av_flow}), (\ref{eq:tv_flow}), (\ref{eq:pv_flow}), are functions of the pressure difference $p-p_{\mathrm{open}}$ across the valve. The following valve models can be defined:
 
 Valve model \verb.pwlin_pres.:
 \begin{align}
@@ -769,15 +769,15 @@ Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumbe
 - Model equations described in \cite{hirschvogel2018}, p. 51ff., 58ff.
 
 
-\section{Multi-physics coupling}\label{sec_multiphys_coupling}
+\section{Multi-physics coupling}\label{sec:multiphys_coupling}
 
-\subsection{Solid + 0D flow}\label{subsec_solid_flow0d}
+\subsection{Solid + 0D flow}\label{subsec:solid_flow0d}
 
 -- Example: \verb.demos/solid_flow0d.\\
 
 -- Problem type: \verb.solid_flow0d.\\
 
--- (\ref{eq_res_u_solid}) or (\ref{eq_res_u_solid_incomp}) augmented by following term:
+-- (\ref{eq:res_u_solid}) or (\ref{eq:res_u_solid_incomp}) augmented by following term:
 \begin{align}
 r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fS\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_0\cdot\delta\bs{u}\,\mathrm{d}A
 \end{align}
@@ -790,31 +790,31 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 
 -- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\LMZ) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_solid_0d}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\LMZ) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid_0d}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$ for displacement-based solid:
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{\lmzi u} & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_solid_0d}
+\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{\lmzi u} & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_0d}
 \end{align}
 
 -- Discrete nonlinear system to solve in each time step $n$ for incompressible solid:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{u}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_solid_0d_inc}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{u}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid_0d_inc}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$ for incompressible solid:
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi u} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_solid_incomp_0d}
+\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi u} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp_0d}
 \end{align}
 
-\subsection{Fluid + 0D flow}\label{subsec_fluid_flow0d}
+\subsection{Fluid + 0D flow}\label{subsec:fluid_flow0d}
 
 -- Example: \verb.demos/fluid_flow0d.\\
 
 -- Problem type: \verb.fluid_flow0d.\\
 
--- (\ref{eq_res_v_fluid}) augmented by following term:
+-- (\ref{eq:res_v_fluid}) augmented by following term:
 \begin{align}
 r_v \leftarrow r_v + \int\limits_{\Gm_t^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\bs{n}\cdot\delta\bs{v}\,\mathrm{d}a
 \end{align}
@@ -827,18 +827,18 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\in
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_fluid_0d}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid_0d}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid_0d}
+\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_0d}
 \end{align}
 
-\subsection{ALE fluid + 0D flow}\label{subsec_fluid_ale_flow0d}
+\subsection{ALE fluid + 0D flow}\label{subsec:fluid_ale_flow0d}
 -- Problem type: \verb.fluid_ale_flow0d.\\
 
--- (\ref{eq_res_v_fluid_ale}) augmented by following term:
+-- (\ref{eq:res_v_fluid_ale}) augmented by following term:
 \begin{align}
 r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
 \end{align}
@@ -853,23 +853,23 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq_nonlin_sys_fluid_ale_0d}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid_ale_0d}
 \end{align}
 
 -- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
-\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_fluid_ale_0d}
+\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale_0d}
 \end{align}
 
 
-\subsection{Fluid-Solid Interaction (FSI)}\label{subsec_fsi}
+\subsection{Fluid-Solid Interaction (FSI)}\label{subsec:fsi}
 
 -- Problem type: \verb.fsi.\\
 
 -- Not yet fully implemented!
 
 
-\subsection{Fluid-Solid Interaction (FSI) + 0D flow}\label{subsec_fsi_flow0d}
+\subsection{Fluid-Solid Interaction (FSI) + 0D flow}\label{subsec:fsi_flow0d}
 
 -- Problem type: \verb.fsi_flow0d.\\
 
@@ -883,44 +883,44 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %\subsection{Physics-reduced solid}
 %
 %\begin{align}
-%\Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\text{-}\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V = \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A, \label{eq_omega_to_gamma}
+%\Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\text{-}\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V = \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A, \label{eq:omega_to_gamma}
 %\end{align}
 %$h_{0}$: reduced solid's wall thickness parameter
 %
 %\subsubsection{Kinematics}
 %\begin{align}
-%\bs{F} = \bs{\nabla}_{0}\bs{x} = \bs{I} + \bs{\nabla}_{0}\uf, \quad \dot{\bs{F}} = \bs{\nabla}_{0}\vf, \quad \bs{C} = \bs{F}^{\mathrm{T}}\bs{F}, \label{eq_defgrad_mem}
+%\bs{F} = \bs{\nabla}_{0}\bs{x} = \bs{I} + \bs{\nabla}_{0}\uf, \quad \dot{\bs{F}} = \bs{\nabla}_{0}\vf, \quad \bs{C} = \bs{F}^{\mathrm{T}}\bs{F}, \label{eq:defgrad_mem}
 %\end{align}
 %-- fluid domain displacement:
 %\begin{align}
-%\uf = \int\limits_{0}^{t} \bs{v}(\bs{X},t)\,\mathrm{d}t \label{eq_ufluid}
+%\uf = \int\limits_{0}^{t} \bs{v}(\bs{X},t)\,\mathrm{d}t \label{eq:ufluid}
 %\end{align}
 %
 %-- in-plane deformation and rate of deformation gradient:
 %\begin{align}
-%    \bs{F}^{0} = \bs{F}-\bs{F}\bs{n}_0\otimes\bs{n}_0 \quad \text{and} \quad \dot{\bs{F}}^{0} = \dot{\bs{F}}-\dot{\bs{F}}\bs{n}_0\otimes\bs{n}_0, \label{eq_F0F0dot}
+%    \bs{F}^{0} = \bs{F}-\bs{F}\bs{n}_0\otimes\bs{n}_0 \quad \text{and} \quad \dot{\bs{F}}^{0} = \dot{\bs{F}}-\dot{\bs{F}}\bs{n}_0\otimes\bs{n}_0, \label{eq:F0F0dot}
 %\end{align}
 %-- plane strain representation of the right Cauchy-Green tensor:
 %\begin{align}
-%    \bs{C}^{||} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \bs{n}_0\otimes\bs{n}_0 \label{eq_Cplane}
+%    \bs{C}^{||} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \bs{n}_0\otimes\bs{n}_0 \label{eq:Cplane}
 %\end{align}
 %
 %-- relation of in-plane and out-of-plane stretches
 %\begin{align}
-%    I\!\!I\!\!I_{C}^{||} = \det \bs{C}^{||} = \lambda_{\xi}^2 \lambda_{\eta}^2 = \frac{1}{\lambda_{\zeta}^2}, \qquad \rightsquigarrow \lambda_{\zeta} = \frac{1}{\sqrt{I\!\!I\!\!I_{C}^{||}}}\label{eq_detCplane}
+%    I\!\!I\!\!I_{C}^{||} = \det \bs{C}^{||} = \lambda_{\xi}^2 \lambda_{\eta}^2 = \frac{1}{\lambda_{\zeta}^2}, \qquad \rightsquigarrow \lambda_{\zeta} = \frac{1}{\sqrt{I\!\!I\!\!I_{C}^{||}}}\label{eq:detCplane}
 %\end{align}
 %
 %-- membrane right Cauchy-Green deformation tensor
 %\begin{align}
-%    \tilde{\bs{C}} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \frac{1}{I\!\!I\!\!I_{C}^{||}}\bs{n}_0\otimes\bs{n}_0. \label{eq_Cmod}
+%    \tilde{\bs{C}} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \frac{1}{I\!\!I\!\!I_{C}^{||}}\bs{n}_0\otimes\bs{n}_0. \label{eq:Cmod}
 %\end{align}
 %
 %-- rate:
 %\begin{align}
-%    \dot{\tilde{\bs{C}}} = \dot{\bs{F}}^{0^\mathrm{T}}\bs{F}^{0} + \bs{F}^{0^\mathrm{T}}\dot{\bs{F}}^{0} - \frac{\dot{I\!\!I\!\!I}_{C}^{||}}{I\!\!I\!\!I_{C}^{||^2}}\bs{n}_0\otimes\bs{n}_0, \label{eq_Cmoddot}
+%    \dot{\tilde{\bs{C}}} = \dot{\bs{F}}^{0^\mathrm{T}}\bs{F}^{0} + \bs{F}^{0^\mathrm{T}}\dot{\bs{F}}^{0} - \frac{\dot{I\!\!I\!\!I}_{C}^{||}}{I\!\!I\!\!I_{C}^{||^2}}\bs{n}_0\otimes\bs{n}_0, \label{eq:Cmoddot}
 %\end{align}
 %
-%-- time derivative of Eq.~(\ref{eq_detCplane}) with Jacobi's formula:
+%-- time derivative of Eq.~(\ref{eq:detCplane}) with Jacobi's formula:
 %\begin{align}
 %\dot{I\!\!I\!\!I}_{C}^{||} = \dot{\overline{\det \bs{C}^{||}}} &= \det \bs{C}^{||} \,\mathrm{tr}\left(\bs{C}^{||^{-1}} \dot{\bs{C}^{||}}\right) \\
 %&= I\!\!I\!\!I_{C}^{||}\,\mathrm{tr}\left(\bs{C}^{||^{-1}} \left(\dot{\bs{F}}^{0^\mathrm{T}}\bs{F}^{0} + \bs{F}^{0^\mathrm{T}}\dot{\bs{F}}^{0}\right)\right).
@@ -930,23 +930,23 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %\paragraph{General isotropic hyperelasticity}
 %-- exemplified for general isotropic hyperelasticity
 %\begin{align}
-%\mathit{\Psi} = \mathit{\Psi}(I_{\tilde{C}},I\!\!I_{\tilde{C}}) - \frac{1}{2}\ps(I\!\!I\!\!I_{\tilde{C}}-1), \label{eq_sef_red_solid_generic}
+%\mathit{\Psi} = \mathit{\Psi}(I_{\tilde{C}},I\!\!I_{\tilde{C}}) - \frac{1}{2}\ps(I\!\!I\!\!I_{\tilde{C}}-1), \label{eq:sef_red_solid_generic}
 %\end{align}
-%where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are the principal invariants of Eq.~(\ref{eq_Cmod})\\
+%where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are the principal invariants of Eq.~(\ref{eq:Cmod})\\
 %
 %-- 2nd Piola-Kirchhoff stress \cite{holzapfel2000}:
 %\begin{align}
-%\tilde{\bs{S}} = -\ps \tilde{\bs{C}}^{-1} + 2\left(\frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} + I_{\tilde{C}} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}}\right)\bs{I} - 2\frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \tilde{\bs{C}} \label{eq_S_membrane_stress}
+%\tilde{\bs{S}} = -\ps \tilde{\bs{C}}^{-1} + 2\left(\frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} + I_{\tilde{C}} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}}\right)\bs{I} - 2\frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \tilde{\bs{C}} \label{eq:S_membrane_stress}
 %\end{align}
 %
 %-- hydrostatic pressure $\ps$ recovered by plane stress assumption for 2-dimensional continua \cite{holzapfel1996,holzapfel2000}:
 %\begin{align}
-%\ps = 2 \left( \frac{1}{\lambda_{\xi}^2 \lambda_{\eta}^2} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - \lambda_{\xi}^2 \lambda_{\eta}^2 \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) = 2 \left( \frac{1}{I\!\!I\!\!I_{C}^{||}} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - I\!\!I\!\!I_{C}^{||} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) \label{eq_p_mem},
+%\ps = 2 \left( \frac{1}{\lambda_{\xi}^2 \lambda_{\eta}^2} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - \lambda_{\xi}^2 \lambda_{\eta}^2 \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) = 2 \left( \frac{1}{I\!\!I\!\!I_{C}^{||}} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - I\!\!I\!\!I_{C}^{||} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) \label{eq:p_mem},
 %\end{align}
 %
 %-- 1st Piola-Kirchhoff stress then is computed by the push-forward operation
 %\begin{align}
-%    \tilde{\bs{P}}_{\fS} = \bs{F}^{0}\tilde{\bs{S}}, \label{eq_P_membrane_stress}
+%    \tilde{\bs{P}}_{\fS} = \bs{F}^{0}\tilde{\bs{S}}, \label{eq:P_membrane_stress}
 %\end{align}
 %
 %
@@ -954,12 +954,12 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %
 %-- isotropic exponential strain energy \cite{demiray1972}
 %\begin{align}
-%    \mathit{\Psi}(\bs{C},\ps) = \frac{a_0}{2b_0}\left(e^{b_0(\mathrm{tr}\bs{C} - 3)} - 1\right) -\frac{1}{2}\ps(\det{\bs{C}} - 1) \label{eq_psi_pass}
+%    \mathit{\Psi}(\bs{C},\ps) = \frac{a_0}{2b_0}\left(e^{b_0(\mathrm{tr}\bs{C} - 3)} - 1\right) -\frac{1}{2}\ps(\det{\bs{C}} - 1) \label{eq:psi_pass}
 %\end{align}
 %
 %-- viscous pseudo-potential \cite{chapelle2012}
 %\begin{align}
-%\mathit{\Psi}_{\mathrm{v}}(\dot{\bs{C}}) = \frac{\eta}{8}\dot{\bs{C}}:\dot{\bs{C}}\label{eq_psi_visc}
+%\mathit{\Psi}_{\mathrm{v}}(\dot{\bs{C}}) = \frac{\eta}{8}\dot{\bs{C}}:\dot{\bs{C}}\label{eq:psi_visc}
 %\end{align}
 %
 %-- for 3D incompressible hyper-viscoelastic active cardiac mechanics:
@@ -972,7 +972,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %\tilde{\bs{S}}=\tilde{\bs{S}}_{\mathrm{e}} + \tilde{\bs{S}}_{\mathrm{v}} + \tilde{\bs{S}}_{\mathrm{a}} = 2\frac{\partial\mathit{\Psi}(\tilde{\bs{C}})}{\partial\tilde{\bs{C}}} + 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}(\dot{\tilde{\bs{C}}})}{\partial\dot{\tilde{\bs{C}}}} + \tau_{\mathrm{a}}(t)\tilde{\bs{M}}_{0}
 %\end{align}
 %
-%-- note that in presence of viscosity according to Eq.~(\ref{eq_psi_visc}), hydrostatic pressure for hyperelastic solid, Eq.~(\ref{eq_p_mem}), needs to be updated to balance the viscous normal stresses:
+%-- note that in presence of viscosity according to Eq.~(\ref{eq:psi_visc}), hydrostatic pressure for hyperelastic solid, Eq.~(\ref{eq:p_mem}), needs to be updated to balance the viscous normal stresses:
 %\begin{align}
 %\ps \leftarrow \ps - \frac{\eta}{2}\frac{\dot{I\!\!I\!\!I}_{C}^{||}}{I\!\!I\!\!I_{C}^{||^3}}
 %\end{align}
@@ -980,7 +980,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %
 %-- reduced (wall-averaged) structural tensor in circumferential and longitudinal directions $\bs{c}_{0}$ and $\bs{l}_{0}$, respectively:
 %\begin{align}
-%\tilde{\bs{M}}_{0} = \bar{\omega}\, \bs{c}_{0}\otimes\bs{c}_{0} + \bar{\iota}\,\bs{l}_{0}\otimes\bs{l}_{0} + 2\bar{\gamma}\,\mathrm{sym}(\bs{c}_{0}\otimes\bs{l}_{0}). \label{eq_M0}
+%\tilde{\bs{M}}_{0} = \bar{\omega}\, \bs{c}_{0}\otimes\bs{c}_{0} + \bar{\iota}\,\bs{l}_{0}\otimes\bs{l}_{0} + 2\bar{\gamma}\,\mathrm{sym}(\bs{c}_{0}\otimes\bs{l}_{0}). \label{eq:M0}
 %\end{align}
 %
 %\paragraph{Balance equation}
@@ -991,18 +991,18 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %    \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}} h_0\,\rho_{0}^{\fS}\,\dot{\bs{v}} \cdot \delta\bs{v} \,\mathrm{d}A_0 
 %    + 
 %    \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}} h_0\,\tilde{\bs{P}}_{\fS}(\uf(\bs{v}),\bs{v}) : \tilde{\bs{\nabla}}_{0} \delta\bs{v} \,\mathrm{d}A
-%    \label{eq_fsi_solid_weakform_red}
+%    \label{eq:fsi_solid_weakform_red}
 %\end{align}
 %
 %\subsection{Projection-based reduction}
 %
 %\begin{align}
-%    \hat{\bs{\mathsf{S}}}_{v}^{\Gm} = \pmb{\mathbb{I}}_{\Gm} \begin{bmatrix} \bs{\mathsf{v}}_{1}^{\fF} & \hdots & \bs{\mathsf{v}}_{m_v}^{\fF} \end{bmatrix} = \begin{bmatrix} \mathbb{I}_{\Gm}^{1} & & \\ & \mathbb{I}_{\Gm}^{2} & \\ & & \ddots & \\ & & & \mathbb{I}_{\Gm}^{n_v} \end{bmatrix} \begin{bmatrix} v_{1}^1 & \hdots & v_{m_v}^1 \\ v_{1}^2 & \hdots & v_{m_v}^2 \\ \vdots & \ddots & \vdots \\ v_{1}^{n_v} & \hdots & v_{m_v}^{n_v} \end{bmatrix}, \label{eq_snap_surf}
+%    \hat{\bs{\mathsf{S}}}_{v}^{\Gm} = \pmb{\mathbb{I}}_{\Gm} \begin{bmatrix} \bs{\mathsf{v}}_{1}^{\fF} & \hdots & \bs{\mathsf{v}}_{m_v}^{\fF} \end{bmatrix} = \begin{bmatrix} \mathbb{I}_{\Gm}^{1} & & \\ & \mathbb{I}_{\Gm}^{2} & \\ & & \ddots & \\ & & & \mathbb{I}_{\Gm}^{n_v} \end{bmatrix} \begin{bmatrix} v_{1}^1 & \hdots & v_{m_v}^1 \\ v_{1}^2 & \hdots & v_{m_v}^2 \\ \vdots & \ddots & \vdots \\ v_{1}^{n_v} & \hdots & v_{m_v}^{n_v} \end{bmatrix}, \label{eq:snap_surf}
 %\end{align}
 %
 %with 
 %\begin{align}
-%    \mathbb{I}_{\Gm}^{i} = \begin{cases} 1,\;\text{if}\;{i} \in \mathcal{N}_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}, \\ 0,\;\text{else},\end{cases} \label{eq_surf_indicative}
+%    \mathbb{I}_{\Gm}^{i} = \begin{cases} 1,\;\text{if}\;{i} \in \mathcal{N}_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}, \\ 0,\;\text{else},\end{cases} \label{eq:surf_indicative}
 %\end{align}
 %
 %
@@ -1010,7 +1010,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %
 %-- discrete fluid domain displacement:
 %\begin{align}
-%\UF_{n+1} = \theta \Delta t\,\VV_{n+1} + (1-\theta)\Delta t\, \VV_{n} + \UF_{n} \label{eq_ufluid_discr}
+%\UF_{n+1} = \theta \Delta t\,\VV_{n+1} + (1-\theta)\Delta t\, \VV_{n} + \UF_{n} \label{eq:ufluid_discr}
 %\end{align}
 %
 %-- trial projection:
@@ -1020,18 +1020,18 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %
 %-- test projection
 %\begin{align}
-%\ROP^{\mathrm{FrSI}}_{n+1} = \begin{bmatrix} \VROBt\ROP_{v}(\VROB \VVr,\PP,\LMZ,\DD) \\ \ROP_{p}(\VROB\VVr,\DD) \\ \ROP_{\lmzi}(\LMZ,\VROB\VVr,\DD) \\ \ROP_{d}(\DD,\textcolor{orange}{\VROB\VVr}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}} \label{eq_res_nonlin_frsi}
+%\ROP^{\mathrm{FrSI}}_{n+1} = \begin{bmatrix} \VROBt\ROP_{v}(\VROB \VVr,\PP,\LMZ,\DD) \\ \ROP_{p}(\VROB\VVr,\DD) \\ \ROP_{\lmzi}(\LMZ,\VROB\VVr,\DD) \\ \ROP_{d}(\DD,\textcolor{orange}{\VROB\VVr}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}} \label{eq:res_nonlin_frsi}
 %\end{align}
 %
 %\begin{align}
-%\begin{bmatrix} \VROBt\bs{\mathsf{K}}_{vv}\VROB & \VROBt\bs{\mathsf{K}}_{vp} & \VROBt\bs{\mathsf{K}}_{v\lmzi} & \VROBt\bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv}\VROB & \zerom & \zerom & \bs{\mathsf{K}}_{pd}\\ \\  \bs{\mathsf{K}}_{\lmzi v}\VROB & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \textcolor{orange}{\bs{\mathsf{K}}_{dv}\VROB} & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}} \\ \\ \Delta\PP \\ \\ \Delta\LMZ \\ \\ \Delta\DD \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \VROBt\ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq_lin_sys_rom_frsi}
+%\begin{bmatrix} \VROBt\bs{\mathsf{K}}_{vv}\VROB & \VROBt\bs{\mathsf{K}}_{vp} & \VROBt\bs{\mathsf{K}}_{v\lmzi} & \VROBt\bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv}\VROB & \zerom & \zerom & \bs{\mathsf{K}}_{pd}\\ \\  \bs{\mathsf{K}}_{\lmzi v}\VROB & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \textcolor{orange}{\bs{\mathsf{K}}_{dv}\VROB} & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}} \\ \\ \Delta\PP \\ \\ \Delta\LMZ \\ \\ \Delta\DD \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \VROBt\ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_rom_frsi}
 %\end{align}
 
-\section{Demos}\label{sec_demos}
+\section{Demos}\label{sec:demos}
 
-\subsection{Solid}\label{subsec_demos_solid}
+\subsection{Solid}\label{subsec:demos_solid}
 
-- Physics description given in sec. \ref{sec_solid}
+-- Physics description given in sec. \ref{sec:solid}
 
 \subsubsection*{Cantilever under tip load}
 
@@ -1041,10 +1041,10 @@ This example demonstrates how to set up a quasi-static solid mechanics elasticit
 \centering
 \includegraphics[width=0.7\columnwidth]{fig/cantilever_setup.png}
 \caption{Cantilever, problem setup.}
-\label{fig_cantilever_setup}
+\label{fig:cantilever_setup}
 \end{figure}
 
-Study the setup shown in fig. \ref{fig_cantilever_setup} and the comments in the input file \verb"solid_cantilever.py" Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup shown in fig. \ref{fig:cantilever_setup} and the comments in the input file \verb"solid_cantilever.py" Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 
 \begin{verbatim}
 mpiexec -n 1 python3 solid_cantilever.py
@@ -1054,19 +1054,19 @@ It is fully sufficient to use one core (\verb#mpiexec -n 1#) for the presented s
 
 Open the results file \verb"results_solid_cantilever_displacement.xdmf" in Paraview, and visualize the deformation over time.
 
-Figure \ref{fig_cantilever_results} shows the displacement magnitude at the end of the simulation.
+Figure \ref{fig:cantilever_results} shows the displacement magnitude at the end of the simulation.
 
 \begin{figure}
 \centering
 \includegraphics[width=0.7\columnwidth]{fig/cantilever_results}
 \caption{Cantilever, tip deformation. Color shows displacement magnitude.}
-\label{fig_cantilever_results}
+\label{fig:cantilever_results}
 \end{figure}
 
 
-\subsection{Fluid}\label{subsec_demos_fluid}
+\subsection{Fluid}\label{subsec:demos_fluid}
 
-- Physics description given in sec. \ref{sec_fluid}
+-- Physics description given in sec. \ref{sec:fluid}
 
 \subsubsection*{2D channel flow}
 
@@ -1077,7 +1077,7 @@ This example shows how to set up 2D fluid flow in a channel around a rigid obsta
 \centering
 \includegraphics[width=1.0\columnwidth]{fig/channel_setup.png}
 \caption{Channel flow, problem setup.}
-\label{fig_channel_setup}
+\label{fig:channel_setup}
 \end{figure}
 
 Study the setup and the comments in the input file \verb#fluid_channel.py`#. Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
@@ -1090,17 +1090,17 @@ It is fully sufficient to use one core (mpiexec -n 1) for the presented setup.
 
 Open the results file \verb"results_fluid_channel_velocity.xdmf" and \\ \verb"results_fluid_channel_pressure.xdmf" in Paraview, and visualize the velocity as well as the pressure over time.
 
-Fig. \ref{fig_channel_results} shows the velocity magnitude (top) as well as the pressure (bottom part) at the end of the simulation.
+Fig. \ref{fig:channel_results} shows the velocity magnitude (top) as well as the pressure (bottom part) at the end of the simulation.
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=1.0\columnwidth]{fig/channel_results.png}
 \caption{Velocity magnitude (top part) and pressure (bottom part) at end of simulation.}
-\label{fig_channel_results}
+\label{fig:channel_results}
 \end{figure}
 
 
-\subsection{0D flow}\label{subsec_demos_flow0d}
+\subsection{0D flow}\label{subsec:demos_flow0d}
 
 \subsubsection*{Systemic and pulmonary circulation}
 
@@ -1112,10 +1112,10 @@ a specified value, here \verb"`eps_periodic'" in the \verb"TIME_PARAMS" dictiona
 \centering
 \includegraphics[width=0.5\columnwidth]{fig/syspul_setup.png}
 \caption{0D heart, systemic and pulmonary circulation, problem setup.}
-\label{fig_syspul_setup}
+\label{fig:syspul_setup}
 \end{figure}
 
-Study the setup in fig. \ref{fig_syspul_setup} and the comments in the input file \verb"flow0d_heart_cycle.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup in fig. \ref{fig:syspul_setup} and the comments in the input file \verb"flow0d_heart_cycle.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 \begin{verbatim}
 python3 flow0d_heart_cycle.py
 \end{verbatim}
@@ -1130,17 +1130,17 @@ Subscripts \verb"v", \verb"at", \verb"ar", \verb"ven" refer to `ventricular', `a
 Try to understand the time courses of the respective pressures, as well as the plots of ventricular pressure over volume.
 Check that the overall system volume is constant and around 4-5 liters.\\
 
-The solution is depicted in fig. \ref{fig_syspul_results}, showing the time course of volumes and pressures of the circulatory system.
+The solution is depicted in fig. \ref{fig:syspul_results}, showing the time course of volumes and pressures of the circulatory system.
 
 \begin{figure}
 \centering
 \includegraphics[width=1.0\columnwidth]{fig/syspul_results.png}
 \caption{A. Left heart and systemic pressures over time. B. Right heart and pulmonary pressures over time. C. Left and right ventricular and atrial volumes over time. D. Left and right ventricular pressure-volume relationships of periodic (5th) cycle.}
-\label{fig_syspul_results}
+\label{fig:syspul_results}
 \end{figure}
 
 
-\subsection{Solid + 0D flow}\label{subsec_demos:solid_flow0d}
+\subsection{Solid + 0D flow}\label{subsec:demos:solid_flow0d}
 
 \subsubsection*{3D heart, coupled to systemic and pulmonary circulation}
 
@@ -1150,7 +1150,7 @@ Passive material behavior of the heart muscle is governed by the Holzapfel-Ogden
 We start the simulation with "prestressing" using the MULF method \cite{gee2010,schein2021}, which allows to imprint loads without changing the geometry,
 where the solid is loaded to the initial left and right ventricular pressures.
 Thereafter, we kickstart the dynamic simulation with passive ventricular filling by the systole of the atria (0D chamber models). Ventricular systole
-happens in $t \in [0.2 s, 0.53 s]$, hence lasting a third of the whole cycle time. After systole, the heart relaxes and eventually fills to about the same pressure
+happens in $t \in [0.2\;\mathrm{s}, 0.53\;\mathrm{s}]$, hence lasting a third of the whole cycle time. After systole, the heart relaxes and eventually fills to about the same pressure
 as it has been initialized to.\\
 
 NOTE: For demonstrative purposes, a fairly coarse finite element discretization is chosen here, which by no means yields a spatially converged solution and which
@@ -1161,10 +1161,10 @@ increase.
 \centering
 \includegraphics[width=0.6\columnwidth]{fig/heart_syspul_setup.png}
 \caption{Generic 3D ventricular heart model coupled to a closed-loop systemic and pulmonary circulation model.}
-\label{fig_heart_syspul_setup}
+\label{fig:heart_syspul_setup}
 \end{figure}
 
-Study the setup shown in fig. \ref{fig_heart_syspul_setup} and the comments in the input file \verb"solid_flow0d_heart_cycle.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup shown in fig. \ref{fig:heart_syspul_setup} and the comments in the input file \verb"solid_flow0d_heart_cycle.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 \begin{verbatim}
 mpiexec -n 1 python3 solid_flow0d_heart_cycle.py
 \end{verbatim}
@@ -1187,18 +1187,18 @@ Check that the overall system volume is constant and around 4-5 liters.\\
 NOTE: This setup computes only one cardiac cycle, which does not yield a periodic state solution (compare e.g. initial and end-cyclic right ventricular pressures and volumes,
 which do not coincide). Change the parameter \verb"number_of_cycles" from \verb"1" to \verb"10" and re-run the simulation. The simulation will stop when the cycle error (relative change in 0D variable quantities from beginning to end of a cycle) falls below the value of \verb"`eps_periodic'" (set to $5 \%$). How many cycles are needed to reach periodicity?\\
 
-Figure \ref{fig_heart_syspul_results} shows a high-fidelity solution using a refined mesh and quadratic tetrahedral elements. Compare your solution from the coarser mesh. What is the deviation
+Figure \ref{fig:heart_syspul_results} shows a high-fidelity solution using a refined mesh and quadratic tetrahedral elements. Compare your solution from the coarser mesh. What is the deviation
 in ventricular volume?
 
 \begin{figure}
 \centering
 \includegraphics[width=1.0\columnwidth]{fig/heart_syspul_results.png}
 \caption{A. Left heart and systemic pressures over time. B. Left and right ventricular and atrial volumes over time. C. Left and right ventricular pressure-volume relationships. D. Snapshot of heart deformation at end-systole, color indicates displacement magnitude.}
-\label{fig_heart_syspul_results}
+\label{fig:heart_syspul_results}
 \end{figure}
 
 
-\subsection{Fluid + 0D flow}\label{subsec_demos:fluid_flow0d}
+\subsection{Fluid + 0D flow}\label{subsec:demos:fluid_flow0d}
 
 \subsubsection*{Blocked pipe flow with 0D model bypass}
 
@@ -1213,10 +1213,10 @@ This example demonstrates how the closed valve can be bypassed by a 0D flow mode
 \centering
 \includegraphics[width=0.8\columnwidth]{fig/pipe_0d_setup.png}
 \caption{Blocked pipe with 0D model bypass, simulation setup.}
-\label{fig_pipe_0d_setup}
+\label{fig:pipe_0d_setup}
 \end{figure}
 
-Study the setup shown in fig. \ref{fig_pipe_0d_setup} and the comments in the input file \verb"fluid_flow0d_pipe.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup shown in fig. \ref{fig:pipe_0d_setup} and the comments in the input file \verb"fluid_flow0d_pipe.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 \begin{verbatim}
 mpiexec -n 1 python3 fluid_flow0d_pipe.py
 \end{verbatim}
@@ -1230,9 +1230,9 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{fig/pipe_0d_results.png}
+\includegraphics[scale=0.4]{fig/pipe_0d_results.png}
 \caption{Streamlines of velocity at end of simulation, color indicates velcity magnitude.}
-\label{fig_pipe_0d_results}
+\label{fig:pipe_0d_results}
 \end{figure}
 
 \bibliography{ref}
