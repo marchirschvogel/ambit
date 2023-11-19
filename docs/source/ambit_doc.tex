@@ -166,7 +166,7 @@ Examples of input files for the respective problem types can be found in the fol
 %\caption{Code design}\label{fig:code_design}
 %\end{figure}
 
-\section{Solid mechanics}
+\section{Solid mechanics}\label{sec:solid}
 
 -- Example: \verb.demos/solid.\\
 
@@ -250,7 +250,12 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 
 \end{itemize}
 
--- Discrete linear system
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{align}
+\left.\ROP_{u}(\bs{\mathsf{u}})\right|_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
 \left. \bs{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\bs{\mathsf{u}}_{n+1}^{k+1}=-\left. \ROP_{u} \right|_{n+1}^{k} \label{eq:lin_sys_solid}
 \end{align}
@@ -273,15 +278,20 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) &= \int\limits_{\Om_{0}} (J(\bs{u}) - 1) \,\delta p \,\mathrm{d}V \label{eq:deltaWpres}
 \end{align}
 
--- Discrete linear system
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid_inc}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
 \begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp}
 \end{align}
 
 
-\section{Fluid mechanics}
+\section{Fluid mechanics}\label{sec:fluid}
 
-\subsection{Eulerian reference frame}
+\subsection{Eulerian reference frame}\label{subsec:fluid:eulerian}
 
 -- Example: \verb.demos/fluid.\\
 
@@ -374,7 +384,12 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 &+ \frac{1}{\rho}\int\limits_{\Om_t} d_3\,(\bs{\nabla}p) \cdot (\bs{\nabla}\delta p)\,\mathrm{d}v 
 \end{align}
 
--- Discrete linear system
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
 \begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid}
 \end{align}
@@ -497,20 +512,41 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_3\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V
 \end{align}
 
--- Discrete linear system
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid_ale}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
 \begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale}
 \end{align}
 -- note that $\bs{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
 
 
-\section{0D flow: Lumped parameter models}
+\section{0D flow: Lumped parameter models}\label{sec:flow0d}
 
 -- Example: \verb.demos/flow0d.\\
 
 -- Problem type: \verb.flow0d.\\
 
-\subsection{``Syspul'' circulation model}
+\subsection{2-element Windkessel}
+
+- Model type : \verb.2elwindkessel.\\
+
+\subsection{4-element Windkessel (inertance parallel to impedance)}
+
+- Model type : \verb.4elwindkesselLpZ.\\
+
+\subsection{4-element Windkessel (inertance serial to impedance)}
+
+- Model type : \verb.4elwindkesselLsZ.\\
+
+\subsection{Systemic and pulmonary circulation}
+
+- Model type : \verb.syspul.\\
+
+- Allows to link in a coronary flow model
 
 \begin{align}
 &\text{left heart and systemic circulation} && \nonumber\\
@@ -633,10 +669,9 @@ Coronary circulation model:
 
 
 
+\subsection{Systemic and pulmonary circulation, including capillary flow}
 
-
-
-\subsection{``Syspulcap'' circulation model}
+- Model type : \verb.syspulcap.\\
 
 % left heart and systemic circulation:
 \begin{align}
@@ -679,8 +714,9 @@ Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t}\nonumber
 \end{align}
 
 
+\subsection{Systemic and pulmonary circulation, including capillary and coronary flow}
 
-\subsection{``Syspulcapcor'' circulation model}
+- Model type : \verb.syspulcapcor.\\
 
 % left heart and systemic circulation:
 \begin{align}
@@ -726,11 +762,16 @@ Q_{\mathrm{at}}^{r} := -\frac{\mathrm{d}V_{\mathrm{at}}^{r}}{\mathrm{d}t}, \qqua
 Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumber
 \end{align}
 
+\subsection{Systemic and pulmonary circulation, capillary flow, and respirory model}
+
+- Model type : \verb.syspulcaprespir.\\
+
+- Model equations described in \cite{hirschvogel2018}, p. 51ff., 58ff.
 
 
-\section{Multi-physics coupling}
+\section{Multi-physics coupling}\label{sec:multiphys_coupling}
 
-\subsection{Solid + 0D flow}
+\subsection{Solid + 0D flow}\label{subsec:solid_flow0d}
 
 -- Example: \verb.demos/solid_flow0d.\\
 
@@ -747,17 +788,27 @@ r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fS\text{-}\mathrm{0d}}}\!\mathit{\Lamb
 r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fS\text{-}0d}}}\! J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\bs{v}(\bs{u})\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
 \end{align}
 
--- Discrete linear system for displacement-based solid
+-- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\LMZ) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid_0d}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$ for displacement-based solid:
 \begin{align}
 \begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{\lmzi u} & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_0d}
 \end{align}
 
--- Discrete linear system for incompressible solid
+-- Discrete nonlinear system to solve in each time step $n$ for incompressible solid:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}(\bs{\mathsf{u}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{u}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{u}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_solid_0d_inc}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$ for incompressible solid:
 \begin{align}
 \begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi u} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp_0d}
 \end{align}
 
-\subsection{Fluid + 0D flow}
+\subsection{Fluid + 0D flow}\label{subsec:fluid_flow0d}
 
 -- Example: \verb.demos/fluid_flow0d.\\
 
@@ -774,12 +825,17 @@ r_v \leftarrow r_v + \int\limits_{\Gm_t^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lamb
 r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_t^{\mathrm{\fF\text{-}0d}}}\! \bs{n}\cdot\bs{v}\,\mathrm{d}a - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
 \end{align}
 
--- Discrete linear system
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid_0d}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
 \begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_0d}
 \end{align}
 
-\subsection{ALE fluid + 0D flow}
+\subsection{ALE fluid + 0D flow}\label{subsec:fluid_ale_flow0d}
 -- Problem type: \verb.fluid_ale_flow0d.\\
 
 -- (\ref{eq:res_v_fluid_ale}) augmented by following term:
@@ -795,20 +851,25 @@ r_{\lambda}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\
 
 with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
--- Discrete linear system
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fluid_ale_0d}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
 \begin{align}
 \begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fluid_ale_0d}
 \end{align}
 
 
-\subsection{Fluid-Solid Interaction (FSI)}
+\subsection{Fluid-Solid Interaction (FSI)}\label{subsec:fsi}
 
 -- Problem type: \verb.fsi.\\
 
 -- Not yet fully implemented!
 
 
-\subsection{Fluid-Solid Interaction (FSI) + 0D flow}
+\subsection{Fluid-Solid Interaction (FSI) + 0D flow}\label{subsec:fsi_flow0d}
 
 -- Problem type: \verb.fsi_flow0d.\\
 
@@ -966,6 +1027,213 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 %\begin{bmatrix} \VROBt\bs{\mathsf{K}}_{vv}\VROB & \VROBt\bs{\mathsf{K}}_{vp} & \VROBt\bs{\mathsf{K}}_{v\lmzi} & \VROBt\bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv}\VROB & \zerom & \zerom & \bs{\mathsf{K}}_{pd}\\ \\  \bs{\mathsf{K}}_{\lmzi v}\VROB & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \textcolor{orange}{\bs{\mathsf{K}}_{dv}\VROB} & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}} \\ \\ \Delta\PP \\ \\ \Delta\LMZ \\ \\ \Delta\DD \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \VROBt\ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_rom_frsi}
 %\end{align}
 
+\section{Demos}\label{sec:demos}
+
+\subsection{Solid}\label{subsec:demos:solid}
+
+- Physics description given in sec. \ref{sec:solid}
+
+\subsubsection*{Cantilever under tip load}
+
+This example demonstrates how to set up a quasi-static solid mechanics elasticity problem. The deformation of a steel cantilever under transverse conservative load is simulated. The structure is fixed on one end. Quadratic 27-node hexahedral finite elements are used for the discretization of the domain. The well-known St. Venant-Kirchhoff material is used as constitutive law, which is a generalization of Hooke's law to the nonlinear realm.\\
+
+\begin{figure}
+\centering
+\includegraphics[width=0.7\columnwidth]{fig/cantilever_setup}
+\caption{Cantilever, problem setup.}
+\label{fig:cantilever_setup}
+\end{figure}
+
+Study the setup shown in fig. \ref{fig:cantilever_setup} and the comments in the input file \verb"solid_cantilever.py" Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+
+\begin{verbatim}
+mpiexec -n 1 python3 solid_cantilever.py
+\end{verbatim}
+
+It is fully sufficient to use one core (\verb#mpiexec -n 1#) for the presented setup.
+
+Open the results file \verb"results_solid_cantilever_displacement.xdmf" in Paraview, and visualize the deformation over time.
+
+Figure \ref{fig:cantilever_results} shows the displacement magnitude at the end of the simulation.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.7\columnwidth]{fig/cantilever_results}
+\caption{Cantilever, tip deformation. Color shows displacement magnitude.}
+\label{fig:cantilever_results}
+\end{figure}
+
+
+\subsection{Fluid}\label{subsec:demos:fluid}
+
+- Physics description given in sec. \ref{sec:fluid}
+
+\subsubsection*{2D channel flow}
+
+This example shows how to set up 2D fluid flow in a channel around a rigid obstacle. Incompressible Navier-Stokes flow is solved using Taylor-Hood elements
+(9-node biquadratic quadrilaterals for the velocity, 4-node bilinear quadrilaterals for the pressure).
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{fig/channel_setup}
+\caption{Channel flow, problem setup.}
+\label{fig:channel_setup}
+\end{figure}
+
+Study the setup and the comments in the input file \verb#fluid_channel.py`#. Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+
+\begin{verbatim}
+mpiexec -n 1 python3 fluid_channel.py
+\end{verbatim}
+
+It is fully sufficient to use one core (mpiexec -n 1) for the presented setup.
+
+Open the results file \verb"results_fluid_channel_velocity.xdmf" and \\ \verb"results_fluid_channel_pressure.xdmf" in Paraview, and visualize the velocity as well as the pressure over time.
+
+Fig. \ref{fig:channel_results} shows the velocity magnitude (top) as well as the pressure (bottom part) at the end of the simulation.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=1.0\columnwidth]{fig/channel_results}
+\caption{Velocity magnitude (top part) and pressure (bottom part) at end of simulation.}
+\label{fig:channel_results}
+\end{figure}
+
+
+\subsection{0D flow}\label{subsec:demos:flow0d}
+
+\subsubsection*{Systemic and pulmonary circulation}
+
+This example demonstrates how to simulate a cardiac cycle using a lumped-parameter (0D) model for the heart chambers and the entire circulation. Multiple heart beats are run
+until a periodic state criterion is met (which compares variable values at the beginning to those at the end of a cycle, and stops if the relative change is less than
+a specified value, here \verb"`eps_periodic'" in the \verb"TIME_PARAMS" dictionary). The problem is set up such that periodicity is reached after 5 heart cycles.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.5\columnwidth]{fig/syspul_setup}
+\caption{0D heart, systemic and pulmonary circulation, problem setup.}
+\label{fig:syspul_setup}
+\end{figure}
+
+Study the setup in fig. \ref{fig:syspul_setup} and the comments in the input file \verb"flow0d_heart_cycle.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+\begin{verbatim}
+python3 flow0d_heart_cycle.py
+\end{verbatim}
+
+For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, either use your own tools to plot the text output files (first column is time, second is the respective quantity), or make sure to have Gnuplot (and TeX) installed and navigate to the output folder (\verb"tmp/") in order to execute the script \verb"flow0d_plot.py" (which lies in \verb"ambit/src/ambit_fe/postprocess/"):
+\begin{verbatim}
+flow0d_plot.py -s flow0d_heart_cycle -n 100
+\end{verbatim}
+A folder \verb"plot_flow0d_heart_cycle" is created inside \verb"tmp/". Look at the results of pressures ($p$), volumes ($V$), and fluxes ($q$, $Q$) over time.
+Subscripts \verb"v", \verb"at", \verb"ar", \verb"ven" refer to `ventricular', `atrial', `arterial', and `venous', respectively. Superscripts \verb"l", \verb"r", \verb"sys", \verb"pul" refer to `left', `right', `systemic', and
+`pulmonary', respectively.
+Try to understand the time courses of the respective pressures, as well as the plots of ventricular pressure over volume.
+Check that the overall system volume is constant and around 4-5 liters.\\
+
+The solution is depicted in fig. \ref{fig:syspul_results}, showing the time course of volumes and pressures of the circulatory system.
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{fig/syspul_results}
+\caption{A. Left heart and systemic pressures over time. B. Right heart and pulmonary pressures over time. C. Left and right ventricular and atrial volumes over time. D. Left and right ventricular pressure-volume relationships of periodic (5th) cycle.}
+\label{fig:syspul_results}
+\end{figure}
+
+
+\subsection{Solid + 0D flow}\label{subsec:demos:solid_flow0d}
+
+\subsubsection*{3D heart, coupled to systemic and pulmonary circulation}
+
+This example demonstrates how to set up and simulate a two-chamber (left and right ventricular) solid mechanics heart model coupled to a closed-loop
+0D circulatory system. A full dynamic heart cycle of duration 1 s is simulated, where the active contraction is modeled by a prescribed active stress approach.
+Passive material behavior of the heart muscle is governed by the Holzapfel-Ogden anisotropic strain energy function \cite{holzapfel2009} and a strain rate-dependent viscous model \cite{chapelle2012}.
+We start the simulation with "prestressing" using the MULF method \cite{gee2010,schein2021}, which allows to imprint loads without changing the geometry,
+where the solid is loaded to the initial left and right ventricular pressures.
+Thereafter, we kickstart the dynamic simulation with passive ventricular filling by the systole of the atria (0D chamber models). Ventricular systole
+happens in $t \in [0.2 s, 0.53 s]$, hence lasting a third of the whole cycle time. After systole, the heart relaxes and eventually fills to about the same pressure
+as it has been initialized to.\\
+
+NOTE: For demonstrative purposes, a fairly coarse finite element discretization is chosen here, which by no means yields a spatially converged solution and which
+may be prone to locking phenomena. The user may increse the parameter \verb"`order_disp'" in the \verb"FEM_PARAMS" section from \verb"1" to \verb"2" (and increase \verb"`quad_degree'" to \verb"6") such that quadratic finite element ansatz functions (instead of linear ones) are used. While this will increase accuracy and mitigate locking, computation time will
+increase.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.6\columnwidth]{fig/heart_syspul_setup}
+\caption{Generic 3D ventricular heart model coupled to a closed-loop systemic and pulmonary circulation model.}
+\label{fig:heart_syspul_setup}
+\end{figure}
+
+Study the setup shown in fig. \ref{fig:heart_syspul_setup} and the comments in the input file \verb"solid_flow0d_heart_cycle.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+\begin{verbatim}
+mpiexec -n 1 python3 solid_flow0d_heart_cycle.py
+\end{verbatim}
+
+It is fully sufficient to use one core (\verb"mpiexec -n 1") for the presented setup, while you might want to use more (e.g., \verb"mpiexec -n 4") if you increase \verb"`order_disp'" to \verb"2".
+
+Open the results file \verb"results_solid_flow0d_heart_cycle_displacement.xdmf" in Paraview, and visualize the deformation over the heart cycle.
+
+For postprocessing of the time courses of pressures, volumes, and fluxes of the 0D model, either use your own tools to plot the text output files (first column is time, second is the respective quantity), or make sure to have Gnuplot (and TeX) installed and navigate to the output folder (\verb"tmp/") in order to execute the script \verb"flow0d_plot.py" (which lies in \verb"ambit/src/ambit_fe/postprocess/"):
+\begin{verbatim}
+flow0d_plot.py -s solid_flow0d_heart_cycle -V0 117e3 93e3 0 0 0
+\end{verbatim}
+
+A folder \verb"plot_solid_flow0d_heart_cycle" is created inside \verb"tmp/". Look at the results of pressures ($p$), volumes ($V$), and fluxes ($q$, $Q$) over time.
+Subscripts \verb"v", \verb"at", \verb"ar", \verb"ven" refer to `ventricular', `atrial', `arterial', and `venous', respectively. Superscripts \verb"l", \verb"r", \verb"sys", \verb"pul" refer to `left', `right', `systemic', and
+`pulmonary', respectively.
+Try to understand the time courses of the respective pressures, as well as the plots of ventricular pressure over volume.
+Check that the overall system volume is constant and around 4-5 liters.\\
+
+NOTE: This setup computes only one cardiac cycle, which does not yield a periodic state solution (compare e.g. initial and end-cyclic right ventricular pressures and volumes,
+which do not coincide). Change the parameter \verb"number_of_cycles" from \verb"1" to \verb"10" and re-run the simulation. The simulation will stop when the cycle error (relative change in 0D variable quantities from beginning to end of a cycle) falls below the value of \verb"`eps_periodic'" (set to $5 \%$). How many cycles are needed to reach periodicity?\\
+
+Figure \ref{fig:heart_syspul_results} shows a high-fidelity solution using a refined mesh and quadratic tetrahedral elements. Compare your solution from the coarser mesh. What is the deviation
+in ventricular volume?
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\columnwidth]{fig/heart_syspul_results}
+\caption{A. Left heart and systemic pressures over time. B. Left and right ventricular and atrial volumes over time. C. Left and right ventricular pressure-volume relationships. D. Snapshot of heart deformation at end-systole, color indicates displacement magnitude.}
+\label{fig:heart_syspul_results}
+\end{figure}
+
+
+\subsection{Fluid + 0D flow}\label{subsec:demos:fluid_flow0d}
+
+\subsubsection*{Blocked pipe flow with 0D model bypass}
+
+This example demonstrates how to couple 3D fluid flow to a 0D lumped-parameter model. Incompressible transient Navier-Stokes flow in a pipe with prescibed inflow is solved,
+with the special constraint that an internal boundary (all-time closed valve) separates region 1 and region 2 of the pipe. This internal Dirichlet condition can only be achieved
+by splitting the pressure space, hence having duplicate pressure nodes at the valve plane. Otherwise, fluid would experience deceleration towards the valve and unphysical acceleration behind it, since the pressure gradient drives fluid flow. To achieve this, the mixed Dolfinx branch instead of the main branch is used. It is installed inside the Ambit devenv Docker
+container. In the future, this functionality is expected to be merged into the Dolfinx main branch (at least it was announced...).\\
+
+This example demonstrates how the closed valve can be bypassed by a 0D flow model that links the 3D fluid out-flow of one region to the in-flow of the other region. The 0D model consists of two Windkessel models in series, each having compliance, resistance, and inertance elements.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.8\columnwidth]{fig/pipe_0d_setup}
+\caption{Blocked pipe with 0D model bypass, simulation setup.}
+\label{fig:pipe_0d_setup}
+\end{figure}
+
+Study the setup shown in fig. \ref{fig:pipe_0d_setup} and the comments in the input file \verb"fluid_flow0d_pipe.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+\begin{verbatim}
+mpiexec -n 1 python3 fluid_flow0d_pipe.py
+\end{verbatim}
+It is fully sufficient to use one core (\verb"mpiexec -n 1") for the presented setup.
+
+Open the results file \verb"results_fluid_flow0d_pipe_velocity.xdmf" in Paraview, and visualize the velocity over time.
+
+Think of which parameter(s) of the 0D model to tweak in order to achieve a) little to no fluid in-flow (into $\mathit{\Gamma}_{\mathrm{in}}^{\mathrm{f\text{-}0d}}$), b) almost the same flow across $\mathit{\Gamma}_{\mathrm{out}}^{\mathrm{f\text{-}0d}}$ and $\mathit{\Gamma}_{\mathrm{in}}^{\mathrm{f\text{-}0d}}$. Think of where the flow is going to in case of a).\\
+
+Figure shows the velocity streamlines and magnitude at the end of the simulation.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.7\columnwidth]{fig/pipe_0d_results}
+\caption{Streamlines of velocity at end of simulation, color indicates velcity magnitude.}
+\label{fig:pipe_0d_results}
+\end{figure}
 
 \bibliography{ref}
 
