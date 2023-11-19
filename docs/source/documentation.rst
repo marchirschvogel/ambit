@@ -1076,7 +1076,7 @@ Cantilever under tip load
   material is used as constitutive law, which is a generalization of
   Hooke’s law to the nonlinear realm.
 
-.. figure:: fig/cantilever_setup
+.. figure:: fig/cantilever_setup.png
    :alt: Cantilever, problem setup.
 
    Cantilever, problem setup.
@@ -1125,7 +1125,7 @@ rigid obstacle. Incompressible Navier-Stokes flow is solved using
 Taylor-Hood elements (9-node biquadratic quadrilaterals for the
 velocity, 4-node bilinear quadrilaterals for the pressure).
 
-.. figure:: fig/channel_setup
+.. figure:: fig/channel_setup.png
    :alt: Channel flow, problem setup.
 
    Channel flow, problem setup.
@@ -1152,7 +1152,7 @@ Fig. `[fig_channel_results] <#fig_channel_results>`__ shows the velocity
 magnitude (top) as well as the pressure (bottom part) at the end of the
 simulation.
 
-.. figure:: fig/channel_results
+.. figure:: fig/channel_results.png
    :alt: Velocity magnitude (top part) and pressure (bottom part) at end
    of simulation.
 
@@ -1180,7 +1180,7 @@ than a specified value, here :literal:`\`eps_periodic'` in the
 ``TIME_PARAMS`` dictionary). The problem is set up such that periodicity
 is reached after 5 heart cycles.
 
-.. figure:: fig/syspul_setup
+.. figure:: fig/syspul_setup.png
    :alt: 0D heart, systemic and pulmonary circulation, problem setup.
 
    0D heart, systemic and pulmonary circulation, problem setup.
@@ -1220,7 +1220,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
   `[fig_syspul_results] <#fig_syspul_results>`__, showing the time
   course of volumes and pressures of the circulatory system.
 
-.. figure:: fig/syspul_results
+.. figure:: fig/syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Right heart
    and pulmonary pressures over time. C. Left and right ventricular and
    atrial volumes over time. D. Left and right ventricular
@@ -1268,7 +1268,7 @@ Solid + 0D flow
   increase accuracy and mitigate locking, computation time will
   increase.
 
-.. figure:: fig/heart_syspul_setup
+.. figure:: fig/heart_syspul_setup.png
    :alt: Generic 3D ventricular heart model coupled to a closed-loop
    systemic and pulmonary circulation model.
 
@@ -1328,7 +1328,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
   tetrahedral elements. Compare your solution from the coarser mesh.
   What is the deviation in ventricular volume?
 
-.. figure:: fig/heart_syspul_results
+.. figure:: fig/heart_syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Left and
    right ventricular and atrial volumes over time. C. Left and right
    ventricular pressure-volume relationships. D. Snapshot of heart
@@ -1368,7 +1368,8 @@ Blocked pipe flow with 0D model bypass
   models in series, each having compliance, resistance, and inertance
   elements.
 
-.. figure:: fig/pipe_0d_setup
+.. figure:: fig/pipe_0d_setup.png
+   :alt: Blocked pipe with 0D model bypass, simulation setup.
 
    Blocked pipe with 0D model bypass, simulation setup.
 
@@ -1400,7 +1401,7 @@ Paraview, and visualize the velocity over time.
 | Figure shows the velocity streamlines and magnitude at the end of the
   simulation.
 
-.. figure:: fig/pipe_0d_results
+.. figure:: fig/pipe_0d_results.png
    :alt: Streamlines of velocity at end of simulation, color indicates
    velcity magnitude.
 
