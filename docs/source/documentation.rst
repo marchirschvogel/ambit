@@ -1132,17 +1132,16 @@ velocity, 4-node bilinear quadrilaterals for the pressure).
 
 [fig:channel_setup]
 
-Study the setup and the comments in the input file
-:literal:`fluid_channel.py\``. Run the simulation, either in one of the
-provided Docker containers or using your own FEniCSx/Ambit installation,
-using the command
+Study the setup and the comments in the input file ``fluid_channel.py``.
+Run the simulation, either in one of the provided Docker containers or
+using your own FEniCSx/Ambit installation, using the command
 
 ::
 
    mpiexec -n 1 python3 fluid_channel.py
 
-It is fully sufficient to use one core (mpiexec -n 1) for the presented
-setup.
+It is fully sufficient to use one core (``mpiexec -n 1``) for the
+presented setup.
 
 | Open the results file ``results_fluid_channel_velocity.xdmf`` and
 | ``results_fluid_channel_pressure.xdmf`` in Paraview, and visualize the
@@ -1182,6 +1181,7 @@ is reached after 5 heart cycles.
 
 .. figure:: fig/syspul_setup.png
    :alt: 0D heart, systemic and pulmonary circulation, problem setup.
+   :scale: 50%
 
    0D heart, systemic and pulmonary circulation, problem setup.
 
@@ -1405,8 +1405,7 @@ Paraview, and visualize the velocity over time.
 .. figure:: fig/pipe_0d_results.png
    :alt: Streamlines of velocity at end of simulation, color indicates
    velcity magnitude.
-   :scale: 5%
-   
+
    Streamlines of velocity at end of simulation, color indicates velcity
    magnitude.
 

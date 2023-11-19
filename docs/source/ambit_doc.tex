@@ -1050,7 +1050,7 @@ Study the setup shown in fig. \ref{fig:cantilever_setup} and the comments in the
 mpiexec -n 1 python3 solid_cantilever.py
 \end{verbatim}
 
-It is fully sufficient to use one core (\verb#mpiexec -n 1#) for the presented setup.
+It is fully sufficient to use one core (\verb"mpiexec -n 1") for the presented setup.
 
 Open the results file \verb"results_solid_cantilever_displacement.xdmf" in Paraview, and visualize the deformation over time.
 
@@ -1080,13 +1080,13 @@ This example shows how to set up 2D fluid flow in a channel around a rigid obsta
 \label{fig:channel_setup}
 \end{figure}
 
-Study the setup and the comments in the input file \verb#fluid_channel.py`#. Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup and the comments in the input file \verb"fluid_channel.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 
 \begin{verbatim}
 mpiexec -n 1 python3 fluid_channel.py
 \end{verbatim}
 
-It is fully sufficient to use one core (mpiexec -n 1) for the presented setup.
+It is fully sufficient to use one core (\verb"mpiexec -n 1") for the presented setup.
 
 Open the results file \verb"results_fluid_channel_velocity.xdmf" and \\ \verb"results_fluid_channel_pressure.xdmf" in Paraview, and visualize the velocity as well as the pressure over time.
 
