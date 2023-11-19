@@ -1369,7 +1369,6 @@ Blocked pipe flow with 0D model bypass
   elements.
 
 .. figure:: fig/pipe_0d_setup
-   :alt: Blocked pipe with 0D model bypass, simulation setup.
 
    Blocked pipe with 0D model bypass, simulation setup.
 
