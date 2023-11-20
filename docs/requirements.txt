@@ -1,3 +1,4 @@
 myst_parser
 sphinx-rtd-theme
 sphinxcontrib-bibtex
+ambit_fe
