@@ -16,8 +16,7 @@ release = '1.1.3'
 
 extensions = ["myst_parser", # to have Markdown working with Sphinx...
               "sphinxcontrib.bibtex",
-              "sphinx.ext.autodoc",
-              "sphinx.ext.autosummary"]
+              "sphinx.ext.autodoc"]
 
 autodoc_mock_imports = ["mpi4py","petsc4py","dolfinx","basix"]
 

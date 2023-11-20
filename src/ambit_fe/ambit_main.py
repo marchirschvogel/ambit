@@ -13,6 +13,19 @@ from . import ioroutines
 class Ambit():
     """
     Ambit main class
+
+    Attributes
+    ----------
+    comm :
+        MPI communicator
+    comm_sq :
+        Sequential MPI communicator for one core
+    entity_maps : dict
+        Entity maps for mixed domain problems
+    mp :
+        Model problem object
+    ms :
+        Model solver object
     """
 
     def __init__(self, io_params, time_params, solver_params, fem_params={}, constitutive_params={}, bc_dict={}, time_curves=None, coupling_params={}, multiscale_params={}, mor_params={}):

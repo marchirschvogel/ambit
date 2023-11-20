@@ -1,7 +1,7 @@
 API
 ===
 
-.. autosummary::
-   :toctree: generated
+.. autoclass:: ambit_fe.ambit_main.Ambit
+    :members:
 
-   ambit_fe
+    .. automethod:: __init__
