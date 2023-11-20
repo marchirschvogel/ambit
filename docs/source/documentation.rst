@@ -1161,7 +1161,7 @@ velocity, 4-node bilinear quadrilaterals for the pressure).
 
 .. figure:: fig/channel_setup.png
    :alt: Channel flow, problem setup.
-   :width: 85.0%
+   :width: 90.0%
 
    Channel flow, problem setup.
 
@@ -1188,7 +1188,7 @@ simulation.
 
 .. figure:: fig/channel_results.png
    :alt: Velocity magnitude (top part) and pressure (bottom part) at end
-   :width: 85.0%
+   :width: 90.0%
 
    Velocity magnitude (top part) and pressure (bottom part) at end of
    simulation.
@@ -1216,7 +1216,7 @@ is reached after 5 heart cycles.
 
 .. figure:: fig/syspul_setup.png
    :alt: 0D heart, systemic and pulmonary circulation, problem setup.
-   :width: 70.0%
+   :width: 65.0%
 
    0D heart, systemic and pulmonary circulation, problem setup.
 
@@ -1257,7 +1257,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
 
 .. figure:: fig/syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Right heart
-   :width: 90.0%
+   :width: 100.0%
 
    A. Left heart and systemic pressures over time. B. Right heart and
    pulmonary pressures over time. C. Left and right ventricular and
@@ -1304,7 +1304,7 @@ Solid + 0D flow
 
 .. figure:: fig/heart_syspul_setup.png
    :alt: Generic 3D ventricular heart model coupled to a closed-loop
-   :width: 70.0%
+   :width: 65.0%
 
    Generic 3D ventricular heart model coupled to a closed-loop systemic
    and pulmonary circulation model.
@@ -1364,7 +1364,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
 
 .. figure:: fig/heart_syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Left and
-   :width: 90.0%
+   :width: 100.0%
 
    A. Left heart and systemic pressures over time. B. Left and right
    ventricular and atrial volumes over time. C. Left and right
