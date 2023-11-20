@@ -18,7 +18,7 @@ extensions = ["myst_parser", # to have Markdown working with Sphinx...
               "sphinxcontrib.bibtex",
               "sphinx.ext.autodoc"]
 
-autodoc_mock_imports = ["mpi4py","petsc4py","dolfinx","basix"]
+autodoc_mock_imports = ["mpi4py","petsc4py","dolfinx","basix","numpy"]
 
 bibtex_bibfiles = ['ref.bib']
 
