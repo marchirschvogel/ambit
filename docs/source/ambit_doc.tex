@@ -38,6 +38,7 @@
 \usepackage{algpseudocode}
 \usepackage{tikz}
 \usepackage{pifont}
+%\usepackage[hidelinks]{hyperref}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{xcolor}
@@ -166,9 +167,33 @@ Examples of input files for the respective problem types can be found in the fol
 %\caption{Code design}\label{fig:code_design}
 %\end{figure}
 
+\section{Installation}
+
+In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx#installation) (latest Ambit-compatible dolfinx development version dates to 19 Aug 2023).\\
+
+Ambit can then be installed using pip, either the current release
+\begin{verbatim}
+python3 -m pip install ambit-fe
+\end{verbatim}
+
+or latest development version:
+\begin{verbatim}
+python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
+\end{verbatim}
+
+Alternatively, you can pull a pre-built Docker image with FEniCSx and Ambit installed:
+\begin{verbatim}
+docker pull ghcr.io/marchirschvogel/ambit:latest
+\end{verbatim}
+
+If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit (including the dolfinx mixed branch):
+\begin{verbatim}
+docker pull ghcr.io/marchirschvogel/ambit:devenv
+\end{verbatim}
+
 \section{Solid mechanics}\label{sec:solid}
 
--- Example: \verb.demos/solid.\\
+-- Example: Sec. \ref{subsec:demos:solid} and \verb"demos/solid"\\
 
 -- Problem type: \verb.solid.\\
 
@@ -293,7 +318,7 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 
 \subsection{Eulerian reference frame}\label{subsec:fluid_eulerian}
 
--- Example: \verb.demos/fluid.\\
+-- Example: Sec. \ref{subsec:demos:fluid} and \verb"demos/fluid"\\
 
 -- Problem type: \verb.fluid.\\
 
@@ -526,7 +551,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 
 \section{0D flow: Lumped parameter models}\label{sec:flow0d}
 
--- Example: \verb.demos/flow0d.\\
+-- Example: Sec. \ref{subsec:demos:flow0d} \verb"demos/flow0d"\\
 
 -- Problem type: \verb.flow0d.\\
 
@@ -774,7 +799,7 @@ Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumbe
 
 \subsection{Solid + 0D flow}\label{subsec:solid_flow0d}
 
--- Example: \verb.demos/solid_flow0d.\\
+-- Example: Sec. \ref{subsec:demos:solid_flow0d} and \verb"demos/solid_flow0d"\\
 
 -- Problem type: \verb.solid_flow0d.\\
 
@@ -811,7 +836,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 
 \subsection{Fluid + 0D flow}\label{subsec:fluid_flow0d}
 
--- Example: \verb.demos/fluid_flow0d.\\
+-- Example: Sec. \ref{subsec:demos:fluid_flow0d} \verb"demos/fluid_flow0d"\\
 
 -- Problem type: \verb.fluid_flow0d.\\
 
@@ -1030,7 +1055,7 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 \section{Demos}\label{sec:demos}
 
-\subsection{Solid}\label{subsec:demos_solid}
+\subsection{Solid}\label{subsec:demos:solid}
 
 -- Physics description given in sec. \ref{sec:solid}
 
@@ -1040,7 +1065,7 @@ This example demonstrates how to set up a quasi-static solid mechanics elasticit
 
 \begin{figure}
 \centering
-\includegraphics[width=0.75\textwidth]{fig/cantilever_setup.png}
+\includegraphics[width=0.85\textwidth]{fig/cantilever_setup.png}
 \caption{Cantilever, problem setup.}
 \label{fig:cantilever_setup}
 \end{figure}
@@ -1059,13 +1084,13 @@ Figure \ref{fig:cantilever_results} shows the displacement magnitude at the end 
 
 \begin{figure}
 \centering
-\includegraphics[width=0.75\textwidth]{fig/cantilever_results.png}
+\includegraphics[width=0.85\textwidth]{fig/cantilever_results.png}
 \caption{Cantilever, tip deformation. Color shows displacement magnitude.}
 \label{fig:cantilever_results}
 \end{figure}
 
 
-\subsection{Fluid}\label{subsec:demos_fluid}
+\subsection{Fluid}\label{subsec:demos:fluid}
 
 -- Physics description given in sec. \ref{sec:fluid}
 
@@ -1076,7 +1101,7 @@ This example shows how to set up 2D fluid flow in a channel around a rigid obsta
 
 \begin{figure}
 \centering
-\includegraphics[width=0.75\textwidth]{fig/channel_setup.png}
+\includegraphics[width=0.85\textwidth]{fig/channel_setup.png}
 \caption{Channel flow, problem setup.}
 \label{fig:channel_setup}
 \end{figure}
@@ -1095,13 +1120,13 @@ Fig. \ref{fig:channel_results} shows the velocity magnitude (top) as well as the
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.75\textwidth]{fig/channel_results.png}
+\includegraphics[width=0.85\textwidth]{fig/channel_results.png}
 \caption{Velocity magnitude (top part) and pressure (bottom part) at end of simulation.}
 \label{fig:channel_results}
 \end{figure}
 
 
-\subsection{0D flow}\label{subsec:demos_flow0d}
+\subsection{0D flow}\label{subsec:demos:flow0d}
 
 \subsubsection*{Systemic and pulmonary circulation}
 
@@ -1111,7 +1136,7 @@ a specified value, here \verb"`eps_periodic'" in the \verb"TIME_PARAMS" dictiona
 
 \begin{figure}
 \centering
-\includegraphics[width=0.6\textwidth]{fig/syspul_setup.png}
+\includegraphics[width=0.7\textwidth]{fig/syspul_setup.png}
 \caption{0D heart, systemic and pulmonary circulation, problem setup.}
 \label{fig:syspul_setup}
 \end{figure}
@@ -1135,7 +1160,7 @@ The solution is depicted in fig. \ref{fig:syspul_results}, showing the time cour
 
 \begin{figure}
 \centering
-\includegraphics[width=0.8\textwidth]{fig/syspul_results.png}
+\includegraphics[width=0.9\textwidth]{fig/syspul_results.png}
 \caption{A. Left heart and systemic pressures over time. B. Right heart and pulmonary pressures over time. C. Left and right ventricular and atrial volumes over time. D. Left and right ventricular pressure-volume relationships of periodic (5th) cycle.}
 \label{fig:syspul_results}
 \end{figure}
@@ -1160,7 +1185,7 @@ increase.
 
 \begin{figure}
 \centering
-\includegraphics[width=0.6\textwidth]{fig/heart_syspul_setup.png}
+\includegraphics[width=0.7\textwidth]{fig/heart_syspul_setup.png}
 \caption{Generic 3D ventricular heart model coupled to a closed-loop systemic and pulmonary circulation model.}
 \label{fig:heart_syspul_setup}
 \end{figure}
@@ -1193,7 +1218,7 @@ in ventricular volume?
 
 \begin{figure}
 \centering
-\includegraphics[width=0.8\textwidth]{fig/heart_syspul_results.png}
+\includegraphics[width=0.9\textwidth]{fig/heart_syspul_results.png}
 \caption{A. Left heart and systemic pressures over time. B. Left and right ventricular and atrial volumes over time. C. Left and right ventricular pressure-volume relationships. D. Snapshot of heart deformation at end-systole, color indicates displacement magnitude.}
 \label{fig:heart_syspul_results}
 \end{figure}
@@ -1212,7 +1237,7 @@ This example demonstrates how the closed valve can be bypassed by a 0D flow mode
 
 \begin{figure}
 \centering
-\includegraphics[width=0.75\textwidth]{fig/pipe_0d_setup.png}
+\includegraphics[width=0.85\textwidth]{fig/pipe_0d_setup.png}
 \caption{Blocked pipe with 0D model bypass, simulation setup.}
 \label{fig:pipe_0d_setup}
 \end{figure}
@@ -1231,7 +1256,7 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 
 \begin{figure}
 \centering
-\includegraphics[width=0.75\textwidth]{fig/pipe_0d_results.png}
+\includegraphics[width=0.85\textwidth]{fig/pipe_0d_results.png}
 \caption{Streamlines of velocity at end of simulation, color indicates velcity magnitude.}
 \label{fig:pipe_0d_results}
 \end{figure}

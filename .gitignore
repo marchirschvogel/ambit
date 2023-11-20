@@ -2,7 +2,6 @@ dist/
 build/
 libext/
 tmp/
-generated/
 __pycache__/
 .pytest_cache/
 *.egg-info/

@@ -77,12 +77,45 @@ Preface
   in the folder ``demos`` (with detailed setup descriptions) or amogst
   the test cases in the folder ``tests``.
 
+Installation
+============
+
+| In order to use Ambit, you need to install FEniCSx
+  (https://github.com/FEniCS/dolfinx#installation) (latest
+  Ambit-compatible dolfinx development version dates to 19 Aug 2023).
+| Ambit can then be installed using pip, either the current release
+
+::
+
+   python3 -m pip install ambit-fe
+
+or latest development version:
+
+::
+
+   python3 -m pip install git+https://github.com/marchirschvogel/ambit.git
+
+Alternatively, you can pull a pre-built Docker image with FEniCSx and
+Ambit installed:
+
+::
+
+   docker pull ghcr.io/marchirschvogel/ambit:latest
+
+If a Docker image for development is desired, the following image
+contains all dependencies needed to install and run Ambit (including the
+dolfinx mixed branch):
+
+::
+
+   docker pull ghcr.io/marchirschvogel/ambit:devenv
+
 .. _sec:solid:
 
 Solid mechanics
 ===============
 
-| – Example: ``demos/solid``
+| – Example: Sec. `7.1 <#subsec:demos:solid>`__ and ``demos/solid``
 | – Problem type: ``solid``
 | – Solid mechanics are formulated in a Total Lagrangian frame
 
@@ -263,7 +296,7 @@ Fluid mechanics
 Eulerian reference frame
 ------------------------
 
-| – Example: ``demos/fluid``
+| – Example: Sec. `7.2 <#subsec:demos:fluid>`__ and ``demos/fluid``
 | – Problem type: ``fluid``
 | – Incompressible Navier-Stokes equations in Eulerian reference frame
 
@@ -548,7 +581,7 @@ Stabilization
 ~~~~~~~~~~~~~
 
 | ALE forms of stabilization introduced in sec.
-  `3.1.3 <#subsubsec:stab>`__
+  `4.1.3 <#subsubsec:stab>`__
 | ``supg_pspg``:
 | – Velocity residual operator
   (`[eq:res_v_fluid_ale] <#eq:res_v_fluid_ale>`__) is augmented with the
@@ -615,7 +648,7 @@ elements (without stabilization)
 0D flow: Lumped parameter models
 ================================
 
-| – Example: ``demos/flow0d``
+| – Example: Sec. `7.3 <#subsec:demos:flow0d>`__ ``demos/flow0d``
 | – Problem type: ``flow0d``
 
 2-element Windkessel
@@ -912,7 +945,8 @@ Multi-physics coupling
 Solid + 0D flow
 ---------------
 
-| – Example: ``demos/solid_flow0d``
+| – Example: Sec. `7.4 <#subsec:demos:solid_flow0d>`__ and
+  ``demos/solid_flow0d``
 | – Problem type: ``solid_flow0d``
 | – (`[eq:res_u_solid] <#eq:res_u_solid>`__) or
   (`[eq:res_u_solid_incomp] <#eq:res_u_solid_incomp>`__) augmented by
@@ -967,7 +1001,8 @@ incompressible solid:
 Fluid + 0D flow
 ---------------
 
-| – Example: ``demos/fluid_flow0d``
+| – Example: Sec. `7.5 <#subsec:demos:fluid_flow0d>`__
+  ``demos/fluid_flow0d``
 | – Problem type: ``fluid_flow0d``
 | – (`[eq:res_v_fluid] <#eq:res_v_fluid>`__) augmented by following
   term:
@@ -1056,12 +1091,12 @@ Fluid-Solid Interaction (FSI) + 0D flow
 Demos
 =====
 
-.. _subsec:demos_solid:
+.. _subsec:demos:solid:
 
 Solid
 -----
 
-– Physics description given in sec. `2 <#sec:solid>`__
+– Physics description given in sec. `3 <#sec:solid>`__
 
 Cantilever under tip load
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1076,7 +1111,7 @@ Cantilever under tip load
 
 .. figure:: fig/cantilever_setup.png
    :alt: Cantilever, problem setup.
-   :width: 75.0%
+   :width: 85.0%
 
    Cantilever, problem setup.
 
@@ -1103,18 +1138,18 @@ displacement magnitude at the end of the simulation.
 
 .. figure:: fig/cantilever_results.png
    :alt: Cantilever, tip deformation. Color shows displacement
-   :width: 75.0%
+   :width: 85.0%
 
    Cantilever, tip deformation. Color shows displacement magnitude.
 
 [fig:cantilever_results]
 
-.. _subsec:demos_fluid:
+.. _subsec:demos:fluid:
 
 Fluid
 -----
 
-– Physics description given in sec. `3 <#sec:fluid>`__
+– Physics description given in sec. `4 <#sec:fluid>`__
 
 2D channel flow
 ~~~~~~~~~~~~~~~
@@ -1126,7 +1161,7 @@ velocity, 4-node bilinear quadrilaterals for the pressure).
 
 .. figure:: fig/channel_setup.png
    :alt: Channel flow, problem setup.
-   :width: 75.0%
+   :width: 85.0%
 
    Channel flow, problem setup.
 
@@ -1153,14 +1188,14 @@ simulation.
 
 .. figure:: fig/channel_results.png
    :alt: Velocity magnitude (top part) and pressure (bottom part) at end
-   :width: 75.0%
+   :width: 85.0%
 
    Velocity magnitude (top part) and pressure (bottom part) at end of
    simulation.
 
 [fig:channel_results]
 
-.. _subsec:demos_flow0d:
+.. _subsec:demos:flow0d:
 
 0D flow
 -------
@@ -1181,7 +1216,7 @@ is reached after 5 heart cycles.
 
 .. figure:: fig/syspul_setup.png
    :alt: 0D heart, systemic and pulmonary circulation, problem setup.
-   :width: 60.0%
+   :width: 70.0%
 
    0D heart, systemic and pulmonary circulation, problem setup.
 
@@ -1222,7 +1257,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
 
 .. figure:: fig/syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Right heart
-   :width: 80.0%
+   :width: 90.0%
 
    A. Left heart and systemic pressures over time. B. Right heart and
    pulmonary pressures over time. C. Left and right ventricular and
@@ -1269,7 +1304,7 @@ Solid + 0D flow
 
 .. figure:: fig/heart_syspul_setup.png
    :alt: Generic 3D ventricular heart model coupled to a closed-loop
-   :width: 60.0%
+   :width: 70.0%
 
    Generic 3D ventricular heart model coupled to a closed-loop systemic
    and pulmonary circulation model.
@@ -1329,7 +1364,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
 
 .. figure:: fig/heart_syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Left and
-   :width: 80.0%
+   :width: 90.0%
 
    A. Left heart and systemic pressures over time. B. Left and right
    ventricular and atrial volumes over time. C. Left and right
@@ -1367,7 +1402,7 @@ Blocked pipe flow with 0D model bypass
 
 .. figure:: fig/pipe_0d_setup.png
    :alt: Blocked pipe with 0D model bypass, simulation setup.
-   :width: 75.0%
+   :width: 85.0%
 
    Blocked pipe with 0D model bypass, simulation setup.
 
@@ -1401,7 +1436,7 @@ Paraview, and visualize the velocity over time.
 
 .. figure:: fig/pipe_0d_results.png
    :alt: Streamlines of velocity at end of simulation, color indicates
-   :width: 75.0%
+   :width: 85.0%
 
    Streamlines of velocity at end of simulation, color indicates velcity
    magnitude.
