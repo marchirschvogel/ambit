@@ -1078,6 +1078,7 @@ Cantilever under tip load
 
 .. figure:: fig/cantilever_setup.png
    :alt: Cantilever, problem setup.
+   :width: 75.0%
 
    Cantilever, problem setup.
 
@@ -1102,9 +1103,10 @@ Paraview, and visualize the deformation over time.
 Figure `[fig:cantilever_results] <#fig:cantilever_results>`__ shows the
 displacement magnitude at the end of the simulation.
 
-.. figure:: fig/cantilever_results
+.. figure:: fig/cantilever_results.png
    :alt: Cantilever, tip deformation. Color shows displacement
    magnitude.
+   :width: 75.0%
 
    Cantilever, tip deformation. Color shows displacement magnitude.
 
@@ -1127,6 +1129,7 @@ velocity, 4-node bilinear quadrilaterals for the pressure).
 
 .. figure:: fig/channel_setup.png
    :alt: Channel flow, problem setup.
+   :width: 75.0%
 
    Channel flow, problem setup.
 
@@ -1154,6 +1157,7 @@ simulation.
 .. figure:: fig/channel_results.png
    :alt: Velocity magnitude (top part) and pressure (bottom part) at end
    of simulation.
+   :width: 75.0%
 
    Velocity magnitude (top part) and pressure (bottom part) at end of
    simulation.
@@ -1181,7 +1185,7 @@ is reached after 5 heart cycles.
 
 .. figure:: fig/syspul_setup.png
    :alt: 0D heart, systemic and pulmonary circulation, problem setup.
-   :scale: 50%
+   :width: 60.0%
 
    0D heart, systemic and pulmonary circulation, problem setup.
 
@@ -1225,6 +1229,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
    and pulmonary pressures over time. C. Left and right ventricular and
    atrial volumes over time. D. Left and right ventricular
    pressure-volume relationships of periodic (5th) cycle.
+   :width: 80.0%
 
    A. Left heart and systemic pressures over time. B. Right heart and
    pulmonary pressures over time. C. Left and right ventricular and
@@ -1272,6 +1277,7 @@ Solid + 0D flow
 .. figure:: fig/heart_syspul_setup.png
    :alt: Generic 3D ventricular heart model coupled to a closed-loop
    systemic and pulmonary circulation model.
+   :width: 60.0%
 
    Generic 3D ventricular heart model coupled to a closed-loop systemic
    and pulmonary circulation model.
@@ -1334,6 +1340,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
    right ventricular and atrial volumes over time. C. Left and right
    ventricular pressure-volume relationships. D. Snapshot of heart
    deformation at end-systole, color indicates displacement magnitude.
+   :width: 80.0%
 
    A. Left heart and systemic pressures over time. B. Left and right
    ventricular and atrial volumes over time. C. Left and right
@@ -1371,6 +1378,7 @@ Blocked pipe flow with 0D model bypass
 
 .. figure:: fig/pipe_0d_setup.png
    :alt: Blocked pipe with 0D model bypass, simulation setup.
+   :width: 75.0%
 
    Blocked pipe with 0D model bypass, simulation setup.
 
@@ -1405,6 +1413,7 @@ Paraview, and visualize the velocity over time.
 .. figure:: fig/pipe_0d_results.png
    :alt: Streamlines of velocity at end of simulation, color indicates
    velcity magnitude.
+   :width: 75.0%
 
    Streamlines of velocity at end of simulation, color indicates velcity
    magnitude.
