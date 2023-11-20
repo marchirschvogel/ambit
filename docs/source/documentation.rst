@@ -1424,7 +1424,7 @@ Blocked pipe flow with 0D model bypass
 
 | This example demonstrates how to couple 3D fluid flow to a 0D
   lumped-parameter model. Incompressible transient Navier-Stokes flow in
-  a pipe with prescibed inflow is solved, with the special constraint
+  a pipe with prescribed inflow is solved, with the special constraint
   that an internal boundary (all-time closed valve) separates region 1
   and region 2 of the pipe. This internal Dirichlet condition can only
   be achieved by splitting the pressure space, hence having duplicate
