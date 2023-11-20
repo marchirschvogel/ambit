@@ -137,7 +137,7 @@
 
 \section{Preface}
 
-Ambit is an open-source software tool written in Python for parallel multi-physics simulations focusing on -- but not limited to -- cardiac mechanics. Amongst others, it contains re-implementations and generalizations of methods developed by the author for his PhD thesis \cite{hirschvogel2018}. Ambit makes use of the open-source finite element library FEniCS/dolfinx (https://fenicsproject.org) \cite{logg2012} along with the linear algebra package PETSc (https://petsc.org) \cite{petsc-user-ref}. It is constantly updated to ensure compatibility with a recent dolfinx development version, hence guaranteeing a state-of-the-art finite element and linear algebra backend.\\
+Ambit is an open-source software tool written in Python for parallel multi-physics simulations focusing on -- but not limited to -- cardiac mechanics. Amongst others, it contains re-implementations and generalizations of methods developed by the author for his PhD thesis \cite{hirschvogel2019disspub}. Ambit makes use of the open-source finite element library FEniCS/dolfinx (https://fenicsproject.org) \cite{logg2012} along with the linear algebra package PETSc (https://petsc.org) \cite{petsc-user-ref}. It is constantly updated to ensure compatibility with a recent dolfinx development version, hence guaranteeing a state-of-the-art finite element and linear algebra backend.\\
 
 Ambit is designed such that the user only needs to provide input files that define parameters through Python dictionaries, hence no programming or in-depth knowledge of any library-specific syntax is required.\\
 
@@ -623,7 +623,7 @@ q(p-p_{\mathrm{open}}) = \frac{p-p_{\mathrm{open}}}{\tilde{R}},\quad \text{with}
 \end{align}
 \textbf{Remark:} Smooth but potentially non-convex flow-pressure relationship!
 
-Valve model \verb.smooth_pres_momentum.:
+Valve model \verb"smooth_pres_momentum":
 \begin{align}
 q(p-p_{\mathrm{open}}) = \begin{cases}\frac{p-p_{\mathrm{open}}}{R_{\max}}, & p < p_{\mathrm{open}}-0.5\epsilon \\ h_{00}p_{0} + h_{10}m_{0}\epsilon + h_{01}p_{1} + h_{11}m_{1}\epsilon, & p \geq p_{\mathrm{open}}-0.5\epsilon \;\text{and}\; p < p_{\mathrm{open}}+0.5\epsilon \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}+0.5\epsilon  \end{cases}\nonumber
 \end{align}
@@ -640,11 +640,12 @@ with
 \begin{align}
 s=\frac{p-p_{\mathrm{open}}+0.5\epsilon}{\epsilon} \nonumber
 \end{align}
-\textbf{Remarks:}\\
-$-$ Collapses to valve model \verb.pwlin_pres. for $\epsilon=0$\\
-$-$ Smooth and convex flow-pressure relationship
 
-Valve model \verb.pw_pres_regurg.:
+\textbf{Remarks:}\\
+-- Collapses to valve model \verb"pwlin_pres" for $\epsilon=0$\\
+-- Smooth and convex flow-pressure relationship\\
+
+Valve model \verb"pw_pres_regurg":
 \begin{equation}
 q(p-p_{\mathrm{open}}) = \begin{cases} c A_{\mathrm{o}} \sqrt{p-p_{\mathrm{open}}}, & p < p_{\mathrm{open}} \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}  \end{cases}\nonumber
 \end{equation}
@@ -766,7 +767,7 @@ Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumbe
 
 - Model type : \verb.syspulcaprespir.\\
 
-- Model equations described in \cite{hirschvogel2018}, p. 51ff., 58ff.
+- Model equations described in \cite{hirschvogel2019disspub}, p. 51ff., 58ff.
 
 
 \section{Multi-physics coupling}\label{sec:multiphys_coupling}

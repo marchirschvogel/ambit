@@ -15,7 +15,7 @@ Preface
   multi-physics simulations focusing on – but not limited to – cardiac
   mechanics. Amongst others, it contains re-implementations and
   generalizations of methods developed by the author for his PhD thesis
-  :cite:p:`hirschvogel2018`. Ambit makes use of the
+  :cite:p:`hirschvogel2019disspub`. Ambit makes use of the
   open-source finite element library FEniCS/dolfinx
   (https://fenicsproject.org) :cite:p:`logg2012` along with
   the linear algebra package PETSc (https://petsc.org)
@@ -740,47 +740,45 @@ Valve model ``smooth_pres_resistance``:
 **Remark:** Smooth but potentially non-convex flow-pressure
 relationship!
 
-| Valve model ``smooth_pres_momentum``:
+Valve model ``smooth_pres_momentum``:
 
-  .. math::
+.. math::
 
-     \begin{aligned}
-     q(p-p_{\mathrm{open}}) = \begin{cases}\frac{p-p_{\mathrm{open}}}{R_{\max}}, & p < p_{\mathrm{open}}-0.5\epsilon \\ h_{00}p_{0} + h_{10}m_{0}\epsilon + h_{01}p_{1} + h_{11}m_{1}\epsilon, & p \geq p_{\mathrm{open}}-0.5\epsilon \;\text{and}\; p < p_{\mathrm{open}}+0.5\epsilon \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}+0.5\epsilon  \end{cases}\nonumber\end{aligned}
+   \begin{aligned}
+   q(p-p_{\mathrm{open}}) = \begin{cases}\frac{p-p_{\mathrm{open}}}{R_{\max}}, & p < p_{\mathrm{open}}-0.5\epsilon \\ h_{00}p_{0} + h_{10}m_{0}\epsilon + h_{01}p_{1} + h_{11}m_{1}\epsilon, & p \geq p_{\mathrm{open}}-0.5\epsilon \;\text{and}\; p < p_{\mathrm{open}}+0.5\epsilon \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}+0.5\epsilon  \end{cases}\nonumber\end{aligned}
 
-  with
+with
 
-  .. math::
+.. math::
 
-     \begin{aligned}
-     p_{0}=\frac{-0.5\epsilon}{R_{\max}}, \qquad m_{0}=\frac{1}{R_{\max}}, \qquad && p_{1}=\frac{0.5\epsilon}{R_{\min}}, \qquad m_{1}=\frac{1}{R_{\min}} \nonumber\end{aligned}
+   \begin{aligned}
+   p_{0}=\frac{-0.5\epsilon}{R_{\max}}, \qquad m_{0}=\frac{1}{R_{\max}}, \qquad && p_{1}=\frac{0.5\epsilon}{R_{\min}}, \qquad m_{1}=\frac{1}{R_{\min}} \nonumber\end{aligned}
 
-  and
+and
 
-  .. math::
+.. math::
 
-     \begin{aligned}
-     h_{00}=2s^3 - 3s^2 + 1, &\qquad h_{01}=-2s^3 + 3s^2, \nonumber\\
-     h_{10}=s^3 - 2s^2 + s, &\qquad h_{11}=s^3 - s^2 \nonumber\end{aligned}
+   \begin{aligned}
+   h_{00}=2s^3 - 3s^2 + 1, &\qquad h_{01}=-2s^3 + 3s^2, \nonumber\\
+   h_{10}=s^3 - 2s^2 + s, &\qquad h_{11}=s^3 - s^2 \nonumber\end{aligned}
 
-  with
+with
 
-  .. math::
+.. math::
 
-     \begin{aligned}
-     s=\frac{p-p_{\mathrm{open}}+0.5\epsilon}{\epsilon} \nonumber\end{aligned}
+   \begin{aligned}
+   s=\frac{p-p_{\mathrm{open}}+0.5\epsilon}{\epsilon} \nonumber\end{aligned}
 
-  **Remarks:**
-| :math:`-` Collapses to valve model ``pwlin_pres`` for
-  :math:`\epsilon=0`
-| :math:`-` Smooth and convex flow-pressure relationship
+| **Remarks:**
+| – Collapses to valve model ``pwlin_pres`` for :math:`\epsilon=0`
+| – Smooth and convex flow-pressure relationship
+| Valve model ``pw_pres_regurg``:
 
-Valve model ``pw_pres_regurg``:
+  .. math:: q(p-p_{\mathrm{open}}) = \begin{cases} c A_{\mathrm{o}} \sqrt{p-p_{\mathrm{open}}}, & p < p_{\mathrm{open}} \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}  \end{cases}\nonumber
 
-.. math:: q(p-p_{\mathrm{open}}) = \begin{cases} c A_{\mathrm{o}} \sqrt{p-p_{\mathrm{open}}}, & p < p_{\mathrm{open}} \\ \frac{p-p_{\mathrm{open}}}{R_{\min}}, & p \geq p_{\mathrm{open}}  \end{cases}\nonumber
-
-**Remark:** Model to allow a regurgitant valve in the closed state,
-degree of regurgitation can be varied by specifying the valve
-regurgitant area :math:`A_{\mathrm{o}}`
+  **Remark:** Model to allow a regurgitant valve in the closed state,
+  degree of regurgitation can be varied by specifying the valve
+  regurgitant area :math:`A_{\mathrm{o}}`
 
 Coronary circulation model:
 
@@ -901,8 +899,8 @@ Systemic and pulmonary circulation, capillary flow, and respirory model
 -----------------------------------------------------------------------
 
 | - Model type : ``syspulcaprespir``
-| - Model equations described in :cite:p:`hirschvogel2018`, p.
-  51ff., 58ff.
+| - Model equations described in
+  :cite:p:`hirschvogel2019disspub`, p. 51ff., 58ff.
 
 .. _sec:multiphys_coupling:
 
@@ -1105,7 +1103,6 @@ displacement magnitude at the end of the simulation.
 
 .. figure:: fig/cantilever_results.png
    :alt: Cantilever, tip deformation. Color shows displacement
-   magnitude.
    :width: 75.0%
 
    Cantilever, tip deformation. Color shows displacement magnitude.
@@ -1156,7 +1153,6 @@ simulation.
 
 .. figure:: fig/channel_results.png
    :alt: Velocity magnitude (top part) and pressure (bottom part) at end
-   of simulation.
    :width: 75.0%
 
    Velocity magnitude (top part) and pressure (bottom part) at end of
@@ -1226,9 +1222,6 @@ in ``ambit/src/ambit_fe/postprocess/``):
 
 .. figure:: fig/syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Right heart
-   and pulmonary pressures over time. C. Left and right ventricular and
-   atrial volumes over time. D. Left and right ventricular
-   pressure-volume relationships of periodic (5th) cycle.
    :width: 80.0%
 
    A. Left heart and systemic pressures over time. B. Right heart and
@@ -1276,7 +1269,6 @@ Solid + 0D flow
 
 .. figure:: fig/heart_syspul_setup.png
    :alt: Generic 3D ventricular heart model coupled to a closed-loop
-   systemic and pulmonary circulation model.
    :width: 60.0%
 
    Generic 3D ventricular heart model coupled to a closed-loop systemic
@@ -1337,9 +1329,6 @@ in ``ambit/src/ambit_fe/postprocess/``):
 
 .. figure:: fig/heart_syspul_results.png
    :alt: A. Left heart and systemic pressures over time. B. Left and
-   right ventricular and atrial volumes over time. C. Left and right
-   ventricular pressure-volume relationships. D. Snapshot of heart
-   deformation at end-systole, color indicates displacement magnitude.
    :width: 80.0%
 
    A. Left heart and systemic pressures over time. B. Left and right
@@ -1412,7 +1401,6 @@ Paraview, and visualize the velocity over time.
 
 .. figure:: fig/pipe_0d_results.png
    :alt: Streamlines of velocity at end of simulation, color indicates
-   velcity magnitude.
    :width: 75.0%
 
    Streamlines of velocity at end of simulation, color indicates velcity
