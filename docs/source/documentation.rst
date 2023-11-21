@@ -17,10 +17,10 @@ Preface
   generalizations of methods developed by the author for his PhD thesis
   :cite:p:`hirschvogel2019disspub`. Ambit makes use of the
   open-source finite element library FEniCS/dolfinx
-  (https://fenicsproject.org) :cite:p:`logg2012` along with
-  the linear algebra package PETSc (https://petsc.org)
-  :cite:p:`petsc-user-ref`. It is constantly updated to ensure
-  compatibility with a recent dolfinx development version, hence
+  (https://fenicsproject.org) :cite:p:`logg2012-fenics` along
+  with the linear algebra package PETSc (https://petsc.org)
+  :cite:p:`balay2022-petsc`. It is constantly updated to
+  ensure compatibility with a recent dolfinx development version, hence
   guaranteeing a state-of-the-art finite element and linear algebra
   backend.
 | Ambit is designed such that the user only needs to provide input files
