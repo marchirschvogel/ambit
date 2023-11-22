@@ -559,27 +559,31 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 
 -- Problem type: \verb"flow0d"\\
 
+-- 0D model concentrated elements are resistances ($R$), impedances ($Z$, technically are resistances), compliances ($C$), inertances ($L$ or $I$), and elastances ($E$)\\
+
+-- 0D variables are pressures ($p$), fluxes ($q$ or $Q$), or volumes ($V$)
+
 \subsubsection{2-element Windkessel}
 
-- Model type : \verb"2elwindkessel"\\
+-- Model type : \verb"2elwindkessel"\\
 
 \subsubsection{4-element Windkessel (inertance parallel to impedance)}
 
-- Model type : \verb"4elwindkesselLpZ"\\
+-- Model type : \verb"4elwindkesselLpZ"\\
 
 \subsubsection{4-element Windkessel (inertance serial to impedance)}
 
-- Model type : \verb"4elwindkesselLsZ"\\
+-- Model type : \verb"4elwindkesselLsZ"\\
 
 \subsubsection{In-outflow CRL link}
 
-- Model type : \verb"CRLinoutlink"\\
+-- Model type : \verb"CRLinoutlink"\\
 
 \subsubsection{Systemic and pulmonary circulation}
 
-- Model type : \verb"syspul"\\
+-- Model type : \verb"syspul"\\
 
-- Allows to link in a coronary flow model
+-- Allows to link in a coronary flow model
 
 \begin{align}
 &\text{left heart and systemic circulation} && \nonumber\\
@@ -712,7 +716,7 @@ q(p-p_{\mathrm{open}}) = \begin{cases} c A_{\mathrm{o}} \sqrt{p-p_{\mathrm{open}
 
 \subsubsection{Systemic and pulmonary circulation, including capillary flow}
 
-- Model type : \verb"syspulcap"\\
+-- Model type : \verb"syspulcap", cf. \cite{hirschvogel2019disspub}, p. 51ff.\\
 
 % left heart and systemic circulation:
 \begin{align}
@@ -757,7 +761,9 @@ Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t}\nonumber
 
 \subsubsection{Systemic and pulmonary circulation, including capillary and coronary flow}
 
-- Model type : \verb"syspulcapcor"\\
+-- Model type : \verb"syspulcapcor"\\
+
+-- Variant of \verb"syspulcap", with coronaries branching off directly after aortic valve
 
 % left heart and systemic circulation:
 \begin{align}
@@ -803,11 +809,11 @@ Q_{\mathrm{at}}^{r} := -\frac{\mathrm{d}V_{\mathrm{at}}^{r}}{\mathrm{d}t}, \qqua
 Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumber
 \end{align}
 
-\subsubsection{Systemic and pulmonary circulation, capillary flow, and respirory model}
+\subsubsection{Systemic and pulmonary circulation, capillary flow, and respiratory (gas transport + dissociation) model}
 
-- Model type : \verb"syspulcaprespir"\\
+-- Model type : \verb"syspulcaprespir"\\
 
-- Model equations described in \cite{hirschvogel2019disspub}, p. 51ff., 58ff.
+-- Model equations described in \cite{hirschvogel2019disspub}, p. 51ff., 58ff.
 
 
 \subsection{Multi-physics coupling}\label{subsec:multiphys_coupling}
@@ -907,14 +913,39 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 -- Problem type: \verb"fsi"\\
 
--- Not yet fully implemented!
+-- Not yet fully implemented!\\
+
+-- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi}
+\end{align}
+
+-- Discrete nonlinear system to solve in each time step $n$ for incompressible solid:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_inc}
+\end{align}
 
 
 \subsubsection{Fluid-Solid Interaction (FSI) + 0D flow}\label{subsubsec:fsi_flow0d}
 
 -- Problem type: \verb"fsi_flow0d"\\
 
--- Not yet fully implemented!
+-- Not yet fully implemented!\\
+
+-- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_0d}
+\end{align}
+
+-- Discrete nonlinear system to solve in each time step $n$ for incompressible solid:
+\begin{align}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_0d_inc}
+\end{align}
+
+%-- Discrete linear system to solve in each Newton iteration $k$:
+%\begin{align}
+%\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fsi_0d}
+%\end{align}
 
 %
 %\section{Fluid-reduced-solid-interaction (FrSI)}
