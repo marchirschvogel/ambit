@@ -22,7 +22,7 @@ def test_main():
                          'mesh_boundary'         : basepath+'/input/blocks5hex_boundary.xdmf',
                          'write_results_every'   : 1,
                          'output_path'           : basepath+'/tmp/',
-                         'results_to_write'      : ['displacement','cauchystress_membrane_principal'],
+                         'results_to_write'      : ['displacement','cauchystress_membrane_principal','strainenergy_membrane'],
                          'simname'               : 'solid_membrane'}
 
     SOLVER_PARAMS     = {'solve_type'            : 'direct',

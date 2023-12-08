@@ -373,7 +373,7 @@ class boundary_cond():
     # set membrane surface BCs
     def membranesurf_bcs(self, bcdict, u, v, a, ds_, ivar=None, wallfields=[]):
 
-        w, idmem, bstress = ufl.as_ufl(0), [], []
+        w, idmem, bstress, bstrainenergy = ufl.as_ufl(0), [], [], []
 
         mi=0
         for m in bcdict:
@@ -396,11 +396,13 @@ class boundary_cond():
                 idmem.append(m['id'][i])
 
                 w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield)
-                bstress.append(self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, stress=True, wallfield=wallfield))
+                bstr, bse = self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, se=True, wallfield=wallfield)
+                bstress.append(bstr)
+                bstrainenergy.append(bse)
 
             mi+=1
 
-        return w, idmem, bstress
+        return w, idmem, bstress, bstrainenergy
 
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)

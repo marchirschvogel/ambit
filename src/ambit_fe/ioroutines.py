@@ -448,6 +448,14 @@ class IO_solid(IO):
                         cauchystress_membrane_principal_out = fem.Function(self.V_out_vector, name=self.cauchystress_membrane_principal.name)
                         cauchystress_membrane_principal_out.interpolate(self.cauchystress_membrane_principal)
                         self.resultsfiles[res].write_function(cauchystress_membrane_principal_out, indicator)
+                    elif res=='strainenergy_membrane':
+                        sefuncs=[]
+                        for n in range(len(pb.bstrainenergy)):
+                            sefuncs.append(pb.bstrainenergy[n])
+                        strainenergy_membrane = project(sefuncs, pb.Vd_scalar, pb.ds, domids=pb.idmem, nm="StrainEnergy_membrane", comm=self.comm)
+                        strainenergy_membrane_out = fem.Function(self.V_out_scalar, name=strainenergy_membrane.name)
+                        strainenergy_membrane_out.interpolate(strainenergy_membrane)
+                        self.resultsfiles[res].write_function(strainenergy_membrane_out, indicator)
                     elif res=='trmandelstress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
@@ -518,6 +526,14 @@ class IO_solid(IO):
                         eastrain_principal_out = fem.Function(self.V_out_vector, name=eastrain_principal.name)
                         eastrain_principal_out.interpolate(eastrain_principal)
                         self.resultsfiles[res].write_function(eastrain_principal_out, indicator)
+                    elif res=='strainenergy':
+                        sefuncs=[]
+                        for n in range(pb.num_domains):
+                            sefuncs.append(ufl.inner(pb.ma[n].S(pb.u,pb.p,pb.vel,ivar=pb.internalvars),pb.ki.E(pb.u)))
+                        se = project(sefuncs, pb.Vd_scalar, pb.dx, domids=pb.domain_ids, nm="StrainEnergy", comm=self.comm)
+                        se_out = fem.Function(self.V_out_scalar, name=se.name)
+                        se_out.interpolate(se)
+                        self.resultsfiles[res].write_function(se_out, indicator)
                     elif res=='fiberstretch':
                         fiberstretch = project(pb.ki.fibstretch(pb.u,pb.fib_func[0]), pb.Vd_scalar, pb.dx, domids=pb.domain_ids, nm="FiberStretch", comm=self.comm)
                         fiberstretch_out = fem.Function(self.V_out_scalar, name=fiberstretch.name)
@@ -736,6 +752,14 @@ class IO_fluid(IO):
                         cauchystress_membrane_out = fem.Function(self.V_out_tensor, name=cauchystress_membrane.name)
                         cauchystress_membrane_out.interpolate(cauchystress_membrane)
                         self.resultsfiles[res].write_function(cauchystress_membrane_out, indicator)
+                    elif res=='strainenergy_membrane':
+                        sefuncs=[]
+                        for n in range(len(pb.bstrainenergy)):
+                            sefuncs.append(pb.bstrainenergy[n])
+                        strainenergy_membrane = project(sefuncs, pb.Vd_scalar, pb.ds, domids=pb.idmem, nm="StrainEnergy_membrane", comm=self.comm)
+                        strainenergy_membrane_out = fem.Function(self.V_out_scalar, name=strainenergy_membrane.name)
+                        strainenergy_membrane_out.interpolate(strainenergy_membrane)
+                        self.resultsfiles[res].write_function(strainenergy_membrane_out, indicator)
                     elif res=='counters':
                         # iteration counters, written by base class
                         pass

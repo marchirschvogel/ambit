@@ -175,9 +175,9 @@ class AleProblem(problem_base):
         # internal virtual work
         self.deltaW_int = ufl.as_ufl(0)
 
-        for n, N in enumerate(self.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             # internal virtual work
-            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d), self.dx(N))
+            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d), self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)

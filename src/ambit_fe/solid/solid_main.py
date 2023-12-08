@@ -84,7 +84,7 @@ class SolidmechanicsProblem(problem_base):
 
         # collect domain data
         self.rho0 = []
-        for n, N in enumerate(self.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             # data for inertial forces: density
             if self.timint != 'static':
                 self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
@@ -417,23 +417,23 @@ class SolidmechanicsProblem(problem_base):
         self.deltaW_int,  self.deltaW_int_old  = ufl.as_ufl(0), ufl.as_ufl(0)
         self.deltaW_p,    self.deltaW_p_old    = ufl.as_ufl(0), ufl.as_ufl(0)
 
-        for n, N in enumerate(self.domain_ids):
+        for n, M in enumerate(self.domain_ids):
 
             if self.timint != 'static':
                 # kinetic virtual work
-                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx(N))
-                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.dx(N))
+                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx(M))
+                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.dx(M))
 
             # internal virtual work
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(N))
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.dx(N))
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(M))
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.dx(M))
 
             # pressure virtual work (for incompressible formulation)
             # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
             if self.mat_growth[n]: J, J_old = self.ma[n].J_e(self.u, self.theta), self.ma[n].J_e(self.u_old, self.theta_old)
             else:                  J, J_old = self.ki.J(self.u), self.ki.J(self.u_old)
-            self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx(N))
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx(N))
+            self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx(M))
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_neumann_old, w_body, w_body_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
@@ -447,8 +447,8 @@ class SolidmechanicsProblem(problem_base):
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, [self.ds,self.de], u_pre=self.u_pre)
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, [self.ds,self.de], u_pre=self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, self.idmem, self.bstress = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, [self.ds,self.de])
-            w_membrane_old, _, _                 = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, [self.ds,self.de])
+            w_membrane, self.idmem, self.bstress, self.bstrainenergy = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, [self.ds,self.de])
+            w_membrane_old, _, _, _                                  = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, [self.ds,self.de])
 
         # for (quasi-static) prestressing, we need to eliminate dashpots in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
@@ -456,8 +456,8 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
             # internal virtual work
-            for n, N in enumerate(self.domain_ids):
-                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(N))
+            for n, M in enumerate(self.domain_ids):
+                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(M))
             # boundary conditions
             bc_dict_prestr = copy.deepcopy(self.bc_dict)
             # get rid of dashpots
@@ -536,7 +536,7 @@ class SolidmechanicsProblem(problem_base):
         # point level with deformation-dependent internal variables (i.e. growth or plasticity), we make use of a more explicit formulation
         # of the linearization which involves the fourth-order material tangent operator Ctang ("derivative" cannot take care of the
         # dependence of the internal variables on the deformation if this dependence is nonlinear and cannot be expressed analytically)
-        for n, N in enumerate(self.domain_ids):
+        for n, M in enumerate(self.domain_ids):
 
             # elastic and viscous material tangent operator
             Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, tang=True)
@@ -553,7 +553,7 @@ class SolidmechanicsProblem(problem_base):
             else:
                 Ctang = Cmat
 
-            self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx(N))
+            self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx(M))
 
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
         self.weakform_lin_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
@@ -563,7 +563,7 @@ class SolidmechanicsProblem(problem_base):
 
             self.weakform_lin_up, self.weakform_lin_pu, self.weakform_lin_pp = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
-            for n, N in enumerate(self.domain_ids):
+            for n, M in enumerate(self.domain_ids):
                 # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
                 if self.mat_growth[n]:
                     J    = self.ma[n].J_e(self.u, self.theta)
@@ -595,16 +595,16 @@ class SolidmechanicsProblem(problem_base):
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
                     dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
                     if not isinstance(dthetadp, ufl.constantvalue.Zero):
-                        self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx(N)
+                        self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx(M)
                 else:
                     Ctang_p = Cmat_p
                     Jtang = Jmat
 
-                self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx(N))
+                self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx(M))
                 if self.pressure_at_midpoint:
-                    self.weakform_lin_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(N))
+                    self.weakform_lin_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
                 else:
-                    self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(N))
+                    self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
 
         # set forms for active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
@@ -679,8 +679,8 @@ class SolidmechanicsProblem(problem_base):
     def compute_solid_growth_rate(self, N, t):
 
         dtheta_all = ufl.as_ufl(0)
-        for n, N in enumerate(self.domain_ids):
-            dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx(N)
+        for n, M in enumerate(self.domain_ids):
+            dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.dx(M)
 
         gr = fem.assemble_scalar(fem.form(dtheta_all))
         gr = self.comm.allgather(gr)
@@ -695,6 +695,49 @@ class SolidmechanicsProblem(problem_base):
                 fl = self.io.output_path+'/results_'+self.simname+'_growthrate.txt'
                 f = open(fl, mode)
                 f.write('%.16E %.16E\n' % (t,self.growth_rate))
+                f.close()
+
+
+    # computes the solid's total strain energy
+    def compute_strain_energy(self, N, t):
+
+        se_all = ufl.as_ufl(0)
+        for n, M in enumerate(self.domain_ids):
+            # S : E (2nd PK stress contracted with Green-Lagrange strain), integrated over reference coordinates, gives total strain energy
+            se_all += ufl.inner(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.E(self.u)) * self.dx(M)
+
+        se = fem.assemble_scalar(fem.form(se_all))
+        se = self.comm.allgather(se)
+        strain_energy = sum(se)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t,self.dt): mode='wt'
+                else: mode='a'
+                fl = self.io.output_path+'/results_'+self.simname+'_strainenergy.txt'
+                f = open(fl, mode)
+                f.write('%.16E %.16E\n' % (t,strain_energy))
+                f.close()
+
+
+    # computes the total strain energy of a membrane (reduced) solid model
+    def compute_strain_energy_membrane(self, N, t):
+
+        se_mem_all = ufl.as_ufl(0)
+        for nm in range(len(self.bc_dict['membrane'])):
+            se_mem_all += self.bstrainenergy[nm] * self.ds(self.idmem[nm])
+
+        se_mem = fem.assemble_scalar(fem.form(se_mem_all))
+        se_mem = self.comm.allgather(se_mem)
+        strain_energy_mem = sum(se_mem)
+
+        if self.comm.rank == 0:
+            if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
+                if np.isclose(t,self.dt): mode='wt'
+                else: mode='a'
+                fl = self.io.output_path+'/results_'+self.simname+'_strainenergy_membrane.txt'
+                f = open(fl, mode)
+                f.write('%.16E %.16E\n' % (t,strain_energy_mem))
                 f.close()
 
 
@@ -716,9 +759,9 @@ class SolidmechanicsProblem(problem_base):
         f = fem.Function(self.V_u) # zero source term
 
         a, L = ufl.as_ufl(0), ufl.as_ufl(0)
-        for n, N in enumerate(self.domain_ids):
-            a += ufl.inner(ufl.grad(uf), ufl.grad(vf))*self.dx(N)
-            L += ufl.dot(f,vf)*self.dx(N)
+        for n, M in enumerate(self.domain_ids):
+            a += ufl.inner(ufl.grad(uf), ufl.grad(vf))*self.dx(M)
+            L += ufl.dot(f,vf)*self.dx(M)
 
         uf = fem.Function(self.V_u, name="uf")
 
@@ -730,8 +773,8 @@ class SolidmechanicsProblem(problem_base):
         lp.solve()
 
         vol_all = ufl.as_ufl(0)
-        for n, N in enumerate(self.domain_ids):
-            vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx(N)
+        for n, M in enumerate(self.domain_ids):
+            vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx(M)
 
         vol = fem.assemble_scalar(fem.form(vol_all))
         vol = self.comm.allgather(vol)
@@ -947,6 +990,10 @@ class SolidmechanicsProblem(problem_base):
         # compute the growth rate (has to be called before update_timestep)
         if self.have_growth:
             self.compute_solid_growth_rate(N, t)
+        if 'strainenergy' in self.results_to_write:
+            self.compute_strain_energy(N, t)
+        if 'membrane' in self.bc_dict.keys() and 'strainenergy_membrane' in self.results_to_write:
+            self.compute_strain_energy_membrane(N, t)
 
 
     def set_output_state(self, t):

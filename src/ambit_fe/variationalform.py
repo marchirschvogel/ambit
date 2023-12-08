@@ -131,7 +131,7 @@ class variationalform_base:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{u}\,\mathrm{d}A
     # for fluid mechanics, contribution to virtual power is:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v}),\boldsymbol{v}) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{v}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, stress=False, wallfield=None):
+    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, se=False, wallfield=None):
 
         C = F.T*F
 
@@ -245,6 +245,9 @@ class variationalform_base:
         # Cauchy stress for postprocessing: sigma = (1/J) P*F^T --> membrane is incompressible, hence J=1
         sigma = P * Fmod.T
 
+        # strain energy of membrane, for postprocessing
+        strainenergy = 0.5*ufl.inner(S, Cmod)
+
         # only in-plane components of test function derivatives should be used!
         var_F = ufl.grad(self.var_u) - ufl.grad(self.var_u)*n0n0
 
@@ -258,7 +261,7 @@ class variationalform_base:
             dWb_kin = ufl.as_ufl(0)
 
         # minus signs, since this sums into external virtual work/power!
-        if not stress:
+        if not se:
             return -dWb_int - dWb_kin
         else:
-            return sigma
+            return sigma, strainenergy
