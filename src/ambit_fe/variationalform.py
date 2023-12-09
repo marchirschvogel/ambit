@@ -140,6 +140,9 @@ class variationalform_base:
 
         model = params['model']
 
+        try: material = params['material']
+        except: material = 'isoexp'
+
         try: active = params['active_stress']
         except: active = None
 
@@ -212,7 +215,13 @@ class variationalform_base:
         except: rho0 = 0.
 
         # exponential isotropic strain energy
-        Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-self.dim)) - 1.)
+        if material == 'isoexp':
+            Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-self.dim)) - 1.)
+        elif material == 'neohooke':
+            Psi = (a_0/2.) * (Ic_ - self.dim)
+        else:
+            raise ValueError("Unknown membrane elastic material!")
+
         # viscous pseudo-potential
         Psi_v = (eta/8.) * ufl.tr(Cmoddot_*Cmoddot_)
 

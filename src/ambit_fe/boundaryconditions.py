@@ -381,9 +381,14 @@ class boundary_cond():
             try: codim = m['codimension']
             except: codim = self.dim - 1
 
+            try: internal = m['internal']
+            except: internal = False
+
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
             else: raise ValueError("Wrong codimension of boundary.")
+
+            if internal: dind=2
 
             # field for variable wall thickness
             if bool(wallfields):

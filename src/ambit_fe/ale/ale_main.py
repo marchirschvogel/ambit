@@ -59,6 +59,8 @@ class AleProblem(problem_base):
 
         self.ds = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
         self.de = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b2_master, metadata={'quadrature_degree': self.quad_degree})
+        self.dS = ufl.Measure("dS", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
+        self.bmeasures = [self.ds,self.de,self.dS]
 
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in ALE is somehow senseless...
@@ -182,11 +184,11 @@ class AleProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, [self.ds,self.de], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
         if 'bodyforce' in self.bc_dict.keys():
             w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update)
         if 'robin' in self.bc_dict.keys():
-            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, [self.ds,self.de])
+            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.bmeasures)
 
         self.deltaW_ext = w_neumann + w_body + w_robin
 
