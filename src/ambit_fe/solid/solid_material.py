@@ -19,13 +19,15 @@ class materiallaw:
         self.I = I
         self.Cdot = Cdot
 
+        self.dim = I.ufl_shape[0]
+
         # Cauchy-Green invariants
         self.Ic   = ufl.tr(C)
         self.IIc  = 0.5*(ufl.tr(C)**2. - ufl.tr(C*C))
         self.IIIc = ufl.det(C)
         # isochoric Cauchy-Green invariants
-        self.Ic_bar   = self.IIIc**(-1./3.) * self.Ic
-        self.IIc_bar  = self.IIIc**(-2./3.) * self.IIc
+        self.Ic_bar   = self.IIIc**(-1./self.dim) * self.Ic
+        self.IIc_bar  = self.IIIc**(-2./self.dim) * self.IIc
 
         # Green-Lagrange strain and invariants (for convenience, used e.g. by St.-Venant-Kirchhoff material)
         self.E = 0.5*(C - I)
@@ -40,7 +42,7 @@ class materiallaw:
         mu = params['mu']
 
         # classic NeoHookean material (isochoric version)
-        Psi_dev = (mu/2.) * (self.Ic_bar - 3.)
+        Psi_dev = (mu/2.) * (self.Ic_bar - self.dim)
 
         S = 2.*ufl.diff(Psi_dev,C)
 
@@ -52,7 +54,7 @@ class materiallaw:
         c1, c2, c3 = params['c1'], params['c2'], params['c3']
 
         # Yeoh material (isochoric version) - generalized NeoHookean model
-        Psi_dev = c1 * (self.Ic_bar - 3.) + c2 * (self.Ic_bar - 3.)**2. + c3 * (self.Ic_bar - 3.)**3.
+        Psi_dev = c1 * (self.Ic_bar - self.dim) + c2 * (self.Ic_bar - self.dim)**2. + c3 * (self.Ic_bar - self.dim)**3.
 
         S = 2.*ufl.diff(Psi_dev,C)
 
@@ -64,7 +66,7 @@ class materiallaw:
         c1, c2 = params['c1'], params['c2']
 
         # Mooney Rivlin material (isochoric version)
-        Psi_dev = c1 * (self.Ic_bar - 3.) + c2 * (self.IIc_bar - 3.)
+        Psi_dev = c1 * (self.Ic_bar - self.dim) + c2 * (self.IIc_bar - self.dim)
 
         S = 2.*ufl.diff(Psi_dev,C)
 
@@ -76,7 +78,7 @@ class materiallaw:
         a_0, b_0 = params['a_0'], params['b_0']
 
         # exponential SEF (isochoric version)
-        Psi_dev = a_0/(2.*b_0)*(ufl.exp(b_0*(self.Ic_bar-3.)) - 1.)
+        Psi_dev = a_0/(2.*b_0)*(ufl.exp(b_0*(self.Ic_bar-self.dim)) - 1.)
 
         S = 2.*ufl.diff(Psi_dev,C)
 
@@ -131,7 +133,7 @@ class materiallaw:
             raise ValueError("Unknown fiber_comp_switch option!")
 
         # Holzapfel-Ogden (Holzapfel and Ogden 2009) material w/o split applied to invariants I4, I6, I8 (Nolan et al. 2014, Sansour 2008)
-        Psi_dev = a_0/(2.*b_0)*(ufl.exp(b_0*(self.Ic_bar-3.)) - 1.) + \
+        Psi_dev = a_0/(2.*b_0)*(ufl.exp(b_0*(self.Ic_bar-self.dim)) - 1.) + \
             a_f_c/(2.*b_f)*(ufl.exp(b_f*(I4-1.)**2.) - 1.) + a_s_c/(2.*b_s)*(ufl.exp(b_s*(I6-1.)**2.) - 1.) + \
             a_fs/(2.*b_fs)*(ufl.exp(b_fs*I8**2.) - 1.)
 
@@ -175,7 +177,7 @@ class materiallaw:
         beta = nu/(1.-2.*nu)
 
         # compressible NeoHookean material (Holzapfel eq. 6.148)
-        Psi = (mu/2.) * (self.Ic - 3.) + mu/(2.*beta)*(self.IIIc**(-beta) - 1.)
+        Psi = (mu/2.) * (self.Ic - self.dim) + mu/(2.*beta)*(self.IIIc**(-beta) - 1.)
 
         S = 2.*ufl.diff(Psi,C)
 

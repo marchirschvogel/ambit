@@ -154,8 +154,8 @@ class timeintegration_solid(timeintegration):
             acc = self.update_a_ost(u, u_old, v_old, a_old, ufl=True)
             vel = self.update_v_ost(u, u_old, v_old, a_old, ufl=True)
         elif self.timint == 'static':
-            acc = ufl.constantvalue.zero(3)
-            vel = ufl.constantvalue.zero(3)
+            acc = ufl.constantvalue.zero(self.dim)
+            vel = ufl.constantvalue.zero(self.dim)
         else:
             raise NameError("Unknown time-integration algorithm for solid mechanics!")
 

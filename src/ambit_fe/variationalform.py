@@ -30,6 +30,7 @@ class variationalform_base:
         self.formulation = formulation # fluid formulation (conservative or non-conservative)
 
         self.I = ufl.Identity(len(self.var_u)) # identity
+        self.dim = self.I.ufl_shape[0] # dimension
 
 
     # Neumann load on reference configuration (1st Piola-Kirchhoff traction)
@@ -137,8 +138,6 @@ class variationalform_base:
 
         n0n0 = ufl.outer(self.n0,self.n0)
 
-        I = ufl.Identity(3)
-
         model = params['model']
 
         try: active = params['active_stress']
@@ -213,7 +212,7 @@ class variationalform_base:
         except: rho0 = 0.
 
         # exponential isotropic strain energy
-        Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-3.)) - 1.)
+        Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-self.dim)) - 1.)
         # viscous pseudo-potential
         Psi_v = (eta/8.) * ufl.tr(Cmoddot_*Cmoddot_)
 
@@ -221,7 +220,7 @@ class variationalform_base:
         dPsi_dIIc = ufl.diff(Psi,IIc_)
 
         # elastic 2nd PK stress
-        S = 2.*(dPsi_dIc + Ic*dPsi_dIIc) * I - 2.*dPsi_dIIc * Cmod
+        S = 2.*(dPsi_dIc + Ic*dPsi_dIIc) * self.I - 2.*dPsi_dIIc * Cmod
         # viscous 2nd PK stress
         S += 2.*ufl.diff(Psi_v,Cmoddot_)
 
