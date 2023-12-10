@@ -388,7 +388,12 @@ class boundary_cond():
             elif codim==self.dim-2: dind=1
             else: raise ValueError("Wrong codimension of boundary.")
 
-            if internal: dind=2
+            if internal:
+                dind=2
+                try: fcts = m['facet_side']
+                except: fcts = '+'
+            else:
+                fcts = None
 
             # field for variable wall thickness
             if bool(wallfields):
@@ -400,8 +405,8 @@ class boundary_cond():
 
                 idmem.append(m['id'][i])
 
-                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield)
-                bstr, bse = self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, se=True, wallfield=wallfield)
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield, fcts=fcts)
+                bstr, bse = self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, se=True, wallfield=wallfield, fcts=fcts)
                 bstress.append(bstr)
                 bstrainenergy.append(bse)
 

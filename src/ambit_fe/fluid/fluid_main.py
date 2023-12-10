@@ -649,7 +649,16 @@ class FluidmechanicsProblem(problem_base):
 
         se_mem_all = ufl.as_ufl(0)
         for nm in range(len(self.bc_dict['membrane'])):
-            se_mem_all += self.bstrainenergy[nm] * self.ds(self.idmem[nm])
+
+            try: internal = self.bc_dict['membrane'][nm]['internal']
+            except: internal = False
+
+            if internal:
+                try: fcts = self.bc_dict['membrane'][nm]['facet_side']
+                except: fcts = '+'
+                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.dS(self.idmem[nm])
+            else:
+                se_mem_all += self.bstrainenergy[nm] * self.ds(self.idmem[nm])
 
         se_mem = fem.assemble_scalar(fem.form(se_mem_all))
         se_mem = self.comm.allgather(se_mem)

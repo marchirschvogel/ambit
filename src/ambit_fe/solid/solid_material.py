@@ -46,7 +46,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_dev,C)
 
-        return S
+        return S, Psi_dev
 
 
     def yeoh_dev(self, params, C):
@@ -58,7 +58,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_dev,C)
 
-        return S
+        return S, Psi_dev
 
 
     def mooneyrivlin_dev(self, params, C):
@@ -70,7 +70,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_dev,C)
 
-        return S
+        return S, Psi_dev
 
 
     def exponential_dev(self, params, C):
@@ -82,7 +82,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_dev,C)
 
-        return S
+        return S, Psi_dev
 
 
     def holzapfelogden_dev(self, params, fib1, fib2, C):
@@ -139,7 +139,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_dev,C)
 
-        return S
+        return S, Psi_dev
 
 
     def guccione_dev(self, params, f0, s0, C):
@@ -166,7 +166,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_dev,C)
 
-        return S
+        return S, Psi_dev
 
 
     def neohooke_compressible(self, params, C):
@@ -181,7 +181,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi,C)
 
-        return S
+        return S, Psi
 
 
     def stvenantkirchhoff(self, params, C):
@@ -192,7 +192,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi,C)
 
-        return S
+        return S, Psi
 
 
     def sussmanbathe_vol(self, params, C):
@@ -203,7 +203,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_vol,C)
 
-        return S
+        return S, Psi_vol
 
 
     def ogden_vol(self, params, C):
@@ -217,7 +217,7 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_vol,C)
 
-        return S
+        return S, Psi_vol
 
     # simple Green-Lagrange strain rate-dependent material
     def visco_green(self, params, Cdot):
@@ -229,21 +229,21 @@ class materiallaw:
 
         S = 2.*ufl.diff(Psi_pseudo,Cdot)
 
-        return S
+        return S, None
 
 
     def active_fiber(self, tau, f0):
 
         S = tau * ufl.outer(f0,f0)
 
-        return S
+        return S, None
 
 
     def active_iso(self, tau):
 
         S = tau * self.I
 
-        return S
+        return S, None
 
 
 

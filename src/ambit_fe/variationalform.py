@@ -132,7 +132,7 @@ class variationalform_base:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{u}\,\mathrm{d}A
     # for fluid mechanics, contribution to virtual power is:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v}),\boldsymbol{v}) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{v}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, se=False, wallfield=None):
+    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, se=False, wallfield=None, fcts=None):
 
         C = F.T*F
 
@@ -254,17 +254,23 @@ class variationalform_base:
         sigma = P * Fmod.T
 
         # strain energy of membrane, for postprocessing
-        strainenergy = 0.5*ufl.inner(S, Cmod)
+        strainenergy = h0 * Psi
 
         # only in-plane components of test function derivatives should be used!
         var_F = ufl.grad(self.var_u) - ufl.grad(self.var_u)*n0n0
 
         # boundary inner virtual work/power
-        dWb_int = h0*ufl.inner(P,var_F)*dboundary
+        if fcts is None:
+            dWb_int = h0*ufl.inner(P,var_F)*dboundary
+        else:
+            dWb_int = (h0*ufl.inner(P,var_F))(fcts)*dboundary
 
         # boundary kinetic virtual work/power
         if not isinstance(a, ufl.constantvalue.Zero):
-            dWb_kin = rho0*(h0*ufl.dot(a,self.var_u)*dboundary)
+            if fcts is None:
+                dWb_kin = rho0*(h0*ufl.dot(a,self.var_u)*dboundary)
+            else:
+                dWb_kin = rho0*(h0*ufl.dot(a,self.var_u)(fcts)*dboundary)
         else:
             dWb_kin = ufl.as_ufl(0)
 

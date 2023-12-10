@@ -541,7 +541,7 @@ class SolidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
 
             # elastic and viscous material tangent operator
-            Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, tang=True)
+            Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='tangent')
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
@@ -578,7 +578,7 @@ class SolidmechanicsProblem(problem_base):
 
                 if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                     # elastic and viscous material tangent operator
-                    Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, tang=True)
+                    Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='tangent')
                     # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
                     # for stress-mediated growth, we get a contribution to the pressure material tangent operator
                     Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
@@ -705,8 +705,7 @@ class SolidmechanicsProblem(problem_base):
 
         se_all = ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
-            # S : E (2nd PK stress contracted with Green-Lagrange strain), integrated over reference coordinates, gives total strain energy
-            se_all += ufl.inner(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.E(self.u)) * self.dx(M)
+            se_all += self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='strainenergy') * self.dx(M)
 
         se = fem.assemble_scalar(fem.form(se_all))
         se = self.comm.allgather(se)
@@ -727,7 +726,16 @@ class SolidmechanicsProblem(problem_base):
 
         se_mem_all = ufl.as_ufl(0)
         for nm in range(len(self.bc_dict['membrane'])):
-            se_mem_all += self.bstrainenergy[nm] * self.ds(self.idmem[nm])
+
+            try: internal = self.bc_dict['membrane'][nm]['internal']
+            except: internal = False
+
+            if internal:
+                try: fcts = self.bc_dict['membrane'][nm]['facet_side']
+                except: fcts = '+'
+                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.dS(self.idmem[nm])
+            else:
+                se_mem_all += self.bstrainenergy[nm] * self.ds(self.idmem[nm])
 
         se_mem = fem.assemble_scalar(fem.form(se_mem_all))
         se_mem = self.comm.allgather(se_mem)

@@ -56,7 +56,7 @@ class constitutive:
 
     # 2nd Piola-Kirchhoff stress core routine
     # we have everything in a Total Lagrangian setting and use S and C to express our internal virtual work
-    def S(self, u_, p_, v_, ivar=None, tang=False):
+    def S(self, u_, p_, v_, ivar=None, returnquantity='stress'):
 
         C_ = ufl.variable(self.kin.C(u_))
 
@@ -65,7 +65,7 @@ class constitutive:
         else:
             Cdot_ = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
 
-        stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
+        stress, strainenergy = ufl.constantvalue.zero((self.kin.dim,self.kin.dim)), ufl.as_ufl(0)
 
         # volumetric (kinematic) growth
         if self.mat_growth:
@@ -91,7 +91,11 @@ class constitutive:
         m = 0
         for matlaw in self.matmodels:
 
-            stress += self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, Cdot_)
+            s_, se_ = self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, Cdot_)
+
+            stress += s_
+            if se_ is not None:
+                strainenergy += se_
 
             m += 1
 
@@ -105,7 +109,9 @@ class constitutive:
             m = 0
             for matlaw in self.matmodels_remod:
 
-                self.stress_remod += self.add_stress_mat(matlaw, self.matparams_remod[m], ivar, C_, Cdot_)
+                s_, _ = self.add_stress_mat(matlaw, self.matparams_remod[m], ivar, C_, Cdot_)
+
+                self.stress_remod += s_
 
                 m += 1
 
@@ -121,15 +127,19 @@ class constitutive:
                 # TeX: S_{\mathrm{vol}} = -2 \frac{\partial[p(J-1)]}{\partial \boldsymbol{C}} = -Jp\boldsymbol{C}^{-1}
                 stress += -2.*ufl.diff(p_*(ufl.sqrt(ufl.det(C_))-1.),C_)
 
-        if tang:
+        if returnquantity=='stress':
+            return stress
+        elif returnquantity=='tangent':
             Cmat = 2.*ufl.diff(stress,C_)
             if not isinstance(v_, ufl.constantvalue.Zero):
                 Cmat_v = 2.*ufl.diff(stress,Cdot_)
             else:
                 Cmat_v = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
             return Cmat, Cmat_v
+        elif returnquantity=='strainenergy':
+            return strainenergy
         else:
-            return stress
+            raise ValueError("Unknown return type.")
 
 
     # add stress contributions from materials
@@ -195,15 +205,15 @@ class constitutive:
 
         elif matlaw == 'inertia':
             # density is added to kinetic virtual work
-            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
+            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim)), None
 
         elif matlaw == 'growth':
             # growth (and remodeling) treated separately
-            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
+            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim)), None
 
         elif matlaw == 'plastic':
             # plasticity treated separately
-            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
+            return ufl.constantvalue.zero((self.kin.dim,self.kin.dim)), None
 
         else:
 
@@ -410,7 +420,7 @@ class constitutive:
 
         if self.growth_trig == 'volstress':
 
-            Cmat, _ = self.S(u_,p_,v_,ivar,tang=True)
+            Cmat, _ = self.S(u_,p_,v_,ivar,returnquantity='tangent')
 
             # TeX: \frac{\partial \vartheta}{\partial \boldsymbol{C}} = \frac{k(\vartheta) \Delta t}{\frac{\partial r}{\partial \vartheta}}\left(\boldsymbol{S} + \boldsymbol{C} : \frac{1}{2} \check{\mathbb{C}}\right)
 
@@ -439,7 +449,7 @@ class constitutive:
 
         theta_ = ivar["theta"]
 
-        Cmat, _ = self.S(u_,p_,v_,ivar,tang=True)
+        Cmat, _ = self.S(u_,p_,v_,ivar,returnquantity='tangent')
 
         i, j, k, l, m, n = ufl.indices(6)
 
