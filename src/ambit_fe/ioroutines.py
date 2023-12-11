@@ -456,6 +456,14 @@ class IO_solid(IO):
                         strainenergy_membrane_out = fem.Function(self.V_out_scalar, name=strainenergy_membrane.name)
                         strainenergy_membrane_out.interpolate(strainenergy_membrane)
                         self.resultsfiles[res].write_function(strainenergy_membrane_out, indicator)
+                    elif res=='internalpower_membrane':
+                        pwfuncs=[]
+                        for n in range(len(pb.bintpower)):
+                            pwfuncs.append(pb.bintpower[n])
+                        internalpower_membrane = project(pwfuncs, pb.Vd_scalar, pb.ds, domids=pb.idmem, nm="InternalPower_membrane", comm=self.comm)
+                        internalpower_membrane_out = fem.Function(self.V_out_scalar, name=internalpower_membrane.name)
+                        internalpower_membrane_out.interpolate(internalpower_membrane)
+                        self.resultsfiles[res].write_function(internalpower_membrane_out, indicator)
                     elif res=='trmandelstress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
@@ -529,11 +537,19 @@ class IO_solid(IO):
                     elif res=='strainenergy':
                         sefuncs=[]
                         for n in range(pb.num_domains):
-                            sefuncs.append(ufl.inner(pb.ma[n].S(pb.u,pb.p,pb.vel,ivar=pb.internalvars),pb.ki.E(pb.u)))
+                            sefuncs.append(pb.ma[n].S(pb.u,pb.p,pb.vel,ivar=pb.internalvars,returnquantity='strainenergy'))
                         se = project(sefuncs, pb.Vd_scalar, pb.dx, domids=pb.domain_ids, nm="StrainEnergy", comm=self.comm)
                         se_out = fem.Function(self.V_out_scalar, name=se.name)
                         se_out.interpolate(se)
                         self.resultsfiles[res].write_function(se_out, indicator)
+                    elif res=='internalpower':
+                        pwfuncs=[]
+                        for n in range(pb.num_domains):
+                            pwfuncs.append(ufl.inner(pb.ma[n].S(pb.u,pb.p,pb.vel,ivar=pb.internalvars),pb.ki.Edot(pb.u,pb.vel)))
+                        pw = project(pwfuncs, pb.Vd_scalar, pb.dx, domids=pb.domain_ids, nm="InternalPower", comm=self.comm)
+                        pw_out = fem.Function(self.V_out_scalar, name=pw.name)
+                        pw_out.interpolate(pw)
+                        self.resultsfiles[res].write_function(pw_out, indicator)
                     elif res=='fiberstretch':
                         fiberstretch = project(pb.ki.fibstretch(pb.u,pb.fib_func[0]), pb.Vd_scalar, pb.dx, domids=pb.domain_ids, nm="FiberStretch", comm=self.comm)
                         fiberstretch_out = fem.Function(self.V_out_scalar, name=fiberstretch.name)
@@ -731,7 +747,7 @@ class IO_fluid(IO):
                     elif res=='cauchystress':
                         stressfuncs=[]
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.v,pb.p))
+                            stressfuncs.append(pb.ma[n].sigma(pb.v,pb.p,F=pb.alevar['Fale']))
                         cauchystress = project(stressfuncs, pb.Vd_tensor, pb.dx, domids=pb.domain_ids, nm="CauchyStress", comm=self.comm)
                         cauchystress_out = fem.Function(self.V_out_tensor, name=cauchystress.name)
                         cauchystress_out.interpolate(cauchystress)
@@ -760,6 +776,22 @@ class IO_fluid(IO):
                         strainenergy_membrane_out = fem.Function(self.V_out_scalar, name=strainenergy_membrane.name)
                         strainenergy_membrane_out.interpolate(strainenergy_membrane)
                         self.resultsfiles[res].write_function(strainenergy_membrane_out, indicator)
+                    elif res=='internalpower_membrane':
+                        pwfuncs=[]
+                        for n in range(len(pb.bintpower)):
+                            pwfuncs.append(pb.bintpower[n])
+                        internalpower_membrane = project(pwfuncs, pb.Vd_scalar, pb.ds, domids=pb.idmem, nm="InternalPower_membrane", comm=self.comm)
+                        internalpower_membrane_out = fem.Function(self.V_out_scalar, name=internalpower_membrane.name)
+                        internalpower_membrane_out.interpolate(internalpower_membrane)
+                        self.resultsfiles[res].write_function(internalpower_membrane_out, indicator)
+                    elif res=='internalpower':
+                        pwfuncs=[]
+                        for n in range(pb.num_domains):
+                            pwfuncs.append(ufl.inner(pb.ma[n].sigma(pb.v,pb.p,F=pb.alevar['Fale']),pb.ki.gamma(pb.v,F=pb.alevar['Fale'])))
+                        pw = project(pwfuncs, pb.Vd_scalar, pb.dx, domids=pb.domain_ids, nm="InternalPower", comm=self.comm)
+                        pw_out = fem.Function(self.V_out_scalar, name=pw.name)
+                        pw_out.interpolate(pw)
+                        self.resultsfiles[res].write_function(pw_out, indicator)
                     elif res=='counters':
                         # iteration counters, written by base class
                         pass

@@ -132,7 +132,7 @@ class variationalform_base:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{u}\,\mathrm{d}A
     # for fluid mechanics, contribution to virtual power is:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v}),\boldsymbol{v}) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{v}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, se=False, wallfield=None, fcts=None):
+    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, wallfield=None, fcts=None, returnquantity='weakform'):
 
         C = F.T*F
 
@@ -208,7 +208,7 @@ class variationalform_base:
         IIc_ = ufl.variable(IIc)
         Cmoddot_ = ufl.variable(Cmoddot)
 
-        a_0, b_0 = params['a_0'], params['b_0']
+        a_0 = params['a_0']
         try: eta = params['eta']
         except: eta = 0.
         try: rho0 = params['rho0']
@@ -216,6 +216,7 @@ class variationalform_base:
 
         # exponential isotropic strain energy
         if material == 'isoexp':
+            b_0 = params['b_0']
             Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_-self.dim)) - 1.)
         elif material == 'neohooke':
             Psi = (a_0/2.) * (Ic_ - self.dim)
@@ -253,8 +254,9 @@ class variationalform_base:
         # Cauchy stress for postprocessing: sigma = (1/J) P*F^T --> membrane is incompressible, hence J=1
         sigma = P * Fmod.T
 
-        # strain energy of membrane, for postprocessing
+        # strain energy and internal power of membrane, for postprocessing
         strainenergy = h0 * Psi
+        internalpower = h0 * 0.5*ufl.inner(S,Cmoddot)
 
         # only in-plane components of test function derivatives should be used!
         var_F = ufl.grad(self.var_u) - ufl.grad(self.var_u)*n0n0
@@ -275,7 +277,9 @@ class variationalform_base:
             dWb_kin = ufl.as_ufl(0)
 
         # minus signs, since this sums into external virtual work/power!
-        if not se:
+        if returnquantity=='weakform':
             return -dWb_int - dWb_kin
+        elif returnquantity=='stress_energy_power':
+            return sigma, strainenergy, internalpower
         else:
-            return sigma, strainenergy
+            raise ValueError("Unknown return type.")

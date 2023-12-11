@@ -30,7 +30,7 @@ def test_main():
                          'fiber_data'            : [np.array([1.0,0.0,0.0]),np.array([0.0,1.0,0.0])],
                          'write_results_every'   : 1,
                          'output_path'           : basepath+'/tmp/',
-                         'results_to_write'      : ['displacement','cauchystress','cauchystress_principal','vonmises_cauchystress','pk1stress','pk2stress','glstrain','glstrain_principal','eastrain','eastrain_principal','jacobian','fibers','strainenergy'],
+                         'results_to_write'      : ['displacement','cauchystress','cauchystress_principal','vonmises_cauchystress','pk1stress','pk2stress','glstrain','glstrain_principal','eastrain','eastrain_principal','jacobian','fibers','strainenergy','internalpower'],
                          'simname'               : 'solid_mat_uniax_hex_2field'}
 
     SOLVER_PARAMS     = {'solve_type'            : 'direct',

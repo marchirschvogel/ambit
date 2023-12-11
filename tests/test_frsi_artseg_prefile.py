@@ -24,7 +24,7 @@ def test_main():
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',
-                            'results_to_write'      : [['fluiddisplacement','velocity','pressure','strainenergy_membrane'],['aledisplacement','alevelocity']], # first fluid, then ale results
+                            'results_to_write'      : [['fluiddisplacement','velocity','pressure','strainenergy_membrane','internalpower_membrane'],['aledisplacement','alevelocity']], # first fluid, then ale results
                             'simname'               : 'frsi_artseg_prefile'}
 
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
