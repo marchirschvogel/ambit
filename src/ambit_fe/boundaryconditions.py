@@ -120,7 +120,9 @@ class boundary_cond():
             elif 'file' in d.keys():
                 assert('val' not in d.keys())
                 assert('curve' not in d.keys())
-                self.ti.funcs_data.append({func : d['file']})
+                try: scale = d['scale']
+                except: scale = 1.0
+                self.ti.funcs_data.append({func : d['file'], 'scale' : scale})
                 self.have_dirichlet_file = True
             else:
                 raise RuntimeError("Need to have 'curve', 'val', or 'file' specified!")
