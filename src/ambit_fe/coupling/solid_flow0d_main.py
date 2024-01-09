@@ -164,7 +164,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = self.pbs.ds(self.surface_vq_ids[n][i])
+                ds_vq = self.pbs.io.ds(self.surface_vq_ids[n][i])
 
                 if coupling_quantity == 'volume':
                     assert(self.coupling_type == 'monolithic_direct' and variable_quantity == 'pressure')
@@ -193,7 +193,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
 
-                ds_p = self.pbs.ds(self.surface_p_ids[n][i])
+                ds_p = self.pbs.io.ds(self.surface_p_ids[n][i])
                 df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
 
                 # add to solid rhs contributions

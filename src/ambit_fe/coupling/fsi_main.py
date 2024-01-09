@@ -101,48 +101,10 @@ class FSIProblem(problem_base):
         self.dLM = ufl.TrialFunction(self.V_lm)    # incremental LM
         self.var_LM = ufl.TestFunction(self.V_lm)  # LM test function
 
-        interface_facets = self.io.mt_b1.indices[self.io.mt_b1.values == self.io.surf_interf[0]]
-        solid_cells = self.io.mt_d.indices[self.io.mt_d.values == self.io.dom_solid[0]]
-
-        tdim=3
-        fdim = tdim - 1
-        integration_entities_s = []
-        integration_entities_f = []
-        self.io.mesh.topology.create_connectivity(tdim, fdim)
-        self.io.mesh.topology.create_connectivity(fdim, tdim)
-        c_to_f = self.io.mesh.topology.connectivity(tdim, fdim)
-        f_to_c = self.io.mesh.topology.connectivity(fdim, tdim)
-        facet_imap = self.io.mesh.topology.index_map(fdim)
-        # Loop over facets on interface
-        for facet in interface_facets:
-            # check if this facet is owned
-            if facet < facet_imap.size_local:
-                # get cells connected to the facet
-                cells = f_to_c.links(facet)
-                local_facets = [c_to_f.links(cells[0]).tolist().index(facet),
-                                c_to_f.links(cells[1]).tolist().index(facet)]
-
-                # add (cell, local_facet_index) pairs to correct side
-                if cells[0] in solid_cells:
-                    integration_entities_s.extend((cells[0], local_facets[0]))
-                    integration_entities_f.extend((cells[1], local_facets[1]))
-                else:
-                    integration_entities_s.extend((cells[1], local_facets[1]))
-                    integration_entities_f.extend((cells[0], local_facets[0]))
-
-        # create a measure, passing the data we just created so we can integrate
-        # over the correct entities
-        interface_id_s = self.io.dom_solid[0]
-        interface_id_f = self.io.dom_fluid[0]
-        integration_entities = [(interface_id_s, integration_entities_s),
-                                (interface_id_f, integration_entities_f)]
-
-        ds_fsi = ufl.Measure("ds", subdomain_data=integration_entities, domain=self.io.mesh)
-
-        work_coupling_solid = ufl.dot(self.LM, self.pbs.var_u)*self.pbs.ds(self.io.surf_interf[0])
-        work_coupling_solid_old = ufl.dot(self.LM_old, self.pbs.var_u)*self.pbs.ds(self.io.surf_interf[0])
-        work_coupling_fluid = ufl.dot(self.LM, self.pbf.var_v)*self.pbf.ds(self.io.surf_interf[0])
-        work_coupling_fluid_old = ufl.dot(self.LM_old, self.pbf.var_v)*self.pbf.ds(self.io.surf_interf[0])
+        work_coupling_solid = ufl.dot(self.LM, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
+        work_coupling_solid_old = ufl.dot(self.LM_old, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
+        work_coupling_fluid = ufl.dot(self.LM, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
+        work_coupling_fluid_old = ufl.dot(self.LM_old, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
 
         # add to solid and fluid virtual work/power
         self.pbs.weakform_u += self.pbs.timefac * work_coupling_solid + (1.-self.pbs.timefac) * work_coupling_solid_old
@@ -155,17 +117,25 @@ class FSIProblem(problem_base):
         self.pbfa.weakform_lin_vd += self.pbf.timefac * ufl.derivative(work_coupling_fluid, self.pba.d, self.pba.dd)
 
         if self.fsi_governing_type=='solid_governed':
-            self.weakform_l = (ufl.dot((self.pbs.u), self.var_LM))*ds_fsi(interface_id_s) - (ufl.dot((self.pbf.ufluid), self.var_LM))*ds_fsi(interface_id_f)
+            self.weakform_l = (ufl.dot((self.pbs.u), self.var_LM))*self.io.ds(self.io.interface_id_s) - (ufl.dot((self.pbf.ufluid), self.var_LM))*self.io.ds(self.io.interface_id_f)
         elif self.fsi_governing_type=='fluid_governed':
-            self.weakform_l = (ufl.dot((self.pbf.v), self.var_LM))*ds_fsi(interface_id_f) - (ufl.dot((self.pbs.vel), self.var_LM))*ds_fsi(interface_id_s)
+            self.weakform_l = (ufl.dot((self.pbf.v), self.var_LM))*self.io.ds(self.io.interface_id_f) - (ufl.dot((self.pbs.vel), self.var_LM))*self.io.ds(self.io.interface_id_s)
         else:
             raise ValueError("Unknown FSI governing type.")
 
+        # self.weakform_ls = (ufl.dot((self.pbs.u), self.var_LM))*ds(interface_id_s)
+        # self.weakform_lf = (ufl.dot((self.pbf.ufluid), self.var_LM))*ds(interface_id_f)
+
         self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
         self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
+        # self.weakform_lin_lsu = ufl.derivative(self.weakform_ls, self.pbs.u, self.pbs.du)
+        # self.weakform_lin_lfv = ufl.derivative(self.weakform_lf, self.pbf.v, self.pbf.dv)
 
         self.weakform_lin_ul = ufl.derivative(self.pbs.weakform_u, self.LM, self.dLM)
         self.weakform_lin_vl = ufl.derivative(self.pbf.weakform_v, self.LM, self.dLM)
+
+        # even though this is zero, we still want to explicitly form and create the matrix for DBC application
+        self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.LM, self.dLM)
 
 
     def set_problem_residual_jacobian_forms(self):
@@ -178,12 +148,19 @@ class FSIProblem(problem_base):
         utilities.print_status("FEM form compilation for FSI coupling...", self.comm, e=" ")
 
         self.res_l = fem.form(self.weakform_l, entity_maps=self.io.entity_maps)
-
         self.jac_lu = fem.form(self.weakform_lin_lu, entity_maps=self.io.entity_maps)
         self.jac_lv = fem.form(self.weakform_lin_lv, entity_maps=self.io.entity_maps)
 
+        # self.res_ls = fem.form(self.weakform_ls, entity_maps=self.io.entity_maps[0])
+        # self.res_lf = fem.form(self.weakform_lf, entity_maps=self.io.entity_maps[1])
+        # self.jac_lsu = fem.form(self.weakform_lin_lsu, entity_maps=self.io.entity_maps[0])
+        # self.jac_lfv = fem.form(self.weakform_lin_lfv, entity_maps=self.io.entity_maps[1])
+
         self.jac_ul = fem.form(self.weakform_lin_ul, entity_maps=self.io.entity_maps)
         self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
+
+        # even though this is zero, we still want to explicitly form and create the matrix for DBC application
+        self.jac_ll = fem.form(self.weakform_lin_ll, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -196,12 +173,19 @@ class FSIProblem(problem_base):
         self.pbfa.set_problem_vector_matrix_structures()
 
         self.r_l = fem.petsc.create_vector(self.res_l)
+        # self.r_ls = fem.petsc.create_vector(self.res_ls)
+        # self.r_lf = fem.petsc.create_vector(self.res_lf)
+        # self.r_l = self.r_ls.copy()
 
         self.K_ul = fem.petsc.create_matrix(self.jac_ul)
         self.K_vl = fem.petsc.create_matrix(self.jac_vl)
 
         self.K_lu = fem.petsc.create_matrix(self.jac_lu)
         self.K_lv = fem.petsc.create_matrix(self.jac_lv)
+        # self.K_lu = fem.petsc.create_matrix(self.jac_lsu)
+        # self.K_lv = fem.petsc.create_matrix(self.jac_lfv)
+
+        self.K_ll = fem.petsc.create_matrix(self.jac_ll)
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -214,6 +198,10 @@ class FSIProblem(problem_base):
 
         fem.petsc.assemble_vector(self.r_l, self.res_l)
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        # fem.petsc.assemble_vector(self.r_ls, self.res_ls)
+        # self.r_ls.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        # fem.petsc.assemble_vector(self.r_lf, self.res_lf)
+        # self.r_lf.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         self.r_list[0] = self.pbs.r_list[0]
 
@@ -223,6 +211,8 @@ class FSIProblem(problem_base):
         self.r_list[1+off] = self.pbfa.r_list[0]
         self.r_list[2+off] = self.pbfa.r_list[1]
 
+        # self.r_l.axpby(1., 0., self.r_ls)
+        # self.r_l.axpy(-1., self.r_lf)
         self.r_list[3+off] = self.r_l
         self.r_list[4+off] = self.pbfa.r_list[2]
 
@@ -265,21 +255,35 @@ class FSIProblem(problem_base):
         self.K_list[2+off][4+off] = self.pbfa.K_list[1][2]
 
         # LM
-        fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, [])
+        fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, []) # TODO: DBCs for LM!!!
         self.K_lu.assemble()
         self.K_list[3+off][0] = self.K_lu
-        fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, [])
+        fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, []) # TODO: DBCs for LM!!!
         self.K_lv.assemble()
         self.K_list[3+off][1+off] = self.K_lv
+        fem.petsc.assemble_matrix(self.K_ll, self.jac_ll, []) # TODO: DBCs for LM!!!
+        self.K_ll.assemble()
+        self.K_list[3+off][3+off] = self.K_ll
 
         # ALE displacement
         self.K_list[4+off][4+off] = self.pbfa.K_list[2][2]
+
+        # print(self.K_list[0][0][:,:])
+        # print(self.pbfa.K_list[2][2][:,:])
+        # # print(self.pbfa.pba.d.vector.getSize())
+        # exit()
 
         if bool(self.residual_scale):
             self.K_ul.scale(self.residual_scale[0])
             self.K_lu.scale(self.residual_scale[3+off])
             self.K_vl.scale(self.residual_scale[1+off])
             self.K_lv.scale(self.residual_scale[3+off])
+
+        # np.set_printoptions(threshold=sys.maxsize)
+        # print(self.K_lu[:,:])
+        # print(self.K_lv[:,:])
+        # print(self.K_lu.norm())
+        # print(self.K_lv.norm())
 
 
     ### now the base routines for this problem

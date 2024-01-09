@@ -16,13 +16,13 @@ import pytest
 @pytest.mark.fsi
 @pytest.mark.fluid_solid
 @pytest.mark.skip(reason="Not yet ready for testing.")
-def main():
+def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
-                            'write_results_every'   : 1,
+                            'write_results_every'   : -1,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-fsi-tet-lin_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-fsi-tet-lin_boundary.xdmf',
@@ -35,7 +35,7 @@ def main():
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'direct_solver'         : 'mumps',
-                            'tol_res'               : [1.0e-8,1.0e-8,1.0e-8,1.0e-8,1.0e-1],
+                            'tol_res'               : [1.0e-5,1.0e-5,1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-1,1.0e-3,1.0e-3,1.0e-1]}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
@@ -68,7 +68,7 @@ def main():
                             'fluid_on_deformed'     : 'consistent'}
 
     MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 100.},
-                                      'sussmanbathe_vol'  : {'kappa' :500.},
+                                      'sussmanbathe_vol'  : {'kappa' : 500.},
                                       'inertia'           : {'rho0' : 1.0e-6},
                                       'visco_green'       : {'eta' : 0.1}}}
 
@@ -85,22 +85,27 @@ def main():
         def tc1(self, t):
             t_ramp = 2.0
             p0 = 0.0
-            pinfl = 0#0.1
+            pinfl = 0.001
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
-    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    #BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
+                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_ref', 'curve' : 1}],
-                             'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    #BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_ref', 'curve' : 1}],
+                             #'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    #BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
+                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
+    BC_DICT_SOLID        = {  }
+
+    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_ref', 'curve' : 1}] }
+
+    BC_DICT_ALE          = {  }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)

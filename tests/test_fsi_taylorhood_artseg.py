@@ -16,13 +16,13 @@ import pytest
 @pytest.mark.fsi
 @pytest.mark.fluid_solid
 @pytest.mark.skip(reason="Not yet ready for testing.")
-def main():
+def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
-                            'write_results_every'   : 1,
+                            'write_results_every'   : -1,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-fsi-hex-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-fsi-hex-quad_boundary.xdmf',
@@ -63,7 +63,7 @@ def main():
                             'quad_degree'           : 5}
     
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
-                            'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
+                            'fsi_governing_type'    : 'fluid_governed', # solid_governed, fluid_governed
                             'fluid_on_deformed'     : 'consistent'}
 
     MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 100.},
@@ -84,21 +84,28 @@ def main():
         def tc1(self, t):
             t_ramp = 2.0
             p0 = 0.0
-            pinfl = 0#0.1
+            pinfl = 0.1
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
-    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    #BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
+                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
-                             'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    #BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
+                             #'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    #BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
+                                            #{'id' : [4], 'dir' : 'y', 'val' : 0.},
+                                            #{'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+
+    BC_DICT_SOLID        = {  }
+
+    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_ref', 'curve' : 1}] }
+
+    BC_DICT_ALE          = {  }
+
 
 
 

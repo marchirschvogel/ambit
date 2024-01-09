@@ -874,7 +874,7 @@ class solver_nonlinear:
             for i in range(num_loc_res):
 
                 # interpolate symbolic increment form into increment vector
-                increment_proj = project(increment_forms[i], functionspaces[i], self.pb[0].dx, domids=self.pb[0].domain_ids, comm=self.comm)
+                increment_proj = project(increment_forms[i], functionspaces[i], self.pb[0].io.dx, domids=self.pb[0].domain_ids, comm=self.comm)
                 increments[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 increments[i].interpolate(increment_proj)
 
@@ -885,7 +885,7 @@ class solver_nonlinear:
 
             for i in range(num_loc_res):
                 # interpolate symbolic residual form into residual vector
-                residual_proj = project(residual_forms[i], functionspaces[i], self.pb[0].dx, domids=self.pb[0].domain_ids, comm=self.comm)
+                residual_proj = project(residual_forms[i], functionspaces[i], self.pb[0].io.dx, domids=self.pb[0].domain_ids, comm=self.comm)
                 residuals[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 residuals[i].interpolate(residual_proj)
                 # get residual and increment inf norms

@@ -67,8 +67,9 @@ class Ambit():
 
             from .solid import solid_main
 
-            io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = solid_main.SolidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
@@ -78,8 +79,9 @@ class Ambit():
 
             from .fluid import fluid_main
 
-            io = ioroutines.IO_fluid(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = fluid_main.FluidmechanicsProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
@@ -89,8 +91,9 @@ class Ambit():
 
             from .ale import ale_main
 
-            io = ioroutines.IO_ale(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_ale(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = ale_main.AleProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
@@ -100,8 +103,9 @@ class Ambit():
 
             from .coupling import fluid_ale_main
 
-            io = ioroutines.IO_fluid_ale(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, fem_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = fluid_ale_main.FluidmechanicsAleProblem(io_params, time_params, fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], bc_dict[0], bc_dict[1], time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)
@@ -111,8 +115,9 @@ class Ambit():
 
             from .coupling import fluid_ale_flow0d_main
 
-            io = ioroutines.IO_fluid_ale(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, fem_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], constitutive_params[2], bc_dict[0], bc_dict[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
@@ -129,8 +134,9 @@ class Ambit():
 
             from .coupling import solid_flow0d_main
 
-            io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
@@ -141,8 +147,9 @@ class Ambit():
             from .coupling import solid_flow0d_main
             from .coupling import solid_flow0d_periodicref_main
 
-            io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
@@ -152,8 +159,9 @@ class Ambit():
 
             from .coupling import fluid_flow0d_main
 
-            io = ioroutines.IO_fluid(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = fluid_flow0d_main.FluidmechanicsFlow0DProblem(io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
@@ -163,8 +171,9 @@ class Ambit():
 
             from .multiscale import solid_flow0d_growthremodel_main
 
-            io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], bc_dict, time_curves, coupling_params, multiscale_params, io, comm=self.comm, comm_sq=self.comm_sq)
@@ -176,38 +185,47 @@ class Ambit():
 
             from .coupling import fsi_main
 
-            io = ioroutines.IO_fsi(io_params, self.entity_maps, self.comm)
-            io.readin_mesh()
+            self.entity_maps_s, self.entity_maps_f = {}, {}
 
+            # io = ioroutines.IO_fsi(io_params, [self.entity_maps_s, self.entity_maps_f], self.comm)
+            io = ioroutines.IO_fsi(io_params, fem_params[0], self.entity_maps, self.comm)
+            io.readin_mesh()
             io.create_submeshes()
+            io.create_integration_measures(io.mesh)
 
             # io_params['io_solid']['simname'] = io_params['simname'] + '_solid'
             # io_params['io_solid']['problem_type'] = io_params['problem_type']
-            ios = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
+            ios = ioroutines.IO_solid(io_params, fem_params[0], self.entity_maps, self.comm)
             #ios.sname += '_solid'
             ios.mesh = io.msh_emap_solid[0]
 
-            ios.mesh_master = io.msh_emap_solid[0]
-            ios.mt_d_master, ios.mt_b1_master = io.mt_d_solid, io.mt_b1_solid
+            ios.mesh_master = io.mesh#io.msh_emap_solid[0]
+            # ios.mt_d_master, ios.mt_b1_master, ios.mt_b2_master = io.mt_d_solid, io.mt_b1_solid, None
             # ios.mesh_master = io.mesh
-            # ios.mt_d_master, ios.mt_b1_master = io.mt_d_master, io.mt_b1_master
+            ios.mt_d_master, ios.mt_b1_master, ios.mt_b2_master = io.mt_d_master, io.mt_b1_master, None
 
-            ios.mt_d, ios.mt_b1 = io.mt_d_solid, io.mt_b1_solid
+            ios.mt_d, ios.mt_b1, ios.mt_b2 = io.mt_d_solid, io.mt_b1_solid, None
+
+            ios.dx, ios.ds, ios.dS = io.dx, io.ds, io.dS
+            ios.bmeasures = io.bmeasures
 
             ios.set_mesh_fields(ios.mesh_master) # we want the fields on the master, entity maps will restrict
 
             # io_params['io_fluid']['simname'] = io_params['simname'] + '_fluid'
             # io_params['io_fluid']['problem_type'] = io_params['problem_type']
-            iof = ioroutines.IO_fluid_ale(io_params, self.entity_maps, self.comm)
+            iof = ioroutines.IO_fluid_ale(io_params, fem_params[0], self.entity_maps, self.comm)
             #iof.sname += '_fluid'
             iof.mesh = io.msh_emap_fluid[0]
 
-            iof.mesh_master = io.msh_emap_fluid[0]
-            iof.mt_d_master, iof.mt_b1_master = io.mt_d_fluid, io.mt_b1_fluid
+            iof.mesh_master = io.mesh#io.msh_emap_fluid[0]
+            # iof.mt_d_master, iof.mt_b1_master, iof.mt_b2_master = io.mt_d_fluid, io.mt_b1_fluid, None
             # iof.mesh_master = io.mesh
-            # iof.mt_d_master, iof.mt_b1_master = io.mt_d_master, io.mt_b1_master
+            iof.mt_d_master, iof.mt_b1_master, iof.mt_b2_master = io.mt_d_master, io.mt_b1_master, None
 
-            iof.mt_d, iof.mt_b1 = io.mt_d_fluid, io.mt_b1_fluid
+            iof.mt_d, iof.mt_b1, iof.mt_b2 = io.mt_d_fluid, io.mt_b1_fluid, None
+
+            iof.dx, iof.ds, iof.dS = io.dx, io.ds, io.dS
+            iof.bmeasures = io.bmeasures
 
             iof.set_mesh_fields(iof.mesh_master) # we want the fields on the master, entity maps will restrict
 
@@ -218,8 +236,9 @@ class Ambit():
 
             from .coupling import solid_constraint_main
 
-            io = ioroutines.IO_solid(io_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, fem_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
             self.mp = solid_constraint_main.SolidmechanicsConstraintProblem(io_params, time_params, fem_params, constitutive_params, bc_dict, time_curves, coupling_params, io, mor_params=mor_params, comm=self.comm)

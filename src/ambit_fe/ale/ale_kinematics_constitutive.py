@@ -15,7 +15,7 @@ ALE kinematics and constitutive class
 
 class constitutive:
 
-    def __init__(self, kin, materials, msh):
+    def __init__(self, kin, materials):
 
         self.kin = kin
 

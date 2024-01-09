@@ -127,7 +127,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = self.pbf.ds(self.surface_vq_ids[n][i])
+                ds_vq = self.pbf.io.ds(self.surface_vq_ids[n][i])
                 cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'])
                 cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'])
 
@@ -137,7 +137,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             df_ = ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
 
-                ds_p = self.pbf.ds(self.surface_p_ids[n][i])
+                ds_p = self.pbf.io.ds(self.surface_p_ids[n][i])
                 df_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale'])
 
                 # add to fluid rhs contributions

@@ -51,17 +51,6 @@ class AleProblem(problem_base):
         self.order_disp = fem_params['order_disp']
         self.quad_degree = fem_params['quad_degree']
 
-        # create domain and boundaty integration measures
-        if self.io.mt_d_master is not None:
-            self.dx = ufl.Measure("dx", domain=self.io.mesh_master, subdomain_data=self.io.mt_d_master, metadata={'quadrature_degree': self.quad_degree})
-        else:
-            self.dx = ufl.Measure("dx", domain=self.io.mesh_master, metadata={'quadrature_degree': self.quad_degree})
-
-        self.ds = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
-        self.de = ufl.Measure("ds", domain=self.io.mesh_master, subdomain_data=self.io.mt_b2_master, metadata={'quadrature_degree': self.quad_degree})
-        self.dS = ufl.Measure("dS", domain=self.io.mesh_master, subdomain_data=self.io.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
-        self.bmeasures = [self.ds,self.de,self.dS]
-
         self.localsolve = False # no idea what might have to be solved locally...
         self.prestress_initial = False # guess prestressing in ALE is somehow senseless...
         self.incompressible_2field = False # always False here...
@@ -133,7 +122,7 @@ class AleProblem(problem_base):
         # initialize material/constitutive classes (one per domain)
         self.ma = []
         for n in range(self.num_domains):
-            self.ma.append(ale_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)], self.io.mesh))
+            self.ma.append(ale_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)]))
 
         # initialize ALE variational form class
         self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0)
@@ -179,16 +168,16 @@ class AleProblem(problem_base):
 
         for n, M in enumerate(self.domain_ids):
             # internal virtual work
-            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d), self.dx(M))
+            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d), self.io.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update)
+            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update)
         if 'robin' in self.bc_dict.keys():
-            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.bmeasures)
+            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.io.bmeasures)
 
         self.deltaW_ext = w_neumann + w_body + w_robin
 

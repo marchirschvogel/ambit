@@ -104,3 +104,41 @@ def get_integration_entities(msh, entity_indices, codim, integration_entities):
             cell = e_to_c.links(entity)[0]
             local_entity = c_to_e.links(cell).tolist().index(entity)
             integration_entities.extend([cell, local_entity])
+
+
+def get_integration_entities_internal(msh, entity_indices, entities_a, codim, integration_entities, ids):
+
+    dim = msh.topology.dim
+
+    integration_entities_a = []
+    integration_entities_b = []
+    msh.topology.create_connectivity(dim, codim)
+    msh.topology.create_connectivity(codim, dim)
+    c_to_e = msh.topology.connectivity(dim, codim)
+    e_to_c = msh.topology.connectivity(codim, dim)
+
+    entity_imap = msh.topology.index_map(codim)
+
+    # loop over facets on interface
+    for entity in entity_indices:
+        # check if this facet is owned
+        if entity < entity_imap.size_local:
+            # get cells connected to the facet
+            cells = e_to_c.links(entity)
+            local_entities = [c_to_e.links(cells[0]).tolist().index(entity),
+                            c_to_e.links(cells[1]).tolist().index(entity)]
+
+            # add (cell, local_facet_index) pairs to correct side
+            if cells[0] in entities_a:
+                integration_entities_a.extend((cells[0], local_entities[0]))
+                integration_entities_b.extend((cells[1], local_entities[1]))
+            else:
+                integration_entities_a.extend((cells[1], local_entities[1]))
+                integration_entities_b.extend((cells[0], local_entities[0]))
+
+    # create a measure, passing the data we just created so we can integrate
+    # over the correct entities
+    interface_id_a = ids[0]
+    interface_id_b = ids[1]
+    integration_entities.extend([(interface_id_a, integration_entities_a),
+                                 (interface_id_b, integration_entities_b)])
