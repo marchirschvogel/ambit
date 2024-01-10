@@ -172,11 +172,18 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
 
         for i in range(self.num_coupling_surf):
-            self.cq_form.append(fem.form(self.cq[i]))
-            self.cq_old_form.append(fem.form(self.cq_old[i]))
+            if self.pbf.io.USE_MIXED_DOLFINX_BRANCH:
+                self.cq_form.append(fem.form(self.cq[i], entity_maps=self.pbf.io.entity_maps))
+                self.cq_old_form.append(fem.form(self.cq_old[i], entity_maps=self.pbf.io.entity_maps))
 
-            self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
-            self.dforce_form.append(fem.form(self.dforce[i]))
+                self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i], entity_maps=self.pbf.io.entity_maps))
+                self.dforce_form.append(fem.form(self.dforce[i], entity_maps=self.pbf.io.entity_maps))
+            else:
+                self.cq_form.append(fem.form(self.cq[i]))
+                self.cq_old_form.append(fem.form(self.cq_old[i]))
+
+                self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
+                self.dforce_form.append(fem.form(self.dforce[i]))
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)

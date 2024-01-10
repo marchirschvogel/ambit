@@ -297,6 +297,14 @@ class sol_utils():
             if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"] and resnorms["res5"] <= tolerances["res5"] and incnorms["inc5"] <= tolerances["inc5"] and resnorms["res6"] <= tolerances["res6"] and incnorms["inc6"] <= tolerances["inc6"]:
                 converged = True
 
+        elif ptype=="fsi_flow0d" and not self.solver.pb[0].incompressible_2field:
+            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"] and resnorms["res5"] <= tolerances["res5"] and incnorms["inc5"] <= tolerances["inc5"] and resnorms["res6"] <= tolerances["res6"] and incnorms["inc6"] <= tolerances["inc6"]:
+                converged = True
+
+        elif ptype=="fsi_flow0d" and self.solver.pb[0].incompressible_2field:
+            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"] and resnorms["res5"] <= tolerances["res5"] and incnorms["inc5"] <= tolerances["inc5"] and resnorms["res6"] <= tolerances["res6"] and incnorms["inc6"] <= tolerances["inc6"] and resnorms["res7"] <= tolerances["res7"] and incnorms["inc7"] <= tolerances["inc7"]:
+                converged = True
+
         else:
             raise NameError("Unknown problem type!")
 
@@ -317,6 +325,8 @@ class sol_utils():
             seplen = 165
         elif len(self.solver.tolerances[0])==12:
             seplen = 195
+        elif len(self.solver.tolerances[0])==14:
+            seplen = 221
         else:
             raise ValueError("Unknown size of tolerances!")
 

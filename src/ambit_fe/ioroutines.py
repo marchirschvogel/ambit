@@ -997,6 +997,7 @@ class IO_fsi(IO_solid,IO_fluid_ale):
 
         IO_solid.write_output(self, pb.pbs, writemesh=writemesh, N=N, t=t)
         IO_fluid_ale.write_output(self, pb.pbfa, writemesh=writemesh, N=N, t=t)
+        # pass
 
     def readcheckpoint(self, pb, N_rest):
 

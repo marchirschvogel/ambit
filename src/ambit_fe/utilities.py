@@ -37,6 +37,10 @@ def print_problem(ptype, sname, comm, numdof):
         elif ptype == 'fsi':
             print_status("################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################", comm)
 
+        elif ptype == 'fsi_flow0d':
+            print_status("################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################", comm)
+            print_status("############################# with coupling to 0D flow ################################", comm)
+
         elif ptype == 'solid_flow0d':
             print_status("########## Welcome to monolithic coupling of 3D solid mechanics and 0D flow ###########", comm)
 
@@ -65,7 +69,6 @@ def print_problem(ptype, sname, comm, numdof):
             raise NameError("Unknown problem type!")
 
         print_sep(comm)
-
 
         if isinstance(numdof, list):
             print_status("Number of degrees of freedom: %i + %i" % (numdof[0],numdof[1]), comm)

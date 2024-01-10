@@ -72,6 +72,7 @@ class FSIProblem(problem_base):
         self.var_LM = ufl.TestFunction(self.V_lm)  # LM test function
 
         self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
+        # TODO: Application of DBCs to LM space not yet working, but might be needed when fluid and solid share mutual DBC nodes!
         #self.bclm.dirichlet_bcs(bc_dict_lm['dirichlet'], self.V_lm)
 
         self.set_variational_forms()
@@ -94,10 +95,12 @@ class FSIProblem(problem_base):
     def get_problem_var_list(self):
 
         if self.pbs.incompressible_2field:
-            is_ghosted = [1, 1, 1, 1, 1, 1]
+            if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 1, 2, 1, 1]
+            else:                     is_ghosted = [1, 1, 1, 1, 1, 1]
             return [self.pbs.u.vector, self.pbs.p.vector, self.pbf.v.vector, self.pbf.p.vector, self.LM.vector, self.pba.d.vector], is_ghosted
         else:
-            is_ghosted = [1, 1, 1, 1, 1]
+            if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 2, 1, 1]
+            else:                     is_ghosted = [1, 1, 1, 1, 1]
             return [self.pbs.u.vector, self.pbf.v.vector, self.pbf.p.vector, self.LM.vector, self.pba.d.vector], is_ghosted
 
 
