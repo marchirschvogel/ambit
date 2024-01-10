@@ -2,7 +2,7 @@
 
 * Ambit - A FEniCS-based cardiovascular physics solver
 
-3D nonlinear solid and fluid mechanics finite element Python code using FEniCS and PETSc libraries
+3D nonlinear solid, fluid, and FSI code using FEniCS and PETSc libraries
 
 https://github.com/marchirschvogel/ambit/assets/52761273/a438ff55-9b37-4572-a1c5-499dd3cfba73
 
@@ -27,7 +27,8 @@ The following is supported:
   - 2-element as well as 4-element Windkessel models
   - Signalling network model
 * Coupling of different physics:
-  - Monolithic coupling of ALE and fluid, 3D solid/fluid/ALE-fluid with lumped 0D flow models
+  - Fluid-solid interaction (FSI): Monolithic FSI in ALE formulation using Lagrange multiplier
+  - Monolithic coupling of 3D solid/fluid/ALE-fluid with lumped 0D flow models
   - Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid-flow0d and G&R solid problem)
 * Fluid-reduced-solid interaction (FrSI)
   - Boundary subspace-projected physics-reduced solid model (incl. hyperelastic, viscous, and active parts) in an ALE fluid reference frame
@@ -39,7 +40,6 @@ The following is supported:
 
 Still experimental / to-do:
 
-- Fluid-solid interaction (FSI) (started)
 - Finite strain plasticity
 - Electrophysiology/scalar transport
 - ... whatever might be wanted in some future ...

@@ -179,6 +179,12 @@ class FluidmechanicsProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
 
+        # for output writing - function spaces on the degree of the mesh
+        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
+        self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+
         # coordinate element function space - based on input mesh
         self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
 
@@ -333,7 +339,7 @@ class FluidmechanicsProblem(problem_base):
             self.fib_func = None
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_fluid(fem_params, self.io, self.vf, self.ti, ki=self.ki, ff=self.fib_func)
+        self.bc = boundaryconditions.boundary_cond_fluid(self.io, fem_params=fem_params, vf=self.vf, ti=self.ti, ki=self.ki, ff=self.fib_func)
 
         self.bc_dict = bc_dict
 

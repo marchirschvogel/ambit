@@ -151,6 +151,12 @@ class SolidmechanicsProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
 
+        # for output writing - function spaces on the degree of the mesh
+        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
+        self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+
         # coordinate element function space - based on input mesh
         self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
 
@@ -364,7 +370,7 @@ class SolidmechanicsProblem(problem_base):
         self.vf = solid_variationalform.variationalform(self.var_u, var_p=self.var_p, du=self.du, dp=self.dp, n0=self.io.n0, x_ref=self.x_ref)
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond(self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
+        self.bc = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki)
         self.bc_dict = bc_dict
 
         # Dirichlet boundary conditions
@@ -454,7 +460,7 @@ class SolidmechanicsProblem(problem_base):
             if 'robin' in bc_dict_prestr.keys():
                 for r in bc_dict_prestr['robin']:
                     if r['type'] == 'dashpot': r['visc'] = 0.
-            bc_prestr = boundaryconditions.boundary_cond(self.fem_params, self.io, self.vf, self.ti, ki=self.ki)
+            bc_prestr = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki)
             if 'neumann_prestress' in bc_dict_prestr.keys():
                 w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
             if 'robin' in bc_dict_prestr.keys():

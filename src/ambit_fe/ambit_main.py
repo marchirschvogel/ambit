@@ -181,55 +181,38 @@ class Ambit():
 
         elif problem_type == 'fsi':
 
-            raise RuntimeError("Monolithic FSI not yet fully implemented!")
-
             from .coupling import fsi_main
 
-            self.entity_maps_s, self.entity_maps_f = {}, {}
-
-            # io = ioroutines.IO_fsi(io_params, [self.entity_maps_s, self.entity_maps_f], self.comm)
             io = ioroutines.IO_fsi(io_params, fem_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.create_submeshes()
             io.create_integration_measures(io.mesh)
 
-            # io_params['io_solid']['simname'] = io_params['simname'] + '_solid'
-            # io_params['io_solid']['problem_type'] = io_params['problem_type']
+            # solid mesh and integration domain variables
             ios = ioroutines.IO_solid(io_params, fem_params[0], self.entity_maps, self.comm)
-            #ios.sname += '_solid'
             ios.mesh = io.msh_emap_solid[0]
 
-            ios.mesh_master = io.mesh#io.msh_emap_solid[0]
-            # ios.mt_d_master, ios.mt_b1_master, ios.mt_b2_master = io.mt_d_solid, io.mt_b1_solid, None
-            # ios.mesh_master = io.mesh
+            ios.mesh_master = io.mesh
             ios.mt_d_master, ios.mt_b1_master, ios.mt_b2_master = io.mt_d_master, io.mt_b1_master, None
-
             ios.mt_d, ios.mt_b1, ios.mt_b2 = io.mt_d_solid, io.mt_b1_solid, None
-
             ios.dx, ios.ds, ios.dS = io.dx, io.ds, io.dS
             ios.bmeasures = io.bmeasures
 
             ios.set_mesh_fields(ios.mesh_master) # we want the fields on the master, entity maps will restrict
 
-            # io_params['io_fluid']['simname'] = io_params['simname'] + '_fluid'
-            # io_params['io_fluid']['problem_type'] = io_params['problem_type']
+            # ALE-fluid mesh and integration domain variables
             iof = ioroutines.IO_fluid_ale(io_params, fem_params[0], self.entity_maps, self.comm)
-            #iof.sname += '_fluid'
             iof.mesh = io.msh_emap_fluid[0]
 
-            iof.mesh_master = io.mesh#io.msh_emap_fluid[0]
-            # iof.mt_d_master, iof.mt_b1_master, iof.mt_b2_master = io.mt_d_fluid, io.mt_b1_fluid, None
-            # iof.mesh_master = io.mesh
+            iof.mesh_master = io.mesh
             iof.mt_d_master, iof.mt_b1_master, iof.mt_b2_master = io.mt_d_master, io.mt_b1_master, None
-
             iof.mt_d, iof.mt_b1, iof.mt_b2 = io.mt_d_fluid, io.mt_b1_fluid, None
-
             iof.dx, iof.ds, iof.dS = io.dx, io.ds, io.dS
             iof.bmeasures = io.bmeasures
 
             iof.set_mesh_fields(iof.mesh_master) # we want the fields on the master, entity maps will restrict
 
-            self.mp = fsi_main.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], bc_dict[0], [bc_dict[1],bc_dict[2]], time_curves, coupling_params, io, ios, iof, mor_params=mor_params, comm=self.comm)
+            self.mp = fsi_main.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], bc_dict[0], [bc_dict[1],bc_dict[2]], bc_dict[3], time_curves, coupling_params, io, ios, iof, mor_params=mor_params, comm=self.comm)
             self.ms = fsi_main.FSISolver(self.mp, solver_params)
 
         elif problem_type == 'solid_constraint':

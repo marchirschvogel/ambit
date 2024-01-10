@@ -91,6 +91,12 @@ class AleProblem(problem_base):
         self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
         self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
 
+        # for output writing - function spaces on the degree of the mesh
+        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
+        self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+
         # coordinate element function space - based on input mesh
         self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
 
@@ -128,7 +134,7 @@ class AleProblem(problem_base):
         self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0)
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond(fem_params, self.io, self.vf, self.ti)
+        self.bc = boundaryconditions.boundary_cond(self.io, fem_params=fem_params, vf=self.vf, ti=self.ti)
 
         self.bc_dict = bc_dict
 

@@ -18,7 +18,7 @@ Boundary condition classes for all problems
 
 class boundary_cond():
 
-    def __init__(self, fem_params, io, vf, ti, ki=None, ff=None):
+    def __init__(self, io, fem_params=None, vf=None, ti=None, ki=None, ff=None, dim=None):
 
         self.io = io
         self.vf = vf
@@ -26,9 +26,13 @@ class boundary_cond():
         self.ki = ki
         self.ff = ff
 
-        self.dim = self.io.mesh.topology.dim
+        if dim is None:
+            self.dim = self.io.mesh.topology.dim
+        else:
+            self.dim = dim
 
-        self.quad_degree = fem_params['quad_degree']
+        if fem_params is not None:
+            self.quad_degree = fem_params['quad_degree']
 
         self.dbcs = []
 

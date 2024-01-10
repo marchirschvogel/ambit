@@ -126,7 +126,7 @@ def get_integration_entities_internal(msh, entity_indices, entities_a, codim, in
             # get cells connected to the facet
             cells = e_to_c.links(entity)
             local_entities = [c_to_e.links(cells[0]).tolist().index(entity),
-                            c_to_e.links(cells[1]).tolist().index(entity)]
+                              c_to_e.links(cells[1]).tolist().index(entity)]
 
             # add (cell, local_facet_index) pairs to correct side
             if cells[0] in entities_a:
