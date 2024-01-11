@@ -28,7 +28,7 @@ FSI problem class
 
 class FSIProblem(problem_base):
 
-    def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, fem_params_ale, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, bc_dict_lm, time_curves, coupling_params, io, ios, iof, mor_params={}, comm=None):
+    def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, fem_params_ale, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, io, ios, iof, mor_params={}, comm=None):
         super().__init__(io_params, time_params_solid, comm=comm)
 
         self.problem_physics = 'fsi'
@@ -61,6 +61,9 @@ class FSIProblem(problem_base):
         try: self.fsi_governing_type = self.coupling_params['fsi_governing_type']
         except: self.fsi_governing_type = 'solid_governed'
 
+        try: self.zero_lm_boundary = self.coupling_params['zero_lm_boundary']
+        except: self.zero_lm_boundary = False
+
         P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
         self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
 
@@ -72,8 +75,11 @@ class FSIProblem(problem_base):
         self.var_LM = ufl.TestFunction(self.V_lm)  # LM test function
 
         self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
-        # TODO: Application of DBCs to LM space not yet working, but might be needed when fluid and solid share mutual DBC nodes!
-        #self.bclm.dirichlet_bcs(bc_dict_lm['dirichlet'], self.V_lm)
+        # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
+        if self.zero_lm_boundary:
+            self.io.msh_emap_lm[0].topology.create_connectivity(self.io.msh_emap_lm[0].topology.dim-1, self.io.msh_emap_lm[0].topology.dim)
+            boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
+            self.bclm.dbcs.append( fem.dirichletbc(self.LM, boundary_facets_lm) )
 
         self.set_variational_forms()
 
@@ -135,6 +141,8 @@ class FSIProblem(problem_base):
 
         # even though this is zero, we still want to explicitly form and create the matrix for DBC application
         self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.LM, self.dLM)
+        # dummy form to initially get a sparsity pattern for LM DBC application
+        self.from_ll_diag_dummy = ufl.inner(self.dLM, self.var_LM)*self.io.ds(self.io.interface_id_s) - ufl.inner(self.dLM, self.var_LM)*self.io.ds(self.io.interface_id_f)
 
 
     def set_problem_residual_jacobian_forms(self):
@@ -155,6 +163,7 @@ class FSIProblem(problem_base):
 
         # even though this is zero, we still want to explicitly form and create the matrix for DBC application
         self.jac_ll = fem.form(self.weakform_lin_ll, entity_maps=self.io.entity_maps)
+        self.jac_ll_dummy = fem.form(self.from_ll_diag_dummy, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -174,7 +183,7 @@ class FSIProblem(problem_base):
         self.K_lu = fem.petsc.create_matrix(self.jac_lu)
         self.K_lv = fem.petsc.create_matrix(self.jac_lv)
 
-        self.K_ll = fem.petsc.create_matrix(self.jac_ll)
+        self.K_ll = fem.petsc.create_matrix(self.jac_ll_dummy)
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -187,7 +196,9 @@ class FSIProblem(problem_base):
 
         with self.r_l.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_l, self.res_l)
+        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.LM.vector], scale=-1.0)
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.LM.vector, scale=-1.0)
 
         self.r_list[0] = self.pbs.r_list[0]
 

@@ -34,7 +34,7 @@ Furthermore, fluid dynamics in terms of incompressible Navier-Stokes/Stokes equa
 
 A variety of reduced 0D lumped models targeted at blood circulation modeling are implemented, including 3- and 4-element Windkessel models [@westerhof2009] as well as closed-loop full circulation [@hirschvogel2017] and coronary flow models [@arthurs2016].
 
-Monolithic fluid-solid interaction (FSI) [@nordsletten2011] along with coupling of 3D and 0D models (solid or fluid with 0D lumped circulation systems) is implemented such that cardiovascular simulations with realistic boundary conditions can be performed.
+Monolithic fluid-solid interaction (FSI) [@nordsletten2011] in ALE formulation using a Lagrange multiplier field is supported, along with coupling of 3D and 0D models (solid or fluid with 0D lumped circulation systems) such that cardiovascular simulations with realistic boundary conditions can be performed.
 
 Implementations for a recently proposed novel physics- and projection-based model reduction for FSI, denoted as fluid-reduced-solid interaction (FrSI) [@hirschvogel2022preprint], are provided, along with POD-based Galerkin model reduction techniques [@farhat2014] using full or boundary subspaces.
 

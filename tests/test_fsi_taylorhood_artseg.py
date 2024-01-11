@@ -96,13 +96,9 @@ def test_main():
                                             {'id' : [4], 'dir' : 'y', 'val' : 0.},
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
-    # TODO: Application of DBCs to LM space not yet working, but might be needed when fluid and solid share mutual DBC nodes!
-    BC_DICT_LM           = { 'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}]}
-
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE, BC_DICT_LM], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # problem solve
     problem.solve_problem()

@@ -50,12 +50,12 @@ Preface
   :cite:p:`westerhof2009` as well as closed-loop full
   circulation :cite:p:`hirschvogel2017` and coronary flow
   models :cite:p:`arthurs2016`.
-| Monolithic multi-physics coupling of solid, fluid, and ALE-fluid with
-  0D lumped models is implemented such that cardiovascular simulations
-  with realistic boundary conditions can be performed. Monolithic
-  fluid-solid interaction (FSI) will be provided in the near future once
-  mixed domain functionality is fully supported in the finite element
-  backend dolfinx.
+| Monolithic fluid-solid interaction (FSI)
+  :cite:p:`nordsletten2011` in ALE formulation using a
+  Lagrange multiplier field is supported, along with coupling of 3D and
+  0D models (solid or fluid with 0D lumped circulation systems) such
+  that cardiovascular simulations with realistic boundary conditions can
+  be performed.
 | Implementations for a recently proposed novel physics- and
   projection-based model reduction for FSI, denoted as
   fluid-reduced-solid interaction (FrSI)
@@ -1112,14 +1112,47 @@ Fluid-Solid Interaction (FSI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | – Problem type: ``fsi``
-| – Not yet fully implemented!
-| – Discrete nonlinear system to solve in each time step :math:`n` for
-  displacement-based solid:
+| – Solid momentum (`[eq:res_u_solid] <#eq:res_u_solid>`__) or
+  (`[eq:res_u_solid_incomp] <#eq:res_u_solid_incomp>`__) augmented by
+  following term:
 
   .. math::
 
      \begin{aligned}
-     \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}^{\mathrm{s}}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{\lambda}}) \\ \boldsymbol{\mathsf{r}}_{v}^{\mathrm{f}}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\lambda}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{p}^{\mathrm{f}}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\lambda}}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_fsi}\end{aligned}
+     r_u \leftarrow r_u + \int\limits_{\mathit{\Gamma}_0^{\text{f}\text{-}\text{s}}}\boldsymbol{\lambda}\cdot\delta\boldsymbol{u}\,\mathrm{d}A\end{aligned}
+
+– Fluid momentum (`[eq:res_v_fluid] <#eq:res_v_fluid>`__) is augmented
+by following term:
+
+.. math::
+
+   \begin{aligned}
+   r_v \leftarrow r_v - \int\limits_{\mathit{\Gamma}_0^{\text{f}\text{-}\text{s}}}\boldsymbol{\lambda}\cdot\delta\boldsymbol{v}\,\mathrm{d}A\end{aligned}
+
+| Note the different signs (actio=reactio!)
+| – Lagrange multiplier constraint:
+
+-  “solid-governed”:
+
+   .. math::
+
+      \begin{aligned}
+      r_{\lambda}(\boldsymbol{u},\boldsymbol{v};\delta\boldsymbol{\lambda}):= \int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{f}\text{-}\text{s}}}} \left(\boldsymbol{u} - \boldsymbol{u}_{\mathrm{f}}\right)\cdot\delta\boldsymbol{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\boldsymbol{\lambda}\end{aligned}
+
+-  “fluid-governed”:
+
+   .. math::
+
+      \begin{aligned}
+      r_{\lambda}(\boldsymbol{v},\boldsymbol{u};\delta\boldsymbol{\lambda}):= \int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{f}\text{-}\text{s}}}} \left(\boldsymbol{v} - \frac{\mathrm{d} \boldsymbol{u}}{\mathrm{d} t}\right)\cdot\delta\boldsymbol{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\boldsymbol{\lambda}\end{aligned}
+
+– Discrete nonlinear system to solve in each time step :math:`n` for
+displacement-based solid:
+
+.. math::
+
+   \begin{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}^{\mathrm{s}}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{\lambda}}) \\ \boldsymbol{\mathsf{r}}_{v}^{\mathrm{f}}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\lambda}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{p}^{\mathrm{f}}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\lambda}}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{d}(\boldsymbol{\mathsf{d}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}\label{eq:nonlin_sys_fsi}\end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n` for
 incompressible solid:
@@ -1521,5 +1554,16 @@ Paraview, and visualize the velocity over time.
    magnitude.
 
 [fig:pipe_0d_results]
+
+.. _subsec:demos:fsi:
+
+FSI
+---
+
+| – Physics description given in sec. `3.4.4 <#subsubsec:fsi>`__
+| – Input files: ``demos/fsi``
+
+Channel flow around elastic flag
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
 .. bibliography::

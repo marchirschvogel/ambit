@@ -149,7 +149,7 @@ Furthermore, fluid dynamics in terms of incompressible Navier-Stokes/Stokes equa
 
 A variety of reduced 0D lumped models targeted at blood circulation modeling are implemented, including 3- and 4-element Windkessel models \cite{westerhof2009} as well as closed-loop full circulation \cite{hirschvogel2017} and coronary flow models \cite{arthurs2016}.\\
 
-Monolithic multi-physics coupling of solid, fluid, and ALE-fluid with 0D lumped models is implemented such that cardiovascular simulations with realistic boundary conditions can be performed. Monolithic fluid-solid interaction (FSI) will be provided in the near future once mixed domain functionality is fully supported in the finite element backend dolfinx.\\
+Monolithic fluid-solid interaction (FSI) \cite{nordsletten2011} in ALE formulation using a Lagrange multiplier field is supported, along with coupling of 3D and 0D models (solid or fluid with 0D lumped circulation systems) such that cardiovascular simulations with realistic boundary conditions can be performed.\\
 
 Implementations for a recently proposed novel physics- and projection-based model reduction for FSI, denoted as fluid-reduced-solid interaction (FrSI) \cite{hirschvogel2022preprint}, are provided, along with POD-based Galerkin model reduction techniques \cite{farhat2014} using full or boundary subspaces.\\
 
@@ -913,7 +913,34 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 
 -- Problem type: \verb"fsi"\\
 
--- Not yet fully implemented!\\
+-- Solid momentum (\ref{eq:res_u_solid}) or (\ref{eq:res_u_solid_incomp}) augmented by following term:
+\begin{align}
+r_u \leftarrow r_u + \int\limits_{\Gm_0^{\fF\text{-}\fS}}\bs{\lambda}\cdot\delta\bs{u}\,\mathrm{d}A
+\end{align}
+
+-- Fluid momentum (\ref{eq:res_v_fluid}) is augmented by following term:
+\begin{align}
+r_v \leftarrow r_v - \int\limits_{\Gm_0^{\fF\text{-}\fS}}\bs{\lambda}\cdot\delta\bs{v}\,\mathrm{d}A
+\end{align}
+
+Note the different signs (actio=reactio!)\\
+
+-- Lagrange multiplier constraint:
+
+\begin{itemize}
+
+\item ``solid-governed'':
+\begin{align}
+r_{\lambda}(\bs{u},\bs{v};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\bs{u} - \bs{u}_{\mathrm{f}}\right)\cdot\delta\bs{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\bs{\lambda}
+\end{align}
+
+\item ``fluid-governed'':
+\begin{align}
+r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\bs{v} - \frac{\mathrm{d} \bs{u}}{\mathrm{d} t}\right)\cdot\delta\bs{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\bs{\lambda}
+\end{align}
+
+\end{itemize}
+
 
 -- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
 \begin{align}
@@ -1322,6 +1349,15 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 \caption{Streamlines of velocity at end of simulation, color indicates velcity magnitude.}
 \label{fig:pipe_0d_results}
 \end{figure}
+
+
+\subsection{FSI}\label{subsec:demos:fsi}
+
+-- Physics description given in sec. \ref{subsubsec:fsi}\\
+
+-- Input files: \verb"demos/fsi"
+
+\subsubsection*{Channel flow around elastic flag}
 
 \bibliography{ref}
 

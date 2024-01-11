@@ -196,7 +196,8 @@ def check_params_coupling_fluid_ale(params):
                     'coupling_fluid_ale',
                     'coupling_strategy',
                     'fluid_on_deformed',
-                    'fsi_governing_type']
+                    'fsi_governing_type',
+                    'zero_lm_boundary']
 
     for k in params.keys():
         if k not in valid_params:

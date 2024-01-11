@@ -212,7 +212,7 @@ class Ambit():
 
             iof.set_mesh_fields(iof.mesh_master) # we want the fields on the master, entity maps will restrict
 
-            self.mp = fsi_main.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], bc_dict[0], [bc_dict[1],bc_dict[2]], bc_dict[3], time_curves, coupling_params, io, ios, iof, mor_params=mor_params, comm=self.comm)
+            self.mp = fsi_main.FSIProblem(io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], bc_dict[0], [bc_dict[1],bc_dict[2]], time_curves, coupling_params, io, ios, iof, mor_params=mor_params, comm=self.comm)
             self.ms = fsi_main.FSISolver(self.mp, solver_params)
 
         elif problem_type == 'fsi_flow0d':
@@ -248,7 +248,7 @@ class Ambit():
 
             iof.set_mesh_fields(iof.mesh_master) # we want the fields on the master, entity maps will restrict
 
-            self.mp = fsi_flow0d_main.FSIFlow0DProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], constitutive_params[3], bc_dict[0], [bc_dict[1],bc_dict[2]], bc_dict[3], time_curves, coupling_params[0], coupling_params[1], io, ios, iof, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
+            self.mp = fsi_flow0d_main.FSIFlow0DProblem(io_params, time_params[0], time_params[1], time_params[2], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], constitutive_params[3], bc_dict[0], [bc_dict[1],bc_dict[2]], time_curves, coupling_params[0], coupling_params[1], io, ios, iof, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
             self.ms = fsi_flow0d_main.FSIFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_constraint':
