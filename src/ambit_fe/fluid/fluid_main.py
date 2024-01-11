@@ -323,17 +323,12 @@ class FluidmechanicsProblem(problem_base):
                 raise ValueError("Unknown fluid_on_deformed option!")
 
         # read in fiber data - for reduced solid (FrSI)
-        if bool(self.io.fiber_data):
+        if bool(self.io.fiber_data) and self.problem_type=='fluid_ale': # only for FrSI problem
 
-            fibarray = ['circ']
-            if len(self.io.fiber_data)>1: fibarray.append('long')
+            self.fibarray = ['circ']
+            if len(self.io.fiber_data)>1: self.fibarray.append('long')
 
-            self.fib_func = self.io.readin_fibers(fibarray, self.V_v, self.io.dx, self.domain_ids, self.order_vel)
-
-            if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
-                for i in range(len(fibarray)):
-                    fib_proj = project(self.fib_func[i], self.V_v, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm)
-                    self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
+            self.fib_func = self.io.readin_fibers(self.fibarray, self.V_v, self.io.dx, self.domain_ids, self.order_vel)
 
         else:
             self.fib_func = None
@@ -634,7 +629,7 @@ class FluidmechanicsProblem(problem_base):
     def evaluate_active_stress_ode(self):
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm) # TODO: Should be self.io.ds here, but yields error; why?
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps) # TODO: Should be self.io.ds here, but yields error; why?
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -1019,6 +1014,14 @@ class FluidmechanicsProblem(problem_base):
     def write_output_ini(self):
 
         self.io.write_output(self, writemesh=True)
+
+
+    def write_output_pre(self):
+
+        if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
+            for i in range(len(fibarray)):
+                fib_proj = project(self.fib_func[i], self.V_v, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm, entity_maps=self.io.entity_maps)
+                self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+self.fibarray[i])
 
 
     def get_time_offset(self):

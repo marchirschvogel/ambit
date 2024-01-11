@@ -399,6 +399,11 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.write_output_ini()
 
 
+    def write_output_pre(self):
+
+        self.pbs.write_output_pre()
+
+
     def get_time_offset(self):
         return 0.
 

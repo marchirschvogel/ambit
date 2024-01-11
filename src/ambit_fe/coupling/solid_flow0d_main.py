@@ -689,6 +689,12 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pbs.write_output_ini()
 
 
+    def write_output_pre(self):
+
+        self.pbs.write_output_pre()
+        self.pb0.write_output_pre()
+
+
     def get_time_offset(self):
 
         return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified

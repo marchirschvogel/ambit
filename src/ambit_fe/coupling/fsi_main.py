@@ -288,8 +288,15 @@ class FSIProblem(problem_base):
 
     def write_output_ini(self):
 
+        # self.io.write_output(self, writemesh=True)
         self.pbs.write_output_ini()
         self.pbfa.write_output_ini()
+
+
+    def write_output_pre(self):
+
+        self.pbs.write_output_pre()
+        self.pbfa.write_output_pre()
 
 
     def get_time_offset(self):
@@ -317,6 +324,7 @@ class FSIProblem(problem_base):
 
     def write_output(self, N, t, mesh=False):
 
+        # self.io.write_output(self, N=N, t=t) # combined FSI output routine
         self.pbs.write_output(N, t)
         self.pbfa.write_output(N, t)
 

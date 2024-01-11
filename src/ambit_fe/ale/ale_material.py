@@ -43,3 +43,10 @@ class materiallaw:
 
         # stress
         return ufl.diff(Psi,self.F)
+
+
+    def diffusion(self, params):
+
+        D = params['D']
+
+        return D*ufl.sym(ufl.grad(self.d))

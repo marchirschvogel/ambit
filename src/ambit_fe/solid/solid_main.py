@@ -324,23 +324,18 @@ class SolidmechanicsProblem(problem_base):
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
-            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm)
+            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps)
             self.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.growth_thres.interpolate(growth_thres_proj)
 
         # read in fiber data
         if bool(self.io.fiber_data):
 
-            fibarray = []
+            self.fibarray = []
             for nf in range(len(self.io.fiber_data)):
-                fibarray.append('f'+str(nf+1))
+                self.fibarray.append('f'+str(nf+1))
 
-            self.fib_func = self.io.readin_fibers(fibarray, self.V_u, self.io.dx, self.domain_ids, self.order_disp)
-
-            if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
-                for i in range(len(fibarray)):
-                    fib_proj = project(self.fib_func[i], self.V_u, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm)
-                    self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+fibarray[i])
+            self.fib_func = self.io.readin_fibers(self.fibarray, self.V_u, self.io.dx, self.domain_ids, self.order_disp)
 
         else:
             self.fib_func = None
@@ -658,12 +653,12 @@ class SolidmechanicsProblem(problem_base):
     def evaluate_active_stress_ode(self):
 
         if self.have_frank_starling:
-            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm)
+            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps)
             self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.amp_old.interpolate(amp_old_proj)
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm)
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps)
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -983,6 +978,14 @@ class SolidmechanicsProblem(problem_base):
     def write_output_ini(self):
 
         self.io.write_output(self, writemesh=True)
+
+
+    def write_output_pre(self):
+
+        if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
+            for i in range(len(self.fibarray)):
+                fib_proj = project(self.fib_func[i], self.V_u, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm, entity_maps=self.io.entity_maps)
+                self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+self.fibarray[i])
 
 
     def get_time_offset(self):

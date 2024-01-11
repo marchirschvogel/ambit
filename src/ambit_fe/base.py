@@ -72,6 +72,10 @@ class problem_base():
         raise RuntimeError("Problem misses function implementation!")
 
 
+    def write_output_pre(self):
+        raise RuntimeError("Problem misses function implementation!")
+
+
     def get_time_offset(self):
         raise RuntimeError("Problem misses function implementation!")
 
@@ -206,8 +210,11 @@ class solver_base():
         # any pre-solve that has to be done (e.g. prestress or consistent initial accelerations)
         self.solve_initial_state()
 
-        # any output that needs to be written initially (e.g. mesh data)
+        # initial mesh data output
         self.pb.write_output_ini()
+
+        # any other output that needs to be written at the beginning (time-invariant fields, e.g. fibers)
+        self.pb.write_output_pre()
 
         utilities.print_sep(self.pb.comm)
 

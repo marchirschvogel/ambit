@@ -399,6 +399,10 @@ class Flow0DProblem(problem_base):
         pass
 
 
+    def write_output_pre(self):
+        pass
+
+
     def get_time_offset(self):
 
         return (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl # zero if T_cycl variable is not specified

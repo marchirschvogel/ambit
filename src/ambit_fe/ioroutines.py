@@ -251,7 +251,7 @@ class IO:
 
         # index map and input indices
         im = np.asarray(f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local + f.function_space.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
-        igi = self.mesh.geometry.input_global_indices
+        igi = f.function_space.mesh.geometry.input_global_indices
 
         # since in parallel, the ordering of the dof ids might change, so we have to find the
         # mapping between original and new id via the coordinates
@@ -289,7 +289,7 @@ class IO:
 
         # non-ghosted index map and input global node indices
         im_no_ghosts = f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local, dtype=np.int32)).tolist()
-        igi = self.mesh.geometry.input_global_indices
+        igi = f.function_space.mesh.geometry.input_global_indices
 
         # gather indices
         im_no_ghosts_gathered = self.comm.allgather(im_no_ghosts)
@@ -991,25 +991,27 @@ class IO_fluid_ale(IO_fluid,IO_ale):
             IO_ale.writecheckpoint(self, pb.pba, N)
 
 
-class IO_fsi(IO_solid,IO_fluid_ale):
+class IO_fsi(IO_solid,IO_fluid,IO_ale):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
         IO_solid.write_output(self, pb.pbs, writemesh=writemesh, N=N, t=t)
-        IO_fluid_ale.write_output(self, pb.pbfa, writemesh=writemesh, N=N, t=t)
-        # pass
+        IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)
+        IO_ale.write_output(self, pb.pba, writemesh=writemesh, N=N, t=t)
 
     def readcheckpoint(self, pb, N_rest):
 
         IO_solid.readcheckpoint(self, pb.pbs, N_rest)
-        IO_fluid_ale.readcheckpoint(self, pb.pbfa, N_rest)
+        IO_fluid.readcheckpoint(self, pb.pbf, N_rest)
+        IO_ale.readcheckpoint(self, pb.pba, N_rest)
 
     def write_restart(self, pb, N):
 
         if self.write_restart_every > 0 and N % self.write_restart_every == 0:
 
             IO_solid.writecheckpoint(self, pb.pbs, N)
-            IO_fluid_ale.writecheckpoint(self, pb.pbfa, N)
+            IO_fluid.writecheckpoint(self, pb.pbf, N)
+            IO_ale.writecheckpoint(self, pb.pba, N)
 
     def create_submeshes(self):
 

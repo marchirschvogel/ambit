@@ -76,6 +76,8 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
 
         # modify results to write...
         self.pbs.results_to_write = io_params['results_to_write'][0]
+        self.pbf.results_to_write = io_params['results_to_write'][1][0]
+        self.pba.results_to_write = io_params['results_to_write'][1][1]
 
         self.incompressible_2field = self.pbs.incompressible_2field
 
@@ -342,13 +344,21 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
 
     def evaluate_initial(self):
 
-        self.pbf0.evaluate_initial()
-        self.pba.evaluate_initial()
+        self.pbs.evaluate_initial()
+        self.pbfa0.evaluate_initial()
 
 
     def write_output_ini(self):
 
-        self.io.write_output(self, writemesh=True)
+        # self.io.write_output(self, writemesh=True)
+        self.pbs.write_output_ini()
+        self.pbfa0.write_output_ini()
+
+
+    def write_output_pre(self):
+
+        self.pbs.write_output_pre()
+        self.pbfa0.write_output_pre()
 
 
     def get_time_offset(self):
@@ -358,45 +368,46 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
 
     def evaluate_pre_solve(self, t, N):
 
-        self.pbf0.evaluate_pre_solve(t, N)
-        self.pba.evaluate_pre_solve(t, N)
+        self.pbs.evaluate_pre_solve(t, N)
+        self.pbfa0.evaluate_pre_solve(t, N)
 
 
     def evaluate_post_solve(self, t, N):
 
-        self.pbf0.evaluate_post_solve(t, N)
-        self.pba.evaluate_post_solve(t, N)
+        self.pbs.evaluate_post_solve(t, N)
+        self.pbfa0.evaluate_post_solve(t, N)
 
 
     def set_output_state(self, N):
 
-        self.pbf0.set_output_state(N)
-        self.pba.set_output_state(N)
+        self.pbs.set_output_state(N)
+        self.pbfa0.set_output_state(N)
 
 
     def write_output(self, N, t, mesh=False):
 
-        self.io.write_output(self, N=N, t=t) # combined fluid-ALE output routine
-        self.pb0.write_output(N, t)
+        # self.io.write_output(self, N=N, t=t) # combined FSI output routine
+        self.pbs.write_output(N, t)
+        self.pbfa0.write_output(N, t)
 
 
     def update(self):
 
-        # update time step - fluid+flow0d and ALE
-        self.pbf0.update()
-        self.pba.update()
+        # update time step - solid,fluid+flow0d and ALE
+        self.pbs.update()
+        self.pbfa0.update()
 
 
     def print_to_screen(self):
 
-        self.pbf0.print_to_screen()
-        self.pba.print_to_screen()
+        self.pbs.print_to_screen()
+        self.pbfa0.print_to_screen()
 
 
     def induce_state_change(self):
 
-        self.pbf0.induce_state_change()
-        self.pba.induce_state_change()
+        self.pbs.induce_state_change()
+        self.pbfa0.induce_state_change()
 
 
     def write_restart(self, sname, N):
@@ -417,16 +428,13 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
 
     def check_abort(self, t):
 
-        return self.pbf0.check_abort(t)
+        return self.pbfa0.check_abort(t)
 
 
     def destroy(self):
 
-        self.pbf0.destroy()
-        self.pba.destroy()
-
-        if self.coupling_strategy=='monolithic':
-            for i in range(len(self.pbf0.row_ids)): self.k_sd_vec[i].destroy()
+        self.pbs.destroy()
+        self.pbfa0.destroy()
 
 
 

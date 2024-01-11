@@ -221,6 +221,10 @@ class SignallingNetworkProblem(problem_base):
         pass
 
 
+    def write_output_pre(self):
+        pass
+
+
     def get_time_offset(self):
         return 0.
 

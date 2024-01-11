@@ -421,6 +421,12 @@ class FluidmechanicsAleProblem(problem_base):
         self.io.write_output(self, writemesh=True)
 
 
+    def write_output_pre(self):
+
+        self.pbf.write_output_pre()
+        self.pba.write_output_pre()
+
+
     def get_time_offset(self):
 
         return 0.

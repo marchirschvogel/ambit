@@ -264,6 +264,10 @@ class AleProblem(problem_base):
         self.io.write_output(self, writemesh=True)
 
 
+    def write_output_pre(self):
+        pass
+
+
     def get_time_offset(self):
         return 0.
 

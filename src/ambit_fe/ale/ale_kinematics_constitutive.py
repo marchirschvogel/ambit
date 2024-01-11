@@ -52,6 +52,10 @@ class constitutive:
 
                 stress += mat.neohooke(matparams_m)
 
+            elif matlaw == 'diffusion':
+
+                stress += mat.diffusion(matparams_m)
+
             else:
 
                 raise NameError('Unknown ALE material law!')

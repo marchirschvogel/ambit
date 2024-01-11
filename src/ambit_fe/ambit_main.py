@@ -217,8 +217,6 @@ class Ambit():
 
         elif problem_type == 'fsi_flow0d':
 
-            raise RuntimeError("FSI-0D coupling not yet fully implemented!")
-
             from .coupling import fsi_flow0d_main
 
             io = ioroutines.IO_fsi(io_params, fem_params[0], self.entity_maps, self.comm)
