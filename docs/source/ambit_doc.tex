@@ -931,7 +931,7 @@ Note the different signs (actio=reactio!)\\
 
 \item ``solid-governed'':
 \begin{align}
-r_{\lambda}(\bs{u},\bs{v};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\bs{u} - \bs{u}_{\mathrm{f}}\right)\cdot\delta\bs{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\bs{\lambda}
+r_{\lambda}(\bs{u},\bs{v};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\text{-}\fS}}} \left(\bs{u} - \bs{u}_{\mathrm{f}}(\bs{v})\right)\cdot\delta\bs{\lambda}\,\mathrm{d}A, \quad \forall \; \delta\bs{\lambda}
 \end{align}
 
 \item ``fluid-governed'':
@@ -944,12 +944,22 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 
 -- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi}
 \end{align}
 
 -- Discrete nonlinear system to solve in each time step $n$ for incompressible solid:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_inc}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_inc}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$ for displacement-based solid:
+\begin{align}
+\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom \\ \\ \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom \\ \\ \zerom &  \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fsi}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$ for incompressible solid:
+\begin{align}
+\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \zerom & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom \\ \\ \zerom &  \zerom & \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{p}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fsi_inc}
 \end{align}
 
 
@@ -957,17 +967,28 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 
 -- Problem type: \verb"fsi_flow0d"\\
 
--- Not yet fully implemented!\\
-
 -- Discrete nonlinear system to solve in each time step $n$ for displacement-based solid:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_0d}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\LM) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_0d}
 \end{align}
 
 -- Discrete nonlinear system to solve in each time step $n$ for incompressible solid:
 \begin{align}
-\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\lambda}}(\bs{\mathsf{u}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_0d_inc}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{u}^{\mathrm{s}}(\bs{\mathsf{u}},\bs{\mathsf{p}}^{\mathrm{s}},\LM) \\ \ROP_{p}^{\mathrm{s}}(\bs{\mathsf{u}}) \\ \ROP_{v}^{\mathrm{f}}(\bs{\mathsf{v}},\bs{\mathsf{p}},\LM,\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}^{\mathrm{f}}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{\lambda}(\bs{\mathsf{u}},\bs{\mathsf{v}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{v}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}\label{eq:nonlin_sys_fsi_0d_inc}
 \end{align}
+
+
+-- Discrete linear system to solve in each Newton iteration $k$ for displacement-based solid:
+\begin{align}
+\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom & \zerom \\ \\ \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \bs{\mathsf{K}}_{\lmzi v} & \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \zerom &  \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fsi_0d}
+\end{align}
+
+-- Discrete linear system to solve in each Newton iteration $k$ for incompressible solid:
+\begin{align}
+\begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \zerom & \zerom & \bs{\mathsf{K}}_{u\lmi} & \zerom & \zerom \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\lmi} & \bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{K}}_{vd} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \zerom & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmi u} & \zerom & \bs{\mathsf{K}}_{\lmi v} & \zerom & \zerom & \zerom & \zerom \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi v} & \zerom & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \zerom &  \zerom & \bs{\mathsf{K}}_{dv}  & \zerom & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LM \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u}^{\mathrm{s}} \\ \\ \ROP_{p}^{\mathrm{s}} \\ \\ \ROP_{v}^{\mathrm{f}} \\ \\ \ROP_{p}^{\mathrm{f}} \\ \\ \ROP_{\lmi} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_fsi_0d_inc}
+\end{align}
+
+
 
 %-- Discrete linear system to solve in each Newton iteration $k$:
 %\begin{align}
