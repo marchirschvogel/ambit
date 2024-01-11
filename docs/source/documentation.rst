@@ -1565,5 +1565,20 @@ FSI
 
 Channel flow around elastic flag
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+| Incompressible fluid flow in a 2D channel around an (incompressible)
+  elastic flag is studied. The setup corresponds to the well-known Turek
+  benchmark :cite:p:`turek2006`, here with a sligh geometric
+  modification (flag thickess is half of the original one). A prescribed
+  inflow velocity is used, here without the parabolic profile proposed
+  in the benchmark, but a constant one over the surface.
+| Study the setup shown in fig. ... and the comments in the input file
+  ``fsi_channel_flag.py``. Run the simulation, either in one of the
+  provided Docker containers or using your own FEniCSx/Ambit
+  installation, using the command
+
+::
+
+   mpiexec -n 1 python3 fsi_channel_flag.py
  
 .. bibliography::

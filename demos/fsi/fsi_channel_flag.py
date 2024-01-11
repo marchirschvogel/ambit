@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-FSI of elastic flag in channel (2D): Q2-Q1 Taylor-Hood for both fluid and incompressible solid
+FSI of elastic flag in channel (2D) (modified Turek benchmark): Q2-Q1 Taylor-Hood for both fluid and incompressible solid
 """
 
 import ambit_fe
@@ -19,7 +19,7 @@ def main():
     """
     IO_PARAMS            = {'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
-                            'write_results_every'   : 1,
+                            'write_results_every'   : 10,
                             'indicate_results_by'   : 'step',
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/channel-flag_domain.xdmf',
@@ -36,14 +36,14 @@ def main():
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'direct_solver'         : 'mumps',
                             'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-8,1e-3],
-                            'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e-0,1e10]}
+                            'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e10,1e-0]}
 
     """
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
     TIME_PARAMS_SOLID    = {'maxtime'               : 35.0,
                             'numstep'               : 8750,
-                            'numstep_stop'          : 15,
+                            #'numstep_stop'          : 15,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
@@ -52,7 +52,7 @@ def main():
     """
     TIME_PARAMS_FLUID    = {'maxtime'               : 35.0,
                             'numstep'               : 8750,
-                            'numstep_stop'          : 15,
+                            #'numstep_stop'          : 15,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
@@ -82,7 +82,7 @@ def main():
     """
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
                             'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
-                            'zero_lm_boundary'      : True,
+                            'zero_lm_boundary'      : False, # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
                             'fluid_on_deformed'     : 'consistent'}
 
     # parameters for polybutadiene (Tab. 2 Turek et al. 2006)
@@ -107,7 +107,7 @@ def main():
             H = 0.41e3
             Ubar = 1e3
             
-            #vel_inflow_y = 1.5*Ubar*( FluidSpaceO.2*(H-FluidSpaceO.2)/((H/2)^2) )
+            #vel_inflow_y = 1.5*Ubar*( y*(H-y)/((H/2)^2) ) # TODO: Currently, these curves can only be time-, but not space-dependent!
             vel_inflow_y = 1.5*Ubar
             return vel_inflow_y * 0.5*(1.-np.cos(np.pi*t/t_ramp)) * (t < t_ramp) + vel_inflow_y * (t >= t_ramp)
 
