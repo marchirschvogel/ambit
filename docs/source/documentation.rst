@@ -1568,7 +1568,7 @@ Channel flow around elastic flag
 
 | Incompressible fluid flow in a 2D channel around an (incompressible)
   elastic flag is studied. The setup corresponds to the well-known Turek
-  benchmark :cite:p:`turek2006`, here with a sligh geometric
+  benchmark :cite:p:`turek2006`, here with a slight geometric
   modification (flag thickess is half of the original one). A prescribed
   inflow velocity is used, here without the parabolic profile proposed
   in the benchmark, but a constant one over the surface.
@@ -1582,14 +1582,33 @@ Channel flow around elastic flag
 
 [fig:channel_flag_setup]
 
+[tab:params_geo_turek]
+
+======================== ========================
+======================== ========================
+======================== ==========================
+==========================
+:math:`L\;[\mathrm{mm}]` :math:`H\;[\mathrm{mm}]` :math:`r\;[\mathrm{mm}]` :math:`l\;[\mathrm{mm}]` :math:`h\;[\mathrm{mm}]` :math:`d_x\;[\mathrm{mm}]` :math:`d_y\;[\mathrm{mm}]`
+======================== ========================
+======================== ========================
+======================== ==========================
+==========================
+:math:`2500`             :math:`410`              :math:`50`               :math:`350`              :math:`10`               :math:`200`                :math:`200`
+======================== ========================
+======================== ========================
+======================== ==========================
+==========================
+
 | Both solid and fluid are discretized with quadrilateral
   :math:`\mathbb{Q}^2`-:math:`\mathbb{Q}^1` Taylor-Hood finite elements,
   hence no stabilization for the fluid problem is needed.
 | Study the setup shown in fig.
-  `[fig:channel_flag_setup] <#fig:channel_flag_setup>`__ and the
-  comments in the input file ``fsi_channel_flag.py``. Run the
-  simulation, either in one of the provided Docker containers or using
-  your own FEniCSx/Ambit installation, using the command
+  `[fig:channel_flag_setup] <#fig:channel_flag_setup>`__ together with
+  the parameters in tab.
+  `[tab:params_geo_turek] <#tab:params_geo_turek>`__ and the comments in
+  the input file ``fsi_channel_flag.py``. Run the simulation, either in
+  one of the provided Docker containers or using your own FEniCSx/Ambit
+  installation, using the command
 
 ::
 
@@ -1600,7 +1619,7 @@ Channel flow around elastic flag
 | The physics of the problem are strongly time-dependent, and a
   (near-)periodic oscillation of the flag only occurs after
   :math:`t\approx 30\;\mathrm{s}`. Run the problem to the end
-  (:math:`t = 35\;\mathrm{s}`) and monitor the flag tip displacement
-  over time. What is the maximum deflection?
+  (:math:`t = 35\;\mathrm{s}`), be patient, and monitor the flag tip
+  displacement over time. What is the maximum deflection?
  
 .. bibliography::
