@@ -1361,10 +1361,23 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 
 Incompressible fluid flow in a 2D channel around an (incompressible) elastic flag is studied. The setup corresponds to the well-known Turek benchmark \cite{turek2006}, here with a sligh geometric modification (flag thickess is half of the original one). A prescribed inflow velocity is used, here without the parabolic profile proposed in the benchmark, but a constant one over the surface.\\
 
-Study the setup shown in fig. ... and the comments in the input file \verb"fsi_channel_flag.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+\begin{figure}
+\centering
+\includegraphics[width=1.0\textwidth]{fig/channel_flag_setup.png}
+\caption{Channel flow around an elastic flag \cite{turek2006}, problem setup.}
+\label{fig:channel_flag_setup}
+\end{figure}
+
+Both solid and fluid are discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor-Hood finite elements, hence no stabilization for the fluid problem is needed.\\
+
+Study the setup shown in fig. \ref{fig:channel_flag_setup} and the comments in the input file \verb"fsi_channel_flag.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 \begin{verbatim}
 mpiexec -n 1 python3 fsi_channel_flag.py
 \end{verbatim}
+
+If your system allows, use more than one core (e.g. \verb"mpiexec -n 4") in order to speed up the simulation a bit.\\
+
+The physics of the problem are strongly time-dependent, and a (near-)periodic oscillation of the flag only occurs after $t\approx 30\;\mathrm{s}$. Run the problem to the end ($t = 35\;\mathrm{s}$) and monitor the flag tip displacement over time. What is the maximum deflection?
 
 \bibliography{ref}
 

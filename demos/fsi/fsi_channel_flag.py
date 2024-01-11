@@ -28,7 +28,7 @@ def main():
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
-                            'simname'               : 'fsi_channel_flag'}
+                            'simname'               : 'tmp'}
 
     """
     Parameters for the linear and nonlinear solution schemes

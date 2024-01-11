@@ -1572,13 +1572,35 @@ Channel flow around elastic flag
   modification (flag thickess is half of the original one). A prescribed
   inflow velocity is used, here without the parabolic profile proposed
   in the benchmark, but a constant one over the surface.
-| Study the setup shown in fig. ... and the comments in the input file
-  ``fsi_channel_flag.py``. Run the simulation, either in one of the
-  provided Docker containers or using your own FEniCSx/Ambit
-  installation, using the command
+
+.. figure:: fig/channel_flag_setup.png
+   :alt: Channel flow around an elastic flag
+   :width: 100.0%
+
+   Channel flow around an elastic flag :cite:p:`turek2006`,
+   problem setup.
+
+[fig:channel_flag_setup]
+
+| Both solid and fluid are discretized with quadrilateral
+  :math:`\mathbb{Q}^2`-:math:`\mathbb{Q}^1` Taylor-Hood finite elements,
+  hence no stabilization for the fluid problem is needed.
+| Study the setup shown in fig.
+  `[fig:channel_flag_setup] <#fig:channel_flag_setup>`__ and the
+  comments in the input file ``fsi_channel_flag.py``. Run the
+  simulation, either in one of the provided Docker containers or using
+  your own FEniCSx/Ambit installation, using the command
 
 ::
 
    mpiexec -n 1 python3 fsi_channel_flag.py
+
+| If your system allows, use more than one core (e.g. ``mpiexec -n 4``)
+  in order to speed up the simulation a bit.
+| The physics of the problem are strongly time-dependent, and a
+  (near-)periodic oscillation of the flag only occurs after
+  :math:`t\approx 30\;\mathrm{s}`. Run the problem to the end
+  (:math:`t = 35\;\mathrm{s}`) and monitor the flag tip displacement
+  over time. What is the maximum deflection?
  
 .. bibliography::
