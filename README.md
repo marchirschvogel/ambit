@@ -1,9 +1,8 @@
 # README #
 
 Ambit is an open-source multi-physics finite element solver written in Python, supporting solid and fluid mechanics, fluid-structure interaction (FSI), and lumped-parameter models.
-It is tailored towards solving problems in cardiac mechanics, but may also be used for more general nonlinear finite element analysis.
-
-3D nonlinear solid, fluid, and FSI code using FEniCS and PETSc libraries
+It is tailored towards solving problems in cardiac mechanics, but may also be used for more general nonlinear finite element analysis. It uses the finite element backend FEniCS and
+linear algebra library PETSc.
 
 https://github.com/marchirschvogel/ambit/assets/52761273/a438ff55-9b37-4572-a1c5-499dd3cfba73
 
