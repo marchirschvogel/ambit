@@ -1524,6 +1524,10 @@ Fluid + 0D flow
 Blocked pipe flow with 0D model bypass
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+| **Note:**\ *This demo only runs with the mixed dolfinx branch, which
+  is pre-installed in the Ambit devenv Docker container. Pull this
+  container and install Ambit in there according to the instructions in
+  sec.*\ `2 <#sec:inst>`__\ *.*
 | This example demonstrates how to couple 3D fluid flow to a 0D
   lumped-parameter model. Incompressible transient Navier-Stokes flow in
   a pipe with prescribed inflow is solved, with the special constraint
@@ -1593,6 +1597,10 @@ FSI
 
 | – Physics description given in sec. `3.4.4 <#subsubsec:fsi>`__
 | – Input files: ``demos/fsi``
+| **Note:**\ *FSI only runs with the mixed dolfinx branch, which is
+  pre-installed in the Ambit devenv Docker container. Pull this
+  container and install Ambit in there according to the instructions in
+  sec.*\ `2 <#sec:inst>`__\ *.*
 
 Channel flow around elastic flag
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

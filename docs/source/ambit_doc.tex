@@ -1338,6 +1338,8 @@ in ventricular volume?
 
 \subsubsection*{Blocked pipe flow with 0D model bypass}
 
+\textit{\textbf{Note:} This demo only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{sec:inst}.}\\
+
 This example demonstrates how to couple 3D fluid flow to a 0D lumped-parameter model. Incompressible transient Navier-Stokes flow in a pipe with prescribed inflow is solved,
 with the special constraint that an internal boundary (all-time closed valve) separates region 1 and region 2 of the pipe. This internal Dirichlet condition can only be achieved
 by splitting the pressure space, hence having duplicate pressure nodes at the valve plane. Otherwise, fluid would experience deceleration towards the valve and unphysical acceleration behind it, since the pressure gradient drives fluid flow. To achieve this, the mixed Dolfinx branch instead of the main branch is used. It is installed inside the Ambit devenv Docker
@@ -1376,7 +1378,9 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 
 -- Physics description given in sec. \ref{subsubsec:fsi}\\
 
--- Input files: \verb"demos/fsi"
+-- Input files: \verb"demos/fsi"\\
+
+\textit{\textbf{Note:} FSI only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{sec:inst}.}
 
 \subsubsection*{Channel flow around elastic flag}
 
