@@ -23,9 +23,9 @@ def main():
     IO_PARAMS            = {'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
                             'write_results_every'   : 10,
-                            'write_restart_every'   : 10,
+                            'write_restart_every'   : -1,
                             'restart_step'          : restart_step,
-                            'indicate_results_by'   : 'step',
+                            'indicate_results_by'   : 'step0',
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/channel-flag_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/channel-flag_boundary.xdmf',
@@ -33,7 +33,7 @@ def main():
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
-                            'simname'               : 'fsi_channel_flag'}
+                            'simname'               : 'fsi_channel_flagNEW'}
 
     """
     Parameters for the linear and nonlinear solution schemes

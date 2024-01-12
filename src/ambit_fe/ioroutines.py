@@ -386,7 +386,12 @@ class IO_solid(IO):
         if self.indicate_results_by=='time':
             indicator = t
         elif self.indicate_results_by=='step':
-            indicator = N-1
+            indicator = N
+        elif self.indicate_results_by=='step0':
+            if self.write_results_every > 0:
+                indicator = int(N/self.write_results_every)-1
+            else:
+                indicator=0
         else:
             raise ValueError("Unknown indicate_results_by option. Choose 'time' or 'step'.")
 
@@ -714,7 +719,12 @@ class IO_fluid(IO):
         if self.indicate_results_by=='time':
             indicator = t
         elif self.indicate_results_by=='step':
-            indicator = N-1
+            indicator = N
+        elif self.indicate_results_by=='step0':
+            if self.write_results_every > 0:
+                indicator = int(N/self.write_results_every)-1
+            else:
+                indicator=0
         else:
             raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
 
@@ -913,7 +923,12 @@ class IO_ale(IO):
         if self.indicate_results_by=='time':
             indicator = t
         elif self.indicate_results_by=='step':
-            indicator = N-1
+            indicator = N
+        elif self.indicate_results_by=='step0':
+            if self.write_results_every > 0:
+                indicator = int(N/self.write_results_every)-1
+            else:
+                indicator=0
         else:
             raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
 

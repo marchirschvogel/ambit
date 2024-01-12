@@ -396,7 +396,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 self.comm.Barrier()
                 # need to broadcast to all cores
                 err = self.comm.bcast(err, root=0)
-                if err>0: subsolver.solver_error()
+                if err>0: subsolver.solver_error(self)
                 self.pb0.s.array[:] = self.comm.bcast(self.pb0.s.array, root=0)
                 self.pb0.df.array[:] = self.comm.bcast(self.pb0.df.array, root=0)
                 self.pb0.f.array[:] = self.comm.bcast(self.pb0.f.array, root=0)

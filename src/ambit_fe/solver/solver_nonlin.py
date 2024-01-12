@@ -1065,9 +1065,10 @@ class solver_nonlinear_ode(solver_nonlinear):
                 return 1
 
 
-    def solver_error(self):
+    def solver_error(self, cp=None):
 
-        raise RuntimeError("Newton for ODE system did not converge!!")
+        if cp is not None: cp.destroy()
+        raise RuntimeError("Newton for ODE system did not converge!")
 
 
     def destroy(self):
