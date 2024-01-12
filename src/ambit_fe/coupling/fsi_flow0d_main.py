@@ -211,7 +211,7 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.LM.vector], scale=-1.0)
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.LM.vector, scale=-1.0)
-        
+
         self.r_list[3+off] = self.r_l
 
         # flow0d
@@ -227,12 +227,12 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         else: off = 0
 
         # if self.have_dbc_fluid_ale:
-            # self.K_list[3][0] = self.K_dv
+            # self.K_list[5+off][1+off] = self.K_dv
         if self.have_weak_dirichlet_fluid_ale:
             self.K_dv.zeroEntries()
             fem.petsc.assemble_matrix(self.K_dv, self.jac_dv, self.pba.bc.dbcs)
             self.K_dv.assemble()
-            self.K_list[3][0] = self.K_dv
+            self.K_list[5+off][1+off] = self.K_dv
 
         self.pbs.assemble_stiffness(t)
         self.pbfa0.assemble_stiffness(t, subsolver=subsolver)
@@ -348,6 +348,7 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
             self.simname += '_r'+str(N)
             # TODO: quick-fix - simname variables of single field problems need to be addressed, too
             # but this should be handled by one variable, however neeeds revamp of I/O
+            self.pbs.simname += '_r'+str(N)
             self.pbf.simname += '_r'+str(N)
             self.pba.simname += '_r'+str(N)
 

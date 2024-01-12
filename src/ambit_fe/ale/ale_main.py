@@ -324,8 +324,8 @@ class AleProblem(problem_base):
 
     def destroy(self):
 
-        self.r_d.destroy()
-        self.K_dd.destroy()
+        self.io.close_output_files(self)
+
 
 
 class AleSolver(solver_base):

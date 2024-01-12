@@ -85,6 +85,7 @@ if category=='fsi' or category=='all':
         
         errs['test_fsi_p1p1_stab_artseg 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
         errs['test_fsi_p1p1_stab_artseg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
+        errs['test_fsi_p1p1_stab_artseg 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py', str(4)])
 
 if category=='fluid_flow0d' or category=='all':
     errs['test_fluid_flow0d_monolagr_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fluid_flow0d_monolagr_taylorhood_cylinder.py'])

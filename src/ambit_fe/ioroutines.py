@@ -223,6 +223,7 @@ class IO:
         func_out = fem.Function(pb.V_out_vector, name=func.name)
         func_out.interpolate(func)
         outfile.write_function(func_out, t)
+        outfile.close()
 
 
     def write_restart(self, pb, N):
@@ -366,12 +367,21 @@ class IO:
         return fib_func
 
 
+    def close_output_files(self, pb):
+
+        if self.write_results_every > 0:
+
+            for res in pb.results_to_write:
+                if res not in self.results_pre:
+                    self.resultsfiles[res].close()
+
+
 
 class IO_solid(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
-        results_pre = ['fibers','counters']
+        self.results_pre = ['fibers','counters']
 
         if self.indicate_results_by=='time':
             indicator = t
@@ -385,7 +395,7 @@ class IO_solid(IO):
             if self.write_results_every > 0:
 
                 for res in pb.results_to_write:
-                    if res not in results_pre:
+                    if res not in self.results_pre:
                         outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+pb.problem_physics+'_'+res+'.xdmf', 'w')
                         outfile.write_mesh(self.mesh)
                         self.resultsfiles[res] = outfile
@@ -642,12 +652,12 @@ class IO_solid(IO):
             if self.restart_io_type=='petscvector':
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
-                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
                 key.vector.load(viewer)
                 key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -686,11 +696,11 @@ class IO_solid(IO):
             if self.restart_io_type=='petscvector':
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
-                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
                 key.vector.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -699,7 +709,7 @@ class IO_fluid(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
-        results_pre = ['fibers','counters']
+        self.results_pre = ['fibers','counters']
 
         if self.indicate_results_by=='time':
             indicator = t
@@ -713,7 +723,7 @@ class IO_fluid(IO):
             if self.write_results_every > 0:
 
                 for res in pb.results_to_write:
-                    if res not in results_pre:
+                    if res not in self.results_pre:
                         if res=='pressure' and bool(self.duplicate_mesh_domains):
                             for j in self.duplicate_mesh_domains:
                                 outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+pb.problem_physics+'_'+res+str(j)+'.xdmf', 'w')
@@ -836,12 +846,12 @@ class IO_fluid(IO):
             if self.restart_io_type=='petscvector':
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
-                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
                 key.vector.load(viewer)
                 key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.problem_physics+'_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -870,20 +880,35 @@ class IO_fluid(IO):
             if self.restart_io_type=='petscvector':
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
-                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
                 key.vector.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
             else:
                 raise ValueError("Unknown restart_io_type!")
+
+
+    def close_output_files(self, pb):
+
+        if self.write_results_every > 0:
+
+            for res in pb.results_to_write:
+                if res not in self.results_pre:
+
+                    if res=='pressure' and bool(self.duplicate_mesh_domains):
+                        for j in self.duplicate_mesh_domains:
+                            self.resultsfiles[res+str(j)].close()
+                    else:
+                        self.resultsfiles[res].close()
+
 
 
 class IO_ale(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
-        results_pre = ['counters']
+        self.results_pre = ['counters']
 
         if self.indicate_results_by=='time':
             indicator = t
@@ -897,7 +922,7 @@ class IO_ale(IO):
             if self.write_results_every > 0:
 
                 for res in pb.results_to_write:
-                    if res not in results_pre:
+                    if res not in self.results_pre:
                         outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.simname+'_'+pb.problem_physics+'_'+res+'.xdmf', 'w')
                         outfile.write_mesh(self.mesh)
                         self.resultsfiles[res] = outfile
@@ -940,12 +965,12 @@ class IO_ale(IO):
             if self.restart_io_type=='petscvector':
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
-                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
                 key.vector.load(viewer)
                 key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -962,11 +987,11 @@ class IO_ale(IO):
             if self.restart_io_type=='petscvector':
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
-                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
                 key.vector.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -1005,6 +1030,25 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
         IO_fluid.readcheckpoint(self, pb.pbf, N_rest)
         IO_ale.readcheckpoint(self, pb.pba, N_rest)
 
+        vecs_to_read = {}
+        vecs_to_read[pb.LM] = 'LM'
+        vecs_to_read[pb.LM_old] = 'LM_old'
+
+        for key in vecs_to_read:
+
+            if self.restart_io_type=='petscvector':
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
+                key.vector.load(viewer)
+                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                viewer.destroy()
+            elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+            else:
+                raise ValueError("Unknown restart_io_type!")
+
+
     def write_restart(self, pb, N):
 
         if self.write_restart_every > 0 and N % self.write_restart_every == 0:
@@ -1012,6 +1056,24 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
             IO_solid.writecheckpoint(self, pb.pbs, N)
             IO_fluid.writecheckpoint(self, pb.pbf, N)
             IO_ale.writecheckpoint(self, pb.pba, N)
+
+            vecs_to_write = {}
+            vecs_to_write[pb.LM] = 'LM'
+            vecs_to_write[pb.LM_old] = 'LM_old'
+
+            for key in vecs_to_write:
+
+                if self.restart_io_type=='petscvector':
+                    # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                    # and for safety reasons, include the number of cores in the dat file name
+                    viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
+                    key.vector.view(viewer)
+                    viewer.destroy()
+                elif self.restart_io_type=='rawtxt': # only working for nodal fields!
+                    self.writefunction(key, self.output_path+'/checkpoint_'+pb.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                else:
+                    raise ValueError("Unknown restart_io_type!")
+
 
     def create_submeshes(self):
 

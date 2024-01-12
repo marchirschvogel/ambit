@@ -17,11 +17,18 @@ import pytest
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
+    
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
 
     IO_PARAMS            = {'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
                             'write_results_every'   : 1,
                             'indicate_results_by'   : 'step',
+                            'write_restart_every'   : 1,
+                            'restart_step'          : restart_step,
+                            'restart_io_type'       : 'petscvector', # petscvector, rawtxt
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/artseg-fsi-tet-lin_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-fsi-tet-lin_boundary.xdmf',

@@ -1099,7 +1099,8 @@ class FluidmechanicsProblem(problem_base):
 
 
     def destroy(self):
-        pass
+
+        self.io.close_output_files(self)
 
 
 

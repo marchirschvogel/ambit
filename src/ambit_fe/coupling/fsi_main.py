@@ -281,14 +281,16 @@ class FSIProblem(problem_base):
 
     def read_restart(self, sname, N):
 
-        # solid + fluid-ALE problem
-        self.pbs.read_restart(sname, N)
-        self.pbfa.read_restart(sname, N)
+        # read restart information
+        if self.restart_step > 0:
 
-        if self.pbs.restart_step > 0:
-            if self.coupling_type == 'monolithic_lagrange':
-                self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
-                self.pbf.cardvasc0D.read_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm_old)
+            self.io.readcheckpoint(self, N)
+            self.simname += '_r'+str(N)
+            # TODO: quick-fix - simname variables of single field problems need to be addressed, too
+            # but this should be handled by one variable, however neeeds revamp of I/O
+            self.pbs.simname += '_r'+str(N)
+            self.pbf.simname += '_r'+str(N)
+            self.pba.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -375,7 +377,9 @@ class FSIProblem(problem_base):
 
 
     def destroy(self):
-        pass
+
+        self.pbs.destroy()
+        self.pbfa.destroy()
 
 
 

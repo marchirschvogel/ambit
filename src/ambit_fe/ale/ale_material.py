@@ -49,4 +49,4 @@ class materiallaw:
 
         D = params['D']
 
-        return D*ufl.sym(ufl.grad(self.d))
+        return D*ufl.grad(self.d)

@@ -789,6 +789,7 @@ class solver_nonlinear:
 
         else:
 
+            self.pb[npr].destroy()
             raise RuntimeError("Newton did not converge after %i iterations!" % (it))
 
 

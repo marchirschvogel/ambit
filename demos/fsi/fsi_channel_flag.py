@@ -13,6 +13,9 @@ def main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
 
     """
     Parameters for input/output
@@ -20,6 +23,8 @@ def main():
     IO_PARAMS            = {'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
                             'write_results_every'   : 10,
+                            'write_restart_every'   : 10,
+                            'restart_step'          : restart_step,
                             'indicate_results_by'   : 'step',
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/channel-flag_domain.xdmf',
@@ -35,6 +40,8 @@ def main():
     """
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'direct_solver'         : 'mumps',
+                            'divergence_continue'   : 'PTC',
+                            'k_ptc_initial'         : 10.,
                             'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-8,1e-3],
                             'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e10,1e-0]}
 
@@ -43,7 +50,7 @@ def main():
     """
     TIME_PARAMS_SOLID    = {'maxtime'               : 35.0,
                             'numstep'               : 8750,
-                            #'numstep_stop'          : 15,
+                            #'numstep_stop'          : 0,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
@@ -52,7 +59,7 @@ def main():
     """
     TIME_PARAMS_FLUID    = {'maxtime'               : 35.0,
                             'numstep'               : 8750,
-                            #'numstep_stop'          : 15,
+                            #'numstep_stop'          : 0,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
@@ -93,7 +100,8 @@ def main():
     MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 1420.0e-6},
                                       'inertia' : {'rho' : 1.26e-6}}}
     
-    MATERIALS_ALE        = {'MAT1' : {'linelast' : {'Emod' : 2.0, 'kappa' : 1.}}}
+    # linear elastic material for domain motion problem
+    MATERIALS_ALE        = {'MAT1' : {'linelast' : {'Emod' : 2.0, 'kappa' : 10.}}}
 
 
     """
