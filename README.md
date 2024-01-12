@@ -1,6 +1,7 @@
 # README #
 
-* Ambit - A FEniCS-based cardiovascular multi-physics solver
+Ambit is an open-source multi-physics finite element solver written in Python, supporting solid and fluid mechanics, fluid-structure interaction (FSI), and lumped-parameter models.
+It is tailored towards solving problems in cardiac mechanics, but may also be used for more general nonlinear finite element analysis.
 
 3D nonlinear solid, fluid, and FSI code using FEniCS and PETSc libraries
 
