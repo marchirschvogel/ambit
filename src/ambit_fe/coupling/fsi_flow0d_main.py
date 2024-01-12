@@ -19,11 +19,8 @@ from .. import utilities
 from .. import boundaryconditions
 from ..mpiroutines import allgather_vec
 
-from .fluid_ale_main import FluidmechanicsAleProblem
-from .fluid_flow0d_main import FluidmechanicsFlow0DProblem
-from ..fluid.fluid_main import FluidmechanicsSolverPrestr
-from ..solid.solid_main import SolidmechanicsProblem
 from .fsi_main import FSIProblem
+from ..solid.solid_main import SolidmechanicsProblem
 from .fluid_ale_flow0d_main import FluidmechanicsAleFlow0DProblem
 from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
@@ -45,18 +42,6 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         # assert that we do not have conflicting timings - TODO: Find better solution by moving these to global control parameters...
         assert(time_params_fluid['maxtime'] == time_params_solid['maxtime'])
         assert(time_params_fluid['numstep'] == time_params_solid['numstep'])
-
-        try: self.coupling_fluid_ale = coupling_params_fluid_ale['coupling_fluid_ale']
-        except: self.coupling_fluid_ale = {}
-
-        try: self.coupling_ale_fluid = coupling_params_fluid_ale['coupling_ale_fluid']
-        except: self.coupling_ale_fluid = {}
-
-        try: self.fluid_on_deformed = coupling_params_fluid_ale['fluid_on_deformed']
-        except: self.fluid_on_deformed = 'consistent'
-
-        try: self.coupling_strategy = coupling_params_fluid_ale['coupling_strategy']
-        except: self.coupling_strategy = 'monolithic'
 
         try: self.fsi_governing_type = self.coupling_params['fsi_governing_type']
         except: self.fsi_governing_type = 'solid_governed'
@@ -104,7 +89,7 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
 
         self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
         # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
-        if self.zero_lm_boundary:
+        if self.zero_lm_boundary: # TODO: Seems to not work properly!
             self.io.msh_emap_lm[0].topology.create_connectivity(self.io.msh_emap_lm[0].topology.dim-1, self.io.msh_emap_lm[0].topology.dim)
             boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
             self.bclm.dbcs.append( fem.dirichletbc(self.LM, boundary_facets_lm) )
@@ -292,52 +277,6 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.K_list[5+off][5+off] = self.pbfa0.K_list[3][3]
 
 
-    def get_index_sets(self, isoptions={}):
-
-        if self.rom is not None: # currently, ROM can only be on (subset of) first variable
-            vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
-            vvec_ls = self.rom.V.getLocalSize()[1]
-        else:
-            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
-            vvec_ls = self.pbf.v.vector.getLocalSize()
-
-        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
-        iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
-
-        if isoptions['rom_to_new']:
-            iset_r = PETSc.IS().createGeneral(self.rom.im_rom_r, comm=self.comm)
-            iset_v = iset_v.difference(iset_r) # subtract
-
-        offset_p = offset_v + vvec_ls
-        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
-
-        offset_s = offset_p + self.pbf.p.vector.getLocalSize()
-        iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
-
-        offset_d = offset_s + self.pbf0.lm.getLocalSize()
-        iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
-
-        if isoptions['rom_to_new']:
-            iset_s = iset_s.expand(iset_r) # add to 0D block
-            iset_s.sort() # should be sorted, otherwise PETSc may struggle to extract block
-
-        if isoptions['ale_to_v']:
-            iset_v = iset_v.expand(iset_d) # add ALE to velocity block
-
-        if isoptions['lms_to_p']:
-            iset_p = iset_p.expand(iset_s) # add to pressure block - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
-            ilist = [iset_v, iset_p, iset_d]
-        elif isoptions['lms_to_v']:
-            iset_v = iset_v.expand(iset_s) # add to velocity block (could be bad...) - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
-            ilist = [iset_v, iset_p, iset_d]
-        else:
-            ilist = [iset_v, iset_p, iset_s, iset_d]
-
-        if isoptions['ale_to_v']: ilist.pop(-1)
-
-        return ilist
-
-
     ### now the base routines for this problem
 
     def read_restart(self, sname, N):
@@ -471,33 +410,10 @@ class FSIFlow0DSolver(solver_base):
         self.evaluate_assemble_system_initial(subsolver=self.subsol)
 
         # initialize nonlinear solver class
-        if self.pb.coupling_strategy=='monolithic':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, subsolver=self.subsol)
-        elif self.pb.coupling_strategy=='partitioned':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf0,self.pb.pba], self.solver_params, subsolver=self.subsol, cp=self.pb)
-        else:
-            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
-
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
-            solver_params_prestr = copy.deepcopy(self.solver_params)
-            # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
-            try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
-            except: pass
-            try: solver_params_prestr['block_precond'] = self.solver_params['block_precond_prestr']
-            except: pass
-            try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
-            except: pass
-            # initialize fluid mechanics solver
-            self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, solver_params_prestr)
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, subsolver=self.subsol)
 
 
     def solve_initial_state(self):
-
-        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
-            # solve solid prestress problem
-            self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.destroy()
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
@@ -519,42 +435,6 @@ class FSIFlow0DSolver(solver_base):
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
-
-
-    # we overload this function here in order to take care of the partitioned solve,
-    # where the ROM needs to be an object of the fluid, not the coupled problem
-    def evaluate_assemble_system_initial(self, subsolver=None):
-
-        # evaluate old initial state of model
-        self.evaluate_system_initial()
-
-        if self.pb.coupling_strategy=='monolithic':
-
-            self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern)
-            self.pb.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
-
-            # create ROM matrix structures
-            if self.pb.rom:
-                self.pb.rom.set_reduced_data_structures_residual(self.pb.r_list, self.pb.r_list_rom)
-                self.pb.K_list_tmp = [[None]]
-                self.pb.rom.set_reduced_data_structures_matrix(self.pb.K_list, self.pb.K_list_rom, self.pb.K_list_tmp)
-
-        elif self.pb.coupling_strategy=='partitioned':
-
-            self.pb.pbf0.rom = self.pb.rom
-
-            self.pb.assemble_residual(self.pb.t_init, subsolver=None)
-            self.pb.pbf0.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
-            self.pb.pba.assemble_stiffness(self.pb.t_init)
-
-            # create ROM matrix structures
-            if self.pb.pbf0.rom:
-                self.pb.pbf0.rom.set_reduced_data_structures_residual(self.pb.pbf0.r_list, self.pb.pbf0.r_list_rom)
-                self.pb.pbf0.K_list_tmp = [[None]]
-                self.pb.pbf0.rom.set_reduced_data_structures_matrix(self.pb.pbf0.K_list, self.pb.pbf0.K_list_rom, self.pb.pbf0.K_list_tmp)
-
-        else:
-            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
 
     def solve_nonlinear_problem(self, t):

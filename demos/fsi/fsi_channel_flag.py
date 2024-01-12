@@ -20,12 +20,15 @@ def main():
     """
     Parameters for input/output
     """
-    IO_PARAMS            = {'problem_type'          : 'fsi',
+    IO_PARAMS            = {# problem type 'fsi': fluid-solid interaction
+                            'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
+                            # at which step frequency to write results (set to 0 in order to not write any output): here, only every 10th due to the many steps
                             'write_results_every'   : 10,
                             'write_restart_every'   : -1,
                             'restart_step'          : restart_step,
                             'indicate_results_by'   : 'step0',
+                            # where to write the output to
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/channel-flag_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/channel-flag_boundary.xdmf',
@@ -42,6 +45,7 @@ def main():
                             'direct_solver'         : 'mumps',
                             'divergence_continue'   : 'PTC',
                             'k_ptc_initial'         : 10.,
+                            # residual and increment tolerances
                             'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-8,1e-3],
                             'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e10,1e-0]}
 
@@ -64,7 +68,7 @@ def main():
                             'theta_ost'             : 1.0}
 
     """
-    Finite element parameters for solid
+    Finite element parameters for solid: Taylor-Hood space
     """
     FEM_PARAMS_SOLID     = {'order_disp'            : 2,
                             'order_pres'            : 1,
@@ -72,7 +76,7 @@ def main():
                             'incompressible_2field' : True}
 
     """
-    Finite element parameters for fluid
+    Finite element parameters for fluid: Taylor-Hood space
     """
     FEM_PARAMS_FLUID     = {'order_vel'             : 2,
                             'order_pres'            : 1,
@@ -112,7 +116,7 @@ def main():
         def tc1(self, t):
             t_ramp = 2.0
             
-            H = 0.41e3
+            H = 0.41e3 # channel height
             Ubar = 1e3
             
             #vel_inflow_y = 1.5*Ubar*( y*(H-y)/((H/2)^2) ) # TODO: Currently, these curves can only be time-, but not space-dependent!

@@ -17,7 +17,7 @@ from ..solver import solver_nonlin
 from .. import ioparams, utilities
 from .. import boundaryconditions
 
-from ..solid.solid_main import SolidmechanicsProblem, SolidmechanicsSolverPrestr
+from ..solid.solid_main import SolidmechanicsProblem
 from .fluid_ale_main import FluidmechanicsAleProblem
 
 from ..base import problem_base, solver_base
@@ -76,7 +76,7 @@ class FSIProblem(problem_base):
 
         self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
         # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
-        if self.zero_lm_boundary:
+        if self.zero_lm_boundary: # TODO: Seems to not work properly!
             self.io.msh_emap_lm[0].topology.create_connectivity(self.io.msh_emap_lm[0].topology.dim-1, self.io.msh_emap_lm[0].topology.dim)
             boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
             self.bclm.dbcs.append( fem.dirichletbc(self.LM, boundary_facets_lm) )
@@ -368,8 +368,6 @@ class FSIProblem(problem_base):
 
         self.io.write_restart(self, N)
 
-        # self.write_restart(self.pbf.output_path_0D, sname+'_lm', N, self.lm)
-
 
     def check_abort(self, t):
 
@@ -394,10 +392,6 @@ class FSISolver(solver_base):
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
-
-        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
-            # initialize fluid mechanics solver
-            self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, self.solver_params)
 
 
     def solve_initial_state(self):
