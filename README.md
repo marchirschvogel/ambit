@@ -1,6 +1,6 @@
 # README #
 
-* Ambit - A FEniCS-based cardiovascular physics solver
+* Ambit - A FEniCS-based cardiovascular multi-physics solver
 
 3D nonlinear solid, fluid, and FSI code using FEniCS and PETSc libraries
 

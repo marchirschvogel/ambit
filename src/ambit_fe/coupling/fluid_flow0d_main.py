@@ -278,10 +278,13 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         if subsolver is not None:
             # only have rank 0 solve the ODE, then broadcast solution
+            err = -1
             if self.comm.rank==0:
-                subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+                err = subsolver.newton(t, print_iter=self.print_subiter, sub=True)
             self.comm.Barrier()
             # need to broadcast to all cores
+            err = self.comm.bcast(err, root=0)
+            if err>0: subsolver.solver_error()
             self.pb0.s.array[:] = self.comm.bcast(self.pb0.s.array, root=0)
             self.pb0.df.array[:] = self.comm.bcast(self.pb0.df.array, root=0)
             self.pb0.f.array[:] = self.comm.bcast(self.pb0.f.array, root=0)
@@ -359,7 +362,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             for i in range(ls, le): # row-owning rank calls the ODE solver
                 for j in range(self.num_coupling_surf):
                     self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] + self.eps_fd # perturbed LM
-                    subsolver.newton(t, print_iter=False)
+                    subsolver.newton(t, print_iter=False, sub=True)
                     val = -(self.pb0.s[self.pb0.cardvasc0D.v_ids[i]] - self.pb0.s_tmp[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
                     self.K_lm.setValue(i, j, val, addv=PETSc.InsertMode.INSERT)
                     self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] # restore LM

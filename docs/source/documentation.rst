@@ -1,6 +1,6 @@
-====================================================
-Ambit – A FEniCS-based cardiovascular physics solver
-====================================================
+==========================================================
+Ambit – A FEniCS-based cardiovascular multi-physics solver
+==========================================================
 
 :Author: Dr.-Ing. Marc Hirschvogel
 

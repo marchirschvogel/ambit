@@ -1055,11 +1055,19 @@ class solver_nonlinear_ode(solver_nonlinear):
                 if print_iter and sub:
                     utilities.print_status("       ****************************************************\n", self.comm)
                 self.ni = it-1
-                break
+                return 0
 
         else:
 
-            raise RuntimeError("Newton for ODE system did not converge after %i iterations!" % (it))
+            if not sub:
+                self.solver_error()
+            else: # sub-solve only on rank 0 - return error and broadcast outside!
+                return 1
+
+
+    def solver_error(self):
+
+        raise RuntimeError("Newton for ODE system did not converge!!")
 
 
     def destroy(self):

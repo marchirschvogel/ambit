@@ -1,5 +1,5 @@
 ---
-title: 'Ambit -- A FEniCS-based cardiovascular physics solver'
+title: 'Ambit -- A FEniCS-based cardiovascular multi-physics solver'
 tags:
   - Python
   - cardiovascular mechanics
@@ -8,15 +8,18 @@ tags:
   - fluid dynamics
   - 0D lumped models
   - fluid-solid interaction
+  - fsi
   - multi-physics coupling
 authors:
   - name: Marc Hirschvogel
     orcid: 0000-0002-4575-9120
     equal-contrib: true
-    affiliation: 1 # (Multiple affiliations must be quoted: "1, 2")
+    affiliation: 1,2 # (Multiple affiliations must be quoted: "1, 2")
 affiliations:
- - name: King's College London
+ - name: Department of Biomedical Engineering, School of Biomedical Engineering & Imaging Sciences, King's College London, London, United Kingdom
    index: 1
+ - name: MOX, Dipartimento di Matematica, Politecnico di Milano, Milan, Italy
+   index: 2
 date: 7 July 2023
 bibliography: paper.bib
 
