@@ -27,7 +27,8 @@ bibliography: paper.bib
 
 # Summary
 
-Ambit is an open-source software tool written in Python for parallel multi-physics simulations focusing on -- but not limited to -- cardiac mechanics. Amongst others, it contains re-implementations and generalizations of methods developed by the author for his PhD thesis [@hirschvogel2019disspub]. Ambit makes use of the open-source finite element library [FEniCS/dolfinx](https://fenicsproject.org) [@logg2012-fenics] along with the linear algebra package [PETSc](https://petsc.org) [@balay2022-petsc]. It is constantly updated to ensure compatibility with a recent dolfinx development version, hence guaranteeing a state-of-the-art finite element and linear algebra backend.
+Ambit is an open-source multi-physics finite element solver written in Python, supporting solid and fluid mechanics, fluid-structure interaction (FSI), and lumped-parameter models. It is tailored towards solving problems in cardiac mechanics, but may also be used for more general nonlinear finite element analysis. Ambit makes use of the open-source finite element library [FEniCS/dolfinx](https://fenicsproject.org) [@logg2012-fenics] along with the linear algebra package [PETSc](https://petsc.org) [@balay2022-petsc], hence guaranteeing a state-of-the-art finite element and linear algebra backend.
+The code encompasses re-implementations and generalizations of methods developed by the author for his PhD thesis [@hirschvogel2019disspub] and beyond. It is constantly updated to ensure compatibility with a recent dolfinx development version.
 
 Ambit is designed such that the user only needs to provide input files that define parameters through Python dictionaries, hence no programming or in-depth knowledge of any library-specific syntax is required.
 

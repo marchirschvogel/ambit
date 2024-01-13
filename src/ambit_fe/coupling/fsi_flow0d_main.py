@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2023, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -415,23 +415,44 @@ class FSIFlow0DSolver(solver_base):
 
     def solve_initial_state(self):
 
-        # consider consistent initial acceleration
-        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
+        # consider consistent initial acceleration of solid
+        if self.pb.pbs.timint != 'static' and self.pb.restart_step == 0:
 
             ts = time.time()
-            utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
+            utilities.print_status("Setting forms and solving for consistent initial solid acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
+            weakform_a_solid = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old + self.pb.work_coupling_solid_old
 
-            weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
+            weakform_lin_aa_solid = ufl.derivative(weakform_a_solid, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
             if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
+                res_a_solid, jac_aa_solid = fem.form(weakform_a_solid, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa_solid, entity_maps=self.pb.io.entity_maps)
             else:
-                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
-            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
+                res_a_solid, jac_aa_solid = fem.form(weakform_a_solid), fem.form(weakform_lin_aa_solid)
+            self.solnln.solve_consistent_ini_acc(res_a_solid, jac_aa_solid, self.pb.pbs.a_old)
+
+            te = time.time() - ts
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
+
+        # consider consistent initial acceleration of fluid
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.restart_step == 0:
+
+            ts = time.time()
+            utilities.print_status("Setting forms and solving for consistent initial fluid acceleration...", self.pb.comm, e=" ")
+
+            # weak form at initial state for consistent initial acceleration solve
+            weakform_a_fluid = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.power_coupling_fluid_old - self.pb.pbf0.power_coupling_old
+
+            weakform_lin_aa_fluid = ufl.derivative(weakform_a_fluid, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
+
+            # solve for consistent initial acceleration a_old
+            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
+                res_a_fluid, jac_aa_fluid = fem.form(weakform_a_fluid, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa_fluid, entity_maps=self.pb.io.entity_maps)
+            else:
+                res_a_fluid, jac_aa_fluid = fem.form(weakform_a_fluid), fem.form(weakform_lin_aa_fluid)
+            self.solnln.solve_consistent_ini_acc(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)

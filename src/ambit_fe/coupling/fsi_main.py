@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2023, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -113,18 +113,18 @@ class FSIProblem(problem_base):
     # defines the monolithic coupling forms for FSI
     def set_variational_forms(self):
 
-        work_coupling_solid = ufl.dot(self.LM, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
-        work_coupling_solid_old = ufl.dot(self.LM_old, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
-        work_coupling_fluid = ufl.dot(self.LM, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
-        work_coupling_fluid_old = ufl.dot(self.LM_old, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
+        self.work_coupling_solid = ufl.dot(self.LM, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
+        self.work_coupling_solid_old = ufl.dot(self.LM_old, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
+        self.power_coupling_fluid = ufl.dot(self.LM, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
+        self.power_coupling_fluid_old = ufl.dot(self.LM_old, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
 
         # add to solid and fluid virtual work/power
-        self.pbs.weakform_u += self.pbs.timefac * work_coupling_solid + (1.-self.pbs.timefac) * work_coupling_solid_old
-        self.pbf.weakform_v += -self.pbf.timefac * work_coupling_fluid - (1.-self.pbf.timefac) * work_coupling_fluid_old
+        self.pbs.weakform_u += self.pbs.timefac * self.work_coupling_solid + (1.-self.pbs.timefac) * self.work_coupling_solid_old
+        self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling_fluid - (1.-self.pbf.timefac) * self.power_coupling_fluid_old
 
         # add to solid and fluid Jacobian
-        self.pbs.weakform_lin_uu += self.pbs.timefac * ufl.derivative(work_coupling_solid, self.pbs.u, self.pbs.du)
-        self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(work_coupling_fluid, self.pbf.v, self.pbf.dv)
+        self.pbs.weakform_lin_uu += self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.pbs.u, self.pbs.du)
+        self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.pbf.v, self.pbf.dv)
 
         if self.fsi_governing_type=='solid_governed':
             self.weakform_l = ufl.dot(self.pbs.u, self.var_LM)*self.io.ds(self.io.interface_id_s) - ufl.dot(self.pbf.ufluid, self.var_LM)*self.io.ds(self.io.interface_id_f)
@@ -136,8 +136,8 @@ class FSIProblem(problem_base):
         self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
         self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
 
-        self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(work_coupling_solid, self.LM, self.dLM)
-        self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(work_coupling_fluid, self.LM, self.dLM)
+        self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.LM, self.dLM)
+        self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.LM, self.dLM)
 
         # even though this is zero, we still want to explicitly form and create the matrix for DBC application
         self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.LM, self.dLM)
@@ -403,7 +403,7 @@ class FSISolver(solver_base):
             utilities.print_status("Setting forms and solving for consistent initial solid acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a_solid = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old
+            weakform_a_solid = self.pb.pbs.deltaW_kin_old + self.pb.pbs.deltaW_int_old - self.pb.pbs.deltaW_ext_old + self.pb.work_coupling_solid_old
 
             weakform_lin_aa_solid = ufl.derivative(weakform_a_solid, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
@@ -424,7 +424,7 @@ class FSISolver(solver_base):
             utilities.print_status("Setting forms and solving for consistent initial fluid acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a_fluid = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old
+            weakform_a_fluid = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.power_coupling_fluid_old
 
             weakform_lin_aa_fluid = ufl.derivative(weakform_a_fluid, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
