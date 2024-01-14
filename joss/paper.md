@@ -13,7 +13,7 @@ tags:
 authors:
   - name: Marc Hirschvogel
     orcid: 0000-0002-4575-9120
-    equal-contrib: true
+    equal-contrib: false
     affiliation: "1, 2" # (Multiple affiliations must be quoted: "1, 2")
 affiliations:
  - name: Department of Biomedical Engineering, School of Biomedical Engineering & Imaging Sciences, King's College London, London, United Kingdom
