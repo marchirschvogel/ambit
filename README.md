@@ -8,7 +8,7 @@ https://github.com/marchirschvogel/ambit/assets/52761273/a438ff55-9b37-4572-a1c5
 
 **Heart cycle simulation of a generic bi-ventricular heart model coupled to a closed-loop circulation model.**
 
-https://github.com/marchirschvogel/ambit/assets/52761273/9165b768-f251-43f5-9605-e04e3b3e3b69
+https://github.com/marchirschvogel/ambit/assets/52761273/a576a50c-88b7-48a6-9a00-4d42f4a55b47
 
 **FSI simulation (modified Turek benchmark) of an elastic flag in incompressible channel flow.**
 
