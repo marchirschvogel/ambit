@@ -1659,6 +1659,19 @@ Channel flow around elastic flag
   (near-)periodic oscillation of the flag only occurs after
   :math:`t\approx 30\;\mathrm{s}`. Run the problem to the end
   (:math:`t = 35\;\mathrm{s}`), be patient, and monitor the flag tip
-  displacement over time. What is the maximum deflection?
+  displacement over time. What is the maximum deflection? Figure
+  `[fig:channel_flag_results] <#fig:channel_flag_results>`__ depicts the
+  velocity at three instances in time towards the end of the simulation.
+
+.. figure:: fig/channel_flag_results.png
+   :alt: Streamlines of velocity at three instances in time
+   :width: 85.0%
+
+   Streamlines of velocity at three instances in time
+   (:math:`t=30\;\mathrm{s}`, :math:`t=32.5\;\mathrm{s}`, and
+   :math:`t=35\;\mathrm{s}`) towards end of simulation, color indicates
+   velcity magnitude.
+
+[fig:channel_flag_results]
  
 .. bibliography::

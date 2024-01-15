@@ -1412,7 +1412,14 @@ mpiexec -n 1 python3 fsi_channel_flag.py
 
 If your system allows, use more than one core (e.g. \verb"mpiexec -n 4") in order to speed up the simulation a bit.\\
 
-The physics of the problem are strongly time-dependent, and a (near-)periodic oscillation of the flag only occurs after $t\approx 30\;\mathrm{s}$. Run the problem to the end ($t = 35\;\mathrm{s}$), be patient, and monitor the flag tip displacement over time. What is the maximum deflection?
+The physics of the problem are strongly time-dependent, and a (near-)periodic oscillation of the flag only occurs after $t\approx 30\;\mathrm{s}$. Run the problem to the end ($t = 35\;\mathrm{s}$), be patient, and monitor the flag tip displacement over time. What is the maximum deflection? Figure \ref{fig:channel_flag_results} depicts the velocity at three instances in time towards the end of the simulation.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.85\textwidth]{fig/channel_flag_results.png}
+\caption{Streamlines of velocity at three instances in time ($t=30\;\mathrm{s}$, $t=32.5\;\mathrm{s}$, and $t=35\;\mathrm{s}$) towards end of simulation, color indicates velcity magnitude.}
+\label{fig:channel_flag_results}
+\end{figure}
 
 \bibliography{ref}
 
