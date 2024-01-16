@@ -31,7 +31,7 @@ Ambit is an open-source multi-physics finite element solver written in Python, s
 
 Ambit provides general nonlinear (compressible or incompressible) finite strain solid dynamics [@holzapfel2000], implementing a range of hyperelastic, viscous, and active material models. Specifically, the well-known anisotropic Holzapfel-Ogden [@holzapfel2009] and Guccione models [@guccione1995] for structural description of the myocardium are provided, along with a bunch of other models. It further implements strain- and stress-mediated volumetric growth models [@goektepe2010] that allow to model (maladaptive) ventricular shape and size changes. Inverse mechanics approaches to imprint loads into a reference state are implemented using the so-called prestressing method [@gee2010] in displacement formulation [@schein2021].
 
-Furthermore, fluid dynamics in terms of incompressible Navier-Stokes/Stokes equations -- either in Eulerian or Arbitrary Lagrangian-Eulerian (ALE) reference frames -- are implemented. Taylor-Hood elements or equal-order approximations with SUPG/PSPG stabilization [@tezduyar2000] can be used.
+Furthermore, fluid dynamics in terms of incompressible Navier-Stokes/Stokes equations – either in Eulerian or Arbitrary Lagrangian-Eulerian (ALE) reference frames – are implemented. Taylor-Hood elements or equal-order approximations with SUPG/PSPG stabilization [@tezduyar2000] can be used.
 
 A variety of reduced 0D lumped models targeted at blood circulation modeling are implemented, including 3- and 4-element Windkessel models [@westerhof2009] as well as closed-loop full circulation [@hirschvogel2017] and coronary flow models [@arthurs2016].
 
