@@ -1,0 +1,26 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Hirschvogel
+  given-names: Marc
+  orcid: "https://orcid.org/0000-0002-4575-9120"
+doi: 10.5281/zenodo.10501275
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Hirschvogel
+    given-names: Marc
+    orcid: "https://orcid.org/0000-0002-4575-9120"
+  date-published: 2024-01-16
+  doi: 10.21105/joss.05744
+  issn: 2475-9066
+  issue: 93
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 5744
+  title: Ambit -- A FEniCS-based cardiovascular multi-physics solver
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.05744"
+  volume: 9
+title: Ambit -- A FEniCS-based cardiovascular multi-physics solver
