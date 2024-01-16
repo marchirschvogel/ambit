@@ -1,5 +1,5 @@
 ---
-title: 'Ambit -- A FEniCS-based cardiovascular multi-physics solver'
+title: 'Ambit – A FEniCS-based cardiovascular multi-physics solver'
 tags:
   - Python
   - cardiovascular mechanics
