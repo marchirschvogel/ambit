@@ -191,7 +191,8 @@ class IO:
         if self.mt_d_master is not None:
             self.dx = ufl.Measure("dx", domain=msh, subdomain_data=self.mt_d_master, metadata={'quadrature_degree': self.quad_degree})
         else:
-            self.dx = ufl.Measure("dx", domain=msh, metadata={'quadrature_degree': self.quad_degree})
+            self.dx_ = ufl.Measure("dx", domain=msh, metadata={'quadrature_degree': self.quad_degree})
+            self.dx = lambda a : self.dx_ # so that we can call dx(1) even without domain meshtags
 
         self.ds = ufl.Measure("ds", domain=msh, subdomain_data=self.mt_b1_master, metadata={'quadrature_degree': self.quad_degree})
         self.de = ufl.Measure("ds", domain=msh, subdomain_data=self.mt_b2_master, metadata={'quadrature_degree': self.quad_degree})
@@ -1132,7 +1133,8 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
         if self.mt_d_master is not None:
             self.dx = ufl.Measure("dx", domain=msh, subdomain_data=self.mt_d_master, metadata={'quadrature_degree': self.quad_degree})
         else:
-            self.dx = ufl.Measure("dx", domain=msh, metadata={'quadrature_degree': self.quad_degree})
+            self.dx_ = ufl.Measure("dx", domain=msh, metadata={'quadrature_degree': self.quad_degree})
+            self.dx = lambda a : self.dx_ # so that we can call dx(1) even without domain meshtags
 
         # now the boundary ones
         interface_facets = self.mt_b1.indices[self.mt_b1.values == self.surf_interf[0]]
