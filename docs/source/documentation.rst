@@ -11,22 +11,24 @@ Ambit – A FEniCS-based cardiovascular multi-physics solver
 Preface
 =======
 
-| Ambit is an open-source software tool written in Python for parallel
-  multi-physics simulations focusing on – but not limited to – cardiac
-  mechanics. Amongst others, it contains re-implementations and
+| Ambit :cite:p:`hirschvogel2024-ambit` is an open-source
+  multi-physics finite element solver written in Python, supporting
+  solid and fluid mechanics, fluid-structure interaction (FSI), and
+  lumped-parameter models. It is tailored towards solving problems in
+  cardiac mechanics, but may also be used for more general nonlinear
+  finite element analysis. The code encompasses re-implementations and
   generalizations of methods developed by the author for his PhD thesis
-  :cite:p:`hirschvogel2019disspub`. Ambit makes use of the
-  open-source finite element library FEniCS/dolfinx
+  :cite:p:`hirschvogel2019disspub` and beyond. Ambit makes use
+  of the open-source finite element library FEniCS/dolfinx
   (https://fenicsproject.org) :cite:p:`logg2012-fenics` along
   with the linear algebra package PETSc (https://petsc.org)
-  :cite:p:`balay2022-petsc`. It is constantly updated to
-  ensure compatibility with a recent dolfinx development version, hence
-  guaranteeing a state-of-the-art finite element and linear algebra
-  backend.
-| Ambit is designed such that the user only needs to provide input files
-  that define parameters through Python dictionaries, hence no
-  programming or in-depth knowledge of any library-specific syntax is
-  required.
+  :cite:p:`balay2022-petsc`, hence guaranteeing a
+  state-of-the-art finite element and linear algebra backend. It is
+  constantly updated to ensure compatibility with a recent dolfinx
+  development version. I/O routines are designed such that the user only
+  needs to provide input files that define parameters through Python
+  dictionaries, hence no programming or in-depth knowledge of any
+  library-specific syntax is required.
 | Ambit provides general nonlinear (compressible or incompressible)
   finite strain solid dynamics :cite:p:`holzapfel2000`,
   implementing a range of hyperelastic, viscous, and active material
@@ -64,10 +66,11 @@ Preface
   :cite:p:`farhat2014` using full or boundary subspaces.
 | The nonlinear (single- or multi-field) problems are solved with a
   customized Newton solver with PTC :cite:p:`gee2009`
-  adaptibity in case of divergence, providing robustness for numerically
+  adaptivity in case of divergence, providing robustness for numerically
   challenging problems. Linear solvers and preconditioners can be chosen
   from the PETSc repertoire, and specific block preconditioners are made
   available for coupled problems.
+
 | Avenues for future functionality include cardiac electrophysiology,
   scalar transport, or finite strain plasticity.
 | In the following, a brief description of the supported problem types

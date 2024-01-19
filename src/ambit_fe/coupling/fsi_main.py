@@ -118,13 +118,9 @@ class FSIProblem(problem_base):
         self.power_coupling_fluid = ufl.dot(self.LM, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
         self.power_coupling_fluid_old = ufl.dot(self.LM_old, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
 
-        # add to solid and fluid virtual work/power
+        # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
         self.pbs.weakform_u += self.pbs.timefac * self.work_coupling_solid + (1.-self.pbs.timefac) * self.work_coupling_solid_old
         self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling_fluid - (1.-self.pbf.timefac) * self.power_coupling_fluid_old
-
-        # add to solid and fluid Jacobian
-        self.pbs.weakform_lin_uu += self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.pbs.u, self.pbs.du)
-        self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.pbf.v, self.pbf.dv)
 
         if self.fsi_governing_type=='solid_governed':
             self.weakform_l = ufl.dot(self.pbs.u, self.var_LM)*self.io.ds(self.io.interface_id_s) - ufl.dot(self.pbf.ufluid, self.var_LM)*self.io.ds(self.io.interface_id_f)
