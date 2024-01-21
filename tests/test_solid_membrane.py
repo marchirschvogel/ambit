@@ -47,10 +47,23 @@ def test_main():
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    class time_curves():
+    class time_curves:
 
         def tc1(self, t):
             return 0.5*t
+
+
+    # alternative/generalization of above-defined time curve: use a user expression that can (but does not have to) vary in space
+    class expression1:
+        def __init__(self):
+            self.t = 0.0
+
+        def evaluate(self, x):
+            val = 0.5*self.t
+            return ( np.full(x.shape[1], val),
+                     np.full(x.shape[1], val),
+                     np.full(x.shape[1], val) )
+
 
     BC_DICT           = { 'membrane' :  [{'id' : [5], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}, # block1
                                          {'id' : [11], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0., 'rho0' : 0., 'h0' : {'val' : 0.1}}}, # block2
@@ -61,17 +74,17 @@ def test_main():
                           'dirichlet' : [{'id' : [3,6], 'dir' : 'z', 'val' : 0.}, # out of 2D plane XY
                                          {'id' : [1], 'dir' : 'all', 'val' : 0.},
                                          {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                         {'id' : [4], 'dir' : 'x', 'curve' : 1}, # tension in membrane plane
+                                         {'id' : [4], 'dir' : 'x', 'expression' : expression1}, # tension in membrane plane
                           # block2 - tension out of membrane plane
                                          {'id' : [9,12], 'dir' : 'z', 'val' : 0.}, # out of 2D plane XY
                                          {'id' : [8], 'dir' : 'all', 'val' : 0.},
                                          {'id' : [11], 'dir' : 'x', 'val' : 0.},
-                                         {'id' : [11], 'dir' : 'y', 'curve' : 1}, # tension out of membrane plane
+                                         {'id' : [11], 'dir' : 'y', 'expression' : expression1}, # tension out of membrane plane
                           # block3 - simple shear in membrane plane
                                          {'id' : [15,18], 'dir' : 'z', 'val' : 0.}, # out of 2D plane XY
                                          {'id' : [14], 'dir' : 'all', 'val' : 0.},
                                          {'id' : [17], 'dir' : 'y', 'val' : 0.},
-                                         {'id' : [17], 'dir' : 'x', 'curve' : 1}, # simple shear in membrane plane
+                                         {'id' : [17], 'dir' : 'x', 'expression' : expression1}, # simple shear in membrane plane
                           # block4 - simple shear out of membrane plane
                                          {'id' : [21,24], 'dir' : 'z', 'val' : 0.}, # out of 2D plane XY
                                          {'id' : [19], 'dir' : 'all', 'val' : 0.},    

@@ -36,7 +36,7 @@ def main():
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
-                            'simname'               : 'fsi_channel_flagNEW'}
+                            'simname'               : 'test_parabinflow'}
 
     """
     Parameters for the linear and nonlinear solution schemes
@@ -109,19 +109,27 @@ def main():
 
 
     """
-    Time curves, e.g. any prescribed time-controlled/-varying loads or functions
+    User expression, here a spatially varying time-controlled inflow: always need a class variable self.t and an evaluate(self, x)
+    with the only argument being the spatial coordinates x
     """
-    class time_curves():
+    class expression1:
+        def __init__(self):
+            
+            self.t = 0.0
 
-        def tc1(self, t):
-            t_ramp = 2.0
+            self.t_ramp = 2.0
             
-            H = 0.41e3 # channel height
-            Ubar = 1e3
+            self.H = 0.41e3 # channel height
+            self.Ubar = 1e3
+
+        def evaluate(self, x):
             
-            #vel_inflow_y = 1.5*Ubar*( y*(H-y)/((H/2)^2) ) # TODO: Currently, these curves can only be time-, but not space-dependent!
-            vel_inflow_y = 1.5*Ubar
-            return vel_inflow_y * 0.5*(1.-np.cos(np.pi*t/t_ramp)) * (t < t_ramp) + vel_inflow_y * (t >= t_ramp)
+            vel_inflow_y = 1.5*self.Ubar*( x[1]*(self.H-x[1])/((self.H/2.)**2.) )
+
+            val_t = vel_inflow_y * 0.5*(1.-np.cos(np.pi*self.t/self.t_ramp)) * (self.t < self.t_ramp) + vel_inflow_y * (self.t >= self.t_ramp)
+
+            return ( np.full(x.shape[1], val_t),
+                     np.full(x.shape[1], val_t) )
 
 
     """
@@ -129,7 +137,7 @@ def main():
     """
     BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [6], 'dir' : 'all', 'val' : 0.}]}
 
-    BC_DICT_FLUID        = { 'dirichlet' : [{'id' : [4], 'dir' : 'x', 'curve' : 1},
+    BC_DICT_FLUID        = { 'dirichlet' : [{'id' : [4], 'dir' : 'x', 'expression' : expression1},
                                             {'id' : [2,3], 'dir' : 'all', 'val' : 0.}],
                             'stabilized_neumann' : [{'id' : [5], 'par1' : 0.252e-6, 'par2' : 1.}] }
 
@@ -137,7 +145,7 @@ def main():
 
 
     # Pass parameters to Ambit to set up the problem
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves, coupling_params=COUPLING_PARAMS)
 
     # Call the Ambit solver to solve the problem
     problem.solve_problem()

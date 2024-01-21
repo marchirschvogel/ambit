@@ -54,7 +54,7 @@ class boundary_cond():
             func = fem.Function(V)
 
             if 'curve' in d.keys():
-                assert('val' not in d.keys())
+                assert('val' not in d.keys() and 'expression' not in d.keys())
                 load = expression.template_vector(dim=self.dim)
                 if d['dir'] == 'all': curve_x, curve_y, curve_z = d['curve'][0], d['curve'][1], d['curve'][2]
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
@@ -62,8 +62,14 @@ class boundary_cond():
                 func.interpolate(load.evaluate)
                 self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
             elif 'val' in d.keys():
-                assert('curve' not in d.keys())
+                assert('curve' not in d.keys() and 'expression' not in d.keys())
                 func.vector.set(d['val'])
+            elif 'expression' in d.keys():
+                assert('curve' not in d.keys() and 'val' not in d.keys())
+                expr = d['expression']()
+                expr.t = self.ti.t_init
+                func.interpolate(expr.evaluate)
+                self.ti.funcsexpr_to_update_vec[func] = expr
             else:
                 raise RuntimeError("Need to have 'curve' or 'val' specified!")
 

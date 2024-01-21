@@ -37,6 +37,7 @@ class timeintegration():
 
         # time-dependent functions to update
         self.funcs_to_update, self.funcs_to_update_old, self.funcs_to_update_vec, self.funcs_to_update_vec_old = [], [], [], []
+        self.funcsexpr_to_update, self.funcsexpr_to_update_old, self.funcsexpr_to_update_vec, self.funcsexpr_to_update_vec_old = {}, {}, {}, {}
         # functions which are fed with external data
         self.funcs_data = []
 
@@ -75,10 +76,16 @@ class timeintegration():
             list(m.keys())[0].interpolate(load.evaluate)
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        # set the time in user expressions - note that they hence must have a class variable self.t
+        for m in self.funcsexpr_to_update_vec:
+            self.funcsexpr_to_update_vec[m].t = t
+            m.interpolate(self.funcsexpr_to_update_vec[m].evaluate)
+            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+
+    # update time-dependent functions
     def update_time_funcs(self):
 
-        # update time-dependent functions
         for m in range(len(self.funcs_to_update_old)):
             list(self.funcs_to_update_old[m].keys())[0].vector.axpby(1.0, 0.0, list(self.funcs_to_update[m].keys())[0].vector)
             list(self.funcs_to_update_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
