@@ -158,7 +158,7 @@ In the following, a brief description of the supported problem types is given, i
 
 Examples of input files for the respective problem types can be found in the folder \verb"demos" (with detailed setup descriptions) or amogst the test cases in the folder \verb"tests".\\
 
-This documentation is structured as follows. In sec. \ref{sec:inst}, instructions on how to install and use Ambit are given. The relevant supported physics models are described in sec. \ref{sec:phys}. Demos are presented in sec. \ref{sec:demos}.
+This documentation is structured as follows. In sec. \ref{installation}, instructions on how to install and use Ambit are given. The relevant supported physics models are described in sec. \ref{sec:phys}. Demos are presented in sec. \ref{sec:demos}.
 
 %\begin{figure}[!htp]
 %\centering
@@ -166,7 +166,7 @@ This documentation is structured as follows. In sec. \ref{sec:inst}, instruction
 %\caption{Code design}\label{fig:code_design}
 %\end{figure}
 
-\section{Installation}\label{sec:inst}
+\section{Installation}\label{installation}
 
 In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible dolfinx development version dates to 19 Aug 2023).\\
 
@@ -190,11 +190,11 @@ If a Docker image for development is desired, the following image contains all d
 docker pull ghcr.io/marchirschvogel/ambit:devenv
 \end{verbatim}
 
-\section{Physics Models}\label{sec:phys}
+\section{Physics Models}\label{physics-models}
 
-\subsection{Solid mechanics}\label{subsec:solid}
+\subsection{Solid mechanics}\label{solid-mechanics}
 
--- Example: Sec. \ref{subsec:demos:solid} and \verb"demos/solid"\\
+-- Example: Sec. \ref{demo-solid} and \verb"demos/solid"\\
 
 -- Problem type: \verb.solid.\\
 
@@ -315,11 +315,11 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \end{align}
 
 
-\subsection{Fluid mechanics}\label{subsec:fluid}
+\subsection{Fluid mechanics}\label{fluid-mechanics}
 
-\subsubsection{Eulerian reference frame}\label{subsubsec:fluid_eulerian}
+\subsubsection{Eulerian reference frame}\label{eulerian-reference-frame}
 
--- Example: Sec. \ref{subsec:demos:fluid} and \verb"demos/fluid"\\
+-- Example: Sec. \ref{demo-fluid} and \verb"demos/fluid"\\
 
 -- Problem type: \verb.fluid.\\
 
@@ -381,7 +381,7 @@ r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \q
 \end{align}
 \end{itemize}
 
-\paragraph{Stabilization}\label{para:stab}
+\paragraph{Stabilization}\label{stabilization}
 Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin (SUPG/PSPG) methods are implemented, either using the full or a reduced scheme\\
 
 Full scheme according to \cite{tezduyar2000}: \verb.supg_pspg.:\\
@@ -421,7 +421,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 \end{align}
 -- Note that $\bs{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
 
-\subsubsection{ALE reference frame}
+\subsubsection{ALE reference frame}\label{ale-reference-frame}
 
 -- Problem type: \verb.fluid_ale.\\
 
@@ -550,9 +550,9 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0
 -- note that $\bs{\mathsf{K}}_{pp}$ is zero for Taylor-Hood elements (without stabilization)
 
 
-\subsection{0D flow: Lumped parameter models}\label{subsec:flow0d}
+\subsection{0D flow: Lumped parameter models}\label{d-flow-lumped-parameter-models}
 
--- Example: Sec. \ref{subsec:demos:flow0d} and \verb"demos/flow0d"\\
+-- Example: Sec. \ref{demo-0d-flow} and \verb"demos/flow0d"\\
 
 -- Problem type: \verb"flow0d"\\
 
@@ -813,11 +813,11 @@ Q_{\mathrm{v}}^{r} := -\frac{\mathrm{d}V_{\mathrm{v}}^{r}}{\mathrm{d}t} \nonumbe
 -- Model equations described in \cite{hirschvogel2019disspub}, p. 51ff., 58ff.
 
 
-\subsection{Multi-physics coupling}\label{subsec:multiphys_coupling}
+\subsection{Multi-physics coupling}\label{multi-physics-coupling}
 
-\subsubsection{Solid + 0D flow}\label{subsubsec:solid_flow0d}
+\subsubsection{Solid + 0D flow}\label{solid-0d-flow}
 
--- Example: Sec. \ref{subsec:demos:solid_flow0d} and \verb"demos/solid_flow0d"\\
+-- Example: Sec. \ref{solid-0d-flow} and \verb"demos/solid_flow0d"\\
 
 -- Problem type: \verb"solid_flow0d"\\
 
@@ -852,9 +852,9 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 \begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} & \bs{\mathsf{K}}_{u\lmzi} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom & \zerom \\ \\  \bs{\mathsf{K}}_{\lmzi u} & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi}\end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_solid_incomp_0d}
 \end{align}
 
-\subsubsection{Fluid + 0D flow}\label{subsubsec:fluid_flow0d}
+\subsubsection{Fluid + 0D flow}\label{fluid-0d-flow}
 
--- Example: Sec. \ref{subsec:demos:fluid_flow0d} \verb"demos/fluid_flow0d"\\
+-- Example: Sec. \ref{fluid-0d-flow} \verb"demos/fluid_flow0d"\\
 
 -- Problem type: \verb.fluid_flow0d.\\
 
@@ -906,7 +906,9 @@ with $\bs{w}(\bs{d})=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}$\\
 \end{align}
 
 
-\subsubsection{Fluid-Solid Interaction (FSI)}\label{subsubsec:fsi}
+\subsubsection{Fluid-Solid Interaction (FSI)}\label{fluid-solid-interaction-fsi}
+
+-- Example: Sec. \ref{demo-fsi} and \verb"demos/fsi"\\
 
 -- Problem type: \verb"fsi"\\
 
@@ -960,7 +962,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \end{align}
 
 
-\subsubsection{Fluid-Solid Interaction (FSI) + 0D flow}\label{subsubsec:fsi_flow0d}
+\subsubsection{Fluid-Solid Interaction (FSI) + 0D flow}\label{fluid-solid-interaction-fsi-0d-flow}
 
 -- Problem type: \verb"fsi_flow0d"\\
 
@@ -1146,9 +1148,9 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 
 \section{Demos}\label{sec:demos}
 
-\subsection{Solid}\label{subsec:demos:solid}
+\subsection{Demo: Solid}\label{demo-solid}
 
--- Physics description given in sec. \ref{subsec:solid}\\
+-- Physics description given in sec. \ref{solid-mechanics}\\
 
 -- Input files: \verb"demos/solid/"
 
@@ -1183,9 +1185,9 @@ Figure \ref{fig:cantilever_results} shows the displacement magnitude at the end 
 \end{figure}
 
 
-\subsection{Fluid}\label{subsec:demos:fluid}
+\subsection{Demo: Fluid}\label{demo-fluid}
 
--- Physics description given in sec. \ref{subsec:fluid}\\
+-- Physics description given in sec. \ref{fluid-mechanics}\\
 
 -- Input files: \verb"demos/fluid"
 
@@ -1221,9 +1223,9 @@ Fig. \ref{fig:channel_results} shows the velocity magnitude (top) as well as the
 \end{figure}
 
 
-\subsection{0D flow}\label{subsec:demos:flow0d}
+\subsection{Demo: 0D flow}\label{demo-0d-flow}
 
--- Physics description given in sec. \ref{subsec:flow0d}\\
+-- Physics description given in sec. \ref{d-flow-lumped-parameter-models}\\
 
 -- Input files: \verb"demos/flow0d"
 
@@ -1265,9 +1267,9 @@ The solution is depicted in fig. \ref{fig:syspul_results}, showing the time cour
 \end{figure}
 
 
-\subsection{Solid + 0D flow}\label{subsec:demos:solid_flow0d}
+\subsection{Demo: Solid + 0D flow}\label{demo-solid-0d-flow}
 
--- Physics description given in sec. \ref{subsubsec:solid_flow0d}\\
+-- Physics description given in sec. \ref{solid-0d-flow}\\
 
 -- Input files: \verb"demos/solid_flow0d"
 
@@ -1327,15 +1329,15 @@ in ventricular volume?
 \end{figure}
 
 
-\subsection{Fluid + 0D flow}\label{subsec:demos:fluid_flow0d}
+\subsection{Demo: Fluid + 0D flow}\label{demo-fluid-0d-flow}
 
--- Physics description given in sec. \ref{subsubsec:fluid_flow0d}\\
+-- Physics description given in sec. \ref{fluid-0d-flow}\\
 
 -- Input files: \verb"demos/fluid_flow0d"
 
 \subsubsection*{Blocked pipe flow with 0D model bypass}
 
-\textit{\textbf{Note:} This demo only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{sec:inst}.}\\
+\textit{\textbf{Note:} This demo only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}\\
 
 This example demonstrates how to couple 3D fluid flow to a 0D lumped-parameter model. Incompressible transient Navier-Stokes flow in a pipe with prescribed inflow is solved,
 with the special constraint that an internal boundary (all-time closed valve) separates region 1 and region 2 of the pipe. This internal Dirichlet condition can only be achieved
@@ -1371,13 +1373,13 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 \end{figure}
 
 
-\subsection{FSI}\label{subsec:demos:fsi}
+\subsection{Demo: FSI}\label{demo-fsi}
 
--- Physics description given in sec. \ref{subsubsec:fsi}\\
+-- Physics description given in sec. \ref{fluid-solid-interaction-fsi}\\
 
 -- Input files: \verb"demos/fsi"\\
 
-\textit{\textbf{Note:} FSI only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{sec:inst}.}
+\textit{\textbf{Note:} FSI only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}
 
 \subsubsection*{Channel flow around elastic flag}
 
@@ -1407,29 +1409,19 @@ with $\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}$.
 \label{fig:channel_flag_setup}
 \end{figure}
 
-%\begin{table}[!h]
-%\begin{center}
-%\caption{Geometrical parameters of modified Turek's benchmark.}\label{tab:params_geo_turek}
-%\begin{tabular}{ccccccc}
-%$L\;[\mathrm{mm}]$ & $H\;[\mathrm{mm}]$ & $r\;[\mathrm{mm}]$ & $l\;[\mathrm{mm}]$ & $h\;[\mathrm{mm}]$ & $d_x\;[\mathrm{mm}]$ & $d_y\;[\mathrm{mm}]$ \\\hline
-%$2500$ & $410$ & $50$ & $350$ & $10$ & $200$ & $200$
-%\end{tabular}
-%\end{center}
-%\end{table}
-
-% TODO: Unbelievable, but if row gets too long, conversion to rst breaks... and caption also does not work :-/
 \begin{table}[!h]
 \begin{center}
+%\caption{Geometrical parameters of modified Turek's benchmark, in $[\mathrm{mm}]$}\label{tab:params_geo_turek}
 \begin{tabular}{ccccccc}
- $L$  & $H$ & $r$ & $l$ & $h$ & $dx$ & $dy$ \\\hline
- 2500 & 410 & 50  & 350 & 20  & 200   & 200  
+ $L$    & $H$   & $r$  & $l$   & $h$  & $d_x$ & $d_y$ \\\hline
+ 2500 & 410 & 50 & 350 & 20 & 200 & 200 
 \end{tabular}
 \end{center}
 \end{table}
 
 Both solid and fluid are discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor-Hood finite elements, hence no stabilization for the fluid problem is needed.\\
 
-Study the setup shown in fig. \ref{fig:channel_flag_setup} together with the parameters in tab. \ref{tab:params_geo_turek} and the comments in the input file \verb"fsi_channel_flag.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup shown in fig. \ref{fig:channel_flag_setup} together with the parameters in the table and the comments in the input file \verb"fsi_channel_flag.py". Run the simulation, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 \begin{verbatim}
 mpiexec -n 1 python3 fsi_channel_flag.py
 \end{verbatim}
@@ -1441,7 +1433,7 @@ The physics of the problem are strongly time-dependent, and a (near-)periodic os
 \begin{figure}
 \centering
 \includegraphics[width=0.85\textwidth]{fig/channel_flag_results.png}
-\caption{Streamlines of velocity at three instances in time ($t=30\;\mathrm{s}$, $t=32.5\;\mathrm{s}$, and $t=35\;\mathrm{s}$) towards end of simulation, color indicates velcity magnitude.}
+\caption{Magnitude of fluid velocity at three instances in time ($t=28\;\mathrm{s}$, $t=31\;\mathrm{s}$, and $t=34\;\mathrm{s}$) towards end of simulation, color indicates velcity magnitude.}
 \label{fig:channel_flag_results}
 \end{figure}
 

@@ -35,7 +35,7 @@ def main():
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
-                            'simname'               : 'fsi_channel_flag_turekFSI2_be'}
+                            'simname'               : 'fsi_channel_flag_turekFSI2'}
 
     """
     Parameters for the linear and nonlinear solution schemes
@@ -53,7 +53,7 @@ def main():
                             'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
                             #'numstep_stop'          : 0,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0} # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            'theta_ost'             : 0.5} # 0.5: Crank-Nicholson, 1.0: Backward Euler
 
     """
     Parameters for the fluid mechanics time integration scheme, plus the global time parameters
@@ -62,7 +62,7 @@ def main():
                             'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
                             #'numstep_stop'          : 0,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0} # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            'theta_ost'             : 0.5} # 0.5: Crank-Nicholson, 1.0: Backward Euler
 
     """
     Finite element parameters for solid: Taylor-Hood space
