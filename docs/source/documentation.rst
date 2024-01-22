@@ -1608,12 +1608,31 @@ FSI
 Channel flow around elastic flag
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| Incompressible fluid flow in a 2D channel around an (incompressible)
-  elastic flag is studied. The setup corresponds to the well-known Turek
-  benchmark :cite:p:`turek2006`, here with a slight geometric
-  modification (flag thickess is half of the original one). A prescribed
-  inflow velocity is used, here without the parabolic profile proposed
-  in the benchmark, but a constant one over the surface.
+| Incompressible fluid flow in a 2D channel around an elastic flag is
+  studied. The setup corresponds to the well-known Turek benchmark
+  :cite:p:`turek2006`. A prescribed inflow velocity with
+  parabolic inflow profile is used:
+| 
+
+  .. math::
+
+     \begin{aligned}
+         \boldsymbol{v}_{\text{f}}= \bar{v}(t,y) \boldsymbol{e}_{y}
+         \quad &  
+         \text{on}\; \mathit{\Gamma}_{t,\mathrm{in}}^{D,\text{f}} \times [0,T],
+         \label{eq:flag_dbc_in}
+     \end{aligned}
+
+  with
+
+  .. math::
+
+     \begin{aligned}
+         \bar{v}(t,y) = \begin{cases} 1.5 \,\bar{U}\, \frac{y(H-y)}{\left(\frac{H}{2}\right)^2} \frac{1-\cos\left(\frac{\pi}{2}t\right)}{2}, & \text{if} \; t < 2, \\ 1.5 \,\bar{U}\, \frac{y(H-y)}{\left(\frac{H}{2}\right)^2}, & \text{else}, \end{cases}
+         \label{eq:flag_dbcs_func}
+     \end{aligned}
+
+with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
 
 .. figure:: fig/channel_flag_setup.png
    :alt: Channel flow around an elastic flag
@@ -1624,24 +1643,16 @@ Channel flow around elastic flag
 
 [fig:channel_flag_setup]
 
-[tab:params_geo_turek]
-
-.. table:: Geometrical parameters of modified Turek’s benchmark.
-
-   ======================== ========================
-   ======================== ========================
-   ======================== ==========================
-   ==========================
-   :math:`L\;[\mathrm{mm}]` :math:`H\;[\mathrm{mm}]` :math:`r\;[\mathrm{mm}]` :math:`l\;[\mathrm{mm}]` :math:`h\;[\mathrm{mm}]` :math:`d_x\;[\mathrm{mm}]` :math:`d_y\;[\mathrm{mm}]`
-   ======================== ========================
-   ======================== ========================
-   ======================== ==========================
-   ==========================
-   :math:`2500`             :math:`410`              :math:`50`               :math:`350`              :math:`10`               :math:`200`                :math:`200`
-   ======================== ========================
-   ======================== ========================
-   ======================== ==========================
-   ==========================
+======================== ========================
+======================== ========================
+======================== ==========================
+==========================
+:math:`L\;[\mathrm{mm}]` :math:`H\;[\mathrm{mm}]` :math:`r\;[\mathrm{mm}]` :math:`l\;[\mathrm{mm}]` :math:`h\;[\mathrm{mm}]` :math:`d_x\;[\mathrm{mm}]` :math:`d_y\;[\mathrm{mm}]`
+:math:`2500`             :math:`410`              :math:`50`               :math:`350`              :math:`20`               :math:`200`                :math:`200`
+======================== ========================
+======================== ========================
+======================== ==========================
+==========================
 
 | Both solid and fluid are discretized with quadrilateral
   :math:`\mathbb{Q}^2`-:math:`\mathbb{Q}^1` Taylor-Hood finite elements,
@@ -1678,11 +1689,5 @@ Channel flow around elastic flag
    velcity magnitude.
 
 [fig:channel_flag_results]
-
-= = =
-1 2 3
-4 5 6
-7 8 9
-= = =
  
 .. bibliography::

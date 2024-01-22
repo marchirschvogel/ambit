@@ -1381,7 +1381,24 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 
 \subsubsection*{Channel flow around elastic flag}
 
-Incompressible fluid flow in a 2D channel around an (incompressible) elastic flag is studied. The setup corresponds to the well-known Turek benchmark \cite{turek2006}, here with a slight geometric modification (flag thickess is half of the original one). A prescribed inflow velocity is used, here without the parabolic profile proposed in the benchmark, but a constant one over the surface.\\
+Incompressible fluid flow in a 2D channel around an elastic flag is studied. The setup corresponds to the well-known Turek benchmark \cite{turek2006}. A prescribed inflow velocity with parabolic inflow profile is used:\\
+\begin{equation}
+\begin{aligned}
+    \vf = \bar{v}(t,y) \bs{e}_{y}
+    \quad &  
+    \text{on}\; \Gm_{t,\mathrm{in}}^{D,\fF} \times [0,T],
+    \label{eq:flag_dbc_in}
+\end{aligned}
+\end{equation}
+with 
+\begin{equation}
+\begin{aligned}
+    \bar{v}(t,y) = \begin{cases} 1.5 \,\bar{U}\, \frac{y(H-y)}{\left(\frac{H}{2}\right)^2} \frac{1-\cos\left(\frac{\pi}{2}t\right)}{2}, & \text{if} \; t < 2, \\ 1.5 \,\bar{U}\, \frac{y(H-y)}{\left(\frac{H}{2}\right)^2}, & \text{else}, \end{cases}
+    \label{eq:flag_dbcs_func}
+\end{aligned}
+\end{equation}
+
+with $\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}$.
 
 \begin{figure}
 \centering
@@ -1390,15 +1407,22 @@ Incompressible fluid flow in a 2D channel around an (incompressible) elastic fla
 \label{fig:channel_flag_setup}
 \end{figure}
 
-\begin{table}[!h]
+%\begin{table}[!h]
+%\begin{center}
+%\caption{Geometrical parameters of modified Turek's benchmark.}\label{tab:params_geo_turek}
+%\begin{tabular}{ccccccc}
+%$L\;[\mathrm{mm}]$ & $H\;[\mathrm{mm}]$ & $r\;[\mathrm{mm}]$ & $l\;[\mathrm{mm}]$ & $h\;[\mathrm{mm}]$ & $d_x\;[\mathrm{mm}]$ & $d_y\;[\mathrm{mm}]$ \\\hline
+%$2500$ & $410$ & $50$ & $350$ & $10$ & $200$ & $200$
+%\end{tabular}
+%\end{center}
+%\end{table}
+
 \begin{center}
-\caption{Geometrical parameters of modified Turek's benchmark.}\label{tab:params_geo_turek}
 \begin{tabular}{ccccccc}
-$L\;[\mathrm{mm}]$ & $H\;[\mathrm{mm}]$ & $r\;[\mathrm{mm}]$ & $l\;[\mathrm{mm}]$ & $h\;[\mathrm{mm}]$ & $d_x\;[\mathrm{mm}]$ & $d_y\;[\mathrm{mm}]$ \\\hline
-$2500$ & $410$ & $50$ & $350$ & $10$ & $200$ & $200$
+ $L\;[\mathrm{mm}]$ & $H\;[\mathrm{mm}]$ & $r\;[\mathrm{mm}]$ & $l\;[\mathrm{mm}]$ & $h\;[\mathrm{mm}]$ & $d_x\;[\mathrm{mm}]$ & $d_y\;[\mathrm{mm}]$ \\ 
+ $2500$ & $410$ & $50$ & $350$ & $20$ & $200$ & $200$
 \end{tabular}
 \end{center}
-\end{table}
 
 Both solid and fluid are discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor-Hood finite elements, hence no stabilization for the fluid problem is needed.\\
 
@@ -1417,14 +1441,6 @@ The physics of the problem are strongly time-dependent, and a (near-)periodic os
 \caption{Streamlines of velocity at three instances in time ($t=30\;\mathrm{s}$, $t=32.5\;\mathrm{s}$, and $t=35\;\mathrm{s}$) towards end of simulation, color indicates velcity magnitude.}
 \label{fig:channel_flag_results}
 \end{figure}
-
-\begin{center}
-\begin{tabular}{ c c c }
- 1 & 2 & 3 \\ 
- 4 & 5 & 6 \\  
- 7 & 8 & 9    
-\end{tabular}
-\end{center}
 
 \bibliography{ref}
 
