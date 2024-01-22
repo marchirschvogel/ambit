@@ -1648,11 +1648,16 @@ with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
 ======================== ==========================
 ==========================
 :math:`L\;[\mathrm{mm}]` :math:`H\;[\mathrm{mm}]` :math:`r\;[\mathrm{mm}]` :math:`l\;[\mathrm{mm}]` :math:`h\;[\mathrm{mm}]` :math:`d_x\;[\mathrm{mm}]` :math:`d_y\;[\mathrm{mm}]`
-:math:`2500`             :math:`410`              :math:`50`               :math:`350`              :math:`20`               :math:`200`                :math:`200`
+2500                     410                      50                       350                      20                       200                        200
 ======================== ========================
 ======================== ========================
 ======================== ==========================
 ==========================
+
+==== === == === == === ===
+L    H   r  l   h  dx  dy
+2500 410 50 350 20 200 200
+==== === == === == === ===
 
 | Both solid and fluid are discretized with quadrilateral
   :math:`\mathbb{Q}^2`-:math:`\mathbb{Q}^1` Taylor-Hood finite elements,
