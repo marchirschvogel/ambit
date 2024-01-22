@@ -1417,19 +1417,15 @@ with $\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}$.
 %\end{center}
 %\end{table}
 
-%\begin{center}
-%\begin{tabular}{ccccccc}
-% $L\;[\mathrm{mm}]$ & $H\;[\mathrm{mm}]$ & $r\;[\mathrm{mm}]$ & $l\;[\mathrm{mm}]$ & $h\;[\mathrm{mm}]$ & $d_x\;[\mathrm{mm}]$ & $d_y\;[\mathrm{mm}]$ \\ 
-% 2500 & 410 & 50 & 350 & 20 & 200 & 200
-%\end{tabular}
-%\end{center}
-
+% TODO: Unbelievable, but if row gets too long, conversion to rst breaks... and caption also does not work :-/
+\begin{table}[!h]
 \begin{center}
 \begin{tabular}{ccccccc}
- $L$ & $H$ & $r$ & $l$ & $h$ & $d_x$ & $d_y$ \\ 
- 2500 & 410 & 50 & 350 & 20 & 200 & 200
+ $L$  & $H$ & $r$ & $l$ & $h$ & $dx$ & $dy$ \\\hline
+ 2500 & 410 & 50  & 350 & 20  & 200   & 200  
 \end{tabular}
 \end{center}
+\end{table}
 
 Both solid and fluid are discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor-Hood finite elements, hence no stabilization for the fluid problem is needed.\\
 
