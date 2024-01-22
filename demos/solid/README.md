@@ -1,3 +1,3 @@
 # README #
 
-Refer to example description at https://ambit.readthedocs.io/en/latest/documentation.html#solid
+Refer to example description at https://ambit.readthedocs.io/en/latest/documentation.html#demo-solid

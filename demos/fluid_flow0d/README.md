@@ -1,3 +1,3 @@
 # README #
 
-Refer to example description at https://ambit.readthedocs.io/en/latest/documentation.html#subsec-demos-fluid-flow0d
+Refer to example description at https://ambit.readthedocs.io/en/latest/documentation.html#demo-fluid-0d-flow
