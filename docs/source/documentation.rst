@@ -1678,5 +1678,11 @@ Channel flow around elastic flag
    velcity magnitude.
 
 [fig:channel_flag_results]
+
+= = =
+1 2 3
+4 5 6
+7 8 9
+= = =
  
 .. bibliography::

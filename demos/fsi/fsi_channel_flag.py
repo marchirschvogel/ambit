@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-FSI of elastic flag in channel (2D) (modified Turek benchmark): Q2-Q1 Taylor-Hood for both fluid and incompressible solid
+FSI of elastic flag in channel (2D) (Turek benchmark): Q2-Q1 Taylor-Hood for both fluid and incompressible solid
 """
 
 import ambit_fe
@@ -27,7 +27,6 @@ def main():
                             'write_results_every'   : 10,
                             'write_restart_every'   : -1,
                             'restart_step'          : restart_step,
-                            'indicate_results_by'   : 'step0',
                             # where to write the output to
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/channel-flag_domain.xdmf',
@@ -36,36 +35,34 @@ def main():
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
-                            'simname'               : 'test_parabinflow'}
+                            'simname'               : 'fsi_channel_flag_turekFSI2_be'}
 
     """
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'direct_solver'         : 'mumps',
-                            'divergence_continue'   : 'PTC',
-                            'k_ptc_initial'         : 10.,
                             # residual and increment tolerances
-                            'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-8,1e-3],
-                            'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e10,1e-0]}
+                            'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-3], # solid-mom,fluid-mom,fluid-cont,FSI-coup,ALE-mom
+                            'tol_inc'               : [1e-0,1e-0,1e-0,1e10,1e-0]} # du,dv,dp,dlm,dd
 
     """
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
     TIME_PARAMS_SOLID    = {'maxtime'               : 35.0,
-                            'numstep'               : 8750,
+                            'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
                             #'numstep_stop'          : 0,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0}
+                            'theta_ost'             : 1.0} # 0.5: Crank-Nicholson, 1.0: Backward Euler
 
     """
     Parameters for the fluid mechanics time integration scheme, plus the global time parameters
     """
     TIME_PARAMS_FLUID    = {'maxtime'               : 35.0,
-                            'numstep'               : 8750,
+                            'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
                             #'numstep_stop'          : 0,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0}
+                            'theta_ost'             : 1.0} # 0.5: Crank-Nicholson, 1.0: Backward Euler
 
     """
     Finite element parameters for solid: Taylor-Hood space
@@ -73,7 +70,7 @@ def main():
     FEM_PARAMS_SOLID     = {'order_disp'            : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'incompressible_2field' : True}
+                            'incompressible_2field' : False}
 
     """
     Finite element parameters for fluid: Taylor-Hood space
@@ -96,16 +93,16 @@ def main():
                             'zero_lm_boundary'      : False, # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
                             'fluid_on_deformed'     : 'consistent'}
 
-    # parameters for polybutadiene (Tab. 2 Turek et al. 2006)
-    MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 0.53e3},
-                                      'inertia'           : {'rho0' : 0.91e-6}}}
+    # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
+    MATERIALS_SOLID      = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 1.4e3, 'nu' : 0.4}, # kPa, E = 2*mu*(1+nu)
+                                      'inertia'           : {'rho0' : 10.0e-6}}} # kg/mm^3
 
-    # parameters for glycerine (Tab. 2 Turek et al. 2006)
-    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 1420.0e-6},
-                                      'inertia' : {'rho' : 1.26e-6}}}
+    # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
+    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 1.0e-3}, # kPa s
+                                      'inertia' : {'rho' : 1.0e-6}}} # kg/mm^3
     
     # linear elastic material for domain motion problem
-    MATERIALS_ALE        = {'MAT1' : {'linelast' : {'Emod' : 2.0, 'kappa' : 10.}}}
+    MATERIALS_ALE        = {'MAT1' : {'neohooke' : {'mu' : 10.0, 'nu' : 0.3}}}
 
 
     """
@@ -145,7 +142,7 @@ def main():
 
 
     # Pass parameters to Ambit to set up the problem
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves, coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], coupling_params=COUPLING_PARAMS)
 
     # Call the Ambit solver to solve the problem
     problem.solve_problem()
