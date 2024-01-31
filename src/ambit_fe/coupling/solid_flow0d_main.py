@@ -87,7 +87,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         if self.coupling_type == 'monolithic_direct':
             self.numdof = self.pbs.numdof + self.pb0.numdof
         elif self.coupling_type == 'monolithic_lagrange':
-            self.numdof = self.pbs.numdof + self.lm.getSize()
+            self.numdof = self.pbs.numdof + self.LM.getSize()
         else:
             raise ValueError("Unknown coupling type!")
 
@@ -120,10 +120,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
         if self.coupling_type == 'monolithic_lagrange':
             if self.pbs.incompressible_2field:
                 is_ghosted = [1, 1, 0]
-                return [self.pbs.u.vector, self.pbs.p.vector, self.lm], is_ghosted
+                return [self.pbs.u.vector, self.pbs.p.vector, self.LM], is_ghosted
             else:
                 is_ghosted = [1, 0]
-                return [self.pbs.u.vector, self.lm], is_ghosted
+                return [self.pbs.u.vector, self.LM], is_ghosted
 
         if self.coupling_type == 'monolithic_direct':
             if self.pbs.incompressible_2field:
@@ -138,14 +138,14 @@ class SolidmechanicsFlow0DProblem(problem_base):
     def set_variational_forms(self):
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
-        self.coupfuncs, self.coupfuncs_old, coupfuncs_pre = [], [], []
+        self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid, coupfuncs_pre = [], [], [], []
 
         if self.coupling_type == 'monolithic_lagrange':
 
             # Lagrange multipliers
-            self.lm, self.lm_old = PETSc.Vec().createMPI(size=self.num_coupling_surf), PETSc.Vec().createMPI(size=self.num_coupling_surf)
+            self.LM, self.LM_old = PETSc.Vec().createMPI(size=self.num_coupling_surf), PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
-        self.work_coupling, self.work_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.work_coupling, self.work_coupling_old, self.work_coupling_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
@@ -160,6 +160,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             self.coupfuncs.append(fem.Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
+            self.coupfuncs_mid.append(self.pbs.timefac * self.coupfuncs[-1] + (1.-self.pbs.timefac) * self.coupfuncs_old[-1])
 
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
@@ -190,28 +191,36 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
 
-            df_ = ufl.as_ufl(0)
+            df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
 
                 ds_p = self.pbs.io.ds(self.surface_p_ids[n][i])
                 df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                df_mid_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 
                 # add to solid rhs contributions
                 self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
                 self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_old[-1], ds_p, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
+                self.work_coupling_mid += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_mid[-1], ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 
-            self.dforce.append(df_)
+            if self.pbs.ti.eval_nonlin_terms=='trapezoidal': self.dforce.append(df_)
+            if self.pbs.ti.eval_nonlin_terms=='midpoint': self.dforce.append(df_mid_)
 
-        # minus sign, since contribution to external work!
-        self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
-
-        # add to solid Jacobian
-        self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
+        if self.pbs.ti.eval_nonlin_terms=='trapezoidal':
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
+            # add to solid Jacobian
+            self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
+        if self.pbs.ti.eval_nonlin_terms=='midpoint':
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += -self.work_coupling_mid
+            # add to solid Jacobian
+            self.pbs.weakform_lin_uu += -ufl.derivative(self.work_coupling_mid, self.pbs.u, self.pbs.du)
 
         if self.coupling_type == 'monolithic_lagrange' and self.pbs.restart_step==0:
             # old Lagrange multipliers - initialize with initial pressures
-            self.pb0.cardvasc0D.initialize_lm(self.lm, self.pb0.initialconditions)
-            self.pb0.cardvasc0D.initialize_lm(self.lm_old, self.pb0.initialconditions)
+            self.pb0.cardvasc0D.initialize_lm(self.LM, self.pb0.initialconditions)
+            self.pb0.cardvasc0D.initialize_lm(self.LM_old, self.pb0.initialconditions)
 
 
     # for multiscale G&R analysis
@@ -383,10 +392,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 self.constr[i] = sum(cq)*self.cq_factor[i]
 
             # Lagrange multipliers (pressures) to be passed to 0D model
-            lm_sq = allgather_vec(self.lm, self.comm)
+            LM_sq = allgather_vec(self.LM, self.comm)
 
             for i in range(self.num_coupling_surf):
-                self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
+                self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = LM_sq[i]
 
             if subsolver is not None:
                 # only have rank 0 solve the ODE, then broadcast solution
@@ -403,7 +412,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 self.pb0.aux[:] = self.comm.bcast(self.pb0.aux, root=0)
 
             # add to solid momentum equation
-            self.pb0.cardvasc0D.set_pressure_fem(self.lm, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
+            self.pb0.cardvasc0D.set_pressure_fem(self.LM, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs)
 
         if self.coupling_type == 'monolithic_direct':
 
@@ -430,7 +439,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         if self.coupling_type == 'monolithic_lagrange':
 
-            ls, le = self.lm.getOwnershipRange()
+            ls, le = self.LM.getOwnershipRange()
 
             # Lagrange multiplier coupling residual
             for i in range(ls,le):
@@ -440,7 +449,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             self.r_list[1+off] = self.r_lm
 
-            del lm_sq
+            del LM_sq
 
         if bool(self.residual_scale):
             self.scale_residual_list([self.r_list[1+off]], [self.residual_scale[1+off]])
@@ -454,10 +463,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
         if self.coupling_type == 'monolithic_lagrange':
 
             # Lagrange multipliers (pressures) to be passed to 0D model
-            lm_sq = allgather_vec(self.lm, self.comm)
+            LM_sq = allgather_vec(self.LM, self.comm)
 
             for i in range(self.num_coupling_surf):
-                self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = lm_sq[i]
+                self.pb0.c[self.pb0.cardvasc0D.c_ids[i]] = LM_sq[i]
 
         if self.coupling_type == 'monolithic_direct':
 
@@ -504,11 +513,11 @@ class SolidmechanicsFlow0DProblem(problem_base):
             if subsolver is not None:
                 for i in range(ls, le): # row-owning rank calls the ODE solver
                     for j in range(self.num_coupling_surf):
-                        self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] + self.eps_fd # perturbed LM
+                        self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = LM_sq[j] + self.eps_fd # perturbed LM
                         subsolver.newton(t, print_iter=False, sub=True)
                         val = -(self.pb0.s[self.pb0.cardvasc0D.v_ids[i]] - self.pb0.s_tmp[self.pb0.cardvasc0D.v_ids[i]])/self.eps_fd
                         self.K_lm.setValue(i, j, val, addv=PETSc.InsertMode.INSERT)
-                        self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = lm_sq[j] # restore LM
+                        self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = LM_sq[j] # restore LM
 
             self.comm.Barrier() # do we need this here, since not all processes participate in the ODE solve?
 
@@ -523,7 +532,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             self.K_list[1+off][1+off] = self.K_lm
 
-            del lm_sq
+            del LM_sq
 
         # offdiagonal s-u rows
         for i in range(len(self.row_ids)):
@@ -584,7 +593,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             uvec_ls = self.pbs.u.vector.getLocalSize()
 
         if self.coupling_type == 'monolithic_direct':   rvec = self.pb0.s
-        if self.coupling_type == 'monolithic_lagrange': rvec = self.lm
+        if self.coupling_type == 'monolithic_lagrange': rvec = self.LM
 
         offset_u = uvec_or0 + rvec.getOwnershipRange()[0]
         if self.pbs.incompressible_2field: offset_u += self.pbs.p.vector.getOwnershipRange()[0]
@@ -626,8 +635,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         if self.pbs.restart_step > 0:
             if self.coupling_type == 'monolithic_lagrange':
-                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm)
-                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.lm_old)
+                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.LM)
+                self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.LM_old)
 
 
     def evaluate_initial(self):
@@ -639,7 +648,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s_old, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
 
         if self.coupling_type == 'monolithic_lagrange':
-            self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+            self.pb0.cardvasc0D.set_pressure_fem(self.LM_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
 
         if self.coupling_type == 'monolithic_direct':
             # old 3D coupling quantities (volumes or fluxes)
@@ -650,8 +659,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         if self.coupling_type == 'monolithic_lagrange':
             for i in range(self.num_coupling_surf):
-                lm_sq, lm_old_sq = allgather_vec(self.lm, self.comm), allgather_vec(self.lm_old, self.comm)
-                self.pb0.c[i] = lm_sq[i]
+                LM_sq, lm_old_sq = allgather_vec(self.LM, self.comm), allgather_vec(self.LM_old, self.comm)
+                self.pb0.c[i] = LM_sq[i]
                 con = fem.assemble_scalar(self.cq_old_form[i])
                 con = self.comm.allgather(con)
                 self.constr[i] = sum(con)*self.cq_factor[i]
@@ -703,10 +712,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
         return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
-        self.pbs.evaluate_pre_solve(t, N)
-        self.pb0.evaluate_pre_solve(t, N)
+        self.pbs.evaluate_pre_solve(t, N, dt)
+        self.pb0.evaluate_pre_solve(t, N, dt)
 
 
     def evaluate_post_solve(self, t, N):
@@ -740,8 +749,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
         if self.coupling_type == 'monolithic_direct':
             self.pb0.cardvasc0D.set_pressure_fem(self.pb0.s_old, self.pb0.cardvasc0D.v_ids, self.pr0D, self.coupfuncs_old)
         if self.coupling_type == 'monolithic_lagrange':
-            self.lm_old.axpby(1.0, 0.0, self.lm)
-            self.pb0.cardvasc0D.set_pressure_fem(self.lm_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
+            self.LM_old.axpby(1.0, 0.0, self.LM)
+            self.pb0.cardvasc0D.set_pressure_fem(self.LM_old, list(range(self.num_coupling_surf)), self.pr0D, self.coupfuncs_old)
             # update old 3D fluxes
             self.constr_old[:] = self.constr[:]
 
@@ -765,13 +774,13 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         if self.coupling_type == 'monolithic_lagrange':
             if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
-                lm_sq = allgather_vec(self.lm, self.comm)
+                LM_sq = allgather_vec(self.LM, self.comm)
                 if self.comm.rank == 0:
                     f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
-                    for i in range(len(lm_sq)):
-                        f.write('%.16E\n' % (lm_sq[i]))
+                    for i in range(len(LM_sq)):
+                        f.write('%.16E\n' % (LM_sq[i]))
                     f.close()
-                del lm_sq
+                del LM_sq
 
 
     def check_abort(self, t):

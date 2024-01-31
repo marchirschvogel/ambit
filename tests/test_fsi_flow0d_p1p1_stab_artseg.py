@@ -77,8 +77,7 @@ def test_main():
                             'quad_degree'           : 5}
     
     COUPLING_PARAMS_ALE_FLUID = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
-                                 'fsi_governing_type'    : 'fluid_governed', # solid_governed, fluid_governed
-                                 'fluid_on_deformed'     : 'consistent'}
+                                 'fsi_governing_type'    : 'fluid_governed'} # solid_governed, fluid_governed
 
     COUPLING_PARAMS_FLUID_FLOW0D = {'surface_ids'   : [[3]],
                                     'coupling_quantity'     : ['pressure'],

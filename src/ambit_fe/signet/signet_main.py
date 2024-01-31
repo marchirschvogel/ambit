@@ -229,7 +229,7 @@ class SignallingNetworkProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
         pass
 
 

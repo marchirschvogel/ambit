@@ -41,9 +41,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         try: self.coupling_ale_fluid = coupling_params_fluid_ale['coupling_ale_fluid']
         except: self.coupling_ale_fluid = {}
 
-        try: self.fluid_on_deformed = coupling_params_fluid_ale['fluid_on_deformed']
-        except: self.fluid_on_deformed = 'consistent'
-
         try: self.coupling_strategy = coupling_params_fluid_ale['coupling_strategy']
         except: self.coupling_strategy = 'monolithic'
 
@@ -52,7 +49,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
         self.pba  = AleProblem(io_params, time_params_fluid, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
-        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
+        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old}
         self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq, alevar=alevariables)
 
         self.pbf = self.pbf0.pbf
@@ -84,9 +81,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.set_variational_forms()
 
         if self.coupling_strategy == 'monolithic':
-            self.numdof = self.pbf.numdof + self.pbf0.lm.getSize() + self.pba.numdof
+            self.numdof = self.pbf.numdof + self.pbf0.LM.getSize() + self.pba.numdof
         else:
-            self.numdof = [self.pbf.numdof + self.pbf0.lm.getSize(), self.pba.numdof]
+            self.numdof = [self.pbf.numdof + self.pbf0.LM.getSize(), self.pba.numdof]
 
         self.sub_solve = True
         self.print_enhanced_info = self.pbf.io.print_enhanced_info
@@ -103,7 +100,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         if self.pbf0.pbf.num_dupl > 1: is_ghosted = [1, 2, 0, 1]
         else:                          is_ghosted = [1, 1, 0, 1]
-        return [self.pbf.v.vector, self.pbf.p.vector, self.pbf0.lm, self.pba.d.vector], is_ghosted
+        return [self.pbf.v.vector, self.pbf.p.vector, self.pbf0.LM, self.pba.d.vector], is_ghosted
 
 
     def set_variational_forms(self):
@@ -261,7 +258,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
             vvec_ls = self.pbf.v.vector.getLocalSize()
 
-        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pbf0.lm.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
+        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pbf0.LM.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -272,9 +269,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         offset_s = offset_p + self.pbf.p.vector.getLocalSize()
-        iset_s = PETSc.IS().createStride(self.pbf0.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+        iset_s = PETSc.IS().createStride(self.pbf0.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
-        offset_d = offset_s + self.pbf0.lm.getLocalSize()
+        offset_d = offset_s + self.pbf0.LM.getLocalSize()
         iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -314,8 +311,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pb0.read_restart(sname, N)
 
         if self.restart_step > 0:
-            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm)
-            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm_old)
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM)
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM_old)
 
 
     def evaluate_initial(self):
@@ -340,10 +337,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
-        self.pbf0.evaluate_pre_solve(t, N)
-        self.pba.evaluate_pre_solve(t, N)
+        self.pbf0.evaluate_pre_solve(t, N, dt)
+        self.pba.evaluate_pre_solve(t, N, dt)
 
 
     def evaluate_post_solve(self, t, N):
@@ -390,7 +387,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pb0.write_restart(sname, N)
 
         if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
-            lm_sq = allgather_vec(self.pbf0.lm, self.comm)
+            lm_sq = allgather_vec(self.pbf0.LM, self.comm)
             if self.comm.rank == 0:
                 f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
                 for i in range(len(lm_sq)):

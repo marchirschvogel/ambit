@@ -66,10 +66,6 @@ class SolidmechanicsProblem(problem_base):
         try: self.incompressible_2field = fem_params['incompressible_2field']
         except: self.incompressible_2field = False
 
-        # whether to enforce continuity of mass at midpoint or not - only relevant for incompressible_2field option
-        try: self.pressure_at_midpoint = fem_params['pressure_at_midpoint']
-        except: self.pressure_at_midpoint = False
-
         self.fem_params = fem_params
 
         # collect domain data
@@ -216,7 +212,7 @@ class SolidmechanicsProblem(problem_base):
         except: self.volume_laplace = []
 
         # dictionaries of internal variables
-        self.internalvars, self.internalvars_old = {}, {}
+        self.internalvars, self.internalvars_old, self.internalvars_mid = {}, {}, {}
 
         # reference coordinates
         self.x_ref = fem.Function(self.V_u)
@@ -268,7 +264,7 @@ class SolidmechanicsProblem(problem_base):
                         self.actstress[-1].act_curve_old = self.act_curve_old[-1]
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['prescribed_curve'])})
-                self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
+                self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
             if 'active_iso' in self.constitutive_models['MAT'+str(n+1)].keys():
                 self.mat_active_stress[n], self.have_active_stress = True, True
@@ -283,7 +279,7 @@ class SolidmechanicsProblem(problem_base):
                     self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_iso'], self.act_curve[-1], x_ref=self.x_ref_d))
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['prescribed_curve'])})
-                self.internalvars['tau_a'], self.internalvars_old['tau_a'] = self.tau_a, self.tau_a_old
+                self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
             if 'growth' in self.constitutive_models['MAT'+str(n+1)].keys():
                 self.mat_growth[n], self.have_growth = True, True
@@ -308,14 +304,14 @@ class SolidmechanicsProblem(problem_base):
                     self.ti.funcs_to_update.append({self.theta : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['growth']['prescribed_curve'])})
                 if 'remodeling_mat' in self.constitutive_models['MAT'+str(n+1)]['growth'].keys():
                     self.mat_remodel[n] = True
-                self.internalvars['theta'], self.internalvars_old['theta'] = self.theta, self.theta_old
+                self.internalvars['theta'], self.internalvars_old['theta'], self.internalvars_mid['theta'] = self.theta, self.theta_old, self.timefac*self.theta + (1.-self.timefac)*self.theta_old
             else:
                 self.mat_growth_thres.append(ufl.as_ufl(0))
 
             if 'plastic' in self.constitutive_models['MAT'+str(n+1)].keys():
                 self.mat_plastic[n], self.have_plasticity = True, True
                 self.localsolve = True
-                self.internalvars['e_plast'], self.internalvars_old['e_plast'] = self.F_plast, self.F_plast_old
+                self.internalvars['e_plast'], self.internalvars_old['e_plast'], self.internalvars_mid['e_plast'] = self.F_plast, self.F_plast_old, self.timefac*self.F_plast + (1.-self.timefac)*self.F_plast_old
 
         # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
@@ -402,11 +398,12 @@ class SolidmechanicsProblem(problem_base):
         self.acc_mid = self.timefac_m * self.acc + (1.-self.timefac_m) * self.a_old
         self.vel_mid = self.timefac   * self.vel + (1.-self.timefac)   * self.v_old
         self.us_mid  = self.timefac   * self.u   + (1.-self.timefac)   * self.u_old
+        self.ps_mid  = self.timefac   * self.p   + (1.-self.timefac)   * self.p_old
 
         # kinetic, internal, and pressure virtual work
-        self.deltaW_kin,  self.deltaW_kin_old  = ufl.as_ufl(0), ufl.as_ufl(0)
-        self.deltaW_int,  self.deltaW_int_old  = ufl.as_ufl(0), ufl.as_ufl(0)
-        self.deltaW_p,    self.deltaW_p_old    = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaW_kin, self.deltaW_kin_old, self.deltaW_kin_mid  = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaW_int, self.deltaW_int_old, self.deltaW_int_mid  = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        self.deltaW_p,   self.deltaW_p_old,   self.deltaW_p_mid    = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
 
@@ -414,32 +411,41 @@ class SolidmechanicsProblem(problem_base):
                 # kinetic virtual work
                 self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.io.dx(M))
                 self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.io.dx(M))
+                self.deltaW_kin_mid += self.vf.deltaW_kin(self.acc_mid, self.rho0[n], self.io.dx(M))
 
             # internal virtual work
             self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.io.dx(M))
             self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.io.dx(M))
+            self.deltaW_int_mid += self.vf.deltaW_int(self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid), self.ki.F(self.us_mid), self.io.dx(M))
 
             # pressure virtual work (for incompressible formulation)
             # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
-            if self.mat_growth[n]: J, J_old = self.ma[n].J_e(self.u, self.theta), self.ma[n].J_e(self.u_old, self.theta_old)
-            else:                  J, J_old = self.ki.J(self.u), self.ki.J(self.u_old)
+            if self.mat_growth[n]: J, J_old, J_mid = self.ma[n].J_e(self.u, self.theta), self.ma[n].J_e(self.u_old, self.theta_old), self.ma[n].J_e(self.us_mid, self.timefac*self.theta+(1.-self.timefac)*self.theta_old)
+            else:                  J, J_old, J_mid = self.ki.J(self.u), self.ki.J(self.u_old), self.ki.J(self.us_mid)
             self.deltaW_p       += self.vf.deltaW_int_pres(J, self.io.dx(M))
             self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.io.dx(M))
+            self.deltaW_p_mid   += self.vf.deltaW_int_pres(J_mid, self.io.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_neumann_old, w_body, w_body_old, w_robin, w_robin_old, w_membrane, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_body, w_robin, w_membrane = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_old, w_body_old, w_robin_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_mid, w_body_mid, w_robin_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
             w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
+            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.us_mid,ext=True), funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid)
         if 'bodyforce' in self.bc_dict.keys():
             w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update)
             w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_old)
+            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_mid)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.io.bmeasures, u_pre=self.u_pre)
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.io.bmeasures, u_pre=self.u_pre)
+            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.us_mid, self.vel_mid, self.io.bmeasures, u_pre=self.u_pre)
         if 'membrane' in self.bc_dict.keys():
             w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, self.io.bmeasures)
             w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, self.io.bmeasures)
+            w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.us_mid, self.vel_mid, self.acc_mid, self.io.bmeasures)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
@@ -466,6 +472,7 @@ class SolidmechanicsProblem(problem_base):
 
         self.deltaW_ext     = w_neumann + w_body + w_robin + w_membrane
         self.deltaW_ext_old = w_neumann_old + w_body_old + w_robin_old + w_membrane_old
+        self.deltaW_ext_mid = w_neumann_mid + w_body_mid + w_robin_mid + w_membrane_mid
 
         ### full weakforms
 
@@ -480,15 +487,23 @@ class SolidmechanicsProblem(problem_base):
         # full dynamic weak form: kinetic plus internal minus external virtual work
         else:
 
-            self.weakform_u = self.timefac_m * self.deltaW_kin  + (1.-self.timefac_m) * self.deltaW_kin_old + \
-                              self.timefac   * self.deltaW_int  + (1.-self.timefac)   * self.deltaW_int_old - \
-                              self.timefac   * self.deltaW_ext  - (1.-self.timefac)   * self.deltaW_ext_old
+            # evaluate nonlinear terms trapezoidal-like: a * f(u_{n+1}) + (1-a) * f(u_{n})
+            if self.ti.eval_nonlin_terms=='trapezoidal':
+
+                self.weakform_u = self.timefac_m * self.deltaW_kin + (1.-self.timefac_m) * self.deltaW_kin_old + \
+                                  self.timefac   * self.deltaW_int + (1.-self.timefac)   * self.deltaW_int_old - \
+                                  self.timefac   * self.deltaW_ext - (1.-self.timefac)   * self.deltaW_ext_old
+
+            # evaluate nonlinear terms midpoint-like: f(a*u_{n+1} + (1-a)*u_{n})
+            elif self.ti.eval_nonlin_terms=='midpoint':
+
+                self.weakform_u = self.deltaW_kin_mid + self.deltaW_int_mid - self.deltaW_ext_mid
+
+            else:
+                raise ValueError("Unknown eval_nonlin_terms option. Choose 'trapezoidal' or 'midpoint'.")
 
             if self.incompressible_2field:
-                if self.pressure_at_midpoint:
-                    self.weakform_p = self.timefac * self.deltaW_p + (1.-self.timefac) * self.deltaW_p_old
-                else:
-                    self.weakform_p = self.deltaW_p
+                self.weakform_p = self.deltaW_p
 
         ### local weak forms at Gauss points for inelastic materials
         self.localdata = {}
@@ -521,7 +536,11 @@ class SolidmechanicsProblem(problem_base):
         ### Jacobians
 
         # kinetic virtual work linearization (deltaW_kin already has contributions from all domains)
-        self.weakform_lin_uu = self.timefac_m * ufl.derivative(self.deltaW_kin, self.u, self.du)
+        # since this is actually linear in the acceleration (and hence the displacement), 'trapezoidal' and 'midpoint' yield the same
+        if self.ti.eval_nonlin_terms=='trapezoidal':
+            self.weakform_lin_uu = self.timefac_m * ufl.derivative(self.deltaW_kin, self.u, self.du)
+        if self.ti.eval_nonlin_terms=='midpoint':
+            self.weakform_lin_uu = ufl.derivative(self.deltaW_kin_mid, self.u, self.du)
 
         # internal virtual work linearization treated differently: since we want to be able to account for nonlinear materials at Gauss
         # point level with deformation-dependent internal variables (i.e. growth or plasticity), we make use of a more explicit formulation
@@ -530,7 +549,8 @@ class SolidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
 
             # elastic and viscous material tangent operator
-            Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='tangent')
+            if self.ti.eval_nonlin_terms=='trapezoidal': Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='tangent')
+            if self.ti.eval_nonlin_terms=='midpoint': Cmat, Cmat_v = self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid, returnquantity='tangent')
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
@@ -544,10 +564,17 @@ class SolidmechanicsProblem(problem_base):
             else:
                 Ctang = Cmat
 
-            self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.io.dx(M))
+            if self.ti.eval_nonlin_terms=='trapezoidal':
+                self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.io.dx(M))
+            if self.ti.eval_nonlin_terms=='midpoint':
+                self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid), self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.u, Ctang, Cmat_v, self.io.dx(M))
 
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
-        self.weakform_lin_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
+        # since external tractions might be nonlinear w.r.t. displacement, there's a difference between 'trapezoidal' and 'midpoint'
+        if self.ti.eval_nonlin_terms=='trapezoidal':
+            self.weakform_lin_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
+        if self.ti.eval_nonlin_terms=='midpoint':
+            self.weakform_lin_uu += -ufl.derivative(self.deltaW_ext_mid, self.u, self.du)
 
         # pressure contributions
         if self.incompressible_2field:
@@ -563,7 +590,8 @@ class SolidmechanicsProblem(problem_base):
                     J    = self.ki.J(self.u)
                     Jmat = self.ki.dJdC(self.u)
 
-                Cmat_p = ufl.diff(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.p)
+                if self.ti.eval_nonlin_terms=='trapezoidal': Cmat_p = ufl.diff(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.p)
+                if self.ti.eval_nonlin_terms=='midpoint': Cmat_p = ufl.diff(self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid), self.p)
 
                 if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                     # elastic and viscous material tangent operator
@@ -591,11 +619,10 @@ class SolidmechanicsProblem(problem_base):
                     Ctang_p = Cmat_p
                     Jtang = Jmat
 
-                self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.io.dx(M))
-                if self.pressure_at_midpoint:
-                    self.weakform_lin_pu += self.timefac * self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.io.dx(M))
-                else:
-                    self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.io.dx(M))
+                if self.ti.eval_nonlin_terms=='trapezoidal': self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.io.dx(M))
+                if self.ti.eval_nonlin_terms=='midpoint': self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.us_mid), Ctang_p, self.io.dx(M))
+
+                self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.io.dx(M))
 
         # set forms for active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
@@ -992,10 +1019,10 @@ class SolidmechanicsProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
         # set time-dependent functions
-        self.ti.set_time_funcs(t, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
+        self.ti.set_time_funcs(t, dt, self.ti.funcs_to_update, self.ti.funcs_to_update_vec, funcs_mid=self.ti.funcs_to_update_mid, funcs_vec_mid=self.ti.funcs_to_update_vec_mid)
 
         # evaluate rate equations
         self.evaluate_rate_equations(t)
@@ -1127,7 +1154,7 @@ class SolidmechanicsSolver(solver_base):
 
             tprestr = N * dt_prestr
 
-            self.pb.ti.set_time_funcs(tprestr, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
+            self.pb.ti.set_time_funcs(tprestr, dt_prestr, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
 
             self.solnln.newton(tprestr)
 

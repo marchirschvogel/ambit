@@ -31,13 +31,20 @@ class timeintegration():
         self.time_curves = time_curves
         self.t_init = t_init
 
+        try: self.eval_nonlin_terms = time_params['eval_nonlin_terms']
+        except: self.eval_nonlin_terms = 'trapezoidal'
+
         self.dim = dim
 
         self.comm = comm
 
         # time-dependent functions to update
-        self.funcs_to_update, self.funcs_to_update_old, self.funcs_to_update_vec, self.funcs_to_update_vec_old = [], [], [], []
-        self.funcsexpr_to_update, self.funcsexpr_to_update_old, self.funcsexpr_to_update_vec, self.funcsexpr_to_update_vec_old = {}, {}, {}, {}
+        self.funcs_to_update, self.funcs_to_update_old, self.funcs_to_update_mid = [], [], []
+        self.funcs_to_update_vec, self.funcs_to_update_vec_old, self.funcs_to_update_vec_mid = [], [], []
+        # time- and potentially space-dependent expressions to update
+        self.funcsexpr_to_update, self.funcsexpr_to_update_old, self.funcsexpr_to_update_mid = {}, {}, {}
+        self.funcsexpr_to_update_vec, self.funcsexpr_to_update_vec_old, self.funcsexpr_to_update_vec_mid = {}, {}, {}
+
         # functions which are fed with external data
         self.funcs_data = []
 
@@ -62,7 +69,7 @@ class timeintegration():
         utilities.print_status("-"*lensep, self.comm)
 
 
-    def set_time_funcs(self, t, funcs, funcs_vec):
+    def set_time_funcs(self, t, dt, funcs, funcs_vec, funcs_mid=None, funcs_vec_mid=None):
 
         for m in funcs_vec:
             load = expression.template_vector(dim=self.dim)
@@ -75,6 +82,23 @@ class timeintegration():
             load.val = list(m.values())[0](t)
             list(m.keys())[0].interpolate(load.evaluate)
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        _, timefac = self.timefactors()
+        tmid = timefac*t + (1.-timefac)*(t-dt)
+
+        if funcs_vec_mid is not None:
+            for m in funcs_vec_mid:
+                load = expression.template_vector(dim=self.dim)
+                load.val_x, load.val_y, load.val_z = list(m.values())[0][0](tmid), list(m.values())[0][1](tmid), list(m.values())[0][2](tmid)
+                list(m.keys())[0].interpolate(load.evaluate)
+                list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        if funcs_mid is not None:
+            for m in funcs_mid:
+                load = expression.template()
+                load.val = list(m.values())[0](tmid)
+                list(m.keys())[0].interpolate(load.evaluate)
+                list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # set the time in user expressions - note that they hence must have a class variable self.t
         for m in self.funcsexpr_to_update_vec:

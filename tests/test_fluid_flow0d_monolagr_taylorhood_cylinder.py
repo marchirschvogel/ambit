@@ -41,7 +41,8 @@ def test_main():
                             'numstep'               : 10,
                             'numstep_stop'          : 2,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0}
+                            'theta_ost'             : 0.5,
+                            'eval_nonlin_terms'     : 'midpoint'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 1.0,
@@ -91,11 +92,11 @@ def test_main():
     v_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = -1.7208654619616248E-02 # x
-    v_corr[1] = -5.9053964448523599E-01 # y
-    v_corr[2] = -3.6933688903433675E+00 # z
+    v_corr[0] = -3.1360126179075958E-02 # x
+    v_corr[1] = -9.7807059298274868E-01 # y
+    v_corr[2] = -2.7900092617595016E+00 # z
 
-    p_corr[0] = -2.9127423264346895E-04
+    p_corr[0] = -3.6308274476437244E-04
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
     check2 = ambit_fe.resultcheck.results_check_node(problem.mp.pbf.p, check_node, p_corr, problem.mp.pbf.V_p, problem.mp.comm, tol=tol, nm='p', readtol=1e-4)

@@ -56,7 +56,8 @@ def test_main():
                             'numstep'               : 150,
                             'numstep_stop'          : 3,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0,
+                            'theta_ost'             : 0.5,
+                            'eval_nonlin_terms'     : 'midpoint',
                             'fluid_governing_type'  : 'stokes_transient'}
 
     FEM_PARAMS_FLUID     = {'order_vel'             : 2,
@@ -67,8 +68,7 @@ def test_main():
     FEM_PARAMS_ALE       = {'order_disp'            : 2,
                             'quad_degree'           : 6}
 
-    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'weak_dirichlet', 'beta' : 1e6}],
-                            'fluid_on_deformed'     : 'consistent'}
+    COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'weak_dirichlet', 'beta' : 1e6}]}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                        'inertia'   : {'rho' : 1.025e-6}} }
@@ -112,8 +112,8 @@ def test_main():
     v_corr = np.zeros(3*len(check_node))
 
     # correct results
-    v_corr[0] = 1.9247317946929927E+00 # x
-    v_corr[1] = 1.9247317946929929E+00 # y
+    v_corr[0] = 2.3582218047720827E+00 # x
+    v_corr[1] = 2.3582218047720827E+00 # y
     v_corr[2] = 0.0 # z
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)

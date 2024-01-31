@@ -408,7 +408,7 @@ class Flow0DProblem(problem_base):
         return (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
         # external volume/flux from time curve
         if self.excitation_curve is not None:

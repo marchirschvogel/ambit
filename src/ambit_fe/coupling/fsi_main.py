@@ -68,18 +68,18 @@ class FSIProblem(problem_base):
         self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
 
         # Lagrange multiplier
-        self.LM = fem.Function(self.V_lm)
-        self.LM_old = fem.Function(self.V_lm)
+        self.lm = fem.Function(self.V_lm)
+        self.lm_old = fem.Function(self.V_lm)
 
-        self.dLM = ufl.TrialFunction(self.V_lm)    # incremental LM
-        self.var_LM = ufl.TestFunction(self.V_lm)  # LM test function
+        self.dlm = ufl.TrialFunction(self.V_lm)    # incremental lm
+        self.var_lm = ufl.TestFunction(self.V_lm)  # lm test function
 
         self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
         # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
         if self.zero_lm_boundary: # TODO: Seems to not work properly!
             self.io.msh_emap_lm[0].topology.create_connectivity(self.io.msh_emap_lm[0].topology.dim-1, self.io.msh_emap_lm[0].topology.dim)
             boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
-            self.bclm.dbcs.append( fem.dirichletbc(self.LM, boundary_facets_lm) )
+            self.bclm.dbcs.append( fem.dirichletbc(self.lm, boundary_facets_lm) )
 
         self.set_variational_forms()
 
@@ -103,42 +103,42 @@ class FSIProblem(problem_base):
         if self.pbs.incompressible_2field:
             if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 1, 2, 1, 1]
             else:                     is_ghosted = [1, 1, 1, 1, 1, 1]
-            return [self.pbs.u.vector, self.pbs.p.vector, self.pbf.v.vector, self.pbf.p.vector, self.LM.vector, self.pba.d.vector], is_ghosted
+            return [self.pbs.u.vector, self.pbs.p.vector, self.pbf.v.vector, self.pbf.p.vector, self.lm.vector, self.pba.d.vector], is_ghosted
         else:
             if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 2, 1, 1]
             else:                     is_ghosted = [1, 1, 1, 1, 1]
-            return [self.pbs.u.vector, self.pbf.v.vector, self.pbf.p.vector, self.LM.vector, self.pba.d.vector], is_ghosted
+            return [self.pbs.u.vector, self.pbf.v.vector, self.pbf.p.vector, self.lm.vector, self.pba.d.vector], is_ghosted
 
 
     # defines the monolithic coupling forms for FSI
     def set_variational_forms(self):
 
-        self.work_coupling_solid = ufl.dot(self.LM, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
-        self.work_coupling_solid_old = ufl.dot(self.LM_old, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
-        self.power_coupling_fluid = ufl.dot(self.LM, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
-        self.power_coupling_fluid_old = ufl.dot(self.LM_old, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
+        self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
+        self.work_coupling_solid_old = ufl.dot(self.lm_old, self.pbs.var_u)*self.io.ds(self.io.interface_id_s)
+        self.power_coupling_fluid = ufl.dot(self.lm, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
+        self.power_coupling_fluid_old = ufl.dot(self.lm_old, self.pbf.var_v)*self.io.ds(self.io.interface_id_f)
 
         # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
         self.pbs.weakform_u += self.pbs.timefac * self.work_coupling_solid + (1.-self.pbs.timefac) * self.work_coupling_solid_old
         self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling_fluid - (1.-self.pbf.timefac) * self.power_coupling_fluid_old
 
         if self.fsi_governing_type=='solid_governed':
-            self.weakform_l = ufl.dot(self.pbs.u, self.var_LM)*self.io.ds(self.io.interface_id_s) - ufl.dot(self.pbf.ufluid, self.var_LM)*self.io.ds(self.io.interface_id_f)
+            self.weakform_l = ufl.dot(self.pbs.u, self.var_lm)*self.io.ds(self.io.interface_id_s) - ufl.dot(self.pbf.ufluid, self.var_lm)*self.io.ds(self.io.interface_id_f)
         elif self.fsi_governing_type=='fluid_governed':
-            self.weakform_l = ufl.dot(self.pbf.v, self.var_LM)*self.io.ds(self.io.interface_id_f) - ufl.dot(self.pbs.vel, self.var_LM)*self.io.ds(self.io.interface_id_s)
+            self.weakform_l = ufl.dot(self.pbf.v, self.var_lm)*self.io.ds(self.io.interface_id_f) - ufl.dot(self.pbs.vel, self.var_lm)*self.io.ds(self.io.interface_id_s)
         else:
             raise ValueError("Unknown FSI governing type.")
 
         self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
         self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
 
-        self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.LM, self.dLM)
-        self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.LM, self.dLM)
+        self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
+        self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
 
         # even though this is zero, we still want to explicitly form and create the matrix for DBC application
-        self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.LM, self.dLM)
+        self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)
         # dummy form to initially get a sparsity pattern for LM DBC application
-        self.from_ll_diag_dummy = ufl.inner(self.dLM, self.var_LM)*self.io.ds(self.io.interface_id_s) - ufl.inner(self.dLM, self.var_LM)*self.io.ds(self.io.interface_id_f)
+        self.from_ll_diag_dummy = ufl.inner(self.dlm, self.var_lm)*self.io.ds(self.io.interface_id_s) - ufl.inner(self.dlm, self.var_lm)*self.io.ds(self.io.interface_id_f)
 
 
     def set_problem_residual_jacobian_forms(self):
@@ -192,9 +192,9 @@ class FSIProblem(problem_base):
 
         with self.r_l.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_l, self.res_l)
-        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.LM.vector], scale=-1.0)
+        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.lm.vector], scale=-1.0)
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.LM.vector, scale=-1.0)
+        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.vector, scale=-1.0)
 
         self.r_list[0] = self.pbs.r_list[0]
 
@@ -313,10 +313,10 @@ class FSIProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
-        self.pbs.evaluate_pre_solve(t, N)
-        self.pbfa.evaluate_pre_solve(t, N)
+        self.pbs.evaluate_pre_solve(t, N, dt)
+        self.pbfa.evaluate_pre_solve(t, N, dt)
 
 
     def evaluate_post_solve(self, t, N):
@@ -345,7 +345,7 @@ class FSIProblem(problem_base):
         self.pbfa.update()
 
         # update Lagrange multiplier
-        self.LM_old.vector.axpby(1.0, 0.0, self.LM.vector)
+        self.lm_old.vector.axpby(1.0, 0.0, self.lm.vector)
 
 
     def print_to_screen(self):

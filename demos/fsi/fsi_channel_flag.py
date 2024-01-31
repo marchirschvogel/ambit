@@ -2,6 +2,7 @@
 
 """
 FSI of elastic flag in channel (2D) (Turek benchmark): Q2-Q1 Taylor-Hood for both fluid and incompressible solid
+Reference solution: https://wwwold.mathematik.tu-dortmund.de/~featflow/en/benchmarks/cfdbenchmarking/fsi_benchmark/fsi_reference.html
 """
 
 import ambit_fe
@@ -53,7 +54,11 @@ def main():
                             'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
                             #'numstep_stop'          : 0,
                             'timint'                : 'ost',
-                            'theta_ost'             : 0.5} # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            # how to evaluat nonlinear terms f(x) in the midpoint time-integration scheme:
+                            # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
+                            # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})
+                            'eval_nonlin_terms'     : 'trapezoidal'} # trapezoidal, midpoint
 
     """
     Parameters for the fluid mechanics time integration scheme, plus the global time parameters
@@ -62,7 +67,11 @@ def main():
                             'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
                             #'numstep_stop'          : 0,
                             'timint'                : 'ost',
-                            'theta_ost'             : 0.5} # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            # how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme:
+                            # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
+                            # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})
+                            'eval_nonlin_terms'     : 'trapezoidal'} # trapezoidal, midpoint
 
     """
     Finite element parameters for solid: Taylor-Hood space
@@ -90,8 +99,7 @@ def main():
     """
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
                             'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
-                            'zero_lm_boundary'      : False, # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
-                            'fluid_on_deformed'     : 'consistent'}
+                            'zero_lm_boundary'      : False} # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
 
     # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
     MATERIALS_SOLID      = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 1.4e3, 'nu' : 0.4}, # kPa, E = 2*mu*(1+nu)
@@ -132,11 +140,10 @@ def main():
     """
     Boundary conditions
     """
-    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [6], 'dir' : 'all', 'val' : 0.}]}
+    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [6], 'dir' : 'all', 'val' : 0.}] }
 
     BC_DICT_FLUID        = { 'dirichlet' : [{'id' : [4], 'dir' : 'x', 'expression' : expression1},
-                                            {'id' : [2,3], 'dir' : 'all', 'val' : 0.}],
-                            'stabilized_neumann' : [{'id' : [5], 'par1' : 0.252e-6, 'par2' : 1.}] }
+                                            {'id' : [2,3], 'dir' : 'all', 'val' : 0.}] }
 
     BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3,4,5], 'dir' : 'all', 'val' : 0.}] }
 

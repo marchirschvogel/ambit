@@ -37,7 +37,8 @@ def test_main():
                             'numstep_stop'          : 10,
                             'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
-                            'rho_inf_genalpha'      : 0.8}
+                            'rho_inf_genalpha'      : 0.8,
+                            'eval_nonlin_terms'     : 'midpoint'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # ost
                             'theta_ost'             : 0.5,
@@ -84,10 +85,10 @@ def test_main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 6.6112734346791608E+00
-    s_corr[1] = -5.0536832486004135E-01
-    s_corr[2] = -6.5698331560523982E-03
-    s_corr[3] = 4.1830472040250060E-04
+    s_corr[0] = 6.6110660989243692E+00
+    s_corr[1] = -4.0464424151533118E-01
+    s_corr[2] = -6.5696261909116991E-03
+    s_corr[3] = 3.1857863909898914E-04
 
     check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)

@@ -75,7 +75,6 @@ def test_main():
                             'quad_degree'           : 6}
 
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}],
-                            'fluid_on_deformed'     : 'consistent',
                             'coupling_strategy'     : 'partitioned'}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},

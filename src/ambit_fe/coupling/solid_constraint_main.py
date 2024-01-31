@@ -52,7 +52,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.set_variational_forms_and_jacobians()
 
-        self.numdof = self.pbs.numdof + self.lm.getSize()
+        self.numdof = self.pbs.numdof + self.LM.getSize()
 
         self.localsolve = self.pbs.localsolve
 
@@ -76,26 +76,26 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         if self.pbs.incompressible_2field:
             is_ghosted = [1, 1, 0]
-            return [self.pbs.u.vector, self.pbs.p.vector, self.lm], is_ghosted
+            return [self.pbs.u.vector, self.pbs.p.vector, self.LM], is_ghosted
         else:
             is_ghosted = [1, 0]
-            return [self.pbs.u.vector, self.lm], is_ghosted
+            return [self.pbs.u.vector, self.LM], is_ghosted
 
 
     # defines the monolithic coupling forms for constraints and solid mechanics
     def set_variational_forms_and_jacobians(self):
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
-        self.coupfuncs, self.coupfuncs_old = [], []
+        self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
 
         # Lagrange multiplier stiffness matrix (most likely to be zero!)
         self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
         self.K_lm.setUp()
 
         # Lagrange multipliers
-        self.lm, self.lm_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
+        self.LM, self.LM_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
 
-        self.work_coupling, self.work_coupling_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.work_coupling, self.work_coupling_old, self.work_coupling_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
         # coupling variational forms and Jacobian contributions
         for n in range(self.num_coupling_surf):
@@ -104,6 +104,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
             self.coupfuncs.append(fem.Function(self.pbs.Vd_scalar)), self.coupfuncs_old.append(fem.Function(self.pbs.Vd_scalar))
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
+            self.coupfuncs_mid.append(self.pbs.timefac * self.coupfuncs[-1] + (1.-self.pbs.timefac) * self.coupfuncs_old[-1])
 
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_c_ids[n])):
@@ -123,23 +124,31 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
 
-            df_ = ufl.as_ufl(0)
+            df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
 
                 ds_p = self.pbs.io.ds(self.surface_p_ids[n][i])
                 df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                df_mid_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 
                 # add to solid rhs contributions
                 self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
                 self.work_coupling_old += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_old[-1], ds_p, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
+                self.work_coupling_mid += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_mid[-1], ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 
-            self.dforce.append(df_)
+            if self.pbs.ti.eval_nonlin_terms=='trapezoidal': self.dforce.append(df_)
+            if self.pbs.ti.eval_nonlin_terms=='midpoint': self.dforce.append(df_mid_)
 
-        # minus sign, since contribution to external work!
-        self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
-
-        # add to solid Jacobian
-        self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
+        if self.pbs.ti.eval_nonlin_terms=='trapezoidal':
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += -self.pbs.timefac * self.work_coupling - (1.-self.pbs.timefac) * self.work_coupling_old
+            # add to solid Jacobian
+            self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
+        if self.pbs.ti.eval_nonlin_terms=='midpoint':
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += -self.work_coupling_mid
+            # add to solid Jacobian
+            self.pbs.weakform_lin_uu += -ufl.derivative(self.work_coupling_mid, self.pbs.u, self.pbs.du)
 
 
     def set_pressure_fem(self, var, p0Da):
@@ -239,7 +248,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         else: off = 0
 
         # add to solid momentum equation
-        self.set_pressure_fem(self.lm, self.coupfuncs)
+        self.set_pressure_fem(self.LM, self.coupfuncs)
 
         # solid main blocks
         self.pbs.assemble_residual(t)
@@ -248,7 +257,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         if self.pbs.incompressible_2field:
             self.r_list[1] = self.pbs.r_list[1]
 
-        ls, le = self.lm.getOwnershipRange()
+        ls, le = self.LM.getOwnershipRange()
 
         for i in range(len(self.surface_p_ids)):
             cq = fem.assemble_scalar(self.cq_form[i])
@@ -278,7 +287,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         else: off = 0
 
         # add to solid momentum equation
-        self.set_pressure_fem(self.lm, self.coupfuncs)
+        self.set_pressure_fem(self.LM, self.coupfuncs)
 
         # solid main blocks
         self.pbs.assemble_stiffness(t)
@@ -339,7 +348,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             uvec_or0 = self.pbs.u.vector.getOwnershipRange()[0]
             uvec_ls = self.pbs.u.vector.getLocalSize()
 
-        offset_u = uvec_or0 + self.lm.getOwnershipRange()[0]
+        offset_u = uvec_or0 + self.LM.getOwnershipRange()[0]
         if self.pbs.incompressible_2field: offset_u += self.pbs.p.vector.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
 
@@ -352,7 +361,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         else:
             offset_s = offset_u + uvec_ls
 
-        iset_s = PETSc.IS().createStride(self.lm.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+        iset_s = PETSc.IS().createStride(self.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
             if isoptions['lms_to_p']:
@@ -378,14 +387,14 @@ class SolidmechanicsConstraintProblem(problem_base):
         # LM data
         if self.pbs.restart_step > 0:
             restart_data = np.loadtxt(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt')
-            self.lm[:], self.lm_old[:] = restart_data[:], restart_data[:]
+            self.LM[:], self.LM_old[:] = restart_data[:], restart_data[:]
 
 
     def evaluate_initial(self):
 
         self.pbs.evaluate_initial()
 
-        self.set_pressure_fem(self.lm_old, self.coupfuncs_old)
+        self.set_pressure_fem(self.LM_old, self.coupfuncs_old)
 
         for i in range(self.num_coupling_surf):
             con = fem.assemble_scalar(self.cq_form[i])
@@ -408,9 +417,9 @@ class SolidmechanicsConstraintProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
-        self.pbs.evaluate_pre_solve(t, N)
+        self.pbs.evaluate_pre_solve(t, N, dt)
 
 
     def evaluate_post_solve(self, t, N):
@@ -434,8 +443,8 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.update()
 
         # update old pressures on solid
-        self.lm_old.axpby(1.0, 0.0, self.lm)
-        self.set_pressure_fem(self.lm_old, self.coupfuncs_old)
+        self.LM_old.axpby(1.0, 0.0, self.LM)
+        self.set_pressure_fem(self.LM_old, self.coupfuncs_old)
         # update old 3D constraint variable
         for i in range(self.num_coupling_surf):
             self.constr_old[i] = self.constr[i]
@@ -456,13 +465,13 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.write_restart(sname, N)
 
         if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
-            lm_sq = allgather_vec(self.lm, self.comm)
+            LM_sq = allgather_vec(self.LM, self.comm)
             if self.comm.rank == 0:
                 f = open(self.pbs.io.output_path+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
-                for i in range(len(lm_sq)):
-                    f.write('%.16E\n' % (lm_sq[i]))
+                for i in range(len(LM_sq)):
+                    f.write('%.16E\n' % (LM_sq[i]))
                 f.close()
-            del lm_sq
+            del LM_sq
 
 
     def check_abort(self, t):

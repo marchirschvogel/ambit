@@ -11,7 +11,6 @@ from pathlib import Path
 import numpy as np
 import argparse
 import distutils.util
-import importlib.util
 
 # postprocessing script for flow0d model results (needs gnuplot to be installed when plot generation is desired)
 # can/probably should be run outside of Docker container

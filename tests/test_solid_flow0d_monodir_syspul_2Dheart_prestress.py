@@ -45,7 +45,8 @@ def test_main():
                             'numstep_stop'          : 5,
                             'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
-                            'rho_inf_genalpha'      : 0.8}
+                            'rho_inf_genalpha'      : 0.8,
+                            'eval_nonlin_terms'     : 'trapezoidal'}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,

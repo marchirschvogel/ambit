@@ -89,7 +89,6 @@ def check_params_fem_solid(params):
                     'lin_remodeling_full',
                     'order_disp',
                     'order_pres',
-                    'pressure_at_midpoint',
                     'prestress_from_file',
                     'prestress_initial',
                     'prestress_initial_only',
@@ -109,7 +108,6 @@ def check_params_fem_fluid(params):
                     'fluid_formulation',
                     'order_vel',
                     'order_pres',
-                    'pressure_at_midpoint',
                     'prestress_from_file',
                     'prestress_initial',
                     'prestress_initial_only',
@@ -139,6 +137,7 @@ def check_params_time_solid(params):
     valid_params = ['alpha_m',
                     'alpha_f',
                     'beta',
+                    'eval_nonlin_terms',
                     'gamma',
                     'maxtime',
                     'numstep',
@@ -157,6 +156,7 @@ def check_params_time_fluid(params):
 
     valid_params = ['alpha_m',
                     'alpha_f',
+                    'eval_nonlin_terms',
                     'fluid_governing_type',
                     'gamma',
                     'maxtime',
@@ -195,7 +195,6 @@ def check_params_coupling_fluid_ale(params):
     valid_params = ['coupling_ale_fluid',
                     'coupling_fluid_ale',
                     'coupling_strategy',
-                    'fluid_on_deformed',
                     'fsi_governing_type',
                     'zero_lm_boundary']
 

@@ -61,8 +61,7 @@ def test_main():
                             'quad_degree'           : 5}
     
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
-                            'fsi_governing_type'    : 'fluid_governed', # solid_governed, fluid_governed
-                            'fluid_on_deformed'     : 'consistent'}
+                            'fsi_governing_type'    : 'fluid_governed'} # solid_governed, fluid_governed
 
     MATERIALS_SOLID      = {'MAT1' : {'neohooke_dev'      : {'mu' : 100.},
                                       'inertia'           : {'rho0' : 1.0e-6}}}

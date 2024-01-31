@@ -46,6 +46,7 @@ def test_main():
                          'numstep'               : 10,
                          'numstep_stop'          : 10,
                          'timint'                : 'genalpha',
+                         'eval_nonlin_terms'     : 'trapezoidal',
                          'rho_inf_genalpha'      : 1.0}
 
     FEM_PARAMS        = {'order_disp'            : 1,

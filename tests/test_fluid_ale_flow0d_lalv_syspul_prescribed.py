@@ -81,8 +81,7 @@ def test_main():
     FEM_PARAMS_ALE       = {'order_disp'            : 1,
                             'quad_degree'           : 5}
 
-    COUPLING_PARAMS_ALE_FLUID = {'coupling_ale_fluid' : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}], # strong_dirichlet, weak_dirichlet
-                                 'fluid_on_deformed'  : 'consistent'}
+    COUPLING_PARAMS_ALE_FLUID = {'coupling_ale_fluid' : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}]} # strong_dirichlet, weak_dirichlet
 
     COUPLING_PARAMS_FLUID_FLOW0D = {'surface_ids'   : [[5],[6],[7],[8], [4]],
                             'coupling_quantity'     : ['pressure']*5,

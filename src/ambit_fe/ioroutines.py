@@ -316,7 +316,8 @@ class IO:
         if self.comm.rank==0:
             f = open(filenm, 'wt')
             for i in range(int(sz/bs)):
-                f.write(str(igi_flat[i]) + ' ' + ' '.join(map(str, vec_sq[bs*i:bs*(i+1)])) + '\n')
+                ind = igi_flat.index(i)
+                f.write(str(i) + ' ' + ' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
             f.close()
 
         self.comm.Barrier()
@@ -1047,8 +1048,8 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
         IO_ale.readcheckpoint(self, pb.pba, N_rest)
 
         vecs_to_read = {}
-        vecs_to_read[pb.LM] = 'LM'
-        vecs_to_read[pb.LM_old] = 'LM_old'
+        vecs_to_read[pb.lm] = 'LM'
+        vecs_to_read[pb.lm_old] = 'LM_old'
 
         for key in vecs_to_read:
 
@@ -1074,8 +1075,8 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
             IO_ale.writecheckpoint(self, pb.pba, N)
 
             vecs_to_write = {}
-            vecs_to_write[pb.LM] = 'LM'
-            vecs_to_write[pb.LM_old] = 'LM_old'
+            vecs_to_write[pb.lm] = 'LM'
+            vecs_to_write[pb.lm_old] = 'LM_old'
 
             for key in vecs_to_write:
 

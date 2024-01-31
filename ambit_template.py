@@ -69,6 +69,7 @@ def main():
                             'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
                             'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
                             'timint'                : 'genalpha', # time-integration algorithm: 'genalpha', 'ost', 'static'
+                            'eval_nonlin_terms'     : 'trapezoidal', # OPTIONAL: how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme: 'trapezoidal': theta * f(x_{n+1}) + (1-theta) * f(x_{n}), 'midpoint': f(theta*x_{n+1} + (1-theta)*x_{n}) (default: 'trapezoidal')
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor, \in ]0;1]
                             'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma), \in [0;1]
                             'fluid_governing_type'  : 'navierstokes_transient', # OPTIONAL: governing equation type for fluid mechanics: 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'stokes_steady' (default: 'navierstokes_transient')
@@ -108,7 +109,6 @@ def main():
                             'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
                             'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt'], # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             'prestress_ptc'         : False, # OPTIONAL: whether to use PTC in prestress or not (default: False)
-                            'pressure_at_midpoint'  : False, # OPTIONAL: whether to collocate the pressure/continuity equations at the generalized mid-point (default: False) vs. at t_{n+1}
                             'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}} # OPTIONAL: stabilization for equal-order fluid mechanics, where 'scheme' can be 'supg_pspg' or 'supg_pspg2' (latter excludes transient part in strong NS residual -> equal for steady NS) (default: None)
 
     # for solid_flow0d or fluid_flow0d problem type
@@ -189,7 +189,7 @@ def main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # some examples... up to 20 possible (tc1 until tc20 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
-    class time_curves():
+    class time_curves:
 
         def tc1(self, t):
             return 3.*t
@@ -226,10 +226,25 @@ def main():
 
         #...
 
+
+    # alternative/generalization of above-defined time curve: use a user expression that can (but does not have to) vary in space
+    # up to now can only be used in Dirichlet BCs (see below)!
+    class expression1:
+        def __init__(self):
+            self.t = 0.0 # t variable always needs to be defined, even if you do not need to use it in your expression...
+
+        # use x[0] for x, x[1] for y, and x[2] for z coordinate in in val variable (or introduce new vals independently for x,y,z) to design your spatially dependent expression
+        def evaluate(self, x):
+            val = 0.5*self.t
+            return ( np.full(x.shape[1], val),
+                     np.full(x.shape[1], val),
+                     np.full(x.shape[1], val) )
+
+
     # bc syntax examples
-    BC_DICT              = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}, # either curve or val
-                                            {'id' : [2,4,5], 'dir' : 'y', 'val' : 0.}, # either curve or val
-                                            {'id' : [3], 'dir' : 'z', 'curve' : 1}], # either curve or val
+    BC_DICT              = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}, # either curve, val, or expression
+                                            {'id' : [2,4,5], 'dir' : 'y', 'expression' : expression1}, # either curve, val, or expression
+                                            {'id' : [3], 'dir' : 'z', 'curve' : 1}], # either curve, val, or expression
                             # Neumann can be - dir xyz_ref or xyz_cur for reference or current coordinate directions (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero),
                             #                - dir normal_ref or normal_cur for reference or current normal direction (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero)
                             'neumann'    : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [1,0,0]},

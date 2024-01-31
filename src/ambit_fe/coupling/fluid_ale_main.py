@@ -39,9 +39,6 @@ class FluidmechanicsAleProblem(problem_base):
         try: self.coupling_ale_fluid = self.coupling_params['coupling_ale_fluid']
         except: self.coupling_ale_fluid = {}
 
-        try: self.fluid_on_deformed = self.coupling_params['fluid_on_deformed']
-        except: self.fluid_on_deformed = 'consistent'
-
         try: self.coupling_strategy = self.coupling_params['coupling_strategy']
         except: self.coupling_strategy = 'monolithic'
 
@@ -50,7 +47,7 @@ class FluidmechanicsAleProblem(problem_base):
         # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
         self.pba = AleProblem(io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
         # ALE variables that are handed to fluid problem
-        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'fluid_on_deformed' : self.fluid_on_deformed}
+        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old}
         self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevariables)
 
         self.pbrom = self.pbf # ROM problem can only be fluid
@@ -106,7 +103,7 @@ class FluidmechanicsAleProblem(problem_base):
         # any DBC conditions that we want to set from fluid to ALE (mandatory for FSI or FrSI)
         if bool(self.coupling_fluid_ale):
 
-            dbcs_coup_fluid_ale, work_weak_dirichlet_fluid_ale, work_weak_dirichlet_fluid_ale_old = [], ufl.as_ufl(0), ufl.as_ufl(0)
+            dbcs_coup_fluid_ale, work_weak_dirichlet_fluid_ale = [], ufl.as_ufl(0)
 
             for j in range(len(self.coupling_fluid_ale)):
 
@@ -147,7 +144,6 @@ class FluidmechanicsAleProblem(problem_base):
 
                         for n in range(self.pba.num_domains):
                             work_weak_dirichlet_fluid_ale += self.pba.vf.deltaW_int_nitsche_dirichlet(self.pba.d, self.pbf.ufluid, self.pba.ma[n].stress(self.pba.var_d), beta, db_) # here, ufluid as form is used!
-                            work_weak_dirichlet_fluid_ale_old += self.pba.vf.deltaW_int_nitsche_dirichlet(self.pba.d_old, self.pbf.uf_old, self.pba.ma[n].stress(self.pba.var_d), beta, db_)
 
                 else:
                     raise ValueError("Unknown coupling_fluid_ale option for fluid to ALE!")
@@ -163,16 +159,16 @@ class FluidmechanicsAleProblem(problem_base):
 
             if not isinstance(work_weak_dirichlet_fluid_ale, ufl.constantvalue.Zero):
                 # add to ALE internal virtual work
-                self.pba.weakform_d += self.pbf.timefac * work_weak_dirichlet_fluid_ale + (1.-self.pbf.timefac) * work_weak_dirichlet_fluid_ale_old
+                self.pba.weakform_d += work_weak_dirichlet_fluid_ale
                 # add to ALE jacobian form and define offdiagonal derivative w.r.t. fluid
-                self.pba.weakform_lin_dd += self.pbf.timefac * ufl.derivative(work_weak_dirichlet_fluid_ale, self.pba.d, self.pba.dd)
-                self.weakform_lin_dv = self.pbf.timefac * ufl.derivative(work_weak_dirichlet_fluid_ale, self.pbf.v, self.pbf.dv) # only contribution is from weak DBC here!
+                self.pba.weakform_lin_dd += ufl.derivative(work_weak_dirichlet_fluid_ale, self.pba.d, self.pba.dd)
+                self.weakform_lin_dv = ufl.derivative(work_weak_dirichlet_fluid_ale, self.pbf.v, self.pbf.dv) # only contribution is from weak DBC here!
                 self.have_weak_dirichlet_fluid_ale = True
 
         # any DBC conditions that we want to set from ALE to fluid
         if bool(self.coupling_ale_fluid):
 
-            dbcs_coup_ale_fluid, work_robin_ale_fluid, work_robin_ale_fluid_old = [], ufl.as_ufl(0), ufl.as_ufl(0)
+            dbcs_coup_ale_fluid, work_robin_ale_fluid, work_robin_ale_fluid_old, work_robin_ale_fluid_mid = [], ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
             for j in range(len(self.coupling_ale_fluid)):
 
@@ -193,6 +189,7 @@ class FluidmechanicsAleProblem(problem_base):
                             db_ = self.pbf.io.ds(ids_ale_fluid[i])
                             work_robin_ale_fluid += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v, self.pba.wel, beta, db_, Fale=self.pba.ki.F(self.pba.d)) # here, wel as form is used!
                             work_robin_ale_fluid_old += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v_old, self.pba.w_old, beta, db_, Fale=self.pba.ki.F(self.pba.d_old))
+                            work_robin_ale_fluid_mid += self.pbf.vf.deltaW_int_robin_cur(self.pbf.vel_mid, self.pbf.timefac*self.pba.wel+(1.-self.pbf.timefac)*self.pba.w_old, beta, db_, Fale=self.pba.ki.F(self.pbf.timefac*self.pba.d+(1.-self.pbf.timefac)*self.pba.d_old))
 
                 else:
                     raise ValueError("Unknown coupling_ale_fluid option for ALE to fluid!")
@@ -207,10 +204,16 @@ class FluidmechanicsAleProblem(problem_base):
                 self.have_dbc_ale_fluid = True
 
             if not isinstance(work_robin_ale_fluid, ufl.constantvalue.Zero):
-                # add to fluid internal virtual power
-                self.pbf.weakform_v += self.pbf.timefac * work_robin_ale_fluid + (1.-self.pbf.timefac) * work_robin_ale_fluid_old
-                # add to fluid jacobian form
-                self.pbf.weakform_lin_vv += self.pbf.timefac * ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
+                if self.pbf.ti.eval_nonlin_terms=='trapezoidal':
+                    # add to fluid internal virtual power
+                    self.pbf.weakform_v += self.pbf.timefac * work_robin_ale_fluid + (1.-self.pbf.timefac) * work_robin_ale_fluid_old
+                    # add to fluid jacobian form
+                    self.pbf.weakform_lin_vv += self.pbf.timefac * ufl.derivative(work_robin_ale_fluid, self.pbf.v, self.pbf.dv)
+                if self.pbf.ti.eval_nonlin_terms=='midpoint':
+                    # add to fluid internal virtual power
+                    self.pbf.weakform_v += work_robin_ale_fluid_mid
+                    # add to fluid jacobian form
+                    self.pbf.weakform_lin_vv += ufl.derivative(work_robin_ale_fluid_mid, self.pbf.v, self.pbf.dv)
                 self.have_robin_ale_fluid = True
 
         # derivative of fluid momentum w.r.t. ALE displacement - also includes potential weak Dirichlet or Robin BCs from ALE to fluid!
@@ -410,11 +413,6 @@ class FluidmechanicsAleProblem(problem_base):
 
         self.pbf.evaluate_initial()
 
-        # issue a warning to the user in case of inconsistent fluid-ALE coupling
-        # (might though be wanted in some cases for efficiency increases...)
-        if self.fluid_on_deformed=='from_last_step' or self.fluid_on_deformed=='mesh_move':
-            self.print_warning_ale()
-
 
     def write_output_ini(self):
 
@@ -432,10 +430,10 @@ class FluidmechanicsAleProblem(problem_base):
         return 0.
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
-        self.pbf.evaluate_pre_solve(t, N)
-        self.pba.evaluate_pre_solve(t, N)
+        self.pbf.evaluate_pre_solve(t, N, dt)
+        self.pba.evaluate_pre_solve(t, N, dt)
 
 
     def evaluate_post_solve(self, t, N):
@@ -460,9 +458,6 @@ class FluidmechanicsAleProblem(problem_base):
         # update time step - fluid and ALE
         self.pbf.update()
         self.pba.update()
-
-        if self.fluid_on_deformed=='mesh_move':
-            self.move_mesh()
 
 
     def print_to_screen(self):

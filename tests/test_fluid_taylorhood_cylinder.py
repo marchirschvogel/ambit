@@ -37,7 +37,8 @@ def test_main():
                            'numstep'               : 10,
                            'numstep_stop'          : 2,
                            'timint'                : 'ost',
-                           'theta_ost'             : 1.0}
+                           'eval_nonlin_terms'     : 'midpoint',
+                           'theta_ost'             : 0.5}
 
     FEM_PARAMS          = {'order_vel'             : 2,
                            'order_pres'            : 1,
@@ -74,11 +75,11 @@ def test_main():
     v_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = -3.1465095873805089E-02 # x
-    v_corr[1] = -9.9548578187403827E+00 # y
-    v_corr[2] = -3.5925873702313398E+00 # z
+    v_corr[0] = -2.9615802320757483E-02 # x
+    v_corr[1] = -8.3281694969318067E+00 # y
+    v_corr[2] = -2.3713480608102548E+00 # z
 
-    p_corr[0] = -1.7243579913013756E-05
+    p_corr[0] = -1.8354991768124549E-05
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.v, check_node, v_corr, problem.mp.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
     check2 = ambit_fe.resultcheck.results_check_node(problem.mp.p, check_node, p_corr, problem.mp.V_p, problem.mp.comm, tol=tol, nm='p', readtol=1e-4)

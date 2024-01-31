@@ -81,22 +81,22 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
 
         # Lagrange multiplier
-        self.LM = fem.Function(self.V_lm)
-        self.LM_old = fem.Function(self.V_lm)
+        self.lm = fem.Function(self.V_lm)
+        self.lm_old = fem.Function(self.V_lm)
 
-        self.dLM = ufl.TrialFunction(self.V_lm)    # incremental LM
-        self.var_LM = ufl.TestFunction(self.V_lm)  # LM test function
+        self.dlm = ufl.TrialFunction(self.V_lm)    # incremental LM
+        self.var_lm = ufl.TestFunction(self.V_lm)  # LM test function
 
         self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
         # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
         if self.zero_lm_boundary: # TODO: Seems to not work properly!
             self.io.msh_emap_lm[0].topology.create_connectivity(self.io.msh_emap_lm[0].topology.dim-1, self.io.msh_emap_lm[0].topology.dim)
             boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
-            self.bclm.dbcs.append( fem.dirichletbc(self.LM, boundary_facets_lm) )
+            self.bclm.dbcs.append( fem.dirichletbc(self.lm, boundary_facets_lm) )
 
         self.set_variational_forms()
 
-        self.numdof = self.pbs.numdof + self.pbfa0.numdof + self.LM.vector.getSize()
+        self.numdof = self.pbs.numdof + self.pbfa0.numdof + self.lm.vector.getSize()
 
         self.sub_solve = True
         self.print_enhanced_info = self.pbf.io.print_enhanced_info
@@ -115,11 +115,11 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         if self.pbs.incompressible_2field:
             if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 1, 2, 1, 0, 1]
             else:                     is_ghosted = [1, 1, 1, 1, 1, 0, 1]
-            return [self.pbs.u.vector, self.pbs.p.vector, self.pbf.v.vector, self.pbf.p.vector, self.LM.vector, self.pbf0.lm, self.pba.d.vector], is_ghosted
+            return [self.pbs.u.vector, self.pbs.p.vector, self.pbf.v.vector, self.pbf.p.vector, self.lm.vector, self.pbf0.LM, self.pba.d.vector], is_ghosted
         else:
             if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 2, 1, 0, 1]
             else:                     is_ghosted = [1, 1, 1, 1, 0, 1]
-            return [self.pbs.u.vector, self.pbf.v.vector, self.pbf.p.vector, self.LM.vector, self.pbf0.lm, self.pba.d.vector], is_ghosted
+            return [self.pbs.u.vector, self.pbf.v.vector, self.pbf.p.vector, self.lm.vector, self.pbf0.LM, self.pba.d.vector], is_ghosted
 
 
     def set_variational_forms(self):
@@ -193,9 +193,9 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         # FSI coupling
         with self.r_l.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_l, self.res_l)
-        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.LM.vector], scale=-1.0)
+        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.lm.vector], scale=-1.0)
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.LM.vector, scale=-1.0)
+        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.vector, scale=-1.0)
 
         self.r_list[3+off] = self.r_l
 
@@ -294,8 +294,8 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.pb0.read_restart(sname, N)
 
         if self.restart_step > 0:
-            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm)
-            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.lm_old)
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM)
+            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM_old)
 
 
     def evaluate_initial(self):
@@ -322,10 +322,10 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
 
-        self.pbs.evaluate_pre_solve(t, N)
-        self.pbfa0.evaluate_pre_solve(t, N)
+        self.pbs.evaluate_pre_solve(t, N, dt)
+        self.pbfa0.evaluate_pre_solve(t, N, dt)
 
 
     def evaluate_post_solve(self, t, N):
@@ -373,7 +373,7 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.pb0.write_restart(sname, N)
 
         if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
-            lm_sq = allgather_vec(self.pbf0.lm, self.comm)
+            lm_sq = allgather_vec(self.pbf0.LM, self.comm)
             if self.comm.rank == 0:
                 f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
                 for i in range(len(lm_sq)):

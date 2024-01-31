@@ -80,7 +80,7 @@ class problem_base():
         raise RuntimeError("Problem misses function implementation!")
 
 
-    def evaluate_pre_solve(self, t, N):
+    def evaluate_pre_solve(self, t, N, dt):
         raise RuntimeError("Problem misses function implementation!")
 
 
@@ -230,7 +230,7 @@ class solver_base():
             t_off = self.pb.get_time_offset()
 
             # evaluate any (solution-independent) time curves or other functions
-            self.pb.evaluate_pre_solve(t-t_off, N)
+            self.pb.evaluate_pre_solve(t-t_off, N, self.pb.dt)
 
             # solve the nonlinear problem
             self.solve_nonlinear_problem(t-t_off)
