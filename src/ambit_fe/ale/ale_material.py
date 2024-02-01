@@ -21,10 +21,15 @@ class materiallaw:
     def linelast(self, params):
 
         Emod = params['Emod']
-        kappa = params['kappa']
+        nu = params['nu']
+
+        mu = Emod/(2.*(1.+nu))
+        lame = nu*Emod/((1.+nu)*(1.-2.*nu))
+
+        epsilon = ufl.sym(ufl.grad(self.d))
 
         # stress
-        return Emod*ufl.sym(ufl.grad(self.d)) + kappa*ufl.div(self.d)*self.I
+        return 2.*mu*epsilon + lame*ufl.tr(epsilon)*self.I
 
 
     def neohooke(self, params):

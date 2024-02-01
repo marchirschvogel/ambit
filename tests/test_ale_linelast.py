@@ -44,7 +44,7 @@ def test_main():
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 2}
 
-    MATERIALS         = {'MAT1' : {'linelast' : {'Emod' : 10.0, 'kappa' : 100.}}}
+    MATERIALS         = {'MAT1' : {'linelast' : {'Emod' : 10., 'nu' : 0.3}}}
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
@@ -73,9 +73,9 @@ def test_main():
     d_corr = np.zeros(3*len(check_node))
 
     ## correct results
-    d_corr[0] = 6.9955263624405670E-02 # x
-    d_corr[1] = -2.8747954454702261E-02 # y
-    d_corr[2] = -2.7537530121857001E-02 # z
+    d_corr[0] = 1.3995086093073472E-01 # x
+    d_corr[1] = -2.7223875668985008E-02 # y
+    d_corr[2] = -2.6750427252171242E-02 # z
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.d, check_node, d_corr, problem.mp.V_d, problem.mp.comm, tol=tol, nm='d')
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)

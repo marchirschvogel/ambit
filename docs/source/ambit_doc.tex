@@ -515,9 +515,9 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 
 -- Incompressible Navier-Stokes equations in Arbitrary Lagrangian Eulerian (ALE) reference frame\\
 
--- ALE domain problem deformation governed by linear-elastic or nonlinear hyperelastic solid, displacement field $\bs{d}$\\
+-- ALE domain problem deformation governed by linear-elastic, nonlinear hyperelastic solid, or a diffusion problem, displacement field $\bs{d}$\\
 
--- Fluid mechanics formulated with respect to the reference frame, using ALE deformation gradient $\bs{F}(\bs{d}) = \bs{I} + \bs{\nabla}_0\bs{d}$ and its determinant, $J(\bs{d})=\det \bs{F}(\bs{d})$\\
+-- Fluid mechanics formulated with respect to the reference frame, using ALE deformation gradient $\widetilde{\bs{F}}(\bs{d}) = \bs{I} + \bs{\nabla}_0\bs{d}$ and its determinant, $\widetilde{J}(\bs{d})=\det \widetilde{\bs{F}}(\bs{d})$\\
 
 \paragraph{ALE problem}
 
@@ -533,10 +533,22 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 \bs{d} &= \hat{\bs{d}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}},
 \end{aligned}
 \end{equation}
-with
+-- ALE material \verb.linelast.:
 \begin{equation}
 \begin{aligned}
-\bs{\sigma}^{\mathrm{G}}(\bs{d}) = E \,\frac{1}{2}\left(\bs{\nabla}_0\bs{d} + (\bs{\nabla}_0\bs{d})^{\mathrm{T}}\right) + \kappa \left(\bs{\nabla}_0 \cdot \bs{d}\right)\,\bs{I}
+\bs{\sigma}^{\mathrm{G}}(\bs{d}) = 2\mu \,\bs{\varepsilon} + \lambda \,\mathrm{tr}\bs{\varepsilon}\,\bs{I}, \qquad \text{with}\quad \bs{\varepsilon} = \frac{1}{2}\left(\bs{\nabla}_0\bs{d} + (\bs{\nabla}_0\bs{d})^{\mathrm{T}}\right)
+\end{aligned}
+\end{equation}
+-- ALE material \verb.diffusion.:
+\begin{equation}
+\begin{aligned}
+\bs{\sigma}^{\mathrm{G}}(\bs{d}) = D \,\bs{\nabla}_0\bs{d}
+\end{aligned}
+\end{equation}
+-- ALE material \verb.neohooke. (fully nonlinear model):
+\begin{equation}
+\begin{aligned}
+\bs{\sigma}^{\mathrm{G}}(\bs{d}) = \frac{\partial \mathit{\Psi}}{\partial \widetilde{\bs{F}}}, \qquad \text{with}\quad \mathit{\Psi} = \frac{\mu}{2}\left(\mathrm{tr}(\widetilde{\bs{F}}^{\mathrm{T}}\widetilde{\bs{F}}) - 3\right) + \frac{\mu}{2\beta} \left(\widetilde{J}^{-2\beta} - 1\right)
 \end{aligned}
 \end{equation}
 
@@ -554,8 +566,8 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 \begin{equation}
 \label{equation-fluid-ale-strong-form}
 \begin{aligned}
-\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
-\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widetilde{\bs{F}}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
 \bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \\
 \bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \\
 \bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0,
@@ -564,7 +576,7 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 
 with a Newtonian fluid constitutive law
 \begin{align}
-\bs{\sigma} = -p \bs{I} + 2 \mu \bs{\gamma} = -p \bs{I} + \mu \left(\bs{\nabla}_0 \bs{v}\,\bs{F}^{-1} + \bs{F}^{-\mathrm{T}}(\bs{\nabla}_0 \bs{v})^{\mathrm{T}}\right)
+\bs{\sigma} = -p \bs{I} + 2 \mu \bs{\gamma} = -p \bs{I} + \mu \left(\bs{\nabla}_0 \bs{v}\,\widetilde{\bs{F}}^{-1} + \widetilde{\bs{F}}^{-\mathrm{T}}(\bs{\nabla}_0 \bs{v})^{\mathrm{T}}\right)
 \end{align}
 
 \paragraph{Weak form}
@@ -583,14 +595,14 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 -- Kinetic virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} J \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,\bs{v}\right) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widetilde{J} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\right) \cdot \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
 \begin{equation}
 \begin{aligned}
 \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) = 
-\int\limits_{\Om_0} J\bs{\sigma}(\bs{v},p,\bs{d}) : \bs{\nabla}_{0} \delta\bs{v}\,\bs{F}^{-1} \,\mathrm{d}V
+\int\limits_{\Om_0} \widetilde{J}\bs{\sigma}(\bs{v},p,\bs{d}) : \bs{\nabla}_{0} \delta\bs{v}\,\widetilde{\bs{F}}^{-1} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -598,7 +610,7 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \begin{equation}
 \begin{aligned}
 \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p) = 
-\int\limits_{\Om_0} J\,\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}}\delta p\,\mathrm{d}V
+\int\limits_{\Om_0} \widetilde{J}\,\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -613,13 +625,13 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \item pressure Neumann load:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A 
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,\widetilde{J}\widetilde{\bs{F}}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A 
 \end{aligned}
 \end{equation}
 \item body force:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} J\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} \widetilde{J}\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 \end{itemize}
@@ -630,16 +642,16 @@ ALE forms of stabilization introduced in sec. \ref{subsubsec:stab}\\
 -- Velocity residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{SUPG}}\,(\bs{\nabla}_0\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\;\cdot \\
-& \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
-& + \int\limits_{\Om_0}J\, \tau_{\mathrm{LSIC}}\,\rho\,(\bs{\nabla}_{0}\delta\bs{v} : \bs{F}^{-\mathrm{T}})(\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}})\,\mathrm{d}V
+r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\mathrm{SUPG}}\,(\bs{\nabla}_0\delta\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\;\cdot \\
+& \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widetilde{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
+& + \int\limits_{\Om_0}\widetilde{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\bs{\nabla}_{0}\delta\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}})(\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}})\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Pressure residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{PSPG}}\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p) \;\cdot \\
-& \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \bs{F}^{-\mathrm{T}}\right]\,\mathrm{d}V
+r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\mathrm{PSPG}}\,(\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p) \;\cdot \\
+& \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widetilde{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -647,16 +659,16 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}J\, \tau_{\mathrm{PSPG}}\
 -- Velocity residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v &+ \int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V \\
-& + \int\limits_{\Om_0} J\,d_2\,(\bs{\nabla}_{0}\bs{v} : \bs{F}^{-\mathrm{T}}) (\bs{\nabla}_{0}\delta\bs{v} : \bs{F}^{-\mathrm{T}})\,\mathrm{d}V\\
-&+ \int\limits_{\Om_0} J\,d_3\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\bs{F}^{-1})\,\bs{v}\,\mathrm{d}V
+r_v \leftarrow r_v &+ \int\limits_{\Om_0} \widetilde{J}\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\,\mathrm{d}V \\
+& + \int\limits_{\Om_0} \widetilde{J}\,d_2\,(\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}}) (\bs{\nabla}_{0}\delta\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}})\,\mathrm{d}V\\
+&+ \int\limits_{\Om_0} \widetilde{J}\,d_3\,(\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Pressure residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\bs{F}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V \\
-&+ \frac{1}{\rho}\int\limits_{\Om_0} J\,d_3\,(\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{F}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V
+r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} \widetilde{J}\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})) \cdot (\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V \\
+&+ \frac{1}{\rho}\int\limits_{\Om_0} \widetilde{J}\,d_3\,(\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -1090,7 +1102,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\in
 -- fluid momentum in (\ref{equation-fluid-ale-weak-form}) augmented by following term:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
+r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\widetilde{J}\widetilde{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
@@ -1098,7 +1110,7 @@ r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lamb
 
 \begin{equation}
 \begin{aligned}
-r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fF\text{-}0d}}}\! J\bs{F}^{-\mathrm{T}}\bs{n}_{0}\cdot(\bs{v}-\bs{w}(\bs{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
+r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fF\text{-}0d}}}\! \widetilde{J}\widetilde{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot(\bs{v}-\bs{w}(\bs{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
 \end{aligned}
 \end{equation}
 
@@ -1679,8 +1691,8 @@ The physics of the problem are strongly time-dependent, and a (near-)periodic os
 \label{fig:channel_flag_results}
 \end{figure}
 
+\clearpage
 
-\newpage
 \section{Table of symbols}
 \begin{equation}
 \nonumber
@@ -1707,8 +1719,10 @@ The physics of the problem are strongly time-dependent, and a (near-)periodic os
 &\bs{w}=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}, \hat{\bs{w}}_{0} &&: \text{ALE velocity, and prescribed initial value} \\
 &\rho_0, \rho &&: \text{reference, current density} \\
 &\bs{P}=\bs{F}\bs{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
-&\bs{F}=\bs{I}+\bs{\nabla}_{0}\bs{u} &&: \text{deformation gradient} \\
-&J=\det \bs{F} &&: \text{determinant of the deformation gradient} \\
+&\bs{F}=\bs{I}+\bs{\nabla}_{0}\bs{u} &&: \text{solid deformation gradient} \\
+&\widetilde{\bs{F}}=\bs{I}+\bs{\nabla}_{0}\bs{d} &&: \text{ALE deformation gradient} \\
+&J=\det \bs{F} &&: \text{determinant of solid deformation gradient} \\
+&\widetilde{J}=\det \widetilde{\bs{F}} &&: \text{determinant of ALE deformation gradient} \\
 &\bs{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\
 &\bs{\sigma} &&: \text{Cauchy stress tensor} \\
 &\bs{t}_0, \hat{\bs{t}}_{0} &&: \text{1st Piola-Kirchhoff traction, prescribed 1st Piola-Kirchhoff traction} \\
