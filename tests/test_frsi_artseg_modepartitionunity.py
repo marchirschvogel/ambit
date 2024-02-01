@@ -73,7 +73,7 @@ def test_main():
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                        'inertia'   : {'rho' : 1.025e-6}} }
 
-    MATERIALS_ALE        = { 'MAT1' : {'linelast' : {'Emod' : 10.0, 'kappa' : 100.}} }
+    MATERIALS_ALE        = { 'MAT1' : {'linelast' : {'Emod' : 15.0, 'nu' : 0.1}} }
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
@@ -112,8 +112,8 @@ def test_main():
     v_corr = np.zeros(3*len(check_node))
 
     # correct results
-    v_corr[0] = 2.3582218047720827E+00 # x
-    v_corr[1] = 2.3582218047720827E+00 # y
+    v_corr[0] = 2.3582758194714750E+00 # x
+    v_corr[1] = 2.3582758194714755E+00 # y
     v_corr[2] = 0.0 # z
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)

@@ -71,7 +71,7 @@ def test_main():
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                        'inertia'   : {'rho' : 1.025e-6}} }
 
-    MATERIALS_ALE        = { 'MAT1' : {'linelast' : {'Emod' : 10.0, 'kappa' : 100.}} }
+    MATERIALS_ALE        = { 'MAT1' : {'linelast' : {'Emod' : 15.0, 'nu' : 0.4}} }
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
