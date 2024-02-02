@@ -109,7 +109,7 @@ def main():
     MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 1.0e-3}, # kPa s
                                       'inertia' : {'rho' : 1.0e-6}}} # kg/mm^3
     
-    # linear elastic material for domain motion problem
+    # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
     MATERIALS_ALE        = {'MAT1' : {'neohooke' : {'mu' : 10.0, 'nu' : 0.3}}}
 
 
