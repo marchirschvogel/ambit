@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-FSI of elastic flag in channel (2D) (Turek benchmark): Q2-Q1 Taylor-Hood for both fluid and incompressible solid
+FSI of elastic flag in channel (2D) (Turek benchmark): Q2-Q1 Taylor-Hood elements for fluid and Q2 elements for solid
 Reference solution: https://wwwold.mathematik.tu-dortmund.de/~featflow/en/benchmarks/cfdbenchmarking/fsi_benchmark/fsi_reference.html
 """
 
@@ -58,7 +58,7 @@ def main():
                             # how to evaluat nonlinear terms f(x) in the midpoint time-integration scheme:
                             # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
                             # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})
-                            'eval_nonlin_terms'     : 'trapezoidal'} # trapezoidal, midpoint
+                            'eval_nonlin_terms'     : 'midpoint'} # trapezoidal, midpoint
 
     """
     Parameters for the fluid mechanics time integration scheme, plus the global time parameters
@@ -71,7 +71,7 @@ def main():
                             # how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme:
                             # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
                             # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})
-                            'eval_nonlin_terms'     : 'trapezoidal'} # trapezoidal, midpoint
+                            'eval_nonlin_terms'     : 'midpoint'} # trapezoidal, midpoint
 
     """
     Finite element parameters for solid: Taylor-Hood space

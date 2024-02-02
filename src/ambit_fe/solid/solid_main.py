@@ -1034,7 +1034,7 @@ class SolidmechanicsProblem(problem_base):
                 func = list(m.keys())[0]
                 self.io.readfunction(func, file)
                 sc = m['scale']
-                if sc > 1.0: func.vector.scale(sc)
+                if sc != 1.0: func.vector.scale(sc)
 
 
     def evaluate_post_solve(self, t, N):
