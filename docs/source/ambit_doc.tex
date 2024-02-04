@@ -251,7 +251,7 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 \begin{equation}
 \label{equation-deltaw-int}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V
+\delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V = \int\limits_{\Om_{0}} \bs{S}(\bs{u},\bs{v}(\bs{u})) : \frac{1}{2}\delta\bs{C}(\bs{u}) \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- External virtual work:\\
@@ -337,7 +337,7 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \begin{equation}
 \label{equation-deltaw-int-inc}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},p,\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V 
+\delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) &= \int\limits_{\Om_{0}} \bs{P}(\bs{u},p,\bs{v}(\bs{u})) : \bs{\nabla}_{0} \delta\bs{u} \,\mathrm{d}V = \int\limits_{\Om_{0}} \bs{S}(\bs{u},p,\bs{v}(\bs{u})) : \frac{1}{2}\delta\bs{C}(\bs{u}) \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Pressure virtual work:

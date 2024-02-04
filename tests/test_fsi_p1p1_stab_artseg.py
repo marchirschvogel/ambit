@@ -46,14 +46,14 @@ def test_main():
     TIME_PARAMS_SOLID    = {'maxtime'               : 3.0,
                             'numstep'               : 150,
                             'numstep_stop'          : 5,
-                            'timint'                : 'ost',
-                            'theta_ost'             : 1.0}
+                            'timint'                : 'genalpha',
+                            'rho_inf_genalpha'      : 1.0}
 
     TIME_PARAMS_FLUID    = {'maxtime'               : 3.0,
                             'numstep'               : 150,
                             'numstep_stop'          : 5,
                             'timint'                : 'ost',
-                            'theta_ost'             : 1.0}
+                            'theta_ost'             : 0.5}
 
     FEM_PARAMS_SOLID     = {'order_disp'            : 1,
                             'order_pres'            : 1,
@@ -120,15 +120,15 @@ def test_main():
     u_corr, v_corr, p_corr = np.zeros(3*len(check_node)), np.zeros(3*len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    u_corr[0] = 1.4136408389112663E-04 # x
-    u_corr[1] = 1.4220281681457883E-04 # y
-    u_corr[2] = -1.7641010373962539E-07 # z
+    u_corr[0] = 1.4135667472799776E-04 # x
+    u_corr[1] = 1.4218659625759257E-04 # y
+    u_corr[2] = -1.7638258092165119E-07 # z
     
-    v_corr[0] = 2.5420821171800636E-03 # x
-    v_corr[1] = 2.5573646939347351E-03 # y
-    v_corr[2] = -3.1678103419619852E-06 # z
+    v_corr[0] = 2.8005565683996473E-03 # x
+    v_corr[1] = 2.8176524733115717E-03 # y
+    v_corr[2] = -3.4904136083075215E-06 # z
 
-    p_corr[0] = 6.1543367992177012E-04
+    p_corr[0] = 6.1541709918483292E-04
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbs.u, check_node, u_corr, problem.mp.pbs.V_u, problem.mp.comm, tol=tol, nm='u', readtol=1e-4)
     check2 = ambit_fe.resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)

@@ -17,6 +17,8 @@ def main():
     # reads in restart step from the command line
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
+    
+    case = 'FSI2' # 'FSI2', 'FSI3'
 
     """
     Parameters for input/output
@@ -101,13 +103,46 @@ def main():
                             'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
                             'zero_lm_boundary'      : False} # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
 
-    # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
-    MATERIALS_SOLID      = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 1.4e3, 'nu' : 0.4}, # kPa, E = 2*mu*(1+nu)
-                                      'inertia'           : {'rho0' : 10.0e-6}}} # kg/mm^3
+    if case=='FSI1':
+        # solid
+        mu_s = 0.5e3 # kPa
+        nu_s = 0.4
+        rho0_s = 1.0e-6 # kg/mm^3
+        # fluid
+        mu_f = 1.0e-3 # kPa
+        rho_f = 1.0e-6
+        # inflow vel
+        Ubar = 0.2e3 # mm/s
+    elif case=='FSI2':
+        # solid
+        mu_s = 0.5e3 # kPa
+        nu_s = 0.4
+        rho0_s = 10.0e-6 # kg/mm^3
+        # fluid
+        mu_f = 1.0e-3 # kPa
+        rho_f = 1.0e-6
+        # inflow vel
+        Ubar = 1e3 # mm/s
+    elif case=='FSI3':
+        # solid
+        mu_s = 0.5e3 # kPa
+        nu_s = 0.4
+        rho0_s = 1.0e-6 # kg/mm^3
+        # fluid
+        mu_f = 1.0e-3 # kPa
+        rho_f = 1.0e-6 # kg/mm^3
+        # inflow vel
+        Ubar = 2e3 # mm/s
+    else:
+        raise ValueError("Unknown case.")
 
     # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
-    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 1.0e-3}, # kPa s
-                                      'inertia' : {'rho' : 1.0e-6}}} # kg/mm^3
+    MATERIALS_SOLID      = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 2.*mu_s*(1.+nu_s), 'nu' : nu_s},
+                                      'inertia'           : {'rho0' : rho0_s}}} 
+
+    # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
+    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : mu_f}, # kPa s
+                                      'inertia' : {'rho' : rho_f}}} # kg/mm^3
     
     # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
     MATERIALS_ALE        = {'MAT1' : {'neohooke' : {'mu' : 10.0, 'nu' : 0.3}}}
@@ -125,7 +160,7 @@ def main():
             self.t_ramp = 2.0
             
             self.H = 0.41e3 # channel height
-            self.Ubar = 1e3
+            self.Ubar = Ubar
 
         def evaluate(self, x):
             

@@ -346,6 +346,7 @@ class FSIProblem(problem_base):
 
         # update Lagrange multiplier
         self.lm_old.vector.axpby(1.0, 0.0, self.lm.vector)
+        self.lm_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def print_to_screen(self):

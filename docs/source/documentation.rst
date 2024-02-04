@@ -197,7 +197,7 @@ Displacement-based
      :label: deltaw-int
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V
+     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{S}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
      \end{aligned}
 
   – External virtual work:
@@ -295,7 +295,7 @@ Incompressible mechanics: 2-field displacement and pressure variables
      :label: deltaw-int-inc
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V 
+     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{S}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
      \end{aligned}
 
   – Pressure virtual work:
