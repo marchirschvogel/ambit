@@ -26,8 +26,8 @@ def main():
     IO_PARAMS            = {# problem type 'fsi': fluid-solid interaction
                             'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
-                            # at which step frequency to write results (set to 0 in order to not write any output): here, only every 10th due to the many steps
-                            'write_results_every'   : 10,
+                            # at which step frequency to write results
+                            'write_results_every'   : 1,
                             'write_restart_every'   : -1,
                             'restart_step'          : restart_step,
                             # where to write the output to
@@ -55,8 +55,8 @@ def main():
     TIME_PARAMS_SOLID    = {'maxtime'               : 15.0,
                             'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.00
                             #'numstep_stop'          : 0,
-                            'timint'                : 'ost',
-                            'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Chung and Hulbert 1993)
+                            'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, beta = 0.25, gamma = 0.5
                             # how to evaluat nonlinear terms f(x) in the midpoint time-integration scheme:
                             # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
                             # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})
@@ -68,8 +68,8 @@ def main():
     TIME_PARAMS_FLUID    = {'maxtime'               : 15.0,
                             'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.001 s
                             #'numstep_stop'          : 0,
-                            'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Chung and Hulbert 1993)
-                            'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, beta = 0.25, gamma = 0.5
+                            'timint'                : 'ost',
+                            'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
                             # how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme:
                             # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
                             # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})
