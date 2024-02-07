@@ -15,7 +15,6 @@ from petsc4py import PETSc
 
 from ..solver import solver_nonlin
 from .. import utilities, expression, ioparams
-from ..solver.projection import project
 from ..mpiroutines import allgather_vec, allgather_vec_entry
 
 from ..solid.solid_main import SolidmechanicsProblem, SolidmechanicsSolverPrestr

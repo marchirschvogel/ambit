@@ -52,8 +52,8 @@ def main():
     """
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
-    TIME_PARAMS_SOLID    = {'maxtime'               : 35.0,
-                            'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
+    TIME_PARAMS_SOLID    = {'maxtime'               : 15.0,
+                            'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.00
                             #'numstep_stop'          : 0,
                             'timint'                : 'ost',
                             'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
@@ -65,11 +65,11 @@ def main():
     """
     Parameters for the fluid mechanics time integration scheme, plus the global time parameters
     """
-    TIME_PARAMS_FLUID    = {'maxtime'               : 35.0,
-                            'numstep'               : 8750, # 8750: dt=0.004 s - 17500: dt=0.002 s - 35000: dt=0.001 s
+    TIME_PARAMS_FLUID    = {'maxtime'               : 15.0,
+                            'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.001 s
                             #'numstep_stop'          : 0,
-                            'timint'                : 'ost',
-                            'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Chung and Hulbert 1993)
+                            'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, beta = 0.25, gamma = 0.5
                             # how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme:
                             # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
                             # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})
@@ -103,6 +103,7 @@ def main():
                             'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
                             'zero_lm_boundary'      : False} # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
 
+    # cases from Tab. 12, Turek et al. 2006
     if case=='FSI1':
         # solid
         mu_s = 0.5e3 # kPa
@@ -110,7 +111,7 @@ def main():
         rho0_s = 1.0e-6 # kg/mm^3
         # fluid
         mu_f = 1.0e-3 # kPa
-        rho_f = 1.0e-6
+        rho_f = 1.0e-6 # kg/mm^3
         # inflow vel
         Ubar = 0.2e3 # mm/s
     elif case=='FSI2':
@@ -120,7 +121,7 @@ def main():
         rho0_s = 10.0e-6 # kg/mm^3
         # fluid
         mu_f = 1.0e-3 # kPa
-        rho_f = 1.0e-6
+        rho_f = 1.0e-6 # kg/mm^3
         # inflow vel
         Ubar = 1e3 # mm/s
     elif case=='FSI3':
@@ -136,13 +137,13 @@ def main():
     else:
         raise ValueError("Unknown case.")
 
-    # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
+    # solid material: St.-Venant Kirchhoff
     MATERIALS_SOLID      = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 2.*mu_s*(1.+nu_s), 'nu' : nu_s},
                                       'inertia'           : {'rho0' : rho0_s}}} 
 
-    # parameters for FSI2 case (Tab. 12 Turek et al. 2006)
-    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : mu_f}, # kPa s
-                                      'inertia' : {'rho' : rho_f}}} # kg/mm^3
+    # fluid material: standard Newtonian fluid
+    MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : mu_f},
+                                      'inertia' : {'rho' : rho_f}}}
     
     # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
     MATERIALS_ALE        = {'MAT1' : {'neohooke' : {'mu' : 10.0, 'nu' : 0.3}}}
@@ -169,7 +170,7 @@ def main():
             val_t = vel_inflow_y * 0.5*(1.-np.cos(np.pi*self.t/self.t_ramp)) * (self.t < self.t_ramp) + vel_inflow_y * (self.t >= self.t_ramp)
 
             return ( np.full(x.shape[1], val_t),
-                     np.full(x.shape[1], val_t) )
+                     np.full(x.shape[1], 0.0) )
 
 
     """
@@ -177,7 +178,7 @@ def main():
     """
     BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [6], 'dir' : 'all', 'val' : 0.}] }
 
-    BC_DICT_FLUID        = { 'dirichlet' : [{'id' : [4], 'dir' : 'x', 'expression' : expression1},
+    BC_DICT_FLUID        = { 'dirichlet' : [{'id' : [4], 'dir' : 'all', 'expression' : expression1},
                                             {'id' : [2,3], 'dir' : 'all', 'val' : 0.}] }
 
     BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3,4,5], 'dir' : 'all', 'val' : 0.}] }

@@ -22,9 +22,7 @@ from ..mpiroutines import allgather_vec
 from .fsi_main import FSIProblem
 from ..solid.solid_main import SolidmechanicsProblem
 from .fluid_ale_flow0d_main import FluidmechanicsAleFlow0DProblem
-from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
-from ..meshutils import gather_surface_dof_indices
 
 
 class FSIFlow0DProblem(FSIProblem,problem_base):
