@@ -18,7 +18,7 @@ def main():
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
     
-    case = 'FSI2' # 'FSI2', 'FSI3'
+    case = 'FSI2' # 'FSI1', 'FSI2', 'FSI3'
 
     """
     Parameters for input/output
@@ -38,7 +38,7 @@ def main():
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
-                            'simname'               : 'fsi_channel_flag_turekFSI2'}
+                            'simname'               : 'fsi_channel_flag_turek_'+case}
 
     """
     Parameters for the linear and nonlinear solution schemes
@@ -53,7 +53,7 @@ def main():
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
     TIME_PARAMS_SOLID    = {'maxtime'               : 15.0,
-                            'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.00
+                            'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.001 s
                             #'numstep_stop'          : 0,
                             'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Chung and Hulbert 1993)
                             'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, beta = 0.25, gamma = 0.5
@@ -126,7 +126,7 @@ def main():
         Ubar = 1e3 # mm/s
     elif case=='FSI3':
         # solid
-        mu_s = 0.5e3 # kPa
+        mu_s = 2.0e3 # kPa
         nu_s = 0.4
         rho0_s = 1.0e-6 # kg/mm^3
         # fluid
