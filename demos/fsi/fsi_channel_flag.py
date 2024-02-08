@@ -18,6 +18,7 @@ def main():
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
     
+    # FSI1 leads to stationary solution, FSI2 and FSI3 to dynamically oscillating solutions
     case = 'FSI2' # 'FSI1', 'FSI2', 'FSI3'
 
     """
@@ -143,7 +144,7 @@ def main():
 
     # fluid material: standard Newtonian fluid
     MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : mu_f},
-                                      'inertia' : {'rho' : rho_f}}}
+                                      'inertia'   : {'rho' : rho_f}}}
     
     # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
     MATERIALS_ALE        = {'MAT1' : {'neohooke' : {'mu' : 10.0, 'nu' : 0.3}}}

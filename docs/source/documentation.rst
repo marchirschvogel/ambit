@@ -1743,8 +1743,8 @@ with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
   in order to speed up the simulation a bit.
 | The physics of the problem are strongly time-dependent, and a
   (near-)periodic oscillation of the flag only occurs after
-  :math:`t\approx 30\;\mathrm{s}`. Run the problem to the end
-  (:math:`t = 35\;\mathrm{s}`), be patient, and monitor the flag tip
+  :math:`t\approx 10\;\mathrm{s}`. Run the problem to the end
+  (:math:`t = 15\;\mathrm{s}`), be patient, and monitor the flag tip
   displacement over time. What is the maximum deflection? Figure
   `12 <#fig:channel_flag_results>`__ depicts the velocity at three
   instances in time towards the end of the simulation.
@@ -1754,8 +1754,8 @@ with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
    :width: 85.0%
 
    Magnitude of fluid velocity at three instances in time
-   (:math:`t=28\;\mathrm{s}`, :math:`t=31\;\mathrm{s}`, and
-   :math:`t=34\;\mathrm{s}`) towards end of simulation, color indicates
+   (:math:`t=10.5\;\mathrm{s}`, :math:`t=11.2\;\mathrm{s}`, and
+   :math:`t=12\;\mathrm{s}`) towards end of simulation, color indicates
    velcity magnitude.
 
 Table of symbols
