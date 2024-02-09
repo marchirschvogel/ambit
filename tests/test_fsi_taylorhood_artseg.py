@@ -36,15 +36,13 @@ def test_main():
                             'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-8,1e-6],
                             'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e-0,1e-0]}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 3.0,
-                            'numstep'               : 150,
-                            'numstep_stop'          : 5,
+    TIME_PARAMS_SOLID    = {'maxtime'               : 0.1,
+                            'dt'                    : 0.02,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
-    TIME_PARAMS_FLUID    = {'maxtime'               : 3.0,
-                            'numstep'               : 150,
-                            'numstep_stop'          : 5,
+    TIME_PARAMS_FLUID    = {'maxtime'               : 0.1,
+                            'dt'                    : 0.02,
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
