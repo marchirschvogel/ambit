@@ -181,9 +181,17 @@ class constitutive:
 
             return self.mat.stvenantkirchhoff(mparams,C_)
 
+        elif matlaw == 'stvenantkirchhoff_mod':
+
+            return self.mat.stvenantkirchhoff_mod(mparams,C_)
+
         elif matlaw == 'ogden_vol':
 
             return self.mat.ogden_vol(mparams,C_)
+
+        elif matlaw == 'ogden_mod_vol':
+
+            return self.mat.ogden_mod_vol(mparams,C_)
 
         elif matlaw == 'sussmanbathe_vol':
 

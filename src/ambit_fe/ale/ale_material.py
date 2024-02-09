@@ -24,12 +24,12 @@ class materiallaw:
         nu = params['nu']
 
         mu = Emod/(2.*(1.+nu))
-        lame = nu*Emod/((1.+nu)*(1.-2.*nu))
+        lam = nu*Emod/((1.+nu)*(1.-2.*nu))
 
         epsilon = ufl.sym(ufl.grad(self.d))
 
         # stress
-        return 2.*mu*epsilon + lame*ufl.tr(epsilon)*self.I
+        return 2.*mu*epsilon + lam*ufl.tr(epsilon)*self.I
 
 
     def neohooke(self, params):

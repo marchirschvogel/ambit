@@ -188,7 +188,25 @@ class materiallaw:
 
         Emod, nu = params['Emod'], params['nu']
 
-        Psi = Emod*nu/( 2.*(1.+nu)*(1.-2.*nu) ) * self.trE**2. + Emod/(2.*(1.+nu)) * self.trE2
+        mu = Emod/(2.*(1.+nu))
+        lam = nu*Emod/((1.+nu)*(1.-2.*nu))
+
+        # classical St.-Venant Kirchhoff model (Holzapfel eq. 6.151)
+        Psi = (lam/2.) * self.trE**2. + mu * self.trE2
+
+        S = 2.*ufl.diff(Psi,C)
+
+        return S, Psi
+
+
+    def stvenantkirchhoff_mod(self, params, C):
+
+        Emod, kappa = params['Emod'], params['kappa']
+
+        mu = 3.*kappa*Emod/(9.*kappa - Emod)
+
+        # modified St.-Venant Kirchhoff also suitable for large compressive strains (Holzapfel eq. 6.152)
+        Psi = (kappa/2.) * ufl.ln(ufl.sqrt(self.IIIc))**2. + mu * self.trE2
 
         S = 2.*ufl.diff(Psi,C)
 
@@ -213,11 +231,28 @@ class materiallaw:
         try: beta = params['beta']
         except: beta = -2.
 
+        # classical Ogden volumetric material (Holzapfel eq. 6.137)
         Psi_vol = (kappa/(beta**2.)) * (beta*ufl.ln(ufl.sqrt(self.IIIc)) + ufl.sqrt(self.IIIc)**(-beta) - 1.)
 
         S = 2.*ufl.diff(Psi_vol,C)
 
         return S, Psi_vol
+
+
+    def ogden_mod_vol(self, params, C):
+
+        kappa = params['kappa']
+
+        try: beta = params['beta']
+        except: beta = -2.
+
+        # a modified variant of the classical Ogden model (spotted somewhere... use with care!)
+        Psi_vol = (kappa/(beta**2.)) * (ufl.ln(ufl.sqrt(self.IIIc))**(-beta) + (ufl.sqrt(self.IIIc) - 1.)**(-beta))
+
+        S = 2.*ufl.diff(Psi_vol,C)
+
+        return S, Psi_vol
+
 
     # simple Green-Lagrange strain rate-dependent material
     def visco_green(self, params, Cdot):
