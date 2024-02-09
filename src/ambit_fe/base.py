@@ -29,9 +29,17 @@ class problem_base():
         try: self.timint = time_params['timint']
         except: self.timint = 'static'
 
-        if 'maxtime' in time_params.keys(): self.maxtime = time_params['maxtime']
-        if 'numstep' in time_params.keys(): self.numstep = time_params['numstep']
-        if 'maxtime' in time_params.keys(): self.dt = self.maxtime/self.numstep
+        self.maxtime = time_params['maxtime']
+        if 'numstep' in time_params.keys():
+            assert('dt' not in time_params.keys())
+            self.numstep = time_params['numstep']
+            self.dt = self.maxtime/self.numstep
+        elif 'dt' in time_params.keys():
+            assert('numstep' not in time_params.keys())
+            self.dt = time_params['dt']
+            self.numstep = int(self.maxtime/self.dt)
+        else:
+            raise RuntimeError("Need to specify either 'numstep' or 'dt' in time parameters!")
 
         try: self.restart_step = io_params['restart_step']
         except: self.restart_step = 0

@@ -177,7 +177,7 @@ class Flow0DProblem(problem_base):
         self.auxdata, self.auxdata_old = {}, {} # auxiliary data that can be set by other fields (e.g. fluxes from the 3D monitor)
 
         # initialize flow0d time-integration class
-        self.ti = timeintegration.timeintegration_flow0d(time_params, time_curves, self.t_init, comm=self.comm)
+        self.ti = timeintegration.timeintegration_flow0d(time_params, self.dt, self.numstep, time_curves, self.t_init, comm=self.comm)
 
         if initial_file:
             self.initialconditions = self.cardvasc0D.set_initial_from_file(initial_file)

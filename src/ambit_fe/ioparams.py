@@ -89,6 +89,7 @@ def check_params_fem_solid(params):
                     'lin_remodeling_full',
                     'order_disp',
                     'order_pres',
+                    'prestress_dt',
                     'prestress_from_file',
                     'prestress_initial',
                     'prestress_initial_only',
@@ -108,6 +109,7 @@ def check_params_fem_fluid(params):
                     'fluid_formulation',
                     'order_vel',
                     'order_pres',
+                    'prestress_dt',
                     'prestress_from_file',
                     'prestress_initial',
                     'prestress_initial_only',
@@ -137,6 +139,7 @@ def check_params_time_solid(params):
     valid_params = ['alpha_m',
                     'alpha_f',
                     'beta',
+                    'dt',
                     'eval_nonlin_terms',
                     'gamma',
                     'maxtime',
@@ -156,6 +159,7 @@ def check_params_time_fluid(params):
 
     valid_params = ['alpha_m',
                     'alpha_f',
+                    'dt',
                     'eval_nonlin_terms',
                     'fluid_governing_type',
                     'gamma',
@@ -174,7 +178,8 @@ def check_params_time_fluid(params):
 
 def check_params_time_flow0d(params):
 
-    valid_params = ['eps_periodic',
+    valid_params = ['dt',
+                    'eps_periodic',
                     'initial_backwardeuler',
                     'initial_conditions',
                     'initial_file',

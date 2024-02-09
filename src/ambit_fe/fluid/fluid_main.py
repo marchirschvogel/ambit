@@ -79,10 +79,13 @@ class FluidmechanicsProblem(problem_base):
         except: self.prestress_initial = False
         try: self.prestress_initial_only = fem_params['prestress_initial_only']
         except: self.prestress_initial_only = False
-        try: self.prestress_numstep = fem_params['prestress_numstep']
-        except: self.prestress_numstep = 1
         try: self.prestress_maxtime = fem_params['prestress_maxtime']
         except: self.prestress_maxtime = 1.0
+        try: self.prestress_numstep = fem_params['prestress_numstep']
+        except: self.prestress_numstep = 1
+        try: self.prestress_dt = fem_params['prestress_dt']
+        except: self.prestress_dt = self.prestress_maxtime/self.prestress_numstep
+        if 'prestress_dt' in fem_params.keys(): self.prestress_numstep = int(self.prestress_maxtime/self.prestress_dt)
         try: self.prestress_ptc = fem_params['prestress_ptc']
         except: self.prestress_ptc = False
         try: self.prestress_from_file = fem_params['prestress_from_file']
@@ -275,7 +278,7 @@ class FluidmechanicsProblem(problem_base):
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
         # initialize fluid time-integration class
-        self.ti = timeintegration.timeintegration_fluid(time_params, fem_params, time_curves=time_curves, t_init=self.t_init, dim=self.dim, comm=self.comm)
+        self.ti = timeintegration.timeintegration_fluid(time_params, self.dt, self.numstep, fem_params, time_curves=time_curves, t_init=self.t_init, dim=self.dim, comm=self.comm)
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
@@ -1180,20 +1183,18 @@ class FluidmechanicsSolver(solver_base):
 
         if self.pb.prestress_ptc: self.solnln.PTC = True
 
-        dt_prestr = self.pb.prestress_maxtime/self.pb.prestress_numstep
-
         for N in range(1,self.pb.prestress_numstep+1):
 
             wts = time.time()
 
-            tprestr = N * dt_prestr
+            tprestr = N * self.pb.prestress_dt
 
-            self.pb.ti.set_time_funcs(tprestr, dt_prestr, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
+            self.pb.ti.set_time_funcs(tprestr, self.pb.prestress_dt, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
 
             self.solnln.newton(tprestr)
 
             # update uf_pre
-            self.pb.ki.prestress_update(dt_prestr, self.pb.v.vector)
+            self.pb.ki.prestress_update(self.pb.prestress_dt, self.pb.v.vector)
             utilities.print_prestress('updt', self.pb.comm)
 
             # update fluid velocity: v_old <- v - we need some slight inertia for this to work smoothly...

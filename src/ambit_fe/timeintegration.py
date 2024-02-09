@@ -18,15 +18,13 @@ Time-integration classes for all problems
 
 class timeintegration():
 
-    def __init__(self, time_params, time_curves=None, t_init=0., dim=3, comm=None):
+    def __init__(self, time_params, dt, Nmax, time_curves=None, t_init=0., dim=3, comm=None):
 
         try: self.timint = time_params['timint']
         except: self.timint = 'static'
 
-        if 'numstep' in time_params.keys(): self.numstep = time_params['numstep']
-        if 'maxtime' in time_params.keys(): self.maxtime = time_params['maxtime']
-
-        if 'maxtime' in time_params.keys(): self.dt = self.maxtime/self.numstep
+        self.dt = dt
+        self.numstep = Nmax
 
         self.time_curves = time_curves
         self.t_init = t_init
@@ -151,8 +149,8 @@ class timeintegration():
 # Solid mechanics time integration class
 class timeintegration_solid(timeintegration):
 
-    def __init__(self, time_params, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
-        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
+    def __init__(self, time_params, dt, Nmax, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+        timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
 
         if self.timint == 'genalpha':
 
@@ -336,8 +334,8 @@ class timeintegration_solid(timeintegration):
 # Fluid mechanics time integration class
 class timeintegration_fluid(timeintegration):
 
-    def __init__(self, time_params, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
-        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
+    def __init__(self, time_params, dt, Nmax, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+        timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
 
         if self.timint == 'ost':
 
@@ -585,8 +583,8 @@ class timeintegration_ale(timeintegration_fluid):
 class timeintegration_flow0d(timeintegration):
 
     # initialize base class
-    def __init__(self, time_params, time_curves=None, t_init=0., comm=None):
-        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
+    def __init__(self, time_params, dt, Nmax, time_curves=None, t_init=0., comm=None):
+        timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, comm=comm)
 
         self.cycle = [1]
         self.cycleerror = [1.]
@@ -610,8 +608,8 @@ class timeintegration_flow0d(timeintegration):
 class timeintegration_signet(timeintegration):
 
     # initialize base class
-    def __init__(self, time_params, time_curves=None, t_init=0., comm=None):
-        timeintegration.__init__(self, time_params, time_curves=time_curves, t_init=t_init, comm=comm)
+    def __init__(self, time_params, dt, Nmax, time_curves=None, t_init=0., comm=None):
+        timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, comm=comm)
 
 
     # print time step info

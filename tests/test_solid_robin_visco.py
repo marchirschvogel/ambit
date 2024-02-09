@@ -38,9 +38,8 @@ def test_main():
                          'maxiter'               : 25,
                          'divergence_continue'   : None}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 10,
-                         'numstep_stop'          : 5,
+    TIME_PARAMS       = {'maxtime'               : 0.5,
+                         'dt'                    : 0.1,
                          'timint'                : 'genalpha',
                          'rho_inf_genalpha'      : 1.0}
 

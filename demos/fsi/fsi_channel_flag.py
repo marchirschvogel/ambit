@@ -17,9 +17,43 @@ def main():
     # reads in restart step from the command line
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
-    
-    # FSI1 leads to stationary solution, FSI2 and FSI3 to dynamically oscillating solutions
-    case = 'FSI2' # 'FSI1', 'FSI2', 'FSI3'
+
+    case = 'FSI2' # 'FSI2', 'FSI3'
+
+    # cases from Tab. 12, Turek et al. 2006
+    if case=='FSI2':
+        # solid
+        mu_s = 0.5e3 # kPa
+        nu_s = 0.4
+        rho0_s = 10.0e-6 # kg/mm^3
+        # fluid
+        mu_f = 1.0e-3 # kPa
+        rho_f = 1.0e-6 # kg/mm^3
+        # inflow vel
+        Ubar = 1e3 # mm/s
+        # max simulation time until periodic
+        maxtime = 15.0
+        dt_ref = 0.0005
+    elif case=='FSI3':
+        # solid
+        mu_s = 2.0e3 # kPa
+        nu_s = 0.4
+        rho0_s = 1.0e-6 # kg/mm^3
+        # fluid
+        mu_f = 1.0e-3 # kPa
+        rho_f = 1.0e-6 # kg/mm^3
+        # inflow vel
+        Ubar = 2e3 # mm/s
+        # max simulation time until periodic
+        maxtime = 7.5
+        dt_ref = 0.00025
+    else:
+        raise ValueError("Unknown case.")
+
+    # dt_ref is the time step used to compute the reference solution of the original benchmark, cf. link above
+    # leads to 30000 time steps in both cases
+    dt = dt_ref
+    #dt = 0.004
 
     """
     Parameters for input/output
@@ -28,7 +62,7 @@ def main():
                             'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
                             # at which step frequency to write results
-                            'write_results_every'   : 1,
+                            'write_results_every'   : 10,
                             'write_restart_every'   : -1,
                             'restart_step'          : restart_step,
                             # where to write the output to
@@ -53,9 +87,8 @@ def main():
     """
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
-    TIME_PARAMS_SOLID    = {'maxtime'               : 15.0,
-                            'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.001 s
-                            #'numstep_stop'          : 0,
+    TIME_PARAMS_SOLID    = {'maxtime'               : maxtime,
+                            'dt'                    : dt,
                             'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Chung and Hulbert 1993)
                             'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, beta = 0.25, gamma = 0.5
                             # how to evaluat nonlinear terms f(x) in the midpoint time-integration scheme:
@@ -66,9 +99,8 @@ def main():
     """
     Parameters for the fluid mechanics time integration scheme, plus the global time parameters
     """
-    TIME_PARAMS_FLUID    = {'maxtime'               : 15.0,
-                            'numstep'               : 3750, # 3750: dt=0.004 s - 7500: dt=0.002 s - 15000: dt=0.001 s
-                            #'numstep_stop'          : 0,
+    TIME_PARAMS_FLUID    = {'maxtime'               : maxtime,
+                            'dt'                    : dt,
                             'timint'                : 'ost',
                             'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
                             # how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme:
@@ -104,39 +136,6 @@ def main():
                             'fsi_governing_type'    : 'solid_governed', # solid_governed, fluid_governed
                             'zero_lm_boundary'      : False} # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
 
-    # cases from Tab. 12, Turek et al. 2006
-    if case=='FSI1':
-        # solid
-        mu_s = 0.5e3 # kPa
-        nu_s = 0.4
-        rho0_s = 1.0e-6 # kg/mm^3
-        # fluid
-        mu_f = 1.0e-3 # kPa
-        rho_f = 1.0e-6 # kg/mm^3
-        # inflow vel
-        Ubar = 0.2e3 # mm/s
-    elif case=='FSI2':
-        # solid
-        mu_s = 0.5e3 # kPa
-        nu_s = 0.4
-        rho0_s = 10.0e-6 # kg/mm^3
-        # fluid
-        mu_f = 1.0e-3 # kPa
-        rho_f = 1.0e-6 # kg/mm^3
-        # inflow vel
-        Ubar = 1e3 # mm/s
-    elif case=='FSI3':
-        # solid
-        mu_s = 2.0e3 # kPa
-        nu_s = 0.4
-        rho0_s = 1.0e-6 # kg/mm^3
-        # fluid
-        mu_f = 1.0e-3 # kPa
-        rho_f = 1.0e-6 # kg/mm^3
-        # inflow vel
-        Ubar = 2e3 # mm/s
-    else:
-        raise ValueError("Unknown case.")
 
     # solid material: St.-Venant Kirchhoff
     MATERIALS_SOLID      = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 2.*mu_s*(1.+nu_s), 'nu' : nu_s},

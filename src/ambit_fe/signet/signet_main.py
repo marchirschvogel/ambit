@@ -95,7 +95,7 @@ class SignallingNetworkProblem(problem_base):
         self.c, self.y = [], []
 
         # initialize signet time-integration class
-        self.ti = timeintegration.timeintegration_signet(time_params, time_curves, self.t_init, comm=self.comm)
+        self.ti = timeintegration.timeintegration_signet(time_params, self.dt, self.numstep, time_curves, self.t_init, comm=self.comm)
 
         if initial_file:
             initialconditions = self.signet.set_initial_from_file(initial_file)
