@@ -348,6 +348,78 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \end{aligned}
 \end{equation}
 
+\paragraph{Time integration}
+-- time scheme \verb.timint : "static".\\
+\begin{equation}
+\begin{aligned}
+\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+\end{equation}
+-- Generalized-alpha time scheme \verb.timint : "genalpha".\\
+\begin{equation}
+\begin{aligned}
+\bs{v}_{n+1} &= \frac{\gamma}{\beta\Delta t}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{\gamma-\beta}{\beta} \bs{v}_{n} - \frac{\gamma-2\beta}{2\beta}\Delta t\,\bs{a}_{n} \\
+\bs{a}_{n+1} &= \frac{1}{\beta\Delta t^2}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{1}{\beta\Delta t} \bs{v}_{n} - \frac{1-2\beta}{2\beta}\bs{a}_{n}
+\end{aligned}
+\end{equation}
+\quad - option \verb.eval_nonlin_terms : "midpoint".:
+\begin{equation}
+\begin{aligned}
+\bs{u}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\bs{u}_{n+1} + \alpha_{\mathrm{f}} \bs{v}_{n} \\
+\bs{v}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\bs{v}_{n+1} + \alpha_{\mathrm{f}} \bs{v}_{n} \\
+\bs{a}_{n+1-\alpha_{\mathrm{m}}} &= (1-\alpha_{\mathrm{m}})\bs{a}_{n+1} + \alpha_{\mathrm{m}} \bs{a}_{n}
+\end{aligned}
+\end{equation}
+\begin{equation}
+\begin{aligned}
+\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+1-\alpha_{m}};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1-\alpha_{f}};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1-\alpha_{f}};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+\end{equation}
+\quad - option \verb.eval_nonlin_terms : "trapezoidal".:
+\begin{equation}
+\begin{aligned}
+&(1-\alpha_{\mathrm{m}})\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+1};\delta\bs{u}) + \alpha_{\mathrm{m}}\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n};\delta\bs{u}) + \\
+& (1-\alpha_{\mathrm{f}})\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1};\delta\bs{u}) + \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n};\delta\bs{u}) - \\
+& (1-\alpha_{f})\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1};\delta\bs{u}) - \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+\end{equation}
+
+-- One-Step-theta time scheme \verb.timint : "ost".\\
+
+\begin{equation}
+\begin{aligned}
+\bs{v}_{n+1} &= \frac{1}{\theta\Delta t}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{1-\theta}{\theta} \bs{v}_{n} \\
+\bs{a}_{n+1} &= \frac{1}{\theta^2\Delta t^2}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{1}{\theta^2\Delta t} \bs{v}_{n} - \frac{1-\theta}{\theta}\bs{a}_{n}
+\end{aligned}
+\end{equation}
+\quad - option \verb.eval_nonlin_terms : "midpoint".:
+\begin{equation}
+\begin{aligned}
+\bs{u}_{n+\theta} &= \theta \bs{u}_{n+1} + (1-\theta) \bs{v}_{n} \\
+\bs{v}_{n+\theta} &= \theta \bs{v}_{n+1} + (1-\theta) \bs{v}_{n} \\
+\bs{a}_{n+\theta} &= \theta \bs{a}_{n+1} + (1-\theta) \bs{a}_{n}
+\end{aligned}
+\end{equation}
+\begin{equation}
+\begin{aligned}
+\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+\theta};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+\theta};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+\theta};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+\end{equation}
+\quad - option \verb.eval_nonlin_terms : "trapezoidal".:
+\begin{equation}
+\begin{aligned}
+&\theta\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n+1};\delta\bs{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{kin}}(\bs{a}_{n};\delta\bs{u}) + \\
+& \theta\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n+1};\delta\bs{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{int}}(\bs{u}_{n};\delta\bs{u}) - \\
+& \theta\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1};\delta\bs{u}) - (1-\theta)\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}
+\end{aligned}
+\end{equation}
+
+Note the equivalence of \verb."midpoint". and \verb."trapezoidal". for all linear terms, e.g. $\delta \mathcal{W}_{\mathrm{kin}}$, or for no or only linear dependence of $\delta \mathcal{W}_{\mathrm{ext}}$ on the solution.\\
+
+Note that, for incompressible mechanics, the pressure kinematic constraint is always evaluated at $t_{n+1}$:
+\begin{equation}
+\begin{aligned}
+\delta \mathcal{W}_{\mathrm{pres}}(\bs{u}_{n+1};\delta p) = 0, \quad \forall \; \delta p,
+\end{aligned}
+\end{equation}
+
+\paragraph{Spatial discretization and solution}
 -- Discrete nonlinear system to solve in each time step $n$:
 \begin{equation}
 \label{equation-nonlin-sys-solid-inc}
@@ -363,6 +435,8 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \begin{bmatrix} \bs{\mathsf{K}}_{uu} & \bs{\mathsf{K}}_{up} \\ \\ \bs{\mathsf{K}}_{pu} & \zerom \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{u}} \\ \\ \Delta\bs{\mathsf{p}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{u} \\ \\ \ROP_{p} \end{bmatrix}_{n+1}^{k}
 \end{aligned}
 \end{equation}
+
+
 
 
 \subsection{Fluid mechanics}\label{fluid-mechanics}

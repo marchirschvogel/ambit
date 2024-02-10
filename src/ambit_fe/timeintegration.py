@@ -487,7 +487,7 @@ class timeintegration_fluid(timeintegration):
         self.update_a_v(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
 
 
-    def update_fields_genalpha(self, v, v_old, w, a_old, uf_old=None):
+    def update_fields_genalpha(self, v, v_old, a, a_old, uf=None, uf_old=None):
 
         # use update functions using vector arguments
         self.update_a_genalpha(v.vector, v_old.vector, a_old.vector, aout=a.vector, ufl=False)
@@ -497,7 +497,7 @@ class timeintegration_fluid(timeintegration):
             # use update functions using vector arguments
             self.update_uf_genalpha(v.vector, v_old.vector, uf_old.vector, ufout=uf.vector, ufl=False)
 
-        self.update_a_v(a_old, v_old, a_vec, v, uf_old=uf_old, uf=uf)
+        self.update_a_v(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
 
 
     def update_a_v(self, a_old, v_old, a, v, uf_old=None, uf=None):
@@ -532,7 +532,10 @@ class timeintegration_ale(timeintegration_fluid):
     def update_timestep(self, d, d_old, w, w_old):
 
         # update old fields with new quantities
-        self.update_fields(d, d_old, w, w_old)
+        if self.timint == 'ost':
+            self.update_fields_ost(d, d_old, w, w_old)
+        if self.timint == 'genalpha':
+            self.update_fields_genalpha(d, d_old, w, w_old)
 
         # update time dependent load curves
         self.update_time_funcs()
@@ -543,6 +546,8 @@ class timeintegration_ale(timeintegration_fluid):
         # set form for domain velocity wel
         if self.timint == 'ost':
             wel = self.update_w_ost(d, d_old, w_old, ufl=True)
+        elif self.timint == 'genalpha':
+            wel = self.update_w_genalpha(d, d_old, w_old, ufl=True)
         else:
             raise NameError("Unknown time scheme for ALE mechanics!")
 
@@ -564,16 +569,43 @@ class timeintegration_ale(timeintegration_fluid):
             wout.axpy(-1./(theta_*dt_), d_old)
 
 
-    def update_fields(self, d, d_old, w, w_old):
+    def update_w_genalpha(self, d, d_old, w_old, wout=None, ufl=True):
+        # update formula for acceleration
+        if ufl: # ufl form
+            dt_ = self.dt
+            gamma_ = self.gamma
+            return 1./(gamma_*dt_) * (d - d_old) - (1.-gamma_)/gamma_ * w_old
+        else: # PETSc vector update
+            dt_ = float(self.dt)
+            gamma_ = float(self.gamma)
+
+            wout.axpby(-(1.-gamma_)/gamma_, 0.0, w_old)
+            wout.axpy(1./(gamma_*dt_), d)
+            wout.axpy(-1./(gamma_*dt_), d_old)
+
+
+    def update_fields_ost(self, d, d_old, w, w_old):
 
         # use update functions using vector arguments
         self.update_w_ost(d.vector, d_old.vector, w_old.vector, wout=w.vector, ufl=False)
 
-        # update velocity: w_old <- w
+        self.update_w_d(w_old, d_old, w, d)
+
+
+    def update_fields_genalpha(self, d, d_old, w, w_old, uf=None, uf_old=None):
+
+        # use update functions using vector arguments
+        self.update_w_genalpha(d.vector, d_old.vector, w_old.vector, wout=w.vector, ufl=False)
+
+        self.update_w_d(w_old, d_old, w, d)
+
+
+    def update_w_d(self, w_old, d_old, w, d):
+        # update ALE velocity: w_old <- w
         w_old.vector.axpby(1.0, 0.0, w.vector)
         w_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # update displacement: d_old <- d
+        # update ALE displacement: d_old <- d
         d_old.vector.axpby(1.0, 0.0, d.vector)
         d_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 

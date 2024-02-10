@@ -52,8 +52,8 @@ def test_main():
     TIME_PARAMS_FLUID    = {'maxtime'               : 3.0,
                             'numstep'               : 150,
                             'numstep_stop'          : 5,
-                            'timint'                : 'ost',
-                            'theta_ost'             : 0.5}
+                            'timint'                : 'genalpha',
+                            'rho_inf_genalpha'      : 1.0}
 
     FEM_PARAMS_SOLID     = {'order_disp'            : 1,
                             'order_pres'            : 1,

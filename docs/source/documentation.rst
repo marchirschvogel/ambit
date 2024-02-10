@@ -307,6 +307,92 @@ Incompressible mechanics: 2-field displacement and pressure variables
      \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) &= \int\limits_{\mathit{\Omega}_{0}} (J(\boldsymbol{u}) - 1) \,\delta p \,\mathrm{d}V 
      \end{aligned}
 
+Time integration
+^^^^^^^^^^^^^^^^
+
+| – time scheme ``timint : "static"``
+| 
+
+  .. math::
+     \begin{aligned}
+     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
+
+  – Generalized-alpha time scheme ``timint : "genalpha"``
+| 
+
+  .. math::
+     \begin{aligned}
+     \boldsymbol{v}_{n+1} &= \frac{\gamma}{\beta\Delta t}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{\gamma-\beta}{\beta} \boldsymbol{v}_{n} - \frac{\gamma-2\beta}{2\beta}\Delta t\,\boldsymbol{a}_{n} \\
+     \boldsymbol{a}_{n+1} &= \frac{1}{\beta\Delta t^2}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1}{\beta\Delta t} \boldsymbol{v}_{n} - \frac{1-2\beta}{2\beta}\boldsymbol{a}_{n}
+     \end{aligned}
+
+  - option ``eval_nonlin_terms : "midpoint"``:
+
+  .. math::
+     \begin{aligned}
+     \boldsymbol{u}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\boldsymbol{u}_{n+1} + \alpha_{\mathrm{f}} \boldsymbol{v}_{n} \\
+     \boldsymbol{v}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\boldsymbol{v}_{n+1} + \alpha_{\mathrm{f}} \boldsymbol{v}_{n} \\
+     \boldsymbol{a}_{n+1-\alpha_{\mathrm{m}}} &= (1-\alpha_{\mathrm{m}})\boldsymbol{a}_{n+1} + \alpha_{\mathrm{m}} \boldsymbol{a}_{n}
+     \end{aligned}
+
+  .. math::
+     \begin{aligned}
+     \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1-\alpha_{m}};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1-\alpha_{f}};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1-\alpha_{f}};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
+
+  - option ``eval_nonlin_terms : "trapezoidal"``:
+
+  .. math::
+     \begin{aligned}
+     &(1-\alpha_{\mathrm{m}})\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1};\delta\boldsymbol{u}) + \alpha_{\mathrm{m}}\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n};\delta\boldsymbol{u}) + \\
+     & (1-\alpha_{\mathrm{f}})\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) + \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) - \\
+     & (1-\alpha_{f})\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
+
+| – One-Step-theta time scheme ``timint : "ost"``
+| 
+
+  .. math::
+     \begin{aligned}
+     \boldsymbol{v}_{n+1} &= \frac{1}{\theta\Delta t}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1-\theta}{\theta} \boldsymbol{v}_{n} \\
+     \boldsymbol{a}_{n+1} &= \frac{1}{\theta^2\Delta t^2}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1}{\theta^2\Delta t} \boldsymbol{v}_{n} - \frac{1-\theta}{\theta}\boldsymbol{a}_{n}
+     \end{aligned}
+
+  - option ``eval_nonlin_terms : "midpoint"``:
+
+  .. math::
+     \begin{aligned}
+     \boldsymbol{u}_{n+\theta} &= \theta \boldsymbol{u}_{n+1} + (1-\theta) \boldsymbol{v}_{n} \\
+     \boldsymbol{v}_{n+\theta} &= \theta \boldsymbol{v}_{n+1} + (1-\theta) \boldsymbol{v}_{n} \\
+     \boldsymbol{a}_{n+\theta} &= \theta \boldsymbol{a}_{n+1} + (1-\theta) \boldsymbol{a}_{n}
+     \end{aligned}
+
+  .. math::
+     \begin{aligned}
+     \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+\theta};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
+
+  - option ``eval_nonlin_terms : "trapezoidal"``:
+
+  .. math::
+     \begin{aligned}
+     &\theta\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n};\delta\boldsymbol{u}) + \\
+     & \theta\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) - \\
+     & \theta\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - (1-\theta)\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}
+     \end{aligned}
+
+| Note the equivalence of ``"midpoint"`` and ``"trapezoidal"`` for all
+  linear terms, e.g. :math:`\delta \mathcal{W}_{\mathrm{kin}}`, or for
+  no or only linear dependence of
+  :math:`\delta \mathcal{W}_{\mathrm{ext}}` on the solution.
+| Note that, for incompressible mechanics, the pressure kinematic
+  constraint is always evaluated at :math:`t_{n+1}`:
+
+  .. math::
+     \begin{aligned}
+     \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u}_{n+1};\delta p) = 0, \quad \forall \; \delta p,
+     \end{aligned}
+
+Spatial discretization and solution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 – Discrete nonlinear system to solve in each time step :math:`n`:
 
 .. math::
