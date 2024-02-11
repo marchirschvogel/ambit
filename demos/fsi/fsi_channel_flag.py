@@ -34,6 +34,7 @@ def main():
         # max simulation time until periodic
         maxtime = 15.0
         dt_ref = 0.0005
+        dt_large = 0.004
     elif case=='FSI3':
         # solid
         mu_s = 2.0e3 # kPa
@@ -47,13 +48,14 @@ def main():
         # max simulation time until periodic
         maxtime = 7.5
         dt_ref = 0.00025
+        dt_large = 0.002
     else:
         raise ValueError("Unknown case.")
 
     # dt_ref is the time step used to compute the reference solution of the original benchmark, cf. link above
-    # leads to 30000 time steps in both cases
+    # dt_ref leads to 30000, dt_large to 3750 time steps in both cases
     #dt = dt_ref
-    dt = 0.004
+    dt = dt_large
 
     """
     Parameters for input/output
@@ -62,7 +64,7 @@ def main():
                             'problem_type'          : 'fsi',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
                             # at which step frequency to write results
-                            'write_results_every'   : 10,
+                            'write_results_every'   : 1,
                             'write_restart_every'   : -1,
                             'restart_step'          : restart_step,
                             # where to write the output to
