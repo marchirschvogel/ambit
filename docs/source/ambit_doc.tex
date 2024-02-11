@@ -39,6 +39,8 @@
 \usepackage{tikz}
 \usepackage{pifont}
 %\usepackage[hidelinks]{hyperref}
+\usepackage{fancyvrb}
+\usepackage{fvextra}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{xcolor}
@@ -158,7 +160,7 @@ In the following, a brief description of the supported problem types is given, i
 
 Examples of input files for the respective problem types can be found in the folder \verb"demos" (with detailed setup descriptions) or amogst the test cases in the folder \verb"tests".\\
 
-This documentation is structured as follows. In sec. \ref{installation}, instructions on how to install and use Ambit are given. The relevant supported physics models are described in sec. \ref{sec:phys}. Demos are presented in sec. \ref{sec:demos}.
+This documentation is structured as follows. In sec. \ref{installation}, instructions on how to install and use Ambit are given. The relevant supported physics models are described in sec. \ref{physics-models}. Demos are presented in sec. \ref{demos}.
 
 %\begin{figure}[!htp]
 %\centering
@@ -196,13 +198,14 @@ docker pull ghcr.io/marchirschvogel/ambit:devenv
 
 -- Example: Sec. \ref{demo-solid} and \verb"demos/solid"\\
 
--- Problem type: \verb.solid.\\
+-- \verb.problem_type : "solid".\\
 
 -- Solid mechanics are formulated in a Total Lagrangian frame
 
 \subsubsection{Strong form}
 
-\paragraph{Displacement-based}
+\textbf{Displacement-based}\\
+
 -- Primary variable: displacement $\bs{u}$
 \begin{equation}
 \label{equation-solid-strong-form}
@@ -215,7 +218,8 @@ docker pull ghcr.io/marchirschvogel/ambit:devenv
 \end{aligned}
 \end{equation}
 
-\paragraph{Incompressible mechanics}
+\textbf{Incompressible mechanics}\\
+
 -- Primary variables: displacement $\bs{u}$ and pressure $p$
 \begin{equation}
 \label{equation-solid-strong-form-inc}
@@ -231,7 +235,8 @@ J(\bs{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
 
 \subsubsection{Weak form}
 
-\paragraph{Displacement-based}
+\textbf{Displacement-based}\\
+
 -- Primary variable: displacement $\bs{u}$\\
 
 -- Principal of Virtual Work:
@@ -305,8 +310,8 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 
 \end{itemize}
 
+\textbf{Incompressible mechanics: 2-field displacement and pressure variables}\\
 
-\paragraph{Incompressible mechanics: 2-field displacement and pressure variables}
 -- Primary variables: displacement $\bs{u}$ and pressure $p$
 \begin{equation}
 \label{equation-solid-weak-form-inc}
@@ -332,7 +337,8 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \end{aligned}
 \end{equation}
 
-\paragraph{Time integration}
+\textbf{Time integration}\\
+
 -- time scheme \verb.timint : "static".\\
 \begin{equation}
 \begin{aligned}
@@ -406,7 +412,7 @@ Note that, for incompressible mechanics, the pressure kinematic constraint is al
 \end{equation}
 and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\ref{equation-solid-midpoint-genalpha}) or (\ref{equation-solid-midpoint-ost}), respectively.
 
-\paragraph{Spatial discretization and solution}
+\textbf{Spatial discretization and solution}\\
 
 -- Discrete nonlinear system to solve in each time step $n$ (displacement-based):
 \begin{equation}
@@ -453,7 +459,8 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 
 -- Incompressible Navier-Stokes equations in Eulerian reference frame\\
 
-\paragraph{Strong Form}
+\textbf{Strong Form}\\
+
 -- Primary variables: velocity $\bs{v}$ and pressure $p$
 \begin{equation}
 \label{equation-fluid-strong-form}
@@ -471,7 +478,8 @@ with a Newtonian fluid constitutive law
 \bs{\sigma} = -p \bs{I} + 2 \mu\,\bs{\gamma} = -p \bs{I} + \mu \left(\bs{\nabla} \bs{v} + (\bs{\nabla} \bs{v})^{\mathrm{T}}\right)
 \end{align}
 
-\paragraph{Weak Form}
+\textbf{Weak Form}\\
+
 -- Primary variables: velocity $\bs{v}$ and pressure $p$\\
 
 -- Principle of Virtual Power
@@ -533,10 +541,18 @@ r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \q
 \end{equation}
 \end{itemize}
 
-\paragraph{Stabilization}\label{stabilization}
+\textbf{Stabilization}\\
+
 Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin (SUPG/PSPG) methods are implemented, either using the full or a reduced scheme\\
 
-Full scheme according to \cite{tezduyar2000}: \verb.supg_pspg.:\\
+-- to the fluid FEM params, add the dict entry:
+
+\begin{Verbatim}[breaklines=true]
+"stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3,
+                   "dscales" : [<d1>,<d2>,<d3>], "symmetric" : False}
+\end{Verbatim}
+
+Full scheme according to \cite{tezduyar2000}: \verb."supg_pspg".:\\
 -- Velocity residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
@@ -552,7 +568,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 \end{equation}
 
 
-Reduced scheme (optimized for first-order): \verb.supg_pspg2.:
+Reduced scheme (optimized for first-order): \verb."supg_pspg2".:
 
 -- Velocity residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
 \begin{equation}
@@ -597,9 +613,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v}
 
 -- Fluid mechanics formulated with respect to the reference frame, using ALE deformation gradient $\widetilde{\bs{F}}(\bs{d}) = \bs{I} + \bs{\nabla}_0\bs{d}$ and its determinant, $\widetilde{J}(\bs{d})=\det \widetilde{\bs{F}}(\bs{d})$\\
 
-\paragraph{ALE problem}
-
--- Displacement-based quasi-static solid\\
+\textbf{ALE problem}\\
 
 -- Primary variable: domain displacement $\bs{d}$\\
 
@@ -639,7 +653,8 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 \end{equation}
 
 
-\paragraph{Strong form}
+\textbf{Strong form (ALE)}\\
+
 -- Primary variables: velocity $\bs{v}$, pressure $p$, and domain displacement $\bs{d}$
 \begin{equation}
 \label{equation-fluid-ale-strong-form}
@@ -657,7 +672,7 @@ with a Newtonian fluid constitutive law
 \bs{\sigma} = -p \bs{I} + 2 \mu \bs{\gamma} = -p \bs{I} + \mu \left(\bs{\nabla}_0 \bs{v}\,\widetilde{\bs{F}}^{-1} + \widetilde{\bs{F}}^{-\mathrm{T}}(\bs{\nabla}_0 \bs{v})^{\mathrm{T}}\right)
 \end{align}
 
-\paragraph{Weak form}
+\textbf{Weak form (ALE)}\\
 
 -- Primary variables: velocity $\bs{v}$, pressure $p$, and domain displacement $\bs{d}$\\
 
@@ -714,9 +729,9 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \end{equation}
 \end{itemize}
 
-\paragraph{Stabilization}
-ALE forms of stabilization introduced in sec. \ref{subsubsec:stab}\\
-\verb.supg_pspg.:\\
+\textbf{Stabilization (ALE)}\\
+
+\verb."supg_pspg".:\\
 -- Velocity residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
@@ -733,7 +748,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\ma
 \end{aligned}
 \end{equation}
 
-\verb.supg_pspg2.:\\
+\verb."supg_pspg2".:\\
 -- Velocity residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
@@ -1327,158 +1342,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 
 
 
-%\section{Fluid-reduced-solid-interaction (FrSI)}
-%
-%-- problem type: \verb\fluid_ale\, \verb\fluid_ale_flow0d\ + appropriate reduced-physics model and projection settings\\
-%
-%\subsection{Physics-reduced solid}
-%
-%\begin{align}
-%\Om_{0}^{\fS} \longmapsto \Gm_{0}^{\mathrm{\fF\text{-}\fS}}, \qquad \rightsquigarrow \int\limits_{\Om_{0}^{\fS}}(\cdot)\,\mathrm{d}V = \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}h_{0}\,(\cdot)\,\mathrm{d}A, \label{eq:omega_to_gamma}
-%\end{align}
-%$h_{0}$: reduced solid's wall thickness parameter
-%
-%\subsubsection{Kinematics}
-%\begin{align}
-%\bs{F} = \bs{\nabla}_{0}\bs{x} = \bs{I} + \bs{\nabla}_{0}\uf, \quad \dot{\bs{F}} = \bs{\nabla}_{0}\vf, \quad \bs{C} = \bs{F}^{\mathrm{T}}\bs{F}, \label{eq:defgrad_mem}
-%\end{align}
-%-- fluid domain displacement:
-%\begin{align}
-%\uf = \int\limits_{0}^{t} \bs{v}(\bs{X},t)\,\mathrm{d}t \label{eq:ufluid}
-%\end{align}
-%
-%-- in-plane deformation and rate of deformation gradient:
-%\begin{align}
-%    \bs{F}^{0} = \bs{F}-\bs{F}\bs{n}_0\otimes\bs{n}_0 \quad \text{and} \quad \dot{\bs{F}}^{0} = \dot{\bs{F}}-\dot{\bs{F}}\bs{n}_0\otimes\bs{n}_0, \label{eq:F0F0dot}
-%\end{align}
-%-- plane strain representation of the right Cauchy-Green tensor:
-%\begin{align}
-%    \bs{C}^{||} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \bs{n}_0\otimes\bs{n}_0 \label{eq:Cplane}
-%\end{align}
-%
-%-- relation of in-plane and out-of-plane stretches
-%\begin{align}
-%    I\!\!I\!\!I_{C}^{||} = \det \bs{C}^{||} = \lambda_{\xi}^2 \lambda_{\eta}^2 = \frac{1}{\lambda_{\zeta}^2}, \qquad \rightsquigarrow \lambda_{\zeta} = \frac{1}{\sqrt{I\!\!I\!\!I_{C}^{||}}}\label{eq:detCplane}
-%\end{align}
-%
-%-- membrane right Cauchy-Green deformation tensor
-%\begin{align}
-%    \tilde{\bs{C}} = \bs{F}^{0^\mathrm{T}}\bs{F}^{0} + \frac{1}{I\!\!I\!\!I_{C}^{||}}\bs{n}_0\otimes\bs{n}_0. \label{eq:Cmod}
-%\end{align}
-%
-%-- rate:
-%\begin{align}
-%    \dot{\tilde{\bs{C}}} = \dot{\bs{F}}^{0^\mathrm{T}}\bs{F}^{0} + \bs{F}^{0^\mathrm{T}}\dot{\bs{F}}^{0} - \frac{\dot{I\!\!I\!\!I}_{C}^{||}}{I\!\!I\!\!I_{C}^{||^2}}\bs{n}_0\otimes\bs{n}_0, \label{eq:Cmoddot}
-%\end{align}
-%
-%-- time derivative of Eq.~(\ref{eq:detCplane}) with Jacobi's formula:
-%\begin{align}
-%\dot{I\!\!I\!\!I}_{C}^{||} = \dot{\overline{\det \bs{C}^{||}}} &= \det \bs{C}^{||} \,\mathrm{tr}\left(\bs{C}^{||^{-1}} \dot{\bs{C}^{||}}\right) \\
-%&= I\!\!I\!\!I_{C}^{||}\,\mathrm{tr}\left(\bs{C}^{||^{-1}} \left(\dot{\bs{F}}^{0^\mathrm{T}}\bs{F}^{0} + \bs{F}^{0^\mathrm{T}}\dot{\bs{F}}^{0}\right)\right).
-%\end{align}
-%
-%\subsubsection{Constitutive equations}
-%\paragraph{General isotropic hyperelasticity}
-%-- exemplified for general isotropic hyperelasticity
-%\begin{align}
-%\mathit{\Psi} = \mathit{\Psi}(I_{\tilde{C}},I\!\!I_{\tilde{C}}) - \frac{1}{2}\ps(I\!\!I\!\!I_{\tilde{C}}-1), \label{eq:sef_red_solid_generic}
-%\end{align}
-%where $I_{\tilde{C}}$, $I\!\!I_{\tilde{C}}$ and $I\!\!I\!\!I_{\tilde{C}}$ are the principal invariants of Eq.~(\ref{eq:Cmod})\\
-%
-%-- 2nd Piola-Kirchhoff stress \cite{holzapfel2000}:
-%\begin{align}
-%\tilde{\bs{S}} = -\ps \tilde{\bs{C}}^{-1} + 2\left(\frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} + I_{\tilde{C}} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}}\right)\bs{I} - 2\frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \tilde{\bs{C}} \label{eq:S_membrane_stress}
-%\end{align}
-%
-%-- hydrostatic pressure $\ps$ recovered by plane stress assumption for 2-dimensional continua \cite{holzapfel1996,holzapfel2000}:
-%\begin{align}
-%\ps = 2 \left( \frac{1}{\lambda_{\xi}^2 \lambda_{\eta}^2} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - \lambda_{\xi}^2 \lambda_{\eta}^2 \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) = 2 \left( \frac{1}{I\!\!I\!\!I_{C}^{||}} \frac{\partial \mathit{\Psi}}{\partial I_{\tilde{C}}} - I\!\!I\!\!I_{C}^{||} \frac{\partial \mathit{\Psi}}{\partial I\!\!I_{\tilde{C}}} \right) \label{eq:p_mem},
-%\end{align}
-%
-%-- 1st Piola-Kirchhoff stress then is computed by the push-forward operation
-%\begin{align}
-%    \tilde{\bs{P}}_{\fS} = \bs{F}^{0}\tilde{\bs{S}}, \label{eq:P_membrane_stress}
-%\end{align}
-%
-%
-%\paragraph{Cardiac mechanics}
-%
-%-- isotropic exponential strain energy \cite{demiray1972}
-%\begin{align}
-%    \mathit{\Psi}(\bs{C},\ps) = \frac{a_0}{2b_0}\left(e^{b_0(\mathrm{tr}\bs{C} - 3)} - 1\right) -\frac{1}{2}\ps(\det{\bs{C}} - 1) \label{eq:psi_pass}
-%\end{align}
-%
-%-- viscous pseudo-potential \cite{chapelle2012}
-%\begin{align}
-%\mathit{\Psi}_{\mathrm{v}}(\dot{\bs{C}}) = \frac{\eta}{8}\dot{\bs{C}}:\dot{\bs{C}}\label{eq:psi_visc}
-%\end{align}
-%
-%-- for 3D incompressible hyper-viscoelastic active cardiac mechanics:
-%\begin{align}
-%\bs{S}&=\bs{S}_{\mathrm{e}} + \bs{S}_{\mathrm{v}} + \bs{S}_{\mathrm{a}} = 2\frac{\partial\mathit{\Psi}(\bs{C},\ps)}{\partial\bs{C}} + 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}(\dot{\bs{C}})}{\partial\dot{\bs{C}}} + \tau_{\mathrm{a}}(t)\bs{f}_{0}\otimes\bs{f}_{0}
-%\end{align}
-%
-%-- for reduced solid:
-%\begin{align}
-%\tilde{\bs{S}}=\tilde{\bs{S}}_{\mathrm{e}} + \tilde{\bs{S}}_{\mathrm{v}} + \tilde{\bs{S}}_{\mathrm{a}} = 2\frac{\partial\mathit{\Psi}(\tilde{\bs{C}})}{\partial\tilde{\bs{C}}} + 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}(\dot{\tilde{\bs{C}}})}{\partial\dot{\tilde{\bs{C}}}} + \tau_{\mathrm{a}}(t)\tilde{\bs{M}}_{0}
-%\end{align}
-%
-%-- note that in presence of viscosity according to Eq.~(\ref{eq:psi_visc}), hydrostatic pressure for hyperelastic solid, Eq.~(\ref{eq:p_mem}), needs to be updated to balance the viscous normal stresses:
-%\begin{align}
-%\ps \leftarrow \ps - \frac{\eta}{2}\frac{\dot{I\!\!I\!\!I}_{C}^{||}}{I\!\!I\!\!I_{C}^{||^3}}
-%\end{align}
-%
-%
-%-- reduced (wall-averaged) structural tensor in circumferential and longitudinal directions $\bs{c}_{0}$ and $\bs{l}_{0}$, respectively:
-%\begin{align}
-%\tilde{\bs{M}}_{0} = \bar{\omega}\, \bs{c}_{0}\otimes\bs{c}_{0} + \bar{\iota}\,\bs{l}_{0}\otimes\bs{l}_{0} + 2\bar{\gamma}\,\mathrm{sym}(\bs{c}_{0}\otimes\bs{l}_{0}). \label{eq:M0}
-%\end{align}
-%
-%\paragraph{Balance equation}
-%
-%\begin{align}
-%    \tilde{r}_{v}^{\mathrm{s}} (\uf(\bs{v}); \delta\bs{v}) 
-%    & := 
-%    \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}} h_0\,\rho_{0}^{\fS}\,\dot{\bs{v}} \cdot \delta\bs{v} \,\mathrm{d}A_0 
-%    + 
-%    \int\limits_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}} h_0\,\tilde{\bs{P}}_{\fS}(\uf(\bs{v}),\bs{v}) : \tilde{\bs{\nabla}}_{0} \delta\bs{v} \,\mathrm{d}A
-%    \label{eq:fsi_solid_weakform_red}
-%\end{align}
-%
-%\subsection{Projection-based reduction}
-%
-%\begin{align}
-%    \hat{\bs{\mathsf{S}}}_{v}^{\Gm} = \pmb{\mathbb{I}}_{\Gm} \begin{bmatrix} \bs{\mathsf{v}}_{1}^{\fF} & \hdots & \bs{\mathsf{v}}_{m_v}^{\fF} \end{bmatrix} = \begin{bmatrix} \mathbb{I}_{\Gm}^{1} & & \\ & \mathbb{I}_{\Gm}^{2} & \\ & & \ddots & \\ & & & \mathbb{I}_{\Gm}^{n_v} \end{bmatrix} \begin{bmatrix} v_{1}^1 & \hdots & v_{m_v}^1 \\ v_{1}^2 & \hdots & v_{m_v}^2 \\ \vdots & \ddots & \vdots \\ v_{1}^{n_v} & \hdots & v_{m_v}^{n_v} \end{bmatrix}, \label{eq:snap_surf}
-%\end{align}
-%
-%with 
-%\begin{align}
-%    \mathbb{I}_{\Gm}^{i} = \begin{cases} 1,\;\text{if}\;{i} \in \mathcal{N}_{\Gm_{0}^{\mathrm{\fF\text{-}\fS}}}, \\ 0,\;\text{else},\end{cases} \label{eq:surf_indicative}
-%\end{align}
-%
-%
-%\subsection{Discrete FrSI equations}
-%
-%-- discrete fluid domain displacement:
-%\begin{align}
-%\UF_{n+1} = \theta \Delta t\,\VV_{n+1} + (1-\theta)\Delta t\, \VV_{n} + \UF_{n} \label{eq:ufluid_discr}
-%\end{align}
-%
-%-- trial projection:
-%\begin{align}
-%\VV = \VROB \VVr
-%\end{align}
-%
-%-- test projection
-%\begin{align}
-%\ROP^{\mathrm{FrSI}}_{n+1} = \begin{bmatrix} \VROBt\ROP_{v}(\VROB \VVr,\PP,\LMZ,\DD) \\ \ROP_{p}(\VROB\VVr,\DD) \\ \ROP_{\lmzi}(\LMZ,\VROB\VVr,\DD) \\ \ROP_{d}(\DD,\textcolor{orange}{\VROB\VVr}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}} \label{eq:res_nonlin_frsi}
-%\end{align}
-%
-%\begin{align}
-%\begin{bmatrix} \VROBt\bs{\mathsf{K}}_{vv}\VROB & \VROBt\bs{\mathsf{K}}_{vp} & \VROBt\bs{\mathsf{K}}_{v\lmzi} & \VROBt\bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv}\VROB & \zerom & \zerom & \bs{\mathsf{K}}_{pd}\\ \\  \bs{\mathsf{K}}_{\lmzi v}\VROB & \zerom & \bs{\mathsf{K}}_{\lmzi\lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \textcolor{orange}{\bs{\mathsf{K}}_{dv}\VROB} & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}} \\ \\ \Delta\PP \\ \\ \Delta\LMZ \\ \\ \Delta\DD \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \VROBt\ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d} \end{bmatrix}_{n+1}^{k} \label{eq:lin_sys_rom_frsi}
-%\end{align}
-
-\section{Demos}\label{sec:demos}
+\section{Demos}\label{demos}
 
 \subsection{Demo: Solid}\label{demo-solid}
 

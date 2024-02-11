@@ -82,8 +82,7 @@ Preface
 | This documentation is structured as follows. In sec.
   `2 <#installation>`__, instructions on how to install and use Ambit
   are given. The relevant supported physics models are described in sec.
-  `[sec:phys] <#sec:phys>`__. Demos are presented in sec.
-  `4 <#sec:demos>`__.
+  `3 <#physics-models>`__. Demos are presented in sec. `4 <#demos>`__.
 
 Installation
 ============
@@ -125,54 +124,46 @@ Solid mechanics
 ---------------
 
 | – Example: Sec. `4.1 <#demo-solid>`__ and ``demos/solid``
-| – Problem type: ``solid``
+| – ``problem_type : "solid"``
 | – Solid mechanics are formulated in a Total Lagrangian frame
 
 Strong form
 ~~~~~~~~~~~
 
-Displacement-based
-^^^^^^^^^^^^^^^^^^
+| **Displacement-based**
+| – Primary variable: displacement :math:`\boldsymbol{u}`
 
-– Primary variable: displacement :math:`\boldsymbol{u}`
+  .. math::
+     :label: solid-strong-form
 
-.. math::
-   :label: solid-strong-form
+     \begin{aligned}
+     \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+     \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
+     \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T],\\
+     \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},\\
+     \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},
+     \end{aligned}
 
-   \begin{aligned}
-   \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
-   \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
-   \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T],\\
-   \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},\\
-   \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},
-   \end{aligned}
+| **Incompressible mechanics**
+| – Primary variables: displacement :math:`\boldsymbol{u}` and pressure
+  :math:`p`
 
-Incompressible mechanics
-^^^^^^^^^^^^^^^^^^^^^^^^
+  .. math::
+     :label: solid-strong-form-inc
 
-– Primary variables: displacement :math:`\boldsymbol{u}` and pressure
-:math:`p`
-
-.. math::
-   :label: solid-strong-form-inc
-
-   \begin{aligned}
-   \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
-   J(\boldsymbol{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
-   \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
-   \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\mathit{\Gamma}}_{0}^{\mathrm{N}} \times [0, T],\\
-   \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0},\\
-   \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0},
-   \end{aligned}
+     \begin{aligned}
+     \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+     J(\boldsymbol{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+     \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
+     \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\mathit{\Gamma}}_{0}^{\mathrm{N}} \times [0, T],\\
+     \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0},\\
+     \boldsymbol{v}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\mathit{\Omega}}_{0},
+     \end{aligned}
 
 Weak form
 ~~~~~~~~~
 
-.. _displacement-based-1:
-
-Displacement-based
-^^^^^^^^^^^^^^^^^^
-
+| **Displacement-based**
 | – Primary variable: displacement :math:`\boldsymbol{u}`
 | – Principal of Virtual Work:
 
@@ -255,19 +246,18 @@ Displacement-based
       \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} (\boldsymbol{n}_0 \otimes \boldsymbol{n}_0)\left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
       \end{aligned}
 
-Incompressible mechanics: 2-field displacement and pressure variables
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+| **Incompressible mechanics: 2-field displacement and pressure
+  variables**
+| – Primary variables: displacement :math:`\boldsymbol{u}` and pressure
+  :math:`p`
 
-– Primary variables: displacement :math:`\boldsymbol{u}` and pressure
-:math:`p`
+  .. math::
+     :label: solid-weak-form-inc
 
-.. math::
-   :label: solid-weak-form-inc
-
-   \begin{aligned}
-   r_u(\boldsymbol{u},p;\delta\boldsymbol{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u} \\
-   r_p(\boldsymbol{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) = 0, \quad \forall \; \delta p
-   \end{aligned}
+     \begin{aligned}
+     r_u(\boldsymbol{u},p;\delta\boldsymbol{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u} \\
+     r_p(\boldsymbol{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) = 0, \quad \forall \; \delta p
+     \end{aligned}
 
 | – Kinetic virtual work:
   (`[equation-deltaw-kin] <#equation-deltaw-kin>`__)
@@ -289,9 +279,7 @@ Incompressible mechanics: 2-field displacement and pressure variables
      \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) &= \int\limits_{\mathit{\Omega}_{0}} (J(\boldsymbol{u}) - 1) \,\delta p \,\mathrm{d}V 
      \end{aligned}
 
-Time integration
-^^^^^^^^^^^^^^^^
-
+| **Time integration**
 | – time scheme ``timint : "static"``
 | 
 
@@ -382,18 +370,16 @@ Time integration
   or (`[equation-solid-midpoint-ost] <#equation-solid-midpoint-ost>`__),
   respectively.
 
-Spatial discretization and solution
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+| **Spatial discretization and solution**
+| – Discrete nonlinear system to solve in each time step :math:`n`
+  (displacement-based):
 
-– Discrete nonlinear system to solve in each time step :math:`n`
-(displacement-based):
+  .. math::
+     :label: nonlin-sys-solid
 
-.. math::
-   :label: nonlin-sys-solid
-
-   \begin{aligned}
-   \left.\boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}})\right|_{n+1} = \boldsymbol{\mathsf{0}}
-   \end{aligned}
+     \begin{aligned}
+     \left.\boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}})\right|_{n+1} = \boldsymbol{\mathsf{0}}
+     \end{aligned}
 
 – Discrete linear system to solve in each Newton iteration :math:`k`
 (displacement-based):
@@ -434,25 +420,20 @@ Eulerian reference frame
 | – Example: Sec. `4.2 <#demo-fluid>`__ and ``demos/fluid``
 | – Problem type: ``fluid``
 | – Incompressible Navier-Stokes equations in Eulerian reference frame
+| **Strong Form**
+| – Primary variables: velocity :math:`\boldsymbol{v}` and pressure
+  :math:`p`
 
-.. _strong-form-1:
+  .. math::
+     :label: fluid-strong-form
 
-Strong Form
-^^^^^^^^^^^
-
-– Primary variables: velocity :math:`\boldsymbol{v}` and pressure
-:math:`p`
-
-.. math::
-   :label: fluid-strong-form
-
-   \begin{aligned}
-   \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
-   \boldsymbol{\nabla}\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\\
-   \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{D}} \times [0, T],\\
-   \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{N}} \times [0, T],\\
-   \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_t,
-   \end{aligned}
+     \begin{aligned}
+     \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
+     \boldsymbol{\nabla}\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\\
+     \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{D}} \times [0, T],\\
+     \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{N}} \times [0, T],\\
+     \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_t,
+     \end{aligned}
 
 with a Newtonian fluid constitutive law
 
@@ -461,11 +442,7 @@ with a Newtonian fluid constitutive law
    \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu\,\boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\boldsymbol{\nabla} \boldsymbol{v} + (\boldsymbol{\nabla} \boldsymbol{v})^{\mathrm{T}}\right)
    \end{aligned}
 
-.. _weak-form-1:
-
-Weak Form
-^^^^^^^^^
-
+| **Weak Form**
 | – Primary variables: velocity :math:`\boldsymbol{v}` and pressure
   :math:`p`
 | – Principle of Virtual Power
@@ -536,14 +513,19 @@ Weak Form
       \delta \mathcal{P}_{\mathrm{ext}}(\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_t} \hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
       \end{aligned}
 
-Stabilization
-^^^^^^^^^^^^^
-
+| **Stabilization**
 | Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin
   (SUPG/PSPG) methods are implemented, either using the full or a
   reduced scheme
+| – to the fluid FEM params, add the dict entry:
+
+::
+
+   "stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3,
+                      "dscales" : [<d1>,<d2>,<d3>], "symmetric" : False}
+
 | Full scheme according to :cite:p:`tezduyar2000`:
-  ``supg_pspg``:
+  ``"supg_pspg"``:
 | – Velocity residual operator in
   (`[equation-fluid-weak-form] <#equation-fluid-weak-form>`__) is
   augmented by the following terms:
@@ -563,7 +545,7 @@ Stabilization
      r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{PSPG}}\,(\boldsymbol{\nabla}\delta p) \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) - \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v 
      \end{aligned}
 
-Reduced scheme (optimized for first-order): ``supg_pspg2``:
+Reduced scheme (optimized for first-order): ``"supg_pspg2"``:
 
 – Velocity residual operator in
 (`[equation-fluid-weak-form] <#equation-fluid-weak-form>`__) is
@@ -621,11 +603,7 @@ ALE reference frame
   :math:`\widetilde{\boldsymbol{F}}(\boldsymbol{d}) = \boldsymbol{I} + \boldsymbol{\nabla}_0\boldsymbol{d}`
   and its determinant,
   :math:`\widetilde{J}(\boldsymbol{d})=\det \widetilde{\boldsymbol{F}}(\boldsymbol{d})`
-
-ALE problem
-^^^^^^^^^^^
-
-| – Displacement-based quasi-static solid
+| **ALE problem**
 | – Primary variable: domain displacement :math:`\boldsymbol{d}`
 | – Strong form:
 
@@ -667,24 +645,20 @@ ALE problem
    r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) := \int\limits_{\mathit{\Omega}_0}\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) : \boldsymbol{\nabla}_{0}\delta\boldsymbol{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\boldsymbol{d}
    \end{aligned}
 
-.. _strong-form-2:
+| **Strong form (ALE)**
+| – Primary variables: velocity :math:`\boldsymbol{v}`, pressure
+  :math:`p`, and domain displacement :math:`\boldsymbol{d}`
 
-Strong form
-^^^^^^^^^^^
+  .. math::
+     :label: fluid-ale-strong-form
 
-– Primary variables: velocity :math:`\boldsymbol{v}`, pressure
-:math:`p`, and domain displacement :math:`\boldsymbol{d}`
-
-.. math::
-   :label: fluid-ale-strong-form
-
-   \begin{aligned}
-   \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
-   \boldsymbol{\nabla}_{0}\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
-   \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \\
-   \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \\
-   \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_0,
-   \end{aligned}
+     \begin{aligned}
+     \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \boldsymbol{\nabla}_{0}\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \\
+     \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \\
+     \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_0,
+     \end{aligned}
 
 with a Newtonian fluid constitutive law
 
@@ -693,11 +667,7 @@ with a Newtonian fluid constitutive law
    \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu \boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\boldsymbol{\nabla}_0 \boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1} + \widetilde{\boldsymbol{F}}^{-\mathrm{T}}(\boldsymbol{\nabla}_0 \boldsymbol{v})^{\mathrm{T}}\right)
    \end{aligned}
 
-.. _weak-form-2:
-
-Weak form
-^^^^^^^^^
-
+| **Weak form (ALE)**
 | – Primary variables: velocity :math:`\boldsymbol{v}`, pressure
   :math:`p`, and domain displacement :math:`\boldsymbol{d}`
 | – Principle of Virtual Power
@@ -756,14 +726,8 @@ Weak form
       \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_0} \widetilde{J}\,\hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
       \end{aligned}
 
-.. _stabilization-1:
-
-Stabilization
-^^^^^^^^^^^^^
-
-| ALE forms of stabilization introduced in sec.
-  `[subsubsec:stab] <#subsubsec:stab>`__
-| ``supg_pspg``:
+| **Stabilization (ALE)**
+| ``"supg_pspg"``:
 | – Velocity residual operator in
   (`[equation-fluid-ale-weak-form] <#equation-fluid-ale-weak-form>`__)
   is augmented by the following terms:
@@ -785,7 +749,7 @@ Stabilization
      & \qquad\quad \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
      \end{aligned}
 
-| ``supg_pspg2``:
+| ``"supg_pspg2"``:
 | – Velocity residual operator in
   (`[equation-fluid-ale-weak-form] <#equation-fluid-ale-weak-form>`__)
   is augmented by the following terms:
@@ -1434,8 +1398,6 @@ incompressible solid:
    \begin{aligned}
    \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{u\lambda} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lambda} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lambda u} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\lambda v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}&  \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\lambda}}\\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}^{\mathrm{s}} \\ \\ \boldsymbol{\mathsf{r}}_{p}^{\mathrm{s}} \\ \\ \boldsymbol{\mathsf{r}}_{v}^{\mathrm{f}} \\ \\ \boldsymbol{\mathsf{r}}_{p}^{\mathrm{f}} \\ \\ \boldsymbol{\mathsf{r}}_{\lambda} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k}
    \end{aligned}
-
-.. _`sec:demos`:
 
 Demos
 =====
