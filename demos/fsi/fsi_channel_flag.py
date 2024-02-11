@@ -52,8 +52,8 @@ def main():
 
     # dt_ref is the time step used to compute the reference solution of the original benchmark, cf. link above
     # leads to 30000 time steps in both cases
-    dt = dt_ref
-    #dt = 0.004
+    #dt = dt_ref
+    dt = 0.004
 
     """
     Parameters for input/output
@@ -101,8 +101,8 @@ def main():
     """
     TIME_PARAMS_FLUID    = {'maxtime'               : maxtime,
                             'dt'                    : dt,
-                            'timint'                : 'ost',
-                            'theta_ost'             : 0.5, # 0.5: Crank-Nicholson, 1.0: Backward Euler
+                            'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Jansen et al. 2000)
+                            'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, gamma = 0.5
                             # how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme:
                             # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
                             # midpoint:    f(theta*x_{n+1} + (1-theta)*x_{n})

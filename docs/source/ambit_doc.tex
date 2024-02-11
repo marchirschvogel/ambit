@@ -305,22 +305,6 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 
 \end{itemize}
 
--- Discrete nonlinear system to solve in each time step $n$:
-\begin{equation}
-\label{equation-nonlin-sys-solid}
-\begin{aligned}
-\left.\ROP_{u}(\bs{\mathsf{u}})\right|_{n+1} = \bs{\mathsf{0}}
-\end{aligned}
-\end{equation}
-
--- Discrete linear system to solve in each Newton iteration $k$:
-\begin{equation}
-\label{equation-lin-sys-solid}
-\begin{aligned}
-\left. \bs{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\bs{\mathsf{u}}_{n+1}^{k+1}=-\left. \ROP_{u} \right|_{n+1}^{k}
-\end{aligned}
-\end{equation}
-
 
 \paragraph{Incompressible mechanics: 2-field displacement and pressure variables}
 -- Primary variables: displacement $\bs{u}$ and pressure $p$
@@ -363,6 +347,7 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \end{equation}
 \quad - option \verb.eval_nonlin_terms : "midpoint".:
 \begin{equation}
+\label{equation-solid-midpoint-genalpha}
 \begin{aligned}
 \bs{u}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\bs{u}_{n+1} + \alpha_{\mathrm{f}} \bs{v}_{n} \\
 \bs{v}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\bs{v}_{n+1} + \alpha_{\mathrm{f}} \bs{v}_{n} \\
@@ -391,8 +376,9 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \end{equation}
 \quad - option \verb.eval_nonlin_terms : "midpoint".:
 \begin{equation}
+\label{equation-solid-midpoint-ost}
 \begin{aligned}
-\bs{u}_{n+\theta} &= \theta \bs{u}_{n+1} + (1-\theta) \bs{v}_{n} \\
+\bs{u}_{n+\theta} &= \theta \bs{u}_{n+1} + (1-\theta) \bs{u}_{n} \\
 \bs{v}_{n+\theta} &= \theta \bs{v}_{n+1} + (1-\theta) \bs{v}_{n} \\
 \bs{a}_{n+\theta} &= \theta \bs{a}_{n+1} + (1-\theta) \bs{a}_{n}
 \end{aligned}
@@ -418,9 +404,27 @@ Note that, for incompressible mechanics, the pressure kinematic constraint is al
 \delta \mathcal{W}_{\mathrm{pres}}(\bs{u}_{n+1};\delta p) = 0, \quad \forall \; \delta p,
 \end{aligned}
 \end{equation}
+and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\ref{equation-solid-midpoint-genalpha}) or (\ref{equation-solid-midpoint-ost}), respectively.
 
 \paragraph{Spatial discretization and solution}
--- Discrete nonlinear system to solve in each time step $n$:
+
+-- Discrete nonlinear system to solve in each time step $n$ (displacement-based):
+\begin{equation}
+\label{equation-nonlin-sys-solid}
+\begin{aligned}
+\left.\ROP_{u}(\bs{\mathsf{u}})\right|_{n+1} = \bs{\mathsf{0}}
+\end{aligned}
+\end{equation}
+
+-- Discrete linear system to solve in each Newton iteration $k$ (displacement-based):
+\begin{equation}
+\label{equation-lin-sys-solid}
+\begin{aligned}
+\left. \bs{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\bs{\mathsf{u}}_{n+1}^{k+1}=-\left. \ROP_{u} \right|_{n+1}^{k}
+\end{aligned}
+\end{equation}
+
+-- Discrete nonlinear system to solve in each time step $n$ (incompressible):
 \begin{equation}
 \label{equation-nonlin-sys-solid-inc}
 \begin{aligned}
@@ -428,7 +432,7 @@ Note that, for incompressible mechanics, the pressure kinematic constraint is al
 \end{aligned}
 \end{equation}
 
--- Discrete linear system to solve in each Newton iteration $k$:
+-- Discrete linear system to solve in each Newton iteration $k$ (incompressible):
 \begin{equation}
 \label{equation-lin-sys-solid-inc}
 \begin{aligned}

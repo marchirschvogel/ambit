@@ -255,24 +255,6 @@ Displacement-based
       \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} (\boldsymbol{n}_0 \otimes \boldsymbol{n}_0)\left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
       \end{aligned}
 
-– Discrete nonlinear system to solve in each time step :math:`n`:
-
-.. math::
-   :label: nonlin-sys-solid
-
-   \begin{aligned}
-   \left.\boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}})\right|_{n+1} = \boldsymbol{\mathsf{0}}
-   \end{aligned}
-
-– Discrete linear system to solve in each Newton iteration :math:`k`:
-
-.. math::
-   :label: lin-sys-solid
-
-   \begin{aligned}
-   \left. \boldsymbol{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\boldsymbol{\mathsf{u}}_{n+1}^{k+1}=-\left. \boldsymbol{\mathsf{r}}_{u} \right|_{n+1}^{k}
-   \end{aligned}
-
 Incompressible mechanics: 2-field displacement and pressure variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -329,6 +311,8 @@ Time integration
   - option ``eval_nonlin_terms : "midpoint"``:
 
   .. math::
+     :label: solid-midpoint-genalpha
+
      \begin{aligned}
      \boldsymbol{u}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\boldsymbol{u}_{n+1} + \alpha_{\mathrm{f}} \boldsymbol{v}_{n} \\
      \boldsymbol{v}_{n+1-\alpha_{\mathrm{f}}} &= (1-\alpha_{\mathrm{f}})\boldsymbol{v}_{n+1} + \alpha_{\mathrm{f}} \boldsymbol{v}_{n} \\
@@ -359,8 +343,10 @@ Time integration
   - option ``eval_nonlin_terms : "midpoint"``:
 
   .. math::
+     :label: solid-midpoint-ost
+
      \begin{aligned}
-     \boldsymbol{u}_{n+\theta} &= \theta \boldsymbol{u}_{n+1} + (1-\theta) \boldsymbol{v}_{n} \\
+     \boldsymbol{u}_{n+\theta} &= \theta \boldsymbol{u}_{n+1} + (1-\theta) \boldsymbol{u}_{n} \\
      \boldsymbol{v}_{n+\theta} &= \theta \boldsymbol{v}_{n+1} + (1-\theta) \boldsymbol{v}_{n} \\
      \boldsymbol{a}_{n+\theta} &= \theta \boldsymbol{a}_{n+1} + (1-\theta) \boldsymbol{a}_{n}
      \end{aligned}
@@ -390,10 +376,37 @@ Time integration
      \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u}_{n+1};\delta p) = 0, \quad \forall \; \delta p,
      \end{aligned}
 
+  and the pressure in :math:`\delta \mathcal{W}_{\mathrm{int}}` is set
+  according to
+  (`[equation-solid-midpoint-genalpha] <#equation-solid-midpoint-genalpha>`__)
+  or (`[equation-solid-midpoint-ost] <#equation-solid-midpoint-ost>`__),
+  respectively.
+
 Spatial discretization and solution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-– Discrete nonlinear system to solve in each time step :math:`n`:
+– Discrete nonlinear system to solve in each time step :math:`n`
+(displacement-based):
+
+.. math::
+   :label: nonlin-sys-solid
+
+   \begin{aligned}
+   \left.\boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}})\right|_{n+1} = \boldsymbol{\mathsf{0}}
+   \end{aligned}
+
+– Discrete linear system to solve in each Newton iteration :math:`k`
+(displacement-based):
+
+.. math::
+   :label: lin-sys-solid
+
+   \begin{aligned}
+   \left. \boldsymbol{\mathsf{K}}_{uu} \right|_{n+1}^{k} \Delta\boldsymbol{\mathsf{u}}_{n+1}^{k+1}=-\left. \boldsymbol{\mathsf{r}}_{u} \right|_{n+1}^{k}
+   \end{aligned}
+
+– Discrete nonlinear system to solve in each time step :math:`n`
+(incompressible):
 
 .. math::
    :label: nonlin-sys-solid-inc
@@ -402,7 +415,8 @@ Spatial discretization and solution
    \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}(\boldsymbol{\mathsf{u}},\boldsymbol{\mathsf{p}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{u}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
    \end{aligned}
 
-– Discrete linear system to solve in each Newton iteration :math:`k`:
+– Discrete linear system to solve in each Newton iteration :math:`k`
+(incompressible):
 
 .. math::
    :label: lin-sys-solid-inc
