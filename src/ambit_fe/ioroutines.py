@@ -254,7 +254,7 @@ class IO:
         # index map and input indices
         im = np.asarray(f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local + f.function_space.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
 
-        # for discontinuous cell-wise constant functions, we need the original cell, otherwise node node index
+        # for discontinuous cell-wise constant functions, we need the original cell, otherwise the node index
         if f.function_space._ufl_element.is_cellwise_constant():
             igi = f.function_space.mesh.topology.original_cell_index
         else:
@@ -297,7 +297,7 @@ class IO:
         # non-ghosted index map and input global node indices
         im_no_ghosts = f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local, dtype=np.int32)).tolist()
 
-        # for discontinuous cell-wise constant functions, we need the original cell, otherwise node node index
+        # for discontinuous cell-wise constant functions, we need the original cell, otherwise the node index
         if f.function_space._ufl_element.is_cellwise_constant():
             igi = f.function_space.mesh.topology.original_cell_index
         else:

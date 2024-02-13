@@ -134,6 +134,16 @@ def check_params_fem_ale(params):
             raise RuntimeError("Unknown parameter found in ALE FEM params: "+k)
 
 
+def check_params_fem_electrophysiology(params):
+
+    valid_params = ['order_phi',
+                    'quad_degree']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in electrophysiology FEM params: "+k)
+
+
 def check_params_time_solid(params):
 
     valid_params = ['alpha_m',
@@ -174,6 +184,22 @@ def check_params_time_fluid(params):
     for k in params.keys():
         if k not in valid_params:
             raise RuntimeError("Unknown parameter found in fluid time params: "+k)
+
+
+def check_params_time_electrophysiology(params):
+
+    valid_params = ['dt',
+                    'eval_nonlin_terms',
+                    'maxtime',
+                    'numstep',
+                    'numstep_stop',
+                    'residual_scale',
+                    'timint',
+                    'theta_ost']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in electrophysiology time params: "+k)
 
 
 def check_params_time_flow0d(params):

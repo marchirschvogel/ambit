@@ -274,8 +274,8 @@ class Ambit():
             io.create_integration_measures(io.mesh)
             io.set_mesh_fields(io.mesh)
 
-            self.mp = electrophys_main.ElectrophysiologyProblem(io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, io, mor_params=mor_params, comm=self.comm)
-            self.ms = electrophys_main.ElectrophysiologySolver(self.mp, solver_params)
+            self.mp = electrophysiology_main.ElectrophysiologyProblem(io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, io, mor_params=mor_params, comm=self.comm)
+            self.ms = electrophysiology_main.ElectrophysiologySolver(self.mp, solver_params)
 
         elif problem_type == 'signet':
 
