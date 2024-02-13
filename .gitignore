@@ -11,3 +11,5 @@ __pycache__/
 *.toc
 *.blg
 *.bbl
+src/ambit_fe/electrophysiology/
+tests/test_electrophysiology.py

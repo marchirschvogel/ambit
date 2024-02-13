@@ -254,6 +254,8 @@ class SolidmechanicsProblem(problem_base):
                 # if one mat has a prescribed active stress, all have to be!
                 if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
                     self.active_stress_trig = 'prescribed'
+                if 'prescribed_from_file' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
+                    self.active_stress_trig, self.actpid = 'prescribed_from_file', n+1 # file acts for all active stress models in all domains!
                 if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
@@ -274,6 +276,8 @@ class SolidmechanicsProblem(problem_base):
                 # if one mat has a prescribed active stress, all have to be!
                 if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)]['active_iso']:
                     self.active_stress_trig = 'prescribed'
+                if 'prescribed_from_file' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
+                    self.active_stress_trig, self.actpid = 'prescribed_from_file', n+1 # file acts for all active stress models in all domains!
                 if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_iso']:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
@@ -1038,6 +1042,9 @@ class SolidmechanicsProblem(problem_base):
                 self.io.readfunction(func, file)
                 sc = m['scale']
                 if sc != 1.0: func.vector.scale(sc)
+
+        if self.active_stress_trig == 'prescribed_from_file':
+            self.io.readfunction(self.tau_a, self.constitutive_models['MAT'+str(self.actpid)]['active_fiber']['prescribed_from_file'].replace('*',str(N)))
 
 
     def evaluate_post_solve(self, t, N):

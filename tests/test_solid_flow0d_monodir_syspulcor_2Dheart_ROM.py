@@ -63,7 +63,10 @@ def test_main():
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul',
                             'coronary_model'        : 'ZCRp_CRd_lr',
                             'parameters'            : param(),
-                            'chamber_models'        : {'lv' : {'type' : '3D_solid'}, 'rv' : {'type' : '3D_solid'}, 'la' : {'type' : '0D_elast', 'activation_curve' : 2}, 'ra' : {'type' : '0D_elast', 'activation_curve' : 2}}}
+                            'chamber_models'        : {'lv' : {'type' : '3D_solid'},
+                                                       'rv' : {'type' : '3D_solid'},
+                                                       'la' : {'type' : '0D_elast', 'activation_curve' : 1},
+                                                       'ra' : {'type' : '0D_elast', 'activation_curve' : 1}}}
 
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
@@ -75,31 +78,17 @@ def test_main():
                             'coupling_quantity'     : ['volume']*2,
                             'coupling_type'         : 'monolithic_direct'}
 
-    MATERIALS            = {'MAT1' : {'holzapfelogden_dev'    : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436},
-                                      'sussmanbathe_vol'      : {'kappa' : 1.0e3},
-                                      'active_fiber'          : {'sigma0' : 50.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 1},
-                                      'inertia'               : {'rho0' : 1.0e-6}}}
+    MATERIALS            = {'MAT1' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436},
+                                      'sussmanbathe_vol'   : {'kappa' : 1.0e3},
+                                      'active_fiber'       : {'prescribed_from_file' : basepath+'/input/checkpoint_ROM_2Dheart_solid_tau_a_*.txt'},
+                                      'inertia'            : {'rho0' : 1.0e-6}}}
 
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves():
 
-        def tc1(self, t):
-
-            K = 5.
-            t_contr, t_relax = 0.0, 0.53
-
-            alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
-            alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
-
-            c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
-            c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-
-            # Diss Hirschvogel eq. 2.101
-            return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
-
-        def tc2(self, t): # atrial activation
+        def tc1(self, t): # atrial activation
 
             act_dur = 2.*param()['t_ed']
             t0 = 0.

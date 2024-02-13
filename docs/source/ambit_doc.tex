@@ -192,6 +192,63 @@ If a Docker image for development is desired, the following image contains all d
 docker pull ghcr.io/marchirschvogel/ambit:devenv
 \end{verbatim}
 
+\section{Ambit input}
+
+Here, a minimal Ambit input file is shown, exemplarily for a single-field problem. The mandatory parameter dictionaries to provide are input parameters, time parameters, solver parameters, finite element parameters, and constitutive parameters. For multi-physics problems, each field needs individual time, finite element, and constitutive parameters.
+
+\begin{Verbatim}[breaklines=true]
+#!/usr/bin/env python3
+
+import ambit_fe
+import numpy as np
+
+def main():
+
+    IO = {"problem_type"        : <PROBLEM_TYPE>,
+          "mesh_domain"         : "/path/...",
+          "mesh_boundary"       : "/path/...",
+          "write_results_every" : 1,
+          "output_path"         : "/path/...",
+          "results_to_write"    : ["displacement","vonmises_cauchystress"],
+          "simname"             : "test"}
+    	  
+    TP = {}
+    SP = {}
+    FP = {}
+    
+    CP = {}
+    
+    MSCP = {}
+    MORP = {}
+    
+    class TC:
+        def tc1(self, t):
+            return ...
+        def tc2(self, t):
+            return ...
+            
+    class EXPR1:
+          def __init__(self):
+            self.t = 0.0
+
+        def evaluate(self, x):
+            val = 0.5*self.t
+            return ( np.full(x.shape[1], val),
+                     np.full(x.shape[1], val),
+                     np.full(x.shape[1], val) )
+
+    # problem setup
+    problem = ambit.Ambit(io_params=[IO], time_params=[TP], solver_params=[SP], fem_params=[FP], constitutive_params=[CP], boundary_conditions=BP, time_curves=TC, coupling_params=CP, multiscale_params=MSCP, mor_params=MORP)
+
+    # problem solve
+    problem.solve_problem()
+    
+if __name__ == "__main__":
+
+    main()
+
+\end{Verbatim}
+
 \section{Physics Models}\label{physics-models}
 
 \subsection{Solid mechanics}\label{solid-mechanics}
@@ -548,8 +605,8 @@ Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin (SUPG/PSP
 -- to the fluid FEM params, add the dict entry:
 
 \begin{Verbatim}[breaklines=true]
-"stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3,
-                   "dscales" : [<d1>,<d2>,<d3>], "symmetric" : False}
+"stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3, "dscales" : [<d1>,<d2>,<d3>],
+                   "symmetric" : False}
 \end{Verbatim}
 
 Full scheme according to \cite{tezduyar2000}: \verb."supg_pspg".:\\
