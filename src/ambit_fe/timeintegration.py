@@ -576,6 +576,13 @@ class timeintegration_ale(timeintegration_fluid):
 # Electrophysiology time integration class
 class timeintegration_electrophysiology(timeintegration):
 
+    def __init__(self, time_params, dt, Nmax, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+        timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
+
+        assert(self.timint == 'ost')
+        self.theta_ost = time_params['theta_ost']
+
+
     def update_timestep(self, phi, phi_old, phidot, phidot_old):
 
         # update old fields with new quantities
@@ -606,6 +613,13 @@ class timeintegration_electrophysiology(timeintegration):
         # update potential: phi_old <- phi
         phi_old.vector.axpby(1.0, 0.0, phi.vector)
         phi_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    def timefactors(self):
+
+        timefac_m, timefac = self.theta_ost, self.theta_ost
+
+        return timefac_m, timefac
 
 
 

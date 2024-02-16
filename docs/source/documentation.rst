@@ -82,7 +82,7 @@ Preface
 | This documentation is structured as follows. In sec.
   `2 <#installation>`__, instructions on how to install and use Ambit
   are given. The relevant supported physics models are described in sec.
-  `3 <#physics-models>`__. Demos are presented in sec. `4 <#demos>`__.
+  `4 <#physics-models>`__. Demos are presented in sec. `5 <#demos>`__.
 
 Installation
 ============
@@ -117,13 +117,90 @@ dolfinx mixed branch):
 
    docker pull ghcr.io/marchirschvogel/ambit:devenv
 
+Ambit input
+===========
+
+Here, a minimal Ambit input file is shown, exemplarily for a
+single-field problem. The mandatory parameter dictionaries to provide
+are input parameters (IO), time parameters (TME), solver parameters
+(SOL), finite element parameters (FEM), and constitutive/material
+parameters (MAT). For multi-physics problems, each field needs
+individual time, finite element, and constitutive parameters.
+
+::
+
+   #!/usr/bin/env python3
+
+   # Minimal input file for an elastodynamics problem
+
+   import ambit_fe
+   import numpy as np
+
+   def main():
+
+       # input/output
+       IO = {"problem_type"        : "solid",                   # type of physics to solve
+             "mesh_domain"         : "/path/mesh_d.xdmf",       # path to domain mesh
+             "mesh_boundary"       : "/path/mesh_b.xdmf",       # path to boundary mesh
+             "meshfile_type"       : "HDF5",                    # encoding (HDF5 or ASCII)
+             "write_results_every" : 1,                         # step frequency for output
+             "output_path"         : "/path/...",               # path to output to
+             "results_to_write"    : ["displacement",
+                                      "vonmises_cauchystress"], # results to output
+             "simname"             : "my_results_name"}         # midfix of output name
+       
+       # time discretization  
+       TME = {'maxtime'            : 1.0,        # maximum simulation time
+              'dt'                 : 0.01,       # time step size
+              'timint'             : 'genalpha', # time integration: Generalized-alpha
+              'rho_inf_genalpha'   : 1.0}        # spectral radius of Gen-alpha scheme
+       
+       # solver
+       SOL = {'solve_type'         : 'direct', # direct linear solver
+              'tol_res'            : 1.0e-8,   # residual tolerance
+              'tol_inc'            : 1.0e-8}   # increment tolerance
+       
+       # finite element discretization
+       FEM = {'order_disp'         : 1, # FEM degree for displacement field
+              'quad_degree'        : 2} # quadrature scheme degree
+       
+       # time curves
+       class TC:
+           # user defined load curves, to be used in boundary conditions (BC)
+           def tc1(self, t):
+               load_max = 5.0
+               return load_max * np.sin(t)
+
+       # materials
+       MAT = {'MAT1' : {'neohooke_dev' : {'mu' : 10.0},      # isochoric NeoHookean material
+                        'ogden_vol'    : {'kappa' : 1.0e3},  # volumetric Ogden material
+                        'inertia'      : {'rho0' : 1.0e-6}}} # density
+
+       # boundary conditions
+       BC = {'dirichlet' : [{'id' : [<SURF_IDs>],  # list of surfaces for Dirichlet BC
+                             'dir' : 'all',        # all directions
+                             'val' : 0.0}],        # set to zero
+             'neumann'   : [{'id' : [<SURF_IDs>],  # list of surfaces for Neumann BC
+                              'dir' : 'xyz_ref',   # in cartesian reference directions
+                              'curve' : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
+
+       # problem setup
+       problem = ambit.Ambit(io_params=IO, time_params=TP, solver_params=SP, fem_params=FP, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
+
+       # run: solve the problem
+       problem.solve_problem()
+       
+   if __name__ == "__main__":
+
+       main()
+
 Physics Models
 ==============
 
 Solid mechanics
 ---------------
 
-| – Example: Sec. `4.1 <#demo-solid>`__ and ``demos/solid``
+| – Example: Sec. `5.1 <#demo-solid>`__ and ``demos/solid``
 | – ``problem_type : "solid"``
 | – Solid mechanics are formulated in a Total Lagrangian frame
 
@@ -288,7 +365,6 @@ Weak form
      \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
 
   – Generalized-alpha time scheme ``timint : "genalpha"``
-| 
 
   .. math::
      \begin{aligned}
@@ -417,7 +493,7 @@ Fluid mechanics
 Eulerian reference frame
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-| – Example: Sec. `4.2 <#demo-fluid>`__ and ``demos/fluid``
+| – Example: Sec. `5.2 <#demo-fluid>`__ and ``demos/fluid``
 | – Problem type: ``fluid``
 | – Incompressible Navier-Stokes equations in Eulerian reference frame
 | **Strong Form**
@@ -521,8 +597,8 @@ with a Newtonian fluid constitutive law
 
 ::
 
-   "stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3,
-                      "dscales" : [<d1>,<d2>,<d3>], "symmetric" : False}
+   "stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3, "dscales" : [<d1>,<d2>,<d3>],
+                      "symmetric" : False}
 
 | Full scheme according to :cite:p:`tezduyar2000`:
   ``"supg_pspg"``:
@@ -795,7 +871,7 @@ elements (without stabilization)
 0D flow: Lumped parameter models
 --------------------------------
 
-| – Example: Sec. `4.3 <#demo-0d-flow>`__ and ``demos/flow0d``
+| – Example: Sec. `5.3 <#demo-0d-flow>`__ and ``demos/flow0d``
 | – Problem type: ``flow0d``
 | – 0D model concentrated elements are resistances (:math:`R`),
   impedances (:math:`Z`, technically are resistances), compliances
@@ -1136,7 +1212,7 @@ Multi-physics coupling
 Solid + 0D flow
 ~~~~~~~~~~~~~~~
 
-| – Example: Sec. `3.4.1 <#solid-0d-flow>`__ and ``demos/solid_flow0d``
+| – Example: Sec. `4.4.1 <#solid-0d-flow>`__ and ``demos/solid_flow0d``
 | – Problem type: ``solid_flow0d``
 | – solid momentum in
   (`[equation-solid-weak-form] <#equation-solid-weak-form>`__) or in
@@ -1198,7 +1274,7 @@ incompressible solid:
 Fluid + 0D flow
 ~~~~~~~~~~~~~~~
 
-| – Example: Sec. `3.4.2 <#fluid-0d-flow>`__ ``demos/fluid_flow0d``
+| – Example: Sec. `4.4.2 <#fluid-0d-flow>`__ ``demos/fluid_flow0d``
 | – Problem type: ``fluid_flow0d``
 | – fluid momentum in
   (`[equation-fluid-weak-form] <#equation-fluid-weak-form>`__) augmented
@@ -1277,7 +1353,7 @@ ALE fluid + 0D flow
 Fluid-Solid Interaction (FSI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-| – Example: Sec. `4.6 <#demo-fsi>`__ and ``demos/fsi``
+| – Example: Sec. `5.6 <#demo-fsi>`__ and ``demos/fsi``
 | – Problem type: ``fsi``
 | – Solid momentum in
   (`[equation-solid-weak-form] <#equation-solid-weak-form>`__) or
@@ -1405,7 +1481,7 @@ Demos
 Demo: Solid
 -----------
 
-| – Physics description given in sec. `3.1 <#solid-mechanics>`__
+| – Physics description given in sec. `4.1 <#solid-mechanics>`__
 | – Input files: ``demos/solid/``
 
 Cantilever under tip load
@@ -1452,7 +1528,7 @@ at the end of the simulation.
 Demo: Fluid
 -----------
 
-| – Physics description given in sec. `3.2 <#fluid-mechanics>`__
+| – Physics description given in sec. `4.2 <#fluid-mechanics>`__
 | – Input files: ``demos/fluid``
 
 2D channel flow
@@ -1498,7 +1574,7 @@ Demo: 0D flow
 -------------
 
 | – Physics description given in sec.
-  `3.3 <#d-flow-lumped-parameter-models>`__
+  `4.3 <#d-flow-lumped-parameter-models>`__
 | – Input files: ``demos/flow0d``
 
 .. _systemic-and-pulmonary-circulation-1:
@@ -1565,7 +1641,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
 Demo: Solid + 0D flow
 ---------------------
 
-| – Physics description given in sec. `3.4.1 <#solid-0d-flow>`__
+| – Physics description given in sec. `4.4.1 <#solid-0d-flow>`__
 | – Input files: ``demos/solid_flow0d``
 
 3D heart, coupled to systemic and pulmonary circulation
@@ -1668,7 +1744,7 @@ in ``ambit/src/ambit_fe/postprocess/``):
 Demo: Fluid + 0D flow
 ---------------------
 
-| – Physics description given in sec. `3.4.2 <#fluid-0d-flow>`__
+| – Physics description given in sec. `4.4.2 <#fluid-0d-flow>`__
 | – Input files: ``demos/fluid_flow0d``
 
 Blocked pipe flow with 0D model bypass
@@ -1739,7 +1815,7 @@ Demo: FSI
 ---------
 
 | – Physics description given in sec.
-  `3.4.4 <#fluid-solid-interaction-fsi>`__
+  `4.4.4 <#fluid-solid-interaction-fsi>`__
 | – Input files: ``demos/fsi``
 | **Note:** *FSI only runs with the mixed dolfinx branch, which is
   pre-installed in the Ambit devenv Docker container. Pull this
@@ -1751,7 +1827,8 @@ Channel flow around elastic flag
 
 | Incompressible fluid flow in a 2D channel around an elastic flag is
   studied. The setup corresponds to the well-known Turek benchmark
-  :cite:p:`turek2006`. A prescribed inflow velocity with
+  :cite:p:`turek2006`. Here, the two cases FSI2 and FSI3 from
+  the original setup are investigated. A prescribed inflow velocity with
   parabolic inflow profile is used:
 | 
 
@@ -1771,7 +1848,7 @@ Channel flow around elastic flag
          \label{eq:flag_dbcs_func}
      \end{aligned}
 
-with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
+| with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
 
 .. figure:: fig/channel_flag_setup.png
    :name: fig:channel_flag_setup
@@ -1779,6 +1856,8 @@ with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
 
    Channel flow around an elastic flag :cite:p:`turek2006`,
    problem setup.
+
+Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
 
 .. container:: center
 
@@ -1790,12 +1869,15 @@ with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
 
 | Both solid and fluid are discretized with quadrilateral
   :math:`\mathbb{Q}^2`-:math:`\mathbb{Q}^1` Taylor-Hood finite elements,
-  hence no stabilization for the fluid problem is needed.
+  hence no stabilization for the fluid problem is needed. Temporal
+  discretization for both the solid and the fluid are carried out with a
+  Generalized-:math:`\alpha` scheme with no numerical damping
+  (:math:`\rho_{\mathrm{inf}}=1`).
 | Study the setup shown in fig. `11 <#fig:channel_flag_setup>`__
   together with the parameters in the table and the comments in the
-  input file ``fsi_channel_flag.py``. Run the simulation, either in one
-  of the provided Docker containers or using your own FEniCSx/Ambit
-  installation, using the command
+  input file ``fsi_channel_flag.py``. Run the simulation for FSI2 and
+  FSI3 cases, either in one of the provided Docker containers or using
+  your own FEniCSx/Ambit installation, using the command
 
 ::
 
@@ -1805,20 +1887,38 @@ with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
   in order to speed up the simulation a bit.
 | The physics of the problem are strongly time-dependent, and a
   (near-)periodic oscillation of the flag only occurs after
-  :math:`t\approx 10\;\mathrm{s}`. Run the problem to the end
-  (:math:`t = 15\;\mathrm{s}`), be patient, and monitor the flag tip
-  displacement over time. What is the maximum deflection? Figure
-  `12 <#fig:channel_flag_results>`__ depicts the velocity at three
-  instances in time towards the end of the simulation.
+  :math:`t\approx 10\;\mathrm{s}` (FSI2) and
+  :math:`t\approx 5\;\mathrm{s}` (FSI3). Run the problem to the end
+  (:math:`t = 15\;\mathrm{s}` for FSI2, :math:`t = 7.5\;\mathrm{s}` for
+  FSI3), be patient, and monitor the flag tip displacement over time.
+| Figure `12 <#fig:channel_flag_results>`__ depicts the velocity at
+  three instances in time towards the end of the simulation for the FSI2
+  case, and figure `13 <#fig:channel_flag_results_verif>`__ shows the
+  flag’s tip displacement over time compared to the reference solution,
+  over a time interval where the solution has become periodic. (Note
+  that the reference solution from the official link shown in the input
+  file needs to be time-adjusted, i.e. synchronized with the first peak
+  in the interval of interest, since the time column of the reference
+  data does not correspond to the physical time of the problem setup.)
 
 .. figure:: fig/channel_flag_results.png
    :name: fig:channel_flag_results
    :width: 85.0%
 
-   Magnitude of fluid velocity at three instances in time
+   FSI2 case: Magnitude of fluid velocity at three instances in time
    (:math:`t=10.5\;\mathrm{s}`, :math:`t=11.2\;\mathrm{s}`, and
    :math:`t=12\;\mathrm{s}`) towards end of simulation, color indicates
    velcity magnitude.
+
+.. figure:: fig/channel_flag_results_verif.png
+   :name: fig:channel_flag_results_verif
+   :width: 100.0%
+
+   Comparison to benchmark reference solution for the time course of the
+   flag’s tip displacement for the two setups FSI2 and FSI3. A fairly
+   coarse time step of :math:`\Delta t = 4 \;\mathrm{ms}` (FSI2) and
+   :math:`\Delta t = 2 \;\mathrm{ms}` (FSI3) already allows a close
+   match to the original results.
 
 Table of symbols
 ================

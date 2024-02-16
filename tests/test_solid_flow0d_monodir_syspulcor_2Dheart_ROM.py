@@ -2,7 +2,7 @@
 
 ### 2D biventricular generic heart, testing of:
 # - Holzapfel-Ogden material
-# - active stress
+# - active stress read from files
 # - 3D-0D monolithic solution of 2D heart w/ syspul circulation (volume coupling) and coronary model ZCRp_CRd_lr
 # - Robin BCs in normal direction (spring and dashpot)
 # - Gen-Alpha time-integration for solid
