@@ -148,7 +148,7 @@ def main():
                                       'inertia'   : {'rho' : rho_f}}}
     
     # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
-    MATERIALS_ALE        = {'MAT1' : {'neohooke' : {'mu' : 10.0, 'nu' : 0.3}}}
+    MATERIALS_ALE        = {'MAT1' : {'exponential' : {'a_0' : 1.0, 'b_0' : 10.0, 'kappa' : 1e2}}}
 
 
     """
