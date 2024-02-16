@@ -52,6 +52,10 @@ class constitutive:
 
                 stress += mat.neohooke(matparams_m)
 
+            elif matlaw == 'exponential':
+
+                stress += mat.exponential(matparams_m)
+
             elif matlaw == 'diffusion':
 
                 stress += mat.diffusion(matparams_m)

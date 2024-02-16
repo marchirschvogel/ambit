@@ -44,7 +44,21 @@ class materiallaw:
         J = ufl.det(self.F)
 
         # compressible NeoHookean material (Holzapfel eq. 6.148)
-        Psi = (mu/2.) * (Ic - 3.) + mu/(2.*beta)*(J**(-2.*beta) - 1.)
+        Psi = (mu/2.) * (Ic - self.dim) + mu/(2.*beta)*(J**(-2.*beta) - 1.)
+
+        # stress
+        return ufl.diff(Psi,self.F)
+
+
+    def exponential(self, params):
+
+        a_0, b_0, kappa = params['a_0'], params['b_0'], params['kappa']
+
+        J = ufl.det(self.F)
+        Ic_bar = J**(-2./self.dim) * ufl.tr(self.F.T*self.F)
+
+        # exponential law: can be soft in the small deformation realm and stiffer for larger deformations
+        Psi = a_0/(2.*b_0)*(ufl.exp(b_0*(Ic_bar-self.dim)) - 1.) + (kappa/2.) * (J - 1.)**2.
 
         # stress
         return ufl.diff(Psi,self.F)

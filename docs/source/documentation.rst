@@ -150,19 +150,19 @@ individual time, finite element, and constitutive parameters.
              "simname"             : "my_results_name"}         # midfix of output name
        
        # time discretization  
-       TME = {'maxtime'            : 1.0,        # maximum simulation time
-              'dt'                 : 0.01,       # time step size
-              'timint'             : 'genalpha', # time integration: Generalized-alpha
-              'rho_inf_genalpha'   : 1.0}        # spectral radius of Gen-alpha scheme
+       TME = {"maxtime"            : 1.0,        # maximum simulation time
+              "dt"                 : 0.01,       # time step size
+              "timint"             : "genalpha", # time integration: Generalized-alpha
+              "rho_inf_genalpha"   : 1.0}        # spectral radius of Gen-alpha scheme
        
        # solver
-       SOL = {'solve_type'         : 'direct', # direct linear solver
-              'tol_res'            : 1.0e-8,   # residual tolerance
-              'tol_inc'            : 1.0e-8}   # increment tolerance
+       SOL = {"solve_type"         : "direct", # direct linear solver
+              "tol_res"            : 1.0e-8,   # residual tolerance
+              "tol_inc"            : 1.0e-8}   # increment tolerance
        
        # finite element discretization
-       FEM = {'order_disp'         : 1, # FEM degree for displacement field
-              'quad_degree'        : 2} # quadrature scheme degree
+       FEM = {"order_disp"         : 1, # FEM degree for displacement field
+              "quad_degree"        : 2} # quadrature scheme degree
        
        # time curves
        class TC:
@@ -172,17 +172,17 @@ individual time, finite element, and constitutive parameters.
                return load_max * np.sin(t)
 
        # materials
-       MAT = {'MAT1' : {'neohooke_dev' : {'mu' : 10.0},      # isochoric NeoHookean material
-                        'ogden_vol'    : {'kappa' : 1.0e3},  # volumetric Ogden material
-                        'inertia'      : {'rho0' : 1.0e-6}}} # density
+       MAT = {"MAT1" : {"neohooke_dev" : {"mu" : 10.0},      # isochoric NeoHookean material
+                        "ogden_vol"    : {"kappa" : 1.0e3},  # volumetric Ogden material
+                        "inertia"      : {"rho0" : 1.0e-6}}} # density
 
        # boundary conditions
-       BC = {'dirichlet' : [{'id' : [<SURF_IDs>],  # list of surfaces for Dirichlet BC
-                             'dir' : 'all',        # all directions
-                             'val' : 0.0}],        # set to zero
-             'neumann'   : [{'id' : [<SURF_IDs>],  # list of surfaces for Neumann BC
-                              'dir' : 'xyz_ref',   # in cartesian reference directions
-                              'curve' : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
+       BC = {"dirichlet" : [{"id" : [<SURF_IDs>], # list of surfaces for Dirichlet BC
+                             "dir" : "all",       # all directions
+                             "val" : 0.0}],       # set to zero
+             "neumann"   : [{"id" : [<SURF_IDs>], # list of surfaces for Neumann BC
+                             "dir" : "xyz_ref",   # in cartesian reference directions
+                             "curve" : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
 
        # problem setup
        problem = ambit.Ambit(io_params=IO, time_params=TP, solver_params=SP, fem_params=FP, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
