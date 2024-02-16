@@ -254,10 +254,10 @@ def main():
                                             {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz_ref', 'visc' : 0.005}] }
 
     # problem setup - exemplary for 3D-0D coupling of solid/fluid to flow0d
-    problem = ambit.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS_3D0D, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS_3D0D, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
 
     # problem setup for solid/fluid only: just pass parameters related to solid (fluid) instead of lists, so:
-    #problem = ambit.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
+    #problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

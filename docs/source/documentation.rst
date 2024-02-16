@@ -138,10 +138,10 @@ individual time, finite element, and constitutive parameters.
 
    def main():
 
-       # input/output
+       # Input/output
        IO = {"problem_type"        : "solid",                   # type of physics to solve
              "mesh_domain"         : "/path/mesh_d.xdmf",       # path to domain mesh
-             "mesh_boundary"       : "/path/mesh_b.xdmf",       # path to boundary mesh
+             "mesh_boundary"       : "/path/mesh_b.xdmf",       # ath to boundary mesh
              "meshfile_type"       : "HDF5",                    # encoding (HDF5 or ASCII)
              "write_results_every" : 1,                         # step frequency for output
              "output_path"         : "/path/...",               # path to output to
@@ -149,34 +149,34 @@ individual time, finite element, and constitutive parameters.
                                       "vonmises_cauchystress"], # results to output
              "simname"             : "my_results_name"}         # midfix of output name
        
-       # time discretization  
+       # Time discretization  
        TME = {"maxtime"            : 1.0,        # maximum simulation time
               "dt"                 : 0.01,       # time step size
               "timint"             : "genalpha", # time integration: Generalized-alpha
               "rho_inf_genalpha"   : 1.0}        # spectral radius of Gen-alpha scheme
        
-       # solver
+       # Solver
        SOL = {"solve_type"         : "direct", # direct linear solver
               "tol_res"            : 1.0e-8,   # residual tolerance
               "tol_inc"            : 1.0e-8}   # increment tolerance
        
-       # finite element discretization
+       # Finite element discretization
        FEM = {"order_disp"         : 1, # FEM degree for displacement field
               "quad_degree"        : 2} # quadrature scheme degree
        
-       # time curves
+       # Time curves
        class TC:
            # user defined load curves, to be used in boundary conditions (BC)
            def tc1(self, t):
                load_max = 5.0
                return load_max * np.sin(t)
 
-       # materials
+       # Materials
        MAT = {"MAT1" : {"neohooke_dev" : {"mu" : 10.0},      # isochoric NeoHookean material
                         "ogden_vol"    : {"kappa" : 1.0e3},  # volumetric Ogden material
                         "inertia"      : {"rho0" : 1.0e-6}}} # density
 
-       # boundary conditions
+       # Boundary conditions
        BC = {"dirichlet" : [{"id" : [<SURF_IDs>], # list of surfaces for Dirichlet BC
                              "dir" : "all",       # all directions
                              "val" : 0.0}],       # set to zero
@@ -184,10 +184,10 @@ individual time, finite element, and constitutive parameters.
                              "dir" : "xyz_ref",   # in cartesian reference directions
                              "curve" : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
 
-       # problem setup
-       problem = ambit.Ambit(io_params=IO, time_params=TP, solver_params=SP, fem_params=FP, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
+       # Problem setup
+       problem = ambit_fe.ambit_main.Ambit(io_params=IO, time_params=TP, solver_params=SP, fem_params=FP, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
 
-       # run: solve the problem
+       # Run: solve the problem
        problem.solve_problem()
        
    if __name__ == "__main__":
