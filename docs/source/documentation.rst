@@ -1848,7 +1848,8 @@ Channel flow around elastic flag
          \label{eq:flag_dbcs_func}
      \end{aligned}
 
-| with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}`.
+| with :math:`\bar{U}=10^{3}\;\mathrm{mm}/\mathrm{s}` (FSI2) and
+  :math:`\bar{U}=2\cdot 10^{3}\;\mathrm{mm}/\mathrm{s}` (FSI3).
 
 .. figure:: fig/channel_flag_setup.png
    :name: fig:channel_flag_setup
