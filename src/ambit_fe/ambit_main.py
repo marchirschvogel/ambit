@@ -265,7 +265,7 @@ class Ambit():
 
         elif problem_type == 'electrophysiology':
 
-            #raise RuntimeError("Electrophysiology not yet fully implemented!")
+            raise RuntimeError("Electrophysiology not yet fully implemented!")
 
             from .electrophysiology import electrophysiology_main
 
