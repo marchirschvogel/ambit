@@ -534,6 +534,8 @@ class schur_bgs_4x4(schur_3x3):
 
         self.Fty4 = PETSc.Vec().createMPI(size=(self.Ft.getLocalSize()[0],self.Ft.getSize()[0]), comm=self.comm)
 
+        self.xtmp = PETSc.Vec().createMPI(size=(self.P.getLocalSize()[0],self.P.getSize()[0]), comm=self.comm)
+
         # do we need this???
         self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
@@ -567,13 +569,13 @@ class schur_bgs_4x4(schur_3x3):
         self.z123.axpy(-1., self.Fty4)
 
         # 2) Schur solve A * y_123 = z_123
-        x.setValues(self.iset_012, self.z123.array)
-        x.assemble()
-        super().apply(pc, x, y)
+        self.xtmp.setValues(self.iset_012, self.z123.array)
+        self.xtmp.assemble()
+        super().apply(pc, self.xtmp, y)
 
         # restore/clean up
-        x.getSubVector(self.iset_012, subvec=self.x123)
-        x.getSubVector(self.iset[3], subvec=self.x4)
+        x.restoreSubVector(self.iset_012, subvec=self.x123)
+        x.restoreSubVector(self.iset[3], subvec=self.x4)
 
         # set into y vector
         y.setValues(self.iset[3], self.y4.array)
