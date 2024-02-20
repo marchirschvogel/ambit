@@ -567,14 +567,14 @@ class schur_bgs_4x4(schur_3x3):
         self.z123.axpy(-1., self.Fty4)
 
         # 2) Schur solve A * y_123 = z_123
-        super().apply(pc, self.z123, self.y123)
+        x.setValues(self.iset_012, self.z123.array)
+        super().apply(pc, x, y)
 
         # restore/clean up
         x.getSubVector(self.iset_012, subvec=self.x123)
         x.getSubVector(self.iset[3], subvec=self.x4)
 
         # set into y vector
-        y.setValues(self.iset_012, self.y123.array)
         y.setValues(self.iset[3], self.y4.array)
 
         y.assemble()

@@ -930,7 +930,7 @@ class IO_ale(IO):
 
     def write_output(self, pb, writemesh=False, N=1, t=0):
 
-        self.results_pre = ['counters']
+        self.results_pre = ['fibers','counters']
 
         if self.indicate_results_by=='time':
             indicator = t
