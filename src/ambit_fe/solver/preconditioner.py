@@ -568,6 +568,7 @@ class schur_bgs_4x4(schur_3x3):
 
         # 2) Schur solve A * y_123 = z_123
         x.setValues(self.iset_012, self.z123.array)
+        x.assemble()
         super().apply(pc, x, y)
 
         # restore/clean up
