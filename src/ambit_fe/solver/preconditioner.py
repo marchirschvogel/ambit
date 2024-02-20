@@ -505,7 +505,7 @@ class schur_3x3(block_precond):
 
 
 
-# BGS with inner schur_3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
+# symmetric BGS with inner schur_3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
 # influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
 class schur_bgs_4x4(schur_3x3):
 
@@ -524,15 +524,18 @@ class schur_bgs_4x4(schur_3x3):
         self.iset_012.sort()
         # get additional offdiagonal block
         self.Ft = self.P.createSubMatrix(self.iset_012,self.iset[3])
+        self.F  = self.P.createSubMatrix(self.iset[3],self.iset_012)
 
         self.x4 = self.G.createVecLeft()
         self.y4 = self.G.createVecLeft()
+        self.z4 = self.G.createVecLeft()
 
         self.x123 = self.Ft.createVecLeft()
         self.y123 = self.Ft.createVecLeft()
         self.z123 = self.Ft.createVecLeft()
 
         self.Fty4 = PETSc.Vec().createMPI(size=(self.Ft.getLocalSize()[0],self.Ft.getSize()[0]), comm=self.comm)
+        self.Fy123 = PETSc.Vec().createMPI(size=(self.F.getLocalSize()[0],self.F.getSize()[0]), comm=self.comm)
 
         self.xtmp = PETSc.Vec().createMPI(size=(self.P.getLocalSize()[0],self.P.getSize()[0]), comm=self.comm)
 
@@ -547,6 +550,7 @@ class schur_bgs_4x4(schur_3x3):
 
         self.P.createSubMatrix(self.iset[3],self.iset[3], submat=self.G)
         self.P.createSubMatrix(self.iset_012,self.iset[3], submat=self.Ft)
+        self.P.createSubMatrix(self.iset[3],self.iset_012, submat=self.F)
 
         # operator values have changed - do we need to re-set it?
         self.ksp_fields[3].setOperators(self.G)
@@ -573,7 +577,19 @@ class schur_bgs_4x4(schur_3x3):
         self.xtmp.assemble()
         super().apply(pc, self.xtmp, y)
 
+        y.getSubVector(self.iset_012, subvec=self.y123)
+
+        self.F.mult(self.y123, self.Fy123)
+
+        # compute z4 = x4 - self.Fy123
+        self.z4.axpby(1., 0., self.x4)
+        self.z4.axpy(-1., self.Fy123)
+
+        # 3) solve G * y_4 = z_4
+        self.ksp_fields[3].solve(self.z4, self.y4)
+
         # restore/clean up
+        y.restoreSubVector(self.iset_012, subvec=self.y123)
         x.restoreSubVector(self.iset_012, subvec=self.x123)
         x.restoreSubVector(self.iset[3], subvec=self.x4)
 
