@@ -520,6 +520,7 @@ class schur_bgs_4x4(schur_3x3):
         # create index set encompassing the first 3 blocks
         self.iset_012 = self.iset[0].expand(self.iset[1])
         self.iset_012 = self.iset_012.expand(self.iset[2])
+        self.iset_012.sort()
         # get additional offdiagonal blocks
         self.Ft = self.P.createSubMatrix(self.iset_012,self.iset[3]) # needed?
         self.F  = self.P.createSubMatrix(self.iset[3],self.iset_012)
