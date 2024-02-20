@@ -506,6 +506,7 @@ class schur_3x3(block_precond):
 
 
 # BGS with inner schur_3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
+# influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
 class schur_bgs_4x4(schur_3x3):
 
     def check_field_size(self):
@@ -521,17 +522,17 @@ class schur_bgs_4x4(schur_3x3):
         self.iset_012 = self.iset[0].expand(self.iset[1])
         self.iset_012 = self.iset_012.expand(self.iset[2])
         self.iset_012.sort()
-        # get additional offdiagonal blocks
-        self.Ft = self.P.createSubMatrix(self.iset_012,self.iset[3]) # needed?
-        self.F  = self.P.createSubMatrix(self.iset[3],self.iset_012)
+        # get additional offdiagonal block
+        self.Ft = self.P.createSubMatrix(self.iset_012,self.iset[3])
 
         self.x4 = self.G.createVecLeft()
         self.y4 = self.G.createVecLeft()
-        self.z4 = self.G.createVecLeft()
 
-        self.y123 = self.F.createVecRight()
+        self.x123 = self.Ft.createVecLeft()
+        self.y123 = self.Ft.createVecLeft()
+        self.z123 = self.Ft.createVecLeft()
 
-        self.Fy123 = PETSc.Vec().createMPI(size=(self.F.getLocalSize()[0],self.F.getSize()[0]), comm=self.comm)
+        self.Fty4 = PETSc.Vec().createMPI(size=(self.Ft.getLocalSize()[0],self.Ft.getSize()[0]), comm=self.comm)
 
         # do we need this???
         self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
@@ -543,7 +544,7 @@ class schur_bgs_4x4(schur_3x3):
         super().setUp(pc)
 
         self.P.createSubMatrix(self.iset[3],self.iset[3], submat=self.G)
-        self.P.createSubMatrix(self.iset[3],self.iset_012, submat=self.F)
+        self.P.createSubMatrix(self.iset_012,self.iset[3], submat=self.Ft)
 
         # operator values have changed - do we need to re-set it?
         self.ksp_fields[3].setOperators(self.G)
@@ -552,31 +553,31 @@ class schur_bgs_4x4(schur_3x3):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
 
-        # Schur 3x3 solve
-        super().apply(pc,x,y)
-
-        # get y123 from solved state y
-        y.getSubVector(self.iset_012, subvec=self.y123)
-        self.F.mult(self.y123, self.Fy123)
-        y.restoreSubVector(self.iset_012, subvec=self.y123)
-
+        # get subvectors
         x.getSubVector(self.iset[3], subvec=self.x4)
+        x.getSubVector(self.iset_012, subvec=self.x123)
 
-        # compute z4 = x4 - self.Fy123
-        self.z4.axpby(1., 0., self.x4)
-        self.z4.axpy(-1., self.Fy123)
+        # 1) solve G * y_4 = x_4
+        self.ksp_fields[3].solve(self.x4, self.y4)
 
-        # solve G * y_4 = z_4
-        self.ksp_fields[3].solve(self.z4, self.y4)
+        self.Ft.mult(self.y4, self.Fty4)
+
+        # compute z123 = x123 - self.Fty4
+        self.z123.axpby(1., 0., self.x123)
+        self.z123.axpy(-1., self.Fty4)
+
+        # 2) Schur solve A * y_123 = z_123
+        super().apply(pc, self.z123, self.y123)
 
         # restore/clean up
-        x.restoreSubVector(self.iset[3], subvec=self.x4)
+        x.getSubVector(self.iset_012, subvec=self.x123)
+        x.getSubVector(self.iset[3], subvec=self.x4)
 
         # set into y vector
+        y.setValues(self.iset_012, self.y123.array)
         y.setValues(self.iset[3], self.y4.array)
 
         y.assemble()
-
 
 
 # Schur complement preconditioner replacing the last solve with a diag(A)^{-1} update
