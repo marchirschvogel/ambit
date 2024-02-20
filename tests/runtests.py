@@ -82,7 +82,7 @@ if category=='fsi' or category=='all':
     if branch=='mixed':
         errs['test_fsi_taylorhood_artseg 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fsi_taylorhood_artseg.py'])
         errs['test_fsi_taylorhood_artseg 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_fsi_taylorhood_artseg.py'])
-        
+
         errs['test_fsi_p1p1_stab_artseg 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
         errs['test_fsi_p1p1_stab_artseg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
         errs['test_fsi_p1p1_stab_artseg 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py', str(4)])
@@ -150,7 +150,7 @@ if category=='frsi' or category=='fluid_ale' or category=='all':
     errs['test_frsi_artseg_modepartitionunity 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_artseg_modepartitionunity.py'])
     errs['test_frsi_artseg_modepartitionunity 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_artseg_modepartitionunity.py', str(2)])
 
-    errs['test_frsi_artseg_prefile_schur4x4 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_frsi_artseg_prefile_schur4x4.py'])
+    errs['test_frsi_artseg_prefile_schurbgs4x4 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_frsi_artseg_prefile_schurbgs4x4.py'])
 
 if category=='ale' or category=='all':
     errs['test_ale_linelast 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_ale_linelast.py'])

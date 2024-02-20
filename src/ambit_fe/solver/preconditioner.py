@@ -505,8 +505,8 @@ class schur_3x3(block_precond):
 
 
 
-# schur_3x3 with a decoupled solve on the 4th block (tailored towards FrSI, where the 4th block is the ALE problem)
-class schur_4x4(schur_3x3):
+# BGS with inner schur_3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
+class schur_bgs_4x4(schur_3x3):
 
     def check_field_size(self):
         assert(self.nfields==4)
@@ -515,12 +515,22 @@ class schur_4x4(schur_3x3):
     def init_mat_vec(self, pc):
         opmats = super().init_mat_vec(pc)
 
-        self.G = self.P.createSubMatrix(self.iset[3],self.iset[3])
+        self.G  = self.P.createSubMatrix(self.iset[3],self.iset[3])
+
+        # create index set encompassing the first 3 blocks
+        self.iset_012 = self.iset[0].expand(self.iset[1])
+        self.iset_012 = self.iset_012.expand(self.iset[2])
+        # get additional offdiagonal blocks
+        self.Ft = self.P.createSubMatrix(self.iset_012,self.iset[3]) # needed?
+        self.F  = self.P.createSubMatrix(self.iset[3],self.iset_012)
 
         self.x4 = self.G.createVecLeft()
         self.y4 = self.G.createVecLeft()
+        self.z4 = self.G.createVecLeft()
 
-        self.arr_y4 = np.zeros(self.y4.getLocalSize())
+        self.y123 = self.F.createVecRight()
+
+        self.Fy123 = PETSc.Vec().createMPI(size=(self.F.getLocalSize()[0],self.F.getSize()[0]), comm=self.comm)
 
         # do we need this???
         self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
@@ -532,6 +542,7 @@ class schur_4x4(schur_3x3):
         super().setUp(pc)
 
         self.P.createSubMatrix(self.iset[3],self.iset[3], submat=self.G)
+        self.P.createSubMatrix(self.iset[3],self.iset_012, submat=self.F)
 
         # operator values have changed - do we need to re-set it?
         self.ksp_fields[3].setOperators(self.G)
@@ -539,12 +550,23 @@ class schur_4x4(schur_3x3):
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
+
+        # Schur 3x3 solve
         super().apply(pc,x,y)
+
+        # get y123 from solved state y
+        y.getSubVector(self.iset_012, subvec=self.y123)
+        self.F.mult(self.y123, self.Fy123)
+        y.restoreSubVector(self.iset_012, subvec=self.y123)
 
         x.getSubVector(self.iset[3], subvec=self.x4)
 
-        # solve G * y_4 = x_4
-        self.ksp_fields[3].solve(self.x4, self.y4)
+        # compute z4 = x4 - self.Fy123
+        self.z4.axpby(1., 0., self.x4)
+        self.z4.axpy(-1., self.Fy123)
+
+        # solve G * y_4 = z_4
+        self.ksp_fields[3].solve(self.z4, self.y4)
 
         # restore/clean up
         x.restoreSubVector(self.iset[3], subvec=self.x4)

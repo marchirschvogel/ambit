@@ -48,7 +48,7 @@ def main():
                             'iterative_solver'      : 'gmres', # OPTIONAL: type of iterative solver, cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html (default: 'gmres')
                             'precond_fields'        : [{'prec':'amg','solve':'preonly'}, {'prec':'direct'}], # OPTIONAL: field-specific preconditioners (dict list has to have length of fields) (default: [])
                             'schur_block_scaling'   : {'type' : 'diag',' val' : 1.0}, # OPTIONAL: scaling type for approximate Schur complement (for schur preconditioners): type can be 'diag', 'rowsum', 'none' (default: 'diag')
-                            'block_precond'         : 'fieldsplit', # OPTIONAL: block preconditioner option: 'bgs2x2', 'jacobi2x2', 'simple2x2', 'schur2x2', 'schur3x3', 'schur4x4', 'fieldsplit' (PETSc split implementation) (default: 'fieldsplit')
+                            'block_precond'         : 'fieldsplit', # OPTIONAL: block preconditioner option: 'bgs2x2', 'jacobi2x2', 'simple2x2', 'schur2x2', 'schur3x3', 'schurbgs4x4', 'fieldsplit' (PETSc split implementation) (default: 'fieldsplit')
                             'fieldsplit_type'       : 'jacobi', # OPTIONAL: PETSc fieldsplit block preconditioner type: 'jacobi', 'gauss_seidel', 'gauss_seidel_sym', 'schur' (default: 'jacobi')
                             'tol_lin_rel'           : 1.0e-5, # OPTIONAL: relative linear solver tolerance (default: 1.0e-5)
                             'tol_lin_abs'           : 1.0e-50, # OPTIONAL: absolute linear solver tolerance (default: 1.0e-50)

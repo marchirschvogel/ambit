@@ -2,7 +2,7 @@
 
 """
 FrSI test case of an axially clamped, prestressed arterial segment
-- iterative schur4x4 solution
+- iterative schurbgs4x4 solution
 """
 
 import ambit_fe
@@ -39,7 +39,7 @@ def test_main():
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',
-                            'block_precond'         : 'schur4x4',
+                            'block_precond'         : 'schurbgs4x4',
                             'precond_fields'        : [{'prec':'amg'}, {'prec':'amg'}, {'prec':'direct'}, {'prec':'amg'}], # fluid-v, fluid-p, fluid-red.v, ale-d
                             'tol_lin_rel'           : 1.0e-5,
                             'tol_lin_abs'           : 1.0e-30,
