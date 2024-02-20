@@ -307,7 +307,7 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform_ale(self.var_v, var_p=self.var_p_, n0=self.io.n0, formulation=self.fluid_formulation)
 
         # read in fiber data - for reduced solid (FrSI)
-        if bool(self.io.fiber_data) and self.problem_type=='fluid_ale': # only for FrSI problem
+        if bool(self.io.fiber_data) and (self.problem_type=='fluid_ale' or self.problem_type=='fluid_ale_flow0d'): # only for FrSI problem
 
             self.fibarray = ['circ']
             if len(self.io.fiber_data)>1: self.fibarray.append('long')
@@ -1044,7 +1044,7 @@ class FluidmechanicsProblem(problem_base):
     def write_output_pre(self):
 
         if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
-            for i in range(len(fibarray)):
+            for i in range(len(self.fibarray)):
                 fib_proj = project(self.fib_func[i], self.V_v, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm, entity_maps=self.io.entity_maps)
                 self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+self.fibarray[i])
 

@@ -246,7 +246,7 @@ class variationalform_base:
             if params['active_stress']['dir']=='cl':
                 S += tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
             if params['active_stress']['dir']=='iso':
-                S += tau * I
+                S += tau * self.I
 
         # 1st PK stress P = FS
         P = Fmod * S
