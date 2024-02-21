@@ -170,6 +170,7 @@ class schur_2x2(block_precond):
         elif self.schur_block_scaling[0]['type']=='rowsum':
             self.A.getRowSum(result=self.adinv_vec)
             self.adinv_vec.abs()
+            self.adinv_vec.reciprocal()
         elif self.schur_block_scaling[0]['type']=='none':
             self.adinv_vec.set(1.0)
         else:
