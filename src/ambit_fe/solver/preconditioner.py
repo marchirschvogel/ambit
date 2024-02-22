@@ -30,9 +30,11 @@ class block_precond():
         self.comm = comm
         # extra level of printing
         self.printenh = printenh
+        # parameters
+        self.solparams = solparams
 
         # type of scaling for approximation of Schur complement
-        try: schur_block_scaling = solparams['schur_block_scaling']
+        try: schur_block_scaling = self.solparams['schur_block_scaling']
         except: schur_block_scaling = [{'type' : 'diag', 'val' : 1.0}]*2
 
         if isinstance(schur_block_scaling, list):
@@ -84,7 +86,7 @@ class block_precond():
 
             # set operators and setup field prec
             self.ksp_fields[n].setOperators(operator_mats[n])
-            self.ksp_fields[n].getPC().setUp()
+            #self.ksp_fields[n].getPC().setUp() # seems to break the solver when a direct prec is used! Needed???!
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -508,7 +510,7 @@ class schur_3x3(block_precond):
 
 # symmetric BGS with inner schur_3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
 # influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
-class schur_bgs_4x4(schur_3x3):
+class schur_bgssym_4x4(schur_3x3):
 
     def check_field_size(self):
         assert(self.nfields==4)
@@ -591,6 +593,48 @@ class schur_bgs_4x4(schur_3x3):
 
         # restore/clean up
         y.restoreSubVector(self.iset_012, subvec=self.y123)
+        x.restoreSubVector(self.iset_012, subvec=self.x123)
+        x.restoreSubVector(self.iset[3], subvec=self.x4)
+
+        # set into y vector
+        y.setValues(self.iset[3], self.y4.array)
+
+        y.assemble()
+
+
+class schur_bgs_4x4(schur_bgssym_4x4):
+
+    def setUp(self, pc):
+        super().setUp(pc)
+
+        self.P.createSubMatrix(self.iset[3],self.iset[3], submat=self.G)
+        self.P.createSubMatrix(self.iset_012,self.iset[3], submat=self.Ft)
+
+        # operator values have changed - do we need to re-set it?
+        self.ksp_fields[3].setOperators(self.G)
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+
+        # get subvectors
+        x.getSubVector(self.iset[3], subvec=self.x4)
+        x.getSubVector(self.iset_012, subvec=self.x123)
+
+        # 1) solve G * y_4 = x_4
+        self.ksp_fields[3].solve(self.x4, self.y4)
+
+        self.Ft.mult(self.y4, self.Fty4)
+
+        # compute z123 = x123 - self.Fty4
+        self.z123.axpby(1., 0., self.x123)
+        self.z123.axpy(-1., self.Fty4)
+
+        # 2) Schur solve A * y_123 = z_123
+        self.xtmp.setValues(self.iset_012, self.z123.array)
+        self.xtmp.assemble()
+        schur_3x3.apply(self, pc, self.xtmp, y)
+
+        # restore/clean up
         x.restoreSubVector(self.iset_012, subvec=self.x123)
         x.restoreSubVector(self.iset[3], subvec=self.x4)
 

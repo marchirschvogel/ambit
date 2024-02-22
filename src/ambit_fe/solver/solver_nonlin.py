@@ -460,6 +460,12 @@ class solver_nonlinear:
                         bj = preconditioner.schur_bgs_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
+                    elif self.block_precond[npr] == 'schurbgssym4x4':
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.schur_bgssym_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
                     elif self.block_precond[npr] == 'bgs2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
