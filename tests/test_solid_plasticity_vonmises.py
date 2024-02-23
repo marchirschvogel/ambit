@@ -50,7 +50,7 @@ def main():
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    class time_curves():
+    class time_curves:
 
         def tc1(self, t):
             umax = -0.25

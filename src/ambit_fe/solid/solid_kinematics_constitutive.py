@@ -206,6 +206,11 @@ class constitutive:
             tau_a_ = ivar["tau_a"]
             return self.mat.active_fiber(tau_a_,self.kin.fib_funcs[0])
 
+        elif matlaw == 'active_crossfiber':
+
+            tau_a_ = ivar["tau_a"]
+            return self.mat.active_crossfiber(tau_a_,self.kin.fib_funcs[0])
+
         elif matlaw == 'active_iso':
 
             tau_a_ = ivar["tau_a"]

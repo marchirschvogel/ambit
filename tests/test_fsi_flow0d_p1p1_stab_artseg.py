@@ -96,8 +96,8 @@ def test_main():
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    # some examples... up to 9 possible (tc1 until tc9 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
-    class time_curves():
+    # some examples... up to 20 possible (tc1 until tc20 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
+    class time_curves:
 
         def tc1(self, t):
             t_ramp = 2.0

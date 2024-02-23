@@ -274,6 +274,13 @@ class materiallaw:
         return S, None
 
 
+    def active_crossfiber(self, tau, f0):
+
+        S = tau * (self.I - ufl.outer(f0,f0))
+
+        return S, None
+
+
     def active_iso(self, tau):
 
         S = tau * self.I
@@ -409,7 +416,11 @@ class activestress_activation:
         # Diss Hirschvogel eq. 2.107
         # TeX: g(\lambda_{\mathrm{myo}}) = \begin{cases} a_{\mathrm{min}}, & \lambda_{\mathrm{myo}} \leq \hat{\lambda}_{\mathrm{myo}}^{\mathrm{thres,lo}}, \\ a_{\mathrm{min}}+\frac{1}{2}\left(a_{\mathrm{max}}-a_{\mathrm{min}}\right)\left(1-\cos \frac{\pi(\lambda_{\mathrm{myo}}-\hat{\lambda}_{\mathrm{myo}}^{\mathrm{thres,lo}})}{\hat{\lambda}_{\mathrm{myo}}^{\mathrm{max,lo}}-\hat{\lambda}_{\mathrm{myo}}^{\mathrm{thres,lo}}}\right), &  \hat{\lambda}_{\mathrm{myo}}^{\mathrm{thres,lo}} \leq \lambda_{\mathrm{myo}}  \leq \hat{\lambda}_{\mathrm{myo}}^{\mathrm{max,lo}}, \\ a_{\mathrm{max}}, &  \hat{\lambda}_{\mathrm{myo}}^{\mathrm{max,lo}} \leq \lambda_{\mathrm{myo}} \leq \hat{\lambda}_{\mathrm{myo}}^{\mathrm{thres,hi}}, \\ a_{\mathrm{min}}+\frac{1}{2}\left(a_{\mathrm{max}}-a_{\mathrm{min}}\right)\left(1-\cos \frac{\pi(\lambda_{\mathrm{myo}}-\hat{\lambda}_{\mathrm{myo}}^{\mathrm{max,hi}})}{\hat{\lambda}_{\mathrm{myo}}^{\mathrm{max,hi}}-\hat{\lambda}_{\mathrm{myo}}^{\mathrm{thres,hi}}}\right), & \hat{\lambda}_{\mathrm{myo}}^{\mathrm{thres,hi}} \leq \lambda_{\mathrm{myo}} \leq \hat{\lambda}_{\mathrm{myo}}^{\mathrm{max,hi}}, \\ a_{\mathrm{min}}, & \lambda_{\mathrm{myo}} \geq \hat{\lambda}_{\mathrm{myo}}^{\mathrm{max,hi}} \end{cases}
 
-        return ufl.conditional( ufl.le(lam,lam_threslo), amp_min, ufl.conditional( ufl.And(ufl.ge(lam,lam_threslo),ufl.le(lam,lam_maxlo)), amp_min + 0.5*(amp_max-amp_min)*(1.-ufl.cos(ufl.pi*(lam-lam_threslo)/(lam_maxlo-lam_threslo))), ufl.conditional( ufl.And(ufl.ge(lam,lam_maxlo),ufl.le(lam,lam_threshi)), amp_max, ufl.conditional( ufl.And(ufl.ge(lam,lam_threshi),ufl.le(lam,lam_maxhi)), amp_min + 0.5*(amp_max-amp_min)*(1.-ufl.cos(ufl.pi*(lam-lam_maxhi)/(lam_maxhi-lam_threshi))), ufl.conditional( ufl.ge(lam,lam_maxhi), amp_min, ufl.as_ufl(0)) ) ) ))
+        return ufl.conditional( ufl.le(lam,lam_threslo), amp_min, \
+               ufl.conditional( ufl.And(ufl.ge(lam,lam_threslo),ufl.le(lam,lam_maxlo)), amp_min + 0.5*(amp_max-amp_min)*(1.-ufl.cos(ufl.pi*(lam-lam_threslo)/(lam_maxlo-lam_threslo))), \
+               ufl.conditional( ufl.And(ufl.ge(lam,lam_maxlo),ufl.le(lam,lam_threshi)), amp_max, \
+               ufl.conditional( ufl.And(ufl.ge(lam,lam_threshi),ufl.le(lam,lam_maxhi)), amp_min + 0.5*(amp_max-amp_min)*(1.-ufl.cos(ufl.pi*(lam-lam_maxhi)/(lam_maxhi-lam_threshi))), \
+               ufl.conditional( ufl.ge(lam,lam_maxhi), amp_min, ufl.as_ufl(0)) ) ) ))
 
 
     # Frank Starling amplification factor (Diss Hirschvogel eq. 2.106, 3.29)

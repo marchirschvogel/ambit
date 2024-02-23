@@ -143,7 +143,7 @@ def main():
     """
     Time curves, e.g. any prescribed time-controlled/-varying loads or functions
     """
-    class time_curves():
+    class time_curves:
 
         # the activation curve for the contraction of the 3D heart ventricles
         def tc1(self, t):

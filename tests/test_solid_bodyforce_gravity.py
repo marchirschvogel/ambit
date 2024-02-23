@@ -51,7 +51,7 @@ def test_main():
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    class time_curves():
+    class time_curves:
 
         def tc1(self, t):
             return MATERIALS['MAT1']['inertia']['rho0'] * 9.81 # 9.81 m/s^2

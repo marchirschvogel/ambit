@@ -144,6 +144,8 @@ class Ambit():
 
         elif problem_type == 'solid_flow0d_periodicref':
 
+            raise RuntimeError("Solid-flow0d periodic ref problem currently borken. To be fixed soon!")
+
             from .coupling import solid_flow0d_main
             from .coupling import solid_flow0d_periodicref_main
 
@@ -168,6 +170,8 @@ class Ambit():
             self.ms = fluid_flow0d_main.FluidmechanicsFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == 'solid_flow0d_multiscale_gandr':
+
+            raise RuntimeError("Solid-flow0d multiscale G&R currently borken. To be fixed soon!")
 
             from .multiscale import solid_flow0d_growthremodel_main
 

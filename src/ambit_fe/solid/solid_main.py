@@ -242,50 +242,36 @@ class SolidmechanicsProblem(problem_base):
         self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
 
         self.localsolve, growth_dir = False, None
-        self.actstress, self.act_curve, self.act_curve_old = [], [], []
+        self.actstress, self.act_curve, self.act_curve_old, self.activemodel = [], [], [], [None]*self.num_domains
         for n in range(self.num_domains):
 
             if 'holzapfelogden_dev' in self.constitutive_models['MAT'+str(n+1)].keys() or 'guccione_dev' in self.constitutive_models['MAT'+str(n+1)].keys():
                 assert(len(self.io.fiber_data)>1)
 
-            if 'active_fiber' in self.constitutive_models['MAT'+str(n+1)].keys():
-                assert(bool(self.io.fiber_data))
+            if 'active_fiber' in self.constitutive_models['MAT'+str(n+1)].keys() or 'active_crossfiber' in self.constitutive_models['MAT'+str(n+1)].keys() or 'active_iso' in self.constitutive_models['MAT'+str(n+1)].keys():
+                if 'active_fiber' in self.constitutive_models['MAT'+str(n+1)].keys(): self.activemodel[n] = 'active_fiber'
+                if 'active_crossfiber' in self.constitutive_models['MAT'+str(n+1)].keys(): self.activemodel[n] = 'active_crossfiber'
+                if 'active_iso' in self.constitutive_models['MAT'+str(n+1)].keys(): self.activemodel[n] = 'active_iso'
+                if self.activemodel[n] == 'active_fiber' or self.activemodel[n] == 'active_crossfiber': assert(bool(self.io.fiber_data))
                 self.mat_active_stress[n], self.have_active_stress = True, True
                 # if one mat has a prescribed active stress, all have to be!
-                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
+                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
                     self.active_stress_trig = 'prescribed'
-                if 'prescribed_from_file' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
+                if 'prescribed_from_file' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
                     self.active_stress_trig, self.actpid = 'prescribed_from_file', n+1 # file acts for all active stress models in all domains!
-                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
+                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
                     self.active_stress_trig = 'prescribed_multiscale'
                 if self.active_stress_trig == 'ode':
                     self.act_curve.append( fem.Function(self.Vd_scalar) )
-                    self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['activation_curve'])})
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_fiber'], self.act_curve[-1], x_ref=self.x_ref_d))
+                    self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]], self.act_curve[-1], x_ref=self.x_ref_d))
                     if self.actstress[-1].frankstarling:
                         self.have_frank_starling = True
                         self.act_curve_old.append( fem.Function(self.Vd_scalar) )
-                        self.ti.funcs_to_update_old.append({self.act_curve_old[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['activation_curve'])})
+                        self.ti.funcs_to_update_old.append({self.act_curve_old[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
                         self.actstress[-1].act_curve_old = self.act_curve_old[-1]
                 if self.active_stress_trig == 'prescribed':
-                    self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_fiber']['prescribed_curve'])})
-                self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
-
-            if 'active_iso' in self.constitutive_models['MAT'+str(n+1)].keys():
-                self.mat_active_stress[n], self.have_active_stress = True, True
-                # if one mat has a prescribed active stress, all have to be!
-                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)]['active_iso']:
-                    self.active_stress_trig = 'prescribed'
-                if 'prescribed_from_file' in self.constitutive_models['MAT'+str(n+1)]['active_fiber']:
-                    self.active_stress_trig, self.actpid = 'prescribed_from_file', n+1 # file acts for all active stress models in all domains!
-                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)]['active_iso']:
-                    self.active_stress_trig = 'prescribed_multiscale'
-                if self.active_stress_trig == 'ode':
-                    self.act_curve.append( fem.Function(self.Vd_scalar) )
-                    self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['activation_curve'])})
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)]['active_iso'], self.act_curve[-1], x_ref=self.x_ref_d))
-                if self.active_stress_trig == 'prescribed':
-                    self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['active_iso']['prescribed_curve'])})
+                    self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['prescribed_curve'])})
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
             if 'growth' in self.constitutive_models['MAT'+str(n+1)].keys():
@@ -1044,7 +1030,7 @@ class SolidmechanicsProblem(problem_base):
                 if sc != 1.0: func.vector.scale(sc)
 
         if self.active_stress_trig == 'prescribed_from_file':
-            self.io.readfunction(self.tau_a, self.constitutive_models['MAT'+str(self.actpid)]['active_fiber']['prescribed_from_file'].replace('*',str(N)))
+            self.io.readfunction(self.tau_a, self.constitutive_models['MAT'+str(self.actpid)][self.activemodel[self.actpid-1]]['prescribed_from_file'].replace('*',str(N)))
 
 
     def evaluate_post_solve(self, t, N):

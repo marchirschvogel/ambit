@@ -69,7 +69,7 @@ def main():
     """
     Time curves, e.g. any prescribed time-controlled/-varying loads or functions
     """
-    class time_curves():
+    class time_curves:
 
         def tc1(self, t): # curve controlling transversal load, here linearly ramped from 0 to load
             load = 1e7 # Pa

@@ -136,7 +136,7 @@ def main():
     """
     Time curves, e.g. any prescribed time-controlled/-varying loads or functions
     """
-    class time_curves():
+    class time_curves:
         
         def tc1(self, t):
             vmax = 1e3 # mm/s

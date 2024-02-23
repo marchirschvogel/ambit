@@ -62,7 +62,7 @@ def test_main():
 
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    class time_curves():
+    class time_curves:
         
         def tc1(self, t):
             return -0.001*np.sin(2.*np.pi*t/TIME_PARAMS_FLUID['maxtime'])

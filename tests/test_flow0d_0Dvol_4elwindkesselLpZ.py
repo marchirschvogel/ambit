@@ -39,7 +39,7 @@ def test_main():
 
 
     # define your time curves here (syntax: tcX refers to curve X)
-    class time_curves():
+    class time_curves:
 
         def tc1(self, t):
             return 0.5*(1.-np.cos(2.*np.pi*(t)/0.1)) + 1.0

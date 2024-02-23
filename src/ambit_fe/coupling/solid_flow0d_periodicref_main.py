@@ -9,12 +9,12 @@
 import time, sys
 from petsc4py import PETSc
 
-from ..solid_flow0d import SolidmechanicsFlow0DSolver
+from .solid_flow0d_main import SolidmechanicsFlow0DSolver
 
 
 class SolidmechanicsFlow0DPeriodicRefSolver():
 
-    def __init__(self, problem, solver_params_solid, solver_params_flow0d):
+    def __init__(self, problem, solver_params):
 
         self.pb = problem
 
@@ -22,7 +22,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         self.pb.noperiodicref = 0
 
         # initialize solver instance
-        self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params_solid, solver_params_flow0d)
+        self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params)
 
         # store prestress flag (because flag is set to False after one prestress run)
         self.prestress_initial = self.pb.pbs.prestress_initial

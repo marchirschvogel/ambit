@@ -67,7 +67,7 @@ def main():
 
 
     # define your time curves here (syntax: tcX refers to curve X)
-    class time_curves():
+    class time_curves:
 
         # the activation curves for the contraction of the 0D atria
         def tc1(self, t):
