@@ -310,9 +310,19 @@ class constitutive:
     def Cdot_v(self, Cdot_, theta_):
         return ufl.inv(self.F_g(theta_)) * Cdot_ * ufl.inv(self.F_g(theta_)).T
 
+    # elastic isotropic stretch: sqrt of first invariant (trace) of right Cauchy-Green tensor: tr(C)
+    def isostretch_e(self, C_, theta_):
+        return ufl.sqrt(ufl.inner(self.C_e(C_,theta_),self.I))
+
     # elastic fiber stretch
     def fibstretch_e(self, C_, theta_, fib_):
-        return ufl.sqrt(ufl.dot(ufl.dot(self.C_e(C_,theta_),fib_), fib_))
+        fof = ufl.outer(fib_,fib_)
+        return ufl.sqrt(ufl.inner(self.C_e(C_,theta_),fof))
+
+    # elastic cross fiber stretch
+    def crossfibstretch_e(self, C_, theta_, fib_):
+        fof = ufl.outer(fib_,fib_)
+        return ufl.sqrt(ufl.inner(self.C_e(C_,theta_),self.I-fof))
 
     # elastic determinant of deformation gradient
     def J_e(self, u_, theta_):
@@ -663,9 +673,21 @@ class kinematics:
         return 0.5*(self.I - ufl.inv(self.b(u_)))
 
 
+    # isotropic stretch: sqrt of first invariant (trace) of right Cauchy-Green tensor: tr(C)
+    def isostretch(self, u_):
+        return ufl.sqrt(ufl.inner(self.C(u_),self.I))
+
+
     # fiber stretch
     def fibstretch(self, u_, fib_):
-        return ufl.sqrt(ufl.dot(ufl.dot(self.C(u_),fib_), fib_))
+        fof = ufl.outer(fib_,fib_)
+        return ufl.sqrt(ufl.inner(self.C(u_),fof))
+
+
+    # cross fiber stretch
+    def crossfibstretch(self, u_, fib_):
+        fof = ufl.outer(fib_,fib_)
+        return ufl.sqrt(ufl.inner(self.C(u_),self.I-fof))
 
 
     # prestressing update (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010,

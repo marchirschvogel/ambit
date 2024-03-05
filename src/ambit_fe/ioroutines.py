@@ -227,9 +227,9 @@ class IO:
         outfile.close()
 
 
-    def write_restart(self, pb, N):
+    def write_restart(self, pb, N, force=False):
 
-        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+        if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
 
             self.writecheckpoint(pb, N)
 
@@ -1035,9 +1035,9 @@ class IO_fluid_ale(IO_fluid,IO_ale):
         IO_fluid.readcheckpoint(self, pb.pbf, N_rest)
         IO_ale.readcheckpoint(self, pb.pba, N_rest)
 
-    def write_restart(self, pb, N):
+    def write_restart(self, pb, N, force=False):
 
-        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+        if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
 
             IO_fluid.writecheckpoint(self, pb.pbf, N)
             IO_ale.writecheckpoint(self, pb.pba, N)
@@ -1076,9 +1076,9 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
                 raise ValueError("Unknown restart_io_type!")
 
 
-    def write_restart(self, pb, N):
+    def write_restart(self, pb, N, force=False):
 
-        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+        if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
 
             IO_solid.writecheckpoint(self, pb.pbs, N)
             IO_fluid.writecheckpoint(self, pb.pbf, N)

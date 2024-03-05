@@ -213,7 +213,16 @@ class solver_base():
 
     def solve_problem(self):
 
-        start = time.time()
+        # execute time loop
+        self.time_loop()
+
+        # destroy stuff
+        self.destroy()
+
+
+    def time_loop(self):
+
+        self.starttime = time.time()
 
         # any pre-solve that has to be done (e.g. prestress or consistent initial accelerations)
         self.solve_initial_state()
@@ -273,33 +282,40 @@ class solver_base():
             # update nonlinear and linear iteration counters
             self.update_counters(wt, t)
 
+            # set final step
+            self.Nfinal = N
+
             # check any abort criterion
             if self.pb.check_abort(t-t_off):
                 break
 
-        # destroy stuff
-        self.destroy()
+        # print final info
+        self.print_final()
 
-        utilities.print_status("Program complete. Time for computation: %.4f s (= %.2f min)\n" % ( time.time()-start, (time.time()-start)/60. ), self.pb.comm)
+
+    def print_final(self):
+
+        utilities.print_status("Program complete. Time for computation: %.4f s (= %.2f min)\n" % ( time.time()-self.starttime, (time.time()-self.starttime)/60. ), self.pb.comm)
 
         utilities.print_status("{:<55s}{:<1.4f}{:<2s}".format("Total solution time of all steps: ",self.wt," s"), self.pb.comm)
-        utilities.print_status("{:<55s}{:<1.4f}{:<2s}".format("Average solution time per time step: ",self.wt/N," s"), self.pb.comm)
+        utilities.print_status("{:<55s}{:<1.4f}{:<2s}".format("Average solution time per time step: ",self.wt/self.Nfinal," s"), self.pb.comm)
         utilities.print_status("{:<55s}{:<1.4f}{:<2s}".format("Maximum solution time of a time step: ",max(self.wt_)," s"), self.pb.comm)
         utilities.print_status(" ", self.pb.comm)
         utilities.print_status("{:<55s}{:<1d}".format("Total number of nonlinear iterations: ",self.ni), self.pb.comm)
-        utilities.print_status("{:<55s}{:<1.1f}".format("Average number of nonlinear iterations per time step: ",self.ni/N), self.pb.comm)
+        utilities.print_status("{:<55s}{:<1.1f}".format("Average number of nonlinear iterations per time step: ",self.ni/self.Nfinal), self.pb.comm)
         utilities.print_status("{:<55s}{:<1d}".format("Maximum number of nonlinear iterations in a time step: ",max(self.ni_)), self.pb.comm)
 
         if self.solnln.solvetype[0]=="iterative":
 
             utilities.print_status(" ", self.pb.comm)
             utilities.print_status("{:<55s}{:<1d}".format("Total number of linear iterations: ",self.li), self.pb.comm)
-            utilities.print_status("{:<55s}{:<1.1f}".format("Average number of linear iterations per time step: ",self.li/N), self.pb.comm)
+            utilities.print_status("{:<55s}{:<1.1f}".format("Average number of linear iterations per time step: ",self.li/self.Nfinal), self.pb.comm)
             utilities.print_status("{:<55s}{:<1d}".format("Maximum number of linear iterations in a time step: ",max(self.li_)), self.pb.comm)
             utilities.print_status("{:<55s}{:<1.1f}".format("Average number of linear iterations per solve: ",self.li/self.ni), self.pb.comm)
             utilities.print_status("{:<55s}{:<1d}".format("Maximum number of linear iterations in a solve: ",max(self.solnln.li_s)), self.pb.comm)
 
         utilities.print_status("-"*63, self.pb.comm)
+        self.reset_counters()
 
 
     def update_counters(self, wt, t):
@@ -327,6 +343,12 @@ class solver_base():
                 f.close()
 
 
+    def reset_counters(self):
+
+        self.wt, self.ni, self.li = 0., 0, 0
+        self.wt_, self.ni_, self.li_ = [], [], []
+
+
     def destroy(self):
 
         # destroy problem-specific stuff first
@@ -351,3 +373,5 @@ class solver_base():
 
         # destroy solver data structures
         self.solnln.destroy()
+        try: self.solverprestr.destroy()
+        except: pass

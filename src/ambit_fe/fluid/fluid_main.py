@@ -282,6 +282,8 @@ class FluidmechanicsProblem(problem_base):
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
+        if self.ti.eval_nonlin_terms=='midpoint': self.midp = True
+        else: self.midp = False
 
         # initialize kinematics_constitutive class
         self.ki = fluid_kinematics_constitutive.kinematics(self.dim, uf_pre=self.uf_pre)
@@ -415,13 +417,13 @@ class FluidmechanicsProblem(problem_base):
         w_neumann_old, w_body_old, w_robin_old, w_stabneumann_old, w_robin_valve_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_mid, w_body_mid, w_robin_mid, w_stabneumann_mid, w_robin_valve_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
-            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
+            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update)
-            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old)
-            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid)
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
+            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, self.io.bmeasures, F=self.alevar['Fale'])
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, self.io.bmeasures, F=self.alevar['Fale_old'])
@@ -484,13 +486,12 @@ class FluidmechanicsProblem(problem_base):
 
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial or self.prestress_initial_only:
-            self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
             # Stokes kinetic virtual power
             for n in range(self.num_domains):
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
             if 'neumann_prestress' in self.bc_dict.keys():
-                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
                 w_membrane_prestr, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
@@ -1056,7 +1057,7 @@ class FluidmechanicsProblem(problem_base):
     def evaluate_pre_solve(self, t, N, dt):
 
         # set time-dependent functions
-        self.ti.set_time_funcs(t, dt, self.ti.funcs_to_update, self.ti.funcs_to_update_vec, funcs_mid=self.ti.funcs_to_update_mid, funcs_vec_mid=self.ti.funcs_to_update_vec_mid)
+        self.ti.set_time_funcs(t, dt, midp=self.midp)
 
         # evaluate rate equations
         self.evaluate_rate_equations(t)
@@ -1114,9 +1115,9 @@ class FluidmechanicsProblem(problem_base):
         pass
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
-        self.io.write_restart(self, N)
+        self.io.write_restart(self, N, force=force)
 
 
     def check_abort(self, t):
@@ -1189,7 +1190,7 @@ class FluidmechanicsSolver(solver_base):
 
             tprestr = N * self.pb.prestress_dt
 
-            self.pb.ti.set_time_funcs(tprestr, self.pb.prestress_dt, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
+            self.pb.ti.set_time_funcs_pre(tprestr)
 
             self.solnln.newton(tprestr)
 

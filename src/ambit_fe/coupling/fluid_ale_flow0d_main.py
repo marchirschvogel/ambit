@@ -300,7 +300,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
     def read_restart(self, sname, N):
 
         # fluid-ALE + flow0d problem
-        if self.restart_step > 0:
+        if N > 0:
             self.io.readcheckpoint(self, N)
             self.simname += '_r'+str(N)
             # TODO: quick-fix - simname variables of single field problems need to be addressed, too
@@ -380,13 +380,13 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pba.induce_state_change()
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
-        self.io.write_restart(self, N)
+        self.io.write_restart(self, N, force=force)
 
-        self.pb0.write_restart(sname, N)
+        self.pb0.write_restart(sname, N, force=force)
 
-        if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
+        if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:
             lm_sq = allgather_vec(self.pbf0.LM, self.comm)
             if self.comm.rank == 0:
                 f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
@@ -445,6 +445,8 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             except: pass
             # initialize fluid mechanics solver
             self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, solver_params_prestr)
+        else:
+            self.solverprestr = None
 
 
     def solve_initial_state(self):
@@ -453,7 +455,6 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.destroy()
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:

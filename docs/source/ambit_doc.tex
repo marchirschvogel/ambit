@@ -368,14 +368,14 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 \begin{equation}
 \label{equation-deltaw-ext-robin}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} \left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A
+\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{R}}} \left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 \item generalized Robin condition in reference surface normal direction:
 \begin{equation}
 \label{equation-deltaw-ext-robin-n}
 \begin{aligned}
-\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{N}}} (\bs{n}_0 \otimes \bs{n}_0)\left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A
+\delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) &= -\int\limits_{\Gm_{0}^{\mathrm{R}}} (\bs{n}_0 \otimes \bs{n}_0)\left[k\,\bs{u} + c\,\bs{v}(\bs{u})\right] \cdot \delta\bs{u}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
@@ -405,6 +405,38 @@ r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0
 \label{equation-deltaw-p}
 \begin{aligned}
 \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) &= \int\limits_{\Om_{0}} (J(\bs{u}) - 1) \,\delta p \,\mathrm{d}V 
+\end{aligned}
+\end{equation}
+
+
+\textbf{Material models}\\
+-- hyperelastic material models
+\begin{equation}
+\begin{aligned}
+\bs{S} = 2\frac{\partial\mathit{\Psi}}{\partial \bs{C}}
+\end{aligned}
+\end{equation}
+
+- MAT \verb."neohooke_dev".\\
+
+\begin{equation}
+\begin{aligned}
+\mathit{\Psi} &= \frac{\mu}{2}\left(\bar{I}_C - 3\right)
+\end{aligned}
+\end{equation}
+
+
+- MAT \verb."holzapfelogden_dev".\\
+\begin{equation}
+\begin{aligned}
+\mathit{\Psi} &= \frac{a_0}{2b_0}\left(e^{b_0(\bar{I}_C - 3)} - 1\right) + \sum\limits_{i\in\{f,s\}}\frac{a_i}{2b_i}\left(e^{b_i(I_{4,i}-1)^2}-1\right) + \frac{a_{fs}}{2b_{fs}}\left(e^{b_{fs}I_{8}^2} - 1\right), \\ & I_{4,f} = \bs{f}_0 \cdot \bs{C}\bs{f}_0, \quad I_{4,s} = \bs{s}_0 \cdot \bs{C}\bs{s}_0, \quad I_8 = \bs{f}_0 \cdot \bs{C}\bs{s}_0
+\end{aligned}
+\end{equation}
+
+-- viscous material models
+\begin{equation}
+\begin{aligned}
+\bs{S} = 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}}{\partial \dot{\bs{C}}}
 \end{aligned}
 \end{equation}
 
@@ -1223,6 +1255,14 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{u};\delta\mathit{\Lambda}):= \left(\in
 \end{aligned}
 \end{equation}
 
+-- sub-solves: 0D model has to hold true in each nonlinear iteration $k$:
+\begin{equation}
+\label{equation-nonlin-lin-sys-0d}
+\begin{aligned}
+\left.\bs{\mathsf{r}}^{0\mathrm{D}}(\bs{\mathsf{\Lambda}})\right|_{k} = \bs{\mathsf{0}}, \qquad \rightsquigarrow \bs{\mathsf{K}}_{k}^{0\mathrm{D},j}\Delta\bs{\mathsf{q}}_{k}^{j+1} = -\bs{\mathsf{r}}_{k}^{0\mathrm{D},j}
+\end{aligned}
+\end{equation}
+
 \subsubsection{Fluid + 0D flow}\label{fluid-0d-flow}
 
 -- Example: Sec. \ref{fluid-0d-flow} \verb"demos/fluid_flow0d"\\
@@ -1411,6 +1451,25 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \end{aligned}
 \end{equation}
 
+
+\subsubsection{Fluid-reduced-Solid Interaction (FrSI)}\label{fluid-reduced-solid-interaction-frsi}
+
+
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{equation}
+\label{equation-nonlin-sys-frsi-0d}
+\begin{aligned}
+\ROP_{n+1} = \begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v}(\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}},\bs{\mathsf{p}},\LMZ,\bs{\mathsf{d}}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}},\bs{\mathsf{d}}) \\ \ROP_{\mathit{\Lambda}}(\LMZ,\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}},\bs{\mathsf{d}}) \\ \ROP_{d}(\bs{\mathsf{d}},\bs{\mathsf{V}}_{v}^{\Gm}\tilde{\bs{\mathsf{v}}}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\end{aligned}
+\end{equation}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
+\begin{equation}
+\label{equation-lin-sys-frsi-0d}
+\begin{aligned}
+\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vv}\bs{\mathsf{V}}_{v}^{\Gm} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vp} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{v\lmzi} & \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\bs{\mathsf{K}}_{vd} \\ \\ \bs{\mathsf{K}}_{pv}\bs{\mathsf{V}}_{v}^{\Gm} & \bs{\mathsf{K}}_{pp} & \zerom & \bs{\mathsf{K}}_{pd} \\ \\ \bs{\mathsf{K}}_{\lmzi v}\bs{\mathsf{V}}_{v}^{\Gm} & \zerom & \bs{\mathsf{K}}_{\lmzi \lmzi} & \bs{\mathsf{K}}_{\lmzi d} \\ \\ \bs{\mathsf{K}}_{dv}\bs{\mathsf{V}}_{v}^{\Gm}  & \zerom & \zerom & \bs{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\bs{\mathsf{v}}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\LMZ \\ \\ \Delta\bs{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \bs{\mathsf{V}}_{v}^{\Gm^\mathrm{T}}\ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\lmzi} \\ \\ \ROP_{d}\end{bmatrix}_{n+1}^{k}
+\end{aligned}
+\end{equation}
 
 
 \section{Demos}\label{demos}

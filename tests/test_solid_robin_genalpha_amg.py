@@ -62,18 +62,22 @@ def test_main():
                                    'inertia'           : {'rho0' : 1.0e-6}}}
 
 
-    # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    class time_curves:
+    class expression1:
+        def __init__(self):
+            self.t = 0.0
 
-        def tc1(self, t):
-            return 3.*t
+        def evaluate(self, x):
+            val = 3.*self.t
+            return ( np.full(x.shape[1], val),
+                     np.full(x.shape[1], 0.0),
+                     np.full(x.shape[1], 0.0) )
 
-    BC_DICT           = { 'neumann' : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [1,0,0]}],
+    BC_DICT           = { 'neumann' : [{'id' : [3], 'dir' : 'xyz_ref', 'expression' : expression1}],
                             'robin' : [{'type' : 'spring', 'id' : [1,2], 'dir' : 'normal_ref', 'stiff' : 5.0}] }
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT)
 
     # solve time-dependent problem
     problem.solve_problem()

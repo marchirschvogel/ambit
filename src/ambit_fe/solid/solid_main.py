@@ -236,6 +236,8 @@ class SolidmechanicsProblem(problem_base):
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
+        if self.ti.eval_nonlin_terms=='midpoint': self.midp = True
+        else: self.midp = False
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         self.have_active_stress, self.active_stress_trig, self.have_frank_starling, self.have_growth, self.have_plasticity = False, 'ode', False, False, False
@@ -424,13 +426,13 @@ class SolidmechanicsProblem(problem_base):
         w_neumann_old, w_body_old, w_robin_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_mid, w_body_mid, w_robin_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old)
-            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.us_mid,ext=True), funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
+            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.us_mid,ext=True), funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update)
-            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_old)
-            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_mid)
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
+            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.io.bmeasures, u_pre=self.u_pre)
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.io.bmeasures, u_pre=self.u_pre)
@@ -444,7 +446,6 @@ class SolidmechanicsProblem(problem_base):
         # plus no rate-dependent or inelastic constitutive models
         w_neumann_prestr, w_robin_prestr, self.deltaW_prestr_int = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial or self.prestress_initial_only:
-            self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
             # internal virtual work
             for n, M in enumerate(self.domain_ids):
                 self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.io.dx(M))
@@ -456,7 +457,7 @@ class SolidmechanicsProblem(problem_base):
                     if r['type'] == 'dashpot': r['visc'] = 0.
             bc_prestr = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki)
             if 'neumann_prestress' in bc_dict_prestr.keys():
-                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.funcs_to_update_pre, funcs_to_update_vec=self.funcs_to_update_vec_pre)
+                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'robin' in bc_dict_prestr.keys():
                 w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.io.bmeasures, u_pre=self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
@@ -626,9 +627,18 @@ class SolidmechanicsProblem(problem_base):
                 for n in range(self.num_domains):
 
                     if self.mat_active_stress[n] and self.actstress[na].frankstarling:
-                        # old fiber stretch (needed for Frank-Starling law)
-                        if self.mat_growth[n]: lam_fib_old = self.ma[n].fibstretch_e(self.ki.C(self.u_old), self.theta_old, self.fib_func[0])
-                        else:                  lam_fib_old = self.ki.fibstretch(self.u_old, self.fib_func[0])
+                        # old stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
+                        if self.activemodel[n]=='active_fiber':
+                            if self.mat_growth[n]: lam_fib_old = self.ma[n].fibstretch_e(self.ki.C(self.u_old), self.theta_old, self.fib_func[0])
+                            else:                  lam_fib_old = self.ki.fibstretch(self.u_old, self.fib_func[0])
+                        elif self.activemodel[n]=='active_crossfiber':
+                            if self.mat_growth[n]: lam_fib_old = self.ma[n].crossfibstretch_e(self.ki.C(self.u_old), self.theta_old, self.fib_func[0])
+                            else:                  lam_fib_old = self.ki.crossfibstretch(self.u_old, self.fib_func[0])
+                        elif self.activemodel[n]=='active_iso':
+                            if self.mat_growth[n]: lam_fib_old = self.ma[n].isostretch_e(self.ki.C(self.u_old), self.theta_old)
+                            else:                  lam_fib_old = self.ki.isostretch(self.u_old)
+                        else:
+                            raise ValueError("Unknown active model!")
 
                         self.amp_old_.append(self.actstress[na].amp(lam_fib_old, self.amp_old))
                         na+=1
@@ -639,10 +649,19 @@ class SolidmechanicsProblem(problem_base):
             for n in range(self.num_domains):
 
                 if self.mat_active_stress[n]:
-                    # fiber stretch (needed for Frank-Starling law)
+                    # stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
                     if self.actstress[na].frankstarling:
-                        if self.mat_growth[n]: lam_fib = self.ma[n].fibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
-                        else:                  lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
+                        if self.activemodel[n]=='active_fiber':
+                            if self.mat_growth[n]: lam_fib = self.ma[n].fibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
+                            else:                  lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
+                        elif self.activemodel[n]=='active_crossfiber':
+                            if self.mat_growth[n]: lam_fib = self.ma[n].crossfibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
+                            else:                  lam_fib = self.ki.crossfibstretch(self.u, self.fib_func[0])
+                        elif self.activemodel[n]=='active_iso':
+                            if self.mat_growth[n]: lam_fib = self.ma[n].isostretch_e(self.ki.C(self.u), self.theta)
+                            else:                  lam_fib = self.ki.isostretch(self.u)
+                        else:
+                            raise ValueError("Unknown active model!")
                     else:
                         lam_fib = ufl.as_ufl(1)
 
@@ -986,7 +1005,7 @@ class SolidmechanicsProblem(problem_base):
     def read_restart(self, sname, N):
 
         # read restart information
-        if self.restart_step > 0:
+        if N > 0:
             self.io.readcheckpoint(self, N)
             self.simname += '_r'+str(N)
 
@@ -1015,7 +1034,7 @@ class SolidmechanicsProblem(problem_base):
     def evaluate_pre_solve(self, t, N, dt):
 
         # set time-dependent functions
-        self.ti.set_time_funcs(t, dt, self.ti.funcs_to_update, self.ti.funcs_to_update_vec, funcs_mid=self.ti.funcs_to_update_mid, funcs_vec_mid=self.ti.funcs_to_update_vec_mid)
+        self.ti.set_time_funcs(t, dt, midp=self.midp)
 
         # evaluate rate equations
         self.evaluate_rate_equations(t)
@@ -1070,9 +1089,9 @@ class SolidmechanicsProblem(problem_base):
         pass
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
-        self.io.write_restart(self, N)
+        self.io.write_restart(self, N, force=force)
 
 
     def check_abort(self, t):
@@ -1148,7 +1167,7 @@ class SolidmechanicsSolver(solver_base):
 
             tprestr = N * self.pb.prestress_dt
 
-            self.pb.ti.set_time_funcs(tprestr, self.pb.prestress_dt, self.pb.funcs_to_update_pre, self.pb.funcs_to_update_vec_pre)
+            self.pb.ti.set_time_funcs_pre(tprestr)
 
             self.solnln.newton(tprestr)
 

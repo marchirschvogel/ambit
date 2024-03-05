@@ -227,17 +227,28 @@ def main():
 
 
     # alternative/generalization of above-defined time curve: use a user expression that can (but does not have to) vary in space
-    # up to now can only be used in Dirichlet BCs (see below)!
     class expression1:
         def __init__(self):
             self.t = 0.0 # t variable always needs to be defined, even if you do not need to use it in your expression...
 
+        # vector expression
         # use x[0] for x, x[1] for y, and x[2] for z coordinate in in val variable (or introduce new vals independently for x,y,z) to design your spatially dependent expression
         def evaluate(self, x):
             val = 0.5*self.t
             return ( np.full(x.shape[1], val),
                      np.full(x.shape[1], val),
                      np.full(x.shape[1], val) )
+
+    # alternative/generalization of above-defined time curve: use a user expression that can (but does not have to) vary in space
+    class expression2:
+        def __init__(self):
+            self.t = 0.0 # t variable always needs to be defined, even if you do not need to use it in your expression...
+
+        # scalar expression
+        # use x[0] for x, x[1] for y, and x[2] for z coordinate in in val variable (or introduce new vals independently for x,y,z) to design your spatially dependent expression
+        def evaluate(self, x):
+            val = 10.*self.t
+            return np.full(x.shape[1], val)
 
 
     # bc syntax examples
@@ -248,7 +259,7 @@ def main():
                             #                - dir normal_ref or normal_cur for reference or current normal direction (then use 'curve' : [xcurve-num, ycurve-num, zcurve-num] with 0 meaning zero)
                             'neumann'    : [{'id' : [3], 'dir' : 'xyz_ref', 'curve' : [1,0,0]},
                                             {'id' : [2], 'dir' : 'normal_ref', 'curve' : 1},
-                                            {'id' : [2], 'dir' : 'normal_cur', 'curve' : 1}],
+                                            {'id' : [2], 'dir' : 'normal_cur', 'expression' : expression2}],
                             # Robib BC can be either spring or dashpot, both either in xyz_ref or normal_ref reference directions
                             'robin'      : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
                                             {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz_ref', 'visc' : 0.005}] }

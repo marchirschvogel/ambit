@@ -179,9 +179,9 @@ class AleProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update)
+            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
         if 'robin' in self.bc_dict.keys():
             w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.io.bmeasures)
 
@@ -275,7 +275,7 @@ class AleProblem(problem_base):
     def evaluate_pre_solve(self, t, N, dt):
 
         # set time-dependent functions
-        self.ti.set_time_funcs(t, dt, self.ti.funcs_to_update, self.ti.funcs_to_update_vec)
+        self.ti.set_time_funcs(t, dt)
 
         # DBC from files
         if self.bc.have_dirichlet_file:

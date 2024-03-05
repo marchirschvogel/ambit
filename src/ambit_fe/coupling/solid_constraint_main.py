@@ -384,7 +384,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         # solid problem
         self.pbs.read_restart(sname, N)
         # LM data
-        if self.pbs.restart_step > 0:
+        if N > 0:
             restart_data = np.loadtxt(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt')
             self.LM[:], self.LM_old[:] = restart_data[:], restart_data[:]
 
@@ -459,11 +459,11 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.induce_state_change()
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
-        self.pbs.write_restart(sname, N)
+        self.pbs.write_restart(sname, N, force=force)
 
-        if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
+        if (self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0) or force:
             LM_sq = allgather_vec(self.LM, self.comm)
             if self.comm.rank == 0:
                 f = open(self.pbs.io.output_path+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')

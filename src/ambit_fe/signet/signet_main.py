@@ -266,10 +266,10 @@ class SignallingNetworkProblem(problem_base):
         pass
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
         # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
-        if self.write_restart_every > 0 and N % self.write_restart_every == 0:
+        if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
             self.writerestart(sname, N)
 
 

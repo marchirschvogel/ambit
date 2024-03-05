@@ -9,6 +9,7 @@
 import time, sys
 from petsc4py import PETSc
 
+from .. import utilities
 from .solid_flow0d_main import SolidmechanicsFlow0DSolver
 
 
@@ -33,7 +34,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # read restart information
         if self.pb.restart_periodicref > 0:
             self.pb.pbs.simname = self.simname + str(self.pb.restart_periodicref)
-            self.pb.readrestart(self.pb.pbs.simname, self.pb.restart_periodicref)
+            self.pb.read_restart(self.pb.pbs.simname, self.pb.restart_periodicref)
 
 
     def solve_problem(self):
@@ -51,22 +52,20 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             self.reset_state_initial()
 
             # solve one heart cycle
-            self.solver.solve_problem()
+            self.solver.time_loop()
 
-            # set prestress and re-initialize solid petsc solver
+            # set prestress for next loop
             if self.prestress_initial:
                 self.pb.pbs.prestress_initial = True
-                self.solver.solverprestr.solnln.initialize_petsc_solver()
 
             if self.pb.write_checkpoints_periodicref:
-                self.pb.write_restart(self.pb.pbs.simname, N)
+                self.pb.write_restart(self.pb.pbs.simname, N, force=True)
 
             # check if below tolerance
-            if abs(self.pb.pbf.ti.cycleerror[0]) <= self.pb.pbf.eps_periodic:
-                utilities.print_status("Periodicity on reference configuration reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.pb.pbf.ti.cycle[0]-1,self.pb.pbf.ti.cycleerror[0]), self.pb.comm)
+            if abs(self.pb.pb0.ti.cycleerror[0]) <= self.pb.pb0.eps_periodic:
                 break
 
-        utilities.print_status("Program complete. Time for full computation: %.4f s (= %.2f min)" % ( time.time()-start, (time.time()-start)/60. ), self.pb.comm)
+        self.solver.destroy()
 
 
     # set state to zero

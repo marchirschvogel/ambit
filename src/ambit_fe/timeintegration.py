@@ -43,6 +43,11 @@ class timeintegration():
         self.funcsexpr_to_update, self.funcsexpr_to_update_old, self.funcsexpr_to_update_mid = {}, {}, {}
         self.funcsexpr_to_update_vec, self.funcsexpr_to_update_vec_old, self.funcsexpr_to_update_vec_mid = {}, {}, {}
 
+        # pseudo time-dependent functions to update for a pre-solve (e.g. prestress)
+        self.funcs_to_update_pre, self.funcs_to_update_vec_pre = [], []
+        # pseudo time-dependent and space-dependent expressions to update for a pre-solve (e.g. prestress)
+        self.funcsexpr_to_update_pre, self.funcsexpr_to_update_vec_pre = {}, {}
+
         # functions which are fed with external data
         self.funcs_data = []
 
@@ -67,36 +72,19 @@ class timeintegration():
         utilities.print_status("-"*lensep, self.comm)
 
 
-    def set_time_funcs(self, t, dt, funcs, funcs_vec, funcs_mid=None, funcs_vec_mid=None):
+    def set_time_funcs(self, t, dt, midp=False):
 
-        for m in funcs_vec:
+        for m in self.funcs_to_update_vec:
             load = expression.template_vector(dim=self.dim)
             load.val_x, load.val_y, load.val_z = list(m.values())[0][0](t), list(m.values())[0][1](t), list(m.values())[0][2](t)
             list(m.keys())[0].interpolate(load.evaluate)
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        for m in funcs:
+        for m in self.funcs_to_update:
             load = expression.template()
             load.val = list(m.values())[0](t)
             list(m.keys())[0].interpolate(load.evaluate)
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-        _, timefac = self.timefactors()
-        tmid = timefac*t + (1.-timefac)*(t-dt)
-
-        if funcs_vec_mid is not None:
-            for m in funcs_vec_mid:
-                load = expression.template_vector(dim=self.dim)
-                load.val_x, load.val_y, load.val_z = list(m.values())[0][0](tmid), list(m.values())[0][1](tmid), list(m.values())[0][2](tmid)
-                list(m.keys())[0].interpolate(load.evaluate)
-                list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-        if funcs_mid is not None:
-            for m in funcs_mid:
-                load = expression.template()
-                load.val = list(m.values())[0](tmid)
-                list(m.keys())[0].interpolate(load.evaluate)
-                list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # set the time in user expressions - note that they hence must have a class variable self.t
         for m in self.funcsexpr_to_update_vec:
@@ -104,9 +92,67 @@ class timeintegration():
             m.interpolate(self.funcsexpr_to_update_vec[m].evaluate)
             m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+        for m in self.funcsexpr_to_update:
+            self.funcsexpr_to_update[m].t = t
+            m.interpolate(self.funcsexpr_to_update[m].evaluate)
+            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-    # update time-dependent functions
-    def update_time_funcs(self):
+        if midp:
+            _, timefac = self.timefactors()
+            tmid = timefac*t + (1.-timefac)*(t-dt)
+
+            for m in self.funcs_to_update_vec_mid:
+                load = expression.template_vector(dim=self.dim)
+                load.val_x, load.val_y, load.val_z = list(m.values())[0][0](tmid), list(m.values())[0][1](tmid), list(m.values())[0][2](tmid)
+                list(m.keys())[0].interpolate(load.evaluate)
+                list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+            for m in self.funcs_to_update_mid:
+                load = expression.template()
+                load.val = list(m.values())[0](tmid)
+                list(m.keys())[0].interpolate(load.evaluate)
+                list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+            # set the time in user expressions - note that they hence must have a class variable self.t
+            for m in self.funcsexpr_to_update_vec_mid:
+                self.funcsexpr_to_update_vec_mid[m].t = tmid
+                m.interpolate(self.funcsexpr_to_update_vec_mid[m].evaluate)
+                m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+            for m in self.funcsexpr_to_update_mid:
+                self.funcsexpr_to_update_mid[m].t = tmid
+                m.interpolate(self.funcsexpr_to_update_mid[m].evaluate)
+                m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    def set_time_funcs_pre(self, t):
+
+        for m in self.funcs_to_update_vec_pre:
+            load = expression.template_vector(dim=self.dim)
+            load.val_x, load.val_y, load.val_z = list(m.values())[0][0](t), list(m.values())[0][1](t), list(m.values())[0][2](t)
+            list(m.keys())[0].interpolate(load.evaluate)
+            list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        for m in self.funcs_to_update_pre:
+            load = expression.template()
+            load.val = list(m.values())[0](t)
+            list(m.keys())[0].interpolate(load.evaluate)
+            list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # set the time in user expressions - note that they hence must have a class variable self.t
+        for m in self.funcsexpr_to_update_vec_pre:
+            self.funcsexpr_to_update_vec_pre[m].t = t
+            m.interpolate(self.funcsexpr_to_update_vec_pre[m].evaluate)
+            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        for m in self.funcsexpr_to_update_pre:
+            self.funcsexpr_to_update_pre[m].t = t
+            m.interpolate(self.funcsexpr_to_update_pre[m].evaluate)
+            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+
+    # update old time-dependent functions
+    def update_time_funcs_old(self):
 
         for m in range(len(self.funcs_to_update_old)):
             list(self.funcs_to_update_old[m].keys())[0].vector.axpby(1.0, 0.0, list(self.funcs_to_update[m].keys())[0].vector)
@@ -115,6 +161,14 @@ class timeintegration():
         for m in range(len(self.funcs_to_update_vec_old)):
             list(self.funcs_to_update_vec_old[m].keys())[0].vector.axpby(1.0, 0.0, list(self.funcs_to_update_vec[m].keys())[0].vector)
             list(self.funcs_to_update_vec_old[m].keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        for (m, n) in zip(self.funcsexpr_to_update_vec_old, self.funcsexpr_to_update_vec):
+            m.vector.axpby(1.0, 0.0, n.vector)
+            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        for (m, n) in zip(self.funcsexpr_to_update_old, self.funcsexpr_to_update):
+            m.vector.axpby(1.0, 0.0, n.vector)
+            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     # OST update formula for the time derivative of a variable
@@ -335,8 +389,8 @@ class timeintegration_solid(timeintegration):
             list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
             list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # update time dependent load curves
-        self.update_time_funcs()
+        # update old time-dependent load curves
+        self.update_time_funcs_old()
 
 
     def update_fields_newmark(self, u, u_old, v, v_old, a, a_old):
@@ -345,7 +399,7 @@ class timeintegration_solid(timeintegration):
         self.update_d2var_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, d2varout=a.vector, ufl=False)
         self.update_dvar_newmark_2nd(u.vector, u_old.vector, v_old.vector, a_old.vector, dvarout=v.vector, ufl=False)
 
-        self.update_a_v_u(a_old, v_old, u_old, a, v, u)
+        self.update_a_v_u_old(a_old, v_old, u_old, a, v, u)
 
 
     def update_fields_ost(self, u, u_old, v, v_old, a, a_old):
@@ -354,10 +408,10 @@ class timeintegration_solid(timeintegration):
         self.update_d2var_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, d2varout=a.vector, ufl=False)
         self.update_dvar_ost(u.vector, u_old.vector, v_old.vector, dvarout=v.vector, ufl=False)
 
-        self.update_a_v_u(a_old, v_old, u_old, a, v, u)
+        self.update_a_v_u_old(a_old, v_old, u_old, a, v, u)
 
 
-    def update_a_v_u(self, a_old, v_old, u_old, a, v, u):
+    def update_a_v_u_old(self, a_old, v_old, u_old, a, v, u):
 
         # update acceleration: a_old <- a
         a_old.vector.axpby(1.0, 0.0, a.vector)
@@ -462,8 +516,8 @@ class timeintegration_fluid(timeintegration):
             list(internalvars_old.values())[i].vector.axpby(1.0, 0.0, list(internalvars.values())[i].vector)
             list(internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        # update time dependent load curves
-        self.update_time_funcs()
+        # update old time dependent load curves
+        self.update_time_funcs_old()
 
 
     def update_fields_ost(self, v, v_old, a, a_old, uf=None, uf_old=None):
@@ -476,7 +530,7 @@ class timeintegration_fluid(timeintegration):
             # use update functions using vector arguments
             self.update_varint_ost(v.vector, v_old.vector, uf_old.vector, varintout=uf.vector, ufl=False)
 
-        self.update_a_v(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
+        self.update_a_v_old(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
 
 
     def update_fields_genalpha(self, v, v_old, a, a_old, uf=None, uf_old=None):
@@ -489,10 +543,10 @@ class timeintegration_fluid(timeintegration):
             # use update functions using vector arguments
             self.update_varint_newmark_1st(v.vector, v_old.vector, uf_old.vector, varintout=uf.vector, ufl=False)
 
-        self.update_a_v(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
+        self.update_a_v_old(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
 
 
-    def update_a_v(self, a_old, v_old, a, v, uf_old=None, uf=None):
+    def update_a_v_old(self, a_old, v_old, a, v, uf_old=None, uf=None):
         # update acceleration: a_old <- a
         a_old.vector.axpby(1.0, 0.0, a.vector)
         a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -529,8 +583,8 @@ class timeintegration_ale(timeintegration_fluid):
         if self.timint == 'genalpha':
             self.update_fields_genalpha(d, d_old, w, w_old)
 
-        # update time dependent load curves
-        self.update_time_funcs()
+        # update old time dependent load curves
+        self.update_time_funcs_old()
 
 
     def set_wel(self, d, d_old, w_old):
@@ -551,7 +605,7 @@ class timeintegration_ale(timeintegration_fluid):
         # use update functions using vector arguments
         self.update_dvar_ost(d.vector, d_old.vector, w_old.vector, dvarout=w.vector, ufl=False)
 
-        self.update_w_d(w_old, d_old, w, d)
+        self.update_w_d_old(w_old, d_old, w, d)
 
 
     def update_fields_genalpha(self, d, d_old, w, w_old, uf=None, uf_old=None):
@@ -559,10 +613,10 @@ class timeintegration_ale(timeintegration_fluid):
         # use update functions using vector arguments
         self.update_dvar_newmark_1st(d.vector, d_old.vector, w_old.vector, dvarout=w.vector, ufl=False)
 
-        self.update_w_d(w_old, d_old, w, d)
+        self.update_w_d_old(w_old, d_old, w, d)
 
 
-    def update_w_d(self, w_old, d_old, w, d):
+    def update_w_d_old(self, w_old, d_old, w, d):
         # update ALE velocity: w_old <- w
         w_old.vector.axpby(1.0, 0.0, w.vector)
         w_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -588,8 +642,8 @@ class timeintegration_electrophysiology(timeintegration):
         # update old fields with new quantities
         self.update_fields_ost(phi, phi_old, phidot, phidot_old)
 
-        # update time dependent load curves
-        self.update_time_funcs()
+        # update old time dependent load curves
+        self.update_time_funcs_old()
 
 
     def set_phidot(self, phi, phi_old, phidot_old):
@@ -602,10 +656,10 @@ class timeintegration_electrophysiology(timeintegration):
         # use update functions using vector arguments
         self.update_dvar_ost(phi.vector, phi_old.vector, phidot_old.vector, dvarout=phidot.vector, ufl=False)
 
-        self.update_phidot_phi(phidot_old, phi_old, phidot, phi)
+        self.update_phidot_phi_old(phidot_old, phi_old, phidot, phi)
 
 
-    def update_phidot_phi(self, w_old, d_old, w, d):
+    def update_phidot_phi_old(self, w_old, d_old, w, d):
         # update time derivative of potential: phidot_old <- phidot
         phidot_old.vector.axpby(1.0, 0.0, phidot.vector)
         phidot_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

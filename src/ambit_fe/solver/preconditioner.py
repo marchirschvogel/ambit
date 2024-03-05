@@ -17,6 +17,7 @@ Ambit preconditioner classes
 
 PETSc PC types:
 https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.PC.Type-class.html
+https://petsc.org/main/petsc4py/petsc_python_types.html#petsc-python-preconditioner-type
 """
 
 class block_precond():
@@ -51,10 +52,12 @@ class block_precond():
         # get reference to preconditioner matrix object
         _, self.P = pc.getOperators()
 
+        self.tpy = None
+
         self.check_field_size()
         operator_mats = self.init_mat_vec(pc)
 
-        self.ksp_fields = []
+        self.ksp_fields, self.ksp_py_solver = [], [None]*self.nfields
         # create field ksps
         for n in range(self.nfields):
             self.ksp_fields.append( PETSc.KSP().create(self.comm) )
@@ -70,13 +73,28 @@ class block_precond():
                 if amgtype=="hypre":
                     self.ksp_fields[n].getPC().setHYPREType("boomeramg")
                 # TODO: Some additional hypre options we might wanna set... which are optimal here???
-                # opts = PETSc.Options()
+                opts = PETSc.Options()
                 # opts.setValue('pc_hypre_parasails_reuse', True) # - does this exist???
                 # opts.setValue('pc_hypre_boomeramg_cycle_type', 'v') # v, w
                 # opts.setValue('pc_hypre_boomeramg_max_iter', 1)
+                # opts.setValue('pc_hypre_boomeramg_max_levels', 25)
+                # opts.setValue('pc_hypre_boomeramg_grid_sweeps_all', 1)
                 # opts.setValue('pc_hypre_boomeramg_relax_type_all',  'symmetric-SOR/Jacobi')
-                # self.ksp_fields[n].getPC().setFromOptions()
+                self.ksp_fields[n].getPC().setFromOptions()
                 # print(self.ksp_fields[n].getPC().view())
+
+                if solvetype == 'python':
+                    try: niter = self.precond_fields[n]['stat_iter']
+                    except: niter = 1
+                    if self.precond_fields[n]['py_solver'] == "stat_iter_fixed":
+                        self.ksp_py_solver[n] = stat_iter_fixed(niter)
+                        self.ksp_fields[n].setPythonContext(self.ksp_py_solver[n])
+                    elif self.precond_fields[n]['py_solver'] == "stat_iter_fixed_scr":
+                        self.ksp_py_solver[n] = stat_iter_fixed_scr(niter, ksp_sub=self.ksp_fields[0])
+                        self.ksp_fields[n].setPythonContext(self.ksp_py_solver[n])
+                    else:
+                        raise ValueError("Unknown Python solver option!")
+
             elif self.precond_fields[n]['prec'] == 'direct':
                 self.ksp_fields[n].setType("preonly")
                 self.ksp_fields[n].getPC().setType("lu")
@@ -87,6 +105,10 @@ class block_precond():
             # set operators and setup field prec
             self.ksp_fields[n].setOperators(operator_mats[n])
             #self.ksp_fields[n].getPC().setUp() # seems to break the solver when a direct prec is used! Needed???!
+
+        #instll = self.rhs(self.ksp_fields[1])
+        #self.ksp_fields[1].setPythonContext(instll)
+        # self.ksp_fields[1].setComputeRHS(rhs_)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -102,6 +124,108 @@ class block_precond():
 
     def destroy(self, pc):
         pc.destroy()
+
+
+class stat_iter_fixed():
+
+    def __init__(self, niter):
+        self.niter = niter
+        raise RuntimeError("Experimental. You should not be here!")
+
+    def create(self, ksp):
+        pass
+
+    def set_mat_vec(self, A):
+
+        self.A = A
+
+
+    def solve(self, ksp, x, y):
+
+        Ayold = y.copy()
+        yold = y.copy()
+        wrk = y.copy()
+
+        op, _ = ksp.getOperators()
+        pc = ksp.getPC()
+
+        A = op.mult
+        P = pc.apply
+
+        # stationary iteration rule:
+        # y = y_old + P^{-1} (x - A y_old)
+        # --> y += P^{-1} (x - A y_old)
+        # --> y_old <- y
+        for i in range(self.niter):
+
+            A(yold, Ayold)     # A y_old
+            P(x-Ayold, wrk)    # P^{-1} (x - A y_old)
+
+            y.axpy(1., wrk)
+            yold.axpby(1., 0., y)
+
+        ksp.setConvergedReason(1)
+
+
+class stat_iter_fixed_scr():
+
+    def __init__(self, niter, ksp_sub=None):
+        self.niter = niter
+        self.ksp_sub = ksp_sub
+        raise RuntimeError("Experimental. You should not be here!")
+
+    def create(self, ksp):
+        pass
+
+    def set_mat_vec(self, A, C, B, Bt):
+
+        self.A = A
+        self.C = C
+        self.B = B
+        self.Bt = Bt
+
+    def solve(self, ksp, x, y):
+
+        yold = y.copy()
+        wrk = y.copy()
+
+        # ytilde = y.copy()
+        ytilde = self.A.createVecLeft()
+
+        op, _ = ksp.getOperators()
+        pc = ksp.getPC()
+
+        A = op.mult
+        P = pc.apply
+
+        # the sub-solve
+        xdiff = y.copy()
+        xhat = y.copy()
+
+        for i in range(self.niter):
+
+            self.C.mult(yold, xhat)
+
+            xbar = self.Bt.createVecLeft()
+            self.Bt.mult(yold, xbar)
+
+            self.ksp_sub.solve(xbar, ytilde)
+
+            xbar = self.B.createVecLeft()
+            self.B.mult(ytilde, xbar)
+
+            xdiff.axpby(1., 0., xhat)
+            xdiff.axpy(-1., xbar)
+
+            P(x-xdiff, wrk)
+
+            y.axpy(1., wrk)
+            yold.axpby(1., 0., y)
+
+        ksp.setConvergedReason(1)
+
+
+
 
 
 # Schur complement preconditioner (using a modified diag(A)^{-1} instead of A^{-1} in the Schur complement)
@@ -194,6 +318,11 @@ class schur_2x2(block_precond):
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[1].setOperators(self.Smod)
+
+        # Schur complement reduction
+        if self.ksp_py_solver[1] is not None:
+            if self.precond_fields[1]['py_solver']=='stat_iter_fixed_scr':
+                self.ksp_py_solver[1].set_mat_vec(self.A, self.C, self.B, self.Bt)
 
         te = time.time() - ts
         if self.printenh:
@@ -432,6 +561,11 @@ class schur_3x3(block_precond):
         self.ksp_fields[0].setOperators(self.A)
         self.ksp_fields[1].setOperators(self.Smod)
         self.ksp_fields[2].setOperators(self.Wmod)
+
+        # Schur complement reduction
+        if self.ksp_py_solver[1] is not None:
+            if self.precond_fields[1]['py_solver']=='stat_iter_fixed_scr':
+                self.ksp_py_solver[1].set_mat_vec(self.A, self.C, self.B, self.Bt)
 
         te = time.time() - ts
         if self.printenh:
@@ -680,6 +814,11 @@ class simple_2x2(schur_2x2):
         y.setValues(self.iset[1], self.y2.array)
 
         y.assemble()
+
+    # def preSolve(self, pc, ksp, x, y):
+    #     print("Huiiiiiiiii")
+
+
 
 
 

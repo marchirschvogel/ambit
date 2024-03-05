@@ -478,7 +478,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pbf.read_restart(sname, N)
         self.pb0.read_restart(sname, N)
 
-        if self.pbf.restart_step > 0:
+        if N > 0:
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.LM)
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.LM_old)
 
@@ -604,12 +604,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pb0.induce_state_change()
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
-        self.pbf.write_restart(sname, N)
-        self.pb0.write_restart(sname, N)
+        self.pbf.write_restart(sname, N, force=force)
+        self.pb0.write_restart(sname, N, force=force)
 
-        if self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0:
+        if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:
             LM_sq = allgather_vec(self.LM, self.comm)
             if self.comm.rank == 0:
                 f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')

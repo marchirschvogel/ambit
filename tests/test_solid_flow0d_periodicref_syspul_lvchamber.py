@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 """
+Tests solid-flow0d problem perdiodicity on reference geometry: Problem is re-initialized with new 0D initial conditions on
+the reference solid geometry and run until perdiodicity is reached - like this, one can obtain "periodic state initial conditions",
+meaning initial conditions which produce a periodic cycle state starting from the reference geometry
 """
 
 import ambit_fe
@@ -19,7 +22,7 @@ def test_main():
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d_periodicref',
                             'write_results_every'   : 1,
-                            'write_restart_every'   : -10,
+                            'write_restart_every'   : -50,
                             #'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/chamberhex_domain.xdmf',
@@ -46,7 +49,7 @@ def test_main():
                             'initial_backwardeuler' : True,
                             'initial_conditions'    : init(),
                             'periodic_checktype'    : ['allvar'],
-                            'eps_periodic'          : 0.05}
+                            'eps_periodic'          : 0.25} # large, only for testing purposes
 
     MODEL_PARAMS_FLOW0D  = {'modeltype'             : 'syspul',
                             'parameters'            : param(),
@@ -66,7 +69,9 @@ def test_main():
                             'coupling_quantity'     : ['pressure']*4,
                             'variable_quantity'     : ['flux']*4,
                             'coupling_type'         : 'monolithic_lagrange',
-                            'print_subiter'         : True}
+                            'print_subiter'         : True,
+                            'write_checkpoints_periodicref' : True,
+                            'restart_periodicref'   : 0}
 
     MATERIALS            = { 'MAT1' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                        'sussmanbathe_vol' : {'kappa' : 1.0e1}, # very compressible
@@ -109,16 +114,20 @@ def test_main():
             
             return 0.5*(1.-np.cos(2.*np.pi*(t)/(2.*t_ed))) * (t >= 0.) * (t <= 2.*t_ed)
 
-        def tc4(self, t): # prestress load
+    class expression1: # prestress load
+        def __init__(self):
+            self.t = 0.0
+        def evaluate(self, x):
             patl_0 = init()['p_v_l_0']
-            return (-0.5*(patl_0)*(1.-np.cos(np.pi*t/1.0)))
+            val = (-0.5*(patl_0)*(1.-np.cos(np.pi*self.t/1.0)))
+            return np.full(x.shape[1], val)
 
 
     BC_DICT  = { 'dirichlet' : [{'id' : [1], 'dir' : 'y', 'val' : 0.},
                                 {'id' : [1], 'dir' : 'z', 'val' : 0.}],
                  'robin' : [{'type' : 'spring', 'id' : [2,3,4,5,6,7], 'dir' : 'xyz_ref', 'stiff' : 0.5},
                             {'type' : 'dashpot', 'id' : [2,3,4,5,6,7], 'dir' : 'xyz_ref', 'visc' : 0.05}],
-                 'neumann_prestress' : [{'id' : [1], 'dir' : 'normal_ref', 'curve' : 4}] } # endo
+                 'neumann_prestress' : [{'id' : [1], 'dir' : 'normal_ref', 'expression' : expression1}] } # endo
 
 
     # problem setup
@@ -126,6 +135,38 @@ def test_main():
     
     # problem solve
     problem.solve_problem()
+
+
+    # --- results check
+    tol = 1.0e-6
+
+    s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
+
+    # correct results
+    s_corr[0] = 6.9428005183618652E+03
+    s_corr[1] = 4.4112801631633913E-01
+    s_corr[2] = -6.9436000768332096E+03
+    s_corr[3] = -7.9955847134443270E-01
+    s_corr[4] = 8.4297699292423047E+00
+    s_corr[5] = -7.9955847134443270E-01
+    s_corr[6] = 8.4297747265931307E+00
+    s_corr[7] = 5.1712201817574940E+04
+    s_corr[8] = 2.2449966365533478E+00
+    s_corr[9] = 7.0958136737571782E+04
+    s_corr[10] = 3.6549519380664853E+04
+    s_corr[11] = 5.4200135485162648E-01
+    s_corr[12] = -1.2026153966680532E-01
+    s_corr[13] = 5.0545183547096162E-01
+    s_corr[14] = 1.7080672321390149E+00
+    s_corr[15] = 2.6499993634955761E+04
+    s_corr[16] = 1.3105673276146788E+00
+    s_corr[17] = 5.7962620753222662E+04
+
+    check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
+
+    if not success:
+        raise RuntimeError("Test failed!")
 
     
 

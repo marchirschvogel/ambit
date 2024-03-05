@@ -633,7 +633,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pbs.read_restart(sname, N)
         self.pb0.read_restart(sname, N)
 
-        if self.pbs.restart_step > 0:
+        if N > 0:
             if self.coupling_type == 'monolithic_lagrange':
                 self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.LM)
                 self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.LM_old)
@@ -767,13 +767,13 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pb0.induce_state_change()
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
-        self.pbs.write_restart(sname, N)
-        self.pb0.write_restart(sname, N)
+        self.pbs.write_restart(sname, N, force=force)
+        self.pb0.write_restart(sname, N, force=force)
 
         if self.coupling_type == 'monolithic_lagrange':
-            if self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0:
+            if (self.pbs.io.write_restart_every > 0 and N % self.pbs.io.write_restart_every == 0) or force:
                 LM_sq = allgather_vec(self.LM, self.comm)
                 if self.comm.rank == 0:
                     f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
@@ -827,6 +827,8 @@ class SolidmechanicsFlow0DSolver(solver_base):
             try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
             except: pass
             self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, solver_params_prestr)
+        else:
+            self.solverprestr = None
 
 
     def solve_initial_state(self):
@@ -835,7 +837,6 @@ class SolidmechanicsFlow0DSolver(solver_base):
         if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.destroy()
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:

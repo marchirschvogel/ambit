@@ -71,7 +71,7 @@ class boundary_cond():
                 func.interpolate(expr.evaluate)
                 self.ti.funcsexpr_to_update_vec[func] = expr
             else:
-                raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
             if d['dir'] == 'all':
                 for i in range(len(d['id'])):
@@ -155,7 +155,7 @@ class boundary_cond():
 
 
     # set Neumann BCs
-    def neumann_bcs(self, bcdict, V, V_real, ds_, F=None, funcs_to_update=None, funcs_to_update_vec=None):
+    def neumann_bcs(self, bcdict, V, V_real, ds_, F=None, funcs_to_update=None, funcs_to_update_vec=None, funcsexpr_to_update=None, funcsexpr_to_update_vec=None):
 
         w = ufl.as_ufl(0)
 
@@ -173,16 +173,22 @@ class boundary_cond():
                 func = fem.Function(V)
 
                 if 'curve' in n.keys():
-                    assert('val' not in n.keys())
+                    assert('val' not in n.keys() and 'expression' not in n.keys())
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                 elif 'val' in n.keys():
-                    assert('curve' not in n.keys())
+                    assert('curve' not in n.keys() and 'expression' not in n.keys())
                     func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
+                elif 'expression' in n.keys():
+                    assert('curve' not in n.keys() and 'val' not in n.keys())
+                    expr = n['expression']()
+                    expr.t = self.ti.t_init
+                    func.interpolate(expr.evaluate)
+                    funcsexpr_to_update_vec[func] = expr
                 else:
-                    raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                    raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n['id'])):
 
@@ -193,16 +199,22 @@ class boundary_cond():
                 func = fem.Function(V_real)
 
                 if 'curve' in n.keys():
-                    assert('val' not in n.keys())
+                    assert('val' not in n.keys() and 'expression' not in n.keys())
                     load = expression.template()
                     load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                 elif 'val' in n.keys():
-                    assert('curve' not in n.keys())
+                    assert('curve' not in n.keys() and 'expression' not in n.keys())
                     func.vector.set(n['val'])
+                elif 'expression' in n.keys():
+                    assert('curve' not in n.keys() and 'val' not in n.keys())
+                    expr = n['expression']()
+                    expr.t = self.ti.t_init
+                    func.interpolate(expr.evaluate)
+                    funcsexpr_to_update[func] = expr
                 else:
-                    raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                    raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n['id'])):
 
@@ -213,16 +225,22 @@ class boundary_cond():
                 func = fem.Function(V)
 
                 if 'curve' in n.keys():
-                    assert('val' not in n.keys())
+                    assert('val' not in n.keys() and 'expression' not in n.keys())
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                 elif 'val' in n.keys():
-                    assert('curve' not in n.keys())
+                    assert('curve' not in n.keys() and 'expression' not in n.keys())
                     func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
+                elif 'expression' in n.keys():
+                    assert('curve' not in n.keys() and 'val' not in n.keys())
+                    expr = n['expression']()
+                    expr.t = self.ti.t_init
+                    func.interpolate(expr.evaluate)
+                    funcsexpr_to_update_vec[func] = expr
                 else:
-                    raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                    raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n['id'])):
 
@@ -233,16 +251,22 @@ class boundary_cond():
                 func = fem.Function(V_real)
 
                 if 'curve' in n.keys():
-                    assert('val' not in n.keys())
+                    assert('val' not in n.keys() and 'expression' not in n.keys())
                     load = expression.template()
                     load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                 elif 'val' in n.keys():
-                    assert('curve' not in n.keys())
+                    assert('curve' not in n.keys() and 'expression' not in n.keys())
                     func.vector.set(n['val'])
+                elif 'expression' in n.keys():
+                    assert('curve' not in n.keys() and 'val' not in n.keys())
+                    expr = n['expression']()
+                    expr.t = self.ti.t_init
+                    func.interpolate(expr.evaluate)
+                    funcsexpr_to_update[func] = expr
                 else:
-                    raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                    raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n['id'])):
 
@@ -255,7 +279,7 @@ class boundary_cond():
 
 
     # set Neumann BCs for prestress
-    def neumann_prestress_bcs(self, bcdict, V, V_real, ds_, funcs_to_update=None, funcs_to_update_vec=None):
+    def neumann_prestress_bcs(self, bcdict, V, V_real, ds_, funcs_to_update=None, funcs_to_update_vec=None, funcsexpr_to_update=None, funcsexpr_to_update_vec=None):
 
         w = ufl.as_ufl(0)
 
@@ -273,16 +297,22 @@ class boundary_cond():
                 func = fem.Function(V)
 
                 if 'curve' in n.keys():
-                    assert('val' not in n.keys())
+                    assert('val' not in n.keys() and 'expression' not in n.keys())
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                 elif 'val' in n.keys():
-                    assert('curve' not in n.keys())
+                    assert('curve' not in n.keys() and 'expression' not in n.keys())
                     func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
+                elif 'expression' in n.keys():
+                    assert('curve' not in n.keys() and 'val' not in n.keys())
+                    expr = n['expression']()
+                    expr.t = self.ti.t_init
+                    func.interpolate(expr.evaluate)
+                    funcsexpr_to_update_vec[func] = expr
                 else:
-                    raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                    raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n['id'])):
 
@@ -293,16 +323,22 @@ class boundary_cond():
                 func = fem.Function(V_real)
 
                 if 'curve' in n.keys():
-                    assert('val' not in n.keys())
+                    assert('val' not in n.keys() and 'expression' not in n.keys())
                     load = expression.template()
                     load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                     func.interpolate(load.evaluate)
                     funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                 elif 'val' in n.keys():
-                    assert('curve' not in n.keys())
+                    assert('curve' not in n.keys() and 'expression' not in n.keys())
                     func.vector.set(n['val']) # currently only one value for all directions - use constant load function otherwise!
+                elif 'expression' in n.keys():
+                    assert('curve' not in n.keys() and 'val' not in n.keys())
+                    expr = n['expression']()
+                    expr.t = self.ti.t_init
+                    func.interpolate(expr.evaluate)
+                    funcsexpr_to_update[func] = expr
                 else:
-                    raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                    raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n['id'])):
 
@@ -429,7 +465,7 @@ class boundary_cond():
 
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def bodyforce(self, bcdict, V, V_real, dx_, funcs_to_update=None):
+    def bodyforce(self, bcdict, V, V_real, dx_, funcs_to_update=None, funcsexpr_to_update=None):
 
         w = ufl.as_ufl(0)
 
@@ -445,16 +481,22 @@ class boundary_cond():
             func_dir.interpolate(driection.evaluate)
 
             if 'curve' in b.keys():
-                assert('val' not in b.keys())
+                assert('val' not in b.keys() and 'expression' not in b.keys())
                 load = expression.template()
                 load.val = self.ti.timecurves(b['curve'])(self.ti.t_init)
                 func.interpolate(load.evaluate)
                 funcs_to_update.append({func : self.ti.timecurves(b['curve'])})
             elif 'val' in b.keys():
-                assert('curve' not in b.keys())
+                assert('curve' not in b.keys() and 'expression' not in b.keys())
                 func.vector.set(b['val'])
+            elif 'expression' in b.keys():
+                assert('curve' not in b.keys() and 'val' not in b.keys())
+                expr = b['expression']()
+                expr.t = self.ti.t_init
+                func.interpolate(expr.evaluate)
+                funcsexpr_to_update[func] = expr
             else:
-                raise RuntimeError("Need to have 'curve' or 'val' specified!")
+                raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
             for i in range(len(b['id'])):
 

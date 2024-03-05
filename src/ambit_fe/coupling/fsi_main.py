@@ -281,7 +281,7 @@ class FSIProblem(problem_base):
     def read_restart(self, sname, N):
 
         # read restart information
-        if self.restart_step > 0:
+        if N > 0:
 
             self.io.readcheckpoint(self, N)
             self.simname += '_r'+str(N)
@@ -364,9 +364,9 @@ class FSIProblem(problem_base):
         self.pbfa.induce_state_change()
 
 
-    def write_restart(self, sname, N):
+    def write_restart(self, sname, N, force=False):
 
-        self.io.write_restart(self, N)
+        self.io.write_restart(self, N, force=force)
 
 
     def check_abort(self, t):
