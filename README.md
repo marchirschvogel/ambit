@@ -42,7 +42,7 @@ The following is supported:
   - Projection-based model order reduction applicable to main fluid or solid field (also in a coupled problem), by either projecting
     the full problem or a boundary to a lower dimensional subspace spanned by POD modes
 
-- author: Dr.-Ing. Marc Hirschvogel, marc.hirschvogel@deepambit.com
+- author: Dr.-Ing. Marc Hirschvogel, marc.hirschvogel@ambit.net
 
 Still experimental / to-do:
 
