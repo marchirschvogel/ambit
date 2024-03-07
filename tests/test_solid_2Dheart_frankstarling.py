@@ -20,12 +20,18 @@ def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS            = {'problem_type'          : 'solid',
                             'mesh_domain'           : basepath+'/input/heart2D_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/heart2D_boundary.xdmf',
                             'fiber_data'            : [basepath+'/input/fib_fiber_nodal_2D.txt'],
                             'order_fib_input'       : 1,
                             'write_results_every'   : -999,
+                            'write_restart_every'   : 2,
+                            'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : ['displacement','pressure','fiberstretch'],
                             'simname'               : 'solid_2Dheart_frankstarling'}

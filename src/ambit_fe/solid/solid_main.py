@@ -19,7 +19,7 @@ from . import solid_variationalform
 from .. import timeintegration
 from .. import utilities, mathutils
 from .. import boundaryconditions
-from .. import ioparams
+from .. import ioparams, expression
 from ..solver import solver_nonlin
 from ..solver.projection import project
 from . import solid_material
@@ -270,10 +270,18 @@ class SolidmechanicsProblem(problem_base):
                     if self.actstress[-1].frankstarling:
                         self.have_frank_starling = True
                         self.act_curve_old.append( fem.Function(self.Vd_scalar) )
+                        # we need to initialize the old activation curve here to get the correct stretch state evaluation
+                        load = expression.template()
+                        load.val = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])(self.ti.t_init)
+                        self.act_curve_old[-1].interpolate(load.evaluate)
+                        self.act_curve_old[-1].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                         self.ti.funcs_to_update_old.append({self.act_curve_old[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
                         self.actstress[-1].act_curve_old = self.act_curve_old[-1]
+                    else:
+                        self.ti.funcs_to_update_old.append({None : -1})
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['prescribed_curve'])})
+                    self.ti.funcs_to_update_old.append({None : -1})
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
             if 'growth' in self.constitutive_models['MAT'+str(n+1)].keys():
@@ -297,6 +305,7 @@ class SolidmechanicsProblem(problem_base):
                 # if one mat has a prescribed growth model, all have to be!
                 if self.mat_growth_trig[n] == 'prescribed':
                     self.ti.funcs_to_update.append({self.theta : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['growth']['prescribed_curve'])})
+                    self.ti.funcs_to_update_old.append({None : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)]['growth']['prescribed_curve'])})
                 if 'remodeling_mat' in self.constitutive_models['MAT'+str(n+1)]['growth'].keys():
                     self.mat_remodel[n] = True
                 self.internalvars['theta'], self.internalvars_old['theta'], self.internalvars_mid['theta'] = self.theta, self.theta_old, self.timefac*self.theta + (1.-self.timefac)*self.theta_old

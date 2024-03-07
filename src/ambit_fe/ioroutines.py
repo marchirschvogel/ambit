@@ -705,7 +705,7 @@ class IO_solid(IO):
                 vecs_to_write[pb.p_set] = 'p_set'
             if pb.have_active_stress:
                 vecs_to_write[pb.tau_a_set] = 'tau_a_set'
-                if pb.have_active_stress:
+                if pb.have_frank_starling:
                     vecs_to_write[pb.amp_old_set] = 'amp_old_set'
 
         for key in vecs_to_write:

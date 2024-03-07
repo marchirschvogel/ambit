@@ -289,9 +289,7 @@ class materiallaw:
 
 
 
-# inversion of growth tensors can be performed with Sherman-Morrison formula:
-# TeX: \left(\boldsymbol{A}-\boldsymbol{u}\otimes \boldsymbol{v}\right)^{-1} = \boldsymbol{A}^{-1} + \frac{\boldsymbol{A}^{-1}\,\boldsymbol{u}\otimes \boldsymbol{v}\,\boldsymbol{A}^{-1}}{1-\boldsymbol{v}\cdot \boldsymbol{A}^{-1}\boldsymbol{u}}
-
+# volumetric growth class: kinematics
 class growth:
 
     def __init__(self, theta, I):
@@ -329,6 +327,7 @@ class growth:
 
 
 
+# volumetric growth class: growth function
 class growthfunction(growth):
 
     # add possible variations / different growth functions here...

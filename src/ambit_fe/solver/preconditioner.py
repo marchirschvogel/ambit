@@ -106,10 +106,6 @@ class block_precond():
             self.ksp_fields[n].setOperators(operator_mats[n])
             #self.ksp_fields[n].getPC().setUp() # seems to break the solver when a direct prec is used! Needed???!
 
-        #instll = self.rhs(self.ksp_fields[1])
-        #self.ksp_fields[1].setPythonContext(instll)
-        # self.ksp_fields[1].setComputeRHS(rhs_)
-
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
 

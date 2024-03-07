@@ -208,7 +208,7 @@ class SignallingNetworkProblem(problem_base):
 
         # read restart information
         if self.restart_step > 0:
-            self.readrestart(sname, N)
+            self.readrestart(sname+'_'+self.problem_physics, N)
             self.simname += '_r'+str(N)
 
 
@@ -249,7 +249,7 @@ class SignallingNetworkProblem(problem_base):
 
         # raw txt file output of 0D model quantities
         if self.write_results_every_signet > 0 and N % self.write_results_every_signet == 0:
-            self.signet.write_output(self.output_path_signet, t, self.s_mid, self.aux_mid, self.simname)
+            self.signet.write_output(self.output_path_signet, t, self.s_mid, self.aux_mid, self.simname+'_'+self.problem_physics)
 
 
     def update(self):
@@ -270,7 +270,7 @@ class SignallingNetworkProblem(problem_base):
 
         # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
         if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
-            self.writerestart(sname, N)
+            self.writerestart(sname+'_'+self.problem_physics, N)
 
 
     def check_abort(self, t):

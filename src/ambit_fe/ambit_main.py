@@ -144,8 +144,6 @@ class Ambit():
 
         elif problem_type == 'solid_flow0d_periodicref':
 
-            raise RuntimeError("Solid-flow0d periodic ref problem currently broken. To be fixed soon!")
-
             from .coupling import solid_flow0d_main
             from .coupling import solid_flow0d_periodicref_main
 

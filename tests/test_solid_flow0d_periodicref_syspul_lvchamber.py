@@ -15,15 +15,14 @@ import pytest
 
 
 @pytest.mark.solid_flow0d
-@pytest.mark.skip(reason="Not yet ready for testing.")
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d_periodicref',
                             'write_results_every'   : 1,
-                            'write_restart_every'   : -50,
-                            #'restart_step'          : restart_step,
+                            'write_restart_every'   : 50,
+                            'restart_step'          : 0, # TODO: Restart not working properly!!!
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/chamberhex_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/chamberhex_boundary.xdmf',
@@ -71,7 +70,7 @@ def test_main():
                             'coupling_type'         : 'monolithic_lagrange',
                             'print_subiter'         : True,
                             'write_checkpoints_periodicref' : True,
-                            'restart_periodicref'   : 0}
+                            'restart_periodicref'   : 0} # TODO...
 
     MATERIALS            = { 'MAT1' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                        'sussmanbathe_vol' : {'kappa' : 1.0e1}, # very compressible
@@ -117,10 +116,11 @@ def test_main():
     class expression1: # prestress load
         def __init__(self):
             self.t = 0.0
+            self.val = init()['p_v_l_0']
+
         def evaluate(self, x):
-            patl_0 = init()['p_v_l_0']
-            val = (-0.5*(patl_0)*(1.-np.cos(np.pi*self.t/1.0)))
-            return np.full(x.shape[1], val)
+            pres = (-0.5*(self.val)*(1.-np.cos(np.pi*self.t/1.0)))
+            return np.full(x.shape[1], pres)
 
 
     BC_DICT  = { 'dirichlet' : [{'id' : [1], 'dir' : 'y', 'val' : 0.},
@@ -143,24 +143,24 @@ def test_main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct results
-    s_corr[0] = 6.9428005183618652E+03
-    s_corr[1] = 4.4112801631633913E-01
-    s_corr[2] = -6.9436000768332096E+03
-    s_corr[3] = -7.9955847134443270E-01
-    s_corr[4] = 8.4297699292423047E+00
-    s_corr[5] = -7.9955847134443270E-01
-    s_corr[6] = 8.4297747265931307E+00
-    s_corr[7] = 5.1712201817574940E+04
-    s_corr[8] = 2.2449966365533478E+00
-    s_corr[9] = 7.0958136737571782E+04
-    s_corr[10] = 3.6549519380664853E+04
-    s_corr[11] = 5.4200135485162648E-01
-    s_corr[12] = -1.2026153966680532E-01
-    s_corr[13] = 5.0545183547096162E-01
-    s_corr[14] = 1.7080672321390149E+00
-    s_corr[15] = 2.6499993634955761E+04
-    s_corr[16] = 1.3105673276146788E+00
-    s_corr[17] = 5.7962620753222662E+04
+    s_corr[0] = 6.9421708117080034E+03
+    s_corr[1] = 4.4439462150660586E-01
+    s_corr[2] = -6.9429701758124638E+03
+    s_corr[3] = -7.9936410446000439E-01
+    s_corr[4] = 8.4310934952949417E+00
+    s_corr[5] = -7.9936410446000439E-01
+    s_corr[6] = 8.4310982914795680E+00
+    s_corr[7] = 5.1723054532288545E+04
+    s_corr[8] = 2.2450224403302048E+00
+    s_corr[9] = 7.0956502600423570E+04
+    s_corr[10] = 3.6548443149263097E+04
+    s_corr[11] = 5.4206637792003998E-01
+    s_corr[12] = -1.2050357157719344E-01
+    s_corr[13] = 5.0551793477077689E-01
+    s_corr[14] = 1.7105536505427112E+00
+    s_corr[15] = 2.6480887501748493E+04
+    s_corr[16] = 1.3133403380164841E+00
+    s_corr[17] = 5.7929714433991918E+04
 
     check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)

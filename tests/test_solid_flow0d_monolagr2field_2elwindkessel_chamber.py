@@ -18,10 +18,16 @@ def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d',
                             'mesh_domain'           : basepath+'/input/chamber_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/chamber_boundary.xdmf',
                             'write_results_every'   : -999,
+                            'write_restart_every'   : 5,
+                            'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'results_to_write'      : [''],
                             'simname'               : 'test'}

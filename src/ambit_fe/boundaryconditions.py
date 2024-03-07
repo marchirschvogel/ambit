@@ -8,6 +8,7 @@
 
 import numpy as np
 from dolfinx import fem, mesh
+from petsc4py import PETSc
 import ufl
 
 from . import expression
@@ -60,7 +61,9 @@ class boundary_cond():
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
                 load.val_x, load.val_y, load.val_z = self.ti.timecurves(curve_x)(self.ti.t_init), self.ti.timecurves(curve_y)(self.ti.t_init), self.ti.timecurves(curve_z)(self.ti.t_init)
                 func.interpolate(load.evaluate)
+                func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
+                self.ti.funcs_to_update_vec_old.append({None : -1}) # DBCs don't need an old state
             elif 'val' in d.keys():
                 assert('curve' not in d.keys() and 'expression' not in d.keys())
                 func.vector.set(d['val'])
@@ -69,7 +72,9 @@ class boundary_cond():
                 expr = d['expression']()
                 expr.t = self.ti.t_init
                 func.interpolate(expr.evaluate)
+                func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 self.ti.funcsexpr_to_update_vec[func] = expr
+                self.ti.funcsexpr_to_update_vec_old[func] = None # DBCs don't need an old state
             else:
                 raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
@@ -122,7 +127,9 @@ class boundary_cond():
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
                 load.val_x, load.val_y, load.val_z = self.ti.timecurves(curve_x)(self.ti.t_init), self.ti.timecurves(curve_y)(self.ti.t_init), self.ti.timecurves(curve_z)(self.ti.t_init)
                 func.interpolate(load.evaluate)
+                func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
+                self.ti.funcs_to_update_vec_old.append({None : -1}) # DBCs don't need an old state
             elif 'val' in d.keys():
                 assert('curve' not in d.keys())
                 assert('file' not in d.keys())
@@ -177,6 +184,7 @@ class boundary_cond():
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                 elif 'val' in n.keys():
                     assert('curve' not in n.keys() and 'expression' not in n.keys())
@@ -186,6 +194,7 @@ class boundary_cond():
                     expr = n['expression']()
                     expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcsexpr_to_update_vec[func] = expr
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
@@ -203,6 +212,7 @@ class boundary_cond():
                     load = expression.template()
                     load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                     func.interpolate(load.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                 elif 'val' in n.keys():
                     assert('curve' not in n.keys() and 'expression' not in n.keys())
@@ -212,6 +222,7 @@ class boundary_cond():
                     expr = n['expression']()
                     expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcsexpr_to_update[func] = expr
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
@@ -229,6 +240,7 @@ class boundary_cond():
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                 elif 'val' in n.keys():
                     assert('curve' not in n.keys() and 'expression' not in n.keys())
@@ -238,6 +250,7 @@ class boundary_cond():
                     expr = n['expression']()
                     expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcsexpr_to_update_vec[func] = expr
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
@@ -255,6 +268,7 @@ class boundary_cond():
                     load = expression.template()
                     load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                     func.interpolate(load.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                 elif 'val' in n.keys():
                     assert('curve' not in n.keys() and 'expression' not in n.keys())
@@ -264,6 +278,7 @@ class boundary_cond():
                     expr = n['expression']()
                     expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcsexpr_to_update[func] = expr
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
@@ -301,6 +316,7 @@ class boundary_cond():
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = self.ti.timecurves(n['curve'][0])(self.ti.t_init), self.ti.timecurves(n['curve'][1])(self.ti.t_init), self.ti.timecurves(n['curve'][2])(self.ti.t_init)
                     func.interpolate(load.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcs_to_update_vec.append({func : [self.ti.timecurves(n['curve'][0]), self.ti.timecurves(n['curve'][1]), self.ti.timecurves(n['curve'][2])]})
                 elif 'val' in n.keys():
                     assert('curve' not in n.keys() and 'expression' not in n.keys())
@@ -310,6 +326,7 @@ class boundary_cond():
                     expr = n['expression']()
                     expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcsexpr_to_update_vec[func] = expr
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
@@ -327,6 +344,7 @@ class boundary_cond():
                     load = expression.template()
                     load.val = self.ti.timecurves(n['curve'])(self.ti.t_init)
                     func.interpolate(load.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcs_to_update.append({func : self.ti.timecurves(n['curve'])})
                 elif 'val' in n.keys():
                     assert('curve' not in n.keys() and 'expression' not in n.keys())
@@ -336,6 +354,7 @@ class boundary_cond():
                     expr = n['expression']()
                     expr.t = self.ti.t_init
                     func.interpolate(expr.evaluate)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                     funcsexpr_to_update[func] = expr
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
@@ -485,6 +504,7 @@ class boundary_cond():
                 load = expression.template()
                 load.val = self.ti.timecurves(b['curve'])(self.ti.t_init)
                 func.interpolate(load.evaluate)
+                func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 funcs_to_update.append({func : self.ti.timecurves(b['curve'])})
             elif 'val' in b.keys():
                 assert('curve' not in b.keys() and 'expression' not in b.keys())
@@ -494,6 +514,7 @@ class boundary_cond():
                 expr = b['expression']()
                 expr.t = self.ti.t_init
                 func.interpolate(expr.evaluate)
+                func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 funcsexpr_to_update[func] = expr
             else:
                 raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")

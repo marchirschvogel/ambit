@@ -10,6 +10,7 @@ import time, sys
 from petsc4py import PETSc
 
 from .. import utilities
+from ..mpiroutines import allgather_vec_entry
 from .solid_flow0d_main import SolidmechanicsFlow0DSolver
 
 
@@ -22,6 +23,11 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # set indicator to zero (no temporal offsets)
         self.pb.noperiodicref = 0
 
+        if self.pb.restart_step > 0:
+            self.pb.simname += str(self.pb.restart_periodicref+1)
+            self.pb.pbs.simname += str(self.pb.restart_periodicref+1)
+            self.pb.pb0.simname += str(self.pb.restart_periodicref+1)
+
         # initialize solver instance
         self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params)
 
@@ -29,12 +35,14 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         self.prestress_initial = self.pb.pbs.prestress_initial
 
         # store simname
-        self.simname = self.pb.pbs.simname
+        self.simname = self.pb.simname
 
         # read restart information
         if self.pb.restart_periodicref > 0:
-            self.pb.pbs.simname = self.simname + str(self.pb.restart_periodicref)
-            self.pb.read_restart(self.pb.pbs.simname, self.pb.restart_periodicref)
+            self.pb.simname = self.simname + str(self.pb.restart_periodicref)
+            self.pb.read_restart(self.pb.simname, self.pb.restart_periodicref)
+            if self.prestress_initial:
+                self.set_prestress_state()
 
 
     def solve_problem(self):
@@ -46,26 +54,47 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
             wts = time.time()
 
-            # change output names
-            self.pb.pbs.simname = self.simname + str(N)
-
-            self.reset_state_initial()
+            # change output names - TODO: Move to one global variable!
+            self.pb.simname, self.pb.pbs.simname, self.pb.pb0.simname = self.simname + str(N), self.simname + str(N), self.simname + str(N)
 
             # solve one heart cycle
             self.solver.time_loop()
 
+            self.reset_state_initial()
+
             # set prestress for next loop
             if self.prestress_initial:
-                self.pb.pbs.prestress_initial = True
+                self.set_prestress_state()
 
             if self.pb.write_checkpoints_periodicref:
-                self.pb.write_restart(self.pb.pbs.simname, N, force=True)
+                self.pb.write_restart(self.pb.simname, N, force=True)
 
             # check if below tolerance
             if abs(self.pb.pb0.ti.cycleerror[0]) <= self.pb.pb0.eps_periodic:
                 break
 
         self.solver.destroy()
+
+
+    def set_prestress_state(self):
+
+        self.pb.pbs.prestress_initial = True
+
+        for i, m in enumerate(self.pb.pbs.ti.funcsexpr_to_update_pre):
+
+            # we need to have the class variable 'val' in our expression!
+            assert('val' in dir(self.pb.pbs.ti.funcsexpr_to_update_pre[m]))
+
+            if self.pb.coupling_type == 'monolithic_direct':
+                self.pb.pbs.ti.funcsexpr_to_update_pre[m].val = allgather_vec_entry(self.pb.pb0.s_old, self.pb.pb0.cardvasc0D.v_ids[i], self.pb.comm)
+            if self.pb.coupling_type == 'monolithic_lagrange':
+                self.pb.pbs.ti.funcsexpr_to_update_pre[m].val = allgather_vec_entry(self.pb.LM_old, list(range(self.pb.num_coupling_surf))[i], self.pb.comm)
+
+            m.interpolate(self.pb.pbs.ti.funcsexpr_to_update_pre[m].evaluate)
+            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # we need to invoke the prestress forms here
+        self.pb.pbs.set_problem_residual_jacobian_forms()
 
 
     # set state to zero
