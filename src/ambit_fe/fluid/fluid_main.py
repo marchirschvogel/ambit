@@ -316,7 +316,7 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform_ale(self.var_v, var_p=self.var_p_, n0=self.io.n0, formulation=self.fluid_formulation)
 
         # read in fiber data - for reduced solid (FrSI)
-        if bool(self.io.fiber_data) and (self.problem_type=='fluid_ale' or self.problem_type=='fluid_ale_flow0d'): # only for FrSI problem
+        if bool(self.io.fiber_data) and (self.pbase.problem_type=='fluid_ale' or self.pbase.problem_type=='fluid_ale_flow0d'): # only for FrSI problem
 
             self.fibarray = ['circ']
             if len(self.io.fiber_data)>1: self.fibarray.append('long')
@@ -478,6 +478,7 @@ class FluidmechanicsProblem(problem_base):
 
                     self.act_curve.append( fem.Function(self.Vd_scalar) )
                     self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])})
+                    self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <-- tau_a at end of time step
 
                     self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], self.act_curve[-1], x_ref=self.x_ref_d))
 

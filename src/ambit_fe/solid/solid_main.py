@@ -286,12 +286,12 @@ class SolidmechanicsProblem(problem_base):
                         self.act_curve_old[-1].interpolate(load.evaluate)
                         self.act_curve_old[-1].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                         self.ti.funcs_to_update_old.append({self.act_curve_old[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
-                        self.actstress[-1].act_curve_old = self.act_curve_old[-1]
+                        self.actstress[-1].act_curve_old = self.act_curve_old[-1] # needed for Frank-Starling law
                     else:
-                        self.ti.funcs_to_update_old.append({None : -1})
+                        self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <-- tau_a at end of time step
                 if self.active_stress_trig == 'prescribed':
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['prescribed_curve'])})
-                    self.ti.funcs_to_update_old.append({None : -1})
+                    self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <-- tau_a at end of time step
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
             if 'growth' in self.constitutive_models['MAT'+str(n+1)].keys():
