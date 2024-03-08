@@ -36,8 +36,12 @@ Fluid mechanics, governed by incompressible Navier-Stokes equations:
 
 class FluidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, iof, mor_params={}, comm=None, alevar={}):
-        super().__init__(io_params, time_params, comm=comm)
+    def __init__(self, pbase, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, iof, mor_params={}, comm=None, alevar={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         ioparams.check_params_fem_fluid(fem_params)
         ioparams.check_params_time_fluid(time_params)
@@ -98,6 +102,7 @@ class FluidmechanicsProblem(problem_base):
         self.localsolve = False # no idea what might have to be solved locally...
 
         self.sub_solve = False
+        self.print_subiter = False
 
         self.have_flux_monitor, self.have_dp_monitor, self.have_robin_valve = False, False, False
 
@@ -126,8 +131,10 @@ class FluidmechanicsProblem(problem_base):
 
         # model order reduction
         self.mor_params = mor_params
-        if bool(self.mor_params): self.have_rom = True
-        else: self.have_rom = False
+        if bool(self.mor_params): self.pbase.have_rom = True
+        else: self.pbase.have_rom = False
+        # will be set by solver base class
+        self.rom = None
 
         # ALE fluid problem variables
         self.alevar = alevar
@@ -241,7 +248,7 @@ class FluidmechanicsProblem(problem_base):
             self.V_p, self.p, self.p_old = self.V_p_[0], self.p_[0], self.p_old_[0] # pointer to first p's...
 
         # if we want to initialize the pressure (domain wise) with a scalar value
-        if self.restart_step==0:
+        if self.pbase.restart_step==0:
             if bool(self.initial_fluid_pressure):
                 for mp in range(self.num_dupl):
                     val = self.initial_fluid_pressure[mp]
@@ -278,7 +285,7 @@ class FluidmechanicsProblem(problem_base):
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
         # initialize fluid time-integration class
-        self.ti = timeintegration.timeintegration_fluid(time_params, self.dt, self.numstep, fem_params, time_curves=time_curves, t_init=self.t_init, dim=self.dim, comm=self.comm)
+        self.ti = timeintegration.timeintegration_fluid(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
@@ -493,7 +500,7 @@ class FluidmechanicsProblem(problem_base):
             if 'neumann_prestress' in self.bc_dict.keys():
                 w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
-                self.ufluid_prestr = self.v * self.dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
+                self.ufluid_prestr = self.v * self.pbase.dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
                 w_membrane_prestr, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr
         else:
@@ -628,7 +635,7 @@ class FluidmechanicsProblem(problem_base):
             for nm in range(len(self.bc_dict['membrane'])):
 
                 if self.mem_active_stress[nm]:
-                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.dt))
+                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.pbase.dt))
                     na+=1
                 else:
                     self.tau_a_.append(ufl.as_ufl(0))
@@ -675,9 +682,9 @@ class FluidmechanicsProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t,self.dt): mode='wt'
+                if np.isclose(t,self.pbase.dt): mode='wt'
                 else: mode='a'
-                fp = open(self.io.output_path+'/results_'+self.simname+'_internalpower.txt', mode)
+                fp = open(self.io.output_path+'/results_'+self.pbase.simname+'_internalpower.txt', mode)
                 fp.write('%.16E %.16E\n' % (t,internal_power))
                 fp.close()
 
@@ -710,14 +717,14 @@ class FluidmechanicsProblem(problem_base):
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t,self.dt): mode='wt'
+                if np.isclose(t,self.pbase.dt): mode='wt'
                 else: mode='a'
                 if 'strainenergy_membrane' in self.results_to_write:
-                    fe = open(self.io.output_path+'/results_'+self.simname+'_strainenergy_membrane.txt', mode)
+                    fe = open(self.io.output_path+'/results_'+self.pbase.simname+'_strainenergy_membrane.txt', mode)
                     fe.write('%.16E %.16E\n' % (t,strain_energy_mem))
                     fe.close()
                 if 'internalpower_membrane' in self.results_to_write:
-                    fp = open(self.io.output_path+'/results_'+self.simname+'_internalpower_membrane.txt', mode)
+                    fp = open(self.io.output_path+'/results_'+self.pbase.simname+'_internalpower_membrane.txt', mode)
                     fp.write('%.16E %.16E\n' % (t,internal_power_mem))
                     fp.close()
 
@@ -736,7 +743,7 @@ class FluidmechanicsProblem(problem_base):
         utilities.print_status("FEM form compilation for fluid...", self.comm, e=" ")
 
         if not bool(self.io.duplicate_mesh_domains):
-            if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
+            if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
                 self.weakform_p = sum(self.weakform_p)
                 self.weakform_lin_vp = sum(self.weakform_lin_vp)
                 self.weakform_lin_pv = sum(self.weakform_lin_pv)
@@ -749,7 +756,7 @@ class FluidmechanicsProblem(problem_base):
                 if self.stabilization is not None:
                     self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
 
-        if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
+        if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
                 self.res_p = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
@@ -862,8 +869,8 @@ class FluidmechanicsProblem(problem_base):
         self.r_list[0] = self.r_v
         self.r_list[1] = self.r_p
 
-        if bool(self.residual_scale):
-            self.scale_residual_list(self.r_list, self.residual_scale)
+        if bool(self.pbase.residual_scale):
+            self.scale_residual_list(self.r_list, self.pbase.residual_scale)
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -903,8 +910,8 @@ class FluidmechanicsProblem(problem_base):
         self.K_list[1][0] = self.K_pv
         self.K_list[1][1] = self.K_pp
 
-        if bool(self.residual_scale):
-            self.scale_jacobian_list(self.K_list, self.residual_scale)
+        if bool(self.pbase.residual_scale):
+            self.scale_jacobian_list(self.K_list, self.pbase.residual_scale)
 
 
     def get_index_sets(self, isoptions={}):
@@ -1019,9 +1026,8 @@ class FluidmechanicsProblem(problem_base):
     def read_restart(self, sname, N):
 
         # read restart information
-        if self.restart_step > 0:
+        if self.pbase.restart_step > 0:
             self.io.readcheckpoint(self, N)
-            self.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -1034,7 +1040,7 @@ class FluidmechanicsProblem(problem_base):
             for k in self.pu_old_: self.pu_[k] = self.pu_old_[k]
             for k in self.pd_old_: self.pd_[k] = self.pd_old_[k]
         if self.have_robin_valve:
-            self.evaluate_robin_valve(self.t_init, self.pu_old_, self.pd_old_)
+            self.evaluate_robin_valve(self.pbase.t_init, self.pu_old_, self.pd_old_)
 
 
     def write_output_ini(self):
@@ -1146,7 +1152,7 @@ class FluidmechanicsSolver(solver_base):
     def solve_initial_state(self):
 
         # consider consistent initial acceleration
-        if (self.pb.fluid_governing_type == 'navierstokes_transient' or self.pb.fluid_governing_type == 'stokes_transient') and self.pb.restart_step == 0:
+        if (self.pb.fluid_governing_type == 'navierstokes_transient' or self.pb.fluid_governing_type == 'stokes_transient') and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
@@ -1215,15 +1221,15 @@ class FluidmechanicsSolver(solver_base):
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in
-            self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_fluiddisplacement_pre.txt')
+            self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_fluiddisplacement_pre.txt')
             if bool(self.pb.io.duplicate_mesh_domains):
                 m=0
                 for j in self.pb.io.duplicate_mesh_domains:
                      # TODO: Might not work for duplicate mesh, since we do not have the input node indices (do we...?)
-                    self.pb.io.writefunction(self.pb.p_[m], self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_pressure'+str(m+1)+'_pre.txt')
+                    self.pb.io.writefunction(self.pb.p_[m], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure'+str(m+1)+'_pre.txt')
                     m+=1
             else:
-                self.pb.io.writefunction(self.pb.p_[0], self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_pressure_pre.txt')
+                self.pb.io.writefunction(self.pb.p_[0], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure_pre.txt')
             utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.", self.pb.comm)
             os._exit(0)
 

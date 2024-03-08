@@ -23,8 +23,12 @@ from ..base import problem_base, solver_base
 
 class SolidmechanicsConstraintProblem(problem_base):
 
-    def __init__(self, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None):
-        super().__init__(io_params, time_params_solid, comm=comm)
+    def __init__(self, pbase, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, coupling_params, io, mor_params={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         self.problem_physics = 'solid_constraint'
 
@@ -43,7 +47,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.prescribed_curve = self.coupling_params['prescribed_curve']
 
         # initialize problem instances (also sets the variational forms for the solid problem)
-        self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
+        self.pbs = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params)
 
         self.pbrom = self.pbs
 
@@ -266,7 +270,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         val, val_old = [], []
         for n in range(self.num_coupling_surf):
             curvenumber = self.prescribed_curve[n]
-            val.append(self.pbs.ti.timecurves(curvenumber)(t)), val_old.append(self.pbs.ti.timecurves(curvenumber)(t-self.dt))
+            val.append(self.pbs.ti.timecurves(curvenumber)(t)), val_old.append(self.pbs.ti.timecurves(curvenumber)(t-self.pbase.dt))
 
         # Lagrange multiplier coupling residual
         for i in range(ls,le):
@@ -276,8 +280,8 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.r_list[1+off] = self.r_lm
 
-        if bool(self.residual_scale):
-            self.scale_residual_list([r_lm], [self.residual_scale[1+off]])
+        if bool(self.pbase.residual_scale):
+            self.scale_residual_list([r_lm], [self.pbase.residual_scale[1+off]])
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -329,10 +333,10 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.K_su.assemble()
 
-        if bool(self.residual_scale):
-            self.K_us.scale(self.residual_scale[0])
-            self.K_su.scale(self.residual_scale[1+off])
-            self.K_lm.scale(self.residual_scale[1+off])
+        if bool(self.pbase.residual_scale):
+            self.K_us.scale(self.pbase.residual_scale[0])
+            self.K_su.scale(self.pbase.residual_scale[1+off])
+            self.K_lm.scale(self.pbase.residual_scale[1+off])
 
         self.K_list[0][1+off] = self.K_us
         self.K_list[1+off][0] = self.K_su
@@ -499,7 +503,7 @@ class SolidmechanicsConstraintSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
-        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
+        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -515,13 +519,13 @@ class SolidmechanicsConstraintSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
-        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
+        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
             self.solverprestr.solnln.ksp[0].destroy()
 
         # consider consistent initial acceleration
-        if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0:
+        if self.pb.pbs.timint != 'static' and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")

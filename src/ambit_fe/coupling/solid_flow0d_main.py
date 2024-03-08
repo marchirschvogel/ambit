@@ -25,8 +25,12 @@ from ..base import problem_base, solver_base
 
 class SolidmechanicsFlow0DProblem(problem_base):
 
-    def __init__(self, io_params, time_params_solid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, comm_sq=None):
-        super().__init__(io_params, time_params_solid, comm=comm, comm_sq=comm_sq)
+    def __init__(self, pbase, io_params, time_params_solid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         self.problem_physics = 'solid_flow0d'
 
@@ -64,8 +68,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
         time_params_flow0d['numstep'] = time_params_solid['numstep']
 
         # initialize problem instances (also sets the variational forms for the solid problem)
-        self.pbs = SolidmechanicsProblem(io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm)
-        self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm, comm_sq=self.comm_sq)
+        self.pbs = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params)
+        self.pb0 = Flow0DProblem(pbase, io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params)
 
         self.pbrom = self.pbs # ROM problem can only be solid
 
@@ -79,7 +83,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
-        if self.pbs.problem_type == 'solid_flow0d_multiscale_gandr': self.have_multiscale_gandr = True
+        if self.pbase.problem_type == 'solid_flow0d_multiscale_gandr': self.have_multiscale_gandr = True
         else: self.have_multiscale_gandr = False
 
         self.set_variational_forms()
@@ -217,7 +221,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += -ufl.derivative(self.work_coupling_mid, self.pbs.u, self.pbs.du)
 
-        if self.coupling_type == 'monolithic_lagrange' and self.pbs.restart_step==0:
+        if self.coupling_type == 'monolithic_lagrange' and self.pbase.restart_step==0:
             # old Lagrange multipliers - initialize with initial pressures
             self.pb0.cardvasc0D.initialize_lm(self.LM, self.pb0.initialconditions)
             self.pb0.cardvasc0D.initialize_lm(self.LM_old, self.pb0.initialconditions)
@@ -451,8 +455,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             del LM_sq
 
-        if bool(self.residual_scale):
-            self.scale_residual_list([self.r_list[1+off]], [self.residual_scale[1+off]])
+        if bool(self.pbase.residual_scale):
+            self.scale_residual_list([self.r_list[1+off]], [self.pbase.residual_scale[1+off]])
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -538,7 +542,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         for i in range(len(self.row_ids)):
 
             # depending on if we have volumes, fluxes, or pressures passed in (latter for LM coupling)
-            if self.pb0.cq[i] == 'volume':   timefac = 1./self.dt
+            if self.pb0.cq[i] == 'volume':   timefac = 1./self.pbase.dt
             if self.pb0.cq[i] == 'flux':     timefac = -self.pb0.theta0d_timint(t) # 0D model time-integration factor
             if self.pb0.cq[i] == 'pressure': timefac = 1.
 
@@ -574,10 +578,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         self.K_su.assemble()
 
-        if bool(self.residual_scale):
-            self.K_us.scale(self.residual_scale[0])
-            self.K_su.scale(self.residual_scale[1+off])
-            self.K_list[1+off][1+off].scale(self.residual_scale[1+off])
+        if bool(self.pbase.residual_scale):
+            self.K_us.scale(self.pbase.residual_scale[0])
+            self.K_su.scale(self.pbase.residual_scale[1+off])
+            self.K_list[1+off][1+off].scale(self.pbase.residual_scale[1+off])
 
         self.K_list[0][1+off] = self.K_us
         self.K_list[1+off][0] = self.K_su
@@ -671,12 +675,12 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         if bool(self.pb0.chamber_models):
             for i, ch in enumerate(['lv','rv','la','ra']):
-                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y[i] = self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbs.t_init)
-                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y[i] = self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbs.t_init)
-                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbs.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y[i] = self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbase.t_init)
+                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y[i] = self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbase.t_init)
+                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pbs.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbase.t_init))
 
         # if we have prescribed variable values over time
-        if self.restart_step==0: # we read s and s_old in case of restart
+        if self.pbase.restart_step==0: # we read s and s_old in case of restart
             if bool(self.pb0.prescribed_variables):
                 for a in self.pb0.prescribed_variables:
                     varindex = self.pb0.cardvasc0D.varmap[a]
@@ -686,13 +690,13 @@ class SolidmechanicsFlow0DProblem(problem_base):
                         val = prescr['val']
                     elif prtype=='curve':
                         curvenumber = prescr['curve']
-                        val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                        val = self.pb0.ti.timecurves(curvenumber)(self.pbase.t_init)
                     else:
                         raise ValueError("Unknown type to prescribe a variable.")
                     self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
 
         # initially evaluate 0D model at old state
-        self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbs.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)
+        self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbase.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)
         self.pb0.auxTc_old[:] = self.pb0.aux_old[:]
 
 
@@ -816,7 +820,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, subsolver=self.subsol)
 
-        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
+        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             # initialize solid mechanics solver
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
@@ -834,12 +838,12 @@ class SolidmechanicsFlow0DSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
-        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbs.restart_step == 0:
+        if (self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
 
         # consider consistent initial acceleration
-        if self.pb.pbs.timint != 'static' and self.pb.pbs.restart_step == 0 and not self.pb.restart_multiscale:
+        if self.pb.pbs.timint != 'static' and self.pb.pbase.restart_step == 0 and not self.pb.restart_multiscale:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
@@ -865,4 +869,4 @@ class SolidmechanicsFlow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbs.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

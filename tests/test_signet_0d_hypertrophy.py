@@ -14,7 +14,7 @@ import pytest
 
 @pytest.mark.signet
 @pytest.mark.skip(reason="Not yet ready for testing.")
-def main():
+def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 

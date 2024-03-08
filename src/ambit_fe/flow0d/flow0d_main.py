@@ -21,8 +21,13 @@ from ..base import problem_base, solver_base
 
 class Flow0DProblem(problem_base):
 
-    def __init__(self, io_params, time_params, model_params, time_curves, coupling_params={}, comm=None, comm_sq=None):
-        super().__init__(io_params, time_params, comm=comm, comm_sq=comm_sq)
+    def __init__(self, pbase, io_params, time_params, model_params, time_curves, coupling_params={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
+        self.comm_sq = self.pbase.comm_sq
 
         ioparams.check_params_io(io_params)
         ioparams.check_params_time_flow0d(time_params)
@@ -177,14 +182,14 @@ class Flow0DProblem(problem_base):
         self.auxdata, self.auxdata_old = {}, {} # auxiliary data that can be set by other fields (e.g. fluxes from the 3D monitor)
 
         # initialize flow0d time-integration class
-        self.ti = timeintegration.timeintegration_flow0d(time_params, self.dt, self.numstep, time_curves, self.t_init, comm=self.comm)
+        self.ti = timeintegration.timeintegration_flow0d(time_params, self.pbase.dt, self.pbase.numstep, time_curves, self.pbase.t_init, comm=self.comm)
 
         if initial_file:
             self.initialconditions = self.cardvasc0D.set_initial_from_file(initial_file)
         else:
             self.initialconditions = time_params['initial_conditions']
 
-        if self.restart_step==0:
+        if self.pbase.restart_step==0:
             self.cardvasc0D.initialize(self.s, self.initialconditions)
             self.cardvasc0D.initialize(self.s_old, self.initialconditions)
             self.cardvasc0D.initialize(self.sTc_old, self.initialconditions)
@@ -214,8 +219,8 @@ class Flow0DProblem(problem_base):
         # 0D rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         self.r.zeroEntries()
 
-        self.r.axpy(1./self.dt, self.df)
-        self.r.axpy(-1./self.dt, self.df_old)
+        self.r.axpy(1./self.pbase.dt, self.df)
+        self.r.axpy(-1./self.pbase.dt, self.df_old)
 
         self.r.axpy(theta, self.f)
         self.r.axpy(1.-theta, self.f_old)
@@ -252,7 +257,7 @@ class Flow0DProblem(problem_base):
         self.K.assemble()
 
         self.K.zeroEntries()
-        self.K.axpy(1./self.dt, self.dK_)
+        self.K.axpy(1./self.pbase.dt, self.dK_)
         self.K.axpy(theta, self.K_)
 
         # if we have prescribed variable values over time
@@ -267,7 +272,7 @@ class Flow0DProblem(problem_base):
     def theta0d_timint(self, t):
 
         if self.initial_backwardeuler:
-            if np.isclose(t,self.dt):
+            if np.isclose(t,self.pbase.dt):
                 theta = 1.0
             else:
                 theta = self.theta_ost
@@ -317,7 +322,7 @@ class Flow0DProblem(problem_base):
         if self.cardvasc0D.T_cycl > 0: # read heart cycle info
             self.ti.cycle[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(0), dtype=int)
             self.ti.cycleerror[0] = np.loadtxt(self.output_path_0D+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(1), dtype=float)
-            self.t_init -= (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl
+            self.pbase.t_init -= (self.ti.cycle[0]-1) * self.cardvasc0D.T_cycl
 
         if bool(self.auxdata_old):
             if bool(self.auxdata_old['p']):
@@ -359,24 +364,24 @@ class Flow0DProblem(problem_base):
     def read_restart(self, sname, N):
 
         # read restart information
-        if self.restart_step > 0:
+        if self.pbase.restart_step > 0:
             self.readrestart(sname+'_'+self.problem_physics, N)
-            self.simname += '_r'+str(N)
+            self.pbase.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
 
         # evaluate old state
         if self.excitation_curve is not None:
-            self.c.append(self.ti.timecurves(self.excitation_curve)(self.t_init))
+            self.c.append(self.ti.timecurves(self.excitation_curve)(self.pbase.t_init))
         if bool(self.chamber_models):
             for i, ch in enumerate(['lv','rv','la','ra']):
-                if self.chamber_models[ch]['type']=='0D_elast': self.y[i] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(self.t_init)
-                if self.chamber_models[ch]['type']=='0D_elast_prescr': self.y[i] = self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(self.t_init)
-                if self.chamber_models[ch]['type']=='0D_prescr': self.c.append(self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(self.t_init))
+                if self.chamber_models[ch]['type']=='0D_elast': self.y[i] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(self.pbase.t_init)
+                if self.chamber_models[ch]['type']=='0D_elast_prescr': self.y[i] = self.ti.timecurves(self.chamber_models[ch]['elastance_curve'])(self.pbase.t_init)
+                if self.chamber_models[ch]['type']=='0D_prescr': self.c.append(self.ti.timecurves(self.chamber_models[ch]['prescribed_curve'])(self.pbase.t_init))
 
         # if we have prescribed variable values over time
-        if self.restart_step==0: # we read s and s_old in case of restart
+        if self.pbase.restart_step==0: # we read s and s_old in case of restart
             if bool(self.prescribed_variables):
                 for a in self.prescribed_variables:
                     varindex = self.cardvasc0D.varmap[a]
@@ -386,12 +391,12 @@ class Flow0DProblem(problem_base):
                         val = prescr['val']
                     elif prtype=='curve':
                         curvenumber = prescr['curve']
-                        val = self.ti.timecurves(curvenumber)(self.t_init)
+                        val = self.ti.timecurves(curvenumber)(self.pbase.t_init)
                     else:
                         raise ValueError("Unknown type to prescribe a variable.")
                     self.s[varindex], self.s_old[varindex] = val, val
 
-        self.cardvasc0D.evaluate(self.s_old, self.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)
+        self.cardvasc0D.evaluate(self.s_old, self.pbase.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)
         self.auxTc_old[:] = self.aux_old[:]
 
 
@@ -433,7 +438,7 @@ class Flow0DProblem(problem_base):
 
         # raw txt file output of 0D model quantities
         if self.write_results_every_0D > 0 and N % self.write_results_every_0D == 0:
-            self.cardvasc0D.write_output(self.output_path_0D, t, self.s_mid, self.aux_mid, self.simname+'_'+self.problem_physics)
+            self.cardvasc0D.write_output(self.output_path_0D, t, self.s_mid, self.aux_mid, self.pbase.simname+'_'+self.problem_physics)
 
 
     def update(self):
@@ -465,7 +470,7 @@ class Flow0DProblem(problem_base):
     def check_abort(self, t):
 
         # check for periodicity in cardiac cycle and stop if reached (only for syspul* models - cycle counter gets updated here)
-        is_periodic = self.cardvasc0D.cycle_check(self.s, self.sTc, self.sTc_old, self.aux, self.auxTc, self.auxTc_old, t, self.ti.cycle, self.ti.cycleerror, self.eps_periodic, check=self.periodic_checktype, inioutpath=self.output_path_0D, nm=self.simname, induce_pert_after_cycl=self.perturb_after_cylce)
+        is_periodic = self.cardvasc0D.cycle_check(self.s, self.sTc, self.sTc_old, self.aux, self.auxTc, self.auxTc_old, t, self.ti.cycle, self.ti.cycleerror, self.eps_periodic, check=self.periodic_checktype, inioutpath=self.output_path_0D, nm=self.pbase.simname, induce_pert_after_cycl=self.perturb_after_cylce)
 
         if is_periodic:
             utilities.print_status("Periodicity reached after %i heart cycles with cycle error %.4f! Finished. :-)" % (self.ti.cycle[0]-1,self.ti.cycleerror[0]), self.comm)
@@ -502,4 +507,4 @@ class Flow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.numstep, ni=ni, li=li, wt=wt)
+        self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

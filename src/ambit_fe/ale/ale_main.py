@@ -29,8 +29,12 @@ Arbitrary Lagrangian Eulerian (ALE) mechanics problem
 
 class AleProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
-        super().__init__(io_params, time_params, comm)
+    def __init__(self, pbase, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         ioparams.check_params_fem_ale(fem_params)
         ioparams.check_params_time_fluid(time_params)
@@ -56,6 +60,7 @@ class AleProblem(problem_base):
         self.incompressible_2field = False # always False here...
 
         self.sub_solve = False
+        self.print_subiter = False
 
         self.dim = self.io.mesh.geometry.dim
 
@@ -77,6 +82,8 @@ class AleProblem(problem_base):
         self.mor_params = mor_params
         if bool(self.mor_params): self.have_rom = True
         else: self.have_rom = False
+        # will be set by solver base class
+        self.rom = None
 
         # create finite element objects
         P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -120,7 +127,7 @@ class AleProblem(problem_base):
         self.numdof = self.d.vector.getSize()
 
         # initialize ALE time-integration class
-        self.ti = timeintegration.timeintegration_ale(time_params, self.dt, self.numstep, fem_params, time_curves=time_curves, t_init=self.t_init, dim=self.dim, comm=self.comm)
+        self.ti = timeintegration.timeintegration_ale(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
 
         # initialize kinematics_constitutive class
         self.ki = ale_kinematics_constitutive.kinematics(self.dim)
@@ -228,8 +235,8 @@ class AleProblem(problem_base):
 
         self.r_list[0] = self.r_d
 
-        if bool(self.residual_scale):
-            self.scale_residual_list(self.r_list, self.residual_scale)
+        if bool(self.pbase.residual_scale):
+            self.scale_residual_list(self.r_list, self.pbase.residual_scale)
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -241,8 +248,8 @@ class AleProblem(problem_base):
 
         self.K_list[0][0] = self.K_dd
 
-        if bool(self.residual_scale):
-            self.scale_jacobian_list(self.K_list, self.residual_scale)
+        if bool(self.pbase.residual_scale):
+            self.scale_jacobian_list(self.K_list, self.pbase.residual_scale)
 
 
     ### now the base routines for this problem
@@ -250,9 +257,8 @@ class AleProblem(problem_base):
     def read_restart(self, sname, N):
 
         # read restart information
-        if self.restart_step > 0:
+        if self.pbase.restart_step > 0:
             self.io.readcheckpoint(self, N)
-            self.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):

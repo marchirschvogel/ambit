@@ -39,13 +39,20 @@ J-1 = 0 \quad \text{in} \; \Omega_{0} \times [0, T]
 
 class SolidmechanicsProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}, comm=None):
-        super().__init__(io_params, time_params, comm)
+    def __init__(self, pbase, io_params, time_params, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         ioparams.check_params_fem_solid(fem_params)
         ioparams.check_params_time_solid(time_params)
 
         self.problem_physics = 'solid'
+
+        try: self.timint = time_params['timint']
+        except: self.timint = 'static'
 
         self.results_to_write = io_params['results_to_write']
 
@@ -99,6 +106,7 @@ class SolidmechanicsProblem(problem_base):
         self.dim = self.io.mesh.geometry.dim
 
         self.sub_solve = False
+        self.print_subiter = False
 
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
@@ -120,8 +128,10 @@ class SolidmechanicsProblem(problem_base):
 
         # model order reduction
         self.mor_params = mor_params
-        if bool(self.mor_params): self.have_rom = True
-        else: self.have_rom = False
+        if bool(self.mor_params): self.pbase.have_rom = True
+        else: self.pbase.have_rom = False
+        # will be set by solver base class
+        self.rom = None
 
         # create finite element objects for u and p
         P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -232,7 +242,7 @@ class SolidmechanicsProblem(problem_base):
         self.mor_params = mor_params
 
         # initialize solid time-integration class
-        self.ti = timeintegration.timeintegration_solid(time_params, self.dt, self.numstep, fem_params, time_curves=time_curves, t_init=self.t_init, dim=self.dim, comm=self.comm)
+        self.ti = timeintegration.timeintegration_solid(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.pbase.comm)
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
@@ -272,7 +282,7 @@ class SolidmechanicsProblem(problem_base):
                         self.act_curve_old.append( fem.Function(self.Vd_scalar) )
                         # we need to initialize the old activation curve here to get the correct stretch state evaluation
                         load = expression.template()
-                        load.val = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])(self.ti.t_init)
+                        load.val = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])(self.pbase.t_init)
                         self.act_curve_old[-1].interpolate(load.evaluate)
                         self.act_curve_old[-1].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                         self.ti.funcs_to_update_old.append({self.act_curve_old[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
@@ -324,7 +334,7 @@ class SolidmechanicsProblem(problem_base):
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
-            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps)
+            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
             self.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.growth_thres.interpolate(growth_thres_proj)
 
@@ -520,7 +530,7 @@ class SolidmechanicsProblem(problem_base):
 
                 if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                     # growth residual and increment
-                    a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres, 'res_del')
+                    a, b = self.ma[n].res_dtheta_growth(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres, 'res_del')
                     self.r_growth.append(a), self.del_theta.append(b)
                 else:
                     self.r_growth.append(ufl.as_ufl(0)), self.del_theta.append(ufl.as_ufl(0))
@@ -557,10 +567,10 @@ class SolidmechanicsProblem(problem_base):
 
             if self.mat_growth[n] and self.mat_growth_trig[n] != 'prescribed' and self.mat_growth_trig[n] != 'prescribed_multiscale':
                 # growth tangent operator
-                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
+                Cgrowth = self.ma[n].Cgrowth(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres)
                 if self.mat_remodel[n] and self.lin_remod_full:
                     # remodeling tangent operator
-                    Cremod = self.ma[n].Cremod(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
+                    Cremod = self.ma[n].Cremod(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres)
                     Ctang = Cmat + Cgrowth + Cremod
                 else:
                     Ctang = Cmat + Cgrowth
@@ -601,21 +611,21 @@ class SolidmechanicsProblem(problem_base):
                     Cmat, Cmat_v = self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='tangent')
                     # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
                     # for stress-mediated growth, we get a contribution to the pressure material tangent operator
-                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
+                    Cgrowth_p = self.ma[n].Cgrowth_p(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres)
                     if self.mat_remodel[n] and self.lin_remod_full:
                         # remodeling tangent operator
-                        Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
+                        Cremod_p = self.ma[n].Cremod_p(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres)
                         Ctang_p = Cmat_p + Cgrowth_p + Cremod_p
                     else:
                         Ctang_p = Cmat_p + Cgrowth_p
                     # for all types of deformation-dependent growth, we need to add the growth contributions to the Jacobian tangent operator
-                    Jgrowth = ufl.diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
+                    Jgrowth = ufl.diff(J,self.theta) * self.ma[n].dtheta_dC(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres)
                     Jtang = Jmat + Jgrowth
                     # ok... for stress-mediated growth, we actually get a non-zero right-bottom (11) block in our saddle-point system matrix,
                     # since Je = Je(C,theta(C,p)) ---> dJe/dp = dJe/dtheta * dtheta/dp
                     # TeX: D_{\Delta p}\!\int\limits_{\Omega_0} (J^{\mathrm{e}}-1)\delta p\,\mathrm{d}V = \int\limits_{\Omega_0} \frac{\partial J^{\mathrm{e}}}{\partial p}\Delta p \,\delta p\,\mathrm{d}V,
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
-                    dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.dt, self.growth_thres)
+                    dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres)
                     if not isinstance(dthetadp, ufl.constantvalue.Zero):
                         self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.io.dx(M)
                 else:
@@ -674,7 +684,7 @@ class SolidmechanicsProblem(problem_base):
                     else:
                         lam_fib = ufl.as_ufl(1)
 
-                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.dt, lam=lam_fib, amp_old=self.amp_old))
+                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.pbase.dt, lam=lam_fib, amp_old=self.amp_old))
                     na+=1
                 else:
                     self.tau_a_.append(ufl.as_ufl(0))
@@ -701,12 +711,12 @@ class SolidmechanicsProblem(problem_base):
     def evaluate_active_stress_ode(self):
 
         if self.have_frank_starling:
-            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps)
+            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
             self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.amp_old.interpolate(amp_old_proj)
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps)
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -719,19 +729,19 @@ class SolidmechanicsProblem(problem_base):
 
         dtheta_all = ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
-            dtheta_all += (self.theta - self.theta_old) / (self.dt) * self.io.dx(M)
+            dtheta_all += (self.theta - self.theta_old) / (self.pbase.dt) * self.io.dx(M)
 
         gr = fem.assemble_scalar(fem.form(dtheta_all))
         gr = self.comm.allgather(gr)
         self.growth_rate = sum(gr)
 
-        utilities.print_status('Solid growth rate: %.4e' % (self.growth_rate), self.comm)
+        utilities.print_status('Solid growth rate: %.4e' % (self.growth_rate), self.pbase.comm)
 
         if self.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t,self.dt): mode='wt'
+                if np.isclose(t,self.pbase.dt): mode='wt'
                 else: mode='a'
-                fl = self.io.output_path+'/results_'+self.simname+'_growthrate.txt'
+                fl = self.io.output_path+'/results_'+self.pbase.simname+'_growthrate.txt'
                 f = open(fl, mode)
                 f.write('%.16E %.16E\n' % (t,self.growth_rate))
                 f.close()
@@ -746,23 +756,23 @@ class SolidmechanicsProblem(problem_base):
             ip_all += ufl.inner(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),self.ki.Edot(self.u, self.vel)) * self.io.dx(M)
 
         se = fem.assemble_scalar(fem.form(se_all))
-        se = self.comm.allgather(se)
+        se = self.pbase.comm.allgather(se)
         strain_energy = sum(se)
 
         ip = fem.assemble_scalar(fem.form(ip_all))
-        ip = self.comm.allgather(ip)
+        ip = self.pbase.comm.allgather(ip)
         internal_power = sum(ip)
 
-        if self.comm.rank == 0:
+        if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t,self.dt): mode='wt'
+                if np.isclose(t,self.pbase.dt): mode='wt'
                 else: mode='a'
                 if 'strainenergy' in self.results_to_write:
-                    fe = open(self.io.output_path+'/results_'+self.simname+'_strainenergy.txt', mode)
+                    fe = open(self.io.output_path+'/results_'+self.pbase.simname+'_strainenergy.txt', mode)
                     fe.write('%.16E %.16E\n' % (t,strain_energy))
                     fe.close()
                 if 'internalpower' in self.results_to_write:
-                    fp = open(self.io.output_path+'/results_'+self.simname+'_internalpower.txt', mode)
+                    fp = open(self.io.output_path+'/results_'+self.pbase.simname+'_internalpower.txt', mode)
                     fp.write('%.16E %.16E\n' % (t,internal_power))
                     fp.close()
 
@@ -786,23 +796,23 @@ class SolidmechanicsProblem(problem_base):
                 ip_mem_all += self.bintpower[nm] * self.io.ds(self.idmem[nm])
 
         se_mem = fem.assemble_scalar(fem.form(se_mem_all))
-        se_mem = self.comm.allgather(se_mem)
+        se_mem = self.pbase.comm.allgather(se_mem)
         strain_energy_mem = sum(se_mem)
 
         ip_mem = fem.assemble_scalar(fem.form(ip_mem_all))
-        ip_mem = self.comm.allgather(ip_mem)
+        ip_mem = self.pbase.comm.allgather(ip_mem)
         internal_power_mem = sum(ip_mem)
 
-        if self.comm.rank == 0:
+        if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t,self.dt): mode='wt'
+                if np.isclose(t,self.pbase.dt): mode='wt'
                 else: mode='a'
                 if 'strainenergy_membrane' in self.results_to_write:
-                    fe = open(self.io.output_path+'/results_'+self.simname+'_strainenergy_membrane.txt', mode)
+                    fe = open(self.io.output_path+'/results_'+self.pbase.simname+'_strainenergy_membrane.txt', mode)
                     fe.write('%.16E %.16E\n' % (t,strain_energy_mem))
                     fe.close()
                 if 'internalpower_membrane' in self.results_to_write:
-                    fp = open(self.io.output_path+'/results_'+self.simname+'_internalpower_membrane.txt', mode)
+                    fp = open(self.io.output_path+'/results_'+self.pbase.simname+'_internalpower_membrane.txt', mode)
                     fp.write('%.16E %.16E\n' % (t,internal_power_mem))
                     fp.close()
 
@@ -843,14 +853,14 @@ class SolidmechanicsProblem(problem_base):
             vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.io.dx(M)
 
         vol = fem.assemble_scalar(fem.form(vol_all))
-        vol = self.comm.allgather(vol)
+        vol = self.pbase.comm.allgather(vol)
         volume = sum(vol)
 
-        if self.comm.rank == 0:
+        if self.pbase.comm.rank == 0:
             if self.io.write_results_every > 0 and N % self.io.write_results_every == 0:
-                if np.isclose(t,self.dt): mode='wt'
+                if np.isclose(t,self.pbase.dt): mode='wt'
                 else: mode='a'
-                fl = self.io.output_path+'/results_'+self.simname+'_volume_laplace.txt'
+                fl = self.io.output_path+'/results_'+self.pbase.simname+'_volume_laplace.txt'
                 f = open(fl, mode)
                 f.write('%.16E %.16E\n' % (t,volume))
                 f.close()
@@ -859,9 +869,9 @@ class SolidmechanicsProblem(problem_base):
     def set_problem_residual_jacobian_forms(self):
 
         ts = time.time()
-        utilities.print_status("FEM form compilation for solid...", self.comm, e=" ")
+        utilities.print_status("FEM form compilation for solid...", self.pbase.comm, e=" ")
 
-        if (not self.prestress_initial and not self.prestress_initial_only) or self.restart_step > 0:
+        if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
                 self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
@@ -903,7 +913,7 @@ class SolidmechanicsProblem(problem_base):
                     self.jac_pp = None
 
         te = time.time() - ts
-        utilities.print_status("t = %.4f s" % (te), self.comm)
+        utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
 
     def set_problem_vector_matrix_structures(self):
@@ -946,8 +956,8 @@ class SolidmechanicsProblem(problem_base):
 
             self.r_list[0] = self.r_u
 
-        if bool(self.residual_scale):
-            self.scale_residual_list(self.r_list, self.residual_scale)
+        if bool(self.pbase.residual_scale):
+            self.scale_residual_list(self.r_list, self.pbase.residual_scale)
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -985,8 +995,8 @@ class SolidmechanicsProblem(problem_base):
 
             self.K_list[0][0] = self.K_uu
 
-        if bool(self.residual_scale):
-            self.scale_jacobian_list(self.K_list, self.residual_scale)
+        if bool(self.pbase.residual_scale):
+            self.scale_jacobian_list(self.K_list, self.pbase.residual_scale)
 
 
     def get_index_sets(self, isoptions={}):
@@ -1001,10 +1011,10 @@ class SolidmechanicsProblem(problem_base):
             uvec_ls = self.u.vector.getLocalSize()
 
         offset_u = uvec_or0 + self.p.vector.getOwnershipRange()[0]
-        iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
+        iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.pbase.comm)
 
         offset_p = offset_u + uvec_ls
-        iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+        iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.pbase.comm)
 
         return [iset_u, iset_p]
 
@@ -1016,7 +1026,6 @@ class SolidmechanicsProblem(problem_base):
         # read restart information
         if N > 0:
             self.io.readcheckpoint(self, N)
-            self.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -1032,7 +1041,7 @@ class SolidmechanicsProblem(problem_base):
 
         if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
             for i in range(len(self.fibarray)):
-                fib_proj = project(self.fib_func[i], self.V_u, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm, entity_maps=self.io.entity_maps)
+                fib_proj = project(self.fib_func[i], self.V_u, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.pbase.comm, entity_maps=self.io.entity_maps)
                 self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+self.fibarray[i])
 
 
@@ -1105,7 +1114,7 @@ class SolidmechanicsProblem(problem_base):
 
     def check_abort(self, t):
 
-        if self.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.growth_rate) <= self.tol_stop_large:
+        if self.pbase.problem_type == 'solid_flow0d_multiscale_gandr' and abs(self.growth_rate) <= self.tol_stop_large:
             return True
 
 
@@ -1131,14 +1140,14 @@ class SolidmechanicsSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the full solid problem
-        if (self.pb.prestress_initial or self.pb.prestress_initial_only) and self.pb.restart_step == 0:
+        if (self.pb.prestress_initial or self.pb.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             self.solve_initial_prestress()
 
         # consider consistent initial acceleration
-        if self.pb.timint != 'static' and self.pb.restart_step == 0:
+        if self.pb.timint != 'static' and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
-            utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
+            utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.pbase.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
             weakform_a = self.pb.deltaW_kin_old + self.pb.deltaW_int_old - self.pb.deltaW_ext_old
@@ -1150,7 +1159,7 @@ class SolidmechanicsSolver(solver_base):
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)
 
             te = time.time() - ts
-            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
+            utilities.print_status("t = %.4f s" % (te), self.pb.pbase.comm)
 
 
     def solve_nonlinear_problem(self, t):
@@ -1166,7 +1175,7 @@ class SolidmechanicsSolver(solver_base):
 
     def solve_initial_prestress(self):
 
-        utilities.print_prestress('start', self.pb.comm)
+        utilities.print_prestress('start', self.pb.pbase.comm)
 
         if self.pb.prestress_ptc: self.solnln.PTC = True
 
@@ -1182,14 +1191,14 @@ class SolidmechanicsSolver(solver_base):
 
             # MULF update
             self.pb.ki.prestress_update(self.pb.u)
-            utilities.print_prestress('updt', self.pb.comm)
+            utilities.print_prestress('updt', self.pb.pbase.comm)
 
             wt = time.time() - wts
 
             # print time step info to screen
             self.pb.ti.print_prestress_step(N, tprestr, self.pb.prestress_numstep, self.solnln.lsp, ni=self.solnln.ni, li=self.solnln.li, wt=wt)
 
-        utilities.print_prestress('end', self.pb.comm)
+        utilities.print_prestress('end', self.pb.pbase.comm)
 
         # write prestress displacement (given that we want to write the displacement)
         if 'displacement' in self.pb.results_to_write and self.pb.io.write_results_every > 0:
@@ -1197,10 +1206,10 @@ class SolidmechanicsSolver(solver_base):
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in
-            self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_displacement_pre.txt')
+            self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_displacement_pre.txt')
             if self.pb.incompressible_2field:
-                self.pb.io.writefunction(self.pb.p, self.pb.io.output_path_pre+'/results_'+self.pb.simname+'_pressure_pre.txt')
-            utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.", self.pb.comm)
+                self.pb.io.writefunction(self.pb.p, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure_pre.txt')
+            utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.", self.pb.pbase.comm)
             os._exit(0)
 
         # reset PTC flag to what it was

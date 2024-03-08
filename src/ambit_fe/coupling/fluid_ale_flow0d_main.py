@@ -28,8 +28,13 @@ from ..meshutils import gather_surface_dof_indices
 
 class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}, comm=None, comm_sq=None):
-        problem_base.__init__(self, io_params, time_params_fluid, comm=comm, comm_sq=comm_sq)
+    def __init__(self, pbase, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}):
+        #problem_base.__init__(self, io_params, time_params_fluid, comm=comm, comm_sq=comm_sq)
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
 
@@ -47,10 +52,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
-        self.pba  = AleProblem(io_params, time_params_fluid, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
+        self.pba  = AleProblem(pbase, io_params, time_params_fluid, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
         # ALE variables that are handed to fluid problem
         alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old}
-        self.pbf0 = FluidmechanicsFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq, alevar=alevariables)
+        self.pbf0 = FluidmechanicsFlow0DProblem(pbase, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, alevar=alevariables)
 
         self.pbf = self.pbf0.pbf
         self.pb0 = self.pbf0.pb0
@@ -86,6 +91,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.numdof = [self.pbf.numdof + self.pbf0.LM.getSize(), self.pba.numdof]
 
         self.sub_solve = True
+        self.print_subiter = False
+
         self.print_enhanced_info = self.pbf.io.print_enhanced_info
 
         # number of fields involved
@@ -242,8 +249,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         self.K_sd.assemble()
 
-        if bool(self.residual_scale):
-            self.K_sd.scale(self.residual_scale[2])
+        if bool(self.pbase.residual_scale):
+            self.K_sd.scale(self.pbase.residual_scale[2])
 
         self.K_list[2][3] = self.K_sd
         self.K_list[3][3] = self.pba.K_list[0][0]
@@ -302,15 +309,10 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         # fluid-ALE + flow0d problem
         if N > 0:
             self.io.readcheckpoint(self, N)
-            self.simname += '_r'+str(N)
-            # TODO: quick-fix - simname variables of single field problems need to be addressed, too
-            # but this should be handled by one variable, however neeeds revamp of I/O
-            self.pbf.simname += '_r'+str(N)
-            self.pba.simname += '_r'+str(N)
 
         self.pb0.read_restart(sname, N)
 
-        if self.restart_step > 0:
+        if self.pbase.restart_step > 0:
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM)
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM_old)
 
@@ -434,7 +436,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -452,12 +454,12 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
 
         # consider consistent initial acceleration
-        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
@@ -487,8 +489,8 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
 
         if self.pb.coupling_strategy=='monolithic':
 
-            self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern)
-            self.pb.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
+            self.pb.assemble_residual(self.pb.pbase.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern)
+            self.pb.assemble_stiffness(self.pb.pbase.t_init, subsolver=subsolver)
 
             # create ROM matrix structures
             if self.pb.rom:
@@ -500,9 +502,9 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
 
             self.pb.pbf0.rom = self.pb.rom
 
-            self.pb.assemble_residual(self.pb.t_init, subsolver=None)
-            self.pb.pbf0.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
-            self.pb.pba.assemble_stiffness(self.pb.t_init)
+            self.pb.assemble_residual(self.pb.pbase.t_init, subsolver=None)
+            self.pb.pbf0.assemble_stiffness(self.pb.pbase.t_init, subsolver=subsolver)
+            self.pb.pba.assemble_stiffness(self.pb.pbase.t_init)
 
             # create ROM matrix structures
             if self.pb.pbf0.rom:
@@ -522,4 +524,4 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbf.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

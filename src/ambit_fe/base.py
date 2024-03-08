@@ -26,9 +26,6 @@ class problem_base():
         self.simname = io_params['simname']
         self.output_path = io_params['output_path']
 
-        try: self.timint = time_params['timint']
-        except: self.timint = 'static'
-
         self.maxtime = time_params['maxtime']
         if 'numstep' in time_params.keys():
             assert('dt' not in time_params.keys())
@@ -53,13 +50,8 @@ class problem_base():
         try: self.residual_scale = time_params['residual_scale']
         except: self.residual_scale = []
 
-        self.print_subiter = False
-
         self.t_init = self.restart_step * self.dt
 
-        # ROM problem - will be overridden by derived model problems
-        self.pbrom = self
-        self.rom = None
         self.have_rom = False
 
 
@@ -158,10 +150,10 @@ class solver_base():
         self.solver_params = solver_params
 
         # print header
-        utilities.print_problem(self.pb.problem_physics, self.pb.simname, self.pb.comm, self.pb.numdof)
+        utilities.print_problem(self.pb.problem_physics, self.pb.pbase.simname, self.pb.comm, self.pb.numdof)
 
         # model order reduction stuff
-        if self.pb.pbrom.have_rom:
+        if self.pb.pbase.have_rom:
             from .mor import mor_main
             self.pb.rom = mor_main.ModelOrderReduction(self.pb.pbrom)
             # prepare reduced-order basis (offline phase): perform Proper Orthogonal Decomposition, or read in pre-computed modes
@@ -170,7 +162,10 @@ class solver_base():
             self.pb.rom = None
 
         # read restart information if requested
-        self.pb.read_restart(self.pb.simname, self.pb.restart_step)
+        self.pb.read_restart(self.pb.pbase.simname, self.pb.pbase.restart_step)
+        # update simname
+        if self.pb.pbase.restart_step > 0:
+            self.pb.pbase.simname += '_r'+str(self.pb.pbase.restart_step)
 
         self.initialize_nonlinear_solver()
 
@@ -188,8 +183,8 @@ class solver_base():
 
         self.evaluate_system_initial()
 
-        self.pb.assemble_residual(self.pb.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern of lm-lm block
-        self.pb.assemble_stiffness(self.pb.t_init, subsolver=subsolver)
+        self.pb.assemble_residual(self.pb.pbase.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern of lm-lm block
+        self.pb.assemble_stiffness(self.pb.pbase.t_init, subsolver=subsolver)
 
         # create ROM matrix structures
         if self.pb.rom:
@@ -236,18 +231,18 @@ class solver_base():
         utilities.print_sep(self.pb.comm)
 
         # Ambit main time loop
-        for N in range(self.pb.restart_step+1, self.pb.numstep_stop+1):
+        for N in range(self.pb.pbase.restart_step+1, self.pb.pbase.numstep_stop+1):
 
             wts = time.time()
 
             # current time
-            t = N * self.pb.dt
+            t = N * self.pb.pbase.dt
 
             # offset time (for cyclic problems)
             t_off = self.pb.get_time_offset()
 
             # evaluate any (solution-independent) time curves or other functions
-            self.pb.evaluate_pre_solve(t-t_off, N, self.pb.dt)
+            self.pb.evaluate_pre_solve(t-t_off, N, self.pb.pbase.dt)
 
             # solve the nonlinear problem
             self.solve_nonlinear_problem(t-t_off)
@@ -277,7 +272,7 @@ class solver_base():
             self.pb.induce_state_change()
 
             # write restart information if desired
-            self.pb.write_restart(self.pb.simname, N)
+            self.pb.write_restart(self.pb.pbase.simname, N)
 
             # update nonlinear and linear iteration counters
             self.update_counters(wt, t)
@@ -330,15 +325,15 @@ class solver_base():
         self.li_.append(self.solnln.li)
 
         # write file for counters if requested
-        if 'counters' in self.pb.results_to_write:
+        if 'counters' in self.pb.pbase.results_to_write:
 
             # mode: 'wt' generates new file, 'a' appends to existing one
-            if np.isclose(t,self.pb.dt): mode = 'wt'
+            if np.isclose(t,self.pb.pbase.dt): mode = 'wt'
             else: mode = 'a'
 
             if self.pb.comm.rank == 0:
 
-                f = open(self.pb.output_path+'/results_'+self.pb.simname+'_wt_ni_li_counters.txt', mode)
+                f = open(self.pb.pbase.output_path+'/results_'+self.pb.pbase.simname+'_wt_ni_li_counters.txt', mode)
                 f.write('%.16E %.16E %i %i\n' % (t, wt, self.solnln.ni, self.solnln.li))
                 f.close()
 
@@ -362,14 +357,15 @@ class solver_base():
                     self.pb.K_list[n][m].destroy()
 
         # destroy ROM-specific ones
-        if self.pb.pbrom.rom:
-            self.pb.pbrom.rom.destroy()
-            self.pb.pbrom.K_list_tmp[0][0].destroy()
-            for n in range(self.pb.pbrom.nfields):
-                self.pb.pbrom.r_list_rom[n].destroy()
-                for m in range(self.pb.pbrom.nfields):
-                    if self.pb.pbrom.K_list_rom[n][m] is not None:
-                        self.pb.pbrom.K_list_rom[n][m].destroy()
+        if self.pb.pbase.have_rom:
+            if self.pb.pbrom.rom:
+                self.pb.pbrom.rom.destroy()
+                self.pb.pbrom.K_list_tmp[0][0].destroy()
+                for n in range(self.pb.pbrom.nfields):
+                    self.pb.pbrom.r_list_rom[n].destroy()
+                    for m in range(self.pb.pbrom.nfields):
+                        if self.pb.pbrom.K_list_rom[n][m] is not None:
+                            self.pb.pbrom.K_list_rom[n][m].destroy()
 
         # destroy solver data structures
         self.solnln.destroy()

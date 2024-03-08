@@ -24,8 +24,12 @@ from ..base import problem_base, solver_base
 
 class FluidmechanicsFlow0DProblem(problem_base):
 
-    def __init__(self, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, comm=None, comm_sq=None, alevar={}):
-        super().__init__(io_params, time_params_fluid, comm=comm, comm_sq=comm_sq)
+    def __init__(self, pbase, io_params, time_params_fluid, time_params_flow0d, fem_params, constitutive_models, model_params_flow0d, bc_dict, time_curves, coupling_params, io, mor_params={}, alevar={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         self.problem_physics = 'fluid_flow0d'
 
@@ -60,8 +64,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
         time_params_flow0d['numstep'] = time_params_fluid['numstep']
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pbf = FluidmechanicsProblem(io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevar)
-        self.pb0 = Flow0DProblem(io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params, comm=self.comm, comm_sq=self.comm_sq)
+        self.pbf = FluidmechanicsProblem(pbase, io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, alevar=alevar)
+        self.pb0 = Flow0DProblem(pbase, io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params)
 
         self.pbrom = self.pbf # ROM problem can only be fluid
 
@@ -162,7 +166,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
 
         # old Lagrange multipliers - initialize with initial pressures
-        if self.pbf.restart_step==0:
+        if self.pbase.restart_step==0:
             self.pb0.cardvasc0D.initialize_lm(self.LM, self.pb0.initialconditions)
             self.pb0.cardvasc0D.initialize_lm(self.LM_old, self.pb0.initialconditions)
 
@@ -320,8 +324,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         del LM_sq
 
-        if bool(self.residual_scale):
-            self.scale_residual_list([self.r_lm], [self.residual_scale[2]])
+        if bool(self.pbase.residual_scale):
+            self.scale_residual_list([self.r_lm], [self.pbase.residual_scale[2]])
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -423,10 +427,10 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.K_sv.assemble()
 
-        if bool(self.residual_scale):
-            self.K_vs.scale(self.residual_scale[0])
-            self.K_sv.scale(self.residual_scale[2])
-            self.K_lm.scale(self.residual_scale[2])
+        if bool(self.pbase.residual_scale):
+            self.K_vs.scale(self.pbase.residual_scale[0])
+            self.K_sv.scale(self.pbase.residual_scale[2])
+            self.K_lm.scale(self.pbase.residual_scale[2])
 
         self.K_list[0][2] = self.K_vs
         self.K_list[2][0] = self.K_sv
@@ -492,7 +496,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
         if bool(self.pb0.chamber_models):
             if self.pb0.chamber_models['lv']['type']=='3D_fluid' and self.pb0.chamber_models['lv']['num_outflows']==0 and self.pb0.cardvasc0D.cormodel:
-                if self.restart_step==0:
+                if self.pbase.restart_step==0:
                     self.pb0.auxdata_old['p'] = copy.deepcopy(self.pbf.pu_old_) # copy since we write restart and update auxdata_old differently
                 # for k in self.pb0.auxdata_old['p']: self.pb0.auxdata['p'][k] = self.pb0.auxdata_old['p'][k]
                 dp_id = self.pb0.chamber_models['lv']['dp_monitor_id']
@@ -511,12 +515,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         if bool(self.pb0.chamber_models):
             for i, ch in enumerate(['lv','rv','la','ra']):
-                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y[i] = self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbf.t_init)
-                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y[i] = self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbf.t_init)
-                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbf.t_init))
+                if self.pb0.chamber_models[ch]['type']=='0D_elast': self.pb0.y[i] = self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['activation_curve'])(self.pbase.t_init)
+                if self.pb0.chamber_models[ch]['type']=='0D_elast_prescr': self.pb0.y[i] = self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['elastance_curve'])(self.pbase.t_init)
+                if self.pb0.chamber_models[ch]['type']=='0D_prescr': self.pb0.c.append(self.pb0.ti.timecurves(self.pb0.chamber_models[ch]['prescribed_curve'])(self.pbase.t_init))
 
         # if we have prescribed variable values over time
-        if self.restart_step==0: # we read s and s_old in case of restart
+        if self.pbase.restart_step==0: # we read s and s_old in case of restart
             if bool(self.pb0.prescribed_variables):
                 for a in self.pb0.prescribed_variables:
                     varindex = self.pb0.cardvasc0D.varmap[a]
@@ -526,7 +530,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
                         val = prescr['val']
                     elif prtype=='curve':
                         curvenumber = prescr['curve']
-                        val = self.pb0.ti.timecurves(curvenumber)(self.pb0.t_init)
+                        val = self.pb0.ti.timecurves(curvenumber)(self.pbase.t_init)
                     elif prtype=='flux_monitor':
                         monid = prescr['flux_monitor']
                         val = self.pbf.qv_old_[monid]
@@ -535,7 +539,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
                     self.pb0.s[varindex], self.pb0.s_old[varindex] = val, val
 
         # initially evaluate 0D model at old state
-        self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbf.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)
+        self.pb0.cardvasc0D.evaluate(self.pb0.s_old, self.pbase.t_init, self.pb0.df_old, self.pb0.f_old, None, None, self.pb0.c, self.pb0.y, self.pb0.aux_old)
         self.pb0.auxTc_old[:] = self.pb0.aux_old[:]
 
 
@@ -656,7 +660,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def solve_initial_state(self):
 
         # consider consistent initial acceleration
-        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
@@ -685,4 +689,4 @@ class FluidmechanicsFlow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbf.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

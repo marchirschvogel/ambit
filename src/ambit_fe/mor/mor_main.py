@@ -132,7 +132,7 @@ class ModelOrderReduction():
         else:
             self.readin_modes()
 
-        if self.write_pod_modes and self.pb.restart_step==0:
+        if self.write_pod_modes and self.pb.pbase.restart_step==0:
             self.write_modes()
 
         # build reduced basis - either only on designated surface(s) or for the whole model
@@ -279,7 +279,7 @@ class ModelOrderReduction():
         # write out POD modes
         for h in range(self.num_partitions):
             for i in range(self.numredbasisvec_true):
-                outfile = io.XDMFFile(self.pb.comm, self.pb.io.output_path+'/results_'+self.pb.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1)+'.xdmf', 'w')
+                outfile = io.XDMFFile(self.pb.comm, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1)+'.xdmf', 'w')
                 outfile.write_mesh(self.pb.io.mesh)
                 podfunc = fem.Function(self.Vspace, name="POD_Mode_P"+str(h+1)+"_"+str(i+1))
                 podfunc.vector[self.ss:self.se] = self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i]

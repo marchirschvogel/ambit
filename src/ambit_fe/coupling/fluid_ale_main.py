@@ -24,8 +24,12 @@ from ..meshutils import gather_surface_dof_indices
 
 class FluidmechanicsAleProblem(problem_base):
 
-    def __init__(self, io_params, time_params, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}, comm=None, comm_sq=None):
-        super().__init__(io_params, time_params, comm=comm)
+    def __init__(self, pbase, io_params, time_params, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params, io, mor_params={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         ioparams.check_params_coupling_fluid_ale(coupling_params)
 
@@ -45,10 +49,10 @@ class FluidmechanicsAleProblem(problem_base):
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
         # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
-        self.pba = AleProblem(io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params, comm=self.comm)
+        self.pba = AleProblem(pbase, io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
         # ALE variables that are handed to fluid problem
         alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old}
-        self.pbf = FluidmechanicsProblem(io_params, time_params, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, comm=self.comm, alevar=alevariables)
+        self.pbf = FluidmechanicsProblem(pbase, io_params, time_params, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, alevar=alevariables)
 
         self.pbrom = self.pbf # ROM problem can only be fluid
 
@@ -80,6 +84,8 @@ class FluidmechanicsAleProblem(problem_base):
             self.numdof = [self.pbf.numdof, self.pba.numdof]
 
         self.sub_solve = False
+        self.print_subiter = False
+
         self.print_enhanced_info = self.pbf.io.print_enhanced_info
 
         # number of fields involved
@@ -404,11 +410,6 @@ class FluidmechanicsAleProblem(problem_base):
         # read restart information
         if N > 0:
             self.io.readcheckpoint(self, N)
-            self.simname += '_r'+str(N)
-            # TODO: quick-fix - simname variables of single field problems need to be addressed, too
-            # but this should be handled by one variable, however neeeds revamp of I/O
-            self.pbf.simname += '_r'+str(N)
-            self.pba.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -508,7 +509,7 @@ class FluidmechanicsAleSolver(solver_base):
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -524,13 +525,13 @@ class FluidmechanicsAleSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the FrSI problem
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
             self.solverprestr.solnln.destroy()
 
         # consider consistent initial acceleration
-        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbf.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
@@ -560,8 +561,8 @@ class FluidmechanicsAleSolver(solver_base):
 
         if self.pb.coupling_strategy=='monolithic':
 
-            self.pb.assemble_residual(self.pb.t_init)
-            self.pb.assemble_stiffness(self.pb.t_init)
+            self.pb.assemble_residual(self.pb.pbase.t_init)
+            self.pb.assemble_stiffness(self.pb.pbase.t_init)
 
             # create ROM matrix structures
             if self.pb.rom:
@@ -573,9 +574,9 @@ class FluidmechanicsAleSolver(solver_base):
 
             self.pb.pbf.rom = self.pb.rom
 
-            self.pb.assemble_residual(self.pb.t_init)
-            self.pb.pbf.assemble_stiffness(self.pb.t_init)
-            self.pb.pba.assemble_stiffness(self.pb.t_init)
+            self.pb.assemble_residual(self.pb.pbase.t_init)
+            self.pb.pbf.assemble_stiffness(self.pb.pbase.t_init)
+            self.pb.pba.assemble_stiffness(self.pb.pbase.t_init)
 
             # create ROM matrix structures
             if self.pb.pbf.rom:

@@ -27,8 +27,13 @@ from ..base import problem_base, solver_base
 
 class FSIFlow0DProblem(FSIProblem,problem_base):
 
-    def __init__(self, io_params, time_params_solid, time_params_fluid, time_params_flow0d, fem_params_solid, fem_params_fluid, fem_params_ale, constitutive_models_solid, constitutive_models_fluid_ale, model_params_flow0d, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, ios, iof, mor_params={}, comm=None, comm_sq=None):
-        problem_base.__init__(self, io_params, time_params_solid, comm=comm, comm_sq=comm_sq)
+    def __init__(self, pbase, io_params, time_params_solid, time_params_fluid, time_params_flow0d, fem_params_solid, fem_params_fluid, fem_params_ale, constitutive_models_solid, constitutive_models_fluid_ale, model_params_flow0d, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, ios, iof, mor_params={}):
+        # problem_base.__init__(self, io_params, time_params_solid, comm=comm, comm_sq=comm_sq)
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
 
@@ -53,8 +58,8 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
-        self.pbs   = SolidmechanicsProblem(io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params, comm=self.comm)
-        self.pbfa0 = FluidmechanicsAleFlow0DProblem(io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], model_params_flow0d, bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, iof, mor_params=mor_params, comm=self.comm, comm_sq=self.comm_sq)
+        self.pbs   = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params)
+        self.pbfa0 = FluidmechanicsAleFlow0DProblem(pbase, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], model_params_flow0d, bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, iof, mor_params=mor_params)
 
         self.pbf = self.pbfa0.pbf
         self.pbf0 = self.pbfa0.pbf0
@@ -285,16 +290,10 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         # fluid-ALE + flow0d problem
         if N > 0:
             self.io.readcheckpoint(self, N)
-            self.simname += '_r'+str(N)
-            # TODO: quick-fix - simname variables of single field problems need to be addressed, too
-            # but this should be handled by one variable, however neeeds revamp of I/O
-            self.pbs.simname += '_r'+str(N)
-            self.pbf.simname += '_r'+str(N)
-            self.pba.simname += '_r'+str(N)
 
         self.pb0.read_restart(sname, N)
 
-        if self.restart_step > 0:
+        if self.pbase.restart_step > 0:
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM)
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM_old)
 
@@ -416,7 +415,7 @@ class FSIFlow0DSolver(solver_base):
     def solve_initial_state(self):
 
         # consider consistent initial acceleration of solid
-        if self.pb.pbs.timint != 'static' and self.pb.restart_step == 0:
+        if self.pb.pbs.timint != 'static' and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial solid acceleration...", self.pb.comm, e=" ")
@@ -437,7 +436,7 @@ class FSIFlow0DSolver(solver_base):
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
         # consider consistent initial acceleration of fluid
-        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial fluid acceleration...", self.pb.comm, e=" ")
@@ -466,4 +465,4 @@ class FSIFlow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbf.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

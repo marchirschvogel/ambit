@@ -23,10 +23,12 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # set indicator to zero (no temporal offsets)
         self.pb.noperiodicref = 0
 
-        if self.pb.restart_step > 0:
-            self.pb.simname += str(self.pb.restart_periodicref+1)
-            self.pb.pbs.simname += str(self.pb.restart_periodicref+1)
-            self.pb.pb0.simname += str(self.pb.restart_periodicref+1)
+        if self.pb.pbase.restart_step > 0:
+            raise RuntimeError("Restart of this problem currently broken!")
+            self.pb.pbase.simname += str(self.pb.restart_periodicref+1)
+
+        if self.pb.restart_periodicref > 0:
+            raise RuntimeError("Restart of this problem currently broken!")
 
         # initialize solver instance
         self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params)
@@ -35,12 +37,12 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         self.prestress_initial = self.pb.pbs.prestress_initial
 
         # store simname
-        self.simname = self.pb.simname
+        self.simname = self.pb.pbase.simname
 
         # read restart information
         if self.pb.restart_periodicref > 0:
-            self.pb.simname = self.simname + str(self.pb.restart_periodicref)
-            self.pb.read_restart(self.pb.simname, self.pb.restart_periodicref)
+            self.pb.pbase.simname = self.simname + str(self.pb.restart_periodicref)
+            self.pb.read_restart(self.pb.pbase.simname, self.pb.restart_periodicref)
             if self.prestress_initial:
                 self.set_prestress_state()
 
@@ -54,8 +56,8 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
             wts = time.time()
 
-            # change output names - TODO: Move to one global variable!
-            self.pb.simname, self.pb.pbs.simname, self.pb.pb0.simname = self.simname + str(N), self.simname + str(N), self.simname + str(N)
+            # change output name
+            self.pb.pbase.simname = self.simname + str(N)
 
             # solve one heart cycle
             self.solver.time_loop()
@@ -67,7 +69,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
                 self.set_prestress_state()
 
             if self.pb.write_checkpoints_periodicref:
-                self.pb.write_restart(self.pb.simname, N, force=True)
+                self.pb.write_restart(self.pb.pbase.simname, N, force=True)
 
             # check if below tolerance
             if abs(self.pb.pb0.ti.cycleerror[0]) <= self.pb.pb0.eps_periodic:

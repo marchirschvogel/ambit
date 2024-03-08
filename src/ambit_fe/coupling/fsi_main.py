@@ -28,8 +28,12 @@ FSI problem class
 
 class FSIProblem(problem_base):
 
-    def __init__(self, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, fem_params_ale, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, io, ios, iof, mor_params={}, comm=None):
-        super().__init__(io_params, time_params_solid, comm=comm)
+    def __init__(self, pbase, io_params, time_params_solid, time_params_fluid, fem_params_solid, fem_params_fluid, fem_params_ale, constitutive_models_solid, constitutive_models_fluid_ale, bc_dict_solid, bc_dict_fluid_ale, time_curves, coupling_params, io, ios, iof, mor_params={}):
+
+        self.pbase = pbase
+
+        # pointer to communicator
+        self.comm = self.pbase.comm
 
         self.problem_physics = 'fsi'
 
@@ -46,8 +50,8 @@ class FSIProblem(problem_base):
             assert(time_params_fluid['dt'] == time_params_solid['dt'])
 
         # initialize problem instances (also sets the variational forms for the solid and fluid problem)
-        self.pbs  = SolidmechanicsProblem(io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params, comm=self.comm)
-        self.pbfa = FluidmechanicsAleProblem(io_params, time_params_fluid, fem_params_fluid, fem_params_ale, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params, comm=self.comm)
+        self.pbs  = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params)
+        self.pbfa = FluidmechanicsAleProblem(pbase, io_params, time_params_fluid, fem_params_fluid, fem_params_ale, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params)
 
         self.pbrom = self.pbs # ROM problem can only be solid so far...
 
@@ -210,8 +214,8 @@ class FSIProblem(problem_base):
         self.r_list[3+off] = self.r_l
         self.r_list[4+off] = self.pbfa.r_list[2]
 
-        if bool(self.residual_scale):
-            self.scale_residual_list([self.r_l], [self.residual_scale[3+off]])
+        if bool(self.pbase.residual_scale):
+            self.scale_residual_list([self.r_l], [self.pbase.residual_scale[3+off]])
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -269,11 +273,11 @@ class FSIProblem(problem_base):
         # ALE displacement
         self.K_list[4+off][4+off] = self.pbfa.K_list[2][2]
 
-        if bool(self.residual_scale):
-            self.K_ul.scale(self.residual_scale[0])
-            self.K_lu.scale(self.residual_scale[3+off])
-            self.K_vl.scale(self.residual_scale[1+off])
-            self.K_lv.scale(self.residual_scale[3+off])
+        if bool(self.pbase.residual_scale):
+            self.K_ul.scale(self.pbase.residual_scale[0])
+            self.K_lu.scale(self.pbase.residual_scale[3+off])
+            self.K_vl.scale(self.pbase.residual_scale[1+off])
+            self.K_lv.scale(self.pbase.residual_scale[3+off])
 
 
     ### now the base routines for this problem
@@ -282,14 +286,7 @@ class FSIProblem(problem_base):
 
         # read restart information
         if N > 0:
-
             self.io.readcheckpoint(self, N)
-            self.simname += '_r'+str(N)
-            # TODO: quick-fix - simname variables of single field problems need to be addressed, too
-            # but this should be handled by one variable, however neeeds revamp of I/O
-            self.pbs.simname += '_r'+str(N)
-            self.pbf.simname += '_r'+str(N)
-            self.pba.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):
@@ -397,7 +394,7 @@ class FSISolver(solver_base):
     def solve_initial_state(self):
 
         # consider consistent initial acceleration of solid
-        if self.pb.pbs.timint != 'static' and self.pb.restart_step == 0:
+        if self.pb.pbs.timint != 'static' and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial solid acceleration...", self.pb.comm, e=" ")
@@ -418,7 +415,7 @@ class FSISolver(solver_base):
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
         # consider consistent initial acceleration of fluid
-        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.restart_step == 0:
+        if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbase.restart_step == 0:
 
             ts = time.time()
             utilities.print_status("Setting forms and solving for consistent initial fluid acceleration...", self.pb.comm, e=" ")
