@@ -231,10 +231,10 @@ class FluidmechanicsAleProblem(problem_base):
             self.weakform_lin_pd.append( ufl.derivative(self.pbf.weakform_p[n], self.pba.d, self.pba.dd) )
 
 
-    def set_problem_residual_jacobian_forms(self):
+    def set_problem_residual_jacobian_forms(self, pre=False):
 
         # fluid + ALE
-        self.pbf.set_problem_residual_jacobian_forms()
+        self.pbf.set_problem_residual_jacobian_forms(pre=pre)
         self.pba.set_problem_residual_jacobian_forms()
 
         if self.coupling_strategy=='monolithic':
@@ -496,7 +496,7 @@ class FluidmechanicsAleSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
-        self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbf.pre)
         self.pb.set_problem_vector_matrix_structures()
 
         self.evaluate_assemble_system_initial()

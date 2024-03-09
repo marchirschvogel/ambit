@@ -234,6 +234,10 @@ class FluidmechanicsProblem(problem_base):
             self.uf_pre = fem.Function(self.V_v, name="Displacement_prestress")
         else:
             self.uf_pre = None
+        if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
+            self.pre = False
+        else:
+            self.pre = True
 
         # collect references to pressure vectors
         self.pvecs_, self.pvecs_old_ = [], []
@@ -738,13 +742,13 @@ class FluidmechanicsProblem(problem_base):
             self.evaluate_active_stress_ode()
 
 
-    def set_problem_residual_jacobian_forms(self):
+    def set_problem_residual_jacobian_forms(self, pre=False):
 
         ts = time.time()
         utilities.print_status("FEM form compilation for fluid...", self.comm, e=" ")
 
         if not bool(self.io.duplicate_mesh_domains):
-            if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
+            if not pre:
                 self.weakform_p = sum(self.weakform_p)
                 self.weakform_lin_vp = sum(self.weakform_lin_vp)
                 self.weakform_lin_pv = sum(self.weakform_lin_pv)
@@ -757,7 +761,7 @@ class FluidmechanicsProblem(problem_base):
                 if self.stabilization is not None:
                     self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
 
-        if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
+        if not pre:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
                 self.res_p = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
@@ -1141,7 +1145,7 @@ class FluidmechanicsSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
-        self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pre)
         self.pb.set_problem_vector_matrix_structures()
 
         self.evaluate_assemble_system_initial()
@@ -1245,8 +1249,7 @@ class FluidmechanicsSolver(solver_base):
             try: self.solnln.PTC = self.solver_params['ptc']
             except: self.solnln.PTC = False
 
-        # set flag to false again
-        self.pb.prestress_initial = False
+        # now build main (non-prestress) forms
         self.pb.set_problem_residual_jacobian_forms()
 
 

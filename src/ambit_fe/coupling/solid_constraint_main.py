@@ -162,9 +162,9 @@ class SolidmechanicsConstraintProblem(problem_base):
             p0Da[i].interpolate(self.pr0D.evaluate)
 
 
-    def set_problem_residual_jacobian_forms(self):
+    def set_problem_residual_jacobian_forms(self, pre=False):
 
-        self.pbs.set_problem_residual_jacobian_forms()
+        self.pbs.set_problem_residual_jacobian_forms(pre=pre)
         self.set_problem_residual_jacobian_forms_coupling()
 
 
@@ -495,7 +495,7 @@ class SolidmechanicsConstraintSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
-        self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbs.pre)
         self.pb.set_problem_vector_matrix_structures()
 
         self.evaluate_assemble_system_initial()

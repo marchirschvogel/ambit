@@ -15,14 +15,14 @@ Variational form base class
 
 class variationalform_base:
 
-    def __init__(self, var_u, var_p=None, du=None, dp=None, n0=None, x_ref=None, formulation=None):
+    def __init__(self, var_u, var_p=None, du=None, dp=None, n0=None, x_ref=None, formulation=None, ro0=None):
 
         self.var_u = var_u  # displacement/velocity test functions
         self.var_p = var_p  # pressure test functions
         self.du = du        # displacement/velocity trial functions
         self.dp = dp        # pressure trial functions
 
-        self.var_v = var_u  # for naming convenience, to use var_v in derived fluid class
+        self.var_v, self.var_d = var_u, var_u  # for naming convenience, to use var_v (var_d) in derived fluid (ALE) class
 
         self.n0 = n0        # reference normal field
         self.x_ref = x_ref  # reference coordinates
@@ -31,6 +31,8 @@ class variationalform_base:
 
         self.I = ufl.Identity(len(self.var_u)) # identity
         self.dim = self.I.ufl_shape[0] # dimension
+
+        self.ro0 = ro0      # cell circumradius (for weak DBC on linear problem, e.g. ALE)
 
 
     # Neumann load on reference configuration (1st Piola-Kirchhoff traction)

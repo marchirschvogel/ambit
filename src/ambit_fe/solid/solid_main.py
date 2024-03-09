@@ -211,6 +211,10 @@ class SolidmechanicsProblem(problem_base):
             self.u_pre = fem.Function(self.V_u, name="Displacement_prestress")
         else:
             self.u_pre = None
+        if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
+            self.pre = False
+        else:
+            self.pre = True
 
         # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
@@ -866,12 +870,12 @@ class SolidmechanicsProblem(problem_base):
                 f.close()
 
 
-    def set_problem_residual_jacobian_forms(self):
+    def set_problem_residual_jacobian_forms(self, pre=False):
 
         ts = time.time()
         utilities.print_status("FEM form compilation for solid...", self.pbase.comm, e=" ")
 
-        if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
+        if not pre:
             if self.io.USE_MIXED_DOLFINX_BRANCH:
                 self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
                 self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
@@ -1128,7 +1132,7 @@ class SolidmechanicsSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
-        self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pre)
         self.pb.set_problem_vector_matrix_structures()
 
         self.evaluate_assemble_system_initial()
@@ -1217,8 +1221,7 @@ class SolidmechanicsSolver(solver_base):
             try: self.solnln.PTC = self.solver_params['ptc']
             except: self.solnln.PTC = False
 
-        # set flag to false again
-        self.pb.prestress_initial = False
+        # now build main (non-prestress) forms
         self.pb.set_problem_residual_jacobian_forms()
 
 

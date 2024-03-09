@@ -138,7 +138,7 @@ class AleProblem(problem_base):
             self.ma.append(ale_kinematics_constitutive.constitutive(self.ki, self.constitutive_models['MAT'+str(n+1)]))
 
         # initialize ALE variational form class
-        self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0)
+        self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0, ro0=self.io.ro0)
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(self.io, fem_params=fem_params, vf=self.vf, ti=self.ti)

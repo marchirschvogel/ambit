@@ -29,7 +29,6 @@ from ..meshutils import gather_surface_dof_indices
 class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
     def __init__(self, pbase, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}):
-        #problem_base.__init__(self, io_params, time_params_fluid, comm=comm, comm_sq=comm_sq)
 
         self.pbase = pbase
 
@@ -118,9 +117,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.dcqd.append(ufl.derivative(self.pbf0.cq[n], self.pba.d, self.pba.dd))
 
 
-    def set_problem_residual_jacobian_forms(self):
+    def set_problem_residual_jacobian_forms(self, pre=False):
 
-        super().set_problem_residual_jacobian_forms()
+        super().set_problem_residual_jacobian_forms(pre=pre)
         self.pbf0.set_problem_residual_jacobian_forms_coupling()
 
         if self.coupling_strategy=='monolithic':
@@ -417,7 +416,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
-        self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbf.pre)
         self.pb.set_problem_vector_matrix_structures()
 
         # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)

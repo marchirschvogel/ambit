@@ -54,7 +54,7 @@ def main():
                             'tol_lin_abs'           : 1.0e-50, # OPTIONAL: absolute linear solver tolerance (default: 1.0e-50)
                             'lin_norm_type'         : 'unpreconditioned', # OPTIONAL: type of iterative linear solver norm: 'preconditioned' or 'unpreconditioned' (default: 'unpreconditioned')
                             'res_lin_monitor'       : 'rel', # OPTIONAL: which linear solver tolerance to monitor, 'abs' or 'rel' (default: 'rel')
-                            'max_liniter'           : 1200, # OPTIONAL: maximum number of linear iterations (default: 1200)
+                            'max_liniter'           : 1000, # OPTIONAL: maximum number of linear iterations (default: 1000)
                             'print_liniter_every'   : 10, # OPTIONAL: how often to print linear iterations (default: 1)
                             'indexset_options'      : {'rom_to_new' : False, 'lms_to_pres' : False}, # OPTIONAL: some options for the index sets (default: {})
                             'rebuild_prec_every_it' : 1, # OPTIONAL: rebuild the preconditioner every rebuild_prec_every_it iterations (default: 1)

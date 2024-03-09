@@ -222,16 +222,16 @@ class solver_nonlinear:
                 self.block_precond[npr] = block_precond
 
         try: self.tol_lin_rel = solver_params['tol_lin_rel']
-        except: self.tol_lin_rel = 1.0e-5
+        except: self.tol_lin_rel = 1e-5
 
         try: self.tol_lin_abs = solver_params['tol_lin_abs']
-        except: self.tol_lin_abs = 1.0e-50
+        except: self.tol_lin_abs = 1e-50
 
         try: self.res_lin_monitor = solver_params['res_lin_monitor']
         except: self.res_lin_monitor = 'rel'
 
         try: self.maxliniter = solver_params['max_liniter']
-        except: self.maxliniter = 1200
+        except: self.maxliniter = 1000
 
         try: self.lin_norm_type = solver_params['lin_norm_type']
         except: self.lin_norm_type = 'unpreconditioned'
@@ -268,10 +268,10 @@ class solver_nonlinear:
         except: self.rebuild_prec_every_it = 1
 
         try: self.tol_res_local = solver_params['tol_res_local']
-        except: self.tol_res_local = 1.0e-10
+        except: self.tol_res_local = 1e-10
 
         try: self.tol_inc_local = solver_params['tol_inc_local']
-        except: self.tol_inc_local = 1.0e-10
+        except: self.tol_inc_local = 1e-10
 
         self.solvetype = [[]]*self.nprob
         for npr in range(self.nprob):

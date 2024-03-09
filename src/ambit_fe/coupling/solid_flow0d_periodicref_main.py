@@ -33,9 +33,6 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # initialize solver instance
         self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params)
 
-        # store prestress flag (because flag is set to False after one prestress run)
-        self.prestress_initial = self.pb.pbs.prestress_initial
-
         # store simname
         self.simname = self.pb.pbase.simname
 
@@ -43,7 +40,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         if self.pb.restart_periodicref > 0:
             self.pb.pbase.simname = self.simname + str(self.pb.restart_periodicref)
             self.pb.read_restart(self.pb.pbase.simname, self.pb.restart_periodicref)
-            if self.prestress_initial:
+            if self.pb.pbs.prestress_initial:
                 self.set_prestress_state()
 
 
@@ -65,7 +62,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             self.reset_state_initial()
 
             # set prestress for next loop
-            if self.prestress_initial:
+            if self.pb.pbs.prestress_initial:
                 self.set_prestress_state()
 
             if self.pb.write_checkpoints_periodicref:
@@ -79,8 +76,6 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
 
     def set_prestress_state(self):
-
-        self.pb.pbs.prestress_initial = True
 
         for i, m in enumerate(self.pb.pbs.ti.funcsexpr_to_update_pre):
 
@@ -96,7 +91,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # we need to invoke the prestress forms here
-        self.pb.pbs.set_problem_residual_jacobian_forms()
+        self.pb.pbs.set_problem_residual_jacobian_forms(pre=True)
 
 
     # set state to zero
@@ -118,7 +113,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             self.pb.pbs.p_old.vector.set(0.0)
             self.pb.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if self.prestress_initial:
+        if self.pb.pbs.prestress_initial:
             self.pb.pbs.u_pre.vector.set(0.0)
             self.pb.pbs.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 

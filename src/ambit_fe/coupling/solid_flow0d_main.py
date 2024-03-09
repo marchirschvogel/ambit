@@ -286,9 +286,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.pb0.s_set.axpby(1.0, 0.0, self.pb0.s)
 
 
-    def set_problem_residual_jacobian_forms(self):
+    def set_problem_residual_jacobian_forms(self, pre=False):
 
-        self.pbs.set_problem_residual_jacobian_forms()
+        self.pbs.set_problem_residual_jacobian_forms(pre=pre)
         self.set_problem_residual_jacobian_forms_coupling()
 
 
@@ -806,7 +806,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
-        self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbs.pre)
         self.pb.set_problem_vector_matrix_structures()
 
         # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)

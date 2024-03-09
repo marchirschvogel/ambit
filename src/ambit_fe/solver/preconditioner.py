@@ -67,6 +67,15 @@ class block_precond():
                 try: solvetype = self.precond_fields[n]['solve']
                 except: solvetype = "preonly"
                 self.ksp_fields[n].setType(solvetype)
+                # GMRES or FGMES for inner solve
+                if solvetype == 'gmres' or solvetype == 'fgmres':
+                    try: maxiter = self.precond_fields[n]['maxiter']
+                    except: maxiter = 1000
+                    try: tolrel = self.precond_fields[n]['tolrel']
+                    except: tolrel = 1e-5
+                    try: tolabs = self.precond_fields[n]['tolabs']
+                    except: tolabs = 1e-50
+                    self.ksp_fields[n].setTolerances(rtol=tolrel, atol=tolabs, divtol=None, max_it=maxiter)
                 try: amgtype = self.precond_fields[n]['amgtype']
                 except: amgtype = "hypre"
                 self.ksp_fields[n].getPC().setType(amgtype)
