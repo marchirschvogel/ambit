@@ -322,10 +322,12 @@ class IO:
         sz = f.vector.getSize()
         bs = f.vector.getBlockSize()
 
+        igi_flat_sorted = sorted(igi_flat)
+
         # write to file
         if self.comm.rank==0:
             f = open(filenm, 'wt')
-            for i in range(int(sz/bs)):
+            for i in igi_flat_sorted:
                 ind = igi_flat.index(i)
                 f.write(str(i) + ' ' + ' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
             f.close()

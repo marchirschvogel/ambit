@@ -234,10 +234,10 @@ class FluidmechanicsProblem(problem_base):
             self.uf_pre = fem.Function(self.V_v, name="Displacement_prestress")
         else:
             self.uf_pre = None
-        if (not self.prestress_initial and not self.prestress_initial_only) or self.pbase.restart_step > 0:
-            self.pre = False
-        else:
+        if (self.prestress_initial or self.prestress_initial_only) and self.pbase.restart_step == 0:
             self.pre = True
+        else:
+            self.pre = False
 
         # collect references to pressure vectors
         self.pvecs_, self.pvecs_old_ = [], []
@@ -482,7 +482,7 @@ class FluidmechanicsProblem(problem_base):
 
                     self.act_curve.append( fem.Function(self.Vd_scalar) )
                     self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])})
-                    self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <-- tau_a at end of time step
+                    self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <- tau_a at end of time step
 
                     self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], self.act_curve[-1], x_ref=self.x_ref_d))
 
@@ -506,7 +506,7 @@ class FluidmechanicsProblem(problem_base):
                 w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.pbase.dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
-                w_membrane_prestr, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
+                w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())

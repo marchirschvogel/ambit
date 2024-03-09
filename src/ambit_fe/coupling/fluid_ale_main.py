@@ -6,7 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys, math
+import time, sys, copy
 import numpy as np
 from dolfinx import fem
 import dolfinx.fem.petsc
@@ -509,7 +509,7 @@ class FluidmechanicsAleSolver(solver_base):
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
+        if self.pb.pbf.pre:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -520,15 +520,16 @@ class FluidmechanicsAleSolver(solver_base):
             except: pass
             # initialize fluid mechanics solver
             self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, self.solver_params)
+        else:
+            self.solverprestr = None
 
 
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the FrSI problem
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
-            # solve solid prestress problem
+        if self.pb.pbf.pre:
+            # solve reduced-solid/FrSI prestress problem
             self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.destroy()
 
         # consider consistent initial acceleration
         if (self.pb.pbf.fluid_governing_type == 'navierstokes_transient' or self.pb.pbf.fluid_governing_type == 'stokes_transient') and self.pb.pbase.restart_step == 0:
@@ -569,6 +570,12 @@ class FluidmechanicsAleSolver(solver_base):
                 self.pb.rom.set_reduced_data_structures_residual(self.pb.r_list, self.pb.r_list_rom)
                 self.pb.K_list_tmp = [[None]]
                 self.pb.rom.set_reduced_data_structures_matrix(self.pb.K_list, self.pb.K_list_rom, self.pb.K_list_tmp)
+
+                if self.pb.pbf.pre:
+                    self.pb.pbf.rom = self.pb.rom
+                    self.pb.pbf.rom.set_reduced_data_structures_residual(self.pb.pbf.r_list, self.pb.pbf.r_list_rom)
+                    self.pb.pbf.K_list_tmp = [[None]]
+                    self.pb.pbf.rom.set_reduced_data_structures_matrix(self.pb.pbf.K_list, self.pb.pbf.K_list_rom, self.pb.pbf.K_list_tmp)
 
         elif self.pb.coupling_strategy=='partitioned':
 

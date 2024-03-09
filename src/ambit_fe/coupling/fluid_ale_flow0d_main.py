@@ -435,7 +435,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
+        if self.pb.pbf.pre:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -453,8 +453,8 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
     def solve_initial_state(self):
 
         # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the 3D-0D problem
-        if (self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only) and self.pb.pbase.restart_step == 0:
-            # solve solid prestress problem
+        if self.pb.pbf.pre:
+            # solve reduced-solid/FrSI prestress problem
             self.solverprestr.solve_initial_prestress()
 
         # consider consistent initial acceleration

@@ -820,11 +820,6 @@ class simple_2x2(schur_2x2):
 
         y.assemble()
 
-    # def preSolve(self, pc, ksp, x, y):
-    #     print("Huiiiiiiiii")
-
-
-
 
 
 # own 2x2 Block Gauss-Seidel (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
