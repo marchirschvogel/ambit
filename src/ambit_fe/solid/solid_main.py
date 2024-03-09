@@ -1228,6 +1228,14 @@ class SolidmechanicsSolver(solver_base):
 # prestress solver, to be called from other (coupled) problems
 class SolidmechanicsSolverPrestr(SolidmechanicsSolver):
 
+    def __init__(self, problem, solver_params):
+
+        self.pb = problem
+        self.solver_params = solver_params
+
+        self.initialize_nonlinear_solver()
+
+
     def initialize_nonlinear_solver(self):
 
         # initialize nonlinear solver class

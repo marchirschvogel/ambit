@@ -366,7 +366,6 @@ class Flow0DProblem(problem_base):
         # read restart information
         if self.pbase.restart_step > 0:
             self.readrestart(sname+'_'+self.problem_physics, N)
-            self.pbase.simname += '_r'+str(N)
 
 
     def evaluate_initial(self):

@@ -24,11 +24,10 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         self.pb.noperiodicref = 0
 
         if self.pb.pbase.restart_step > 0:
-            raise RuntimeError("Restart of this problem currently broken!")
             self.pb.pbase.simname += str(self.pb.restart_periodicref+1)
 
         if self.pb.restart_periodicref > 0:
-            raise RuntimeError("Restart of this problem currently broken!")
+            raise RuntimeError("Outer restart of this problem currently broken!")
 
         # initialize solver instance
         self.solver = SolidmechanicsFlow0DSolver(self.pb, solver_params)
@@ -59,6 +58,10 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             # solve one heart cycle
             self.solver.time_loop()
 
+            # for the next loop, set back
+            self.pb.pbase.restart_step = 0
+
+            # set back state
             self.reset_state_initial()
 
             # set prestress for next loop
@@ -76,6 +79,8 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
 
     def set_prestress_state(self):
+
+        self.pb.pbs.pre = True
 
         for i, m in enumerate(self.pb.pbs.ti.funcsexpr_to_update_pre):
 

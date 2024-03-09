@@ -503,7 +503,7 @@ class SolidmechanicsConstraintSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
-        if self.pb.pbs.pre:
+        if self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -512,7 +512,6 @@ class SolidmechanicsConstraintSolver(solver_base):
             except: pass
             try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
             except: pass
-            # initialize solid mechanics solver
             self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, solver_params_prestr)
 
 
@@ -522,7 +521,6 @@ class SolidmechanicsConstraintSolver(solver_base):
         if self.pb.pbs.pre:
             # solve solid prestress problem
             self.solverprestr.solve_initial_prestress()
-            self.solverprestr.solnln.ksp[0].destroy()
 
         # consider consistent initial acceleration
         if self.pb.pbs.timint != 'static' and self.pb.pbase.restart_step == 0:

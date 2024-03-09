@@ -138,6 +138,7 @@ if category=='solid_flow0d' or category=='all':
     errs['test_solid_flow0d_monodir_syspulcor_2Dheart_ROM 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_syspulcor_2Dheart_ROM.py'])
     
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py'])
+    errs['test_solid_flow0d_periodicref_syspul_lvchamber 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py', str(50), str(0)]) # TODO: Fix outer loop restart
 
 if category=='solid_constraint' or category=='all':
     errs['test_solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_constraint_volume_chamber.py'])

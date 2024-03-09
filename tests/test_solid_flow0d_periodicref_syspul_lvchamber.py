@@ -19,10 +19,17 @@ def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try: restart_step = int(sys.argv[1])
+    except: restart_step = 0
+    
+    try: restart_step_outer = int(sys.argv[2])
+    except: restart_step_outer = 0
+
     IO_PARAMS            = {'problem_type'          : 'solid_flow0d_periodicref',
-                            'write_results_every'   : 1,
+                            'write_results_every'   : 10,
                             'write_restart_every'   : 50,
-                            'restart_step'          : 0, # TODO: Restart not working properly!!!
+                            'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/chamberhex_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/chamberhex_boundary.xdmf',
@@ -70,7 +77,7 @@ def test_main():
                             'coupling_type'         : 'monolithic_lagrange',
                             'print_subiter'         : True,
                             'write_checkpoints_periodicref' : True,
-                            'restart_periodicref'   : 0} # TODO...
+                            'restart_periodicref'   : restart_step_outer} # TODO: Currently broken...
 
     MATERIALS            = { 'MAT1' : {'guccione_dev'     : {'c_0' : 1.662, 'b_f' : 14.31, 'b_t' : 4.49, 'b_fs' : 10.},
                                        'sussmanbathe_vol' : {'kappa' : 1.0e1}, # very compressible

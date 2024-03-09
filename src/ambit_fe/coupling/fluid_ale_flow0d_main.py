@@ -435,7 +435,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
-        if self.pb.pbf.pre:
+        if self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only:
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem)
             try: solver_params_prestr['solve_type'] = self.solver_params['solve_type_prestr']
@@ -446,8 +446,6 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             except: pass
             # initialize fluid mechanics solver
             self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, solver_params_prestr)
-        else:
-            self.solverprestr = None
 
 
     def solve_initial_state(self):

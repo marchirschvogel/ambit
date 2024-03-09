@@ -820,7 +820,7 @@ class SolidmechanicsFlow0DSolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, subsolver=self.subsol)
 
-        if self.pb.pbs.pre:
+        if self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only:
             # initialize solid mechanics solver
             solver_params_prestr = copy.deepcopy(self.solver_params)
             # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
@@ -831,8 +831,6 @@ class SolidmechanicsFlow0DSolver(solver_base):
             try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
             except: pass
             self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, solver_params_prestr)
-        else:
-            self.solverprestr = None
 
 
     def solve_initial_state(self):
