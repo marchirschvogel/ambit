@@ -35,6 +35,7 @@ def check_params_io(params):
                     'simname',
                     'surface_ids_interface',
                     'USE_MIXED_DOLFINX_BRANCH',
+                    'USE_NEW_DOLFINX',
                     'volume_laplace',
                     'write_results_every',
                     'write_results_every_0D',

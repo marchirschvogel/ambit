@@ -130,8 +130,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.dcqd_form = []
 
             for i in range(self.pbf0.num_coupling_surf):
-                if self.pbf.io.USE_MIXED_DOLFINX_BRANCH:
-                    self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i], entity_maps=self.pbf.io.entity_maps))
+                if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
+                    self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i], entity_maps=self.io.entity_maps))
                 else:
                     self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i]))
 
@@ -164,7 +164,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
                 for i in range(len(self.pbf0.surface_vq_ids[n])):
                     nds_vq_local[i] = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[self.pba.io.mt_b1.values == self.pbf0.surface_vq_ids[n][i]])
                 nds_vq_local_flat = [item for sublist in nds_vq_local for item in sublist]
-                nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(nds_vq_local_flat), dtype=np.int32)
+                nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local_flat, dtype=np.int32)), dtype=np.int32 )
                 self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
                 self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
@@ -467,8 +467,8 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
+            if self.pb.io.USE_MIXED_DOLFINX_BRANCH or self.pb.io.USE_NEW_DOLFINX:
+                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)

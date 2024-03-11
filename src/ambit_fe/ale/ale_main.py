@@ -85,27 +85,52 @@ class AleProblem(problem_base):
         # will be set by solver base class
         self.rom = None
 
-        # create finite element objects
-        P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        # function space
-        self.V_d = fem.FunctionSpace(self.io.mesh, P_d)
-        # continuous tensor and scalar function spaces of order order_disp
-        self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
-        self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
+        if self.io.USE_NEW_DOLFINX:
+    
+            # function space for d
+            self.V_d = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
 
-        # a discontinuous tensor, vector, and scalar function space
-        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+            # continuous tensor and scalar function spaces of order order_disp
+            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
 
-        # for output writing - function spaces on the degree of the mesh
-        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
-        self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-        self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-        self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            # a discontinuous tensor, vector, and scalar function space
+            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
+            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1))
 
-        # coordinate element function space - based on input mesh
-        self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+
+        else: # remove once update is fully compatible...
+
+            # create finite element objects
+            P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+            # function space
+            self.V_d = fem.FunctionSpace(self.io.mesh, P_d)
+            # continuous tensor and scalar function spaces of order order_disp
+            self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
+            self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
+
+            # a discontinuous tensor, vector, and scalar function space
+            self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+            self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+            self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
+            self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
 
         # functions
         self.dd    = ufl.TrialFunction(self.V_d)            # Incremental displacement

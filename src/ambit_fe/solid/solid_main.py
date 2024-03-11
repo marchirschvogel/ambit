@@ -122,7 +122,7 @@ class SolidmechanicsProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
-        basix_celltype = utilities.get_basix_cell_type(self.io.mesh.ufl_cell())
+        self.basix_celltype = utilities.get_basix_cell_type(self.io.mesh.ufl_cell())
 
         self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
 
@@ -133,41 +133,67 @@ class SolidmechanicsProblem(problem_base):
         # will be set by solver base class
         self.rom = None
 
-        # create finite element objects for u and p
-        P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-        P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
-        # function spaces for u and p
-        self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
-        self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
-        # continuous tensor and scalar function spaces of order order_disp
-        self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
-        self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
+        if self.io.USE_NEW_DOLFINX:
 
-        # Quadrature tensor, vector, and scalar elements
-        Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
-        Q_vector = ufl.VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
-        Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+            # function spaces for u and p
+            self.V_u = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
+            self.V_p = fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres))
 
-        # quadrature function spaces
-        self.Vq_tensor = fem.FunctionSpace(self.io.mesh, Q_tensor)
-        self.Vq_vector = fem.FunctionSpace(self.io.mesh, Q_vector)
-        self.Vq_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
+            # continuous tensor and scalar function spaces of order order_disp
+            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
 
-        self.quadrature_points, wts = basix.make_quadrature(basix_celltype, self.quad_degree)
+            # discontinuous function spaces
+            self.Vd_tensor = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.Vd_vector = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
+            self.Vd_scalar = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1))
 
-        # discontinuous function spaces
-        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
-        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
-        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
 
-        # for output writing - function spaces on the degree of the mesh
-        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
-        self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-        self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-        self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
 
-        # coordinate element function space - based on input mesh
-        self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+        else: # remove once update is fully compatible...
+
+            # create finite element objects for u and p
+            P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
+            P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+            # function spaces for u and p
+            self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
+            self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
+            # continuous tensor and scalar function spaces of order order_disp
+            self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
+            self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
+
+            # discontinuous function spaces
+            self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
+            self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
+            self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
+
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
+            self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+
+        # # Quadrature tensor, vector, and scalar elements
+        # Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        # Q_vector = ufl.VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        # Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        #
+        # # quadrature function spaces
+        # self.Vq_tensor = fem.FunctionSpace(self.io.mesh, Q_tensor)
+        # self.Vq_vector = fem.FunctionSpace(self.io.mesh, Q_vector)
+        # self.Vq_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
+        #
+        # self.quadrature_points, wts = basix.make_quadrature(basix_celltype, self.quad_degree)
 
         # functions
         self.du    = ufl.TrialFunction(self.V_u)            # Incremental displacement
@@ -876,7 +902,7 @@ class SolidmechanicsProblem(problem_base):
         utilities.print_status("FEM form compilation for solid...", self.pbase.comm, e=" ")
 
         if not pre:
-            if self.io.USE_MIXED_DOLFINX_BRANCH:
+            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
                 self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
                 self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
                 if self.incompressible_2field:
@@ -899,7 +925,7 @@ class SolidmechanicsProblem(problem_base):
                     else:
                         self.jac_pp = None
         else:
-            if self.io.USE_MIXED_DOLFINX_BRANCH:
+            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
                 self.res_u  = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
                 self.jac_uu = fem.form(self.weakform_lin_prestress_uu, entity_maps=self.io.entity_maps)
                 if self.incompressible_2field:

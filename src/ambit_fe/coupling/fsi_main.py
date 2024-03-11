@@ -405,10 +405,7 @@ class FSISolver(solver_base):
             weakform_lin_aa_solid = ufl.derivative(weakform_a_solid, self.pb.pbs.a_old, self.pb.pbs.du) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
-                res_a_solid, jac_aa_solid = fem.form(weakform_a_solid, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa_solid, entity_maps=self.pb.io.entity_maps)
-            else:
-                res_a_solid, jac_aa_solid = fem.form(weakform_a_solid), fem.form(weakform_lin_aa_solid)
+            res_a_solid, jac_aa_solid = fem.form(weakform_a_solid, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa_solid, entity_maps=self.pb.io.entity_maps)
             self.solnln.solve_consistent_ini_acc(res_a_solid, jac_aa_solid, self.pb.pbs.a_old)
 
             te = time.time() - ts
@@ -426,10 +423,7 @@ class FSISolver(solver_base):
             weakform_lin_aa_fluid = ufl.derivative(weakform_a_fluid, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
-                res_a_fluid, jac_aa_fluid = fem.form(weakform_a_fluid, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa_fluid, entity_maps=self.pb.io.entity_maps)
-            else:
-                res_a_fluid, jac_aa_fluid = fem.form(weakform_a_fluid), fem.form(weakform_lin_aa_fluid)
+            res_a_fluid, jac_aa_fluid = fem.form(weakform_a_fluid, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa_fluid, entity_maps=self.pb.io.entity_maps)
             self.solnln.solve_consistent_ini_acc(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
 
             te = time.time() - ts

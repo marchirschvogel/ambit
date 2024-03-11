@@ -139,17 +139,21 @@ class FluidmechanicsProblem(problem_base):
         # ALE fluid problem variables
         self.alevar = alevar
 
-        # create finite element objects for v and p
-        P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
-        P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
         # function space for v
-        self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
+        if self.io.USE_NEW_DOLFINX:
+            self.V_v = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,)))
+        else:
+            P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
+            self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
 
+        if not self.io.USE_NEW_DOLFINX: P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+
+        # now collect those for p (pressure space may be duplicate!)
         self.V_p__ = {}
 
         if bool(self.io.duplicate_mesh_domains):
 
-            assert(self.io.USE_MIXED_DOLFINX_BRANCH)
+            assert(self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX)
             assert(self.num_domains>1)
 
             self.num_dupl = self.num_domains
@@ -163,7 +167,11 @@ class FluidmechanicsProblem(problem_base):
             num_cells = cell_imap.size_local + cell_imap.num_ghosts
 
             for mp in self.io.duplicate_mesh_domains:
-                self.V_p__[mp] = fem.FunctionSpace(self.io.submshes_emap[mp][0], P_p)
+                if self.io.USE_NEW_DOLFINX:
+                    self.V_p__[mp] = fem.functionspace(self.io.submshes_emap[mp][0], ("Lagrange", self.order_pres))
+                else:
+                    self.V_p__[mp] = fem.FunctionSpace(self.io.submshes_emap[mp][0], P_p)
+
                 inv_emap[mp] = np.full(num_cells, -1)
 
             for mp in self.io.duplicate_mesh_domains:
@@ -174,25 +182,50 @@ class FluidmechanicsProblem(problem_base):
 
         else:
             self.num_dupl = 1
-            self.V_p_ = [ fem.FunctionSpace(self.io.mesh, P_p) ]
+            if self.io.USE_NEW_DOLFINX:
+                self.V_p_ = [ fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres)) ]
+            else:
+                self.V_p_ = [ fem.FunctionSpace(self.io.mesh, P_p) ]
 
-        # continuous tensor and scalar function spaces of order order_vel
-        self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
-        self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_vel))
+        if self.io.USE_NEW_DOLFINX:
 
-        # a discontinuous tensor, vector, and scalar function space
-        self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
-        self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
-        self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+            # continuous tensor and scalar function spaces of order order_vel
+            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel))
 
-        # for output writing - function spaces on the degree of the mesh
-        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
-        self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-        self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-        self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            # a discontinuous tensor, vector, and scalar function space
+            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,)))
+            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1))
 
-        # coordinate element function space - based on input mesh
-        self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+
+        else: # remove once update is fully compatible...
+
+            # continuous tensor and scalar function spaces of order order_vel
+            self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
+            self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_vel))
+
+            # a discontinuous tensor, vector, and scalar function space
+            self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+            self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+            self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
+            self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+            self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
 
         # functions
         self.dv     = ufl.TrialFunction(self.V_v)            # Incremental velocity
@@ -762,7 +795,7 @@ class FluidmechanicsProblem(problem_base):
                     self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
 
         if not pre:
-            if self.io.USE_MIXED_DOLFINX_BRANCH:
+            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
                 self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
                 self.res_p = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
                 self.jac_vv = fem.form(self.weakform_lin_vv, entity_maps=self.io.entity_maps)
@@ -790,7 +823,7 @@ class FluidmechanicsProblem(problem_base):
                 if self.stabilization is not None:
                     self.jac_pp = fem.form(self.weakform_lin_pp)
         else:
-            if self.io.USE_MIXED_DOLFINX_BRANCH:
+            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
                 self.res_v  = fem.form(self.weakform_prestress_v, entity_maps=self.io.entity_maps)
                 self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
                 self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.io.entity_maps)
@@ -1168,7 +1201,7 @@ class FluidmechanicsSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.io.USE_MIXED_DOLFINX_BRANCH:
+            if self.pb.io.USE_MIXED_DOLFINX_BRANCH or self.pb.io.USE_NEW_DOLFINX:
                 res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)

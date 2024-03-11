@@ -224,7 +224,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             for i in range(len(self.surface_c_ids[n])):
                 nds_c_local[i] = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[self.pbs.io.mt_b1.values == self.surface_c_ids[n][i]])
             nds_c_local_flat = [item for sublist in nds_c_local for item in sublist]
-            nds_c = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(nds_c_local_flat), dtype=np.int32)
+            nds_c = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_c_local_flat, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_c, comm=self.comm)
 
             self.k_su_subvec.append( self.k_su_vec[n].getSubVector(self.dofs_coupling[n]) )

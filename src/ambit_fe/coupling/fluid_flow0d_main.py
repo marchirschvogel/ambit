@@ -185,7 +185,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
 
         for i in range(self.num_coupling_surf):
-            if self.pbf.io.USE_MIXED_DOLFINX_BRANCH:
+            if self.pbf.io.USE_MIXED_DOLFINX_BRANCH or self.pbf.io.USE_NEW_DOLFINX:
                 self.cq_form.append(fem.form(self.cq[i], entity_maps=self.pbf.io.entity_maps))
                 self.cq_old_form.append(fem.form(self.cq_old[i], entity_maps=self.pbf.io.entity_maps))
 
@@ -240,7 +240,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             for i in range(len(self.surface_vq_ids[n])):
                 nds_vq_local[i] = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[self.pbf.io.mt_b1.values == self.surface_vq_ids[n][i]])
             nds_vq_local_flat = [item for sublist in nds_vq_local for item in sublist]
-            nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(nds_vq_local_flat), dtype=np.int32)
+            nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local_flat, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
             self.k_sv_subvec.append( self.k_sv_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
@@ -251,7 +251,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             for i in range(len(self.surface_p_ids[n])):
                 nds_p_local[i] = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[self.pbf.io.mt_b1.values == self.surface_p_ids[n][i]])
             nds_p_local_flat = [item for sublist in nds_p_local for item in sublist]
-            nds_p = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(nds_p_local_flat), dtype=np.int32)
+            nds_p = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local_flat, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_p, comm=self.comm)
 
             self.k_vs_subvec.append( self.k_vs_vec[n].getSubVector(self.dofs_coupling_p[n]) )
@@ -671,7 +671,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.pbf.io.USE_MIXED_DOLFINX_BRANCH:
+            if self.pb.pbf.io.USE_MIXED_DOLFINX_BRANCH or self.pb.pbf.io.USE_NEW_DOLFINX:
                 res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
             else:
                 res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)

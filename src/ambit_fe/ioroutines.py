@@ -79,6 +79,12 @@ class IO:
         try: self.USE_MIXED_DOLFINX_BRANCH = io_params['USE_MIXED_DOLFINX_BRANCH']
         except: self.USE_MIXED_DOLFINX_BRANCH = False
 
+        # use new dolfinx
+        if sys.argv[-1]=='new':
+            self.USE_NEW_DOLFINX = True
+        else:
+            self.USE_NEW_DOLFINX = False
+
         # entity map dict - for coupled multiphysics/multimesh problems
         self.entity_maps = entity_maps
 
@@ -347,7 +353,10 @@ class IO:
         except: self.order_fib_input = order_disp
 
         # define input fiber function space
-        V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", self.order_fib_input))
+        if self.USE_NEW_DOLFINX:
+            V_fib_input = fem.functionspace(self.mesh, ("Lagrange", self.order_fib_input, (self.mesh.geometry.dim,)))
+        else:
+            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", self.order_fib_input))
 
         si = 0
         for s in fibarray:
