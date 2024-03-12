@@ -40,7 +40,10 @@ def test_main():
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',
                             'block_precond'         : 'schurbgs4x4',
-                            'precond_fields'        : [{'prec':'amg'}, {'prec':'amg'}, {'prec':'direct'}, {'prec':'amg'}], # fluid-v, fluid-p, fluid-red.v, ale-d
+                            'precond_fields'        : [{'prec':'amg'},    # fluid-v
+                                                       {'prec':'amg'},    # fluid-p (Schur)
+                                                       {'prec':'direct'}, # fluid-red.v
+                                                       {'prec':'amg'}],   # ale-d
                             'tol_lin_rel'           : 1.0e-5,
                             'tol_lin_abs'           : 1.0e-30,
                             'lin_norm_type'         : 'preconditioned',

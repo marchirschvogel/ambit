@@ -81,17 +81,15 @@ class block_precond():
                 self.ksp_fields[n].getPC().setType(amgtype)
                 if amgtype=="hypre":
                     self.ksp_fields[n].getPC().setHYPREType("boomeramg")
-                # TODO: Some additional hypre options we might wanna set... which are optimal here???
-                opts = PETSc.Options()
-                # opts.setValue('pc_hypre_parasails_reuse', True) # - does this exist???
-                # opts.setValue('pc_hypre_boomeramg_cycle_type', 'v') # v, w
-                # opts.setValue('pc_hypre_boomeramg_max_iter', 1)
-                # opts.setValue('pc_hypre_boomeramg_max_levels', 25)
-                # opts.setValue('pc_hypre_boomeramg_grid_sweeps_all', 1)
-                # opts.setValue('pc_hypre_boomeramg_relax_type_all',  'symmetric-SOR/Jacobi')
-                self.ksp_fields[n].getPC().setFromOptions()
+                # add PETSc options
+                if 'petsc_options' in self.precond_fields[n].keys():
+                    opt_dict = self.precond_fields[n]['petsc_options']
+                    opts = PETSc.Options()
+                    for o in opt_dict:
+                        opts.setValue(o, opt_dict[o])
+                    self.ksp_fields[n].getPC().setFromOptions()
+                # print to view some settings...
                 # print(self.ksp_fields[n].getPC().view())
-
                 if solvetype == 'python':
                     try: niter = self.precond_fields[n]['stat_iter']
                     except: niter = 1
