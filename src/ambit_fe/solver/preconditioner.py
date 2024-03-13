@@ -87,6 +87,7 @@ class block_precond():
                     opts = PETSc.Options()
                     for o in opt_dict:
                         opts.setValue(o, opt_dict[o])
+                    # opts.setValue('pc_hypre_parasails_reuse', True) # TODO: There seems to be a memory leak when using ParaSails, even with this option. What is going on??!
                     self.ksp_fields[n].getPC().setFromOptions()
                 # print to view some settings...
                 # print(self.ksp_fields[n].getPC().view())
