@@ -275,8 +275,8 @@ class schur_2x2(block_precond):
         self.y1, self.y2 = self.A.createVecLeft(), self.Smod.createVecLeft()
         self.z1, self.z2 = self.A.createVecLeft(), self.Smod.createVecLeft()
 
-        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+        self.By1 = self.B.createVecLeft()
+        self.Bty2 = self.Bt.createVecLeft()
 
         # do we need these???
         self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
@@ -454,13 +454,13 @@ class schur_3x3(block_precond):
 
         self.E_Smoddinv_Tmod = self.E.matMult(self.Smoddinv_Tmod)
 
-        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.Dy1 = PETSc.Vec().createMPI(size=(self.D.getLocalSize()[0],self.D.getSize()[0]), comm=self.comm)
-        self.DBty2 = PETSc.Vec().createMPI(size=(self.DBt.getLocalSize()[0],self.DBt.getSize()[0]), comm=self.comm)
-        self.Ey2 = PETSc.Vec().createMPI(size=(self.E.getLocalSize()[0],self.E.getSize()[0]), comm=self.comm)
-        self.Tmody3 = PETSc.Vec().createMPI(size=(self.Et.getLocalSize()[0],self.Et.getSize()[0]), comm=self.comm)
-        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
-        self.Dty3 = PETSc.Vec().createMPI(size=(self.Dt.getLocalSize()[0],self.Dt.getSize()[0]), comm=self.comm)
+        self.By1 = self.B.createVecLeft()
+        self.Dy1 = self.D.createVecLeft()
+        self.DBty2 = self.DBt.createVecLeft()
+        self.Ey2 = self.E.createVecLeft()
+        self.Tmody3 = self.Et.createVecLeft()
+        self.Bty2 = self.Bt.createVecLeft()
+        self.Dty3 = self.Dt.createVecLeft()
 
         self.x1, self.x2, self.x3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
         self.y1, self.y2, self.y3 = self.A.createVecLeft(), self.Smod.createVecLeft(), self.Wmod.createVecLeft()
@@ -675,10 +675,10 @@ class schur_bgssym_4x4(schur_3x3):
         self.y123 = self.Ft.createVecLeft()
         self.z123 = self.Ft.createVecLeft()
 
-        self.Fty4 = PETSc.Vec().createMPI(size=(self.Ft.getLocalSize()[0],self.Ft.getSize()[0]), comm=self.comm)
-        self.Fy123 = PETSc.Vec().createMPI(size=(self.F.getLocalSize()[0],self.F.getSize()[0]), comm=self.comm)
+        self.Fty4 = self.Ft.createVecLeft()
+        self.Fy123 = self.F.createVecLeft()
 
-        self.xtmp = PETSc.Vec().createMPI(size=(self.P.getLocalSize()[0],self.P.getSize()[0]), comm=self.comm)
+        self.xtmp = self.P.createVecLeft()
 
         # do we need this???
         self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
@@ -838,8 +838,8 @@ class bgs_2x2(block_precond):
         self.B  = self.P.createSubMatrix(self.iset[1],self.iset[0])
         self.C  = self.P.createSubMatrix(self.iset[1],self.iset[1])
 
-        self.By1 = PETSc.Vec().createMPI(size=(self.B.getLocalSize()[0],self.B.getSize()[0]), comm=self.comm)
-        self.Bty2 = PETSc.Vec().createMPI(size=(self.Bt.getLocalSize()[0],self.Bt.getSize()[0]), comm=self.comm)
+        self.By1 = self.B.createVecLeft()
+        self.Bty2 = self.Bt.createVecLeft()
 
         self.x1, self.x2 = self.A.createVecLeft(), self.C.createVecLeft()
         self.y1, self.y2 = self.A.createVecLeft(), self.C.createVecLeft()
