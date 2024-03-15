@@ -75,7 +75,7 @@ def main():
                             'domain_ids_solid'      : [1], 
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
-                            'simname'               : 'fsi_channel_flag_turek_'+case}
+                            'simname'               : 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'+case}
 
     """
     Parameters for the linear and nonlinear solution schemes
@@ -90,6 +90,7 @@ def main():
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
     TIME_PARAMS_SOLID    = {'maxtime'               : maxtime,
+                            'numstep_stop' : 1,
                             'dt'                    : dt,
                             'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Chung and Hulbert 1993)
                             'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, beta = 0.25, gamma = 0.5
@@ -102,6 +103,7 @@ def main():
     Parameters for the fluid mechanics time integration scheme, plus the global time parameters
     """
     TIME_PARAMS_FLUID    = {'maxtime'               : maxtime,
+                            'numstep_stop' : 1,
                             'dt'                    : dt,
                             'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Jansen et al. 2000)
                             'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, gamma = 0.5

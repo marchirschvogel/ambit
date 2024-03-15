@@ -485,8 +485,16 @@ class solver_nonlinear:
 
                     if self.precond_fields[npr][0]['prec'] == 'amg':
                         self.ksp[npr].getPC().setType("hypre")
-                        self.ksp[npr].getPC().setMGLevels(3)
                         self.ksp[npr].getPC().setHYPREType("boomeramg")
+
+                        # set additional PETSc options for single-field preconditioner
+                        if 'petsc_options' in self.precond_fields[npr][0].keys():
+                            opt_dict = self.precond_fields[npr][0]['petsc_options']
+                            opts = PETSc.Options()
+                            for o in opt_dict:
+                                opts.setValue(o, opt_dict[o])
+                            self.ksp[npr].getPC().setFromOptions()
+
                     else:
                         raise ValueError("Currently, only 'amg' is supported as single-field preconditioner.")
 
@@ -517,7 +525,6 @@ class solver_nonlinear:
         elif self.solvetype[0]=='iterative':
             ksp.setType(self.iterative_solver)
             ksp.getPC().setType("hypre")
-            ksp.getPC().setMGLevels(3)
             ksp.getPC().setHYPREType("boomeramg")
         else:
             raise NameError("Unknown solvetype!")

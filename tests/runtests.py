@@ -31,6 +31,8 @@ subprocess.call(['mkdir', '-p', 'tmp'])
 if category=='solid' or category=='all':
     errs['test_solid_mat_uniax_hex_2field 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_mat_uniax_hex_2field.py'])
     errs['test_solid_mat_uniax_hex_2field 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_mat_uniax_hex_2field.py'])
+    
+    errs['test_solid_2d_pres 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_2d_pres.py'])
 
     errs['test_solid_robin_genalpha 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_robin_genalpha.py'])
     errs['test_solid_robin_genalpha 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_robin_genalpha.py'])
@@ -59,8 +61,8 @@ if category=='solid' or category=='all':
 
     errs['test_solid_growthremodeling_fiberstretch 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_growthremodeling_fiberstretch.py']) # only 1 element, cannot run on multiple cores
 
-    errs['test_solid_2Dheart_frankstarling 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_2Dheart_frankstarling.py'])
-    errs['test_solid_2Dheart_frankstarling 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_2Dheart_frankstarling.py', str(2)])
+    errs['test_solid_2dheart_frankstarling 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_2dheart_frankstarling.py'])
+    errs['test_solid_2dheart_frankstarling 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_2dheart_frankstarling.py', str(2)])
 
     errs['test_solid_membrane 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_membrane.py'])
     errs['test_solid_membrane 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_membrane.py'])
@@ -100,17 +102,17 @@ if category=='fluid_ale_flow0d' or category=='all':
         errs['test_fluid_ale_flow0d_lalv_syspul_prescribed 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'test_fluid_ale_flow0d_lalv_syspul_prescribed.py'])
 
 if category=='flow0d' or category=='all':
-    errs['test_flow0d_0Dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0Dvol_4elwindkesselLsZ.py'])
-    errs['test_flow0d_0Dvol_4elwindkesselLpZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0Dvol_4elwindkesselLpZ.py'])
+    errs['test_flow0d_0dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dvol_4elwindkesselLsZ.py'])
+    errs['test_flow0d_0dvol_4elwindkesselLpZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dvol_4elwindkesselLpZ.py'])
 
-    errs['test_flow0d_0Dheart_syspul 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0Dheart_syspul.py'])
-    errs['test_flow0d_0Dheart_syspul 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0Dheart_syspul.py', str(450)]) # tests restart from step 450
+    errs['test_flow0d_0dheart_syspul 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dheart_syspul.py'])
+    errs['test_flow0d_0dheart_syspul 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dheart_syspul.py', str(450)]) # tests restart from step 450
 
-    errs['test_flow0d_0Dheart_syspulcor 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0Dheart_syspulcor.py'])
-    errs['test_flow0d_0Dheart_syspulcap 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0Dheart_syspulcap.py'])
+    errs['test_flow0d_0dheart_syspulcor 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dheart_syspulcor.py'])
+    errs['test_flow0d_0dheart_syspulcap 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dheart_syspulcap.py'])
 
-    errs['test_flow0d_0Dheart_syspulcaprespir_periodic 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0Dheart_syspulcaprespir_periodic.py'])
-    errs['test_flow0d_0Dheart_syspulcaprespir_periodic 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_flow0d_0Dheart_syspulcaprespir_periodic.py'])
+    errs['test_flow0d_0dheart_syspulcaprespir_periodic 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dheart_syspulcaprespir_periodic.py'])
+    errs['test_flow0d_0dheart_syspulcaprespir_periodic 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_flow0d_0dheart_syspulcaprespir_periodic.py'])
 
 if category=='solid_flow0d' or category=='all':
     errs['test_solid_flow0d_monodir_4elwindkesselLsZ_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_4elwindkesselLsZ_chamber.py'])
@@ -127,15 +129,15 @@ if category=='solid_flow0d' or category=='all':
 
     errs['test_solid_flow0d_monolagr_CRLinoutlink_chambers 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_flow0d_monolagr_CRLinoutlink_chambers.py'])
 
-    errs['test_solid_flow0d_monodir_syspul_2Dheart_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_syspul_2Dheart_prestress.py'])
-    errs['test_solid_flow0d_monodir_syspul_2Dheart_prestress 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_flow0d_monodir_syspul_2Dheart_prestress.py'])
-    errs['test_solid_flow0d_monodir_syspul_2Dheart_prestress 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_flow0d_monodir_syspul_2Dheart_prestress.py', str(3)]) # tests restart from step 3
+    errs['test_solid_flow0d_monodir_syspul_2dheart_prestress 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_syspul_2dheart_prestress.py'])
+    errs['test_solid_flow0d_monodir_syspul_2dheart_prestress 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_flow0d_monodir_syspul_2dheart_prestress.py'])
+    errs['test_solid_flow0d_monodir_syspul_2dheart_prestress 3 restart'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_flow0d_monodir_syspul_2dheart_prestress.py', str(3)]) # tests restart from step 3
 
     errs['test_solid_flow0d_monodir_flux_syspulcap_3Dheart_simple2x2 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_flow0d_monodir_flux_syspulcap_3Dheart_simple2x2.py'])
 
     errs['test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3.py'])
 
-    errs['test_solid_flow0d_monodir_syspulcor_2Dheart_ROM 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_syspulcor_2Dheart_ROM.py'])
+    errs['test_solid_flow0d_monodir_syspulcor_2dheart_rom 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_syspulcor_2dheart_rom.py'])
     
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py'])
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py', str(50), str(0)]) # TODO: Fix outer loop restart

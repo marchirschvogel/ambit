@@ -25,6 +25,7 @@ class materiallaw:
         self.Ic   = ufl.tr(C)
         self.IIc  = 0.5*(ufl.tr(C)**2. - ufl.tr(C*C))
         self.IIIc = ufl.det(C)
+        self.J    = ufl.sqrt(self.IIIc)
         # isochoric Cauchy-Green invariants
         self.Ic_bar   = self.IIIc**(-1./self.dim) * self.Ic
         self.IIc_bar  = self.IIIc**(-2./self.dim) * self.IIc
@@ -177,7 +178,7 @@ class materiallaw:
         beta = nu/(1.-2.*nu)
 
         # compressible NeoHookean material (Holzapfel eq. 6.148)
-        Psi = (mu/2.) * (self.Ic - self.dim) + mu/(2.*beta)*(self.IIIc**(-beta) - 1.)
+        Psi = (mu/2.) * (self.Ic - self.dim) + mu/(2.*beta)*(self.J**(-2.*beta) - 1.)
 
         S = 2.*ufl.diff(Psi,C)
 
@@ -206,7 +207,7 @@ class materiallaw:
         mu = 3.*kappa*Emod/(9.*kappa - Emod)
 
         # modified St.-Venant Kirchhoff also suitable for large compressive strains (Holzapfel eq. 6.152)
-        Psi = (kappa/2.) * ufl.ln(ufl.sqrt(self.IIIc))**2. + mu * self.trE2
+        Psi = (kappa/2.) * ufl.ln(self.J)**2. + mu * self.trE2
 
         S = 2.*ufl.diff(Psi,C)
 
@@ -217,7 +218,7 @@ class materiallaw:
 
         kappa = params['kappa']
 
-        Psi_vol = (kappa/2.) * (ufl.sqrt(self.IIIc) - 1.)**2.
+        Psi_vol = (kappa/2.) * (self.J - 1.)**2.
 
         S = 2.*ufl.diff(Psi_vol,C)
 
@@ -232,7 +233,7 @@ class materiallaw:
         except: beta = -2.
 
         # classical Ogden volumetric material (Holzapfel eq. 6.137)
-        Psi_vol = (kappa/(beta**2.)) * (beta*ufl.ln(ufl.sqrt(self.IIIc)) + ufl.sqrt(self.IIIc)**(-beta) - 1.)
+        Psi_vol = (kappa/(beta**2.)) * (beta*ufl.ln(self.J) + self.J**(-beta) - 1.)
 
         S = 2.*ufl.diff(Psi_vol,C)
 
@@ -247,7 +248,7 @@ class materiallaw:
         except: beta = -2.
 
         # a modified variant of the classical Ogden model (spotted somewhere... use with care!)
-        Psi_vol = (kappa/(beta**2.)) * (ufl.ln(ufl.sqrt(self.IIIc))**(-beta) + (ufl.sqrt(self.IIIc) - 1.)**(-beta))
+        Psi_vol = (kappa/(beta**2.)) * (ufl.ln(self.J)**(-beta) + (self.J - 1.)**(-beta))
 
         S = 2.*ufl.diff(Psi_vol,C)
 

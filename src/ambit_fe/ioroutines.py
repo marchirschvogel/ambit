@@ -51,8 +51,14 @@ class IO:
         try: self.write_restart_every = io_params['write_restart_every']
         except: self.write_restart_every = -1
 
+        try: self.meshfile_format = io_params['meshfile_format']
+        except: self.meshfile_format = 'XDMF'
+
         try: self.meshfile_type = io_params['meshfile_type']
         except: self.meshfile_type = 'ASCII'
+
+        try: self.mesh_dim = io_params['mesh_dim'] # actually only needed/used for gmsh read-in
+        except: self.mesh_dim = 3
 
         try: self.gridname_domain = io_params['gridname_domain']
         except: self.gridname_domain = 'Grid'
@@ -100,11 +106,23 @@ class IO:
         else:
             raise NameError('Choose either ASCII or HDF5 as meshfile_type, or add a different encoding!')
 
-        # read in xdmf mesh - domain
-        with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
-            self.mesh = infile.read_mesh(name=self.gridname_domain)
-            try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
-            except: self.mt_d = None
+        if self.meshfile_format=='XDMF':
+
+            # read in xdmf mesh - domain
+            with io.XDMFFile(self.comm, self.mesh_domain, 'r', encoding=encoding) as infile:
+                self.mesh = infile.read_mesh(name=self.gridname_domain)
+                try: self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
+                except: self.mt_d = None
+
+        elif self.meshfile_format=='gmsh':
+
+            # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
+            self.mesh, self.mt_d, self.mt_b1 = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)
+            assert(self.mesh.geometry.dim==self.mesh_dim) # would be weird if this wasn't true...
+
+        else:
+
+            raise NameError('Choose either XDMF or gmsh as meshfile_format!')
 
         # master mesh object (need if fields are actually subdomains, e.g. in FSI)
         self.mesh_master = self.mesh
@@ -118,7 +136,13 @@ class IO:
         # for a 2D problem - b1: edge BCs, b2: point BCs
         # 1D problems not supported (currently...)
 
-        self.mt_b1_master, self.mt_b2_master, self.mt_b3_master = None, None, None
+        # check if these have already been read
+        try: self.mt_b1_master = self.mt_b1
+        except: self.mt_b1_master = None
+        try: self.mt_b2_master = self.mt_b2
+        except: self.mt_b2_master = None
+        try: self.mt_b3_master = self.mt_b3
+        except: self.mt_b3_master = None
 
         if self.mesh.topology.dim == 3:
 
