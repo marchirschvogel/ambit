@@ -313,11 +313,7 @@ class FluidmechanicsProblem(problem_base):
         self.internalvars, self.internalvars_old, self.internalvars_mid = {}, {}, {}
 
         # reference coordinates
-        self.x_ref = fem.Function(self.V_v)
-        self.x_ref.interpolate(self.x_ref_expr)
-
-        self.x_ref_d = fem.Function(self.Vd_vector)
-        self.x_ref_d.interpolate(self.x_ref_expr)
+        self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
 
         self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
 
@@ -517,7 +513,7 @@ class FluidmechanicsProblem(problem_base):
                     self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])})
                     self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <- tau_a at end of time step
 
-                    self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], self.act_curve[-1], x_ref=self.x_ref_d))
+                    self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], self.act_curve[-1], x_ref=self.x_ref))
 
                 if 'field' in self.bc_dict['membrane'][nm]['params']['h0'].keys():
                     # wall thickness field for reduced solid

@@ -258,11 +258,7 @@ class SolidmechanicsProblem(problem_base):
         self.internalvars, self.internalvars_old, self.internalvars_mid = {}, {}, {}
 
         # reference coordinates
-        self.x_ref = fem.Function(self.V_u)
-        self.x_ref.interpolate(self.x_ref_expr)
-
-        self.x_ref_d = fem.Function(self.Vd_vector)
-        self.x_ref_d.interpolate(self.x_ref_expr)
+        self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
 
         if self.incompressible_2field:
             self.numdof = self.u.vector.getSize() + self.p.vector.getSize()
@@ -306,7 +302,7 @@ class SolidmechanicsProblem(problem_base):
                 if self.active_stress_trig == 'ode':
                     self.act_curve.append( fem.Function(self.Vd_scalar) )
                     self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
-                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]], self.act_curve[-1], x_ref=self.x_ref_d))
+                    self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]], self.act_curve[-1], x_ref=self.x_ref))
                     if self.actstress[-1].frankstarling:
                         self.have_frank_starling = True
                         self.act_curve_old.append( fem.Function(self.Vd_scalar) )

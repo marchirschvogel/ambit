@@ -133,13 +133,6 @@ class problem_base():
                 if Klist[n][m] is not None: Klist[n][m].scale(fac[n])
 
 
-    # reference coordinates
-    def x_ref_expr(self, x):
-
-        if self.dim==3: return np.stack((x[0],x[1],x[2]))
-        if self.dim==2: return np.stack((x[0],x[1]))
-
-
 
 class solver_base():
 

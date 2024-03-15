@@ -86,7 +86,7 @@ class AleProblem(problem_base):
         self.rom = None
 
         if self.io.USE_NEW_DOLFINX:
-    
+
             # function space for d
             self.V_d = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
 
@@ -143,11 +143,7 @@ class AleProblem(problem_base):
         self.w_old = fem.Function(self.V_d)
 
         # reference coordinates
-        self.x_ref = fem.Function(self.V_d)
-        self.x_ref.interpolate(self.x_ref_expr)
-
-        self.x_ref_d = fem.Function(self.Vd_vector)
-        self.x_ref_d.interpolate(self.x_ref_expr)
+        self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
 
         self.numdof = self.d.vector.getSize()
 
