@@ -304,11 +304,6 @@ class Flow0DProblem(problem_base):
                         f.write('%.16E\n' % (self.auxdata_old['p'][m]))
                     f.close()
 
-                # auxdata update - needs to be done here since timestep update is called prior to write_restart,
-                # but we need the values from the pre-previous step to get the correct restart (pressure auxdata)
-                # is only evaluated after a solve, hence technically within a step it's always "old" data
-                for k in self.auxdata['p']: self.auxdata_old['p'][k] = self.auxdata['p'][k]
-
 
     def readrestart(self, sname, rst, ms=False):
 
@@ -464,6 +459,13 @@ class Flow0DProblem(problem_base):
         # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
         if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
             self.writerestart(sname+'_'+self.problem_physics, N)
+
+        if bool(self.auxdata_old):
+            if bool(self.auxdata_old['p']):
+                # auxdata update - needs to be done here since timestep update is called prior to write_restart,
+                # but we need the values from the pre-previous step to get the correct restart (pressure auxdata)
+                # is only evaluated after a solve, hence technically within a step it's always "old" data
+                for k in self.auxdata['p']: self.auxdata_old['p'][k] = self.auxdata['p'][k]
 
 
     def check_abort(self, t):
