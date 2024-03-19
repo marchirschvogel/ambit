@@ -92,6 +92,8 @@ class FluidmechanicsProblem(problem_base):
         if 'prestress_dt' in fem_params.keys(): self.prestress_numstep = int(self.prestress_maxtime/self.prestress_dt)
         try: self.prestress_ptc = fem_params['prestress_ptc']
         except: self.prestress_ptc = False
+        try: self.prestress_kinetic = fem_params['prestress_kinetic']
+        except: self.prestress_kinetic = False
         try: self.prestress_from_file = fem_params['prestress_from_file']
         except: self.prestress_from_file = False
         try: self.initial_fluid_pressure = fem_params['initial_fluid_pressure']
@@ -528,15 +530,15 @@ class FluidmechanicsProblem(problem_base):
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial or self.prestress_initial_only:
             # Stokes kinetic virtual power
-            for n in range(self.num_domains):
+            for n, M in enumerate(self.domain_ids):
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
             if 'neumann_prestress' in self.bc_dict.keys():
                 w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
-                self.ufluid_prestr = self.v * self.pbase.dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
+                self.ufluid_prestr = self.v * self.prestress_dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
                 w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
-            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr
+            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr + w_robin_valve
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
 
@@ -677,7 +679,10 @@ class FluidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             # prestressing weak forms
             self.weakform_prestress_p, self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pv, self.weakform_lin_prestress_pp = [], [], [], []
-            self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
+            if self.prestress_kinetic:
+                self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
+            else:
+                self.weakform_prestress_v = self.deltaW_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
             for n in range(self.num_domains):
                 self.weakform_prestress_p.append( self.deltaW_p[n] )
@@ -689,7 +694,7 @@ class FluidmechanicsProblem(problem_base):
                 for n in range(self.num_domains):
                     if self.num_dupl==1: j=0
                     else: j=n
-                    self.weakform_lin_prestress_pp.append( ufl.derivative(self.weakform_prestress_p, self.p_[j], self.dp_[j]) )
+                    self.weakform_lin_prestress_pp.append( ufl.derivative(self.weakform_prestress_p[n], self.p_[j], self.dp_[j]) )
 
 
     # active stress ODE evaluation - for reduced solid model
@@ -1238,9 +1243,10 @@ class FluidmechanicsSolver(solver_base):
             self.pb.ki.prestress_update(self.pb.prestress_dt, self.pb.v.vector)
             utilities.print_prestress('updt', self.pb.comm)
 
-            # update fluid velocity: v_old <- v - we need some slight inertia for this to work smoothly...
-            self.pb.v_old.vector.axpby(1.0, 0.0, self.pb.v.vector)
-            self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            # update fluid velocity: v_old <- v - if we want some slight inertia...
+            if self.pb.prestress_kinetic:
+                self.pb.v_old.vector.axpby(1.0, 0.0, self.pb.v.vector)
+                self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             wt = time.time() - wts
 

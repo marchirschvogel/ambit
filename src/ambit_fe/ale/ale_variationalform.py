@@ -29,7 +29,7 @@ class variationalform(variationalform_base):
 
     # Nitsche term for weak imposition of Dirichlet condition
     # TeX: \int\limits_{\Gamma_0} \frac{\beta}{2 r_{\mathrm{o}}}\,(\boldsymbol{u}-\boldsymbol{u}_{\mathrm{D}})\cdot\delta\boldsymbol{u}\,\mathrm{d}A - \int\limits_{\Gamma_0} \boldsymbol{\sigma}(\delta\boldsymbol{u})\boldsymbol{n}_{0}\cdot (\boldsymbol{u}-\boldsymbol{u}_{\mathrm{D}})\,\mathrm{d}A
-    def deltaW_int_nitsche_dirichlet(self, u, uD, var_stress, beta, dboundary, hscale=False):
+    def deltaW_int_nitsche_dirichlet(self, u, uD, var_stress, beta, dboundary, hscale=True):
 
         if hscale: # NOTE: Cannot use circumradius for non-simplex cells, so the BC should be called without hscale...
             return ( (beta/(2.*self.ro0))*ufl.dot((u-uD), self.var_d) - ufl.dot(ufl.dot(var_stress,self.n0),(u-uD)) )*dboundary

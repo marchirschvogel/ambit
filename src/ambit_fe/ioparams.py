@@ -116,6 +116,7 @@ def check_params_fem_fluid(params):
                     'prestress_from_file',
                     'prestress_initial',
                     'prestress_initial_only',
+                    'prestress_kinetic',
                     'prestress_maxtime',
                     'prestress_numstep',
                     'prestress_ptc',

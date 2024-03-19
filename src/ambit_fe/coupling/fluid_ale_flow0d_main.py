@@ -495,6 +495,12 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
                 self.pb.K_list_tmp = [[None]]
                 self.pb.rom.set_reduced_data_structures_matrix(self.pb.K_list, self.pb.K_list_rom, self.pb.K_list_tmp)
 
+                if self.pb.pbf.pre:
+                    self.pb.pbf.rom = self.pb.rom
+                    self.pb.pbf.rom.set_reduced_data_structures_residual(self.pb.pbf.r_list, self.pb.pbf.r_list_rom)
+                    self.pb.pbf.K_list_tmp = [[None]]
+                    self.pb.pbf.rom.set_reduced_data_structures_matrix(self.pb.pbf.K_list, self.pb.pbf.K_list_rom, self.pb.pbf.K_list_tmp)
+
         elif self.pb.coupling_strategy=='partitioned':
 
             self.pb.pbf0.rom = self.pb.rom
