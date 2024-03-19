@@ -370,6 +370,8 @@ class solver_nonlinear:
                 # create solver
                 self.ksp[npr] = PETSc.KSP().create(self.comm)
 
+                self.ksp[npr].setType(self.iterative_solver) # cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html
+
                 self.ksp[npr].setOperators(self.K_full_nest[npr], self.P[npr])
 
                 self.ksp[npr].setInitialGuessNonzero(False)
@@ -379,8 +381,6 @@ class solver_nonlinear:
                 if self.nfields[npr] > 1:
 
                     self.iset[npr] = self.pb[npr].get_index_sets(isoptions=self.iset_options)
-
-                    self.ksp[npr].setType(self.iterative_solver) # cf. https://petsc.org/release/petsc4py/petsc4py.PETSc.KSP.Type-class.html
 
                     if self.block_precond[npr] == 'fieldsplit':
 
