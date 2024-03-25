@@ -1261,15 +1261,15 @@ class FluidmechanicsSolver(solver_base):
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in
-            self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_fluiddisplacement_pre.txt')
+            self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_fluiddisplacement_pre')
             if bool(self.pb.io.duplicate_mesh_domains):
                 m=0
                 for j in self.pb.io.duplicate_mesh_domains:
                      # TODO: Might not work for duplicate mesh, since we do not have the input node indices (do we...?)
-                    self.pb.io.writefunction(self.pb.p_[m], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure'+str(m+1)+'_pre.txt')
+                    self.pb.io.writefunction(self.pb.p_[m], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure'+str(m+1)+'_pre')
                     m+=1
             else:
-                self.pb.io.writefunction(self.pb.p_[0], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure_pre.txt')
+                self.pb.io.writefunction(self.pb.p_[0], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure_pre')
             utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.", self.pb.comm)
             os._exit(0)
 

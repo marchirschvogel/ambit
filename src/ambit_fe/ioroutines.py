@@ -331,7 +331,7 @@ class IO:
     # (e.g. linear pressure field defined on a quadratic input mesh), but not the other way
     # around (since we would not have all input node ids for a higher-order mesh defined using
     # a lower order input mesh)
-    def writefunction(self, f, filenm):
+    def writefunction(self, f, filenm, filetype='id_val'):
 
         # non-ghosted index map and input global node indices
         im_no_ghosts = f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local, dtype=np.int32)).tolist()
@@ -366,12 +366,30 @@ class IO:
         igi_flat_sorted = sorted(igi_flat)
 
         # write to file
-        if self.comm.rank==0:
-            f = open(filenm, 'wt')
-            for i in igi_flat_sorted:
-                ind = np.where(igi_flat_array == i)[0][0]
-                f.write(str(i) + ' ' + ' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
-            f.close()
+        if filetype=='id_val':
+            if self.comm.rank==0:
+                f = open(filenm+'.txt', 'wt')
+                for i in igi_flat_sorted:
+                    ind = np.where(igi_flat_array == i)[0][0]
+                    f.write(str(i) + ' ' + ' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
+                f.close()
+        elif filetype=='val':
+            if self.comm.rank==0:
+                f = open(filenm+'.txt', 'wt')
+                for i in igi_flat_sorted:
+                    ind = np.where(igi_flat_array == i)[0][0]
+                    f.write(' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
+                f.close()
+        elif filetype=='cheart': # CHeart .D file
+            if self.comm.rank==0:
+                f = open(filenm+'.D', 'wt')
+                f.write(str(len(igi_flat_sorted)) + ' ' + str(bs) + '\n')
+                for i in igi_flat_sorted:
+                    ind = np.where(igi_flat_array == i)[0][0]
+                    f.write(' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
+                f.close()
+        else:
+            raise ValueError("Unknown filetype!")
 
         self.comm.Barrier()
 
@@ -763,7 +781,7 @@ class IO_solid(IO):
                 key.vector.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -952,7 +970,7 @@ class IO_fluid(IO):
                 key.vector.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -1064,7 +1082,7 @@ class IO_ale(IO):
                 key.vector.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))
             else:
                 raise ValueError("Unknown restart_io_type!")
 
@@ -1143,7 +1161,7 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
                     key.vector.view(viewer)
                     viewer.destroy()
                 elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                    self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'.txt')
+                    self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))
                 else:
                     raise ValueError("Unknown restart_io_type!")
 

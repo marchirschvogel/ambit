@@ -1232,9 +1232,9 @@ class SolidmechanicsSolver(solver_base):
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in
-            self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_displacement_pre.txt')
+            self.pb.io.writefunction(self.pb.u_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_displacement_pre')
             if self.pb.incompressible_2field:
-                self.pb.io.writefunction(self.pb.p, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure_pre.txt')
+                self.pb.io.writefunction(self.pb.p, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure_pre')
             utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in u_pre.", self.pb.pbase.comm)
             os._exit(0)
 

@@ -288,7 +288,7 @@ class ModelOrderReduction():
                 podfunc.vector[self.ss:self.se] = self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i]
                 outfile.write_function(podfunc)
                 # also as txt (id_val file) for efficient read-in later on...
-                self.pb.io.writefunction(podfunc, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1)+'.txt')
+                self.pb.io.writefunction(podfunc, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1), filetype=self.filetype)
 
 
     # read modes from files
