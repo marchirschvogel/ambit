@@ -52,6 +52,7 @@ class ModelOrderReduction():
             except: self.pod_only = False
         else:
             self.num_hdms, self.numsnapshots = len(self.modes_from_files), 1
+            self.pod_only = False
 
         try: self.numredbasisvec = self.params['numredbasisvec']
         except: self.numredbasisvec = self.numsnapshots
