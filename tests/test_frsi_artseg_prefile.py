@@ -33,8 +33,7 @@ def test_main():
                             'numredbasisvec'        : 1,
                             'eigenvalue_cutoff'     : 1.0e-8,
                             'print_eigenproblem'    : True,
-                            'surface_rom'           : [1,6],
-                            'filesource'            : 'rawtxt'}
+                            'surface_rom'           : [1,6]}
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],

@@ -272,14 +272,23 @@ class IO:
 
 
     # own read function
-    def readfunction(self, f, datafile, normalize=False):
+    def readfunction(self, f, datafile, normalize=False, filetype='id_val'):
 
         # block size of vector
         bs = f.vector.getBlockSize()
 
         # load data and input node indices
-        data = np.loadtxt(datafile,usecols=(np.arange(1,bs+1)),ndmin=2)
-        ind_file = np.loadtxt(datafile,usecols=(0),dtype=int)
+        if filetype=='id_val':
+            data = np.loadtxt(datafile,usecols=(np.arange(1,bs+1)),ndmin=2)
+            ind_file = np.loadtxt(datafile,usecols=(0),dtype=int)
+        elif filetype=='val':
+            data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2)
+            ind_file = np.arange(0,len(data))
+        elif filetype=='cheart': # CHeart .D files: skip first row
+            data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2,skiprows=1)
+            ind_file = np.arange(0,len(data))
+        else:
+            raise ValueError("Unknown filetype!")
 
         # index map and input indices
         im = np.asarray(f.function_space.dofmap.index_map.local_to_global(np.arange(f.function_space.dofmap.index_map.size_local + f.function_space.dofmap.index_map.num_ghosts, dtype=np.int32)), dtype=PETSc.IntType)
@@ -346,6 +355,8 @@ class IO:
             for i in range(len(im_no_ghosts_gathered[n])):
                 igi_flat.append(igi_gathered[n][i])
 
+        igi_flat_array = np.asarray(igi_flat)
+
         # gather PETSc vector
         vec_sq = allgather_vec(f.vector, self.comm)
 
@@ -358,7 +369,7 @@ class IO:
         if self.comm.rank==0:
             f = open(filenm, 'wt')
             for i in igi_flat_sorted:
-                ind = igi_flat.index(i)
+                ind = np.where(igi_flat_array == i)[0][0]
                 f.write(str(i) + ' ' + ' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
             f.close()
 
@@ -908,7 +919,7 @@ class IO_fluid(IO):
                 key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
-                self.readfunction(key, self.output_path+'/checkpoint_'+pb.problem_physics+'_'+pb.pbase.simname+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
+                self.readfunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
             else:
                 raise ValueError("Unknown restart_io_type!")
 

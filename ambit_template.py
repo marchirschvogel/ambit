@@ -132,7 +132,7 @@ def main():
     # for model order reduction
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_simname_u_*_1proc.dat'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
                             'partitions'            : [basepath+'/input/artseg_part-1.txt',basepath+'/input/artseg_part-2.txt',basepath+'/input/artseg_part-3.txt'], # OPTIONAL: scalar fields that partition our POD mode space (default: [])
-                            'modes_from_files'      : [basepath+'/input/PODmode-*.txt'], # OPTIONAL: if modes should be directly read from file bypassing POD (will ignore above partitions but instead set one list element per partition --> requires modes to be already partitioned!) (default: False)
+                            'modes_from_files'      : [basepath+'/input/PODmode-*.txt'], # OPTIONAL: if modes should be directly read from file bypassing POD (default: False)
                             'numsnapshots'          : 10, # number of snapshots
                             'snapshotincr'          : 1, # OPTIONAL: snapshot increment (default: 1)
                             'numredbasisvec'        : 10, # OPTIONAL: number of reduced basis vectors to consider (default: numsnapshots)
@@ -140,7 +140,7 @@ def main():
                             'print_eigenproblem'    : False, # OPTIONAL: print output of Proper Orthogonal Decomposition (POD) eigensolve (default: False)
                             'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
                             'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
-                            'filesource'            : 'petscvector', # OPTIONAL: source of snapshot/mode data: 'petscvector' or 'rawtxt' (default: 'petscvector')
+                            'filetype'              : 'id_val', # OPTIONAL: file type of snapshot/mode data: 'id_val', 'val', 'cheart' (default: 'id_val')
                             'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type

@@ -45,8 +45,7 @@ def test_main():
                             'eigenvalue_cutoff'     : 1.0e-8,
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
-                            'redbasisvec_penalties' : [0.0, 0.0, 0.0], # only for code coverage test - applying zero terms
-                            'filesource'            : 'rawtxt'}
+                            'redbasisvec_penalties' : [0.0, 0.0, 0.0]} # only for code coverage test - applying zero terms
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-8],

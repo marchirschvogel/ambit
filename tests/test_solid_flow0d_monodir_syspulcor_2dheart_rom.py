@@ -38,7 +38,7 @@ def test_main():
                             'restart_step'          : restart_step,
                             'ode_parallel'          : True}
 
-    ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_romsnaps_2Dheart_u_*_1proc.dat'],
+    ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_romsnaps_2Dheart_u_*.txt'],
                             'numsnapshots'          : 5,
                             'snapshotincr'          : 1,
                             'numredbasisvec'        : 5,
@@ -103,8 +103,6 @@ def test_main():
                             'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075},
                                        {'type' : 'dashpot', 'id' : [3], 'dir' : 'normal_ref', 'visc' : 0.005}] }
 
-    if MPI.COMM_WORLD.size > 1:
-        raise RuntimeError("ROM data only written for 1 core.")
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)

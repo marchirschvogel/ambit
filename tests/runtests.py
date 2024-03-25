@@ -138,6 +138,7 @@ if category=='solid_flow0d' or category=='all':
     errs['test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3.py'])
 
     errs['test_solid_flow0d_monodir_syspulcor_2dheart_rom 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_syspulcor_2dheart_rom.py'])
+    errs['test_solid_flow0d_monodir_syspulcor_2dheart_rom 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_flow0d_monodir_syspulcor_2dheart_rom.py'])
     
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py'])
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py', str(50), str(0)]) # TODO: Fix outer loop restart

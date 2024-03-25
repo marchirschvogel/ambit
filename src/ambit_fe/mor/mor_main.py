@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 #import h5py
-import time, sys, copy, math
+import time, sys, copy, math, os
 from dolfinx import fem, io
 from petsc4py import PETSc
 import numpy as np
@@ -33,7 +33,7 @@ class ModelOrderReduction():
         if not self.modes_from_files:
 
             self.hdmfilenames = self.params['hdmfilenames']
-            self.numhdms = len(self.hdmfilenames)
+            self.num_hdms = len(self.hdmfilenames)
             self.numsnapshots = self.params['numsnapshots']
 
             try: self.snapshotincr = self.params['snapshotincr']
@@ -47,8 +47,11 @@ class ModelOrderReduction():
 
             try: self.eigenvalue_cutoff = self.params['eigenvalue_cutoff']
             except: self.eigenvalue_cutoff = 0.0
+
+            try: self.pod_only = self.params['pod_only']
+            except: self.pod_only = False
         else:
-            self.numhdms, self.numsnapshots = 1, 1
+            self.num_hdms, self.numsnapshots = len(self.modes_from_files), 1
 
         try: self.numredbasisvec = self.params['numredbasisvec']
         except: self.numredbasisvec = self.numsnapshots
@@ -56,10 +59,8 @@ class ModelOrderReduction():
         try: self.surface_rom = self.params['surface_rom']
         except: self.surface_rom = []
 
-        try:
-            self.filesource = self.params['filesource']
-        except:
-            self.filesource = 'petscvector'
+        try: self.filetype = self.params['filetype']
+        except: self.filetype = 'id_val'
 
         try: self.write_pod_modes = self.params['write_pod_modes']
         except: self.write_pod_modes = False
@@ -78,24 +79,24 @@ class ModelOrderReduction():
         try: self.exclude_from_snap = self.params['exclude_from_snap']
         except: self.exclude_from_snap = []
 
-        # mode partitions are either determined by the mode files or partition files
-        if bool(self.modes_from_files):
-            self.num_partitions = len(self.modes_from_files)
+        # # mode partitions are either determined by the mode files or partition files
+        # if bool(self.modes_from_files):
+        #     self.num_partitions = len(self.modes_from_files)
+        # else:
+        if bool(self.partitions):
+            self.num_partitions = len(self.partitions)
         else:
-            if bool(self.partitions):
-                self.num_partitions = len(self.partitions)
-            else:
-                self.num_partitions = 1
+            self.num_partitions = 1
 
         # some sanity checks
         if not self.modes_from_files:
-            if self.numhdms <= 0:
+            if self.num_hdms <= 0:
                 raise ValueError('Number of HDMs has to be > 0!')
             if self.numsnapshots <= 0:
                 raise ValueError('Number of snapshots has to be > 0!')
             if self.snapshotincr <= 0:
                 raise ValueError('Snapshot increment has to be > 0!')
-            if len(self.redbasisvec_indices) <= 0 or len(self.redbasisvec_indices) > self.numhdms*self.numsnapshots:
+            if len(self.redbasisvec_indices) <= 0 or len(self.redbasisvec_indices) > self.num_hdms*self.numsnapshots:
                 raise ValueError('Number of reduced-basis vectors has to be > 0 and <= number of HDMs times number of snapshots!')
 
         # function space of variable to be reduced
@@ -110,7 +111,7 @@ class ModelOrderReduction():
         self.matsize_u = self.Vspace.dofmap.index_map.size_global * self.Vspace.dofmap.index_map_bs
 
         # snapshot matrix
-        self.S_d = PETSc.Mat().createDense(size=((self.locmatsize_u,self.matsize_u),(self.numhdms*self.numsnapshots)), bsize=None, array=None, comm=self.pb.comm)
+        self.S_d = PETSc.Mat().createDense(size=((self.locmatsize_u,self.matsize_u),(self.num_hdms*self.numsnapshots)), bsize=None, array=None, comm=self.pb.comm)
         self.S_d.setUp()
 
         # row ownership range of snapshhot matrix (same for ROB operator and non-reduced stiffness matrix)
@@ -132,8 +133,13 @@ class ModelOrderReduction():
         else:
             self.readin_modes()
 
+        self.partition_pod_space()
+
         if self.write_pod_modes and self.pb.pbase.restart_step==0:
             self.write_modes()
+
+        # exit in case we only want to do POD and write the modes
+        if self.pod_only: os._exit(0)
 
         # build reduced basis - either only on designated surface(s) or for the whole model
         if bool(self.surface_rom):
@@ -164,30 +170,18 @@ class ModelOrderReduction():
         utilities.print_status("Performing Proper Orthogonal Decomposition (POD)...", self.pb.comm)
 
         # gather snapshots (mostly displacements or velocities)
-        for h in range(self.numhdms):
+        for h in range(self.num_hdms):
 
             for i in range(self.numsnapshots):
 
-                utilities.print_status("Reading snapshot %i ..." % (i+1), self.pb.comm)
-
                 step = self.snapshotoffset + (i+1)*self.snapshotincr
+
+                utilities.print_status("Reading snapshot %i ..." % (step), self.pb.comm)
 
                 field = fem.Function(self.Vspace)
 
-                if self.filesource == 'petscvector':
-                    # WARNING: Like this, we can only load data with the same amount of processes as it has been written!
-                    viewer = PETSc.Viewer().createMPIIO(self.hdmfilenames[h].replace('*',str(step)), 'r', self.pb.comm)
-                    field.vector.load(viewer)
-
-                    field.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
-                elif self.filesource == 'rawtxt':
-
-                    # own read function: requires plain txt format of type node-id valx valy valz
-                    self.pb.io.readfunction(field, self.hdmfilenames[h].replace('*',str(step)))
-
-                else:
-                    raise NameError("Unknown filesource!")
+                # own read function: requires plain txt format of type node-id valx valy valz
+                self.pb.io.readfunction(field, self.hdmfilenames[h].replace('*',str(step)), filetype=self.filetype)
 
                 self.S_d[self.ss:self.se, self.numsnapshots*h+i] = field.vector[self.ss:self.se]
 
@@ -257,11 +251,23 @@ class ModelOrderReduction():
 
         # eigenvectors, scaled with 1 / sqrt(eigenval)
         # calculate first numredbasisvec_true POD modes
+        self.Phi_all = np.zeros((self.matsize_u, self.numredbasisvec_true))
+        for i in range(self.numredbasisvec_true):
+            self.Phi_all[self.ss:self.se, i] = self.S_d * evecs[i] / math.sqrt(evals[i])
+
+        te = time.time() - ts
+
+        utilities.print_status("POD done... Time: %.4f s" % (te), self.pb.comm)
+
+
+    def partition_pod_space(self):
+
         self.Phi = np.zeros((self.matsize_u, self.numredbasisvec_true*self.num_partitions))
+
         # first set the entries for the partitions (same for all prior to weighting)
         for h in range(self.num_partitions):
             for i in range(self.numredbasisvec_true):
-                self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i] = self.S_d * evecs[i] / math.sqrt(evals[i])
+                self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i] = self.Phi_all[self.ss:self.se, i]
 
         # read partitions and apply to reduced-order basis
         if bool(self.partitions):
@@ -269,10 +275,6 @@ class ModelOrderReduction():
             for h in range(self.num_partitions):
                 for i in range(self.numredbasisvec_true):
                     self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i] *= self.part_rvar[h].vector[self.ss:self.se]
-
-        te = time.time() - ts
-
-        utilities.print_status("POD done... Time: %.4f s" % (te), self.pb.comm)
 
 
     def write_modes(self):
@@ -284,6 +286,8 @@ class ModelOrderReduction():
                 podfunc = fem.Function(self.Vspace, name="POD_Mode_P"+str(h+1)+"_"+str(i+1))
                 podfunc.vector[self.ss:self.se] = self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i]
                 outfile.write_function(podfunc)
+                # also as txt (id_val file) for efficient read-in later on...
+                self.pb.io.writefunction(podfunc, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1)+'.txt')
 
 
     # read modes from files
@@ -291,21 +295,18 @@ class ModelOrderReduction():
 
         self.numredbasisvec_true = self.numredbasisvec
 
-        self.Phi = np.zeros((self.matsize_u, self.numredbasisvec_true*self.num_partitions))
+        self.Phi_all = np.zeros((self.matsize_u, self.numredbasisvec_true))
 
         # own read function: requires plain txt format of type valx valy valz x z y
-        for h in range(self.num_partitions):
-
-            if self.num_partitions > 1:
-                utilities.print_status("Modes for partition %i:" % (h+1), self.pb.comm)
+        for h in range(self.num_hdms):
 
             for i in range(self.numredbasisvec_true):
 
                 utilities.print_status("Reading mode %i ..." % (i+1), self.pb.comm)
 
                 field = fem.Function(self.Vspace)
-                self.pb.io.readfunction(field, self.modes_from_files[h].replace('*',str(i+1)))
-                self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i] = field.vector[self.ss:self.se]
+                self.pb.io.readfunction(field, self.modes_from_files[h].replace('*',str(i+1)), filetype=self.filetype)
+                self.Phi_all[self.ss:self.se, i] = field.vector[self.ss:self.se]
 
 
     # read partitions from files
@@ -319,7 +320,7 @@ class ModelOrderReduction():
             utilities.print_status("Reading partition %i ..." % (h+1), self.pb.comm)
 
             self.part.append( fem.Function(self.Vspace_sc) )
-            self.pb.io.readfunction(self.part[-1], self.partitions[h])
+            self.pb.io.readfunction(self.part[-1], self.partitions[h], filetype=self.filetype)
 
             self.part_rvar.append( fem.Function(self.Vspace) )
 
