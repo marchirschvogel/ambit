@@ -223,17 +223,18 @@ class ModelOrderReduction():
             vi, _ = C_d.getVecs()
 
             if self.print_eigenproblem:
-                utilities.print_status("   k                        ||Ax-kx||/||kx||", self.pb.comm)
-                utilities.print_status("   ----------------------   ----------------", self.pb.comm)
+                utilities.print_status("   k            k/k0         ||Ax-kx||/||kx||", self.pb.comm)
+                utilities.print_status("   ------------ ------------ ----------------", self.pb.comm)
 
             for i in range(len(self.redbasisvec_indices)):
                 k = eigsolver.getEigenpair(self.redbasisvec_indices[i], vr, vi)
                 error = eigsolver.computeError(self.redbasisvec_indices[i])
                 if self.print_eigenproblem:
+                    if i==0: k0 = k.real
                     if k.imag != 0.0:
                         utilities.print_status("{:<3s}{:<4.4e}{:<1s}{:<4.4e}{:<1s}{:<3s}{:<4.4e}".format(" ",k.real,"+",k.imag,"j"," ",error), self.pb.comm)
                     else:
-                        utilities.print_status("{:<3s}{:<4.4e}{:<15s}{:<4.4e}".format(" ",k.real," ",error), self.pb.comm)
+                        utilities.print_status("{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<3s}{:<4.4e}".format(" ",k.real," ",k.real/k0," ",error), self.pb.comm)
 
                 # store
                 evecs.append(copy.deepcopy(vr)) # need copy here, otherwise reference changes
