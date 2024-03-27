@@ -185,7 +185,7 @@ individual time, finite element, and constitutive parameters.
                              "curve" : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
 
        # Problem setup
-       problem = ambit_fe.ambit_main.Ambit(io_params=IO, time_params=TP, solver_params=SP, fem_params=FP, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
+       problem = ambit_fe.ambit_main.Ambit(io_params=IO, time_params=TME, solver_params=SOL, fem_params=FEM, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
 
        # Run: solve the problem
        problem.solve_problem()
@@ -760,7 +760,7 @@ ALE reference frame
      :label: fluid-ale-strong-form
 
      \begin{aligned}
-     \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
      \boldsymbol{\nabla}_{0}\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
      \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \\
      \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \\
