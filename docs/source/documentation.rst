@@ -8,6 +8,8 @@ Ambit – A FEniCS-based cardiovascular multi-physics solver
    :format: latex
 ..
 
+–
+
 Preface
 =======
 
@@ -311,7 +313,7 @@ Weak form
       :label: deltaw-ext-robin
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} \left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
+      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{R}}} \left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
       \end{aligned}
 
 -  generalized Robin condition in reference surface normal direction:
@@ -320,7 +322,7 @@ Weak form
       :label: deltaw-ext-robin-n
 
       \begin{aligned}
-      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{N}}} (\boldsymbol{n}_0 \otimes \boldsymbol{n}_0)\left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
+      \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) &= -\int\limits_{\mathit{\Gamma}_{0}^{\mathrm{R}}} (\boldsymbol{n}_0 \otimes \boldsymbol{n}_0)\left[k\,\boldsymbol{u} + c\,\boldsymbol{v}(\boldsymbol{u})\right] \cdot \delta\boldsymbol{u}\,\mathrm{d}A
       \end{aligned}
 
 | **Incompressible mechanics: 2-field displacement and pressure
@@ -355,6 +357,37 @@ Weak form
      \begin{aligned}
      \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) &= \int\limits_{\mathit{\Omega}_{0}} (J(\boldsymbol{u}) - 1) \,\delta p \,\mathrm{d}V 
      \end{aligned}
+
+| **Material models**
+| – hyperelastic material models
+
+  .. math::
+     \begin{aligned}
+     \boldsymbol{S} = 2\frac{\partial\mathit{\Psi}}{\partial \boldsymbol{C}}
+     \end{aligned}
+
+| - MAT ``"neohooke_dev"``
+| 
+
+  .. math::
+     \begin{aligned}
+     \mathit{\Psi} &= \frac{\mu}{2}\left(\bar{I}_C - 3\right)
+     \end{aligned}
+
+| - MAT ``"holzapfelogden_dev"``
+| 
+
+  .. math::
+     \begin{aligned}
+     \mathit{\Psi} &= \frac{a_0}{2b_0}\left(e^{b_0(\bar{I}_C - 3)} - 1\right) + \sum\limits_{i\in\{f,s\}}\frac{a_i}{2b_i}\left(e^{b_i(I_{4,i}-1)^2}-1\right) + \frac{a_{fs}}{2b_{fs}}\left(e^{b_{fs}I_{8}^2} - 1\right), \\ & I_{4,f} = \boldsymbol{f}_0 \cdot \boldsymbol{C}\boldsymbol{f}_0, \quad I_{4,s} = \boldsymbol{s}_0 \cdot \boldsymbol{C}\boldsymbol{s}_0, \quad I_8 = \boldsymbol{f}_0 \cdot \boldsymbol{C}\boldsymbol{s}_0
+     \end{aligned}
+
+– viscous material models
+
+.. math::
+   \begin{aligned}
+   \boldsymbol{S} = 2\frac{\partial\mathit{\Psi}_{\mathrm{v}}}{\partial \dot{\boldsymbol{C}}}
+   \end{aligned}
 
 | **Time integration**
 | – time scheme ``timint : "static"``
@@ -760,7 +793,7 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widetilde{J} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widetilde{J} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
    \end{aligned}
 
 – Internal virtual power:
@@ -1271,6 +1304,16 @@ incompressible solid:
    \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \boldsymbol{\mathsf{K}}_{u\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\  \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}u} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}\end{bmatrix}_{n+1}^{k}
    \end{aligned}
 
+– sub-solves: 0D model has to hold true in each nonlinear iteration
+:math:`k`:
+
+.. math::
+   :label: nonlin-lin-sys-0d
+
+   \begin{aligned}
+   \left.\boldsymbol{\mathsf{r}}^{0\mathrm{D}}(\boldsymbol{\mathsf{\Lambda}})\right|_{k} = \boldsymbol{\mathsf{0}}, \qquad \rightsquigarrow \boldsymbol{\mathsf{K}}_{k}^{0\mathrm{D},j}\Delta\boldsymbol{\mathsf{q}}_{k}^{j+1} = -\boldsymbol{\mathsf{r}}_{k}^{0\mathrm{D},j}
+   \end{aligned}
+
 Fluid + 0D flow
 ~~~~~~~~~~~~~~~
 
@@ -1473,6 +1516,27 @@ incompressible solid:
 
    \begin{aligned}
    \begin{bmatrix} \boldsymbol{\mathsf{K}}_{uu} & \boldsymbol{\mathsf{K}}_{up} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{u\lambda} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\ \boldsymbol{\mathsf{K}}_{pu} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\lambda} & \boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{vd} \\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\lambda u} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\lambda v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}&  \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dv}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{u}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\lambda}}\\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{u}^{\mathrm{s}} \\ \\ \boldsymbol{\mathsf{r}}_{p}^{\mathrm{s}} \\ \\ \boldsymbol{\mathsf{r}}_{v}^{\mathrm{f}} \\ \\ \boldsymbol{\mathsf{r}}_{p}^{\mathrm{f}} \\ \\ \boldsymbol{\mathsf{r}}_{\lambda} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k}
+   \end{aligned}
+
+Fluid-reduced-Solid Interaction (FrSI)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+– Discrete nonlinear system to solve in each time step :math:`n`:
+
+.. math::
+   :label: nonlin-sys-frsi-0d
+
+   \begin{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}}\tilde{\boldsymbol{\mathsf{v}}},\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}}\tilde{\boldsymbol{\mathsf{v}}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}}(\boldsymbol{\mathsf{\Lambda}},\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}}\tilde{\boldsymbol{\mathsf{v}}},\boldsymbol{\mathsf{d}}) \\ \boldsymbol{\mathsf{r}}_{d}(\boldsymbol{\mathsf{d}},\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}}\tilde{\boldsymbol{\mathsf{v}}}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
+   \end{aligned}
+
+– Discrete linear system to solve in each Newton iteration :math:`k`:
+
+.. math::
+   :label: lin-sys-frsi-0d
+
+   \begin{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\boldsymbol{\mathsf{v}}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k}
    \end{aligned}
 
 Demos

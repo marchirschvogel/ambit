@@ -14,8 +14,8 @@ import basix
 # print header at beginning of simulation
 def print_problem_header(comm):
 
-    print_status("#####################################   AMBIT   #######################################", comm)
-    print_status("#################### A FEniCS-based cardiovascular physics solver #####################", comm)
+    print_status("#####################################   Ambit   #######################################", comm)
+    print_status("################# A FEniCS-based cardiovascular multi-physics solver ##################", comm)
 
 
 def print_problem(ptype, sname, comm, numdof):

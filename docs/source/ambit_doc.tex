@@ -1,4 +1,4 @@
-\documentclass[a4paper,12pt]{report}
+--\documentclass[a4paper,12pt]{report}
 \usepackage{a4wide}
 \usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
@@ -791,7 +791,7 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 -- Kinetic virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widetilde{J} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\right) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widetilde{J} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) \cdot \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
