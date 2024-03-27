@@ -8,8 +8,6 @@ Ambit – A FEniCS-based cardiovascular multi-physics solver
    :format: latex
 ..
 
-–
-
 Preface
 =======
 
