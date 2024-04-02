@@ -472,6 +472,24 @@ class solver_nonlinear:
                         bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
+                    elif self.block_precond[npr] == 'bgssym2x2': # can also be called via PETSc's fieldsplit
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgssym_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond[npr] == 'bgs3x3': # can also be called via PETSc's fieldsplit
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgs_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond[npr] == 'bgssym3x3': # can also be called via PETSc's fieldsplit
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgssym_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
                     elif self.block_precond[npr] == 'jacobi2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
