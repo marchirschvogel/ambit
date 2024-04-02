@@ -425,8 +425,8 @@ class schur_3x3(block_precond):
         # set 1's to get correct allocation pattern
         self.Smoddinv.shift(1.)
 
-        self.Umod = self.Et.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
-        self.Tmod = self.E.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.Tmod = self.Et.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+        self.Umod = self.E.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
         self.Wmod = self.R.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
 
         self.Adinv_Bt = self.Adinv.matMult(self.Bt)
@@ -441,10 +441,10 @@ class schur_3x3(block_precond):
 
         # need to set Smod and Tmod here to get the data structures right
         self.Smod.axpy(-1., self.B_Adinv_Bt)
-        self.Tmod.axpy(-1., self.D_Adinv_Bt)
-        self.Umod.axpy(-1., self.B_Adinv_Dt)
+        self.Umod.axpy(-1., self.D_Adinv_Bt)
+        self.Tmod.axpy(-1., self.B_Adinv_Dt)
 
-        self.Smoddinv_Tmod = self.Smoddinv.matMult(self.Umod)
+        self.Smoddinv_Tmod = self.Smoddinv.matMult(self.Tmod)
 
         self.Bt_Smoddinv_Tmod = self.Bt.matMult(self.Smoddinv_Tmod)
 
@@ -455,8 +455,8 @@ class schur_3x3(block_precond):
 
         self.By1 = self.B.createVecLeft()
         self.Dy1 = self.D.createVecLeft()
-        self.Tmody2 = self.E.createVecLeft()
-        self.Umody3 = self.Et.createVecLeft()
+        self.Umody2 = self.E.createVecLeft()
+        self.Tmody3 = self.Et.createVecLeft()
         self.Bty2 = self.Bt.createVecLeft()
         self.Dty3 = self.Dt.createVecLeft()
 
@@ -518,13 +518,13 @@ class schur_3x3(block_precond):
         self.B.matMult(self.Adinv_Dt, result=self.B_Adinv_Dt)  # B diag(A)^{-1} Dt
         self.D.matMult(self.Adinv_Bt, result=self.D_Adinv_Bt)  # D diag(A)^{-1} Bt
 
-        # compute self.Tmod = self.E - D_Adinv_Bt
-        self.E.copy(result=self.Tmod)
-        self.Tmod.axpy(-1., self.D_Adinv_Bt)
+        # compute self.Umod = self.E - D_Adinv_Bt
+        self.E.copy(result=self.Umod)
+        self.Umod.axpy(-1., self.D_Adinv_Bt)
 
-        # compute self.Umod = self.Et - B_Adinv_Dt
-        self.Et.copy(result=self.Umod)
-        self.Umod.axpy(-1., self.B_Adinv_Dt)
+        # compute self.Tmod = self.Et - B_Adinv_Dt
+        self.Et.copy(result=self.Tmod)
+        self.Tmod.axpy(-1., self.B_Adinv_Dt)
 
         # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
 
@@ -545,7 +545,7 @@ class schur_3x3(block_precond):
         # form diag(Smod)^{-1}
         self.Smoddinv.setDiagonal(self.smoddinv_vec, addv=PETSc.InsertMode.INSERT)
 
-        self.Smoddinv.matMult(self.Umod, result=self.Smoddinv_Tmod)                        # diag(Smod)^{-1} Tmod
+        self.Smoddinv.matMult(self.Tmod, result=self.Smoddinv_Tmod)                        # diag(Smod)^{-1} Tmod
 
         self.Bt.matMult(self.Smoddinv_Tmod, result=self.Bt_Smoddinv_Tmod)                  # Bt diag(Smod)^{-1} Tmod
 
@@ -601,20 +601,20 @@ class schur_3x3(block_precond):
         self.ksp_fields[1].solve(self.z2, self.y2)
 
         self.D.mult(self.y1, self.Dy1)
-        self.Tmod.mult(self.y2, self.Tmody2)
+        self.Umod.mult(self.y2, self.Umody2)
 
-        # compute z3 = x3 - self.Dy1 - self.Tmody2
+        # compute z3 = x3 - self.Dy1 - self.Umody2
         self.z3.axpby(1., 0., self.x3)
         self.z3.axpy(-1., self.Dy1)
-        self.z3.axpy(-1., self.Tmody2)
+        self.z3.axpy(-1., self.Umody2)
 
         # 3) solve Wmod * y_3 = z_3
         self.ksp_fields[2].solve(self.z3, self.y3)
 
-        self.Umod.mult(self.y3, self.Umody3)
+        self.Tmod.mult(self.y3, self.Tmody3)
 
-        # compute z2 = x2 - self.By1 - self.Umody3
-        self.z2.axpy(-1., self.Umody3)
+        # compute z2 = x2 - self.By1 - self.Tmody3
+        self.z2.axpy(-1., self.Tmody3)
 
         # 4) solve Smod * y_2 = z_2
         self.ksp_fields[1].solve(self.z2, self.y2)
