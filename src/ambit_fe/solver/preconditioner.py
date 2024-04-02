@@ -446,12 +446,7 @@ class schur_3x3(block_precond):
 
         self.Smoddinv_Tmod = self.Smoddinv.matMult(self.Tmod)
 
-        self.Bt_Smoddinv_Tmod = self.Bt.matMult(self.Smoddinv_Tmod)
-
-        self.Adinv_Bt_Smoddinv_Tmod = self.Adinv.matMult(self.Bt_Smoddinv_Tmod)
-        self.D_Adinv_Bt_Smoddinv_Tmod = self.D.matMult(self.Adinv_Bt_Smoddinv_Tmod)
-
-        self.E_Smoddinv_Tmod = self.E.matMult(self.Smoddinv_Tmod)
+        self.Umod_Smoddinv_Tmod = self.Umod.matMult(self.Smoddinv_Tmod)
 
         self.By1 = self.B.createVecLeft()
         self.Dy1 = self.D.createVecLeft()
@@ -547,21 +542,14 @@ class schur_3x3(block_precond):
 
         self.Smoddinv.matMult(self.Tmod, result=self.Smoddinv_Tmod)                        # diag(Smod)^{-1} Tmod
 
-        self.Bt.matMult(self.Smoddinv_Tmod, result=self.Bt_Smoddinv_Tmod)                  # Bt diag(Smod)^{-1} Tmod
-
-        self.Adinv.matMult(self.Bt_Smoddinv_Tmod, result=self.Adinv_Bt_Smoddinv_Tmod)      # diag(A)^{-1} ( Bt diag(Smod)^{-1} Tmod )
-
-        self.D.matMult(self.Adinv_Bt_Smoddinv_Tmod, result=self.D_Adinv_Bt_Smoddinv_Tmod)  # D diag(A)^{-1} ( Bt diag(Smod)^{-1} Tmod )
-
-        self.E.matMult(self.Smoddinv_Tmod, result=self.E_Smoddinv_Tmod)                    # E diag(Smod)^{-1} Tmod
+        self.Umod.matMult(self.Smoddinv_Tmod, result=self.Umod_Smoddinv_Tmod)              # Umod diag(Smod)^{-1} Tmod
 
         self.D.matMult(self.Adinv_Dt, result=self.D_Adinv_Dt)                              # D diag(A)^{-1} Dt
 
-        # compute self.Wmod = self.R - D_Adinv_Dt - E_Smoddinv_Tmod + D_Adinv_Bt_Smoddinv_Tmod
+        # compute self.Wmod = self.R - D_Adinv_Dt - Umod_Smoddinv_Tmod
         self.R.copy(result=self.Wmod)
         self.Wmod.axpy(-1., self.D_Adinv_Dt)
-        self.Wmod.axpy(-1., self.E_Smoddinv_Tmod)
-        self.Wmod.axpy(1., self.D_Adinv_Bt_Smoddinv_Tmod)
+        self.Wmod.axpy(-1., self.Umod_Smoddinv_Tmod)
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
