@@ -521,7 +521,7 @@ class schur_3x3(block_precond):
         self.Et.copy(result=self.Tmod)
         self.Tmod.axpy(-1., self.B_Adinv_Dt)
 
-        # --- Wmod = R - D diag(A)^{-1} Dt - E diag(Smod)^{-1} Tmod + D diag(A)^{-1} Bt diag(Smod)^{-1} Tmod
+        # --- Wmod = R - D diag(A)^{-1} Dt - Umod diag(Smod)^{-1} Tmod
 
         if self.schur_block_scaling[1]['type']=='diag':
             self.Smod.getDiagonal(result=self.smoddinv_vec)
