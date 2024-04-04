@@ -274,10 +274,6 @@ class FluidmechanicsProblem(problem_base):
         else:
             self.pre = False
 
-        self.re = fem.Function(self.V_scalar)
-        self.re_ktilde = fem.Function(self.V_v)
-        self.re_c = fem.Function(self.V_v)
-
         # collect references to pressure vectors
         self.pvecs_, self.pvecs_old_ = [], []
         if self.num_dupl > 1:

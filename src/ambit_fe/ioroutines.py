@@ -900,10 +900,6 @@ class IO_fluid(IO):
                         pw_out = fem.Function(pb.V_out_scalar, name=pw.name)
                         pw_out.interpolate(pw)
                         self.resultsfiles[res].write_function(pw_out, indicator)
-                    elif res=='reynolds':
-                        re_out = fem.Function(pb.V_out_vector, name=pb.re.name)
-                        re_out.interpolate(pb.re)
-                        self.resultsfiles[res].write_function(re_out, indicator)
                     elif res=='counters':
                         # iteration counters, written by base class
                         pass
