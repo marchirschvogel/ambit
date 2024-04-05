@@ -68,7 +68,7 @@ class variationalform(variationalform_base):
 
         return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
 
-    def res_v_strong_stokes_transient(self, a, rho, sig, w=None, F=None):
+    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None):
 
         return self.f_inert_strong_stokes_transient(a, rho) - self.f_visc_strong(sig, F=F)
 
@@ -121,7 +121,7 @@ class variationalform(variationalform_base):
     ### SUPG/PSPG stabilization - cf. Tezduyar and Osawa (2000), "Finite element stabilization parameters computed from element matrices and vectors"
     def stab_supg(self, v, res_v_strong, tau_supg, rho, ddomain, w=None, F=None, symmetric=False):
 
-        if symmetric: # modification to make the effective stress symmetric
+        if symmetric: # modification to make the effective stress symmetric - experimental, use with care...
             return (1./rho) * ufl.dot(tau_supg*rho*ufl.sym(ufl.grad(self.var_v))*v, res_v_strong) * ddomain
         else:
             return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*v, res_v_strong) * ddomain
@@ -138,7 +138,7 @@ class variationalform(variationalform_base):
     # reduced stabilization scheme - cf. Hoffman and Johnson (2006), "A new approach to computational turbulence modeling"
     def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, F=None, symmetric=False):
 
-        if symmetric: # modification to make the effective stress symmetric
+        if symmetric: # modification to make the effective stress symmetric - experimental, use with care...
             return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.sym(ufl.grad(self.var_v))*v) + \
                      delta2 * ufl.div(v)*ufl.div(self.var_v) + \
                      delta3 * ufl.dot(ufl.grad(p), ufl.sym(ufl.grad(self.var_v))*v) ) * ddomain
@@ -269,21 +269,21 @@ class variationalform_ale(variationalform):
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_navierstokes_steady(v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_stokes_transient(a, v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_stokes_transient(a, v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
 
     def res_v_strong_stokes_steady(self, rho, sig, F=None):
 
         return -self.f_visc_strong(sig, F=F)
 
-    def f_inert_navierstokes_transient(self, a, v, rho, sig, w=None, F=None):
+    def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None):
         if self.formulation=='nonconservative':
             return rho*(a + ufl.grad(v)*ufl.inv(F) * (v-w))
         elif self.formulation=='conservative':
@@ -292,7 +292,7 @@ class variationalform_ale(variationalform):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_navierstokes_steady(self, v, rho, sig, w=None, F=None):
+    def f_inert_strong_navierstokes_steady(self, v, rho, w=None, F=None):
         if self.formulation=='nonconservative':
             return rho*(ufl.grad(v)*ufl.inv(F) * (v-w))
         elif self.formulation=='conservative':
@@ -301,7 +301,7 @@ class variationalform_ale(variationalform):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_stokes_transient(self, a, v, rho, w=None, F=None):
+    def f_inert_strong_stokes_transient(self, a, v, rho, w=None, F=None):
         if self.formulation=='nonconservative':
             return rho*(a + ufl.grad(v)*ufl.inv(F) * (-w))
         elif self.formulation=='conservative':
@@ -335,7 +335,7 @@ class variationalform_ale(variationalform):
     ### SUPG/PSPG stabilization
     def stab_supg(self, v, res_v_strong, tau_supg, rho, ddomain, w=None, F=None, symmetric=False):
         J = ufl.det(F)
-        if symmetric: # modification to make the effective stress symmetric
+        if symmetric: # modification to make the effective stress symmetric - experimental, use with care...
             return (1./rho) * ufl.dot(tau_supg*rho*ufl.sym(ufl.grad(self.var_v)*ufl.inv(F))*v, res_v_strong) * J*ddomain
         else:
             return (1./rho) * ufl.dot(tau_supg*rho*ufl.grad(self.var_v)*ufl.inv(F)*v, res_v_strong) * J*ddomain
@@ -350,7 +350,7 @@ class variationalform_ale(variationalform):
 
     def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, F=None, symmetric=False):
         J = ufl.det(F)
-        if symmetric: # modification to make the effective stress symmetric
+        if symmetric: # modification to make the effective stress symmetric - experimental, use with care...
             return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(F)*(v-w), ufl.sym(ufl.grad(self.var_v)*ufl.inv(F))*v) + \
                      delta2 * ufl.inner(ufl.grad(v),ufl.inv(F).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(F).T) + \
                      delta3 * ufl.dot(ufl.inv(F).T*ufl.grad(p), ufl.sym(ufl.grad(self.var_v)*ufl.inv(F))*v) ) * J*ddomain
