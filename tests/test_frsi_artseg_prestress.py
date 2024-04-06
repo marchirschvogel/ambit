@@ -110,8 +110,8 @@ def test_main():
     v_corr = np.zeros(3*len(check_node))
 
     # correct results
-    v_corr[0] = -6.9221857227068683E-03 # x
-    v_corr[1] = -6.9221857227068691E-03 # y
+    v_corr[0] = -4.8182947123710648E-03 # x
+    v_corr[1] = -4.8182947123710657E-03 # y
     v_corr[2] = 0.0 # z
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)

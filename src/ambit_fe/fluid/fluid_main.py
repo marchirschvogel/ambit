@@ -541,15 +541,15 @@ class FluidmechanicsProblem(problem_base):
 
         w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
         if self.prestress_initial or self.prestress_initial_only:
-            # Stokes kinetic virtual power
+            self.acc_prestr = (self.v - self.v_old)/self.prestress_dt # in case acceleration is used (for kinetic prestress option)
             for n, M in enumerate(self.domain_ids):
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 if self.prestress_kinetic=='navierstokes_transient':
-                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(self.acc_prestr, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
                 elif self.prestress_kinetic=='navierstokes_steady':
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_steady(self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
                 elif self.prestress_kinetic=='stokes_transient':
-                    self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc_prestr, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
                 elif self.prestress_kinetic=='none':
                     pass
                 else:
@@ -558,7 +558,7 @@ class FluidmechanicsProblem(problem_base):
                 w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.prestress_dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
-                w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
+                w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc_prestr, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr + w_robin_valve
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
