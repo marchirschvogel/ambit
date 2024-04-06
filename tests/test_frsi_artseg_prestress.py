@@ -53,7 +53,7 @@ def test_main():
                             'quad_degree'           : 6,
                             'fluid_formulation'     : 'conservative',
                             'prestress_initial'     : True,
-                            'prestress_kinetic'     : True,
+                            'prestress_kinetic'     : 'stokes_transient',
                             'prestress_maxtime'     : 1.0,
                             'prestress_numstep'     : 30}
 

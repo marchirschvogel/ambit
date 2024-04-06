@@ -93,7 +93,7 @@ class FluidmechanicsProblem(problem_base):
         try: self.prestress_ptc = fem_params['prestress_ptc']
         except: self.prestress_ptc = False
         try: self.prestress_kinetic = fem_params['prestress_kinetic']
-        except: self.prestress_kinetic = False
+        except: self.prestress_kinetic = 'none'
         try: self.prestress_from_file = fem_params['prestress_from_file']
         except: self.prestress_from_file = False
         try: self.initial_fluid_pressure = fem_params['initial_fluid_pressure']
@@ -544,7 +544,16 @@ class FluidmechanicsProblem(problem_base):
             # Stokes kinetic virtual power
             for n, M in enumerate(self.domain_ids):
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
-                self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                if self.prestress_kinetic=='navierstokes_transient':
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                elif self.prestress_kinetic=='navierstokes_steady':
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_steady(self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                elif self.prestress_kinetic=='stokes_transient':
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                elif self.prestress_kinetic=='none':
+                    pass
+                else:
+                    raise ValueError("Unknown prestress_kinetic option. Choose either 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'none'.")
             if 'neumann_prestress' in self.bc_dict.keys():
                 w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
@@ -699,10 +708,7 @@ class FluidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             # prestressing weak forms
             self.weakform_prestress_p, self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pv, self.weakform_lin_prestress_pp = [], [], [], []
-            if self.prestress_kinetic:
-                self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
-            else:
-                self.weakform_prestress_v = self.deltaW_int - self.deltaW_prestr_ext
+            self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
             for n in range(self.num_domains):
                 self.weakform_prestress_p.append( self.deltaW_p[n] )
@@ -1263,8 +1269,8 @@ class FluidmechanicsSolver(solver_base):
             self.pb.ki.prestress_update(self.pb.prestress_dt, self.pb.v.vector)
             utilities.print_prestress('updt', self.pb.comm)
 
-            # update fluid velocity: v_old <- v - if we want some slight inertia...
-            if self.pb.prestress_kinetic:
+            # update fluid velocity: v_old <- v
+            if self.pb.prestress_kinetic!='none':
                 self.pb.v_old.vector.axpby(1.0, 0.0, self.pb.v.vector)
                 self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
