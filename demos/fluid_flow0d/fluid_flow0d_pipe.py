@@ -99,12 +99,13 @@ def main():
                             'order_pres'            : 1,
                             # the quadrature degree
                             'quad_degree'           : 5,
-                            # stabilization scheme: we make use of a reduced scheme ('supg_pspg2') optimized for first-order elements, which does not have
-                            # the inertia term in the strong residual
-                            'stabilization'         : {'scheme' : 'supg_pspg2', # scheme name
-                                                       'vscale' : 1e3,          # velocity scale
-                                                       'dscales' : [1.,1.,1.],  # stabilization parameter scales
-                                                       'symmetric' : True}}     # modification to make the effective stress symmetric
+                            # stabilization scheme: we make use of a reduced scheme optimized for first-order elements, which does not have
+                            # the inertia term as well as the divergence term of the viscous stress in the strong residual
+                            'stabilization'         : {'scheme' : 'supg_pspg',   # scheme name
+                                                       'vscale' : 1e3,           # velocity scale
+                                                       'dscales' : [1.,1.,1.],   # stabilization parameter scales
+                                                       'symmetric' : True,       # modification to make the effective stress symmetric
+                                                       'reduced_scheme' : True}} # reduced scheme
 
     """
     3D-0D coupling parameters
