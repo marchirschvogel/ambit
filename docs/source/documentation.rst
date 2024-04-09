@@ -629,7 +629,7 @@ with a Newtonian fluid constitutive law
 ::
 
    "stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3, "dscales" : [<d1>,<d2>,<d3>],
-                      "symmetric" : False}
+                      "symmetric" : False, "reduced_scheme" : False}
 
 | Full scheme according to :cite:p:`tezduyar2000`:
   ``"supg_pspg"``:
@@ -651,29 +651,6 @@ with a Newtonian fluid constitutive law
      \begin{aligned}
      r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{PSPG}}\,(\boldsymbol{\nabla}\delta p) \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) - \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v 
      \end{aligned}
-
-Reduced scheme (optimized for first-order): ``"supg_pspg2"``:
-
-– Velocity residual operator in
-(`[equation-fluid-weak-form] <#equation-fluid-weak-form>`__) is
-augmented by the following terms:
-
-.. math::
-   \begin{aligned}
-   r_v \leftarrow r_v &+ \int\limits_{\mathit{\Omega}_t} d_1\,((\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}) \cdot (\boldsymbol{\nabla}\delta\boldsymbol{v})\,\boldsymbol{v}\,\mathrm{d}v \\
-   & + \int\limits_{\mathit{\Omega}_t} d_2\,(\boldsymbol{\nabla}\cdot\boldsymbol{v}) (\boldsymbol{\nabla}\cdot\delta\boldsymbol{v})\,\mathrm{d}v\\
-   &+ \int\limits_{\mathit{\Omega}_t} d_3\,(\boldsymbol{\nabla}p) \cdot (\boldsymbol{\nabla}\delta\boldsymbol{v})\,\boldsymbol{v}\,\mathrm{d}v 
-   \end{aligned}
-
-– Pressure residual operator in
-(`[equation-fluid-weak-form] <#equation-fluid-weak-form>`__) is
-augmented by the following terms:
-
-.. math::
-   \begin{aligned}
-   r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} d_1\,((\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}) \cdot (\boldsymbol{\nabla}\delta p)\,\mathrm{d}v \\
-   &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} d_3\,(\boldsymbol{\nabla}p) \cdot (\boldsymbol{\nabla}\delta p)\,\mathrm{d}v 
-   \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
 
@@ -854,28 +831,6 @@ with a Newtonian fluid constitutive law
      \begin{aligned}
      r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widetilde{J}\, \tau_{\mathrm{PSPG}}\,(\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}\delta p) \;\cdot \\
      & \qquad\quad \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
-     \end{aligned}
-
-| ``"supg_pspg2"``:
-| – Velocity residual operator in
-  (`[equation-fluid-ale-weak-form] <#equation-fluid-ale-weak-form>`__)
-  is augmented by the following terms:
-
-  .. math::
-     \begin{aligned}
-     r_v \leftarrow r_v &+ \int\limits_{\mathit{\Omega}_0} \widetilde{J}\,d_1\,((\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})) \cdot (\boldsymbol{\nabla}_{0}\delta\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\,\mathrm{d}V \\
-     & + \int\limits_{\mathit{\Omega}_0} \widetilde{J}\,d_2\,(\boldsymbol{\nabla}_{0}\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}}) (\boldsymbol{\nabla}_{0}\delta\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}})\,\mathrm{d}V\\
-     &+ \int\limits_{\mathit{\Omega}_0} \widetilde{J}\,d_3\,(\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}p) \cdot (\boldsymbol{\nabla}_{0}\delta\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\,\mathrm{d}V
-     \end{aligned}
-
-  – Pressure residual operator in
-  (`[equation-fluid-ale-weak-form] <#equation-fluid-ale-weak-form>`__)
-  is augmented by the following terms:
-
-  .. math::
-     \begin{aligned}
-     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0} \widetilde{J}\,d_1\,((\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})) \cdot (\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}\delta p)\,\mathrm{d}V \\
-     &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0} \widetilde{J}\,d_3\,(\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}p) \cdot (\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}\delta p)\,\mathrm{d}V
      \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:

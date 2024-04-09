@@ -354,6 +354,8 @@ class ModelOrderReduction():
 
         # set penalties
         if bool(self.redbasisvec_penalties):
+            assert(len(self.redbasisvec_penalties)==self.numredbasisvec_true*self.num_partitions)
+
             self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()
 
@@ -438,6 +440,7 @@ class ModelOrderReduction():
 
         # set penalties
         if bool(self.redbasisvec_penalties):
+            assert(len(self.redbasisvec_penalties)==self.numredbasisvec_true*self.num_partitions)
 
             self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()

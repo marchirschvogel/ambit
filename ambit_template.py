@@ -108,7 +108,7 @@ def main():
                             'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
                             'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt'], # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             'prestress_ptc'         : False, # OPTIONAL: whether to use PTC in prestress or not (default: False)
-                            'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}} # OPTIONAL: stabilization for equal-order fluid mechanics, where 'scheme' can be 'supg_pspg' or 'supg_pspg2' (latter excludes transient part in strong NS residual -> equal for steady NS) (default: None)
+                            'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : False, 'reduced_scheme' : False}} # OPTIONAL: stabilization for equal-order fluid mechanics, where 'scheme' can only be 'supg_pspg' (default: None)
 
     # for solid_flow0d or fluid_flow0d problem type
     COUPLING_PARAMS_3D0D = {'surface_ids'           : [[1],[2]], # coupling surfaces (for syspul* models: order is lv, rv, la, ra - has to be consistent with chamber_models dict)

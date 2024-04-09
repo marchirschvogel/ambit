@@ -539,10 +539,14 @@ class FluidmechanicsProblem(problem_base):
             w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.io.bmeasures, ivar=self.internalvars_old, wallfields=self.wallfields)
             w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_mid, self.vel_mid, self.acc_mid, self.io.bmeasures, ivar=self.internalvars_mid, wallfields=self.wallfields)
 
-        w_neumann_prestr, self.deltaW_prestr_kin = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_prestr, self.deltaW_prestr_kin, self.deltaW_prestr_int, self.deltaW_p_prestr = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), []
         if self.prestress_initial or self.prestress_initial_only:
             self.acc_prestr = (self.v - self.v_old)/self.prestress_dt # in case acceleration is used (for kinetic prestress option)
             for n, M in enumerate(self.domain_ids):
+                if self.num_dupl==1: j=0
+                else: j=n
+                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), self.io.dx(M), F=self.alevar['Fale'])
+                self.deltaW_p_prestr.append( self.vf.deltaW_int_pres(self.v, self.var_p_[j], self.io.dx(M), F=self.alevar['Fale']) )
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 if self.prestress_kinetic=='navierstokes_transient':
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(self.acc_prestr, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
@@ -577,6 +581,7 @@ class FluidmechanicsProblem(problem_base):
             try: vscale_vel_dep = self.stabilization['vscale_vel_dep']
             except: vscale_vel_dep = False
 
+            # TODO: Is this a good choice in general if we wanna make it state dependent?
             if vscale_vel_dep:
                 vscale_max = ufl.max_value(ufl.sqrt(ufl.dot(self.v_old,self.v_old)), vscale)
             else:
@@ -587,6 +592,17 @@ class FluidmechanicsProblem(problem_base):
             try: symm = self.stabilization['symmetric']
             except: symm = False
 
+            # reduced stabiliztion scheme optimized for first-order: missing transient NS term as well as divergence stress term of strong residual
+            try: red_scheme = self.stabilization['reduced_scheme']
+            except: red_scheme = False
+
+            try: dscales = self.stabilization['dscales']
+            except: dscales = [1., 1., 1.]
+
+            if red_scheme:
+                assert(self.order_vel==1)
+                assert(self.order_pres==1)
+
             # full scheme
             if self.stabilization['scheme']=='supg_pspg':
 
@@ -595,27 +611,49 @@ class FluidmechanicsProblem(problem_base):
                     if self.num_dupl==1: j=0
                     else: j=n
 
-                    tau_supg = h / vscale_max
-                    tau_pspg = h / vscale_max
-                    tau_lsic = h * vscale_max
+                    dscales = self.stabilization['dscales']
+
+                    tau_supg = dscales[0] * h / vscale_max
+                    tau_pspg = dscales[1] * h / vscale_max
+                    tau_lsic = dscales[2] * h * vscale_max
 
                     # strong momentum residuals
                     if self.fluid_governing_type=='navierstokes_transient':
-                        residual_v_strong     = self.vf.res_v_strong_navierstokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-                        residual_v_strong_mid = self.vf.res_v_strong_navierstokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                        if not red_scheme:
+                            residual_v_strong     = self.vf.res_v_strong_navierstokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.res_v_strong_navierstokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                        else: # no viscous stress term and no dv/dt term
+                            residual_v_strong     = self.vf.f_inert_strong_navierstokes_steady(self.v, self.rho[n], w=self.alevar['w'], F=self.alevar['Fale']) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(self.v_old, self.rho[n], w=self.alevar['w_old'], F=self.alevar['Fale_old']) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(self.vel_mid, self.rho[n], w=self.alevar['w_mid'], F=self.alevar['Fale_mid']) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar['Fale_mid'])
                     elif self.fluid_governing_type=='navierstokes_steady':
-                        residual_v_strong     = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-                        residual_v_strong_mid = self.vf.res_v_strong_navierstokes_steady(self.vel_mid, self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                        if not red_scheme:
+                            residual_v_strong     = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.res_v_strong_navierstokes_steady(self.vel_mid, self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                        else: # no viscous stress term
+                            residual_v_strong     = self.vf.f_inert_strong_navierstokes_steady(self.v, self.rho[n], w=self.alevar['w'], F=self.alevar['Fale']) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(self.v_old, self.rho[n], w=self.alevar['w_old'], F=self.alevar['Fale_old']) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(self.vel_mid, self.rho[n], w=self.alevar['w_mid'], F=self.alevar['Fale_mid']) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar['Fale_mid'])
                     elif self.fluid_governing_type=='stokes_transient':
-                        residual_v_strong     = self.vf.res_v_strong_stokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-                        residual_v_strong_mid = self.vf.res_v_strong_stokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                        if not red_scheme:
+                            residual_v_strong     = self.vf.res_v_strong_stokes_transient(self.acc, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.res_v_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.res_v_strong_stokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                        else: # no viscous stress term
+                            residual_v_strong     = self.vf.f_inert_strong_stokes_transient(self.acc, self.v, self.rho[n], w=self.alevar['w'], F=self.alevar['Fale']) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.f_inert_strong_stokes_transient(self.a_old, self.v_old, self.rho[n], w=self.alevar['w_old'], F=self.alevar['Fale_old']) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.f_inert_strong_stokes_transient(self.acc_mid, self.vel_mid, self.rho[n], w=self.alevar['w_mid'], F=self.alevar['Fale_mid']) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar['Fale_mid'])
                     elif self.fluid_governing_type=='stokes_steady':
-                        residual_v_strong     = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), F=self.alevar['Fale'])
-                        residual_v_strong_old = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), F=self.alevar['Fale_old'])
-                        residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), F=self.alevar['Fale_mid'])
+                        if not red_scheme:
+                            residual_v_strong     = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), F=self.alevar['Fale_mid'])
+                        else: # no viscous stress term
+                            residual_v_strong     = self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                            residual_v_strong_old = self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar['Fale_old'])
+                            residual_v_strong_mid = self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar['Fale_mid'])
                     else:
                         raise ValueError("Unknown fluid_governing_type!")
 
@@ -632,33 +670,18 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
                     self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_old'])
                     self.deltaW_int_mid += self.vf.stab_lsic(self.vel_mid, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_mid'])
+                    if self.prestress_initial or self.prestress_initial_only:
+                        self.deltaW_prestr_int += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
+                        if not red_scheme:
+                            residual_v_strong_prestr = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), F=self.alevar['Fale'])
+                        else: # no viscous stress term
+                            residual_v_strong_prestr = self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                        self.deltaW_p_prestr[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_prestr, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
+                        if self.prestress_kinetic=='navierstokes_transient' or self.prestress_kinetic=='navierstokes_steady': # NOTE: We still use the static stabilization form here...
+                            self.deltaW_prestr_int += self.vf.stab_supg(self.v, residual_v_strong_prestr, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
 
-            # reduced scheme: missing transient NS term as well as divergence stress term of strong residual
-            if self.stabilization['scheme']=='supg_pspg2':
-
-                # optimized for first-order
-                assert(self.order_vel==1)
-                assert(self.order_pres==1)
-
-                for n, M in enumerate(self.domain_ids):
-
-                    if self.num_dupl==1: j=0
-                    else: j=n
-
-                    dscales = self.stabilization['dscales']
-
-                    # yields same result as above for navierstokes_steady
-                    delta1 = dscales[0] * self.rho[n] * h / vscale_max
-                    delta2 = dscales[1] * self.rho[n] * h * vscale_max
-                    delta3 = dscales[2] * h / vscale_max
-
-                    self.deltaW_int     += self.vf.stab_v(delta1, delta2, delta3, self.v, self.p_[j], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
-                    self.deltaW_int_old += self.vf.stab_v(delta1, delta2, delta3, self.v_old, self.p_old_[j], self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'], symmetric=symm)
-                    self.deltaW_int_mid += self.vf.stab_v(delta1, delta2, delta3, self.vel_mid, self.pf_mid_[j], self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'], symmetric=symm)
-
-                    self.deltaW_p[n]     += self.vf.stab_p(delta1, delta3, self.v, self.p_[j], self.var_p_[j], self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
-                    self.deltaW_p_old[n] += self.vf.stab_p(delta1, delta3, self.v_old, self.p_old_[j], self.var_p_[j], self.rho[n], self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-                    self.deltaW_p_mid[n] += self.vf.stab_p(delta1, delta3, self.vel_mid, self.pf_mid_[j], self.var_p_[j], self.rho[n], self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            else:
+                raise ValueError("Unknown stabilization scheme!")
 
 
         ### full weakforms
@@ -708,10 +731,10 @@ class FluidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             # prestressing weak forms
             self.weakform_prestress_p, self.weakform_lin_prestress_vp, self.weakform_lin_prestress_pv, self.weakform_lin_prestress_pp = [], [], [], []
-            self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_int - self.deltaW_prestr_ext
+            self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_prestr_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
             for n in range(self.num_domains):
-                self.weakform_prestress_p.append( self.deltaW_p[n] )
+                self.weakform_prestress_p.append( self.deltaW_p_prestr[n] )
             for j in range(self.num_dupl):
                 self.weakform_lin_prestress_vp.append( ufl.derivative(self.weakform_prestress_v, self.p_[j], self.dp_[j]) )
             for n in range(self.num_domains):

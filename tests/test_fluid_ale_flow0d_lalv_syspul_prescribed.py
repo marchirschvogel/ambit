@@ -76,7 +76,7 @@ def test_main():
     FEM_PARAMS_FLUID     = {'order_vel'             : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : True} }
+                            'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : True, 'reduced_scheme' : True} }
 
     FEM_PARAMS_ALE       = {'order_disp'            : 1,
                             'quad_degree'           : 5}

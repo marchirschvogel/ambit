@@ -45,7 +45,7 @@ def test_main():
                            'order_pres'            : 1,
                            'quad_degree'           : 5,
                            'fluid_formulation'     : 'nonconservative', # nonconservative (default), conservative
-                           'stabilization'         : {'scheme' : 'supg_pspg2', 'vscale' : 1e3, 'dscales' : [1.,1.,1.]}}
+                           'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'reduced_scheme' : True}}
 
 
     MATERIALS           = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},

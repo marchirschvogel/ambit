@@ -652,7 +652,7 @@ Streamline-upwind Petrov-Galerkin/pressure-stabilizing Petrov-Galerkin (SUPG/PSP
 
 \begin{Verbatim}[breaklines=true]
 "stabilization" : {"scheme" : <SCHEME>, "vscale" : 1e3, "dscales" : [<d1>,<d2>,<d3>],
-                   "symmetric" : False}
+                   "symmetric" : False, "reduced_scheme" : False}
 \end{Verbatim}
 
 Full scheme according to \cite{tezduyar2000}: \verb."supg_pspg".:\\
@@ -667,25 +667,6 @@ r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\
 \begin{equation}
 \begin{aligned}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\bs{\nabla}\delta p) \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}\bs{v})\,\bs{v}\right) - \bs{\nabla} \cdot \bs{\sigma}(\bs{v},p)\right]\,\mathrm{d}v 
-\end{aligned}
-\end{equation}
-
-
-Reduced scheme (optimized for first-order): \verb."supg_pspg2".:
-
--- Velocity residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
-\begin{equation}
-\begin{aligned}
-r_v \leftarrow r_v &+ \int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v \\
-& + \int\limits_{\Om_t} d_2\,(\bs{\nabla}\cdot\bs{v}) (\bs{\nabla}\cdot\delta\bs{v})\,\mathrm{d}v\\
-&+ \int\limits_{\Om_t} d_3\,(\bs{\nabla}p) \cdot (\bs{\nabla}\delta\bs{v})\,\bs{v}\,\mathrm{d}v 
-\end{aligned}
-\end{equation}
--- Pressure residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
-\begin{equation}
-\begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} d_1\,((\bs{\nabla}\bs{v})\,\bs{v}) \cdot (\bs{\nabla}\delta p)\,\mathrm{d}v \\
-&+ \frac{1}{\rho}\int\limits_{\Om_t} d_3\,(\bs{\nabla}p) \cdot (\bs{\nabla}\delta p)\,\mathrm{d}v 
 \end{aligned}
 \end{equation}
 
@@ -848,23 +829,6 @@ r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\ma
 \begin{aligned}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\mathrm{PSPG}}\,(\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p) \;\cdot \\
 & \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widetilde{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
-\end{aligned}
-\end{equation}
-
-\verb."supg_pspg2".:\\
--- Velocity residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
-\begin{equation}
-\begin{aligned}
-r_v \leftarrow r_v &+ \int\limits_{\Om_0} \widetilde{J}\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\,\mathrm{d}V \\
-& + \int\limits_{\Om_0} \widetilde{J}\,d_2\,(\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}}) (\bs{\nabla}_{0}\delta\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}})\,\mathrm{d}V\\
-&+ \int\limits_{\Om_0} \widetilde{J}\,d_3\,(\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\bs{\nabla}_{0}\delta\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\,\mathrm{d}V
-\end{aligned}
-\end{equation}
--- Pressure residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
-\begin{equation}
-\begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0} \widetilde{J}\,d_1\,((\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})) \cdot (\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V \\
-&+ \frac{1}{\rho}\int\limits_{\Om_0} \widetilde{J}\,d_3\,(\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}p) \cdot (\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p)\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 

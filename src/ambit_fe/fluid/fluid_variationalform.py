@@ -62,19 +62,19 @@ class variationalform(variationalform_base):
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_strong_stokes_transient(a, rho) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_stokes_transient(a, rho) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_stokes_steady(self, rho, sig, F=None):
 
-        return -self.f_visc_strong(sig, F=F)
+        return -self.f_stress_strong(sig, F=F)
 
     def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None):
         if self.formulation=='nonconservative':
@@ -96,9 +96,13 @@ class variationalform(variationalform_base):
 
         return rho*a
 
-    def f_visc_strong(self, sig, F=None):
+    def f_stress_strong(self, sig, F=None):
 
         return ufl.div(sig)
+
+    def f_gradp_strong(self, p, F=None):
+
+        return ufl.grad(p)
 
     def res_p_strong(self, v, F=None):
 
@@ -134,23 +138,6 @@ class variationalform(variationalform_base):
 
         return tau_lsic*ufl.div(self.var_v)*rho*self.res_p_strong(v, F=F) * ddomain
 
-
-    # reduced stabilization scheme - cf. Hoffman and Johnson (2006), "A new approach to computational turbulence modeling"
-    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, F=None, symmetric=False):
-
-        if symmetric: # modification to make the effective stress symmetric - experimental, use with care...
-            return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.sym(ufl.grad(self.var_v))*v) + \
-                     delta2 * ufl.div(v)*ufl.div(self.var_v) + \
-                     delta3 * ufl.dot(ufl.grad(p), ufl.sym(ufl.grad(self.var_v))*v) ) * ddomain
-        else:
-            return ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(self.var_v)*v) + \
-                     delta2 * ufl.div(v)*ufl.div(self.var_v) + \
-                     delta3 * ufl.dot(ufl.grad(p), ufl.grad(self.var_v)*v) ) * ddomain
-
-    def stab_p(self, delta1, delta3, v, p, var_p, rho, ddomain, w=None, F=None):
-
-        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*v, ufl.grad(var_p)) + \
-                            delta3 * ufl.dot(ufl.grad(p), ufl.grad(var_p)) ) * ddomain
 
     # components of element-level Reynolds number - cf. Tezduyar and Osawa (2000)
     def re_c(self, rho, v, ddomain, w=None, F=None):
@@ -269,19 +256,19 @@ class variationalform_ale(variationalform):
 
     def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None):
 
-        return self.f_inert_strong_stokes_transient(a, v, rho, w=w, F=F) - self.f_visc_strong(sig, F=F)
+        return self.f_inert_strong_stokes_transient(a, v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_stokes_steady(self, rho, sig, F=None):
 
-        return -self.f_visc_strong(sig, F=F)
+        return -self.f_stress_strong(sig, F=F)
 
     def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None):
         if self.formulation=='nonconservative':
@@ -310,9 +297,13 @@ class variationalform_ale(variationalform):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_visc_strong(self, sig, F=None):
+    def f_stress_strong(self, sig, F=None):
         i, j, k = ufl.indices(3)
-        return -ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(F).T[j,k], i)
+        return ufl.as_vector(ufl.grad(sig)[i,j,k]*ufl.inv(F).T[j,k], i)
+
+    def f_gradp_strong(self, p, F=None):
+
+        return ufl.inv(F).T*ufl.grad(p)
 
     def res_p_strong(self, v, F=None):
 
@@ -348,21 +339,6 @@ class variationalform_ale(variationalform):
         J = ufl.det(F)
         return tau_lsic * ufl.inner(ufl.grad(self.var_v),ufl.inv(F).T) * rho*self.res_p_strong(v, F=F) * J*ddomain
 
-    def stab_v(self, delta1, delta2, delta3, v, p, ddomain, w=None, F=None, symmetric=False):
-        J = ufl.det(F)
-        if symmetric: # modification to make the effective stress symmetric - experimental, use with care...
-            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(F)*(v-w), ufl.sym(ufl.grad(self.var_v)*ufl.inv(F))*v) + \
-                     delta2 * ufl.inner(ufl.grad(v),ufl.inv(F).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(F).T) + \
-                     delta3 * ufl.dot(ufl.inv(F).T*ufl.grad(p), ufl.sym(ufl.grad(self.var_v)*ufl.inv(F))*v) ) * J*ddomain
-        else:
-            return ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(F)*(v-w), ufl.grad(self.var_v)*ufl.inv(F)*v) + \
-                     delta2 * ufl.inner(ufl.grad(v),ufl.inv(F).T) * ufl.inner(ufl.grad(self.var_v),ufl.inv(F).T) + \
-                     delta3 * ufl.dot(ufl.inv(F).T*ufl.grad(p), ufl.grad(self.var_v)*ufl.inv(F)*v) ) * J*ddomain
-
-    def stab_p(self, delta1, delta3, v, p, var_p, rho, ddomain, w=None, F=None):
-        J = ufl.det(F)
-        return (1./rho) * ( delta1 * ufl.dot(ufl.grad(v)*ufl.inv(F)*(v-w), ufl.inv(F).T*ufl.grad(var_p)) + \
-                            delta3 * ufl.dot(ufl.inv(F).T*ufl.grad(p), ufl.inv(F).T*ufl.grad(var_p)) ) * J*ddomain
 
     # components of element-level Reynolds number
     def re_c(self, rho, v, ddomain, w=None, F=None):
