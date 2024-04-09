@@ -670,14 +670,37 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
                     self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_old'])
                     self.deltaW_int_mid += self.vf.stab_lsic(self.vel_mid, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_mid'])
+
+                    # now take care of stabilization for the prestress problem (only FrSI)
                     if self.prestress_initial or self.prestress_initial_only:
                         self.deltaW_prestr_int += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
-                        if not red_scheme:
-                            residual_v_strong_prestr = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), F=self.alevar['Fale'])
-                        else: # no viscous stress term
-                            residual_v_strong_prestr = self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                        # get the respective strong residual depending on the prestress kinetic type...
+                        if self.prestress_kinetic=='navierstokes_transient':
+                            if not red_scheme:
+                                residual_v_strong_prestr = self.vf.res_v_strong_navierstokes_transient(self.acc_prestr, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
+                            else: # no viscous stress term and no dv/dt term
+                                residual_v_strong_prestr = self.vf.f_inert_strong_navierstokes_steady(self.v, self.rho[n], w=self.alevar['w'], F=self.alevar['Fale']) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                        elif self.prestress_kinetic=='navierstokes_steady':
+                            if not red_scheme:
+                                residual_v_strong_prestr = self.vf.res_v_strong_navierstokes_steady(self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
+                            else: # no viscous stress term
+                                residual_v_strong_prestr = self.vf.f_inert_strong_navierstokes_steady(self.v, self.rho[n], w=self.alevar['w'], F=self.alevar['Fale']) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                        elif self.prestress_kinetic=='stokes_transient':
+                            if not red_scheme:
+                                residual_v_strong_prestr = self.vf.res_v_strong_stokes_transient(self.acc_prestr, self.v, self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), w=self.alevar['w'], F=self.alevar['Fale'])
+                            else: # no viscous stress term
+                                residual_v_strong_prestr = self.vf.f_inert_strong_stokes_transient(self.acc_prestr, self.v, self.rho[n], w=self.alevar['w'], F=self.alevar['Fale']) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                        elif self.prestress_kinetic=='none':
+                            if not red_scheme:
+                                residual_v_strong_prestr = self.vf.res_v_strong_stokes_steady(self.rho[n], self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), F=self.alevar['Fale'])
+                            else: # no viscous stress term
+                                residual_v_strong_prestr = self.vf.f_gradp_strong(self.p_[j], F=self.alevar['Fale'])
+                        else:
+                            raise ValueError("Unknown prestress_kinetic option!")
+                        # PSPG term
                         self.deltaW_p_prestr[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_prestr, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
-                        if self.prestress_kinetic=='navierstokes_transient' or self.prestress_kinetic=='navierstokes_steady': # NOTE: We still use the static stabilization form here...
+                        # SUPG term only for kinetic prestress...
+                        if self.prestress_kinetic=='navierstokes_transient' or self.prestress_kinetic=='navierstokes_steady':
                             self.deltaW_prestr_int += self.vf.stab_supg(self.v, residual_v_strong_prestr, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
 
             else:
