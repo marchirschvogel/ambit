@@ -63,15 +63,17 @@ class cardiovascular0D4elwindkesselLpZ(cardiovascular0Dbase):
         self.numdof = 4
 
         self.v_ids = [0]
-        self.c_ids = [2]
 
         if self.cq[0] == 'volume':
+            self.c_ids = [2]
             assert(self.vq[0]=='pressure')
             self.switch_V, self.cname, self.vname = 1, 'V', 'p'
         elif self.cq[0] == 'flux':
+            self.c_ids = [2]
             assert(self.vq[0]=='pressure')
             self.switch_V, self.cname, self.vname = 0, 'Q', 'p'
         elif self.cq[0] == 'pressure':
+            self.c_ids = [0]
             if self.vq[0] == 'flux':
                 self.switch_V, self.cname, self.vname = 0, 'p', 'Q'
             elif self.vq[0] == 'volume':
