@@ -120,17 +120,17 @@ class problem_base():
         raise RuntimeError("Problem misses function implementation!")
 
 
-    def scale_residual_list(self, rlist, fac):
+    def scale_residual_list(self, rlist):
 
         for n in range(len(rlist)):
-            rlist[n].scale(fac[n])
+            rlist[n].scale(self.pbase.residual_scale[n])
 
 
-    def scale_jacobian_list(self, Klist, fac):
+    def scale_jacobian_list(self, Klist):
 
         for n in range(len(Klist)):
             for m in range(len(Klist)):
-                if Klist[n][m] is not None: Klist[n][m].scale(fac[n])
+                if Klist[n][m] is not None: Klist[n][m].scale(self.pbase.residual_scale[n])
 
 
 

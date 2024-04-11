@@ -455,9 +455,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             del LM_sq
 
-        if bool(self.pbase.residual_scale):
-            self.scale_residual_list([self.r_list[1+off]], [self.pbase.residual_scale[1+off]])
-
 
     def assemble_stiffness(self, t, subsolver=None):
 
@@ -577,11 +574,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.k_su_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_su_subvec[i])
 
         self.K_su.assemble()
-
-        if bool(self.pbase.residual_scale):
-            self.K_us.scale(self.pbase.residual_scale[0])
-            self.K_su.scale(self.pbase.residual_scale[1+off])
-            self.K_list[1+off][1+off].scale(self.pbase.residual_scale[1+off])
 
         self.K_list[0][1+off] = self.K_us
         self.K_list[1+off][0] = self.K_su

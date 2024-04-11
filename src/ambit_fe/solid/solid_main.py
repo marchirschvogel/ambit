@@ -982,9 +982,6 @@ class SolidmechanicsProblem(problem_base):
 
             self.r_list[0] = self.r_u
 
-        if bool(self.pbase.residual_scale):
-            self.scale_residual_list(self.r_list, self.pbase.residual_scale)
-
 
     def assemble_stiffness(self, t, subsolver=None):
 
@@ -1020,9 +1017,6 @@ class SolidmechanicsProblem(problem_base):
         else:
 
             self.K_list[0][0] = self.K_uu
-
-        if bool(self.pbase.residual_scale):
-            self.scale_jacobian_list(self.K_list, self.pbase.residual_scale)
 
 
     def get_index_sets(self, isoptions={}):

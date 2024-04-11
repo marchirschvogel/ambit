@@ -673,6 +673,7 @@ class FluidmechanicsProblem(problem_base):
 
                     # now take care of stabilization for the prestress problem (only FrSI)
                     if self.prestress_initial or self.prestress_initial_only:
+                        # LSIC term
                         self.deltaW_prestr_int += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
                         # get the respective strong residual depending on the prestress kinetic type...
                         if self.prestress_kinetic=='navierstokes_transient':
@@ -980,9 +981,6 @@ class FluidmechanicsProblem(problem_base):
         self.r_list[0] = self.r_v
         self.r_list[1] = self.r_p
 
-        if bool(self.pbase.residual_scale):
-            self.scale_residual_list(self.r_list, self.pbase.residual_scale)
-
 
     def assemble_stiffness(self, t, subsolver=None):
 
@@ -1020,9 +1018,6 @@ class FluidmechanicsProblem(problem_base):
         self.K_list[0][1] = self.K_vp
         self.K_list[1][0] = self.K_pv
         self.K_list[1][1] = self.K_pp
-
-        if bool(self.pbase.residual_scale):
-            self.scale_jacobian_list(self.K_list, self.pbase.residual_scale)
 
 
     def get_index_sets(self, isoptions={}):

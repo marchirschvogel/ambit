@@ -248,9 +248,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         self.K_sd.assemble()
 
-        if bool(self.pbase.residual_scale):
-            self.K_sd.scale(self.pbase.residual_scale[2])
-
         self.K_list[2][3] = self.K_sd
         self.K_list[3][3] = self.pba.K_list[0][0]
 

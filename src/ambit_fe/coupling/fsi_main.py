@@ -214,9 +214,6 @@ class FSIProblem(problem_base):
         self.r_list[3+off] = self.r_l
         self.r_list[4+off] = self.pbfa.r_list[2]
 
-        if bool(self.pbase.residual_scale):
-            self.scale_residual_list([self.r_l], [self.pbase.residual_scale[3+off]])
-
 
     def assemble_stiffness(self, t, subsolver=None):
 
@@ -272,12 +269,6 @@ class FSIProblem(problem_base):
 
         # ALE displacement
         self.K_list[4+off][4+off] = self.pbfa.K_list[2][2]
-
-        if bool(self.pbase.residual_scale):
-            self.K_ul.scale(self.pbase.residual_scale[0])
-            self.K_lu.scale(self.pbase.residual_scale[3+off])
-            self.K_vl.scale(self.pbase.residual_scale[1+off])
-            self.K_lv.scale(self.pbase.residual_scale[3+off])
 
 
     ### now the base routines for this problem

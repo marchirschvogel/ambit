@@ -848,6 +848,9 @@ class solver_nonlinear:
         if self.pb[npr].rom:
             self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom, x=self.x[npr][0])
 
+        if bool(self.pb[npr].pbase.residual_scale):
+            self.pb[npr].scale_residual_list(self.r_list_sol[npr])
+
         # get residual norms
         for n in range(self.nfields[npr]):
             self.r_list_sol[npr][n].assemble()
@@ -868,6 +871,9 @@ class solver_nonlinear:
         # apply model order reduction of stiffness
         if self.pb[npr].rom:
             self.pb[npr].rom.reduce_stiffness(self.pb[npr].K_list, self.pb[npr].K_list_rom, self.pb[npr].K_list_tmp)
+
+        if bool(self.pb[npr].pbase.residual_scale):
+            self.pb[npr].scale_jacobian_list(self.K_list_sol[npr])
 
         if self.PTC:
             # computes K_00 + k_PTC * I

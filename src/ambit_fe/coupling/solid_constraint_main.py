@@ -280,9 +280,6 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.r_list[1+off] = self.r_lm
 
-        if bool(self.pbase.residual_scale):
-            self.scale_residual_list([r_lm], [self.pbase.residual_scale[1+off]])
-
 
     def assemble_stiffness(self, t, subsolver=None):
 
@@ -332,11 +329,6 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.k_su_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_su_subvec[i])
 
         self.K_su.assemble()
-
-        if bool(self.pbase.residual_scale):
-            self.K_us.scale(self.pbase.residual_scale[0])
-            self.K_su.scale(self.pbase.residual_scale[1+off])
-            self.K_lm.scale(self.pbase.residual_scale[1+off])
 
         self.K_list[0][1+off] = self.K_us
         self.K_list[1+off][0] = self.K_su

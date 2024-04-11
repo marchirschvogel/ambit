@@ -45,7 +45,7 @@ def test_main():
                             'eigenvalue_cutoff'     : 1.0e-8,
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
-                            'redbasisvec_penalties' : [0.0, 0.0, 0.0]} # only for code coverage test - applying zero terms
+                            'redbasisvec_penalties' : [0.0, 0.0, 10.0]} # penalize the mode at the junction in the middle (last one)
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-8],
@@ -111,8 +111,8 @@ def test_main():
     v_corr = np.zeros(3*len(check_node))
 
     # correct results
-    v_corr[0] = 2.3582758194714750E+00 # x
-    v_corr[1] = 2.3582758194714755E+00 # y
+    v_corr[0] = -2.0813796141204302E+00 # x
+    v_corr[1] = -2.0813796141204306E+00 # y
     v_corr[2] = 0.0 # z
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbf.v, check_node, v_corr, problem.mp.pbf.V_v, problem.mp.comm, tol=tol, nm='v', readtol=1e-4)
