@@ -118,7 +118,7 @@ def test_main():
     BC_DICT_FLUID        = { 'robin_valve' : [{'id' : [3], 'type' : 'temporal', 'beta_max' : 1e3, 'beta_min' : 0, 'to' : 0.0, 'tc' : 0.37}], # MV
                              'dp_monitor' : [{'id' : [3], 'upstream_domain' : 2, 'downstream_domain' : 1}], # MV
                              'flux_monitor' : [{'id' : [3], 'on_subdomain' : True, 'domain' : 2}],  # MV
-                             'stabilized_neumann' : [{'id' : [5,6,7,8, 4], 'par1' : 0.205e-6, 'par2' : 1.}] } # par1 should be ~ 0.2*rho
+                             'stabilized_neumann_mod' : [{'id' : [5,6,7,8, 4], 'beta' : 0.205e-6, 'gamma' : 1.}] } # beta should be ~ 0.2*rho
 
 
     # problem setup

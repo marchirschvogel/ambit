@@ -467,9 +467,9 @@ class FluidmechanicsProblem(problem_base):
             self.Re_ktilde_mid += self.vf.re_ktilde(self.rho[n], self.vel_mid, self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
-        w_neumann, w_body, w_robin, w_stabneumann, w_robin_valve, w_membrane = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
-        w_neumann_old, w_body_old, w_robin_old, w_stabneumann_old, w_robin_valve_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
-        w_neumann_mid, w_body_mid, w_robin_mid, w_stabneumann_mid, w_robin_valve_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann, w_body, w_robin, w_stabneumann, w_stabneumann_mod, w_robin_valve, w_membrane = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_old, w_body_old, w_robin_old, w_stabneumann_old, w_stabneumann_mod_old, w_robin_valve_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_mid, w_body_mid, w_robin_mid, w_stabneumann_mid, w_stabneumann_mod_mid, w_robin_valve_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
             w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
             w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
@@ -486,6 +486,10 @@ class FluidmechanicsProblem(problem_base):
             w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, self.io.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
             w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, self.io.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
             w_stabneumann_mid = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.vel_mid, self.io.bmeasures, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+        if 'stabilized_neumann_mod' in self.bc_dict.keys():
+            w_stabneumann_mod     = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.v, self.io.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_stabneumann_mod_old = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.v_old, self.io.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_stabneumann_mod_mid = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.vel_mid, self.io.bmeasures, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
         if 'robin_valve' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve = True
@@ -563,13 +567,13 @@ class FluidmechanicsProblem(problem_base):
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.prestress_dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
                 w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc_prestr, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
-            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_membrane_prestr + w_robin_valve
+            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane_prestr + w_robin_valve
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
 
-        self.deltaW_ext     = w_neumann + w_body + w_robin + w_stabneumann + w_membrane + w_robin_valve
-        self.deltaW_ext_old = w_neumann_old + w_body_old + w_robin_old + w_stabneumann_old + w_membrane_old + w_robin_valve_old
-        self.deltaW_ext_mid = w_neumann_mid + w_body_mid + w_robin_mid + w_stabneumann_mid + w_membrane_mid + w_robin_valve_mid
+        self.deltaW_ext     = w_neumann + w_body + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane + w_robin_valve
+        self.deltaW_ext_old = w_neumann_old + w_body_old + w_robin_old + w_stabneumann_old + w_stabneumann_mod_old + w_membrane_old + w_robin_valve_old
+        self.deltaW_ext_mid = w_neumann_mid + w_body_mid + w_robin_mid + w_stabneumann_mid + w_stabneumann_mod_mid + w_membrane_mid + w_robin_valve_mid
 
         # stabilization
         if self.stabilization is not None:

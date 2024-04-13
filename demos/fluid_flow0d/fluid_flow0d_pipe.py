@@ -152,7 +152,7 @@ def main():
     BC_DICT              = { 'dirichlet' : [{'id' : [2], 'dir' : 'z', 'curve' : 1}, # inflow
                                             {'id' : [1,5], 'dir' : 'all', 'val' : 0.}, # lateral wall
                                             {'id' : [3], 'dir' : 'all', 'val' : 0.}], # inner (valve) plane
-                             'stabilized_neumann' : [{'id' : [4,6,7], 'par1' : 0.205e-6, 'par2' : 1.}] }  # par1 should be ~ 0.2*rho
+                             'stabilized_neumann_mod' : [{'id' : [4,6,7], 'beta' : 0.205e-6, 'gamma' : 1.}] }  # beta should be ~ 0.2*rho
 
     # Pass parameters to Ambit to set up the problem
     problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)

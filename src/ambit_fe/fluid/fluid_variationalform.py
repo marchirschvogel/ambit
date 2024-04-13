@@ -110,10 +110,16 @@ class variationalform(variationalform_base):
 
 
     # stabilized Neumann BC - Esmaily Moghadam et al. 2011
-    def deltaW_ext_stabilized_neumann(self, v, par1, par2, dboundary, w=None, F=None):
+    def deltaW_ext_stabilized_neumann(self, v, beta, dboundary, w=None, F=None):
 
         vn = ufl.dot(v,self.n0)
-        return par1*((vn**2.)/(vn**2. + 0.01*par2**2.) * ufl.min_value(vn,0.) * ufl.dot(v,self.var_v)*dboundary) # version from Esmaily Moghadam et al. 2011 if par2 = 0
+        return beta*(ufl.min_value(vn,0.) * ufl.dot(v,self.var_v)*dboundary)
+
+    # mod. stabilized Neumann BC
+    def deltaW_ext_stabilized_neumann_mod(self, v, beta, gamma, dboundary, w=None, F=None):
+
+        vn = ufl.dot(v,self.n0)
+        return beta*((vn**2.)/(vn**2. + 0.01*gamma**2.) * ufl.min_value(vn,0.) * ufl.dot(v,self.var_v)*dboundary) # version from Esmaily Moghadam et al. 2011 if gamma = 0
 
 
     # Robin condition for valve, over internal surface
@@ -311,10 +317,16 @@ class variationalform_ale(variationalform):
 
 
     # stabilized Neumann BC - Esmaily Moghadam et al. 2011
-    def deltaW_ext_stabilized_neumann(self, v, par1, par2, dboundary, w=None, F=None):
+    def deltaW_ext_stabilized_neumann(self, v, beta, dboundary, w=None, F=None):
         J = ufl.det(F)
         vwn = ufl.dot(v-w, J*ufl.inv(F).T*self.n0)
-        return par1*((vwn**2.)/(vwn**2. + 0.01*par2**2.) * ufl.min_value(vwn,0.) * ufl.dot(v,self.var_v)*dboundary) # version from Esmaily Moghadam et al. 2011 if param2 = 0
+        return beta*(ufl.min_value(vwn,0.) * ufl.dot(v,self.var_v)*dboundary)
+
+    # mod. stabilized Neumann BC
+    def deltaW_ext_stabilized_neumann_mod(self, v, beta, gamma, dboundary, w=None, F=None):
+        J = ufl.det(F)
+        vwn = ufl.dot(v-w, J*ufl.inv(F).T*self.n0)
+        return beta*((vwn**2.)/(vwn**2. + 0.01*gamma**2.) * ufl.min_value(vwn,0.) * ufl.dot(v,self.var_v)*dboundary) # version from Esmaily Moghadam et al. 2011 if gamma = 0
 
 
     # Robin condition for valve, over internal surface

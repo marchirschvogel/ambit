@@ -544,11 +544,33 @@ class boundary_cond_fluid(boundary_cond):
 
             for i in range(len(sn['id'])):
 
-                par1 = sn['par1']
-                try: par2 = sn['par2']
-                except: par2 = 0.
+                beta = sn['beta']
 
-                w += self.vf.deltaW_ext_stabilized_neumann(v, par1, par2, ds_[dind](sn['id'][i]), w=wel, F=F)
+                w += self.vf.deltaW_ext_stabilized_neumann(v, beta, ds_[dind](sn['id'][i]), w=wel, F=F)
+
+        return w
+
+
+    # set mod. stabilized Neumann BCs
+    def stabilized_neumann_mod_bcs(self, bcdict, v, ds_, wel=None, F=None):
+
+        w = ufl.as_ufl(0)
+
+        for sn in bcdict:
+
+            try: codim = sn['codimension']
+            except: codim = self.dim - 1
+
+            if codim==self.dim-1: dind=0
+            elif codim==self.dim-2: dind=1
+            else: raise ValueError("Wrong codimension of boundary.")
+
+            for i in range(len(sn['id'])):
+
+                beta = sn['beta']
+                gamma = sn['gamma']
+
+                w += self.vf.deltaW_ext_stabilized_neumann_mod(v, beta, gamma, ds_[dind](sn['id'][i]), w=wel, F=F)
 
         return w
 
