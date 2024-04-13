@@ -632,10 +632,75 @@ class schur_3x3(block_precond):
 
 
 
+# special MH Schur complement 3x3 preconditioner - SIMPLE version: spares the last A-solve by doing a diag(A)^{-1} update
+class schur_3x3simple(schur_3x3):
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+
+        # get subvectors (references!)
+        x.getSubVector(self.iset[0], subvec=self.x1)
+        x.getSubVector(self.iset[1], subvec=self.x2)
+        x.getSubVector(self.iset[2], subvec=self.x3)
+
+        tss = time.time()
+
+        # 1) solve A * y_1 = x_1
+        self.ksp_fields[0].solve(self.x1, self.y1)
+
+        self.B.mult(self.y1, self.By1)
+
+        # compute z2 = x2 - self.By1
+        self.z2.axpby(1., 0., self.x2)
+        self.z2.axpy(-1., self.By1)
+
+        # 2) solve Smod * y_2 = z_2
+        self.ksp_fields[1].solve(self.z2, self.y2)
+
+        self.D.mult(self.y1, self.Dy1)
+        self.Umod.mult(self.y2, self.Umody2)
+
+        # compute z3 = x3 - self.Dy1 - self.Umody2
+        self.z3.axpby(1., 0., self.x3)
+        self.z3.axpy(-1., self.Dy1)
+        self.z3.axpy(-1., self.Umody2)
+
+        # 3) solve Wmod * y_3 = z_3
+        self.ksp_fields[2].solve(self.z3, self.y3)
+
+        self.Tmod.mult(self.y3, self.Tmody3)
+
+        # compute z2 = x2 - self.By1 - self.Tmody3
+        self.z2.axpy(-1., self.Tmody3)
+
+        # 4) solve Smod * y_2 = z_2
+        self.ksp_fields[1].solve(self.z2, self.y2)
+
+        # 5) update y_1
+        self.Adinv_Bt.mult(self.y2, self.Bty2)
+        self.Adinv_Dt.mult(self.y3, self.Dty3)
+        # compute y1 -= (self.Bty2 + self.Dty3)
+        self.y1.axpy(-1., self.Bty2)
+        self.y1.axpy(-1., self.Dty3)
+
+        # restore/clean up
+        x.restoreSubVector(self.iset[0], subvec=self.x1)
+        x.restoreSubVector(self.iset[1], subvec=self.x2)
+        x.restoreSubVector(self.iset[2], subvec=self.x3)
+
+        # set into y vector
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[1], self.y2.array)
+        y.setValues(self.iset[2], self.y3.array)
+
+        y.assemble()
+
+
+
 # BGS with inner schur_3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
 # influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
 # --> NO upward solve that accounts for fluid on ALE influence
-class schur_bgs_4x4(schur_3x3):
+class bgs_schur_4x4(schur_3x3):
 
     def check_field_size(self):
         assert(self.nfields==4)
@@ -713,10 +778,45 @@ class schur_bgs_4x4(schur_3x3):
 
 
 
+# SIMPLE version of above: last A-solve replaced by diag(A)^{-1} update
+class bgs_schur_4x4simple(bgs_schur_4x4):
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+
+        # get subvectors
+        x.getSubVector(self.iset[3], subvec=self.x4)
+        x.getSubVector(self.iset_012, subvec=self.x123)
+
+        # 1) solve G * y_4 = x_4
+        self.ksp_fields[3].solve(self.x4, self.y4)
+
+        self.H.mult(self.y4, self.Hy4)
+
+        # compute z123 = x123 - self.Hy4
+        self.z123.axpby(1., 0., self.x123)
+        self.z123.axpy(-1., self.Hy4)
+
+        # 2) Schur solve F * y_123 = z_123
+        self.xtmp.setValues(self.iset_012, self.z123.array)
+        self.xtmp.assemble()
+        schur_3x3simple.apply(self, pc, self.xtmp, y)
+
+        # restore/clean up
+        x.restoreSubVector(self.iset_012, subvec=self.x123)
+        x.restoreSubVector(self.iset[3], subvec=self.x4)
+
+        # set into y vector
+        y.setValues(self.iset[3], self.y4.array)
+
+        y.assemble()
+
+
+
 # symmetric BGS with inner schur_3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
 # influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
 # --> WITH upward solve that accounts for fluid on ALE influence (guess can often be neglected, since only little gain...)
-class schur_bgssym_4x4(schur_bgs_4x4):
+class bgssym_schur_4x4(bgs_schur_4x4):
 
     def init_mat_vec(self, pc):
         opmats = super().init_mat_vec(pc)
@@ -778,9 +878,55 @@ class schur_bgssym_4x4(schur_bgs_4x4):
         y.assemble()
 
 
+# SIMPLE version of above: last A-solve replaced by diag(A)^{-1} update
+class bgssym_schur_4x4simple(bgssym_schur_4x4):
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+
+        # get subvectors
+        x.getSubVector(self.iset[3], subvec=self.x4)
+        x.getSubVector(self.iset_012, subvec=self.x123)
+
+        # 1) solve G * y_4 = x_4
+        self.ksp_fields[3].solve(self.x4, self.y4)
+
+        self.H.mult(self.y4, self.Hy4)
+
+        # compute z123 = x123 - self.Hy4
+        self.z123.axpby(1., 0., self.x123)
+        self.z123.axpy(-1., self.Hy4)
+
+        # 2) Schur solve F * y_123 = z_123
+        self.xtmp.setValues(self.iset_012, self.z123.array)
+        self.xtmp.assemble()
+        schur_3x3simple.apply(self, pc, self.xtmp, y)
+
+        y.getSubVector(self.iset_012, subvec=self.y123)
+
+        self.Ht.mult(self.y123, self.Hty123)
+
+        # compute z4 = x4 - self.Hty123
+        self.z4.axpby(1., 0., self.x4)
+        self.z4.axpy(-1., self.Hty123)
+
+        # 3) solve G * y_4 = z_4
+        self.ksp_fields[3].solve(self.z4, self.y4)
+
+        # restore/clean up
+        y.restoreSubVector(self.iset_012, subvec=self.y123)
+        x.restoreSubVector(self.iset_012, subvec=self.x123)
+        x.restoreSubVector(self.iset[3], subvec=self.x4)
+
+        # set into y vector
+        y.setValues(self.iset[3], self.y4.array)
+
+        y.assemble()
+
+
 
 # Schur complement preconditioner replacing the last solve with a diag(A)^{-1} update
-class simple_2x2(schur_2x2):
+class schur_2x2simple(schur_2x2):
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):

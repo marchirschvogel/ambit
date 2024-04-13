@@ -442,10 +442,10 @@ class solver_nonlinear:
                         bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == 'simple2x2':
+                    elif self.block_precond[npr] == 'schur2x2simple':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.simple_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.schur_2x2simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur3x3':
@@ -454,16 +454,34 @@ class solver_nonlinear:
                         bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == 'schurbgs4x4':
+                    elif self.block_precond[npr] == 'schur3x3simple':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_bgs_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.schur_3x3simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == 'schurbgssym4x4':
+                    elif self.block_precond[npr] == 'bgsschur4x4':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_bgssym_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgs_schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond[npr] == 'bgsschur4x4simple':
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgs_schur_4x4simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond[npr] == 'bgssymschur4x4':
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgssym_schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond[npr] == 'bgssymschur4x4simple':
+
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgssym_schur_4x4simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgs2x2': # can also be called via PETSc's fieldsplit

@@ -2,7 +2,7 @@
 
 """
 FrSI test case of an axially clamped, prestressed arterial segment
-- iterative schurbgs4x4 solution
+- iterative bgsschur4x4simple solution
 """
 
 import ambit_fe
@@ -26,7 +26,7 @@ def test_main():
                             'mesh_domain'           : basepath+'/input/artseg-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-quad_boundary.xdmf',
                             'results_to_write'      : [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity'],'counters'], # first fluid, then ale results
-                            'simname'               : 'frsi_artseg_prefile_iterative'}
+                            'simname'               : 'frsi_artseg_prefile_bgsschur4x4'}
 
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'numsnapshots'          : 1,
@@ -38,11 +38,11 @@ def test_main():
 
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',
-                            'block_precond'         : 'schurbgs4x4',
-                            'precond_fields'        : [{'prec':'amg'},    # fluid-v
-                                                       {'prec':'amg'},    # fluid-p (Schur)
-                                                       {'prec':'direct'}, # fluid-red.v
-                                                       {'prec':'amg'}],   # ale-d
+                            'block_precond'         : 'bgsschur4x4simple', # can as well use bgsschur4x4 version - interestingly, the SIMPLE version yields fewer linear iterations!
+                            'precond_fields'        : [{'prec':'amg'},     # fluid-v
+                                                       {'prec':'amg'},     # fluid-p (Schur)
+                                                       {'prec':'direct'},  # fluid-red.v
+                                                       {'prec':'amg'}],    # ale-d
                             'tol_lin_rel'           : 1.0e-5,
                             'tol_lin_abs'           : 1.0e-30,
                             'lin_norm_type'         : 'preconditioned',
