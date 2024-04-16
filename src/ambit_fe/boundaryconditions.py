@@ -55,7 +55,7 @@ class boundary_cond():
             func = fem.Function(V)
 
             if 'curve' in d.keys():
-                assert('val' not in d.keys() and 'expression' not in d.keys())
+                assert('val' not in d.keys() and 'expression' not in d.keys() and 'file' not in d.keys())
                 load = expression.template_vector(dim=self.dim)
                 if d['dir'] == 'all': curve_x, curve_y, curve_z = d['curve'][0], d['curve'][1], d['curve'][2]
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
@@ -65,18 +65,24 @@ class boundary_cond():
                 self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
                 self.ti.funcs_to_update_vec_old.append({None : -1}) # DBCs don't need an old state
             elif 'val' in d.keys():
-                assert('curve' not in d.keys() and 'expression' not in d.keys())
+                assert('curve' not in d.keys() and 'expression' not in d.keys() and 'file' not in d.keys())
                 func.vector.set(d['val'])
             elif 'expression' in d.keys():
-                assert('curve' not in d.keys() and 'val' not in d.keys())
+                assert('curve' not in d.keys() and 'val' not in d.keys() and 'file' not in d.keys())
                 expr = d['expression']()
                 expr.t = self.ti.t_init
                 func.interpolate(expr.evaluate)
                 func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 self.ti.funcsexpr_to_update_vec[func] = expr
                 self.ti.funcsexpr_to_update_vec_old[func] = None # DBCs don't need an old state
+            elif 'file' in d.keys():
+                assert('curve' not in d.keys() and 'val' not in d.keys() and 'expression' not in d.keys())
+                fle = d['file'] # a single file
+                try: ftype = d['ftype']
+                except: ftype = 'id_val'
+                self.io.readfunction(func, fle, filetype=ftype)
             else:
-                raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
+                raise RuntimeError("Need to have 'curve', 'val', 'expression', or 'file' specified!")
 
             if d['dir'] == 'all':
                 for i in range(len(d['id'])):
@@ -120,8 +126,7 @@ class boundary_cond():
             func = fem.Function(V)
 
             if 'curve' in d.keys():
-                assert('val' not in d.keys())
-                assert('file' not in d.keys())
+                assert('val' not in d.keys() and 'file' not in d.keys())
                 load = expression.template_vector(dim=self.dim)
                 if d['dir'] == 'all': curve_x, curve_y, curve_z = d['curve'][0], d['curve'][1], d['curve'][2]
                 else:                 curve_x, curve_y, curve_z = d['curve'], d['curve'], d['curve']
@@ -131,12 +136,10 @@ class boundary_cond():
                 self.ti.funcs_to_update_vec.append({func : [self.ti.timecurves(curve_x), self.ti.timecurves(curve_y), self.ti.timecurves(curve_z)]})
                 self.ti.funcs_to_update_vec_old.append({None : -1}) # DBCs don't need an old state
             elif 'val' in d.keys():
-                assert('curve' not in d.keys())
-                assert('file' not in d.keys())
+                assert('curve' not in d.keys() and 'file' not in d.keys())
                 func.vector.set(d['val'])
-            elif 'file' in d.keys():
-                assert('val' not in d.keys())
-                assert('curve' not in d.keys())
+            elif 'file' in d.keys(): # file series, where we'd have one file per time step
+                assert('val' not in d.keys() and 'curve' not in d.keys())
                 try: scale = d['scale']
                 except: scale = 1.0
                 self.ti.funcs_data.append({func : d['file'], 'scale' : scale})

@@ -52,7 +52,8 @@ class block_precond():
         # get reference to preconditioner matrix object
         _, self.P = pc.getOperators()
 
-        self.tpy = None
+        # reference to PETSc options
+        opts = PETSc.Options()
 
         self.check_field_size()
         operator_mats = self.init_mat_vec(pc)
@@ -84,10 +85,10 @@ class block_precond():
                 # add PETSc options
                 if 'petsc_options' in self.precond_fields[n].keys():
                     opt_dict = self.precond_fields[n]['petsc_options']
-                    opts = PETSc.Options()
                     for o in opt_dict:
                         opts.setValue(o, opt_dict[o])
-                    self.ksp_fields[n].getPC().setFromOptions()
+                    self.ksp_fields[n].setFromOptions() # solver options
+                    self.ksp_fields[n].getPC().setFromOptions() # preconditioner options
                 # print to view some settings...
                 # print(self.ksp_fields[n].getPC().view())
                 if solvetype == 'python':
