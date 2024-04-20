@@ -45,7 +45,9 @@ def test_main():
                             'eigenvalue_cutoff'     : 1.0e-8,
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6],
-                            'redbasisvec_penalties' : [0.0, 0.0, 10.0]} # penalize the mode at the junction in the middle (last one)
+                            'regularizations'       : [0.0, 0.0, 10.0], # add regularization to the mode at the junction in the middle (last one) ("dashpot-like")
+                            'regularizations_integ' : [0.0, 0.0, 0.0],  # regularization on integral of reduced variable (here 0) ("spring-like")
+                            'regularizations_deriv' : [0.0, 0.0, 0.0]}  # regularization on derivative of reduced variable (here 0) ("mass-like")
 
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-8],

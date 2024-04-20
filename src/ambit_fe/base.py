@@ -351,14 +351,14 @@ class solver_base():
 
         # destroy ROM-specific ones
         if self.pb.pbase.have_rom:
-            if self.pb.pbrom.rom:
-                self.pb.pbrom.rom.destroy()
-                self.pb.pbrom.K_list_tmp[0][0].destroy()
-                for n in range(self.pb.pbrom.nfields):
-                    self.pb.pbrom.r_list_rom[n].destroy()
-                    for m in range(self.pb.pbrom.nfields):
-                        if self.pb.pbrom.K_list_rom[n][m] is not None:
-                            self.pb.pbrom.K_list_rom[n][m].destroy()
+            if self.pb.rom:
+                self.pb.rom.destroy()
+                self.pb.pbrom_host.K_list_tmp[0][0].destroy()
+                for n in range(self.pb.pbrom_host.nfields):
+                    self.pb.pbrom_host.r_list_rom[n].destroy()
+                    for m in range(self.pb.pbrom_host.nfields):
+                        if self.pb.pbrom_host.K_list_rom[n][m] is not None:
+                            self.pb.pbrom_host.K_list_rom[n][m].destroy()
 
         # destroy solver data structures
         self.solnln.destroy()

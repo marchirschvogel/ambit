@@ -293,7 +293,7 @@ class solver_nonlinear:
             # perform initial matrix and residual reduction to set the correct arrays
             if self.pb[npr].rom:
                 self.pb[npr].rom.reduce_stiffness(self.pb[npr].K_list, self.pb[npr].K_list_rom, self.pb[npr].K_list_tmp)
-                self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom, x=self.x[npr][0])
+                self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom)
 
             # create nested matrix and residual structures
             self.K_full_nest[npr] = PETSc.Mat().createNest(self.K_list_sol[npr], isrows=None, iscols=None, comm=self.comm)
@@ -864,7 +864,7 @@ class solver_nonlinear:
 
         # apply model order reduction of residual
         if self.pb[npr].rom:
-            self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom, x=self.x[npr][0])
+            self.pb[npr].rom.reduce_residual(self.pb[npr].r_list, self.pb[npr].r_list_rom)
 
         if bool(self.pb[npr].pbase.residual_scale):
             self.pb[npr].scale_residual_list(self.r_list_sol[npr])

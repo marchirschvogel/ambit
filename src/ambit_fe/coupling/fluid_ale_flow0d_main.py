@@ -60,6 +60,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pb0 = self.pbf0.pb0
 
         self.pbrom = self.pbf # ROM problem can only be fluid
+        self.pbrom_host = self
 
         # modify results to write...
         self.pbf.results_to_write = io_params['results_to_write'][0]
@@ -501,6 +502,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
         elif self.pb.coupling_strategy=='partitioned':
 
             self.pb.pbf0.rom = self.pb.rom
+            self.pb.pbrom_host = self.pb.pbf0 # overridden
 
             self.pb.assemble_residual(self.pb.pbase.t_init, subsolver=None)
             self.pb.pbf0.assemble_stiffness(self.pb.pbase.t_init, subsolver=subsolver)

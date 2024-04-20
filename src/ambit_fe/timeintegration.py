@@ -182,9 +182,9 @@ class timeintegration():
 
 
     # OST update formula for the time derivative of a variable
-    def update_dvar_ost(self, var, var_old, dvar_old, dvarout=None, ufl=True):
+    def update_dvar_ost(self, var, var_old, dvar_old, dvarout=None, uflform=True):
 
-        if ufl: # ufl form
+        if uflform: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
             return 1./(theta_*dt_) * (var - var_old) - (1.-theta_)/theta_ * dvar_old
@@ -198,9 +198,9 @@ class timeintegration():
 
 
     # OST update formula for the second time derivative of a variable
-    def update_d2var_ost(self, var, var_old, dvar_old, d2var_old, d2varout=None, ufl=True):
+    def update_d2var_ost(self, var, var_old, dvar_old, d2var_old, d2varout=None, uflform=True):
 
-        if ufl: # ufl form
+        if uflform: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
             return 1./(theta_*theta_*dt_*dt_) * (var - var_old) - 1./(theta_*theta_*dt_) * dvar_old - (1.-theta_)/theta_ * d2var_old
@@ -215,9 +215,9 @@ class timeintegration():
 
 
     # Newmark update formula for the time derivative of a variable: 1st order scheme
-    def update_dvar_newmark_1st(self, var, var_old, dvar_old, dvarout=None, ufl=True):
+    def update_dvar_newmark_1st(self, var, var_old, dvar_old, dvarout=None, uflform=True):
 
-        if ufl: # ufl form
+        if uflform: # ufl form
             dt_ = self.dt
             gamma_ = self.gamma
             return 1./(gamma_*dt_) * (var - var_old) - (1.-gamma_)/gamma_ * dvar_old
@@ -231,9 +231,9 @@ class timeintegration():
 
 
     # Newmark update formula for the time derivative of a variable: 2nd order scheme
-    def update_dvar_newmark_2nd(self, var, var_old, dvar_old, d2var_old, dvarout=None, ufl=True):
+    def update_dvar_newmark_2nd(self, var, var_old, dvar_old, d2var_old, dvarout=None, uflform=True):
 
-        if ufl: # ufl form
+        if uflform: # ufl form
             dt_ = self.dt
             gamma_ = self.gamma
             beta_ = self.beta
@@ -250,9 +250,9 @@ class timeintegration():
 
 
     # Newmark update formula for the second time derivative of a variable
-    def update_d2var_newmark(self, var, var_old, dvar_old, d2var_old, d2varout=None, ufl=True):
+    def update_d2var_newmark(self, var, var_old, dvar_old, d2var_old, d2varout=None, uflform=True):
 
-        if ufl: # ufl form
+        if uflform: # ufl form
             dt_ = self.dt
             beta_ = self.beta
             return 1./(beta_*dt_*dt_) * (var - var_old) - 1./(beta_*dt_) * dvar_old - (1.-2.*beta_)/(2.*beta_) * d2var_old
@@ -267,9 +267,9 @@ class timeintegration():
 
 
     # OST update formula for the first integration of a variable
-    def update_varint_ost(self, var, var_old, varint_old, varintout=None, ufl=True):
+    def update_varint_ost(self, var, var_old, varint_old, varintout=None, uflform=True):
 
-        if ufl: # ufl form
+        if uflform: # ufl form
             dt_ = self.dt
             theta_ = self.theta_ost
             return theta_*dt_ * var + (1.-theta_)*dt_ * var_old + varint_old
@@ -283,9 +283,9 @@ class timeintegration():
 
 
     # Newmark update formula for the first integration of a variable: 1st order scheme
-    def update_varint_newmark_1st(self, var, var_old, varint_old, varintout=None, ufl=True):
+    def update_varint_newmark_1st(self, var, var_old, varint_old, varintout=None, uflform=True):
 
-        if ufl: # ufl form
+        if uflform: # ufl form
             dt_ = self.dt
             gamma_ = self.gamma
             return gamma_*dt_ * var + (1.-gamma_)*dt_ * var_old + varint_old
@@ -297,6 +297,22 @@ class timeintegration():
             varintout.axpy(gamma_*dt_, var)
             varintout.axpy((1.-gamma_)*dt_, var_old)
 
+    # get constant time integration factors for the derivative w.r.t. the primary var
+    # (may be needed by some algorithms that don't use the ufl form)
+    def get_factor_deriv_dvar_ost(self):
+        return 1./(self.theta_ost*self.dt)
+    def get_factor_deriv_d2var_ost(self):
+        return 1./(self.theta_ost*self.theta_ost*self.dt*self.dt)
+    def get_factor_deriv_dvar_newmark_1st(self):
+        return 1./(self.gamma*self.dt)
+    def get_factor_deriv_dvar_newmark_2nd(self):
+        return self.gamma/(self.beta*self.dt)
+    def get_factor_deriv_d2var_newmark(self):
+        return 1./(self.beta*self.dt*self.dt)
+    def get_factor_deriv_varint_ost(self):
+        return self.theta_ost*self.dt
+    def get_factor_deriv_varint_newmark_1st(self):
+        return self.gamma*self.dt
 
     # zero
     def zero(self, t):
@@ -357,17 +373,12 @@ class timeintegration_solid(timeintegration):
     def set_acc_vel(self, u, u_old, v_old, a_old):
 
         # set forms for acc and vel
-        if self.timint == 'genalpha':
-            acc = self.update_d2var_newmark(u, u_old, v_old, a_old, ufl=True)
-            vel = self.update_dvar_newmark_2nd(u, u_old, v_old, a_old, ufl=True)
-        elif self.timint == 'ost':
-            acc = self.update_d2var_ost(u, u_old, v_old, a_old, ufl=True)
-            vel = self.update_dvar_ost(u, u_old, v_old, a_old, ufl=True)
-        elif self.timint == 'static':
+        if self.timint == 'static':
             acc = ufl.constantvalue.zero(self.dim)
             vel = ufl.constantvalue.zero(self.dim)
         else:
-            raise NameError("Unknown time-integration algorithm for solid mechanics!")
+            acc = self.update_d2var(u, u_old, v_old, a_old, uflform=True)
+            vel = self.update_dvar(u, u_old, v_old, a_old, uflform=True)
 
         return acc, vel
 
@@ -384,10 +395,7 @@ class timeintegration_solid(timeintegration):
     def update_timestep(self, u, u_old, v, v_old, a, a_old, p, p_old, internalvars, internalvars_old):
 
         # now update old kinematic fields with new quantities
-        if self.timint == 'genalpha':
-            self.update_fields_newmark(u, u_old, v, v_old, a, a_old)
-        if self.timint == 'ost':
-            self.update_fields_ost(u, u_old, v, v_old, a, a_old)
+        self.update_fields(u, u_old, v, v_old, a, a_old)
 
         # update pressure variable
         if self.incompressible_2field:
@@ -403,22 +411,37 @@ class timeintegration_solid(timeintegration):
         self.update_time_funcs_old()
 
 
-    def update_fields_newmark(self, u, u_old, v, v_old, a, a_old):
+    def update_fields(self, u, u_old, v, v_old, a, a_old):
 
         # use update functions using vector arguments
-        self.update_d2var_newmark(u.vector, u_old.vector, v_old.vector, a_old.vector, d2varout=a.vector, ufl=False)
-        self.update_dvar_newmark_2nd(u.vector, u_old.vector, v_old.vector, a_old.vector, dvarout=v.vector, ufl=False)
+        self.update_d2var(u.vector, u_old.vector, v_old.vector, a_old.vector, d2varout=a.vector, uflform=False)
+        self.update_dvar(u.vector, u_old.vector, v_old.vector, a_old.vector, dvarout=v.vector, uflform=False)
 
         self.update_a_v_u_old(a_old, v_old, u_old, a, v, u)
 
 
-    def update_fields_ost(self, u, u_old, v, v_old, a, a_old):
+    def update_dvar(self, var, var_old, dvar_old, d2var_old, dvarout=None, uflform=True):
 
-        # use update functions using vector arguments
-        self.update_d2var_ost(u.vector, u_old.vector, v_old.vector, a_old.vector, d2varout=a.vector, ufl=False)
-        self.update_dvar_ost(u.vector, u_old.vector, v_old.vector, dvarout=v.vector, ufl=False)
+        if self.timint == 'genalpha':
+            return self.update_dvar_newmark_2nd(var, var_old, dvar_old, d2var_old, dvarout=dvarout, uflform=uflform)
+        elif self.timint == 'ost':
+            return self.update_dvar_ost(var, var_old, dvar_old, dvarout=dvarout, uflform=uflform)
+        elif self.timint == 'static':
+            pass
+        else:
+            raise NameError("Unknown time-integration algorithm for solid mechanics!")
 
-        self.update_a_v_u_old(a_old, v_old, u_old, a, v, u)
+
+    def update_d2var(self, var, var_old, dvar_old, d2var_old, d2varout=None, uflform=True):
+
+        if self.timint == 'genalpha':
+            return self.update_d2var_newmark(var, var_old, dvar_old, d2var_old, d2varout=d2varout, uflform=uflform)
+        elif self.timint == 'ost':
+            return self.update_d2var_ost(var, var_old, dvar_old, d2var_old, d2varout=d2varout, uflform=uflform)
+        elif self.timint == 'static':
+            pass
+        else:
+            raise NameError("Unknown time-integration algorithm for solid mechanics!")
 
 
     def update_a_v_u_old(self, a_old, v_old, u_old, a, v, u):
@@ -444,6 +467,28 @@ class timeintegration_solid(timeintegration):
         gamma   = 0.5-alpha_m+alpha_f
 
         return alpha_m, alpha_f, beta, gamma
+
+
+    def get_factor_deriv_dvar(self):
+        if self.timint == 'genalpha':
+            return self.get_factor_deriv_dvar_newmark_2nd()
+        elif self.timint == 'ost':
+            return self.get_factor_deriv_dvar_ost()
+        else:
+            raise NameError("Unknown time-integration algorithm for solid mechanics!")
+
+
+    def get_factor_deriv_d2var(self):
+        if self.timint == 'genalpha':
+            return self.get_factor_deriv_d2var_newmark()
+        elif self.timint == 'ost':
+            return self.get_factor_deriv_d2var_ost()
+        else:
+            raise NameError("Unknown time-integration algorithm for solid mechanics!")
+
+
+    def get_factor_deriv_varint(self):
+        raise RuntimeError("Why are you requesting this value?!")
 
 
 
@@ -472,26 +517,16 @@ class timeintegration_fluid(timeintegration):
 
     def set_acc(self, v, v_old, a_old):
 
-        # set forms for acc and vel
-        if self.timint == 'ost':
-            acc = self.update_dvar_ost(v, v_old, a_old, ufl=True)
-        elif self.timint == 'genalpha':
-            acc = self.update_dvar_newmark_1st(v, v_old, a_old, ufl=True)
-        else:
-            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
+        # set form for acceleration
+        acc = self.update_dvar(v, v_old, a_old, uflform=True)
 
         return acc
 
 
     def set_uf(self, v, v_old, uf_old):
 
-        # set forms for acc and vel
-        if self.timint == 'ost':
-            uf = self.update_varint_ost(v, v_old, uf_old, ufl=True)
-        elif self.timint == 'genalpha':
-            uf = self.update_varint_newmark_1st(v, v_old, uf_old, ufl=True)
-        else:
-            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
+        # set form for fluid displacement
+        uf = self.update_varint(v, v_old, uf_old, uflform=True)
 
         return uf
 
@@ -507,10 +542,7 @@ class timeintegration_fluid(timeintegration):
     def update_timestep(self, v, v_old, a, a_old, p, p_old, internalvars, internalvars_old, uf=None, uf_old=None):
 
         # update old fields with new quantities
-        if self.timint == 'ost':
-            self.update_fields_ost(v, v_old, a, a_old, uf=uf, uf_old=uf_old)
-        if self.timint == 'genalpha':
-            self.update_fields_genalpha(v, v_old, a, a_old, uf=uf, uf_old=uf_old)
+        self.update_fields(v, v_old, a, a_old, uf=uf, uf_old=uf_old)
 
         # update pressure variable
         p_old.vector.axpby(1.0, 0.0, p.vector)
@@ -530,30 +562,37 @@ class timeintegration_fluid(timeintegration):
         self.update_time_funcs_old()
 
 
-    def update_fields_ost(self, v, v_old, a, a_old, uf=None, uf_old=None):
+    def update_fields(self, v, v_old, a, a_old, uf=None, uf_old=None):
 
         # use update functions using vector arguments
-        self.update_dvar_ost(v.vector, v_old.vector, a_old.vector, dvarout=a.vector, ufl=False)
+        self.update_dvar(v.vector, v_old.vector, a_old.vector, dvarout=a.vector, uflform=False)
 
         if uf_old is not None:
 
             # use update functions using vector arguments
-            self.update_varint_ost(v.vector, v_old.vector, uf_old.vector, varintout=uf.vector, ufl=False)
+            self.update_varint(v.vector, v_old.vector, uf_old.vector, varintout=uf.vector, uflform=False)
 
         self.update_a_v_old(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
 
 
-    def update_fields_genalpha(self, v, v_old, a, a_old, uf=None, uf_old=None):
+    def update_dvar(self, var, var_old, dvar_old, dvarout=None, uflform=True):
 
-        # use update functions using vector arguments
-        self.update_dvar_newmark_1st(v.vector, v_old.vector, a_old.vector, dvarout=a.vector, ufl=False)
+        if self.timint == 'ost':
+            return self.update_dvar_ost(var, var_old, dvar_old, dvarout=dvarout, uflform=uflform)
+        elif self.timint == 'genalpha':
+            return self.update_dvar_newmark_1st(var, var_old, dvar_old, dvarout=dvarout, uflform=uflform)
+        else:
+            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
-        if uf_old is not None:
 
-            # use update functions using vector arguments
-            self.update_varint_newmark_1st(v.vector, v_old.vector, uf_old.vector, varintout=uf.vector, ufl=False)
+    def update_varint(self, var, var_old, varint_old, varintout=None, uflform=True):
 
-        self.update_a_v_old(a_old, v_old, a, v, uf_old=uf_old, uf=uf)
+        if self.timint == 'ost':
+            return self.update_varint_ost(var, var_old, varint_old, varintout=varintout, uflform=uflform)
+        elif self.timint == 'genalpha':
+            return self.update_varint_newmark_1st(var, var_old, varint_old, varintout=varintout, uflform=uflform)
+        else:
+            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
 
 
     def update_a_v_old(self, a_old, v_old, a, v, uf_old=None, uf=None):
@@ -582,16 +621,36 @@ class timeintegration_fluid(timeintegration):
         return alpha_m, alpha_f, gamma
 
 
+    def get_factor_deriv_dvar(self):
+        if self.timint == 'genalpha':
+            return self.get_factor_deriv_dvar_newmark_1st()
+        elif self.timint == 'ost':
+            return self.get_factor_deriv_dvar_ost()
+        else:
+            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
+
+
+    def get_factor_deriv_d2var(self):
+        raise RuntimeError("Why are you requesting this value?!")
+
+
+    def get_factor_deriv_varint(self):
+        if self.timint == 'genalpha':
+            return self.get_factor_deriv_varint_newmark_1st()
+        elif self.timint == 'ost':
+            return self.get_factor_deriv_varint_ost()
+        else:
+            raise NameError("Unknown time-integration algorithm for fluid mechanics!")
+
+
+
 # ALE time integration class
 class timeintegration_ale(timeintegration_fluid):
 
     def update_timestep(self, d, d_old, w, w_old):
 
         # update old fields with new quantities
-        if self.timint == 'ost':
-            self.update_fields_ost(d, d_old, w, w_old)
-        if self.timint == 'genalpha':
-            self.update_fields_genalpha(d, d_old, w, w_old)
+        self.update_fields(d, d_old, w, w_old)
 
         # no old time-dependent load curves to update - ALE is quasi-static
 
@@ -599,28 +658,15 @@ class timeintegration_ale(timeintegration_fluid):
     def set_wel(self, d, d_old, w_old):
 
         # set form for domain velocity wel
-        if self.timint == 'ost':
-            wel = self.update_dvar_ost(d, d_old, w_old, ufl=True)
-        elif self.timint == 'genalpha':
-            wel = self.update_dvar_newmark_1st(d, d_old, w_old, ufl=True)
-        else:
-            raise NameError("Unknown time scheme for ALE mechanics!")
+        wel = self.update_dvar(d, d_old, w_old, uflform=True)
 
         return wel
 
 
-    def update_fields_ost(self, d, d_old, w, w_old):
+    def update_fields(self, d, d_old, w, w_old):
 
         # use update functions using vector arguments
-        self.update_dvar_ost(d.vector, d_old.vector, w_old.vector, dvarout=w.vector, ufl=False)
-
-        self.update_w_d_old(w_old, d_old, w, d)
-
-
-    def update_fields_genalpha(self, d, d_old, w, w_old, uf=None, uf_old=None):
-
-        # use update functions using vector arguments
-        self.update_dvar_newmark_1st(d.vector, d_old.vector, w_old.vector, dvarout=w.vector, ufl=False)
+        self.update_dvar(d.vector, d_old.vector, w_old.vector, dvarout=w.vector, uflform=False)
 
         self.update_w_d_old(w_old, d_old, w, d)
 
@@ -637,7 +683,7 @@ class timeintegration_ale(timeintegration_fluid):
 
 
 # Electrophysiology time integration class
-class timeintegration_electrophysiology(timeintegration):
+class timeintegration_electrophysiology(timeintegration_fluid):
 
     def __init__(self, time_params, dt, Nmax, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
         timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
@@ -649,7 +695,7 @@ class timeintegration_electrophysiology(timeintegration):
     def update_timestep(self, phi, phi_old, phidot, phidot_old):
 
         # update old fields with new quantities
-        self.update_fields_ost(phi, phi_old, phidot, phidot_old)
+        self.update_fields(phi, phi_old, phidot, phidot_old)
 
         # update old time-dependent load curves
         self.update_time_funcs_old()
@@ -657,13 +703,13 @@ class timeintegration_electrophysiology(timeintegration):
 
     def set_phidot(self, phi, phi_old, phidot_old):
 
-        return self.update_dvar_ost(phi, phi_old, phidot_old, ufl=True)
+        return self.update_dvar(phi, phi_old, phidot_old, uflform=True)
 
 
-    def update_fields_ost(self, phi, phi_old, phidot, phidot_old):
+    def update_fields(self, phi, phi_old, phidot, phidot_old):
 
         # use update functions using vector arguments
-        self.update_dvar_ost(phi.vector, phi_old.vector, phidot_old.vector, dvarout=phidot.vector, ufl=False)
+        self.update_dvar(phi.vector, phi_old.vector, phidot_old.vector, dvarout=phidot.vector, uflform=False)
 
         self.update_phidot_phi_old(phidot_old, phi_old, phidot, phi)
 

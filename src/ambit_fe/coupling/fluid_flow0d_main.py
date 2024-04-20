@@ -68,6 +68,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pb0 = Flow0DProblem(pbase, io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params)
 
         self.pbrom = self.pbf # ROM problem can only be fluid
+        self.pbrom_host = self
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1

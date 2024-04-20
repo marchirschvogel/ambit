@@ -55,6 +55,7 @@ class FluidmechanicsAleProblem(problem_base):
         self.pbf = FluidmechanicsProblem(pbase, io_params, time_params, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, alevar=alevariables)
 
         self.pbrom = self.pbf # ROM problem can only be fluid
+        self.pbrom_host = self
 
         # modify results to write...
         self.pbf.results_to_write = io_params['results_to_write'][0]
@@ -339,15 +340,13 @@ class FluidmechanicsAleProblem(problem_base):
 
         if self.have_dbc_fluid_ale:
             # we need a vector representation of ufluid to apply in ALE DBCs
-            if self.pbf.ti.timint == 'ost': self.pbf.ti.update_varint_ost(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, varintout=self.pbf.uf.vector, ufl=False)
-            if self.pbf.ti.timint == 'genalpha': self.pbf.ti.update_varint_newmark_1st(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, varintout=self.pbf.uf.vector, ufl=False)
+            self.pbf.ti.update_varint(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, varintout=self.pbf.uf.vector, uflform=False)
             self.ufa.vector.axpby(1.0, 0.0, self.pbf.uf.vector)
             self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if self.have_dbc_ale_fluid:
             # we need a vector representation of w to apply in fluid DBCs
-            if self.pbf.ti.timint == 'ost': self.pba.ti.update_dvar_ost(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, dvarout=self.pba.w.vector, ufl=False)
-            if self.pbf.ti.timint == 'genalpha': self.pba.ti.update_dvar_newmark_1st(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, dvarout=self.pba.w.vector, ufl=False)
+            self.pba.ti.update_dvar(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, dvarout=self.pba.w.vector, uflform=False)
             self.wf.vector.axpby(1.0, 0.0, self.pba.w.vector)
             self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
@@ -580,6 +579,7 @@ class FluidmechanicsAleSolver(solver_base):
         elif self.pb.coupling_strategy=='partitioned':
 
             self.pb.pbf.rom = self.pb.rom
+            self.pb.pbrom_host = self.pb.pbf # overridden
 
             self.pb.assemble_residual(self.pb.pbase.t_init)
             self.pb.pbf.assemble_stiffness(self.pb.pbase.t_init)

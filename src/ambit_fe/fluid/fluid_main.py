@@ -257,7 +257,7 @@ class FluidmechanicsProblem(problem_base):
         self.v_old  = fem.Function(self.V_v)
         self.a_old  = fem.Function(self.V_v)
         # auxiliary acceleration vector
-        self.a     = fem.Function(self.V_v, name="Acceleration")
+        self.a      = fem.Function(self.V_v, name="Acceleration")
         # a fluid displacement
         self.uf     = fem.Function(self.V_v, name="FluidDisplacement")
         self.uf_old = fem.Function(self.V_v)
@@ -273,6 +273,11 @@ class FluidmechanicsProblem(problem_base):
             self.pre = True
         else:
             self.pre = False
+
+        # for ROM, provide pointers to main variable, its derivative, and possibly its time integrated value
+        if self.pbase.have_rom:
+            self.xr_, self.xr_old_, self.xrpre_ = self.v.vector, self.v_old.vector, None
+            self.xdtr_old_, self.xdintr_old_, self.xintrpre_ = self.a_old.vector, self.uf_old.vector, self.uf_pre
 
         # collect references to pressure vectors
         self.pvecs_, self.pvecs_old_ = [], []
@@ -376,6 +381,7 @@ class FluidmechanicsProblem(problem_base):
         self.set_variational_forms()
 
         self.pbrom = self # self-pointer needed for ROM solver access
+        self.pbrom_host = self
         self.V_rom = self.V_v
         self.print_enhanced_info = self.io.print_enhanced_info
 

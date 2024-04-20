@@ -72,6 +72,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pb0 = Flow0DProblem(pbase, io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params)
 
         self.pbrom = self.pbs # ROM problem can only be solid
+        self.pbrom_host = self
 
         self.incompressible_2field = self.pbs.incompressible_2field
 

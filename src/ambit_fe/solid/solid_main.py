@@ -242,6 +242,11 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.pre = False
 
+        # for ROM, provide pointers to main variable and its derivative
+        if self.pbase.have_rom:
+            self.xr_, self.xr_old_, self.xrpre_ = self.u.vector, self.u_old.vector, self.u_pre
+            self.xdtr_old_, self.xintrpre_ = self.v_old.vector, None
+
         # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
             self.io.readfunction(self.u_pre, self.prestress_from_file[0])
@@ -414,6 +419,7 @@ class SolidmechanicsProblem(problem_base):
         self.set_variational_forms()
 
         self.pbrom = self # self-pointer needed for ROM solver access
+        self.pbrom_host = self
         self.V_rom = self.V_u
         self.print_enhanced_info = self.io.print_enhanced_info
 

@@ -71,8 +71,19 @@ class ModelOrderReduction():
             self.redbasisvec_indices = []
             for i in range(self.numredbasisvec): self.redbasisvec_indices.append(i)
 
-        try: self.redbasisvec_penalties = self.params['redbasisvec_penalties']
-        except: self.redbasisvec_penalties = []
+        try: self.regularizations = self.params['regularizations']
+        except: self.regularizations = []
+
+        try: self.regularizations_integ = self.params['regularizations_integ']
+        except: self.regularizations_integ = []
+
+        try: self.regularizations_deriv = self.params['regularizations_deriv']
+        except: self.regularizations_deriv = []
+
+        if bool(self.regularizations) or bool(self.regularizations_integ) or bool(self.regularizations_deriv):
+            self.have_regularization_terms = True
+        else:
+            self.have_regularization_terms = False
 
         try: self.partitions = self.params['partitions']
         except: self.partitions = []
@@ -148,15 +159,29 @@ class ModelOrderReduction():
         else:
             self.build_reduced_basis()
 
-        if bool(self.redbasisvec_penalties):
-            # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
-            # V^T * V - normally I, but for badly converged eigenvalues may have non-zero off-diagonal terms...
+        if self.have_regularization_terms:
             self.VTV = self.V.transposeMatMult(self.V)
+
+        # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
+        # V^T * V - normally I, but for badly converged eigenvalues may have non-zero off-diagonal terms...
+        if bool(self.regularizations):
             self.CpenVTV = self.Cpen.matMult(self.VTV) # Cpen * V^T * V
+            self.Vtx, self.regtermx = self.V.createVecRight(), self.V.createVecRight()
+            if self.pb.xrpre_ is not None:
+                self.Vtxpre = self.V.createVecRight()
+        if bool(self.regularizations_integ):
+            self.xinteg = self.V.createVecLeft()
+            self.CpenintegVTV = self.Cpeninteg.matMult(self.VTV) # Cpeninteg * V^T * V
+            self.Vtx_integ, self.regtermx_integ = self.V.createVecRight(), self.V.createVecRight()
+            if self.pb.xintrpre_ is not None:
+                self.Vtxpre = self.V.createVecRight()
+        if bool(self.regularizations_deriv):
+            self.xderiv = self.V.createVecLeft()
+            self.CpenderivVTV = self.Cpenderiv.matMult(self.VTV) # Cpeninteg * V^T * V
+            self.Vtx_deriv, self.regtermx_deriv = self.V.createVecRight(), self.V.createVecRight()
 
+        if self.have_regularization_terms:
             self.VTV.destroy()
-
-            self.Vtu_, self.penterm_ = self.V.createVecRight(), self.V.createVecRight()
 
         self.S_d.destroy()
 
@@ -352,17 +377,41 @@ class ModelOrderReduction():
 
         self.V.assemble()
 
-        # set penalties
-        if bool(self.redbasisvec_penalties):
-            assert(len(self.redbasisvec_penalties)==self.numredbasisvec_true*self.num_partitions)
+        # set regularizations terms on reduced variable
+        if bool(self.regularizations):
+            assert(len(self.regularizations)==self.numredbasisvec_true*self.num_partitions)
 
             self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()
 
-            for i in range(len(self.redbasisvec_penalties)):
-                self.Cpen[i,i] = self.redbasisvec_penalties[i]
+            for i in range(len(self.regularizations)):
+                self.Cpen[i,i] = self.regularizations[i]
 
             self.Cpen.assemble()
+
+        # set regularizations terms on integration of reduced variable
+        if bool(self.regularizations_integ):
+            assert(len(self.regularizations_integ)==self.numredbasisvec_true*self.num_partitions)
+
+            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpeninteg.setUp()
+
+            for i in range(len(self.regularizations_integ)):
+                self.Cpeninteg[i,i] = self.regularizations_integ[i]
+
+            self.Cpeninteg.assemble()
+
+        # set regularizations terms on derivative of reduced variable
+        if bool(self.regularizations_deriv):
+            assert(len(self.regularizations_deriv)==self.numredbasisvec_true*self.num_partitions)
+
+            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpenderiv.setUp()
+
+            for i in range(len(self.regularizations_deriv)):
+                self.Cpenderiv[i,i] = self.regularizations_deriv[i]
+
+            self.Cpenderiv.assemble()
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pb.comm)
@@ -438,9 +487,9 @@ class ModelOrderReduction():
 
         self.V.assemble()
 
-        # set penalties
-        if bool(self.redbasisvec_penalties):
-            assert(len(self.redbasisvec_penalties)==self.numredbasisvec_true*self.num_partitions)
+        # set regularizations terms on reduced variable
+        if bool(self.regularizations):
+            assert(len(self.regularizations)==self.numredbasisvec_true*self.num_partitions)
 
             self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()
@@ -448,10 +497,40 @@ class ModelOrderReduction():
             n=0
             for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
                 if col in col_fd_set:
-                    self.Cpen[col,col] = self.redbasisvec_penalties[n]
+                    self.Cpen[col,col] = self.regularizations[n]
                     n += 1
 
             self.Cpen.assemble()
+
+        # set regularizations terms on integration of reduced variable
+        if bool(self.regularizations_integ):
+            assert(len(self.regularizations_integ)==self.numredbasisvec_true*self.num_partitions)
+
+            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpeninteg.setUp()
+
+            n=0
+            for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
+                if col in col_fd_set:
+                    self.Cpeninteg[col,col] = self.regularizations_integ[n]
+                    n += 1
+
+            self.Cpeninteg.assemble()
+
+        # set regularizations terms on derivative of reduced variable
+        if bool(self.regularizations_deriv):
+            assert(len(self.regularizations_deriv)==self.numredbasisvec_true*self.num_partitions)
+
+            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpenderiv.setUp()
+
+            n=0
+            for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
+                if col in col_fd_set:
+                    self.Cpenderiv[col,col] = self.regularizations_deriv[n]
+                    n += 1
+
+            self.Cpenderiv.assemble()
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pb.comm)
@@ -514,7 +593,7 @@ class ModelOrderReduction():
 
 
     # online functions
-    def reduce_residual(self, r_list, r_list_rom, x=None):
+    def reduce_residual(self, r_list, r_list_rom):
 
         ts = time.time()
 
@@ -523,11 +602,9 @@ class ModelOrderReduction():
         # projection of main block: residual
         self.V.multTranspose(r_list[0], r_list_rom[0]) # V^T * r_u
 
-        # deal with penalties that may be added to reduced residual to penalize certain modes
-        if bool(self.redbasisvec_penalties):
-            self.V.multTranspose(x, self.Vtu_) # V^T * u
-            self.Cpen.mult(self.Vtu_, self.penterm_) # Cpen * V^T * u
-            r_list_rom[0].axpy(1.0, self.penterm_) # add penalty term to reduced residual
+        # deal with regularizations that may be added to reduced residual to penalize certain modes
+        if self.have_regularization_terms:
+            self.add_residual_regularization(r_list_rom)
 
         if nfields > 1: # only implemented for the first var in list so far!
             for n in range(1,nfields):
@@ -548,9 +625,9 @@ class ModelOrderReduction():
         K_list[0][0].matMult(self.V, result=K_list_tmp[0][0]) # K_00 * V
         self.V.transposeMatMult(K_list_tmp[0][0], result=K_list_rom[0][0]) # V^T * K_00 * V
 
-        # deal with penalties that may be added to reduced residual to penalize certain modes
-        if bool(self.redbasisvec_penalties):
-            K_list_rom[0][0].aypx(1.0, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
+        # deal with regularizations that may be added to reduced residual to penalize certain modes
+        if self.have_regularization_terms:
+            self.add_jacobian_regularization(K_list_rom)
 
         # now the offdiagonal blocks
         if nfields > 1:
@@ -586,10 +663,67 @@ class ModelOrderReduction():
             utilities.print_status("       === ROM: Computed V * dx_rom[0], te = %.4f s" % (te), self.pb.comm)
 
 
+    def add_residual_regularization(self, r_list_rom):
+
+        if bool(self.regularizations):
+            # project
+            self.V.multTranspose(self.pb.xr_, self.Vtx) # V^T * x
+            if self.pb.xrpre_ is not None:
+                self.V.multTranspose(self.pb.xrpre_, self.Vtxpre) # V^T * x_pre
+                self.Vtx.axpy(1.0, self.Vtxpre)
+            self.Cpen.mult(self.Vtx, self.regtermx) # Cpen * V^T * x
+            r_list_rom[0].axpy(1.0, self.regtermx) # add penalty term to reduced residual
+
+        if bool(self.regularizations_integ):
+            # get integration of variable
+            self.pb.ti.update_varint(self.pb.xr_, self.pb.xr_old_, self.pb.xdintr_old_, varintout=self.xinteg, uflform=False)
+            # project
+            self.V.multTranspose(self.xinteg, self.Vtx_integ) # V^T * x_integ
+            if self.pb.xintrpre_ is not None:
+                self.V.multTranspose(self.pb.xintrpre_, self.Vtxpre) # V^T * x_pre
+                self.Vtx_integ.axpy(1.0, self.Vtxpre)
+            self.Cpeninteg.mult(self.Vtx_integ, self.regtermx_integ) # Cpeninteg * V^T * x_integ
+            r_list_rom[0].axpy(1.0, self.regtermx_integ) # add penalty term to reduced residual
+
+        if bool(self.regularizations_deriv):
+            # get derivative of variable
+            self.pb.ti.update_dvar(self.pb.xr_, self.pb.xr_old_, self.pb.xdtr_old_, dvarout=self.xderiv, uflform=False)
+            # project
+            self.V.multTranspose(self.xderiv, self.Vtx_deriv) # V^T * x_deriv
+            self.Cpenderiv.mult(self.Vtx_deriv, self.regtermx_deriv) # Cpenderiv * V^T * x_deriv
+            r_list_rom[0].axpy(1.0, self.regtermx_deriv) # add penalty term to reduced residual
+
+
+    def add_jacobian_regularization(self, K_list_rom):
+
+        if bool(self.regularizations):
+            K_list_rom[0][0].axpy(1.0, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
+
+        if bool(self.regularizations_integ):
+            fac_time = self.pb.ti.get_factor_deriv_varint()
+            K_list_rom[0][0].axpy(fac_time, self.CpenintegVTV) # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
+
+        if bool(self.regularizations_deriv):
+            fac_time = self.pb.ti.get_factor_deriv_dvar()
+            K_list_rom[0][0].axpy(fac_time, self.CpenderivVTV) # K_00 + Cpenderiv * V^T * V - add penalty to stiffness
+
+
     def destroy(self):
 
         self.V.destroy()
-        if bool(self.redbasisvec_penalties):
+        if bool(self.regularizations):
             self.CpenVTV.destroy()
-            self.Vtu_.destroy()
-            self.penterm_.destroy()
+            self.Vtx.destroy()
+            self.regtermx.destroy()
+            if self.pb.xrpre_ is not None:
+                self.Vtxpre.destroy()
+        if bool(self.regularizations_integ):
+            if self.pb.xintrpre_ is not None:
+                self.Vtxpre.destroy()
+            self.CpenintegVTV.destroy()
+            self.Vtx_integ.destroy()
+            self.regtermx_integ.destroy()
+        if bool(self.regularizations_deriv):
+            self.CpenderivVTV.destroy()
+            self.Vtx_deriv.destroy()
+            self.regtermx_deriv.destroy()

@@ -50,6 +50,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params)
 
         self.pbrom = self.pbs
+        self.pbrom_host = self
 
         self.incompressible_2field = self.pbs.incompressible_2field
 

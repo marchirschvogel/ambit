@@ -250,7 +250,9 @@ def check_params_rom(params):
                     'partitions',
                     'pod_only',
                     'print_eigenproblem',
-                    'redbasisvec_penalties',
+                    'regularizations',
+                    'regularizations_integ',
+                    'regularizations_deriv',
                     'snapshotincr',
                     'surface_rom',
                     'write_pod_modes']

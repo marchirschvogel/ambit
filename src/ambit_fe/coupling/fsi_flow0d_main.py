@@ -66,7 +66,8 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.pb0 = self.pbfa0.pb0
         self.pba = self.pbfa0.pba
 
-        self.pbrom = self.pbf # ROM problem can only be fluid
+        self.pbrom = self.pbs # ROM problem can only be solid
+        self.pbrom_host = self
 
         # modify results to write...
         self.pbs.results_to_write = io_params['results_to_write'][0]

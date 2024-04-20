@@ -54,6 +54,7 @@ class FSIProblem(problem_base):
         self.pbfa = FluidmechanicsAleProblem(pbase, io_params, time_params_fluid, fem_params_fluid, fem_params_ale, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params)
 
         self.pbrom = self.pbs # ROM problem can only be solid so far...
+        self.pbrom_host = self
 
         self.pbf = self.pbfa.pbf
         self.pba = self.pbfa.pba
