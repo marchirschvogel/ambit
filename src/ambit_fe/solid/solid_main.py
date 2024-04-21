@@ -244,7 +244,7 @@ class SolidmechanicsProblem(problem_base):
 
         # for ROM, provide pointers to main variable and its derivative
         if self.pbase.have_rom:
-            self.xr_, self.xr_old_, self.xrpre_ = self.u.vector, self.u_old.vector, self.u_pre
+            self.xr_, self.xr_old_, self.xrpre_ = self.u.vector, self.u_old.vector, self.u_pre.vector
             self.xdtr_old_, self.xintrpre_ = self.v_old.vector, None
 
         # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)

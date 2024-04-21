@@ -277,7 +277,7 @@ class FluidmechanicsProblem(problem_base):
         # for ROM, provide pointers to main variable, its derivative, and possibly its time integrated value
         if self.pbase.have_rom:
             self.xr_, self.xr_old_, self.xrpre_ = self.v.vector, self.v_old.vector, None
-            self.xdtr_old_, self.xdintr_old_, self.xintrpre_ = self.a_old.vector, self.uf_old.vector, self.uf_pre
+            self.xdtr_old_, self.xdintr_old_, self.xintrpre_ = self.a_old.vector, self.uf_old.vector, self.uf_pre.vector
 
         # collect references to pressure vectors
         self.pvecs_, self.pvecs_old_ = [], []
