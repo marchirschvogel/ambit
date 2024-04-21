@@ -667,27 +667,27 @@ class ModelOrderReduction():
 
         if bool(self.regularizations):
             # project
-            self.V.multTranspose(self.pb.xr_, self.Vtx) # V^T * x
+            self.V.multTranspose(self.pb.xr_.vector, self.Vtx) # V^T * x
             if self.pb.xrpre_ is not None:
-                self.V.multTranspose(self.pb.xrpre_, self.Vtxpre) # V^T * x_pre
+                self.V.multTranspose(self.pb.xrpre_.vector, self.Vtxpre) # V^T * x_pre
                 self.Vtx.axpy(1.0, self.Vtxpre)
             self.Cpen.mult(self.Vtx, self.regtermx) # Cpen * V^T * x
             r_list_rom[0].axpy(1.0, self.regtermx) # add penalty term to reduced residual
 
         if bool(self.regularizations_integ):
             # get integration of variable
-            self.pb.ti.update_varint(self.pb.xr_, self.pb.xr_old_, self.pb.xdintr_old_, varintout=self.xinteg, uflform=False)
+            self.pb.ti.update_varint(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdintr_old_.vector, varintout=self.xinteg, uflform=False)
             # project
             self.V.multTranspose(self.xinteg, self.Vtx_integ) # V^T * x_integ
             if self.pb.xintrpre_ is not None:
-                self.V.multTranspose(self.pb.xintrpre_, self.Vtxpre) # V^T * x_pre
+                self.V.multTranspose(self.pb.xintrpre_.vector, self.Vtxpre) # V^T * x_pre
                 self.Vtx_integ.axpy(1.0, self.Vtxpre)
             self.Cpeninteg.mult(self.Vtx_integ, self.regtermx_integ) # Cpeninteg * V^T * x_integ
             r_list_rom[0].axpy(1.0, self.regtermx_integ) # add penalty term to reduced residual
 
         if bool(self.regularizations_deriv):
             # get derivative of variable
-            self.pb.ti.update_dvar(self.pb.xr_, self.pb.xr_old_, self.pb.xdtr_old_, dvarout=self.xderiv, uflform=False)
+            self.pb.ti.update_dvar(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdtr_old_.vector, dvarout=self.xderiv, uflform=False)
             # project
             self.V.multTranspose(self.xderiv, self.Vtx_deriv) # V^T * x_deriv
             self.Cpenderiv.mult(self.Vtx_deriv, self.regtermx_deriv) # Cpenderiv * V^T * x_deriv
