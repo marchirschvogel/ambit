@@ -165,18 +165,19 @@ class ModelOrderReduction():
         # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
         # V^T * V - normally I, but for badly converged eigenvalues may have non-zero off-diagonal terms...
         if bool(self.regularizations):
+            self.xreg = self.V.createVecLeft()
             self.CpenVTV = self.Cpen.matMult(self.VTV) # Cpen * V^T * V
             self.Vtx, self.regtermx = self.V.createVecRight(), self.V.createVecRight()
             if self.pb.xrpre_ is not None:
                 self.Vtxpre = self.V.createVecRight()
         if bool(self.regularizations_integ):
-            self.xinteg = self.V.createVecLeft()
+            self.xreginteg = self.V.createVecLeft()
             self.CpenintegVTV = self.Cpeninteg.matMult(self.VTV) # Cpeninteg * V^T * V
             self.Vtx_integ, self.regtermx_integ = self.V.createVecRight(), self.V.createVecRight()
             if self.pb.xintrpre_ is not None:
                 self.Vtxpre = self.V.createVecRight()
         if bool(self.regularizations_deriv):
-            self.xderiv = self.V.createVecLeft()
+            self.xregderiv = self.V.createVecLeft()
             self.CpenderivVTV = self.Cpenderiv.matMult(self.VTV) # Cpeninteg * V^T * V
             self.Vtx_deriv, self.regtermx_deriv = self.V.createVecRight(), self.V.createVecRight()
 
@@ -665,47 +666,53 @@ class ModelOrderReduction():
 
     def add_residual_regularization(self, r_list_rom):
 
+        _, timefac = self.pb.ti.timefactors()
+
         if bool(self.regularizations):
-            # project
-            self.V.multTranspose(self.pb.xr_.vector, self.Vtx) # V^T * x
+            self.xreg.axpby(timefac, 0.0, self.pb.xr_.vector)
+            self.xreg.axpy(1.-timefac, self.pb.xr_old_.vector)
             if self.pb.xrpre_ is not None:
-                self.V.multTranspose(self.pb.xrpre_.vector, self.Vtxpre) # V^T * x_pre
-                self.Vtx.axpy(1.0, self.Vtxpre)
+                self.xreg.axpy(1.0, self.pb.xrpre_.vector)
+            # project
+            self.V.multTranspose(self.xreg, self.Vtx) # V^T * x
             self.Cpen.mult(self.Vtx, self.regtermx) # Cpen * V^T * x
             r_list_rom[0].axpy(1.0, self.regtermx) # add penalty term to reduced residual
 
         if bool(self.regularizations_integ):
             # get integration of variable
-            self.pb.ti.update_varint(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdintr_old_.vector, varintout=self.xinteg, uflform=False)
-            # project
-            self.V.multTranspose(self.xinteg, self.Vtx_integ) # V^T * x_integ
+            self.pb.ti.update_varint(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xintr_old_.vector, varintout=self.xreginteg, uflform=False)
+            self.xreginteg.axpby(1.-timefac, timefac, self.pb.xintr_old_.vector)
             if self.pb.xintrpre_ is not None:
-                self.V.multTranspose(self.pb.xintrpre_.vector, self.Vtxpre) # V^T * x_pre
-                self.Vtx_integ.axpy(1.0, self.Vtxpre)
+                self.xreginteg.axpy(1.0, self.pb.xintrpre_.vector)
+            # project
+            self.V.multTranspose(self.xreginteg, self.Vtx_integ) # V^T * x_integ
             self.Cpeninteg.mult(self.Vtx_integ, self.regtermx_integ) # Cpeninteg * V^T * x_integ
             r_list_rom[0].axpy(1.0, self.regtermx_integ) # add penalty term to reduced residual
 
         if bool(self.regularizations_deriv):
             # get derivative of variable
-            self.pb.ti.update_dvar(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdtr_old_.vector, dvarout=self.xderiv, uflform=False)
+            self.pb.ti.update_dvar(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdtr_old_.vector, dvarout=self.xregderiv, uflform=False)
+            self.xregderiv.axpby(1.-timefac, timefac, self.pb.xdtr_old_.vector)
             # project
-            self.V.multTranspose(self.xderiv, self.Vtx_deriv) # V^T * x_deriv
+            self.V.multTranspose(self.xregderiv, self.Vtx_deriv) # V^T * x_deriv
             self.Cpenderiv.mult(self.Vtx_deriv, self.regtermx_deriv) # Cpenderiv * V^T * x_deriv
             r_list_rom[0].axpy(1.0, self.regtermx_deriv) # add penalty term to reduced residual
 
 
     def add_jacobian_regularization(self, K_list_rom):
 
+        _, timefac = self.pb.ti.timefactors()
+
         if bool(self.regularizations):
-            K_list_rom[0][0].axpy(1.0, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
+            K_list_rom[0][0].axpy(timefac, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_integ):
-            fac_time = self.pb.ti.get_factor_deriv_varint()
-            K_list_rom[0][0].axpy(fac_time, self.CpenintegVTV) # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
+            fac_timint = self.pb.ti.get_factor_deriv_varint()
+            K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenintegVTV) # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_deriv):
-            fac_time = self.pb.ti.get_factor_deriv_dvar()
-            K_list_rom[0][0].axpy(fac_time, self.CpenderivVTV) # K_00 + Cpenderiv * V^T * V - add penalty to stiffness
+            fac_timint = self.pb.ti.get_factor_deriv_dvar()
+            K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenderivVTV) # K_00 + Cpenderiv * V^T * V - add penalty to stiffness
 
 
     def destroy(self):
