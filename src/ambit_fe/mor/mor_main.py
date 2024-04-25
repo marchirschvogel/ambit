@@ -710,12 +710,12 @@ class ModelOrderReduction():
 
         if bool(self.regularizations_integ):
             fac_timint = self.pb.ti.get_factor_deriv_varint()
-            if self.pb.pre: fac_timint = 1.0
+            if self.pb.pre: fac_timint = self.pb.pbase.dt
             K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenintegVTV) # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_deriv):
             fac_timint = self.pb.ti.get_factor_deriv_dvar()
-            if self.pb.pre: fac_timint = 1.0
+            if self.pb.pre: fac_timint = 1./self.pb.pbase.dt
             K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenderivVTV) # K_00 + Cpenderiv * V^T * V - add penalty to stiffness
 
 
