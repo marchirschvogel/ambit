@@ -667,6 +667,7 @@ class ModelOrderReduction():
     def add_residual_regularization(self, r_list_rom):
 
         _, timefac = self.pb.ti.timefactors()
+        if self.pb.pre: timefac = 1.0
 
         if bool(self.regularizations):
             self.xreg.axpby(timefac, 0.0, self.pb.xr_.vector)
@@ -702,16 +703,19 @@ class ModelOrderReduction():
     def add_jacobian_regularization(self, K_list_rom):
 
         _, timefac = self.pb.ti.timefactors()
+        if self.pb.pre: timefac = 1.0
 
         if bool(self.regularizations):
             K_list_rom[0][0].axpy(timefac, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_integ):
             fac_timint = self.pb.ti.get_factor_deriv_varint()
+            if self.pb.pre: fac_timint = 1.0
             K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenintegVTV) # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_deriv):
             fac_timint = self.pb.ti.get_factor_deriv_dvar()
+            if self.pb.pre: fac_timint = 1.0
             K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenderivVTV) # K_00 + Cpenderiv * V^T * V - add penalty to stiffness
 
 
