@@ -667,7 +667,8 @@ class ModelOrderReduction():
     def add_residual_regularization(self, r_list_rom):
 
         _, timefac = self.pb.ti.timefactors()
-        if self.pb.pre: timefac = 1.0
+        dt = self.pb.pbase.dt
+        if self.pb.pre: timefac, dt = 1.0, self.pb.prestress_dt
 
         if bool(self.regularizations):
             self.xreg.axpby(timefac, 0.0, self.pb.xr_.vector)
@@ -681,7 +682,7 @@ class ModelOrderReduction():
 
         if bool(self.regularizations_integ):
             # get integration of variable
-            self.pb.ti.update_varint(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xintr_old_.vector, varintout=self.xreginteg, uflform=False)
+            self.pb.ti.update_varint(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xintr_old_.vector, dt, varintout=self.xreginteg, uflform=False)
             self.xreginteg.axpby(1.-timefac, timefac, self.pb.xintr_old_.vector)
             if self.pb.xintrpre_ is not None:
                 self.xreginteg.axpy(1.0, self.pb.xintrpre_.vector)
@@ -692,7 +693,7 @@ class ModelOrderReduction():
 
         if bool(self.regularizations_deriv):
             # get derivative of variable
-            self.pb.ti.update_dvar(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdtr_old_.vector, dvarout=self.xregderiv, uflform=False)
+            self.pb.ti.update_dvar(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdtr_old_.vector, dt, dvarout=self.xregderiv, uflform=False)
             self.xregderiv.axpby(1.-timefac, timefac, self.pb.xdtr_old_.vector)
             # project
             self.V.multTranspose(self.xregderiv, self.Vtx_deriv) # V^T * x_deriv
@@ -709,13 +710,13 @@ class ModelOrderReduction():
             K_list_rom[0][0].axpy(timefac, self.CpenVTV) # K_00 + Cpen * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_integ):
-            fac_timint = self.pb.ti.get_factor_deriv_varint()
-            if self.pb.pre: fac_timint = self.pb.pbase.dt
+            fac_timint = self.pb.ti.get_factor_deriv_varint(self.pb.pbase.dt)
+            if self.pb.pre: fac_timint = self.pb.prestress_dt
             K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenintegVTV) # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_deriv):
-            fac_timint = self.pb.ti.get_factor_deriv_dvar()
-            if self.pb.pre: fac_timint = 1./self.pb.pbase.dt
+            fac_timint = self.pb.ti.get_factor_deriv_dvar(self.pb.pbase.dt)
+            if self.pb.pre: fac_timint = 1./self.pb.prestress_dt
             K_list_rom[0][0].axpy(timefac*fac_timint, self.CpenderivVTV) # K_00 + Cpenderiv * V^T * V - add penalty to stiffness
 
 

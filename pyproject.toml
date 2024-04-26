@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0.0", "wheel"]
 
 [project]
 name = "ambit-fe"
-version = "v1.2.5"
+version = "v1.2.6"
 description = "A FEniCS-based cardiovascular multi-physics solver"
-authors = [{name = "Marc Hirschvogel", email = "marc.hirschvogel@deepambit.com"}]
+authors = [{name = "Marc Hirschvogel", email = "marc.hirschvogel@ambit.net"}]
 license = {file = "LICENSE"}
 readme = "README.md"
 keywords = [
