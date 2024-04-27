@@ -271,7 +271,7 @@ class solver_base():
             self.update_counters(wt, t)
 
             # set final step
-            self.Nfinal = N
+            self.Nfinal = N - self.pb.pbase.restart_step
 
             # check any abort criterion
             if self.pb.check_abort(t-t_off):
