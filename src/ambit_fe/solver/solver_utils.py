@@ -19,7 +19,7 @@ class sol_utils():
         self.solver = solver
 
 
-    def catch_solver_errors(self, resnorm, incnorm=0, maxval=1e16):
+    def catch_solver_errors(self, resnorm, incnorm=0, maxval=1e16, linconv=1):
 
         err = 0
 
@@ -38,6 +38,12 @@ class sol_utils():
         if np.isinf(incnorm):
 
             utilities.print_status("Inf encountered. Reset Newton and perform PTC adaption.", self.solver.comm)
+
+            err = 1
+
+        if linconv < 0: # values smaller 0 indicate divergence of PETSc ksp method
+
+            utilities.print_status("Linear solver diverged. Reset Newton and perform PTC adaption.", self.solver.comm)
 
             err = 1
 

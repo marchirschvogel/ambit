@@ -137,25 +137,38 @@ def main():
     """
     Time curves, e.g. any prescribed time-controlled/-varying loads or functions
     """
-    class time_curves:
-        
-        def tc1(self, t):
-            vmax = 1e3 # mm/s
-            T=0.4 # s
-            return 0.5*vmax*(1.-np.cos(2.*np.pi*t/T))
+    class expression1:
+        def __init__(self):
+            
+            self.t = 0.0
+
+            self.T = 0.4
+            self.vmax = 1e3
+            
+            self.r = 15.0 # pipe radius
+
+        def evaluate(self, x):
+            
+            vel_inflow_xy = (x[0]**2. - self.r**2.)*(x[1]**2. - self.r**2.) / (self.r**4.) # parabolic inflow profile
+
+            val_t = 0.5*self.vmax*(1.-np.cos(2.*np.pi*self.t/self.T)) * vel_inflow_xy
+            
+            return ( np.full(x.shape[1], 0.0),
+                     np.full(x.shape[1], 0.0),
+                     np.full(x.shape[1], val_t) )
 
 
     """
     Boundary conditions: ids: 1,5: lateral wall - 2: inflow, 5: axial outflow, 6: top outflow, 3: valve
     Inflow is prescribed, lateral wall as well as "valve" (inner domain separator plane) are fixed, a stabilized Neumann condition is applied to the outflow.
     """
-    BC_DICT              = { 'dirichlet' : [{'id' : [2], 'dir' : 'z', 'curve' : 1}, # inflow
+    BC_DICT              = { 'dirichlet' : [{'id' : [2], 'dir' : 'all', 'expression' : expression1}, # inflow
                                             {'id' : [1,5], 'dir' : 'all', 'val' : 0.}, # lateral wall
                                             {'id' : [3], 'dir' : 'all', 'val' : 0.}], # inner (valve) plane
                              'stabilized_neumann' : [{'id' : [4,6,7], 'beta' : 0.205e-6}] }  # beta should be ~ 0.2*rho
 
     # Pass parameters to Ambit to set up the problem
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS)
 
     # Call the Ambit solver to solve the problem
     problem.solve_problem()

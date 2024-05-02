@@ -623,7 +623,7 @@ class solver_nonlinear:
 
         while it < self.maxiter and counter_adapt < max_adapt:
 
-            converged, err = [], []
+            converged, err, linconv = [], [], 1
 
             # problem loop (in case of partitioned solves)
             for npr in range(self.nprob):
@@ -721,7 +721,8 @@ class solver_nonlinear:
                         self.ksp[npr].solve(-r, self.del_full)
                         ts = time.time() - tss
 
-                        self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
+                        linconv = self.ksp[npr].getConvergedReason()
+                        self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), linconv)
 
                         if not self.block_precond[npr] == 'fieldsplit':
                             self.r_full_merged[npr].resetArray()
@@ -744,7 +745,8 @@ class solver_nonlinear:
                     ts = time.time() - tss
 
                     if self.solvetype[npr]=='iterative':
-                        self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), self.ksp[npr].getConvergedReason())
+                        linconv = self.ksp[npr].getConvergedReason()
+                        self.solutils.print_linear_iter_last(self.ksp[npr].getIterationNumber(), self.ksp[npr].getResidualNorm(), linconv)
 
                 tes = time.time()
 
@@ -794,7 +796,7 @@ class solver_nonlinear:
                     self.maxiter = 100 # should be enough...
 
                     # collect errors
-                    err.append(self.solutils.catch_solver_errors(self.resnorms[npr]['res1'], incnorm=self.incnorms[npr]['inc1'], maxval=self.maxresval))
+                    err.append(self.solutils.catch_solver_errors(self.resnorms[npr]['res1'], incnorm=self.incnorms[npr]['inc1'], maxval=self.maxresval, linconv=linconv))
 
             # iteration update after all problems have been solved
             it += 1
