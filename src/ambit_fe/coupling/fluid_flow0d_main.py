@@ -316,6 +316,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
             islm = PETSc.IS().createStride(self.num_coupling_surf, first=0, step=1, comm=self.comm)
             self.K_lm_inv.setValuesBlocked(islm, islm, np.ones((self.num_coupling_surf,self.num_coupling_surf), dtype=np.int32), addv=PETSc.InsertMode.INSERT)
             self.K_lm_inv.assemble()
+            # numpy array for serial inverse
+            self.K_lm_array_inv = np.zeros((self.num_coupling_surf,self.num_coupling_surf))
 
             self.Kvs_Klminv = self.K_vs.matMult(self.K_lm_inv)
             self.Kvs_Klminv_Ksv = self.Kvs_Klminv.matMult(self.K_sv)
@@ -501,16 +503,20 @@ class FluidmechanicsFlow0DProblem(problem_base):
             if subsolver is not None:
                 # gather matrix and do a serial inverse with numpy (matrix is always super small!)
                 K_lm_array = allgather_mat(self.K_lm, self.comm)
-                K_lm_array_inv = np.linalg.inv(K_lm_array)
+                # let only rank 0 do the inverse, then broadcast
+                if self.comm.rank==0:
+                    self.K_lm_array_inv[:] = np.linalg.inv(K_lm_array)
+                self.comm.Barrier()
+                self.K_lm_array_inv[:] = self.comm.bcast(self.K_lm_array_inv, root=0)
 
                 # now set back to parallel K_lm_inv matrix (for efficient multiplications later on)
                 for i in range(ls, le):
                     for j in range(self.num_coupling_surf):
-                        self.K_lm_inv.setValue(i, j, K_lm_array_inv[i,j], addv=PETSc.InsertMode.INSERT)
+                        self.K_lm_inv.setValue(i, j, self.K_lm_array_inv[i,j], addv=PETSc.InsertMode.INSERT)
 
                 self.K_lm_inv.assemble()
 
-                del K_lm_array, K_lm_array_inv
+                del K_lm_array
 
             self.K_vs.matMult(self.K_lm_inv, result=self.Kvs_Klminv)
 
