@@ -104,9 +104,14 @@ class sol_utils():
                 v1, v2 = "u", "lm"
                 numres = 2
         elif ptype=="fluid_flow0d":
-            eq1, eq2, eq3 = "fluid momentum", "fluid continuity", "3D0D coup constraint"
-            v1, v2, v3 = "v", "p", "LM" # using greek symbol print (Λ) is not supported everywhere...
-            numres = 3
+            if not self.solver.pb[0].condense_0d_model:
+                eq1, eq2, eq3 = "fluid momentum", "fluid continuity", "3D0D coup constraint"
+                v1, v2, v3 = "v", "p", "LM" # using greek symbol print (Λ) is not supported everywhere...
+                numres = 3
+            else:
+                eq1, eq2 = "fluid momentum", "fluid continuity"
+                v1, v2 = "v", "p"
+                numres = 2
         elif ptype=="fluid_ale":
             eq1, eq2, eq3 = "fluid momentum", "fluid continuity", "ALE momentum"
             v1, v2, v3 = "v", "p", "d"
@@ -283,8 +288,12 @@ class sol_utils():
             if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"]:
                 converged = True
 
-        elif ptype=="fluid_flow0d":
+        elif ptype=="fluid_flow0d" and not self.solver.pb[0].condense_0d_model:
             if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"]:
+                converged = True
+
+        elif ptype=="fluid_flow0d" and self.solver.pb[0].condense_0d_model:
+            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"]:
                 converged = True
 
         elif ptype=="fluid_ale":

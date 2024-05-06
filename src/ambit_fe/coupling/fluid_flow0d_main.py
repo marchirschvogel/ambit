@@ -15,7 +15,7 @@ from petsc4py import PETSc
 
 from ..solver import solver_nonlin
 from .. import utilities, expression, ioparams
-from ..mpiroutines import allgather_vec
+from ..mpiroutines import allgather_vec, allgather_mat
 
 from ..fluid.fluid_main import FluidmechanicsProblem
 from ..flow0d.flow0d_main import Flow0DProblem
@@ -55,6 +55,13 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         try: self.Nmax_periodicref = self.coupling_params['Nmax_periodicref']
         except: self.Nmax_periodicref = 10
+
+        try: self.condense_0d_model = self.coupling_params['condense_0d_model']
+        except: self.condense_0d_model = False
+
+        self.have_condensed_variables = False
+        if self.condense_0d_model:
+            self.have_condensed_variables = True
 
         # only option in fluid mechanics!
         self.coupling_type = 'monolithic_lagrange'
@@ -96,7 +103,10 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pb0.c = [[]]*(self.num_coupling_surf+self.offc)
 
         # number of fields involved
-        self.nfields = 3
+        if not self.condense_0d_model:
+            self.nfields = 3
+        else:
+            self.nfields = 2
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
@@ -105,9 +115,16 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def get_problem_var_list(self):
 
-        if self.pbf.num_dupl > 1: is_ghosted = [1, 2, 0]
-        else:                     is_ghosted = [1, 1, 0]
-        return [self.pbf.v.vector, self.pbf.p.vector, self.LM], is_ghosted
+        if not self.condense_0d_model:
+            if self.pbf.num_dupl > 1: is_ghosted = [1, 2, 0]
+            else:                     is_ghosted = [1, 1, 0]
+            varlist = [self.pbf.v.vector, self.pbf.p.vector, self.LM]
+        else:
+            if self.pbf.num_dupl > 1: is_ghosted = [1, 2]
+            else:                     is_ghosted = [1, 1]
+            varlist = [self.pbf.v.vector, self.pbf.p.vector]
+
+        return varlist, is_ghosted
 
 
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
@@ -268,6 +285,46 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.K_sv.setUp()
         self.K_sv.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
 
+        # In case we might want to condense the 0D model into the fluid momentum residual block. This implementation is mainly for
+        # testing and comparison purposes (to other approaches which do that...).
+        # This will eliminate the multiplier from the system, hence the fluid momentum and Jacobian need to be updated accordingly.
+        # If iterative solvers are used, this approach may severely compromise the sparsity pattern and break the solver performance!
+        # Also, it is in genetral difficult to find a reason why this should be done (write me if you have one).
+        if self.condense_0d_model:
+
+            # inverse of LM stiffness matrix
+            self.K_lm_inv = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=self.num_coupling_surf*self.num_coupling_surf, csr=None, comm=self.comm)
+            self.K_lm_inv.setUp()
+
+            # need to set K_vs here to get correct sparsity patterns for mat-mat products
+            for i in range(len(self.col_ids)):
+                # NOTE: only set the surface-subset of the k_vs vector entries to avoid placing unnecessary zeros!
+                self.k_vs_vec[i].getSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
+                self.K_vs.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.k_vs_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+                self.k_vs_vec[i].restoreSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
+            self.K_vs.assemble()
+
+            # need to set K_sv here to get correct sparsity patterns for mat-mat products
+            for i in range(len(self.row_ids)):
+                # NOTE: only set the surface-subset of the k_sv vector entries to avoid placing unnecessary zeros!
+                self.k_sv_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
+                self.K_sv.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.k_sv_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+                self.k_sv_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
+            self.K_sv.assemble()
+
+            # set 1's to get correct allocation pattern
+            islm = PETSc.IS().createStride(self.num_coupling_surf, first=0, step=1, comm=self.comm)
+            self.K_lm_inv.setValuesBlocked(islm, islm, np.ones((self.num_coupling_surf,self.num_coupling_surf), dtype=np.int32), addv=PETSc.InsertMode.INSERT)
+            self.K_lm_inv.assemble()
+
+            self.Kvs_Klminv = self.K_vs.matMult(self.K_lm_inv)
+            self.Kvs_Klminv_Ksv = self.Kvs_Klminv.matMult(self.K_sv)
+
+            self.r_v_kcondens = self.Kvs_Klminv.createVecLeft()
+            self.ksv_v = self.K_lm.createVecLeft()
+
+            self.r_lm_kcondens = self.K_lm.createVecLeft()
+
 
     def assemble_residual(self, t, subsolver=None):
 
@@ -321,7 +378,13 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.r_lm.assemble()
 
-        self.r_list[2] = self.r_lm
+        if self.condense_0d_model:
+            # call those parts of assemble_stiffness_3d0d that are needed for forming the residual
+            self.assemble_stiffness_3d0d(t, LM_sq, subsolver=subsolver, condensed_res_action=True)
+            self.Kvs_Klminv.mult(self.r_lm, self.r_v_kcondens)
+            self.r_list[0].axpy(-1., self.r_v_kcondens)
+        else:
+            self.r_list[2] = self.r_lm
 
         del LM_sq
 
@@ -350,6 +413,11 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.K_list[0][1] = self.pbf.K_list[0][1]
         self.K_list[1][0] = self.pbf.K_list[1][0]
         self.K_list[1][1] = self.pbf.K_list[1][1] # should be only non-zero if we have stabilization...
+
+        self.assemble_stiffness_3d0d(t, LM_sq, subsolver=subsolver)
+
+
+    def assemble_stiffness_3d0d(self, t, LM_sq, subsolver=None, condensed_res_action=False):
 
         # assemble 0D rhs contributions
         self.pb0.df_old.assemble()
@@ -389,15 +457,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.K_lm.assemble()
 
-        self.K_list[2][2] = self.K_lm
+        if not self.condense_0d_model:
+            self.K_list[2][2] = self.K_lm
 
         del LM_sq
 
-        # offdiagonal s-v rows
-        for i in range(len(self.row_ids)):
-            with self.k_sv_vec[i].localForm() as r_local: r_local.set(0.0)
-            fem.petsc.assemble_vector(self.k_sv_vec[i], self.dcq_form[i])
-            self.k_sv_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        if not condensed_res_action:
+            # offdiagonal s-v rows
+            for i in range(len(self.row_ids)):
+                with self.k_sv_vec[i].localForm() as r_local: r_local.set(0.0)
+                fem.petsc.assemble_vector(self.k_sv_vec[i], self.dcq_form[i])
+                self.k_sv_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # offdiagonal v-s columns
         for i in range(len(self.col_ids)):
@@ -416,20 +486,47 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.K_vs.assemble()
 
-        # set rows
-        for i in range(len(self.row_ids)):
-            # NOTE: only set the surface-subset of the k_sv vector entries to avoid placing unnecessary zeros!
-            self.k_sv_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
-            self.K_sv.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.k_sv_subvec[i].array, addv=PETSc.InsertMode.INSERT)
-            self.k_sv_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
+        if not condensed_res_action:
+            # set rows
+            for i in range(len(self.row_ids)):
+                # NOTE: only set the surface-subset of the k_sv vector entries to avoid placing unnecessary zeros!
+                self.k_sv_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
+                self.K_sv.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.k_sv_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+                self.k_sv_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
 
-        self.K_sv.assemble()
+            self.K_sv.assemble()
 
-        self.K_list[0][2] = self.K_vs
-        self.K_list[2][0] = self.K_sv
+        if self.condense_0d_model:
+
+            if subsolver is not None:
+                # gather matrix and do a serial inverse with numpy (matrix is always super small!)
+                K_lm_array = allgather_mat(self.K_lm, self.comm)
+                K_lm_array_inv = np.linalg.inv(K_lm_array)
+
+                # now set back to parallel K_lm_inv matrix (for efficient multiplications later on)
+                for i in range(ls, le):
+                    for j in range(self.num_coupling_surf):
+                        self.K_lm_inv.setValue(i, j, K_lm_array_inv[i,j], addv=PETSc.InsertMode.INSERT)
+
+                self.K_lm_inv.assemble()
+
+                del K_lm_array, K_lm_array_inv
+
+            self.K_vs.matMult(self.K_lm_inv, result=self.Kvs_Klminv)
+
+            if not condensed_res_action:
+                self.Kvs_Klminv.matMult(self.K_sv, result=self.Kvs_Klminv_Ksv)
+                self.K_list[0][0].axpy(-1., self.Kvs_Klminv_Ksv)
+
+        else:
+            self.K_list[0][2] = self.K_vs
+            self.K_list[2][0] = self.K_sv
 
 
     def get_index_sets(self, isoptions={}):
+
+        if self.condense_0d_model:
+            return self.pbf.get_index_sets(isoptions=isoptions)
 
         if self.rom is not None: # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
@@ -465,6 +562,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
             ilist = [iset_v, iset_p, iset_s]
 
         return ilist
+
+
+    def update_condensed_vars(self, del_x):
+
+        # compute LM
+        self.K_sv.mult(del_x[0], self.ksv_v)
+
+        self.r_lm_kcondens.axpby(-1., 0., self.r_lm)
+        self.r_lm_kcondens.axpy(-1., self.ksv_v)
+
+        self.K_lm_inv.multAdd(self.r_lm_kcondens, self.LM, self.LM)
 
 
     ### now the base routines for this problem

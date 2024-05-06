@@ -55,6 +55,8 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         try: self.zero_lm_boundary = self.coupling_params['zero_lm_boundary']
         except: self.zero_lm_boundary = False
 
+        self.have_condensed_variables = False
+
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)

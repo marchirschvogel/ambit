@@ -579,7 +579,7 @@ class boundary_cond_fluid(boundary_cond):
 
 
     # set Robin valve BCs
-    def robin_valve_bcs(self, bcdict, v, V_real, beta_, dS_, wel=None, F=None):
+    def robin_valve_bcs(self, bcdict, v, V_real, beta_, dS_, wel=None, F=None, dw=None):
 
         w = ufl.as_ufl(0)
 
@@ -589,6 +589,8 @@ class boundary_cond_fluid(boundary_cond):
             wel_ = wel
 
         for r in bcdict:
+
+            dwddp = ufl.as_ufl(0)
 
             try: codim = r['codimension']
             except: codim = self.dim - 1
@@ -601,7 +603,15 @@ class boundary_cond_fluid(boundary_cond):
 
             for i in range(len(r['id'])):
 
-                w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+                if dw is None:
+                    w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+                else:
+                    # derivative (for implicit valve law)
+                    dwddp += self.vf.deltaW_ext_robin_valve(v, ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+
+            # one dwddp term per valve
+            if dw is not None:
+                dw.append( dwddp )
 
         return w
 

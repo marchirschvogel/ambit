@@ -63,6 +63,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
         try: self.Nmax_periodicref = self.coupling_params['Nmax_periodicref']
         except: self.Nmax_periodicref = 10
 
+        self.have_condensed_variables = False
+
         # assert that we do not have conflicting timings
         time_params_flow0d['maxtime'] = time_params_solid['maxtime']
         time_params_flow0d['numstep'] = time_params_solid['numstep']

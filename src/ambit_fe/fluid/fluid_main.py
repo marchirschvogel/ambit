@@ -106,13 +106,14 @@ class FluidmechanicsProblem(problem_base):
         self.sub_solve = False
         self.print_subiter = False
 
-        self.have_flux_monitor, self.have_dp_monitor, self.have_robin_valve = False, False, False
+        self.have_flux_monitor, self.have_dp_monitor, self.have_robin_valve, self.have_robin_valve_implicit = False, False, False, False
+        self.have_condensed_variables = False
 
         self.dim = self.io.mesh.geometry.dim
 
         # dicts for evaluations of surface integrals (fluxes, pressures), to be queried by other models
-        self.qv_, self.pu_, self.pd_ = {}, {}, {}
-        self.qv_old_, self.pu_old_, self.pd_old_ = {}, {}, {}
+        self.qv_, self.pu_, self.pd_, self.dp_ = {}, {}, {}, {}
+        self.qv_old_, self.pu_old_, self.pd_old_, self.dp_old_ = {}, {}, {}, {}
 
         # type of discontinuous function spaces
         if str(self.io.mesh.ufl_cell()) == 'tetrahedron' or str(self.io.mesh.ufl_cell()) == 'triangle' or str(self.io.mesh.ufl_cell()) == 'triangle3D':
@@ -387,6 +388,7 @@ class FluidmechanicsProblem(problem_base):
 
         # number of fields involved
         self.nfields = 2
+        if self.have_robin_valve_implicit: self.nfields+=1
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = [None]*self.nfields, [None]*self.nfields
@@ -397,7 +399,13 @@ class FluidmechanicsProblem(problem_base):
 
         if self.num_dupl > 1: is_ghosted = [1, 2]
         else:                 is_ghosted = [1, 1]
-        return [self.v.vector, self.p.vector], is_ghosted
+        varlist = [self.v.vector, self.p.vector]
+
+        if self.have_robin_valve_implicit:
+            varlist.append(self.z)
+            is_ghosted.append(0)
+
+        return varlist, is_ghosted
 
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
@@ -502,7 +510,25 @@ class FluidmechanicsProblem(problem_base):
             self.beta_valve, self.beta_valve_old = [], []
             w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, [self.io.dS], wel=self.alevar['w'], F=self.alevar['Fale'])
             w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, [self.io.dS], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.Vd_scalar, self.beta_valve_old, [self.io.dS], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.Vd_scalar, self.beta_valve, [self.io.dS], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+        if 'robin_valve_implicit' in self.bc_dict.keys():
+            assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
+            self.have_robin_valve_implicit = True
+            raise RuntimeError("Implicit valve law not yet fully implemented!")
+            self.state_valve, self.state_valve_old = [], []
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.state_valve, [self.io.dS], wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v_old, self.Vd_scalar, self.state_valve_old, [self.io.dS], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.vel_mid, self.Vd_scalar, self.state_valve, [self.io.dS], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            self.dbeta_dz_valve = []
+            self.dw_robin_valve_dz = []
+            for i in range(len(self.beta_valve)):
+                self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.dbeta_dz_valve, [self.io.dS], wel=self.alevar['w'], F=self.alevar['Fale'], dw=self.dw_robin_valve_dz)
+            # reduced valve variables (integrated pressures)
+            self.num_valve_coupling_surf = len(self.bc_dict['robin_valve_implicit'])
+            self.z, self.z_old = PETSc.Vec().createMPI(size=self.num_valve_coupling_surf), PETSc.Vec().createMPI(size=self.num_valve_coupling_surf)
+            self.surface_vlv_ids = []
+            for i in range(self.num_valve_coupling_surf):
+                self.surface_vlv_ids.append(self.bc_dict['robin_valve_implicit'][i]['id'])
         if 'flux_monitor' in self.bc_dict.keys():
             self.have_flux_monitor = True
             self.q_, self.q_old_, self.q_mid_ = [], [], []
@@ -624,8 +650,8 @@ class FluidmechanicsProblem(problem_base):
                     dscales = self.stabilization['dscales']
 
                     tau_supg = dscales[0] * h / vscale_max
-                    tau_pspg = dscales[1] * h / vscale_max
-                    tau_lsic = dscales[2] * h * vscale_max
+                    tau_lsic = dscales[1] * h * vscale_max
+                    tau_pspg = dscales[2] * h / vscale_max
 
                     # strong momentum residuals
                     if self.fluid_governing_type=='navierstokes_transient':
@@ -672,14 +698,14 @@ class FluidmechanicsProblem(problem_base):
                         self.deltaW_int     += self.vf.stab_supg(self.v, residual_v_strong, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
                         self.deltaW_int_old += self.vf.stab_supg(self.v_old, residual_v_strong_old, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'], symmetric=symm)
                         self.deltaW_int_mid += self.vf.stab_supg(self.vel_mid, residual_v_strong_mid, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'], symmetric=symm)
-                    # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
-                    self.deltaW_p[n]     += self.vf.stab_pspg(self.var_p_[j], residual_v_strong, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
-                    self.deltaW_p_old[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_old, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale_old'])
-                    self.deltaW_p_mid[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_mid, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale_mid'])
                     # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
                     self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
                     self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_old'])
                     self.deltaW_int_mid += self.vf.stab_lsic(self.vel_mid, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_mid'])
+                    # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
+                    self.deltaW_p[n]     += self.vf.stab_pspg(self.var_p_[j], residual_v_strong, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
+                    self.deltaW_p_old[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_old, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale_old'])
+                    self.deltaW_p_mid[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_mid, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale_mid'])
 
                     # now take care of stabilization for the prestress problem (only FrSI)
                     if self.prestress_initial or self.prestress_initial_only:
@@ -935,6 +961,11 @@ class FluidmechanicsProblem(problem_base):
                 if self.stabilization is not None:
                     self.jac_pp = fem.form(self.weakform_lin_prestress_pp)
 
+        if self.have_robin_valve_implicit:
+            self.dw_robin_valve_dz_form, self.drz_dp = [], []
+            for i in range(self.num_valve_coupling_surf):
+                self.dw_robin_valve_dz_form.append(fem.form(self.dw_robin_valve_dz[i], entity_maps=self.io.entity_maps))
+
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
@@ -963,6 +994,66 @@ class FluidmechanicsProblem(problem_base):
         else:
             self.K_pp = None
 
+        if self.have_robin_valve_implicit:
+
+            self.r_z = PETSc.Vec().createMPI(size=self.num_valve_coupling_surf)
+            self.K_zz = PETSc.Mat().createAIJ(size=(self.num_valve_coupling_surf,self.num_valve_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
+            self.K_zz.setUp()
+
+            self.row_ids = list(range(self.num_valve_coupling_surf))
+            self.col_ids = list(range(self.num_valve_coupling_surf))
+
+            # setup offdiagonal matrices
+            locmatsize = self.V_v.dofmap.index_map.size_local * self.V_v.dofmap.index_map_bs
+            matsize = self.V_v.dofmap.index_map.size_global * self.V_v.dofmap.index_map_bs
+            #locmatsize_p = self.V_p.dofmap.index_map.size_local * self.V_p.dofmap.index_map_bs
+            #matsize_p = self.V_p.dofmap.index_map.size_global * self.V_p.dofmap.index_map_bs
+
+            self.k_vz_vec = []
+            for i in range(len(self.col_ids)):
+                self.k_vz_vec.append(fem.petsc.create_vector(self.dw_robin_valve_dz_form[i]))
+
+            # self.k_zp_vec = []
+            # for i in range(len(self.row_ids)):
+            #     self.k_sp_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
+
+            self.dofs_coupling_v = [[]]*self.num_valve_coupling_surf
+
+            self.k_vz_subvec, self.k_zp_subvec, sze_vz, sze_zp = [], [], [], []
+
+            for n in range(self.num_valve_coupling_surf):
+
+                # nds_p_local = [[]]*len(self.surface_vlv_ids[n])
+                # for i in range(len(self.surface_vlv_ids[n])):
+                #     nds_p_local[i] = fem.locate_dofs_topological(self.V_p, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.surface_vlv_ids[n][i]])
+                # nds_p_local_flat = [item for sublist in nds_p_local for item in sublist]
+                # nds_p = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local_flat, dtype=np.int32)), dtype=np.int32 )
+                # self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.V_p.dofmap.index_map_bs, nds_p, comm=self.comm)
+                #
+                # self.k_zp_subvec.append( self.k_zp_vec[n].getSubVector(self.dofs_coupling_p[n]) )
+                #
+                # sze_zp.append(self.k_zp_subvec[-1].getSize())
+
+                nds_v_local = [[]]*len(self.surface_vlv_ids[n])
+                for i in range(len(self.surface_vlv_ids[n])):
+                    nds_v_local[i] = fem.locate_dofs_topological(self.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.surface_vlv_ids[n][i]])
+                nds_v_local_flat = [item for sublist in nds_v_local for item in sublist]
+                nds_v = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_v_local_flat, dtype=np.int32)), dtype=np.int32 )
+                self.dofs_coupling_v[n] = PETSc.IS().createBlock(self.V_v.dofmap.index_map_bs, nds_v, comm=self.comm)
+
+                self.k_vz_subvec.append( self.k_vz_vec[n].getSubVector(self.dofs_coupling_v[n]) )
+
+                sze_vz.append(self.k_vz_subvec[-1].getSize())
+
+            # derivative of fluid residual w.r.t. valve state variables
+            self.K_vz = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(PETSc.DECIDE,self.num_valve_coupling_surf)), bsize=None, nnz=self.num_valve_coupling_surf, csr=None, comm=self.comm)
+            self.K_vz.setUp()
+
+            # # derivative of valve state residual w.r.t. fluid pressures
+            # self.K_zp = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.num_valve_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_sv), csr=None, comm=self.comm)
+            # self.K_zp.setUp()
+            # self.K_zp.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
+
 
     def assemble_residual(self, t, subsolver=None):
 
@@ -990,6 +1081,15 @@ class FluidmechanicsProblem(problem_base):
 
         self.r_list[0] = self.r_v
         self.r_list[1] = self.r_p
+
+        if self.have_robin_valve_implicit:
+            self.evaluate_dp_monitor(self.pu_, self.pd_, self.pint_u_, self.pint_d_, self.dp_, self.a_u_, self.a_d_, prnt=False)
+            self.evaluate_robin_valve_implicit(self.dp_)
+            ls, le = self.z.getOwnershipRange()
+            for i in range(ls,le):
+                self.r_z[i] = self.z[i] - self.dp_[i]
+            self.r_z.assemble()
+            self.r_list[2] = self.r_z
 
 
     def assemble_stiffness(self, t, subsolver=None):
@@ -1029,6 +1129,37 @@ class FluidmechanicsProblem(problem_base):
         self.K_list[1][0] = self.K_pv
         self.K_list[1][1] = self.K_pp
 
+        if self.have_robin_valve_implicit:
+
+            # offdiagonal v-z columns
+            for i in range(len(self.col_ids)):
+                with self.k_vz_vec[i].localForm() as r_local: r_local.set(0.0)
+                fem.petsc.assemble_vector(self.k_vz_vec[i], self.dw_robin_valve_dz_form[i]) # already multiplied by time-integration factor
+                self.k_vz_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                # set zeros at DBC entries
+                fem.set_bc(self.k_vz_vec[i], self.bc.dbcs, x0=self.v.vector, scale=0.0)
+
+            # set columns
+            for i in range(len(self.col_ids)):
+                # NOTE: only set the surface-subset of the k_vz vector entries to avoid placing unnecessary zeros!
+                self.k_vz_vec[i].getSubVector(self.dofs_coupling_v[i], subvec=self.k_vz_subvec[i])
+                self.K_vz.setValues(self.dofs_coupling_v[i], self.col_ids[i], self.k_vz_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+                self.k_vz_vec[i].restoreSubVector(self.dofs_coupling_v[i], subvec=self.k_vz_subvec[i])
+
+            self.K_vz.assemble()
+
+            ls, le = self.K_zz.getOwnershipRange()
+            for i in range(ls, le):
+                self.K_zz.setValue(i, i, 1.0, addv=PETSc.InsertMode.INSERT)
+
+            self.K_zz.assemble()
+
+            self.K_list[0][2] = self.K_vz
+            self.K_list[2][2] = self.K_zz
+            # K_zp needed...
+            # self.K_list[2][1] =
+
+
 
     def get_index_sets(self, isoptions={}):
 
@@ -1058,8 +1189,9 @@ class FluidmechanicsProblem(problem_base):
 
 
     # valve law on "immersed" surface (an internal boundary)
-    def evaluate_robin_valve(self, t, pu_, pd_):
+    def evaluate_robin_valve(self, t, dp_):
 
+        # dp_ = pd_ - pu_ (downstream minus upstream)
         for m in range(len(self.bc_dict['robin_valve'])):
 
             beta_min, beta_max = self.bc_dict['robin_valve'][m]['beta_min'], self.bc_dict['robin_valve'][m]['beta_max']
@@ -1068,7 +1200,7 @@ class FluidmechanicsProblem(problem_base):
 
             if self.bc_dict['robin_valve'][m]['type'] == 'dp':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
-                if pu_[dp_id] < pd_[dp_id]:
+                if dp_[dp_id] > 0.:
                     beta.val = beta_max
                 else:
                     beta.val = beta_min
@@ -1076,7 +1208,7 @@ class FluidmechanicsProblem(problem_base):
             elif self.bc_dict['robin_valve'][m]['type'] == 'dp_smooth':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
                 epsilon = self.bc_dict['robin_valve'][m]['epsilon']
-                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh((pd_[dp_id] - pu_[dp_id])/epsilon) + 1.) + beta_min
+                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + beta_min
 
             elif self.bc_dict['robin_valve'][m]['type'] == 'temporal':
                 to, tc = self.bc_dict['robin_valve'][m]['to'], self.bc_dict['robin_valve'][m]['tc']
@@ -1097,7 +1229,35 @@ class FluidmechanicsProblem(problem_base):
             self.beta_valve[m].interpolate(beta.evaluate)
 
 
-    def evaluate_dp_monitor(self, pu_, pd_, pint_u_, pint_d_, a_u_, a_d_, prnt=True):
+    # valve law on "immersed" surface (an internal boundary) - implicit version
+    def evaluate_robin_valve_implicit(self, dp_):
+
+        # dp_ = pd_ - pu_ (downstream minus upstream)
+        for m in range(self.num_valve_coupling_surf):
+
+            beta_min, beta_max = self.bc_dict['robin_valve_implicit'][m]['beta_min'], self.bc_dict['robin_valve_implicit'][m]['beta_max']
+
+            beta = expression.template()
+
+            if self.bc_dict['robin_valve_implicit'][m]['type'] == 'dp':
+                dp_id = self.bc_dict['robin_valve_implicit'][m]['dp_monitor_id']
+                if dp_[dp_id] > 0.:
+                    beta.val = beta_max
+                else:
+                    beta.val = beta_min
+
+            elif self.bc_dict['robin_valve_implicit'][m]['type'] == 'dp_smooth':
+                dp_id = self.bc_dict['robin_valve_implicit'][m]['dp_monitor_id']
+                epsilon = self.bc_dict['robin_valve_implicit'][m]['epsilon']
+                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + beta_min
+
+            else:
+                raise ValueError("Unknown implicit Robin valve type!")
+
+            self.beta_valve[m].interpolate(beta.evaluate)
+
+
+    def evaluate_dp_monitor(self, pu_, pd_, pint_u_, pint_d_, dp_, a_u_, a_d_, prnt=True):
 
         for m in range(len(self.bc_dict['dp_monitor'])):
 
@@ -1122,6 +1282,8 @@ class FluidmechanicsProblem(problem_base):
             pd = (1./ad_)*fem.assemble_scalar(pint_d_[m])
             pd = self.comm.allgather(pd)
             pd_[m] = sum(pd)
+
+            dp_[m] = sum(pd) - sum(pu)
 
             if prnt: utilities.print_status("dp ID "+str(self.bc_dict['dp_monitor'][m]['id'])+": pu = %.4e, pd = %.4e" % (pu_[m],pd_[m]), self.comm)
 
@@ -1152,11 +1314,11 @@ class FluidmechanicsProblem(problem_base):
             self.evaluate_flux_monitor(self.qv_old_, self.q_old_)
             for k in self.qv_old_: self.qv_[k] = self.qv_old_[k]
         if self.have_dp_monitor:
-            self.evaluate_dp_monitor(self.pu_old_, self.pd_old_, self.pint_u_old_, self.pint_d_old_, self.a_u_old_, self.a_d_old_)
+            self.evaluate_dp_monitor(self.pu_old_, self.pd_old_, self.pint_u_old_, self.pint_d_old_, self.dp_old_, self.a_u_old_, self.a_d_old_)
             for k in self.pu_old_: self.pu_[k] = self.pu_old_[k]
             for k in self.pd_old_: self.pd_[k] = self.pd_old_[k]
         if self.have_robin_valve:
-            self.evaluate_robin_valve(self.pbase.t_init, self.pu_old_, self.pd_old_)
+            self.evaluate_robin_valve(self.pbase.t_init, self.dp_old_)
 
 
     def write_output_ini(self):
@@ -1199,9 +1361,9 @@ class FluidmechanicsProblem(problem_base):
         if self.have_flux_monitor:
             self.evaluate_flux_monitor(self.qv_, self.q_)
         if self.have_dp_monitor:
-            self.evaluate_dp_monitor(self.pu_, self.pd_, self.pint_u_, self.pint_d_, self.a_u_, self.a_d_)
+            self.evaluate_dp_monitor(self.pu_, self.pd_, self.pint_u_, self.pint_d_, self.dp_, self.a_u_, self.a_d_)
         if self.have_robin_valve:
-            self.evaluate_robin_valve(t, self.pu_, self.pd_)
+            self.evaluate_robin_valve(t, self.dp_)
         if 'internalpower' in self.results_to_write:
             self.compute_power(N, t)
         if 'membrane' in self.bc_dict.keys() and ('strainenergy_membrane' in self.results_to_write or 'internalpower_membrane' in self.results_to_write):

@@ -47,6 +47,7 @@ class FluidmechanicsAleProblem(problem_base):
         except: self.coupling_strategy = 'monolithic'
 
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
+        self.have_condensed_variables = False
 
         # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
         self.pba = AleProblem(pbase, io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)

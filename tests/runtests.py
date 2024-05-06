@@ -31,7 +31,7 @@ subprocess.call(['mkdir', '-p', 'tmp'])
 if category=='solid' or category=='all':
     errs['test_solid_mat_uniax_hex_2field 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_mat_uniax_hex_2field.py'])
     errs['test_solid_mat_uniax_hex_2field 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_mat_uniax_hex_2field.py'])
-    
+
     errs['test_solid_2d_pres 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_2d_pres.py'])
 
     errs['test_solid_robin_genalpha 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_robin_genalpha.py'])
@@ -97,6 +97,8 @@ if category=='fluid_flow0d' or category=='all':
     errs['test_fluid_flow0d_monolagr_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fluid_flow0d_monolagr_taylorhood_cylinder.py'])
     errs['test_fluid_flow0d_monolagr_taylorhood_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_fluid_flow0d_monolagr_taylorhood_cylinder.py'])
 
+    errs['test_fluid_flow0d_monolagr_taylorhood_cylinder_condensed 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fluid_flow0d_monolagr_taylorhood_cylinder_condensed.py'])
+
 if category=='fluid_ale_flow0d' or category=='all':
     if branch=='mixed':
         errs['test_fluid_ale_flow0d_lalv_syspul_prescribed 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'test_fluid_ale_flow0d_lalv_syspul_prescribed.py'])
@@ -139,7 +141,7 @@ if category=='solid_flow0d' or category=='all':
 
     errs['test_solid_flow0d_monodir_syspulcor_2dheart_rom 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_monodir_syspulcor_2dheart_rom.py'])
     errs['test_solid_flow0d_monodir_syspulcor_2dheart_rom 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_solid_flow0d_monodir_syspulcor_2dheart_rom.py'])
-    
+
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py'])
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py', str(50), str(0)]) # TODO: Fix outer loop restart
 

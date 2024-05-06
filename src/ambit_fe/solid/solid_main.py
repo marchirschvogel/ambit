@@ -103,6 +103,8 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             self.constitutive_models_prestr = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
+        self.have_condensed_variables = False
+
         self.dim = self.io.mesh.geometry.dim
 
         self.sub_solve = False

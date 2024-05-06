@@ -770,6 +770,10 @@ class solver_nonlinear:
                         subvecs = self.x[npr][n].getNestSubVecs()
                         for j in range(len(subvecs)): subvecs[j].ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
+                # if the model has condensed state variables, they need to update
+                if self.pb[npr].have_condensed_variables:
+                    self.pb[npr].update_condensed_vars(self.del_x_sol[npr])
+
                 # compute new residual actions after updated solution
                 self.residual_problem_actions(t, npr, localdata)
 

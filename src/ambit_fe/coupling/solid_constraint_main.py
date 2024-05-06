@@ -61,6 +61,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.localsolve = self.pbs.localsolve
 
         self.sub_solve = False
+        self.have_condensed_variables = False
 
         self.print_enhanced_info = self.pbs.io.print_enhanced_info
 

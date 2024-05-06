@@ -72,6 +72,8 @@ class FSIProblem(problem_base):
         try: self.zero_lm_boundary = self.coupling_params['zero_lm_boundary']
         except: self.zero_lm_boundary = False
 
+        self.have_condensed_variables = False
+
         P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
         self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
 
