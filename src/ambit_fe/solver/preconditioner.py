@@ -89,8 +89,9 @@ class block_precond():
                         opts.setValue(o, opt_dict[o])
                     self.ksp_fields[n].setFromOptions() # solver options
                     self.ksp_fields[n].getPC().setFromOptions() # preconditioner options
+                    for key in opts.getAll(): opts.delValue(key) # clear options - opts.clear() doesn't seem to work?!
                 # print to view some settings...
-                # print(self.ksp_fields[n].getPC().view())
+                #print(self.ksp_fields[n].getPC().view())
                 if solvetype == 'python':
                     try: niter = self.precond_fields[n]['stat_iter']
                     except: niter = 1

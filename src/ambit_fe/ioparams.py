@@ -62,6 +62,7 @@ def check_params_solver(params):
                     'lin_norm_type',
                     'max_liniter',
                     'maxiter',
+                    'petsc_options_ksp',
                     'precond_fields',
                     'precond_fields_prestr',
                     'print_liniter_every',

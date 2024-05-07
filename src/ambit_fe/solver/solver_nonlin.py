@@ -221,6 +221,16 @@ class solver_nonlinear:
             else:
                 self.block_precond[npr] = block_precond
 
+        try: petsc_options_ksp = solver_params['petsc_options_ksp']
+        except: petsc_options_ksp = None
+
+        self.petsc_options_ksp = [[]]*self.nprob
+        for npr in range(self.nprob):
+            if isinstance(petsc_options_ksp, list):
+                self.petsc_options_ksp[npr] = petsc_options_ksp[npr]
+            else:
+                self.petsc_options_ksp[npr] = petsc_options_ksp
+
         try: self.tol_lin_rel = solver_params['tol_lin_rel']
         except: self.tol_lin_rel = 1e-5
 
@@ -530,6 +540,7 @@ class solver_nonlinear:
                             for o in opt_dict:
                                 opts.setValue(o, opt_dict[o])
                             self.ksp[npr].getPC().setFromOptions()
+                            for key in opts.getAll(): opts.delValue(key) # clear options - opts.clear() doesn't seem to work?!
 
                     else:
                         raise ValueError("Currently, only 'amg' is supported as single-field preconditioner.")
@@ -539,9 +550,13 @@ class solver_nonlinear:
                 self.ksp[npr].setMonitor(lambda ksp, its, rnorm: self.solutils.print_linear_iter(its, rnorm))
 
                 # set some additional PETSc options
-                petsc_options = PETSc.Options()
-                petsc_options.setValue('-ksp_gmres_modifiedgramschmidt', True)
-                self.ksp[npr].setFromOptions()
+                if self.petsc_options_ksp[npr] is not None:
+                    opt_dict = self.petsc_options_ksp[npr]
+                    petsc_options = PETSc.Options()
+                    for o in opt_dict:
+                        petsc_options.setValue(o, opt_dict[o])
+                    self.ksp[npr].setFromOptions()
+                    for key in petsc_options.getAll(): petsc_options.delValue(key) # clear options - petsc_options.clear() doesn't seem to work?!
 
             else:
 

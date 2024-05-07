@@ -38,6 +38,7 @@ def test_main():
                          'simname'               : 'solid_robin_genalpha'}
 
     SOLVER_PARAMS     = {'solve_type'            : 'iterative',
+                         'petsc_options_ksp'     : {'ksp_gmres_modifiedgramschmidt':True, 'ksp_gmres_restart':100},
                          'precond_fields'        : [{'prec':'amg', 'petsc_options':{'pc_hypre_boomeramg_strong_threshold':0.7}}],
                          'tol_lin_rel'           : 1.0e-5,
                          'tol_lin_abs'           : 1.0e-9,
