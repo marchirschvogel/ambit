@@ -541,9 +541,9 @@ class FluidmechanicsProblem(problem_base):
             self.a_u_, self.a_d_, self.pint_u_, self.pint_d_ = [], [], [], []
             self.a_u_old_, self.a_d_old_, self.pint_u_old_, self.pint_d_old_ = [], [], [], []
             self.a_u_mid_, self.a_d_mid_, self.pint_u_mid_, self.pint_d_mid_ = [], [], [], []
-            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_, self.a_d_, self.pint_u_, self.pint_d_, self.p__, wel=self.alevar['w'], F=self.alevar['Fale'])
-            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_old_, self.a_d_old_, self.pint_u_old_, self.pint_d_old_, self.p_old__, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_mid_, self.a_d_mid_, self.pint_u_mid_, self.pint_d_mid_, self.pf_mid__, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_, self.a_d_, self.pint_u_, self.pint_d_, self.p__, F=self.alevar['Fale'])
+            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_old_, self.a_d_old_, self.pint_u_old_, self.pint_d_old_, self.p_old__, F=self.alevar['Fale_old'])
+            self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_mid_, self.a_d_mid_, self.pint_u_mid_, self.pint_d_mid_, self.pf_mid__, F=self.alevar['Fale_mid'])
 
         # reduced-solid for FrSI problem
         self.have_active_stress, self.active_stress_trig = False, 'ode'

@@ -595,19 +595,37 @@ class boundary_cond_fluid(boundary_cond):
             try: codim = r['codimension']
             except: codim = self.dim - 1
 
+            try: direction = r['dir']
+            except: direction = 'xyz_ref'
+
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
             else: raise ValueError("Wrong codimension of boundary.")
 
             beta_.append( fem.Function(V_real) )
 
-            for i in range(len(r['id'])):
+            if direction == 'xyz_ref': # reference xyz
 
-                if dw is None:
-                    w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
-                else:
-                    # derivative (for implicit valve law)
-                    dwddp += self.vf.deltaW_ext_robin_valve(v, ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+                for i in range(len(r['id'])):
+
+                    if dw is None:
+                        w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+                    else:
+                        # derivative (for implicit valve law)
+                        dwddp += self.vf.deltaW_ext_robin_valve(v, ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+
+            elif direction == 'normal_ref': # reference normal
+
+                for i in range(len(r['id'])):
+
+                    if dw is None:
+                        w += self.vf.deltaW_ext_robin_valve_normal_ref(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+                    else:
+                        # derivative (for implicit valve law)
+                        dwddp += self.vf.deltaW_ext_robin_valve_normal_ref(v, ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
+
+            else:
+                raise NameError("Unknown dir option for Robin valve BC!")
 
             # one dwddp term per valve
             if dw is not None:
@@ -672,28 +690,26 @@ class boundary_cond_fluid(boundary_cond):
 
 
     # set dp monitor conditions
-    def dp_monitor_bcs(self, bcdict, a_u_, a_d_, pint_u_, pint_d_, pdict, wel=None, F=None):
-
-        if wel is None:
-            wel_ = ufl.constantvalue.zero(self.dim)
-        else:
-            wel_ = wel
-
-        # area map for integration
-        if F is not None:
-            J = ufl.det(F)
-            ja = J*ufl.sqrt(ufl.dot(self.vf.n0, (ufl.inv(F)*ufl.inv(F).T)*self.vf.n0))
-        else:
-            ja = 1.0
+    def dp_monitor_bcs(self, bcdict, a_u_, a_d_, pint_u_, pint_d_, pdict, F=None):
 
         for r in bcdict:
 
             try: codim = r['codimension']
             except: codim = self.dim - 1
 
+            try: spatial = r['spatial']
+            except: spatial = False
+
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
             else: raise ValueError("Wrong codimension of boundary.")
+
+            # area map for integration
+            if spatial and F is not None:
+                J = ufl.det(F)
+                ja = J*ufl.sqrt(ufl.dot(self.vf.n0, (ufl.inv(F)*ufl.inv(F).T)*self.vf.n0))
+            else:
+                ja = 1.0
 
             dom_u, dom_d = r['upstream_domain'], r['downstream_domain']
 
