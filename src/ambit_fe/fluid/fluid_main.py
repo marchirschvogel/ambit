@@ -344,12 +344,14 @@ class FluidmechanicsProblem(problem_base):
         # initialize fluid variational form class
         if not bool(self.alevar):
             # standard Eulerian fluid
-            self.alevar = {'Fale' : None, 'Fale_old' : None, 'Fale_mid' : None, 'w' : None, 'w_old' : None, 'w_mid' : None}
+            self.alevar = {'Fale' : None, 'Fale_old' : None, 'Fale_mid' : None, 'w' : None, 'w_old' : None, 'w_mid' : None, 'd' : None, 'd_old' : None, 'd_mid' : None}
             self.vf = fluid_variationalform.variationalform(self.var_v, var_p=self.var_p_, n0=self.io.n0, formulation=self.fluid_formulation)
 
         else:
             # mid-point representation of ALE velocity
             self.alevar['w_mid']    = self.timefac * self.alevar['w']    + (1.-self.timefac) * self.alevar['w_old']
+            # mid-point representation of ALE displacement
+            self.alevar['d_mid']    = self.timefac * self.alevar['d']    + (1.-self.timefac) * self.alevar['d_old']
             # mid-point representation of ALE deformation gradient - linear in ALE displacement, hence we can combine it like this
             self.alevar['Fale_mid'] = self.timefac * self.alevar['Fale'] + (1.-self.timefac) * self.alevar['Fale_old']
 
@@ -507,10 +509,10 @@ class FluidmechanicsProblem(problem_base):
         if 'robin_valve' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve = True
-            self.beta_valve, self.beta_valve_old = [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, [self.io.dS], wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, [self.io.dS], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.Vd_scalar, self.beta_valve, [self.io.dS], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            self.beta_valve, self.beta_valve_old, self.alpha_valve, self.alpha_valve_old = [], [], [], []
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.ufluid, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w'], d=self.alevar['d'], F=self.alevar['Fale'], u_pre=self.uf_pre)
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.uf_old, self.Vd_scalar, self.beta_valve_old, self.alpha_valve_old, [self.io.dS], wel=self.alevar['w_old'], d=self.alevar['d_old'], F=self.alevar['Fale_old'], u_pre=self.uf_pre)
+            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.ufluid_mid, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w_mid'], d=self.alevar['d_mid'], F=self.alevar['Fale_mid'], u_pre=self.uf_pre)
         if 'robin_valve_implicit' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve_implicit = True
@@ -1195,38 +1197,49 @@ class FluidmechanicsProblem(problem_base):
         for m in range(len(self.bc_dict['robin_valve'])):
 
             beta_min, beta_max = self.bc_dict['robin_valve'][m]['beta_min'], self.bc_dict['robin_valve'][m]['beta_max']
+            try: alpha_min, alpha_max = self.bc_dict['robin_valve'][m]['alpha_min'], self.bc_dict['robin_valve'][m]['alpha_max']
+            except: alpha_min, alpha_max = 0., 0.
 
             beta = expression.template()
+            alpha = expression.template()
 
             if self.bc_dict['robin_valve'][m]['type'] == 'dp':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
                 if dp_[dp_id] > 0.:
                     beta.val = beta_max
+                    alpha.val = alpha_max
                 else:
                     beta.val = beta_min
+                    alpha.val = alpha_min
 
             elif self.bc_dict['robin_valve'][m]['type'] == 'dp_smooth':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
                 epsilon = self.bc_dict['robin_valve'][m]['epsilon']
                 beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + beta_min
+                alpha.val = 0.5*(alpha_max - alpha_min)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + alpha_min
 
             elif self.bc_dict['robin_valve'][m]['type'] == 'temporal':
                 to, tc = self.bc_dict['robin_valve'][m]['to'], self.bc_dict['robin_valve'][m]['tc']
                 if to > tc:
                     if t < to and t >= tc:
                         beta.val = beta_max
+                        alpha.val = alpha_max
                     if t >= to or t < tc:
                         beta.val = beta_min
+                        alpha.val = alpha_min
                 else:
                     if t < to or t >= tc:
                         beta.val = beta_max
+                        alpha.val = alpha_max
                     if t >= to and t < tc:
                         beta.val = beta_min
+                        alpha.val = alpha_min
 
             else:
                 raise ValueError("Unknown Robin valve type!")
 
             self.beta_valve[m].interpolate(beta.evaluate)
+            self.alpha_valve[m].interpolate(alpha.evaluate)
 
 
     # valve law on "immersed" surface (an internal boundary) - implicit version

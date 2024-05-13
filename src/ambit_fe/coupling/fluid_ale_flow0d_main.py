@@ -54,7 +54,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
         self.pba  = AleProblem(pbase, io_params, time_params_fluid, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
         # ALE variables that are handed to fluid problem
-        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old}
+        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'd' : self.pba.d, 'd_old' : self.pba.d_old}
         self.pbf0 = FluidmechanicsFlow0DProblem(pbase, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, alevar=alevariables)
 
         self.pbf = self.pbf0.pbf

@@ -123,15 +123,19 @@ class variationalform(variationalform_base):
 
 
     # Robin condition for valve, over internal surface
-    def deltaW_ext_robin_valve(self, v, beta, dboundary, fcts='+', w=None, F=None):
+    def deltaW_ext_robin_valve(self, v, uf, beta, alpha, dboundary, fcts='+', w=None, d=None, F=None, u_pre=None):
 
-        return (-(beta*ufl.dot(v, self.var_v)))(fcts)*dboundary
+        if u_pre is not None: uf_ = uf + u_pre
+        else: uf_ = uf
+        return ( -(beta*ufl.dot(v, self.var_v) + alpha*ufl.dot(uf_, self.var_v)) )(fcts)*dboundary
 
 
     # Robin condition for valve, over internal surface - normal direction
-    def deltaW_ext_robin_valve_normal_ref(self, v, beta, dboundary, fcts='+', w=None, F=None):
+    def deltaW_ext_robin_valve_normal_ref(self, v, uf, beta, alpha, dboundary, fcts='+', w=None, d=None, F=None, u_pre=None):
 
-        return (-(beta*ufl.dot(ufl.outer(self.n0,self.n0)*v, self.var_v)))(fcts)*dboundary
+        if u_pre is not None: uf_ = uf + u_pre
+        else: uf_ = uf
+        return ( -(beta*ufl.dot(ufl.outer(self.n0,self.n0)*v, self.var_v) + alpha*ufl.dot(ufl.outer(self.n0,self.n0)*uf_, self.var_v)) )(fcts)*dboundary
 
 
     ### SUPG/PSPG stabilization - cf. Tezduyar and Osawa (2000), "Finite element stabilization parameters computed from element matrices and vectors"
@@ -325,15 +329,19 @@ class variationalform_ale(variationalform):
 
 
     # Robin condition for valve, over internal surface
-    def deltaW_ext_robin_valve(self, v, beta, dboundary, fcts='+', w=None, F=None):
+    def deltaW_ext_robin_valve(self, v, uf, beta, alpha, dboundary, fcts='+', w=None, d=None, F=None, u_pre=None):
 
-        return (-(beta*ufl.dot((v-w), self.var_v)))(fcts)*dboundary
+        if u_pre is not None: uf_ = uf + u_pre
+        else: uf_ = uf
+        return ( -(beta*ufl.dot((v-w), self.var_v) + alpha*ufl.dot((uf_-d), self.var_v)) )(fcts)*dboundary
 
 
     # Robin condition for valve, over internal surface - normal direction
-    def deltaW_ext_robin_valve_normal_ref(self, v, beta, dboundary, fcts='+', w=None, F=None):
+    def deltaW_ext_robin_valve_normal_ref(self, v, uf, beta, alpha, dboundary, fcts='+', w=None, d=None, F=None, u_pre=None):
 
-        return (-(beta*ufl.dot(ufl.outer(self.n0,self.n0)*(v-w), self.var_v)))(fcts)*dboundary
+        if u_pre is not None: uf_ = uf + u_pre
+        else: uf_ = uf
+        return ( -(beta*ufl.dot(ufl.outer(self.n0,self.n0)*(v-w), self.var_v) + alpha*ufl.dot(ufl.outer(self.n0,self.n0)*(uf_-d), self.var_v)) )(fcts)*dboundary
 
 
     ### SUPG/PSPG stabilization

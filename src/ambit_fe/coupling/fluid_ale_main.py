@@ -52,7 +52,7 @@ class FluidmechanicsAleProblem(problem_base):
         # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
         self.pba = AleProblem(pbase, io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
         # ALE variables that are handed to fluid problem
-        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old}
+        alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old, 'd' : self.pba.d, 'd_old' : self.pba.d_old}
         self.pbf = FluidmechanicsProblem(pbase, io_params, time_params, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, io, mor_params=mor_params, alevar=alevariables)
 
         self.pbrom = self.pbf # ROM problem can only be fluid
