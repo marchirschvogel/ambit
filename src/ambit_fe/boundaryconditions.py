@@ -579,16 +579,14 @@ class boundary_cond_fluid(boundary_cond):
 
 
     # set Robin valve BCs
-    def robin_valve_bcs(self, bcdict, v, u, V_real, beta_, alpha_, dS_, wel=None, d=None, F=None, dw=None, u_pre=None):
+    def robin_valve_bcs(self, bcdict, v, V_real, beta_, dS_, wel=None, F=None, dw=None):
 
         w = ufl.as_ufl(0)
 
         if wel is None:
             wel_ = ufl.constantvalue.zero(self.dim)
-            d_ = ufl.constantvalue.zero(self.dim)
         else:
             wel_ = wel
-            d_ = d
 
         for r in bcdict:
 
@@ -605,27 +603,26 @@ class boundary_cond_fluid(boundary_cond):
             else: raise ValueError("Wrong codimension of boundary.")
 
             beta_.append( fem.Function(V_real) )
-            alpha_.append( fem.Function(V_real) )
 
             if direction == 'xyz_ref': # reference xyz
 
                 for i in range(len(r['id'])):
 
                     if dw is None:
-                        w += self.vf.deltaW_ext_robin_valve(v, u, beta_[-1], alpha_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, d=d_, F=F, u_pre=u_pre)
+                        w += self.vf.deltaW_ext_robin_valve(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
                     else:
                         # derivative (for implicit valve law)
-                        dwddp += self.vf.deltaW_ext_robin_valve(v, u, ufl.as_ufl(1.0), ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, d=d_, F=F, u_pre=u_pre)
+                        dwddp += self.vf.deltaW_ext_robin_valve(v, ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
 
             elif direction == 'normal_ref': # reference normal
 
                 for i in range(len(r['id'])):
 
                     if dw is None:
-                        w += self.vf.deltaW_ext_robin_valve_normal_ref(v, u, beta_[-1], alpha_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, d=d_, F=F, u_pre=u_pre)
+                        w += self.vf.deltaW_ext_robin_valve_normal_ref(v, beta_[-1], dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
                     else:
                         # derivative (for implicit valve law)
-                        dwddp += self.vf.deltaW_ext_robin_valve_normal_ref(v, u, ufl.as_ufl(1.0), ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, d=d_, F=F, u_pre=u_pre)
+                        dwddp += self.vf.deltaW_ext_robin_valve_normal_ref(v, ufl.as_ufl(1.0), dS_[dind](r['id'][i]), fcts='+', w=wel_, F=F)
 
             else:
                 raise NameError("Unknown dir option for Robin valve BC!")
