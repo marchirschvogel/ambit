@@ -507,12 +507,13 @@ class FluidmechanicsProblem(problem_base):
             w_stabneumann_mod_old = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.v_old, self.io.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
             w_stabneumann_mod_mid = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.vel_mid, self.io.bmeasures, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
         if 'robin_valve' in self.bc_dict.keys():
-            assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
-            self.have_robin_valve = True
-            self.beta_valve, self.beta_valve_old, self.alpha_valve, self.alpha_valve_old = [], [], [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.ufluid, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w'], d=self.alevar['d'], F=self.alevar['Fale'], u_pre=self.uf_pre)
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.uf_old, self.Vd_scalar, self.beta_valve_old, self.alpha_valve_old, [self.io.dS], wel=self.alevar['w_old'], d=self.alevar['d_old'], F=self.alevar['Fale_old'], u_pre=self.uf_pre)
-            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.ufluid_mid, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w_mid'], d=self.alevar['d_mid'], F=self.alevar['Fale_mid'], u_pre=self.uf_pre)
+            if not self.pre: # in prestress mode, we call this separately with u_fluid computed with prestress dt
+                assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
+                self.have_robin_valve = True
+                self.beta_valve, self.beta_valve_old, self.alpha_valve, self.alpha_valve_old = [], [], [], []
+                w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.ufluid, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w'], d=self.alevar['d'], F=self.alevar['Fale'], u_pre=self.uf_pre)
+                w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.uf_old, self.Vd_scalar, self.beta_valve_old, self.alpha_valve_old, [self.io.dS], wel=self.alevar['w_old'], d=self.alevar['d_old'], F=self.alevar['Fale_old'], u_pre=self.uf_pre)
+                w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.ufluid_mid, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w_mid'], d=self.alevar['d_mid'], F=self.alevar['Fale_mid'], u_pre=self.uf_pre)
         if 'robin_valve_implicit' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve_implicit = True
@@ -601,7 +602,12 @@ class FluidmechanicsProblem(problem_base):
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.prestress_dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
                 w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc_prestr, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
-            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane_prestr + w_robin_valve
+            if 'robin_valve' in self.bc_dict.keys():
+                assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
+                self.have_robin_valve = True
+                self.beta_valve, self.beta_valve_old, self.alpha_valve, self.alpha_valve_old = [], [], [], []
+                w_robin_valve_prestr = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.ufluid_prestr, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w'], d=self.alevar['d'], F=self.alevar['Fale'], u_pre=self.uf_pre)
+            self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane_prestr + w_robin_valve_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
 
