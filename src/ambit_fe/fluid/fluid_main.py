@@ -607,6 +607,8 @@ class FluidmechanicsProblem(problem_base):
                 self.have_robin_valve = True
                 self.beta_valve, self.beta_valve_old, self.alpha_valve, self.alpha_valve_old = [], [], [], []
                 w_robin_valve_prestr = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.ufluid_prestr, self.Vd_scalar, self.beta_valve, self.alpha_valve, [self.io.dS], wel=self.alevar['w'], d=self.alevar['d'], F=self.alevar['Fale'], u_pre=self.uf_pre)
+            else:
+                w_robin_valve_prestr = ufl.as_ufl(0)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane_prestr + w_robin_valve_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
