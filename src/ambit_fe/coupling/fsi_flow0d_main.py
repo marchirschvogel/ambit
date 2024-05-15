@@ -284,6 +284,7 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
 
         # ALE displacement
         self.K_list[5+off][5+off] = self.pbfa0.K_list[3][3]
+        self.K_list[5+off][1+off] = self.pbfa0.K_list[3][0]
 
 
     ### now the base routines for this problem

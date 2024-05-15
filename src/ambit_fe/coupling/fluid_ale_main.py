@@ -122,26 +122,16 @@ class FluidmechanicsAleProblem(problem_base):
                     for i in range(len(ids_fluid_ale)):
                         dbcs_coup_fluid_ale.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_fluid_ale[i]])) )
 
-                    # NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
-
-                    # fdi = set(gather_surface_dof_indices(self.pba.io, self.pba.V_d, ids_fluid_ale, self.comm))
-
-                    # # fluid and ALE actually should have same sizes...
-                    # locmatsize_d = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
-                    # matsize_d = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
-                    #
-                    # locmatsize_v = self.pbf.V_v.dofmap.index_map.size_local * self.pbf.V_v.dofmap.index_map_bs
-                    # matsize_v = self.pbf.V_v.dofmap.index_map.size_global * self.pbf.V_v.dofmap.index_map_bs
-                    #
-                    # # now we have to assemble the offdiagonal stiffness due to the DBCs w=v set on the ALE surface - cannot be treated with "derivative" since DBCs are not present in form
-                    # self.K_dv = PETSc.Mat().createAIJ(size=((locmatsize_d,matsize_d),(locmatsize_v,matsize_v)), bsize=None, nnz=None, csr=None, comm=self.comm)
-                    # self.K_dv.setUp()
-                    #
-                    # for i in range(matsize_d):
-                    #     if i in fdi:
-                    #         self.K_dv[i,i] = -self.pbf.timefac*self.pbf.dt
-                    #
-                    # self.K_dv.assemble()
+                    # get surface dofs for dr_ALE/dv matrix entry
+                    fnode_indices_local = [[]]*len(ids_fluid_ale)
+                    for i in range(len(ids_fluid_ale)):
+                        fnode_indices_local[i] = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[self.pba.io.mt_b1.values == ids_fluid_ale[i]])
+                    fnode_indices_local_flat = [item for sublist in fnode_indices_local for item in sublist]
+                    fnode_indices_all = np.array( self.pba.V_d.dofmap.index_map.local_to_global(np.asarray(fnode_indices_local_flat, dtype=np.int32)), dtype=np.int32 )
+                    fdofs = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, fnode_indices_all, comm=self.comm)
+                    # all indices
+                    iset_d_0 = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=self.pba.d.vector.getOwnershipRange()[0], step=1, comm=self.comm)
+                    self.iset_d_0 = iset_d_0.difference(fdofs) # subtract
 
                 elif self.coupling_fluid_ale[j]['type'] == 'weak_dirichlet':
 
@@ -189,7 +179,7 @@ class FluidmechanicsAleProblem(problem_base):
                     for i in range(len(ids_ale_fluid)):
                         dbcs_coup_ale_fluid.append( fem.dirichletbc(self.wf, fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_ale_fluid[i]])) )
 
-                    #NOTE: linearization entries due to strong DBCs of fluid on ALE are currently not considered in the monolithic block matrix!
+                    #NOTE: linearization entries due to strong DBCs of ALE on fluid are currently not considered in the monolithic block matrix!
 
                 elif self.coupling_ale_fluid[j]['type'] == 'robin':
 
@@ -279,6 +269,8 @@ class FluidmechanicsAleProblem(problem_base):
             self.K_vd = fem.petsc.create_matrix(self.jac_vd)
             if self.have_weak_dirichlet_fluid_ale:
                 self.K_dv = fem.petsc.create_matrix(self.jac_dv)
+            elif self.have_dbc_fluid_ale:
+                self.K_dv = fem.petsc.create_matrix(self.pba.jac_dd)
             else:
                 self.K_dv = None
 
@@ -302,13 +294,24 @@ class FluidmechanicsAleProblem(problem_base):
 
     def assemble_stiffness(self, t, subsolver=None):
 
-        # if self.have_dbc_fluid_ale:
-            #K_list[2][0] = self.K_dv
         if self.have_weak_dirichlet_fluid_ale:
             self.K_dv.zeroEntries()
             fem.petsc.assemble_matrix(self.K_dv, self.jac_dv, self.pba.bc.dbcs)
             self.K_dv.assemble()
-            self.K_list[2][0] = self.K_dv
+
+        elif self.have_dbc_fluid_ale: # TODO: Does not seem to yield quadratic convergence yet! Why?
+            self.K_dv.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_dv, self.pba.jac_dd, self.pba.bc.dbcs)
+            # fem.petsc.assemble_matrix(self.K_dv, self.pba.jac_dd, [])
+            self.K_dv.assemble()
+
+            # self.K_dv.zeroRowsColumns(self.iset_d_0, diag=0.)
+            self.K_dv.zeroRows(self.iset_d_0, diag=0.)
+            # we apply u_fluid to ALE, hence get du_fluid/dv
+            fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
+            self.K_dv.scale(-fac)
+
+        self.K_list[2][0] = self.K_dv
 
         self.pbf.assemble_stiffness(t)
         self.pba.assemble_stiffness(t)

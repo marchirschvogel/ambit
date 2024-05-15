@@ -272,6 +272,7 @@ class FSIProblem(problem_base):
 
         # ALE displacement
         self.K_list[4+off][4+off] = self.pbfa.K_list[2][2]
+        self.K_list[4+off][1+off] = self.pbfa.K_list[2][0]
 
 
     ### now the base routines for this problem
