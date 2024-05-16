@@ -104,6 +104,8 @@ if category=='fluid_ale_flow0d' or category=='all':
         errs['test_fluid_ale_flow0d_lalv_syspul_prescribed 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'test_fluid_ale_flow0d_lalv_syspul_prescribed.py'])
 
 if category=='flow0d' or category=='all':
+    errs['test_flow0d_0dvol_2elwindkessel_n3 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dvol_2elwindkessel_n3.py'])
+    
     errs['test_flow0d_0dvol_4elwindkesselLsZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dvol_4elwindkesselLsZ.py'])
     errs['test_flow0d_0dvol_4elwindkesselLpZ 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_flow0d_0dvol_4elwindkesselLpZ.py'])
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-0D signalling network model for cardiac hypertrophy: not yet fully tested!
+2-element Windkessel, 3 decoupled models
 """
 
 import ambit_fe
@@ -12,14 +12,13 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.signet
-@pytest.mark.skip(reason="Not yet ready for testing.")
+@pytest.mark.flow0d
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
 
-    IO_PARAMS         = {'problem_type'          : 'signet',
-                         'write_results_every'   : 1,
+    IO_PARAMS         = {'problem_type'          : 'flow0d',
+                         'write_results_every'   : -999,
                          'output_path'           : basepath+'/tmp/',
                          'simname'               : 'test'}
 
@@ -34,9 +33,9 @@ def test_main():
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init()}
 
-    MODEL_PARAMS      = {'modeltype'             : 'hypertrophy',
+    MODEL_PARAMS      = {'modeltype'             : '2elwindkessel',
                          'parameters'            : param(),
-                         'excitation_curve'      : [1]} # not used...
+                         'excitation_curve'      : [1,1,1]}
 
 
     # define your time curves here (syntax: tcX refers to curve X)
@@ -52,33 +51,44 @@ def test_main():
     problem.solve_problem()
 
 
-    ## --- results check
-    #tol = 1.0e-7
+    # --- results check
+    tol = 1.0e-7
 
-    #s_corr = np.zeros(problem.mp.cardvasc0D.numdof)
+    s_corr = np.zeros(problem.mp.cardvasc0D.numdof)
 
-    ## correct results
-    #s_corr[0] = 1.1484429140599208E+00
-    #s_corr[1] = -7.3138173135468898E-01
-    #s_corr[2] = 0.0
-    #s_corr[3] = 0.0
+    # correct results
+    s_corr[0] = 1.0608252198133676E+00
+    s_corr[1] = 1.0608252198133676E+00
+    s_corr[2] = 1.0608252198133676E+00
 
-    #check1 = ambit_fe.resultcheck.results_check_vec(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
-    #success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
+    check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.s, s_corr, problem.mp.comm, tol=tol)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
-    #if not success:
-        #raise RuntimeError("Test failed!")
+    if not success:
+        raise RuntimeError("Test failed!")
 
 
 
 def init():
 
-    return {'var1_0' : 0.0}
+    return {'p1_0' : 10.0,
+            'p2_0' : 10.0,
+            'p3_0' : 10.0}
 
 
 def param():
 
-    return {'p1' : 1.}
+    return {'R1' : 100e-6,
+            'C1' : 2000.0,
+            'p_ref1' : 1.0,
+            'R2' : 100e-6,
+            'C2' : 2000.0,
+            'p_ref2' : 1.0,
+            'R3' : 100e-6,
+            'C3' : 2000.0,
+            'p_ref3' : 1.0,
+            'num_models' : 3}
+
 
 
 

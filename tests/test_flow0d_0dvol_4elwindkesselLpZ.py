@@ -35,7 +35,7 @@ def test_main():
 
     MODEL_PARAMS      = {'modeltype'             : '4elwindkesselLpZ',
                          'parameters'            : param(),
-                         'excitation_curve'      : 1}
+                         'excitation_curve'      : [1]}
 
 
     # define your time curves here (syntax: tcX refers to curve X)

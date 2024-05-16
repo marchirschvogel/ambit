@@ -30,8 +30,7 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
         # initialize base class
         super().__init__(init=init, ode_par=ode_par, comm=comm)
 
-        # number of degrees of freedom
-        self.numdof = 3
+        self.num_models = 1 # up to now hard-set to 1
 
         # parameters
         self.R = params['R']
@@ -58,8 +57,8 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
     def setup_arrays(self):
 
-        # number of degrees of freedom
-        self.numdof = 3
+        # number of degrees of freedom - 3 per model
+        self.numdof = 3*self.num_models
 
         self.v_ids = [0]
 

@@ -367,7 +367,8 @@ class Flow0DProblem(problem_base):
 
         # evaluate old state
         if self.excitation_curve is not None:
-            self.c.append(self.ti.timecurves(self.excitation_curve)(self.pbase.t_init))
+            for i in range(len(self.excitation_curve)):
+                self.c.append(self.ti.timecurves(self.excitation_curve[i])(self.pbase.t_init))
         if bool(self.chamber_models):
             for i, ch in enumerate(['lv','rv','la','ra']):
                 if self.chamber_models[ch]['type']=='0D_elast': self.y[i] = self.ti.timecurves(self.chamber_models[ch]['activation_curve'])(self.pbase.t_init)
@@ -411,7 +412,8 @@ class Flow0DProblem(problem_base):
 
         # external volume/flux from time curve
         if self.excitation_curve is not None:
-            self.c[0] = self.ti.timecurves(self.excitation_curve)(t)
+            for i in range(len(self.excitation_curve)):
+                self.c[i] = self.ti.timecurves(self.excitation_curve[i])(t)
         # activation curves
         self.evaluate_activation(t)
 

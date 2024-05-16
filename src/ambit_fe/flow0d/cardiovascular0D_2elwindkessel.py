@@ -25,10 +25,23 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         # initialize base class
         super().__init__(init=init, ode_par=ode_par, comm=comm)
 
+        # number of (independent) models
+        try: self.num_models = params['num_models']
+        except: self.num_models = 1
+
+        self.C, self.R, self.p_ref = [], [], []
+
         # parameters
-        self.C = params['C']
-        self.R = params['R']
-        self.p_ref = params['p_ref']
+        for n in range(self.num_models):
+            # compliance
+            try: self.C.append(params['C'+str(n+1)])
+            except: self.C.append(params['C'])
+            # resistance
+            try: self.R.append(params['R'+str(n+1)])
+            except: self.R.append(params['R'])
+            # downstream reference pressure
+            try: self.p_ref.append(params['p_ref'+str(n+1)])
+            except: self.p_ref.append(params['p_ref'])
 
         self.cq = cq
         self.vq = vq
@@ -48,74 +61,91 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
     def setup_arrays(self):
 
-        # number of degrees of freedom
-        self.numdof = 1
+        # number of degrees of freedom - 1 per model
+        self.numdof = self.num_models
 
-        self.v_ids = [0]
-        self.c_ids = [0]
+        self.v_ids, self.c_ids = [], []
+        self.switch_V, self.cname, self.vname = [], [], []
 
-        if self.cq[0] == 'volume':
-            assert(self.vq[0]=='pressure')
-            self.switch_V, self.cname, self.vname = 1, 'V', 'p'
-        elif self.cq[0] == 'flux':
-            assert(self.vq[0]=='pressure')
-            self.switch_V, self.cname, self.vname = 0, 'Q', 'p'
-        elif self.cq[0] == 'pressure':
-            if self.vq[0] == 'flux':
-                self.switch_V, self.cname, self.vname = 0, 'p', 'Q'
-            elif self.vq[0] == 'volume':
-                self.switch_V, self.cname, self.vname = 1, 'p', 'V'
+        for n in range(self.num_models):
+
+            self.v_ids.append(n)
+            self.c_ids.append(n)
+
+            if self.cq[n] == 'volume':
+                assert(self.vq[n]=='pressure')
+                self.switch_V.append(1), self.cname.append('V'), self.vname.append('p')
+            elif self.cq[n] == 'flux':
+                assert(self.vq[n]=='pressure')
+                self.switch_V.append(0), self.cname.append('Q'), self.vname.append('p')
+            elif self.cq[n] == 'pressure':
+                if self.vq[n] == 'flux':
+                    self.switch_V.append(0), self.cname.append('p'), self.vname.append('Q')
+                elif self.vq[0] == 'volume':
+                    self.switch_V.append(1), self.cname.append('p'), self.vname.append('V')
+                else:
+                    raise ValueError("Unknown variable quantity!")
             else:
-                raise ValueError("Unknown variable quantity!")
-        else:
-            raise NameError("Unknown coupling quantity!")
+                raise NameError("Unknown coupling quantity!")
 
         self.set_solve_arrays()
 
 
     def equation_map(self):
 
-        self.varmap = {self.vname : 0}
-        self.auxmap = {self.cname : 0}
+        self.varmap, self.auxmap = {}, {}
+        for n in range(self.num_models):
+            self.varmap[self.vname[n]] = n
+            self.auxmap[self.cname[n]] = n
 
         self.t_ = sp.Symbol('t_')
-        p_ = sp.Symbol('p_')
-        VQ_ = sp.Symbol('VQ_')
+
+        p_, VQ_ = [], []
+        for n in range(self.num_models):
+            p_.append(sp.Symbol('p_'+str(n+1)))
+            VQ_.append(sp.Symbol('VQ_'+str(n+1)))
 
         # dofs to differentiate w.r.t.
-        self.x_[0] = p_
-        # coupling variables
-        self.c_.append(VQ_)
-        if self.cq[0] == 'pressure': # switch Q <--> p for pressure coupling
-            self.x_[0] = VQ_
-            self.c_[0] = p_
+        for n in range(self.num_models):
+            self.x_[n] = p_[n]
+            # coupling variables
+            self.c_.append(VQ_[n])
+        for n in range(self.num_models):
+            if self.cq[n] == 'pressure': # switch Q <--> p for pressure coupling
+                self.x_[n] = VQ_[n]
+                self.c_[n] = p_[n]
 
-        # df part of rhs contribution (df - df_old)/dt
-        self.df_[0] = self.C * p_ + VQ_ * self.switch_V
+        for n in range(self.num_models):
 
-        # f part of rhs contribution theta * f + (1-theta) * f_old
-        self.f_[0] = (p_-self.p_ref)/self.R - (1-self.switch_V) * VQ_
+            # df part of rhs contribution (df - df_old)/dt
+            self.df_[n] = self.C[n] * p_[n] + VQ_[n] * self.switch_V[n]
 
-        # populate auxiliary variable vector
-        self.a_[0] = self.c_[0]
+            # f part of rhs contribution theta * f + (1-theta) * f_old
+            self.f_[n] = (p_[n]-self.p_ref[n])/self.R[n] - (1-self.switch_V[n]) * VQ_[n]
+
+            # populate auxiliary variable vector
+            self.a_[n] = self.c_[n]
 
 
     def initialize(self, var, iniparam):
 
-        var[0] = iniparam[self.vname+'_0']
-
+        for n in range(self.num_models):
+            try: var[n] = iniparam[self.vname[n]+str(n+1)+'_0']
+            except: var[n] = iniparam[self.vname[n]+'_0']
 
     def initialize_lm(self, var, iniparam):
 
-        if 'p_0' in iniparam.keys(): var[0] = iniparam['p_0']
-
+        for n in range(self.num_models):
+            if 'p_0' in iniparam.keys(): var[n] = iniparam['p_0']
+            if 'p'+str(n+1)+'_0' in iniparam.keys(): var[n] = iniparam['p'+str(n+1)+'_0']
 
     def print_to_screen(self, var, aux):
 
         if self.ode_parallel: var_arr = allgather_vec(var, self.comm)
         else: var_arr = var.array
 
-        utilities.print_status("Output of 0D model (2elwindkessel):", self.comm)
+        for n in range(self.num_models):
+            utilities.print_status("Output of 0D model (2elwindkessel) "+str(n+1)+":", self.comm)
 
-        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.cname,' = ',aux[0]), self.comm)
-        utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.vname,' = ',var_arr[0]), self.comm)
+            utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.cname[n],' = ',aux[n]), self.comm)
+            utilities.print_status('{:<1s}{:<3s}{:<10.3f}'.format(self.vname[n],' = ',var_arr[n]), self.comm)
