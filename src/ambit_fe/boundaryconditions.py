@@ -80,7 +80,27 @@ class boundary_cond():
                 fle = d['file'] # a single file
                 try: ftype = d['ftype']
                 except: ftype = 'id_val'
-                self.io.readfunction(func, fle, filetype=ftype)
+                # to ramp the file by a time curve
+                try: ramp_curve = d['ramp_curve']
+                except: ramp_curve = None
+                if ramp_curve is not None:
+                    func_ramp, func_file = fem.Function(V), fem.Function(V)
+                    # first read file into function
+                    self.io.readfunction(func_file, fle, filetype=ftype)
+                    # now store ramp curve into function
+                    load_ = expression.template_vector(dim=self.dim)
+                    load_.val_x, load_.val_y, load_.val_z = self.ti.timecurves(d['ramp_curve'])(self.ti.t_init), self.ti.timecurves(d['ramp_curve'])(self.ti.t_init), self.ti.timecurves(d['ramp_curve'])(self.ti.t_init)
+                    func_ramp.interpolate(load_.evaluate)
+                    func_ramp.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                    self.ti.funcs_to_update_vec.append({func_ramp : [self.ti.timecurves(d['ramp_curve']), self.ti.timecurves(d['ramp_curve']), self.ti.timecurves(d['ramp_curve'])],
+                                                        'funcs_mult' : [func_file, func]})
+                    self.ti.funcs_to_update_vec_old.append({None : -1}) # DBCs don't need an old state
+                    # now multiply
+                    func.vector.pointwiseMult(func_ramp.vector, func_file.vector)
+                    func.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                else:
+                    # read file into function
+                    self.io.readfunction(func, fle, filetype=ftype)
             else:
                 raise RuntimeError("Need to have 'curve', 'val', 'expression', or 'file' specified!")
 

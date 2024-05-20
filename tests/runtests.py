@@ -33,6 +33,9 @@ if category=='solid' or category=='all':
     errs['test_solid_mat_uniax_hex_2field 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_mat_uniax_hex_2field.py'])
 
     errs['test_solid_2d_pres 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_2d_pres.py'])
+    
+    errs['test_solid_ost_dbc_ramp 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_ost_dbc_ramp.py'])
+    errs['test_solid_ost_dbc_ramp 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_ost_dbc_ramp.py'])
 
     errs['test_solid_robin_genalpha 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_robin_genalpha.py'])
     errs['test_solid_robin_genalpha 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_robin_genalpha.py'])

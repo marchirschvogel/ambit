@@ -71,7 +71,6 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
 
             self.v_ids.append(n)
             self.c_ids.append(n)
-
             if self.cq[n] == 'volume':
                 assert(self.vq[n]=='pressure')
                 self.switch_V.append(1), self.cname.append('V'), self.vname.append('p')
@@ -81,7 +80,7 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
             elif self.cq[n] == 'pressure':
                 if self.vq[n] == 'flux':
                     self.switch_V.append(0), self.cname.append('p'), self.vname.append('Q')
-                elif self.vq[0] == 'volume':
+                elif self.vq[n] == 'volume':
                     self.switch_V.append(1), self.cname.append('p'), self.vname.append('V')
                 else:
                     raise ValueError("Unknown variable quantity!")

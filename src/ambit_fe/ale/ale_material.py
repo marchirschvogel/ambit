@@ -69,3 +69,10 @@ class materiallaw:
         D = params['D']
 
         return D*ufl.grad(self.d)
+
+
+    def diffusion_sym(self, params):
+
+        D = params['D']
+
+        return D*ufl.sym(ufl.grad(self.d))

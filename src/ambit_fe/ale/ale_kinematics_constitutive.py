@@ -60,6 +60,10 @@ class constitutive:
 
                 stress += mat.diffusion(matparams_m)
 
+            elif matlaw == 'diffusion_sym':
+
+                stress += mat.diffusion_sym(matparams_m)
+
             else:
 
                 raise NameError('Unknown ALE material law!')

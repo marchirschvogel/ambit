@@ -79,6 +79,11 @@ class timeintegration():
             load.val_x, load.val_y, load.val_z = list(m.values())[0][0](t), list(m.values())[0][1](t), list(m.values())[0][2](t)
             list(m.keys())[0].interpolate(load.evaluate)
             list(m.keys())[0].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            # in case we wanna set a function that is a product of values in a file and a time curve
+            if 'funcs_mult' in m.keys():
+                # m['funcs_mult'][1] is the function that is set (as DBC)
+                m['funcs_mult'][1].vector.pointwiseMult(list(m.keys())[0].vector, m['funcs_mult'][0].vector)
+                m['funcs_mult'][1].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         for m in self.funcs_to_update:
             load = expression.template()
