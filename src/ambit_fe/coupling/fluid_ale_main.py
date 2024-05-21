@@ -128,10 +128,7 @@ class FluidmechanicsAleProblem(problem_base):
                         fnode_indices_local[i] = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[self.pba.io.mt_b1.values == ids_fluid_ale[i]])
                     fnode_indices_local_flat = [item for sublist in fnode_indices_local for item in sublist]
                     fnode_indices_all = np.array( self.pba.V_d.dofmap.index_map.local_to_global(np.asarray(fnode_indices_local_flat, dtype=np.int32)), dtype=np.int32 )
-                    fdofs = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, fnode_indices_all, comm=self.comm)
-                    # all indices
-                    iset_d_0 = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=self.pba.d.vector.getOwnershipRange()[0], step=1, comm=self.comm)
-                    self.iset_d_0 = iset_d_0.difference(fdofs) # subtract
+                    self.fdofs = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, fnode_indices_all, comm=self.comm)
 
                 elif self.coupling_fluid_ale[j]['type'] == 'weak_dirichlet':
 
@@ -150,6 +147,10 @@ class FluidmechanicsAleProblem(problem_base):
 
             # now add the DBCs: pay attention to order... first u=uf, then the others... hence re-set!
             if bool(dbcs_coup_fluid_ale):
+                # store DBCs without those from fluid
+                self.pba.bc.dbcs_nofluid = []
+                for k in self.pba.bc.dbcs:
+                    self.pba.bc.dbcs_nofluid.append(k)
                 self.pba.bc.dbcs = []
                 self.pba.bc.dbcs += dbcs_coup_fluid_ale
                 # Dirichlet boundary conditions
@@ -270,7 +271,26 @@ class FluidmechanicsAleProblem(problem_base):
             if self.have_weak_dirichlet_fluid_ale:
                 self.K_dv = fem.petsc.create_matrix(self.jac_dv)
             elif self.have_dbc_fluid_ale:
-                self.K_dv = fem.petsc.create_matrix(self.pba.jac_dd)
+                # create unity vector with 1's on surface dofs and zeros elsewhere
+                self.Iale = self.pba.K_dd.createVecLeft()
+                self.Iale.setValues(self.fdofs, np.ones(self.fdofs.getLocalSize(), dtype=np.int32), addv=PETSc.InsertMode.INSERT)
+                self.Iale.assemble()
+                # create diagonal matrix
+                self.Diag_ale = PETSc.Mat().createAIJ(self.pba.K_dd.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
+                self.Diag_ale.setUp()
+                self.Diag_ale.assemble()
+                # set 1's to get correct allocation pattern
+                self.Diag_ale.shift(1.)
+                # now only set the 1's at surface dofs
+                self.Diag_ale.setDiagonal(self.Iale, addv=PETSc.InsertMode.INSERT)
+                self.Diag_ale.assemble()
+                # create from ALE matrix and only keep the necessary columns
+                # need to assemble here to get correct sparsity pattern when doing the column product
+                self.K_dv_ = fem.petsc.assemble_matrix(self.pba.jac_dd, [])
+                self.K_dv_.assemble()
+                # now multiply to grep out the correct columns
+                self.K_dv = self.K_dv_.matMult(self.Diag_ale)
+                self.K_dv.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True) # needed so that zeroRows does not change it!
             else:
                 self.K_dv = None
 
@@ -298,18 +318,17 @@ class FluidmechanicsAleProblem(problem_base):
             self.K_dv.zeroEntries()
             fem.petsc.assemble_matrix(self.K_dv, self.jac_dv, self.pba.bc.dbcs)
             self.K_dv.assemble()
-
-        elif self.have_dbc_fluid_ale: # TODO: Does not seem to yield quadratic convergence yet! Why?
-            self.K_dv.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_dv, self.pba.jac_dd, self.pba.bc.dbcs)
-            # fem.petsc.assemble_matrix(self.K_dv, self.pba.jac_dd, [])
-            self.K_dv.assemble()
-
-            # self.K_dv.zeroRowsColumns(self.iset_d_0, diag=0.)
-            self.K_dv.zeroRows(self.iset_d_0, diag=0.)
+        elif self.have_dbc_fluid_ale:
+            self.K_dv_.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_dv_, self.pba.jac_dd, self.pba.bc.dbcs_nofluid) # need DBCs w/o fluid here
+            self.K_dv_.assemble()
+            # multiply to get the relevant columns only
+            self.K_dv_.matMult(self.Diag_ale, result=self.K_dv)
+            # zero rows where DBC is applied and set diagonal entry to -1
+            self.K_dv.zeroRows(self.fdofs, diag=-1.)
             # we apply u_fluid to ALE, hence get du_fluid/dv
             fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
-            self.K_dv.scale(-fac)
+            self.K_dv.scale(fac)
 
         self.K_list[2][0] = self.K_dv
 

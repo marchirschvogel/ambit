@@ -220,14 +220,6 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         if self.pbs.incompressible_2field: off = 1
         else: off = 0
 
-        # if self.have_dbc_fluid_ale:
-            # self.K_list[5+off][1+off] = self.K_dv
-        if self.have_weak_dirichlet_fluid_ale:
-            self.K_dv.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_dv, self.jac_dv, self.pba.bc.dbcs)
-            self.K_dv.assemble()
-            self.K_list[5+off][1+off] = self.K_dv
-
         self.pbs.assemble_stiffness(t)
         self.pbfa0.assemble_stiffness(t, subsolver=subsolver)
 
