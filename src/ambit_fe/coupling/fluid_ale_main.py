@@ -273,7 +273,7 @@ class FluidmechanicsAleProblem(problem_base):
             elif self.have_dbc_fluid_ale:
                 # create unity vector with 1's on surface dofs and zeros elsewhere
                 self.Iale = self.pba.K_dd.createVecLeft()
-                self.Iale.setValues(self.fdofs, np.ones(self.fdofs.getLocalSize(), dtype=np.int32), addv=PETSc.InsertMode.INSERT)
+                self.Iale.setValues(self.fdofs, np.ones(self.fdofs.getLocalSize()), addv=PETSc.InsertMode.INSERT)
                 self.Iale.assemble()
                 # create diagonal matrix
                 self.Diag_ale = PETSc.Mat().createAIJ(self.pba.K_dd.getSizes(), bsize=None, nnz=(1,1), csr=None, comm=self.comm)
