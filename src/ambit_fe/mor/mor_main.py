@@ -368,7 +368,7 @@ class ModelOrderReduction():
         utilities.print_status("ROM: Building reduced basis operator...", self.pb.comm, e=" ")
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions,self.locmatsize_u), csr=None, comm=self.pb.comm)
+        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions+1), csr=None, comm=self.pb.comm)
         self.V.setUp()
 
         vrs, vre = self.V.getOwnershipRange()
@@ -382,7 +382,7 @@ class ModelOrderReduction():
         if bool(self.regularizations):
             assert(len(self.regularizations)==self.numredbasisvec_true*self.num_partitions)
 
-            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()
 
             for i in range(len(self.regularizations)):
@@ -394,7 +394,7 @@ class ModelOrderReduction():
         if bool(self.regularizations_integ):
             assert(len(self.regularizations_integ)==self.numredbasisvec_true*self.num_partitions)
 
-            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpeninteg.setUp()
 
             for i in range(len(self.regularizations_integ)):
@@ -406,7 +406,7 @@ class ModelOrderReduction():
         if bool(self.regularizations_deriv):
             assert(len(self.regularizations_deriv)==self.numredbasisvec_true*self.num_partitions)
 
-            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpenderiv.setUp()
 
             for i in range(len(self.regularizations_deriv)):
@@ -457,7 +457,7 @@ class ModelOrderReduction():
         col_fd_set = set(col_fd)
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions+1,self.locmatsize_u), csr=None, comm=self.pb.comm)
+        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions+1), csr=None, comm=self.pb.comm)
         self.V.setUp()
 
         vrs, vre = self.V.getOwnershipRange()
@@ -492,7 +492,7 @@ class ModelOrderReduction():
         if bool(self.regularizations):
             assert(len(self.regularizations)==self.numredbasisvec_true*self.num_partitions)
 
-            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()
 
             n=0
@@ -507,7 +507,7 @@ class ModelOrderReduction():
         if bool(self.regularizations_integ):
             assert(len(self.regularizations_integ)==self.numredbasisvec_true*self.num_partitions)
 
-            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpeninteg.setUp()
 
             n=0
@@ -522,7 +522,7 @@ class ModelOrderReduction():
         if bool(self.regularizations_deriv):
             assert(len(self.regularizations_deriv)==self.numredbasisvec_true*self.num_partitions)
 
-            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions), csr=None, comm=self.pb.comm)
+            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpenderiv.setUp()
 
             n=0
