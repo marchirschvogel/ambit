@@ -811,10 +811,10 @@ class IO_fluid(IO):
                 for res in pb.results_to_write:
                     if res not in self.results_pre:
                         if res=='pressure' and bool(self.duplicate_mesh_domains):
-                            for j in self.duplicate_mesh_domains:
-                                outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+res+str(j)+'.xdmf', 'w')
-                                outfile.write_mesh(self.submshes_emap[j][0])
-                                self.resultsfiles[res+str(j)] = outfile
+                            for m, mp in enumerate(self.duplicate_mesh_domains):
+                                outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+res+str(m+1)+'.xdmf', 'w')
+                                outfile.write_mesh(self.submshes_emap[m+1][0])
+                                self.resultsfiles[res+str(m+1)] = outfile
                         else:
                             outfile = io.XDMFFile(self.comm, self.output_path+'/results_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+res+'.xdmf', 'w')
                             outfile.write_mesh(self.mesh)
@@ -841,13 +841,11 @@ class IO_fluid(IO):
                         self.resultsfiles[res].write_function(a_out, indicator)
                     elif res=='pressure':
                         if bool(self.duplicate_mesh_domains):
-                            m=0
-                            for j in self.duplicate_mesh_domains:
-                                V_out_scalar_sub = fem.FunctionSpace(self.submshes_emap[j][0], ("CG", pb.mesh_degree))
+                            for m, mp in enumerate(self.duplicate_mesh_domains):
+                                V_out_scalar_sub = fem.FunctionSpace(self.submshes_emap[m+1][0], ("CG", pb.mesh_degree))
                                 p_out = fem.Function(V_out_scalar_sub, name=pb.p_[m].name)
                                 p_out.interpolate(pb.p_[m])
-                                self.resultsfiles[res+str(j)].write_function(p_out, indicator)
-                                m+=1
+                                self.resultsfiles[res+str(m+1)].write_function(p_out, indicator)
                         else:
                             p_out = fem.Function(pb.V_out_scalar, name=pb.p_[0].name)
                             p_out.interpolate(pb.p_[0])
@@ -920,9 +918,9 @@ class IO_fluid(IO):
 
         # pressure may be discontinuous across domains
         if bool(self.duplicate_mesh_domains):
-            for mp in self.duplicate_mesh_domains:
-                vecs_to_read[pb.p__[mp]] = 'p'+str(mp)
-                vecs_to_read[pb.p_old__[mp]] = 'p_old'+str(mp)
+            for m, mp in enumerate(self.duplicate_mesh_domains):
+                vecs_to_read[pb.p__[m+1]] = 'p'+str(m+1)
+                vecs_to_read[pb.p_old__[m+1]] = 'p_old'+str(m+1)
         else:
             vecs_to_read[pb.p] = 'p'
             vecs_to_read[pb.p_old] = 'p_old'
@@ -954,9 +952,9 @@ class IO_fluid(IO):
 
         # pressure may be discontinuous across domains
         if bool(self.duplicate_mesh_domains):
-            for mp in self.duplicate_mesh_domains:
-                vecs_to_write[pb.p__[mp]] = 'p'+str(mp)
-                vecs_to_write[pb.p_old__[mp]] = 'p_old'+str(mp)
+            for m, mp in enumerate(self.duplicate_mesh_domains):
+                vecs_to_write[pb.p__[m+1]] = 'p'+str(m+1)
+                vecs_to_write[pb.p_old__[m+1]] = 'p_old'+str(m+1)
         else:
             vecs_to_write[pb.p] = 'p'
             vecs_to_write[pb.p_old] = 'p_old'
@@ -983,8 +981,8 @@ class IO_fluid(IO):
                 if res not in self.results_pre:
 
                     if res=='pressure' and bool(self.duplicate_mesh_domains):
-                        for j in self.duplicate_mesh_domains:
-                            self.resultsfiles[res+str(j)].close()
+                        for m, mp in enumerate(self.duplicate_mesh_domains):
+                            self.resultsfiles[res+str(m+1)].close()
                     else:
                         self.resultsfiles[res].close()
 
@@ -1170,8 +1168,8 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
 
         self.dom_solid, self.dom_fluid, self.surf_interf = self.io_params['domain_ids_solid'], self.io_params['domain_ids_fluid'], self.io_params['surface_ids_interface']
 
-        self.msh_emap_solid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == self.dom_solid])[0:2]
-        self.msh_emap_fluid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[self.mt_d.values == self.dom_fluid])[0:2]
+        self.msh_emap_solid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)])[0:2]
+        self.msh_emap_fluid = mesh.create_submesh(self.mesh, self.mesh.topology.dim, self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)])[0:2]
 
         # TODO: Assert that meshtags start actually from 1 when transferred!
         self.mt_d_solid = meshutils.meshtags_parent_to_child(self.mt_d, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'domain')
@@ -1180,7 +1178,7 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
         self.mt_b1_solid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_solid[0], self.msh_emap_solid[1], self.mesh, 'boundary')
         self.mt_b1_fluid = meshutils.meshtags_parent_to_child(self.mt_b1, self.msh_emap_fluid[0], self.msh_emap_fluid[1], self.mesh, 'boundary')
 
-        self.msh_emap_lm = mesh.create_submesh(self.mesh, self.mesh.topology.dim-1, self.mt_b1.indices[self.mt_b1.values == self.surf_interf])[0:2]
+        self.msh_emap_lm = mesh.create_submesh(self.mesh, self.mesh.topology.dim-1, self.mt_b1.indices[np.isin(self.mt_b1.values, self.surf_interf)])[0:2]
 
         cell_imap = self.mesh.topology.index_map(self.mesh.topology.dim)
         facet_imap = self.mesh.topology.index_map(self.mesh.topology.dim-1)
@@ -1212,8 +1210,8 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
             self.dx = lambda a : self.dx_ # so that we can call dx(1) even without domain meshtags
 
         # now the boundary ones
-        interface_facets = self.mt_b1.indices[self.mt_b1.values == self.surf_interf[0]]
-        solid_cells = self.mt_d.indices[self.mt_d.values == self.dom_solid[0]]
+        interface_facets = self.mt_b1.indices[np.isin(self.mt_b1.values, self.surf_interf)]
+        solid_cells = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
 
         integration_entities = []
 

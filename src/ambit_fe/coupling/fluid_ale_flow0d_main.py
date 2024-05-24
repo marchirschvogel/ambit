@@ -162,11 +162,8 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
             for n in range(self.pbf0.num_coupling_surf):
 
-                nds_vq_local = [[]]*len(self.pbf0.surface_vq_ids[n])
-                for i in range(len(self.pbf0.surface_vq_ids[n])):
-                    nds_vq_local[i] = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[self.pba.io.mt_b1.values == self.pbf0.surface_vq_ids[n][i]])
-                nds_vq_local_flat = [item for sublist in nds_vq_local for item in sublist]
-                nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local_flat, dtype=np.int32)), dtype=np.int32 )
+                nds_vq_local = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[np.isin(self.pba.io.mt_b1.values, self.pbf0.surface_vq_ids[n])])
+                nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)), dtype=np.int32 )
                 self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
                 self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]) )

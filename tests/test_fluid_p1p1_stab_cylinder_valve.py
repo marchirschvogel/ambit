@@ -30,7 +30,7 @@ def test_main():
 
     IO_PARAMS           = {'problem_type'          : 'fluid',
                            'USE_MIXED_DOLFINX_BRANCH' : True,
-                           'duplicate_mesh_domains': [1,2],
+                           'duplicate_mesh_domains': [[1],[2]],
                            'mesh_domain'           : basepath+'/input/cylinder_domain.xdmf',
                            'mesh_boundary'         : basepath+'/input/cylinder_boundary.xdmf',
                            'write_results_every'   : 1,

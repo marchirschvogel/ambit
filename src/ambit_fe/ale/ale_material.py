@@ -64,15 +64,29 @@ class materiallaw:
         return ufl.diff(Psi,self.F)
 
 
-    def diffusion(self, params):
+    def diffusion(self, params, jac_det):
 
         D = params['D']
+        try: scale_det = params['scale_det']
+        except: scale_det = False
 
-        return D*ufl.grad(self.d)
+        if scale_det:
+            fac = 1./jac_det
+        else:
+            fac = 1.
+
+        return fac*D*ufl.grad(self.d)
 
 
-    def diffusion_sym(self, params):
+    def diffusion_sym(self, params, jac_det):
 
         D = params['D']
+        try: scale_det = params['scale_det']
+        except: scale_det = False
 
-        return D*ufl.sym(ufl.grad(self.d))
+        if scale_det:
+            fac = 1./jac_det
+        else:
+            fac = 1.
+
+        return fac*D*ufl.sym(ufl.grad(self.d))

@@ -354,22 +354,16 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         for n in range(self.num_coupling_surf):
 
-            nds_vq_local = [[]]*len(self.surface_vq_ids[n])
-            for i in range(len(self.surface_vq_ids[n])):
-                nds_vq_local[i] = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[self.pbs.io.mt_b1.values == self.surface_vq_ids[n][i]])
-            nds_vq_local_flat = [item for sublist in nds_vq_local for item in sublist]
-            nds_vq = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_vq_local_flat, dtype=np.int32)), dtype=np.int32 )
+            nds_vq_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_vq_ids[n])])
+            nds_vq = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
             self.k_su_subvec.append( self.k_su_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
 
             sze_su.append(self.k_su_subvec[-1].getSize())
 
-            nds_p_local = [[]]*len(self.surface_p_ids[n])
-            for i in range(len(self.surface_p_ids[n])):
-                nds_p_local[i] = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[self.pbs.io.mt_b1.values == self.surface_p_ids[n][i]])
-            nds_p_local_flat = [item for sublist in nds_p_local for item in sublist]
-            nds_p = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_p_local_flat, dtype=np.int32)), dtype=np.int32 )
+            nds_p_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_p_ids[n])])
+            nds_p = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_p, comm=self.comm)
 
             self.k_us_subvec.append( self.k_us_vec[n].getSubVector(self.dofs_coupling_p[n]) )

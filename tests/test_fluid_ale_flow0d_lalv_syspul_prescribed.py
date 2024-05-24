@@ -30,7 +30,7 @@ def test_main():
 
     IO_PARAMS            = {'problem_type'          : 'fluid_ale_flow0d',
                             'USE_MIXED_DOLFINX_BRANCH' : True,
-                            'duplicate_mesh_domains': [1,2],
+                            'duplicate_mesh_domains': [[1],[2]],
                             'write_results_every'   : 1,
                             'write_restart_every'   : 1,
                             'indicate_results_by'   : 'step',

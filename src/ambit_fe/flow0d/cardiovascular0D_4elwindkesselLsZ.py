@@ -107,8 +107,6 @@ class cardiovascular0D4elwindkesselLsZ(cardiovascular0Dbase):
 
         self.varmap, self.auxmap = {}, {}
         for n in range(self.num_models):
-            # self.varmap = {self.vname : 0, 'q' : 1, 's' : 2}
-            # self.auxmap = {self.cname : 1}
             self.varmap[self.vname[n]] = 3*n+0
             self.varmap['q'] = 3*n+1
             self.varmap['s'] = 3*n+2

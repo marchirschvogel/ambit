@@ -163,25 +163,25 @@ class FluidmechanicsProblem(problem_base):
 
             self.io.submshes_emap, inv_emap, self.io.sub_mt_b1 = {}, {}, {}
 
-            for mp in self.io.duplicate_mesh_domains:
-                self.io.submshes_emap[mp] = mesh.create_submesh(self.io.mesh, self.io.mesh.topology.dim, self.io.mt_d.indices[self.io.mt_d.values == mp])[0:2]
+            for m, mp in enumerate(self.io.duplicate_mesh_domains):
+                self.io.submshes_emap[m+1] = mesh.create_submesh(self.io.mesh, self.io.mesh.topology.dim, self.io.mt_d.indices[np.isin(self.io.mt_d.values, mp)])[0:2]
 
             cell_imap = self.io.mesh.topology.index_map(self.io.mesh.topology.dim)
             num_cells = cell_imap.size_local + cell_imap.num_ghosts
 
-            for mp in self.io.duplicate_mesh_domains:
+            for m, mp in enumerate(self.io.duplicate_mesh_domains):
                 if self.io.USE_NEW_DOLFINX:
-                    self.V_p__[mp] = fem.functionspace(self.io.submshes_emap[mp][0], ("Lagrange", self.order_pres))
+                    self.V_p__[m+1] = fem.functionspace(self.io.submshes_emap[m+1][0], ("Lagrange", self.order_pres))
                 else:
-                    self.V_p__[mp] = fem.FunctionSpace(self.io.submshes_emap[mp][0], P_p)
+                    self.V_p__[m+1] = fem.FunctionSpace(self.io.submshes_emap[m+1][0], P_p)
 
-                inv_emap[mp] = np.full(num_cells, -1)
+                inv_emap[m+1] = np.full(num_cells, -1)
 
-            for mp in self.io.duplicate_mesh_domains:
-                inv_emap[mp][self.io.submshes_emap[mp][1]] = np.arange(len(self.io.submshes_emap[mp][1]))
-                self.io.entity_maps[self.io.submshes_emap[mp][0]] = inv_emap[mp]
+            for m, mp in enumerate(self.io.duplicate_mesh_domains):
+                inv_emap[m+1][self.io.submshes_emap[m+1][1]] = np.arange(len(self.io.submshes_emap[m+1][1]))
+                self.io.entity_maps[self.io.submshes_emap[m+1][0]] = inv_emap[m+1]
                 # transfer boundary meshtags to submesh
-                self.io.sub_mt_b1[mp] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[mp][0], self.io.submshes_emap[mp][1], self.io.mesh, 'boundary')
+                self.io.sub_mt_b1[m+1] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[m+1][0], self.io.submshes_emap[m+1][1], self.io.mesh, 'boundary')
 
         else:
             self.num_dupl = 1
@@ -238,12 +238,12 @@ class FluidmechanicsProblem(problem_base):
         # pressure can have duplicate nodes (one variable per domain)
         self.p__, self.p_old__, self.var_p__, self.dp__ = {}, {}, {}, {}
         if self.num_dupl > 1:
-            for mp in self.io.duplicate_mesh_domains:
-                self.p__[mp] = fem.Function(self.V_p__[mp], name="Pressure"+str(mp))
-                self.dp__[mp] = ufl.TrialFunction(self.V_p__[mp])            # Incremental pressure
-                self.var_p__[mp] = ufl.TestFunction(self.V_p__[mp])          # Test function
+            for m, mp in enumerate(self.io.duplicate_mesh_domains):
+                self.p__[m+1] = fem.Function(self.V_p__[m+1], name="Pressure"+str(m+1))
+                self.dp__[m+1] = ufl.TrialFunction(self.V_p__[m+1])            # Incremental pressure
+                self.var_p__[m+1] = ufl.TestFunction(self.V_p__[m+1])          # Test function
                 # values of previous time step
-                self.p_old__[mp] = fem.Function(self.V_p__[mp])
+                self.p_old__[m+1] = fem.Function(self.V_p__[m+1])
             # make lists
             self.V_p_ = list(self.V_p__.values())
             self.p_, self.dp_, self.var_p_, self.p_old_ = list(self.p__.values()), list(self.dp__.values()), list(self.var_p__.values()), list(self.p_old__.values())
@@ -283,9 +283,9 @@ class FluidmechanicsProblem(problem_base):
         # collect references to pressure vectors
         self.pvecs_, self.pvecs_old_ = [], []
         if self.num_dupl > 1:
-            for mp in range(self.num_dupl):
-                self.pvecs_.append(self.p_[mp].vector)
-                self.pvecs_old_.append(self.p_old_[mp].vector)
+            for m in range(self.num_dupl):
+                self.pvecs_.append(self.p_[m].vector)
+                self.pvecs_old_.append(self.p_old_[m].vector)
                 # full pressure vectors - dummy function that holds a class variable "vector"
                 self.p = expression.function_dummy(self.pvecs_,self.comm)
                 self.p_old = expression.function_dummy(self.pvecs_old_,self.comm)
@@ -295,12 +295,12 @@ class FluidmechanicsProblem(problem_base):
         # if we want to initialize the pressure (domain wise) with a scalar value
         if self.pbase.restart_step==0:
             if bool(self.initial_fluid_pressure):
-                for mp in range(self.num_dupl):
-                    val = self.initial_fluid_pressure[mp]
-                    self.p_[mp].vector.set(val)
-                    self.p_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                    self.p_old_[mp].vector.set(val)
-                    self.p_old_[mp].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                for m in range(self.num_dupl):
+                    val = self.initial_fluid_pressure[m]
+                    self.p_[m].vector.set(val)
+                    self.p_[m].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                    self.p_old_[m].vector.set(val)
+                    self.p_old_[m].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
@@ -308,11 +308,9 @@ class FluidmechanicsProblem(problem_base):
             # if available, we might want to read in the pressure field, too
             if len(self.prestress_from_file)>1:
                 if bool(self.duplicate_mesh_domains):
-                    m=0
-                    for j in self.duplicate_mesh_domains:
+                    for m, mp in enumerate(self.io.duplicate_mesh_domains):
                         self.io.readfunction(self.p_[m], self.prestress_from_file[1].replace('*',str(m+1)))
                         self.io.readfunction(self.p_old_[m], self.prestress_from_file[1].replace('*',str(m+1)))
-                        m+=1
                 else:
                     self.io.readfunction(self.p_[0], self.prestress_from_file[1])
                     self.io.readfunction(self.p_old_[0], self.prestress_from_file[1])
@@ -423,8 +421,8 @@ class FluidmechanicsProblem(problem_base):
 
         self.pf_mid__ = {}
         if self.num_dupl > 1:
-            for mp in self.io.duplicate_mesh_domains:
-                self.pf_mid__[mp] = self.timefac * self.p__[mp] + (1.-self.timefac) * self.p_old__[mp]
+            for m, mp in enumerate(self.io.duplicate_mesh_domains):
+                self.pf_mid__[m+1] = self.timefac * self.p__[m+1] + (1.-self.timefac) * self.p_old__[m+1]
             # make list
             self.pf_mid_ = list(self.pf_mid__.values())
         else:
@@ -1023,22 +1021,16 @@ class FluidmechanicsProblem(problem_base):
 
             for n in range(self.num_valve_coupling_surf):
 
-                # nds_p_local = [[]]*len(self.surface_vlv_ids[n])
-                # for i in range(len(self.surface_vlv_ids[n])):
-                #     nds_p_local[i] = fem.locate_dofs_topological(self.V_p, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.surface_vlv_ids[n][i]])
-                # nds_p_local_flat = [item for sublist in nds_p_local for item in sublist]
-                # nds_p = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local_flat, dtype=np.int32)), dtype=np.int32 )
+                # nds_p_local = fem.locate_dofs_topological(self.V_p, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.surface_vlv_ids[n])])
+                # nds_p = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)), dtype=np.int32 )
                 # self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.V_p.dofmap.index_map_bs, nds_p, comm=self.comm)
                 #
                 # self.k_zp_subvec.append( self.k_zp_vec[n].getSubVector(self.dofs_coupling_p[n]) )
                 #
                 # sze_zp.append(self.k_zp_subvec[-1].getSize())
 
-                nds_v_local = [[]]*len(self.surface_vlv_ids[n])
-                for i in range(len(self.surface_vlv_ids[n])):
-                    nds_v_local[i] = fem.locate_dofs_topological(self.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == self.surface_vlv_ids[n][i]])
-                nds_v_local_flat = [item for sublist in nds_v_local for item in sublist]
-                nds_v = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_v_local_flat, dtype=np.int32)), dtype=np.int32 )
+                nds_v_local = fem.locate_dofs_topological(self.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.surface_vlv_ids[n])])
+                nds_v = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_v_local, dtype=np.int32)), dtype=np.int32 )
                 self.dofs_coupling_v[n] = PETSc.IS().createBlock(self.V_v.dofmap.index_map_bs, nds_v, comm=self.comm)
 
                 self.k_vz_subvec.append( self.k_vz_vec[n].getSubVector(self.dofs_coupling_v[n]) )
@@ -1502,11 +1494,9 @@ class FluidmechanicsSolver(solver_base):
             # it may be convenient to write the prestress displacement field to a file for later read-in
             self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_fluiddisplacement_pre')
             if bool(self.pb.io.duplicate_mesh_domains):
-                m=0
-                for j in self.pb.io.duplicate_mesh_domains:
+                for m, mp in enumerate(self.io.duplicate_mesh_domains):
                      # TODO: Might not work for duplicate mesh, since we do not have the input node indices (do we...?)
                     self.pb.io.writefunction(self.pb.p_[m], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure'+str(m+1)+'_pre')
-                    m+=1
             else:
                 self.pb.io.writefunction(self.pb.p_[0], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure_pre')
             utilities.print_status("Prestress only done. To resume, set file path(s) in 'prestress_from_file' and read in uf_pre.", self.pb.comm)

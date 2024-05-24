@@ -105,23 +105,19 @@ class boundary_cond():
                 raise RuntimeError("Need to have 'curve', 'val', 'expression', or 'file' specified!")
 
             if d['dir'] == 'all':
-                for i in range(len(d['id'])):
-                    self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, codim, mdata.indices[mdata.values == d['id'][i]])) )
+                self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, codim, mdata.indices[np.isin(mdata.values, d['id'])])) )
 
             elif d['dir'] == 'x':
-                for i in range(len(d['id'])):
-                    dofs_x = fem.locate_dofs_topological(V.sub(0), codim, mdata.indices[mdata.values == d['id'][i]])
-                    self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
+                dofs_x = fem.locate_dofs_topological(V.sub(0), codim, mdata.indices[np.isin(mdata.values, d['id'])])
+                self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
 
             elif d['dir'] == 'y':
-                for i in range(len(d['id'])):
-                    dofs_y = fem.locate_dofs_topological(V.sub(1), codim, mdata.indices[mdata.values == d['id'][i]])
-                    self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
+                dofs_y = fem.locate_dofs_topological(V.sub(1), codim, mdata.indices[np.isin(mdata.values, d['id'])])
+                self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
 
             elif d['dir'] == 'z':
-                for i in range(len(d['id'])):
-                    dofs_z = fem.locate_dofs_topological(V.sub(2), codim, mdata.indices[mdata.values == d['id'][i]])
-                    self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
+                dofs_z = fem.locate_dofs_topological(V.sub(2), codim, mdata.indices[np.isin(mdata.values, d['id'])])
+                self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
 
             elif d['dir'] == '2dimX':
                 dofs_x = fem.locate_dofs_topological(V.sub(0), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimX))
@@ -167,8 +163,7 @@ class boundary_cond():
             else:
                 raise RuntimeError("Need to have 'curve', 'val', or 'file' specified!")
 
-            for i in range(len(d['id'])):
-                self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.dim, self.io.mt_d.indices[self.io.mt_d.values == d['id'][i]])) )
+            self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.dim, self.io.mt_d.indices[np.isin(self.io.mt_d.values, d['id'])])) )
 
 
     # function to mark x=0

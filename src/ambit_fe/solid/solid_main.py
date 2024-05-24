@@ -876,7 +876,7 @@ class SolidmechanicsProblem(problem_base):
         uf = fem.Function(self.V_u, name="uf")
 
         dbcs_laplace=[]
-        dbcs_laplace.append( fem.dirichletbc(self.u, fem.locate_dofs_topological(self.V_u, 2, self.io.mt_b1.indices[self.io.mt_b1.values == self.volume_laplace[0]])) )
+        dbcs_laplace.append( fem.dirichletbc(self.u, fem.locate_dofs_topological(self.V_u, 2, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.volume_laplace)])) )
 
         # solve linear Laplace problem
         lp = fem.petsc.LinearProblem(a, L, bcs=dbcs_laplace, u=uf)

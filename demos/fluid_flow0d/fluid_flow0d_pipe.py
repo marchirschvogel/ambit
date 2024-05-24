@@ -27,7 +27,7 @@ def main():
                             # In the future, this functionality is expected to be merged into the main branch of Dolfinx (as it has been announced).
                             'USE_MIXED_DOLFINX_BRANCH' : True,
                             # indicate which domain IDs (specified in 'mesh_domain' file) should be split (creating a submesh)
-                            'duplicate_mesh_domains': [1,2],
+                            'duplicate_mesh_domains': [[1],[2]],
                             # the meshes for the domain and boundary topology are specified separately
                             'mesh_domain'           : basepath+'/input/pipe_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/pipe_boundary.xdmf',

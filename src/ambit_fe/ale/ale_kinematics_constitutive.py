@@ -58,11 +58,11 @@ class constitutive:
 
             elif matlaw == 'diffusion':
 
-                stress += mat.diffusion(matparams_m)
+                stress += mat.diffusion(matparams_m, self.kin.elem_metrics['jac_det'])
 
             elif matlaw == 'diffusion_sym':
 
-                stress += mat.diffusion_sym(matparams_m)
+                stress += mat.diffusion_sym(matparams_m, self.kin.elem_metrics['jac_det'])
 
             else:
 
@@ -75,12 +75,14 @@ class constitutive:
 
 class kinematics:
 
-    def __init__(self, dim):
+    def __init__(self, dim, elem_metrics=None):
 
         self.dim = dim
 
         # identity tensor
         self.I = ufl.Identity(self.dim)
+
+        self.elem_metrics = elem_metrics
 
 
     # ALE deformation gradient

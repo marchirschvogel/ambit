@@ -119,15 +119,11 @@ class FluidmechanicsAleProblem(problem_base):
 
                 if self.coupling_fluid_ale[j]['type'] == 'strong_dirichlet':
 
-                    for i in range(len(ids_fluid_ale)):
-                        dbcs_coup_fluid_ale.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_fluid_ale[i]])) )
+                    dbcs_coup_fluid_ale.append( fem.dirichletbc(self.ufa, fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, ids_fluid_ale)])) )
 
                     # get surface dofs for dr_ALE/dv matrix entry
-                    fnode_indices_local = [[]]*len(ids_fluid_ale)
-                    for i in range(len(ids_fluid_ale)):
-                        fnode_indices_local[i] = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[self.pba.io.mt_b1.values == ids_fluid_ale[i]])
-                    fnode_indices_local_flat = [item for sublist in fnode_indices_local for item in sublist]
-                    fnode_indices_all = np.array( self.pba.V_d.dofmap.index_map.local_to_global(np.asarray(fnode_indices_local_flat, dtype=np.int32)), dtype=np.int32 )
+                    fnode_indices_local = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[np.isin(self.pba.io.mt_b1.values, ids_fluid_ale)])
+                    fnode_indices_all = np.array( self.pba.V_d.dofmap.index_map.local_to_global(np.asarray(fnode_indices_local, dtype=np.int32)), dtype=np.int32 )
                     self.fdofs = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, fnode_indices_all, comm=self.comm)
 
                 elif self.coupling_fluid_ale[j]['type'] == 'weak_dirichlet':
@@ -177,8 +173,7 @@ class FluidmechanicsAleProblem(problem_base):
 
                 if self.coupling_ale_fluid[j]['type'] == 'strong_dirichlet':
 
-                    for i in range(len(ids_ale_fluid)):
-                        dbcs_coup_ale_fluid.append( fem.dirichletbc(self.wf, fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[self.io.mt_b1.values == ids_ale_fluid[i]])) )
+                    dbcs_coup_ale_fluid.append( fem.dirichletbc(self.wf, fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, ids_ale_fluid)])) )
 
                     #NOTE: linearization entries due to strong DBCs of ALE on fluid are currently not considered in the monolithic block matrix!
 
