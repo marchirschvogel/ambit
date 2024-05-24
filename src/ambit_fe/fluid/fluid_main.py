@@ -1494,7 +1494,7 @@ class FluidmechanicsSolver(solver_base):
             # it may be convenient to write the prestress displacement field to a file for later read-in
             self.pb.io.writefunction(self.pb.uf_pre, self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_fluiddisplacement_pre')
             if bool(self.pb.io.duplicate_mesh_domains):
-                for m, mp in enumerate(self.io.duplicate_mesh_domains):
+                for m, mp in enumerate(self.pb.io.duplicate_mesh_domains):
                      # TODO: Might not work for duplicate mesh, since we do not have the input node indices (do we...?)
                     self.pb.io.writefunction(self.pb.p_[m], self.pb.io.output_path_pre+'/results_'+self.pb.pbase.simname+'_pressure'+str(m+1)+'_pre')
             else:
