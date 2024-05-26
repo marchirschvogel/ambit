@@ -36,7 +36,7 @@ class constitutive:
 
         stress = ufl.constantvalue.zero((dim,dim))
 
-        mat = materiallaw(d_,F_)
+        mat = materiallaw(d_, F_, self.kin.elem_metrics)
 
         m = 0
         for matlaw in self.matmodels:
@@ -44,7 +44,15 @@ class constitutive:
             # extract associated material parameters
             matparams_m = self.matparams[m]
 
-            if matlaw == 'linelast':
+            if matlaw == 'diffusion':
+
+                stress += mat.diffusion(matparams_m)
+
+            elif matlaw == 'diffusion_sym':
+
+                stress += mat.diffusion_sym(matparams_m)
+
+            elif matlaw == 'linelast':
 
                 stress += mat.linelast(matparams_m)
 
@@ -55,14 +63,6 @@ class constitutive:
             elif matlaw == 'exponential':
 
                 stress += mat.exponential(matparams_m)
-
-            elif matlaw == 'diffusion':
-
-                stress += mat.diffusion(matparams_m, self.kin.elem_metrics['jac_det'])
-
-            elif matlaw == 'diffusion_sym':
-
-                stress += mat.diffusion_sym(matparams_m, self.kin.elem_metrics['jac_det'])
 
             else:
 
