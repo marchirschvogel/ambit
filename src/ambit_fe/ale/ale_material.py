@@ -10,8 +10,9 @@ import ufl
 
 class materiallaw:
 
-    def __init__(self, d, F, elem_metrics):
+    def __init__(self, d, w, F, elem_metrics):
         self.d = d
+        self.w = w
         self.F = F
         self.jac_det = elem_metrics['jac_det']
 
@@ -31,6 +32,18 @@ class materiallaw:
         return fac * D*ufl.grad(self.d)
 
 
+    def diffusion_rate(self, params):
+
+        D = params['D']
+        try: scale_det = params['scale_det']
+        except: scale_det = False
+
+        if scale_det: fac = 1./self.jac_det
+        else:         fac = 1.
+
+        return fac * D*ufl.grad(self.w)
+
+
     def diffusion_sym(self, params):
 
         D = params['D']
@@ -41,6 +54,18 @@ class materiallaw:
         else:         fac = 1.
 
         return fac * D*ufl.sym(ufl.grad(self.d))
+
+
+    def diffusion_rate_sym(self, params):
+
+        D = params['D']
+        try: scale_det = params['scale_det']
+        except: scale_det = False
+
+        if scale_det: fac = 1./self.jac_det
+        else:         fac = 1.
+
+        return fac * D*ufl.sym(ufl.grad(self.w))
 
 
     def linelast(self, params):
