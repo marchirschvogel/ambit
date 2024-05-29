@@ -25,8 +25,10 @@ class materiallaw:
         D = params['D']
         try: scale_det = params['scale_det']
         except: scale_det = False
+        try: scale_exp = params['scale_exp']
+        except: scale_exp = 1.
 
-        if scale_det: fac = 1./self.jac_det
+        if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
 
         return fac * D*ufl.grad(self.d)
@@ -37,8 +39,10 @@ class materiallaw:
         D = params['D']
         try: scale_det = params['scale_det']
         except: scale_det = False
+        try: scale_exp = params['scale_exp']
+        except: scale_exp = 1.
 
-        if scale_det: fac = 1./self.jac_det
+        if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
 
         return fac * D*ufl.grad(self.w)
@@ -49,8 +53,10 @@ class materiallaw:
         D = params['D']
         try: scale_det = params['scale_det']
         except: scale_det = False
+        try: scale_exp = params['scale_exp']
+        except: scale_exp = 1.
 
-        if scale_det: fac = 1./self.jac_det
+        if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
 
         return fac * D*ufl.sym(ufl.grad(self.d))
@@ -61,8 +67,10 @@ class materiallaw:
         D = params['D']
         try: scale_det = params['scale_det']
         except: scale_det = False
+        try: scale_exp = params['scale_exp']
+        except: scale_exp = 1.
 
-        if scale_det: fac = 1./self.jac_det
+        if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
 
         return fac * D*ufl.sym(ufl.grad(self.w))
@@ -74,8 +82,10 @@ class materiallaw:
         nu = params['nu']
         try: scale_det = params['scale_det']
         except: scale_det = False
+        try: scale_exp = params['scale_exp']
+        except: scale_exp = 1.
 
-        if scale_det: fac = 1./self.jac_det
+        if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
 
         mu = Emod/(2.*(1.+nu))
@@ -93,8 +103,10 @@ class materiallaw:
         mu, nu = params['mu'], params['nu']
         try: scale_det = params['scale_det']
         except: scale_det = False
+        try: scale_exp = params['scale_exp']
+        except: scale_exp = 1.
 
-        if scale_det: fac = 1./self.jac_det
+        if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
 
         beta = nu/(1.-2.*nu)
@@ -115,8 +127,10 @@ class materiallaw:
         a_0, b_0, kappa = params['a_0'], params['b_0'], params['kappa']
         try: scale_det = params['scale_det']
         except: scale_det = False
+        try: scale_exp = params['scale_exp']
+        except: scale_exp = 1.
 
-        if scale_det: fac = 1./self.jac_det
+        if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
 
         J = ufl.det(self.F)
