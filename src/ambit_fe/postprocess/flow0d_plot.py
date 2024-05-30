@@ -831,9 +831,9 @@ def postprocess_groups_syspul(groups, coronarymodel=None, indpertaftercyl=0, mul
 
     if coronarymodel is not None:
         # index 14
-        groups.append({'flux_time_cor_PERIODIC' : list(groups[6].values())[0],
-                    'tex'                       : list(groups[6].values())[1],
-                    'lines'                     : list(groups[6].values())[2]})
+        groups.append({'flux_time_cor_PERIODIC' : list(groups[7].values())[0],
+                    'tex'                       : list(groups[7].values())[1],
+                    'lines'                     : list(groups[7].values())[2]})
 
 
 def postprocess_groups_syspulcap(groups, indpertaftercyl=0, multiscalegandr=False):

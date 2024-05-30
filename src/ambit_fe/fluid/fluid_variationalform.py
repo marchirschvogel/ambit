@@ -282,10 +282,10 @@ class variationalform_ale(variationalform):
 
     def f_inert_strong_navierstokes_steady(self, v, rho, w=None, F=None):
         if self.formulation=='nonconservative':
-            return rho*(ufl.grad(v)*ufl.inv(F) * (v-w))
+            return rho*(ufl.grad(v)*ufl.inv(F) * v) # NOTE: No domain velocity here!
         elif self.formulation=='conservative':
             i, j, k = ufl.indices(3)
-            return rho*(ufl.as_vector(ufl.grad(ufl.outer(v,v-w))[i,j,k]*ufl.inv(F).T[j,k], i))
+            return rho*(ufl.as_vector(ufl.grad(ufl.outer(v,v))[i,j,k]*ufl.inv(F).T[j,k], i)) # NOTE: No domain velocity here!
         else:
             raise ValueError("Unknown fluid formulation!")
 

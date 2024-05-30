@@ -136,7 +136,7 @@ class FluidmechanicsAleProblem(problem_base):
                         db_ = self.pba.io.ds(ids_fluid_ale[i])
 
                         for n in range(self.pba.num_domains):
-                            work_weak_dirichlet_fluid_ale += self.pba.vf.deltaW_int_nitsche_dirichlet(self.pba.d, self.pbf.ufluid, self.pba.ma[n].stress(self.pba.var_d), beta, db_, hscale=hscale) # here, ufluid as form is used!
+                            work_weak_dirichlet_fluid_ale += self.pba.vf.deltaW_int_nitsche_dirichlet(self.pba.d, self.pbf.ufluid, self.pba.ma[n].stress(self.pba.var_d,self.pba.var_d), beta, db_, hscale=hscale) # here, ufluid as form is used!
 
                 else:
                     raise ValueError("Unknown coupling_fluid_ale option for fluid to ALE!")
