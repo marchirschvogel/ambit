@@ -6,7 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys, os
+import time, sys, os, inspect
 import numpy as np
 from dolfinx import fem, mesh
 import dolfinx.fem.petsc
@@ -57,6 +57,11 @@ class FluidmechanicsProblem(problem_base):
         # for FSI, we want to specify the subdomains
         try: self.domain_ids = self.io.io_params['domain_ids_fluid']
         except: self.domain_ids = np.arange(1,self.num_domains+1)
+
+        self.dx, self.bmeasures = self.io.create_integration_measures(self.io.mesh, [self.io.mt_d,self.io.mt_b1,self.io.mt_b2])
+        # should go once moved completely to new dolfinx...
+        if self.pbase.problem_type=='fsi' or self.pbase.problem_type=='fsi_flow0d':
+            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
@@ -143,74 +148,70 @@ class FluidmechanicsProblem(problem_base):
         self.alevar = alevar
 
         # function space for v
-        if self.io.USE_NEW_DOLFINX:
-            self.V_v = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,)))
-        else:
+        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
             P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
             self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
 
-        if not self.io.USE_NEW_DOLFINX: P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        else:
+            self.V_v = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,)))
+
+        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH: P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
 
         # now collect those for p (pressure space may be duplicate!)
         self.V_p__ = {}
 
+        self.dx_p, self.bmeasures_p = [], []
+
         if bool(self.io.duplicate_mesh_domains):
 
-            assert(self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX)
             assert(self.num_domains>1)
 
             self.num_dupl = self.num_domains
 
-            self.io.submshes_emap, inv_emap, self.io.sub_mt_b1 = {}, {}, {}
+            self.io.submshes_emap, inv_emap, self.io.sub_mt_d, self.io.sub_mt_b1 = {}, {}, {}, {}
 
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
                 self.io.submshes_emap[m+1] = mesh.create_submesh(self.io.mesh, self.io.mesh.topology.dim, self.io.mt_d.indices[np.isin(self.io.mt_d.values, mp)])[0:2]
+
+            # self.io.submshes_emap[m+1][0].topology.create_connectivity(3, 3)
+            # self.io.submshes_emap[m+1][0].topology.create_connectivity(2, 2)
+            # self.io.submshes_emap[m+1][0].topology.create_connectivity(3, 2)
+            # self.io.submshes_emap[m+1][0].topology.create_connectivity(2, 3)
 
             cell_imap = self.io.mesh.topology.index_map(self.io.mesh.topology.dim)
             num_cells = cell_imap.size_local + cell_imap.num_ghosts
 
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
-                if self.io.USE_NEW_DOLFINX:
-                    self.V_p__[m+1] = fem.functionspace(self.io.submshes_emap[m+1][0], ("Lagrange", self.order_pres))
-                else:
+                if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
                     self.V_p__[m+1] = fem.FunctionSpace(self.io.submshes_emap[m+1][0], P_p)
+                else:
+                    self.V_p__[m+1] = fem.functionspace(self.io.submshes_emap[m+1][0], ("Lagrange", self.order_pres))
 
                 inv_emap[m+1] = np.full(num_cells, -1)
 
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
                 inv_emap[m+1][self.io.submshes_emap[m+1][1]] = np.arange(len(self.io.submshes_emap[m+1][1]))
                 self.io.entity_maps[self.io.submshes_emap[m+1][0]] = inv_emap[m+1]
-                # transfer boundary meshtags to submesh
+                # transfer meshtags to submesh
+                self.io.sub_mt_d[m+1] = meshutils.meshtags_parent_to_child(self.io.mt_d, self.io.submshes_emap[m+1][0], self.io.submshes_emap[m+1][1], self.io.mesh, 'domain')
                 self.io.sub_mt_b1[m+1] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[m+1][0], self.io.submshes_emap[m+1][1], self.io.mesh, 'boundary')
+
+                dxp, bmeasuresp = self.io.create_integration_measures(self.io.submshes_emap[m+1][0], [self.io.sub_mt_d[m+1],self.io.sub_mt_b1[m+1],None])
+                # self.dx_p.append(dxp)
+                # self.bmeasures_p.append(bmeasuresp)
+                self.dx_p.append(self.dx)
+                self.bmeasures_p.append(self.bmeasures)
 
         else:
             self.num_dupl = 1
-            if self.io.USE_NEW_DOLFINX:
-                self.V_p_ = [ fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres)) ]
-            else:
+            if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
                 self.V_p_ = [ fem.FunctionSpace(self.io.mesh, P_p) ]
+            else:
+                self.V_p_ = [ fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres)) ]
+            self.dx_p.append(self.dx)
+            self.bmeasures_p.append(self.bmeasures)
 
-        if self.io.USE_NEW_DOLFINX:
-
-            # continuous tensor and scalar function spaces of order order_vel
-            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel))
-
-            # a discontinuous tensor, vector, and scalar function space
-            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,)))
-            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1))
-
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
-            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
-            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
-
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
-
-        else: # remove once update is fully compatible...
+        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
 
             # continuous tensor and scalar function spaces of order order_vel
             self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
@@ -229,6 +230,26 @@ class FluidmechanicsProblem(problem_base):
 
             # coordinate element function space - based on input mesh
             self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+
+        else:
+
+            # continuous tensor and scalar function spaces of order order_vel
+            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel))
+
+            # a discontinuous tensor, vector, and scalar function space
+            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,)))
+            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1))
+
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
 
         # functions
         self.dv     = ufl.TrialFunction(self.V_v)            # Incremental velocity
@@ -360,7 +381,7 @@ class FluidmechanicsProblem(problem_base):
             self.fibarray = ['circ']
             if len(self.io.fiber_data)>1: self.fibarray.append('long')
 
-            self.fib_func = self.io.readin_fibers(self.fibarray, self.V_v, self.io.dx, self.domain_ids, self.order_vel)
+            self.fib_func = self.io.readin_fibers(self.fibarray, self.V_v, self.dx, self.domain_ids, self.order_vel)
 
         else:
             self.fib_func = None
@@ -382,7 +403,6 @@ class FluidmechanicsProblem(problem_base):
         self.pbrom = self # self-pointer needed for ROM solver access
         self.pbrom_host = self
         self.V_rom = self.V_v
-        self.print_enhanced_info = self.io.print_enhanced_info
 
         # number of fields involved
         self.nfields = 2
@@ -443,84 +463,100 @@ class FluidmechanicsProblem(problem_base):
 
             # kinetic virtual power
             if self.fluid_governing_type=='navierstokes_transient':
-                self.deltaW_kin     += self.vf.deltaW_kin_navierstokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
-                self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-                self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                self.deltaW_kin     += self.vf.deltaW_kin_navierstokes_transient(self.acc, self.v, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_transient(self.a_old, self.v_old, self.rho[n], self.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+                self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
             elif self.fluid_governing_type=='navierstokes_steady':
-                self.deltaW_kin     += self.vf.deltaW_kin_navierstokes_steady(self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
-                self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_steady(self.v_old, self.rho[n], self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-                self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_steady(self.vel_mid, self.rho[n], self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                self.deltaW_kin     += self.vf.deltaW_kin_navierstokes_steady(self.v, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_steady(self.v_old, self.rho[n], self.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+                self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_steady(self.vel_mid, self.rho[n], self.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
             elif self.fluid_governing_type=='stokes_transient':
-                self.deltaW_kin     += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
-                self.deltaW_kin_old += self.vf.deltaW_kin_stokes_transient(self.a_old, self.v_old, self.rho[n], self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-                self.deltaW_kin_mid += self.vf.deltaW_kin_stokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+                self.deltaW_kin     += self.vf.deltaW_kin_stokes_transient(self.acc, self.v, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                self.deltaW_kin_old += self.vf.deltaW_kin_stokes_transient(self.a_old, self.v_old, self.rho[n], self.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+                self.deltaW_kin_mid += self.vf.deltaW_kin_stokes_transient(self.acc_mid, self.vel_mid, self.rho[n], self.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
             elif self.fluid_governing_type=='stokes_steady':
                 pass # no kinetic term to add for steady Stokes flow
             else:
                 raise ValueError("Unknown fluid_governing_type!")
 
             # internal virtual power
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), self.io.dx(M), F=self.alevar['Fale'])
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), self.io.dx(M), F=self.alevar['Fale_old'])
-            self.deltaW_int_mid += self.vf.deltaW_int(self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), self.io.dx(M), F=self.alevar['Fale_mid'])
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), self.dx(M), F=self.alevar['Fale'])
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar['Fale_old']), self.dx(M), F=self.alevar['Fale_old'])
+            self.deltaW_int_mid += self.vf.deltaW_int(self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar['Fale_mid']), self.dx(M), F=self.alevar['Fale_mid'])
 
             # pressure virtual power
-            self.deltaW_p.append( self.vf.deltaW_int_pres(self.v, self.var_p_[j], self.io.dx(M), F=self.alevar['Fale']) )
-            self.deltaW_p_old.append( self.vf.deltaW_int_pres(self.v_old, self.var_p_[j], self.io.dx(M), F=self.alevar['Fale_old']) )
-            self.deltaW_p_mid.append( self.vf.deltaW_int_pres(self.vel_mid, self.var_p_[j], self.io.dx(M), F=self.alevar['Fale_mid']) )
+            self.deltaW_p.append( self.vf.deltaW_int_pres(self.v, self.var_p_[j], self.dx_p[j](M), F=self.alevar['Fale']) )
+            self.deltaW_p_old.append( self.vf.deltaW_int_pres(self.v_old, self.var_p_[j], self.dx_p[j](M), F=self.alevar['Fale_old']) )
+            self.deltaW_p_mid.append( self.vf.deltaW_int_pres(self.vel_mid, self.var_p_[j], self.dx_p[j](M), F=self.alevar['Fale_mid']) )
 
             # element level Reynolds number components - not used so far! Need to assemble a cell-based vector in order to evaluate these...
-            self.Re_c      += self.vf.re_c(self.rho[n], self.v, self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
-            self.Re_c_old  += self.vf.re_c(self.rho[n], self.v_old, self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            self.Re_c_mid  += self.vf.re_c(self.rho[n], self.vel_mid, self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            self.Re_c      += self.vf.re_c(self.rho[n], self.v, self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+            self.Re_c_old  += self.vf.re_c(self.rho[n], self.v_old, self.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            self.Re_c_mid  += self.vf.re_c(self.rho[n], self.vel_mid, self.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
 
-            self.Re_ktilde     += self.vf.re_ktilde(self.rho[n], self.v, self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
-            self.Re_ktilde_old += self.vf.re_ktilde(self.rho[n], self.v_old, self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            self.Re_ktilde_mid += self.vf.re_ktilde(self.rho[n], self.vel_mid, self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            self.Re_ktilde     += self.vf.re_ktilde(self.rho[n], self.v, self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+            self.Re_ktilde_old += self.vf.re_ktilde(self.rho[n], self.v_old, self.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            self.Re_ktilde_mid += self.vf.re_ktilde(self.rho[n], self.vel_mid, self.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin, w_stabneumann, w_stabneumann_mod, w_robin_valve, w_membrane = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_old, w_body_old, w_robin_old, w_stabneumann_old, w_stabneumann_mod_old, w_robin_valve_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_mid, w_body_mid, w_robin_mid, w_stabneumann_mid, w_stabneumann_mod_mid, w_robin_valve_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
-            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.io.bmeasures, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.bmeasures, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.bmeasures, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
+            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.bmeasures, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
-            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
-            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.io.dx, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
+            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, self.io.bmeasures, F=self.alevar['Fale'])
-            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, self.io.bmeasures, F=self.alevar['Fale_old'])
-            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.vel_mid, self.io.bmeasures, F=self.alevar['Fale_mid'])
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, self.bmeasures, F=self.alevar['Fale'])
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, self.bmeasures, F=self.alevar['Fale_old'])
+            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.vel_mid, self.bmeasures, F=self.alevar['Fale_mid'])
         if 'stabilized_neumann' in self.bc_dict.keys():
-            w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, self.io.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, self.io.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_stabneumann_mid = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.vel_mid, self.io.bmeasures, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, self.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, self.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_stabneumann_mid = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.vel_mid, self.bmeasures, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
         if 'stabilized_neumann_mod' in self.bc_dict.keys():
-            w_stabneumann_mod     = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.v, self.io.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_stabneumann_mod_old = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.v_old, self.io.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_stabneumann_mod_mid = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.vel_mid, self.io.bmeasures, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            w_stabneumann_mod     = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.v, self.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_stabneumann_mod_old = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.v_old, self.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_stabneumann_mod_mid = self.bc.stabilized_neumann_mod_bcs(self.bc_dict['stabilized_neumann_mod'], self.vel_mid, self.bmeasures, wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
         if 'robin_valve' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve = True
             self.beta_valve, self.beta_valve_old = [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, [self.io.dS], wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, [self.io.dS], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.Vd_scalar, self.beta_valve, [self.io.dS], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, [self.bmeasures[2]], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.Vd_scalar, self.beta_valve, [self.bmeasures[2]], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            # in case we manna make the min and max values spatially dependent (usage of an expression), prepare some functions
+            self.beta_valve_min_expr, self.beta_valve_max_expr = [], []
+            for m in range(len(self.bc_dict['robin_valve'])):
+                beta_min, beta_max = self.bc_dict['robin_valve'][m]['beta_min'], self.bc_dict['robin_valve'][m]['beta_max']
+                # check if we have passed an expression (class) or a constant value
+                if inspect.isclass(beta_min):
+                    self.beta_valve_min_expr.append(beta_min())
+                else:
+                    self.beta_valve_min_expr.append(expression.template())
+                    self.beta_valve_min_expr[-1].val = beta_min
+                # check if we have passed an expression (class) or a constant value
+                if inspect.isclass(beta_max):
+                    self.beta_valve_max_expr.append(beta_max())
+                else:
+                    self.beta_valve_max_expr.append(expression.template())
+                    self.beta_valve_max_expr[-1].val = beta_max
         if 'robin_valve_implicit' in self.bc_dict.keys():
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve_implicit = True
             raise RuntimeError("Implicit valve law not yet fully implemented!")
             self.state_valve, self.state_valve_old = [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.state_valve, [self.io.dS], wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v_old, self.Vd_scalar, self.state_valve_old, [self.io.dS], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.vel_mid, self.Vd_scalar, self.state_valve, [self.io.dS], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.state_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v_old, self.Vd_scalar, self.state_valve_old, [self.bmeasures[2]], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.vel_mid, self.Vd_scalar, self.state_valve, [self.bmeasures[2]], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
             self.dbeta_dz_valve = []
             self.dw_robin_valve_dz = []
             for i in range(len(self.beta_valve)):
-                self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.dbeta_dz_valve, [self.io.dS], wel=self.alevar['w'], F=self.alevar['Fale'], dw=self.dw_robin_valve_dz)
+                self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.dbeta_dz_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'], dw=self.dw_robin_valve_dz)
             # reduced valve variables (integrated pressures)
             self.num_valve_coupling_surf = len(self.bc_dict['robin_valve_implicit'])
             self.z, self.z_old = PETSc.Vec().createMPI(size=self.num_valve_coupling_surf), PETSc.Vec().createMPI(size=self.num_valve_coupling_surf)
@@ -569,9 +605,9 @@ class FluidmechanicsProblem(problem_base):
                     self.io.readfunction(h0_func, self.bc_dict['membrane'][nm]['params']['h0']['field'])
                     self.wallfields.append(h0_func)
 
-            w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
-            w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.io.bmeasures, ivar=self.internalvars_old, wallfields=self.wallfields)
-            w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_mid, self.vel_mid, self.acc_mid, self.io.bmeasures, ivar=self.internalvars_mid, wallfields=self.wallfields)
+            w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
+            w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.bmeasures, ivar=self.internalvars_old, wallfields=self.wallfields)
+            w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_mid, self.vel_mid, self.acc_mid, self.bmeasures, ivar=self.internalvars_mid, wallfields=self.wallfields)
 
         w_neumann_prestr, self.deltaW_prestr_kin, self.deltaW_prestr_int, self.deltaW_p_prestr = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), []
         if self.prestress_initial or self.prestress_initial_only:
@@ -579,24 +615,24 @@ class FluidmechanicsProblem(problem_base):
             for n, M in enumerate(self.domain_ids):
                 if self.num_dupl==1: j=0
                 else: j=n
-                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), self.io.dx(M), F=self.alevar['Fale'])
-                self.deltaW_p_prestr.append( self.vf.deltaW_int_pres(self.v, self.var_p_[j], self.io.dx(M), F=self.alevar['Fale']) )
+                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), self.dx(M), F=self.alevar['Fale'])
+                self.deltaW_p_prestr.append( self.vf.deltaW_int_pres(self.v, self.var_p_[j], self.dx(M), F=self.alevar['Fale']) )
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
                 if self.prestress_kinetic=='navierstokes_transient':
-                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(self.acc_prestr, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_transient(self.acc_prestr, self.v, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
                 elif self.prestress_kinetic=='navierstokes_steady':
-                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_steady(self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_steady(self.v, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
                 elif self.prestress_kinetic=='stokes_transient':
-                    self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc_prestr, self.v, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
+                    self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(self.acc_prestr, self.v, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'])
                 elif self.prestress_kinetic=='none':
                     pass
                 else:
                     raise ValueError("Unknown prestress_kinetic option. Choose either 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'none'.")
             if 'neumann_prestress' in self.bc_dict.keys():
-                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
+                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.prestress_dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
-                w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc_prestr, self.io.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
+                w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc_prestr, self.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane_prestr + w_robin_valve
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
@@ -693,22 +729,22 @@ class FluidmechanicsProblem(problem_base):
 
                     # SUPG (streamline-upwind Petrov-Galerkin) for Navier-Stokes
                     if self.fluid_governing_type=='navierstokes_transient' or self.fluid_governing_type=='navierstokes_steady':
-                        self.deltaW_int     += self.vf.stab_supg(self.v, residual_v_strong, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
-                        self.deltaW_int_old += self.vf.stab_supg(self.v_old, residual_v_strong_old, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'], symmetric=symm)
-                        self.deltaW_int_mid += self.vf.stab_supg(self.vel_mid, residual_v_strong_mid, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'], symmetric=symm)
+                        self.deltaW_int     += self.vf.stab_supg(self.v, residual_v_strong, tau_supg, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
+                        self.deltaW_int_old += self.vf.stab_supg(self.v_old, residual_v_strong_old, tau_supg, self.rho[n], self.dx(M), w=self.alevar['w_old'], F=self.alevar['Fale_old'], symmetric=symm)
+                        self.deltaW_int_mid += self.vf.stab_supg(self.vel_mid, residual_v_strong_mid, tau_supg, self.rho[n], self.dx(M), w=self.alevar['w_mid'], F=self.alevar['Fale_mid'], symmetric=symm)
                     # LSIC (least-squares on incompressibility constraint) for Navier-Stokes and Stokes
-                    self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
-                    self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_old'])
-                    self.deltaW_int_mid += self.vf.stab_lsic(self.vel_mid, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale_mid'])
+                    self.deltaW_int     += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.dx(M), F=self.alevar['Fale'])
+                    self.deltaW_int_old += self.vf.stab_lsic(self.v_old, tau_lsic, self.rho[n], self.dx(M), F=self.alevar['Fale_old'])
+                    self.deltaW_int_mid += self.vf.stab_lsic(self.vel_mid, tau_lsic, self.rho[n], self.dx(M), F=self.alevar['Fale_mid'])
                     # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
-                    self.deltaW_p[n]     += self.vf.stab_pspg(self.var_p_[j], residual_v_strong, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
-                    self.deltaW_p_old[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_old, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale_old'])
-                    self.deltaW_p_mid[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_mid, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale_mid'])
+                    self.deltaW_p[n]     += self.vf.stab_pspg(self.var_p_[j], residual_v_strong, tau_pspg, self.rho[n], self.dx_p[j](M), F=self.alevar['Fale'])
+                    self.deltaW_p_old[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_old, tau_pspg, self.rho[n], self.dx_p[j](M), F=self.alevar['Fale_old'])
+                    self.deltaW_p_mid[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_mid, tau_pspg, self.rho[n], self.dx_p[j](M), F=self.alevar['Fale_mid'])
 
                     # now take care of stabilization for the prestress problem (only FrSI)
                     if self.prestress_initial or self.prestress_initial_only:
                         # LSIC term
-                        self.deltaW_prestr_int += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
+                        self.deltaW_prestr_int += self.vf.stab_lsic(self.v, tau_lsic, self.rho[n], self.dx(M), F=self.alevar['Fale'])
                         # get the respective strong residual depending on the prestress kinetic type...
                         if self.prestress_kinetic=='navierstokes_transient':
                             if not red_scheme:
@@ -733,10 +769,10 @@ class FluidmechanicsProblem(problem_base):
                         else:
                             raise ValueError("Unknown prestress_kinetic option!")
                         # PSPG term
-                        self.deltaW_p_prestr[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_prestr, tau_pspg, self.rho[n], self.io.dx(M), F=self.alevar['Fale'])
+                        self.deltaW_p_prestr[n] += self.vf.stab_pspg(self.var_p_[j], residual_v_strong_prestr, tau_pspg, self.rho[n], self.dx(M), F=self.alevar['Fale'])
                         # SUPG term only for kinetic prestress...
                         if self.prestress_kinetic=='navierstokes_transient' or self.prestress_kinetic=='navierstokes_steady':
-                            self.deltaW_prestr_int += self.vf.stab_supg(self.v, residual_v_strong_prestr, tau_supg, self.rho[n], self.io.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
+                            self.deltaW_prestr_int += self.vf.stab_supg(self.v, residual_v_strong_prestr, tau_supg, self.rho[n], self.dx(M), w=self.alevar['w'], F=self.alevar['Fale'], symmetric=symm)
 
             else:
                 raise ValueError("Unknown stabilization scheme!")
@@ -808,7 +844,7 @@ class FluidmechanicsProblem(problem_base):
     def evaluate_active_stress_ode(self):
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps) # TODO: Should be self.io.ds here, but yields error; why?
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps) # TODO: Should be self.ds here, but yields error; why?
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -820,7 +856,7 @@ class FluidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
             if self.num_dupl==1: j=0
             else: j=n
-            ip_all += ufl.inner(self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), self.ki.gamma(self.v, F=self.alevar['Fale'])) * self.io.dx(M)
+            ip_all += ufl.inner(self.ma[n].sigma(self.v, self.p_[j], F=self.alevar['Fale']), self.ki.gamma(self.v, F=self.alevar['Fale'])) * self.dx(M)
 
         ip = fem.assemble_scalar(fem.form(ip_all))
         ip = self.comm.allgather(ip)
@@ -847,11 +883,11 @@ class FluidmechanicsProblem(problem_base):
             if internal:
                 try: fcts = self.bc_dict['membrane'][nm]['facet_side']
                 except: fcts = '+'
-                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.io.dS(self.idmem[nm])
-                ip_mem_all += (self.bintpower[nm])(fcts) * self.io.dS(self.idmem[nm])
+                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
+                ip_mem_all += (self.bintpower[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
             else:
-                se_mem_all += self.bstrainenergy[nm] * self.io.ds(self.idmem[nm])
-                ip_mem_all += self.bintpower[nm] * self.io.ds(self.idmem[nm])
+                se_mem_all += self.bstrainenergy[nm] * self.bmeasures[0](self.idmem[nm])
+                ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])
 
         se_mem = fem.assemble_scalar(fem.form(se_mem_all))
         se_mem = self.comm.allgather(se_mem)
@@ -903,61 +939,43 @@ class FluidmechanicsProblem(problem_base):
                     self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
 
         if not pre:
-            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
-                self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
-                self.res_p = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
-                self.jac_vv = fem.form(self.weakform_lin_vv, entity_maps=self.io.entity_maps)
-                self.jac_vp = fem.form(self.weakform_lin_vp, entity_maps=self.io.entity_maps)
-                self.jac_pv = fem.form(self.weakform_lin_pv, entity_maps=self.io.entity_maps)
+            self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
+            self.res_p = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
+            self.jac_vv = fem.form(self.weakform_lin_vv, entity_maps=self.io.entity_maps)
+            self.jac_vp = fem.form(self.weakform_lin_vp, entity_maps=self.io.entity_maps)
+            self.jac_pv = fem.form(self.weakform_lin_pv, entity_maps=self.io.entity_maps)
+            if self.num_dupl > 1:
+                self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
+                # make lists for offdiagonal block mat assembly
+                self.jac_vp_ = [self.jac_vp]
+                self.jac_pv_ = []
+                for j in range(self.num_dupl):
+                    self.jac_pv_.append([self.jac_pv[j]])
+            if self.stabilization is not None:
+                self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
                 if self.num_dupl > 1:
-                    self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
-                    # make lists for offdiagonal block mat assembly
-                    self.jac_vp_ = [self.jac_vp]
-                    self.jac_pv_ = []
+                    self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
                     for j in range(self.num_dupl):
-                        self.jac_pv_.append([self.jac_pv[j]])
-                if self.stabilization is not None:
-                    self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
-                    if self.num_dupl > 1:
-                        self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
-                        for j in range(self.num_dupl):
-                            self.jac_pp_[j][j] = self.jac_pp[j]
-            else:
-                self.res_v = fem.form(self.weakform_v)
-                self.res_p = fem.form(self.weakform_p)
-                self.jac_vv = fem.form(self.weakform_lin_vv)
-                self.jac_vp = fem.form(self.weakform_lin_vp)
-                self.jac_pv = fem.form(self.weakform_lin_pv)
-                if self.stabilization is not None:
-                    self.jac_pp = fem.form(self.weakform_lin_pp)
+                        self.jac_pp_[j][j] = self.jac_pp[j]
         else:
-            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
-                self.res_v  = fem.form(self.weakform_prestress_v, entity_maps=self.io.entity_maps)
-                self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
-                self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.io.entity_maps)
-                self.jac_vp = fem.form(self.weakform_lin_prestress_vp, entity_maps=self.io.entity_maps)
-                self.jac_pv = fem.form(self.weakform_lin_prestress_pv, entity_maps=self.io.entity_maps)
+            self.res_v  = fem.form(self.weakform_prestress_v, entity_maps=self.io.entity_maps)
+            self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
+            self.jac_vv = fem.form(self.weakform_lin_prestress_vv, entity_maps=self.io.entity_maps)
+            self.jac_vp = fem.form(self.weakform_lin_prestress_vp, entity_maps=self.io.entity_maps)
+            self.jac_pv = fem.form(self.weakform_lin_prestress_pv, entity_maps=self.io.entity_maps)
+            if self.num_dupl > 1:
+                self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
+                # make lists for offdiagonal block mat assembly
+                self.jac_vp_ = [self.jac_vp]
+                self.jac_pv_ = []
+                for j in range(self.num_dupl):
+                    self.jac_pv_.append([self.jac_pv[j]])
+            if self.stabilization is not None:
+                self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.io.entity_maps)
                 if self.num_dupl > 1:
-                    self.dummat = [[None]*self.num_dupl for _ in range(self.num_dupl)] # needed for block vector assembly...
-                    # make lists for offdiagonal block mat assembly
-                    self.jac_vp_ = [self.jac_vp]
-                    self.jac_pv_ = []
+                    self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
                     for j in range(self.num_dupl):
-                        self.jac_pv_.append([self.jac_pv[j]])
-                if self.stabilization is not None:
-                    self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.io.entity_maps)
-                    if self.num_dupl > 1:
-                        self.jac_pp_ = [[None]*self.num_dupl for _ in range(self.num_dupl)]
-                        for j in range(self.num_dupl):
-                            self.jac_pp_[j][j] = self.jac_pp[j]
-            else:
-                self.res_v  = fem.form(self.weakform_prestress_v)
-                self.res_p  = fem.form(self.weakform_prestress_p)
-                self.jac_vv = fem.form(self.weakform_lin_prestress_vv)
-                self.jac_vp = fem.form(self.weakform_lin_prestress_vp)
-                self.jac_pv = fem.form(self.weakform_lin_prestress_pv)
-                if self.stabilization is not None:
-                    self.jac_pp = fem.form(self.weakform_lin_prestress_pp)
+                        self.jac_pp_[j][j] = self.jac_pp[j]
 
         if self.have_robin_valve_implicit:
             self.dw_robin_valve_dz_form, self.drz_dp = [], []
@@ -1186,39 +1204,37 @@ class FluidmechanicsProblem(problem_base):
         # dp_ = pd_ - pu_ (downstream minus upstream)
         for m in range(len(self.bc_dict['robin_valve'])):
 
-            beta_min, beta_max = self.bc_dict['robin_valve'][m]['beta_min'], self.bc_dict['robin_valve'][m]['beta_max']
-
-            beta = expression.template()
-
             if self.bc_dict['robin_valve'][m]['type'] == 'dp':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
                 if dp_[dp_id] > 0.:
-                    beta.val = beta_max
+                    self.beta_valve[m].interpolate(self.beta_valve_max_expr[m].evaluate)
                 else:
-                    beta.val = beta_min
+                    self.beta_valve[m].interpolate(self.beta_valve_min_expr[m].evaluate)
 
-            elif self.bc_dict['robin_valve'][m]['type'] == 'dp_smooth':
+            elif self.bc_dict['robin_valve'][m]['type'] == 'dp_smooth': # min, max values have to be spatially constant (no expression!) in this case...
+                beta = expression.template()
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
                 epsilon = self.bc_dict['robin_valve'][m]['epsilon']
-                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + beta_min
+                beta.val = 0.5*(self.beta_valve_max_expr[m].val - self.beta_valve_min_expr[m].val)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + self.beta_valve_min_expr[m].val
+                self.beta_valve[m].interpolate(beta.evaluate)
 
             elif self.bc_dict['robin_valve'][m]['type'] == 'temporal':
                 to, tc = self.bc_dict['robin_valve'][m]['to'], self.bc_dict['robin_valve'][m]['tc']
                 if to > tc:
                     if t < to and t >= tc:
-                        beta.val = beta_max
+                        self.beta_valve[m].interpolate(self.beta_valve_max_expr[m].evaluate)
                     if t >= to or t < tc:
-                        beta.val = beta_min
+                        self.beta_valve[m].interpolate(self.beta_valve_min_expr[m].evaluate)
                 else:
                     if t < to or t >= tc:
-                        beta.val = beta_max
+                        self.beta_valve[m].interpolate(self.beta_valve_max_expr[m].evaluate)
                     if t >= to and t < tc:
-                        beta.val = beta_min
+                        self.beta_valve[m].interpolate(self.beta_valve_min_expr[m].evaluate)
 
             else:
                 raise ValueError("Unknown Robin valve type!")
 
-            self.beta_valve[m].interpolate(beta.evaluate)
+            self.beta_valve[m].x.scatter_forward()
 
 
     # valve law on "immersed" surface (an internal boundary) - implicit version
@@ -1227,21 +1243,19 @@ class FluidmechanicsProblem(problem_base):
         # dp_ = pd_ - pu_ (downstream minus upstream)
         for m in range(self.num_valve_coupling_surf):
 
-            beta_min, beta_max = self.bc_dict['robin_valve_implicit'][m]['beta_min'], self.bc_dict['robin_valve_implicit'][m]['beta_max']
-
-            beta = expression.template()
-
             if self.bc_dict['robin_valve_implicit'][m]['type'] == 'dp':
                 dp_id = self.bc_dict['robin_valve_implicit'][m]['dp_monitor_id']
                 if dp_[dp_id] > 0.:
-                    beta.val = beta_max
+                    self.beta_valve[m].interpolate(self.beta_valve_max_expr[m].evaluate)
                 else:
-                    beta.val = beta_min
+                    self.beta_valve[m].interpolate(self.beta_valve_min_expr[m].evaluate)
 
             elif self.bc_dict['robin_valve_implicit'][m]['type'] == 'dp_smooth':
+                beta = expression.template()
                 dp_id = self.bc_dict['robin_valve_implicit'][m]['dp_monitor_id']
                 epsilon = self.bc_dict['robin_valve_implicit'][m]['epsilon']
-                beta.val = 0.5*(beta_max - beta_min)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + beta_min
+                beta.val = 0.5*(self.beta_valve_max_expr[m].val - self.beta_valve_min_expr[m].val)*(ufl.tanh(dp_[dp_id]/epsilon) + 1.) + self.beta_valve_min_expr[m].val
+                self.beta_valve[m].interpolate(beta.evaluate)
 
             else:
                 raise ValueError("Unknown implicit Robin valve type!")
@@ -1322,7 +1336,7 @@ class FluidmechanicsProblem(problem_base):
 
         if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
             for i in range(len(self.fibarray)):
-                fib_proj = project(self.fib_func[i], self.V_v, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm, entity_maps=self.io.entity_maps)
+                fib_proj = project(self.fib_func[i], self.V_v, self.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.comm, entity_maps=self.io.entity_maps)
                 self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+self.fibarray[i])
 
 
@@ -1433,10 +1447,7 @@ class FluidmechanicsSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.io.USE_MIXED_DOLFINX_BRANCH or self.pb.io.USE_NEW_DOLFINX:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
-            else:
-                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.a_old)
 
             te = time.time() - ts

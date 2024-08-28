@@ -94,7 +94,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.sub_solve = True
         self.print_subiter = False
 
-        self.print_enhanced_info = self.pbf.io.print_enhanced_info
+        self.io = self.pbf.io
 
         # number of fields involved
         self.nfields = 4
@@ -132,10 +132,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             self.dcqd_form = []
 
             for i in range(self.pbf0.num_coupling_surf):
-                if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
-                    self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i], entity_maps=self.io.entity_maps))
-                else:
-                    self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i]))
+                self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i], entity_maps=self.io.entity_maps))
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -473,10 +470,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.io.USE_MIXED_DOLFINX_BRANCH or self.pb.io.USE_NEW_DOLFINX:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
-            else:
-                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
             te = time.time() - ts

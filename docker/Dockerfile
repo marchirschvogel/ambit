@@ -1,5 +1,5 @@
-# Ambit-compatible dolfinx Docker image (19 Aug 2023)
-FROM ghcr.io/fenics/dolfinx/dolfinx@sha256:1f374e90d5e918a71a4bdba994bf434cdaf84fedc47aa11ac33295864180fb76
+# Ambit-compatible dolfinx Docker image (28 Aug 2024)
+FROM ghcr.io/fenics/dolfinx/dolfinx@sha256:3fb0184b9a15153f4ecdc73ff8b817af9d2bf85a2ef29119281d64100d70df0e
 
 LABEL org.opencontainers.image.source=https://github.com/marchirschvogel/ambit
 LABEL org.opencontainers.image.version=latest
@@ -20,6 +20,7 @@ WORKDIR /tmp
 # install Python module
 RUN git clone https://github.com/marchirschvogel/ambit.git
 RUN python3 -m pip install git+https://github.com/marchirschvogel/ambit.git --no-cache-dir
+RUN pip3 -v install --no-cache-dir pytest
 
 # remove contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp

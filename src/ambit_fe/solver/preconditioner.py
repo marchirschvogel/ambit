@@ -22,15 +22,15 @@ https://petsc.org/main/petsc4py/petsc_python_types.html#petsc-python-preconditio
 
 class block_precond():
 
-    def __init__(self, iset, precond_fields, printenh, solparams, comm=None):
+    def __init__(self, iset, precond_fields, io, solparams, comm=None):
 
         self.iset = iset
         self.precond_fields = precond_fields
         self.nfields = len(precond_fields)
         assert(len(self.iset)==self.nfields)
         self.comm = comm
-        # extra level of printing
-        self.printenh = printenh
+        # acess to problem IO object
+        self.io = io
         # parameters
         self.solparams = solparams
 
@@ -328,7 +328,7 @@ class schur_2x2(block_precond):
                 self.ksp_py_solver[1].set_mat_vec(self.A, self.C, self.B, self.Bt)
 
         te = time.time() - ts
-        if self.printenh:
+        if self.io.print_enhanced_info:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
@@ -564,7 +564,7 @@ class schur_3x3(block_precond):
                 self.ksp_py_solver[1].set_mat_vec(self.A, self.C, self.B, self.Bt)
 
         te = time.time() - ts
-        if self.printenh:
+        if self.io.print_enhanced_info:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
@@ -1009,7 +1009,7 @@ class bgs_2x2(block_precond):
         self.ksp_fields[1].setOperators(self.C)
 
         te = time.time() - ts
-        if self.printenh:
+        if self.io.print_enhanced_info:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
@@ -1045,6 +1045,8 @@ class bgs_2x2(block_precond):
 
 
 # symmetric version of 2x2 BGS
+# P = [A  0] [I  0] [A^{-1} 0] [I  Bt] [A  I], --> P^{-1} = [A^{-1} 0] [I  -Bt] [A    0   ] [ I  0] [A^{-1} 0]
+#     [0  I] [B  I] [0      C] [0   I] [0  I]               [0      I] [0   I ] [0  C^{-1}] [-B  I] [0      I]
 class bgssym_2x2(bgs_2x2):
 
     def check_field_size(self):
@@ -1158,7 +1160,7 @@ class bgs_3x3(block_precond):
         self.ksp_fields[2].setOperators(self.R)
 
         te = time.time() - ts
-        if self.printenh:
+        if self.io.print_enhanced_info:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 
@@ -1335,7 +1337,7 @@ class jacobi_2x2(block_precond):
         self.ksp_fields[1].setOperators(self.C)
 
         te = time.time() - ts
-        if self.printenh:
+        if self.io.print_enhanced_info:
             utilities.print_status("       === PREC setup, te = %.4f s" % (te), self.comm)
 
 

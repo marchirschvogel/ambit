@@ -44,8 +44,6 @@ class solver_nonlinear:
 
         self.solver_params = solver_params
 
-        self.printenh = self.pb[0].print_enhanced_info
-
         self.x, self.is_ghosted = [[]]*self.nprob, [[]]*self.nprob
         self.nfields, self.ptype = [], []
 
@@ -449,79 +447,79 @@ class solver_nonlinear:
                     elif self.block_precond[npr] == 'schur2x2':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.schur_2x2(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur2x2simple':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_2x2simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.schur_2x2simple(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur3x3':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.schur_3x3(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'schur3x3simple':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.schur_3x3simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.schur_3x3simple(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgsschur4x4':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgs_schur_4x4(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgsschur4x4simple':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_schur_4x4simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgs_schur_4x4simple(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgssymschur4x4':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgssym_schur_4x4(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgssym_schur_4x4(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgssymschur4x4simple':
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgssym_schur_4x4simple(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgssym_schur_4x4simple(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgs2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgs_2x2(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgssym2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgssym_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgssym_2x2(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgs3x3': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgs_3x3(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'bgssym3x3': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgssym_3x3(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.bgssym_3x3(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     elif self.block_precond[npr] == 'jacobi2x2': # can also be called via PETSc's fieldsplit
 
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.printenh, self.solver_params, self.comm)
+                        bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
 
                     else:
@@ -671,7 +669,7 @@ class solver_nonlinear:
 
                         self.K_full_nest[npr].convert("aij", out=self.K_full_merged[npr])
                         tme = time.time() - tes
-                        if self.printenh:
+                        if self.pb[npr].io.print_enhanced_info:
                             utilities.print_status(" "*self.indlen_[npr] + "      === MAT merge, te = %.4f s" % (tme), self.comm)
 
                         self.r_arr[:] = self.r_full_nest[npr].getArray(readonly=True)
@@ -709,7 +707,7 @@ class solver_nonlinear:
                                 self.P_full_nest[npr].convert("aij", out=self.P_full_merged[npr])
                                 self.P[npr] = self.P_full_merged[npr]
                                 tme = time.time() - tms
-                                if self.printenh:
+                                if self.pb[npr].io.print_enhanced_info:
                                     utilities.print_status(" "*self.indlen_[npr] + "      === PREC MAT merge, te = %.4f s" % (tme), self.comm)
                             else:
                                 self.P[npr] = self.P_full_nest[npr]
@@ -880,7 +878,7 @@ class solver_nonlinear:
         self.pb[npr].assemble_residual(t, subsolver=self.subsol)
 
         tee = time.time() - tes
-        if self.printenh:
+        if self.pb[npr].io.print_enhanced_info:
             utilities.print_status(" "*self.indlen_[npr] + "      === Residual assemble, t = %.4f s" % (tee), self.comm)
 
         # apply model order reduction of residual
@@ -904,7 +902,7 @@ class solver_nonlinear:
         self.pb[npr].assemble_stiffness(t, subsolver=self.subsol)
 
         tee = time.time() - tes
-        if self.printenh:
+        if self.pb[npr].io.print_enhanced_info:
             utilities.print_status(" "*self.indlen_[npr] + "      === Jacobian assemble, t = %.4f s" % (tee), self.comm)
 
         # apply model order reduction of stiffness
@@ -951,7 +949,7 @@ class solver_nonlinear:
             for i in range(num_loc_res):
 
                 # interpolate symbolic increment form into increment vector
-                increment_proj = project(increment_forms[i], functionspaces[i], self.pb[0].io.dx, domids=self.pb[0].domain_ids, comm=self.comm)
+                increment_proj = project(increment_forms[i], functionspaces[i], self.pb[0].dx, domids=self.pb[0].domain_ids, comm=self.comm)
                 increments[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 increments[i].interpolate(increment_proj)
 
@@ -962,7 +960,7 @@ class solver_nonlinear:
 
             for i in range(num_loc_res):
                 # interpolate symbolic residual form into residual vector
-                residual_proj = project(residual_forms[i], functionspaces[i], self.pb[0].io.dx, domids=self.pb[0].domain_ids, comm=self.comm)
+                residual_proj = project(residual_forms[i], functionspaces[i], self.pb[0].dx, domids=self.pb[0].domain_ids, comm=self.comm)
                 residuals[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 residuals[i].interpolate(residual_proj)
                 # get residual and increment inf norms

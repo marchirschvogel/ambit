@@ -14,6 +14,7 @@ import pytest
 
 @pytest.mark.fsi
 @pytest.mark.fluid_solid
+@pytest.mark.skip(reason="Currently not tested! Waiting for mixed domain functionality to be working in latest dolfinx version...")
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
@@ -23,7 +24,6 @@ def test_main():
     except: restart_step = 0
 
     IO_PARAMS            = {'problem_type'          : 'fsi',
-                            'USE_MIXED_DOLFINX_BRANCH' : True,
                             'write_results_every'   : 1,
                             'indicate_results_by'   : 'step',
                             'write_restart_every'   : 1,

@@ -62,7 +62,7 @@ def main():
     """
     IO_PARAMS            = {# problem type 'fsi': fluid-solid interaction
                             'problem_type'          : 'fsi',
-                            'USE_MIXED_DOLFINX_BRANCH' : True,
+                            'USE_OLD_DOLFINX_MIXED_BRANCH' : True,
                             # at which step frequency to write results
                             'write_results_every'   : 1,
                             'write_restart_every'   : -1,

@@ -20,6 +20,7 @@ import pytest
 
 
 @pytest.mark.fluid_ale_flow0d
+@pytest.mark.skip(reason="Currently not tested! Waiting for mixed domain functionality to be working in latest dolfinx version...")
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
@@ -29,7 +30,6 @@ def test_main():
     except: restart_step = 0
 
     IO_PARAMS            = {'problem_type'          : 'fluid_ale_flow0d',
-                            'USE_MIXED_DOLFINX_BRANCH' : True,
                             'duplicate_mesh_domains': [[1],[2]],
                             'write_results_every'   : 1,
                             'write_restart_every'   : 1,

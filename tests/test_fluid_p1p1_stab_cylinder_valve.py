@@ -20,6 +20,7 @@ import pytest
 
 
 @pytest.mark.fluid
+@pytest.mark.skip(reason="Currently not tested! Waiting for mixed domain functionality to be working in latest dolfinx version...")
 def test_main():
     
     basepath = str(Path(__file__).parent.absolute())
@@ -29,7 +30,6 @@ def test_main():
     except: restart_step = 0
 
     IO_PARAMS           = {'problem_type'          : 'fluid',
-                           'USE_MIXED_DOLFINX_BRANCH' : True,
                            'duplicate_mesh_domains': [[1],[2]],
                            'mesh_domain'           : basepath+'/input/cylinder_domain.xdmf',
                            'mesh_boundary'         : basepath+'/input/cylinder_boundary.xdmf',

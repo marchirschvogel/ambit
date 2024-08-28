@@ -119,6 +119,9 @@
 \newcommand{\lmzi}{\mathit{\Lambda}} % LM FSI (index)
 
 \mathchardef\mhyphen="2D
+
+\usepackage{scalerel}
+\DeclareMathOperator*{\assembly}{\scalerel*{\mathsf{A}}{\sum}}
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
 \setcounter{secnumdepth}{3}
@@ -151,7 +154,7 @@ A variety of reduced 0D lumped models targeted at blood circulation modeling are
 
 Monolithic fluid-solid interaction (FSI) \cite{nordsletten2011} in ALE formulation using a Lagrange multiplier field is supported, along with coupling of 3D and 0D models (solid or fluid with 0D lumped circulation systems) such that cardiovascular simulations with realistic boundary conditions can be performed.\\
 
-Implementations for a recently proposed novel physics- and projection-based model reduction for FSI, denoted as fluid-reduced-solid interaction (FrSI) \cite{hirschvogel2022preprint}, are provided, along with POD-based Galerkin model reduction techniques \cite{farhat2014} using full or boundary subspaces.\\
+Implementations for a recently proposed novel physics- and projection-based model reduction for FSI, denoted as fluid-reduced-solid interaction (FrSI) \cite{hirschvogel2024-frsi}, are provided, along with POD-based Galerkin model reduction techniques \cite{farhat2014} using full or boundary subspaces.\\
 
 The nonlinear (single- or multi-field) problems are solved with a customized Newton solver with PTC \cite{gee2009} adaptivity in case of divergence, providing robustness for numerically challenging problems. Linear solvers and preconditioners can be chosen from the PETSc repertoire, and specific block preconditioners are made available for coupled problems.
 
@@ -171,7 +174,7 @@ This documentation is structured as follows. In sec. \ref{installation}, instruc
 
 \section{Installation}\label{installation}
 
-In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible dolfinx development version dates to 19 Aug 2023).\\
+In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible dolfinx development version dates to 28 Aug 2024).\\
 
 Ambit can then be installed using pip, either the current release
 \begin{verbatim}
@@ -696,7 +699,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 
 -- ALE domain problem deformation governed by linear-elastic, nonlinear hyperelastic solid, or a diffusion problem, displacement field $\bs{d}$\\
 
--- Fluid mechanics formulated with respect to the reference frame, using ALE deformation gradient $\widetilde{\bs{F}}(\bs{d}) = \bs{I} + \bs{\nabla}_0\bs{d}$ and its determinant, $\widetilde{J}(\bs{d})=\det \widetilde{\bs{F}}(\bs{d})$\\
+-- Fluid mechanics formulated with respect to the reference frame, using ALE deformation gradient $\widehat{\bs{F}}(\bs{d}) = \bs{I} + \bs{\nabla}_0\bs{d}$ and its determinant, $\widehat{J}(\bs{d})=\det \widehat{\bs{F}}(\bs{d})$\\
 
 \textbf{ALE problem}\\
 
@@ -725,7 +728,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\
 -- ALE material \verb.neohooke. (fully nonlinear model):
 \begin{equation}
 \begin{aligned}
-\bs{\sigma}^{\mathrm{G}}(\bs{d}) = \frac{\partial \mathit{\Psi}}{\partial \widetilde{\bs{F}}}, \qquad \text{with}\quad \mathit{\Psi} = \frac{\mu}{2}\left(\mathrm{tr}(\widetilde{\bs{F}}^{\mathrm{T}}\widetilde{\bs{F}}) - 3\right) + \frac{\mu}{2\beta} \left(\widetilde{J}^{-2\beta} - 1\right)
+\bs{\sigma}^{\mathrm{G}}(\bs{d}) = \frac{\partial \mathit{\Psi}}{\partial \widehat{\bs{F}}}, \qquad \text{with}\quad \mathit{\Psi} = \frac{\mu}{2}\left(\mathrm{tr}(\widehat{\bs{F}}^{\mathrm{T}}\widehat{\bs{F}}) - 3\right) + \frac{\mu}{2\beta} \left(\widehat{J}^{-2\beta} - 1\right)
 \end{aligned}
 \end{equation}
 
@@ -744,8 +747,8 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 \begin{equation}
 \label{equation-fluid-ale-strong-form}
 \begin{aligned}
-\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widetilde{\bs{F}}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
-\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widehat{\bs{F}}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\bs{\nabla}_{0}\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
 \bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \\
 \bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \\
 \bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0,
@@ -754,7 +757,7 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 
 with a Newtonian fluid constitutive law
 \begin{align}
-\bs{\sigma} = -p \bs{I} + 2 \mu \bs{\gamma} = -p \bs{I} + \mu \left(\bs{\nabla}_0 \bs{v}\,\widetilde{\bs{F}}^{-1} + \widetilde{\bs{F}}^{-\mathrm{T}}(\bs{\nabla}_0 \bs{v})^{\mathrm{T}}\right)
+\bs{\sigma} = -p \bs{I} + 2 \mu \bs{\gamma} = -p \bs{I} + \mu \left(\bs{\nabla}_0 \bs{v}\,\widehat{\bs{F}}^{-1} + \widehat{\bs{F}}^{-\mathrm{T}}(\bs{\nabla}_0 \bs{v})^{\mathrm{T}}\right)
 \end{align}
 
 \textbf{Weak form (ALE)}\\
@@ -773,14 +776,14 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 -- Kinetic virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widetilde{J} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_{0}\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widehat{J} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\bs{\nabla}_{0}\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) \cdot \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
 \begin{equation}
 \begin{aligned}
 \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) = 
-\int\limits_{\Om_0} \widetilde{J}\bs{\sigma}(\bs{v},p,\bs{d}) : \bs{\nabla}_{0} \delta\bs{v}\,\widetilde{\bs{F}}^{-1} \,\mathrm{d}V
+\int\limits_{\Om_0} \widehat{J}\bs{\sigma}(\bs{v},p,\bs{d}) : \bs{\nabla}_{0} \delta\bs{v}\,\widehat{\bs{F}}^{-1} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -788,7 +791,7 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \begin{equation}
 \begin{aligned}
 \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p) = 
-\int\limits_{\Om_0} \widetilde{J}\,\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
+\int\limits_{\Om_0} \widehat{J}\,\bs{\nabla}_{0}\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -803,13 +806,13 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \item pressure Neumann load:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,\widetilde{J}\widetilde{\bs{F}}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A 
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= -\int\limits_{\Gm_0^{\mathrm{N}}} \hat{p}(t)\,\widehat{J}\widehat{\bs{F}}^{-\mathrm{T}}\bs{n}_{0} \cdot \delta\bs{v} \,\mathrm{d}A 
 \end{aligned}
 \end{equation}
 \item body force:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} \widetilde{J}\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{ext}}(\bs{d};\delta\bs{v}) &= \int\limits_{\Om_0} \widehat{J}\,\hat{\bs{b}}(t) \cdot \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 \end{itemize}
@@ -820,16 +823,16 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 -- Velocity residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\mathrm{SUPG}}\,(\bs{\nabla}_0\delta\bs{v}\,\widetilde{\bs{F}}^{-1})\,\bs{v}\;\cdot \\
-& \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widetilde{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
-& + \int\limits_{\Om_0}\widetilde{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\bs{\nabla}_{0}\delta\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}})(\bs{\nabla}_{0}\bs{v} : \widetilde{\bs{F}}^{-\mathrm{T}})\,\mathrm{d}V
+r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\bs{\nabla}_0\delta\bs{v}\,\widehat{\bs{F}}^{-1})\,\bs{v}\;\cdot \\
+& \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widehat{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
+& + \int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\bs{\nabla}_{0}\delta\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}})(\bs{\nabla}_{0}\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}})\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Pressure residual operator in (\ref{equation-fluid-ale-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\mathrm{PSPG}}\,(\widetilde{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p) \;\cdot \\
-& \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widetilde{\bs{F}}^{-1})\,(\bs{v}-\bs{w})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widetilde{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
+r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\bs{F}}^{-\mathrm{T}}\bs{\nabla}_{0}\delta p) \;\cdot \\
+& \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\bs{\nabla}_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \bs{\nabla}_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widehat{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -891,7 +894,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\ma
 &q_{\mathrm{v,in}}^{\ell} = q_{\mathrm{mv}}(p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}) && \text{mitral valve momentum}\\
 &-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell} && \text{left ventricle flow balance}\\
 &q_{\mathrm{v,out}}^{\ell} = q_{\mathrm{av}}(p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}) && \text{aortic valve momentum}\\
-&-Q_{\mathrm{aort}}^{\mathrm{sys}} = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}}\sum\limits_{i=1}^{2}q_{\mathrm{ar,cor,in},i}^{\mathrm{sys}} && \text{aortic root flow balance}\\
+&-Q_{\mathrm{aort}}^{\mathrm{sys}} = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}}\sum\limits_{i\in\{\ell,r\}}q_{\mathrm{cor,p,in}}^{\mathrm{sys},i} && \text{aortic root flow balance}\\
 &I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,p}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,p}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,d}}^{\mathrm{sys}} && \text{aortic root inertia}\nonumber\\
 &C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,d}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,p}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}} && \text{systemic arterial flow balance}\\
 &L_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar,d}}^{\mathrm{sys}}-p_{\mathrm{ven}}^{\mathrm{sys}} && \text{systemic arterial momentum}\\
@@ -904,7 +907,7 @@ r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widetilde{J}\, \tau_{\ma
 \label{equation-syspul-2}
 \begin{aligned}
 &\text{right heart and pulmonary circulation} && \\
-&-Q_{\mathrm{at}}^{r} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}} q_{\mathrm{ven,cor,out}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r} && \text{right atrium flow balance}\\
+&-Q_{\mathrm{at}}^{r} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}} + \mathbb{I}^{\mathrm{cor}} q_{\mathrm{cor,d,out}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r} && \text{right atrium flow balance}\\
 &q_{\mathrm{v,in}}^{r} = q_{\mathrm{tv}}(p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}) && \text{tricuspid valve momentum}\\
 &-Q_{\mathrm{v}}^{r} = q_{\mathrm{v,in}}^{r} - q_{\mathrm{v,out}}^{r} && \text{right ventricle flow balance}\\
 &q_{\mathrm{v,out}}^{r} = q_{\mathrm{pv}}(p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}) && \text{pulmonary valve momentum}\\
@@ -1271,7 +1274,7 @@ r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v};\delta\mathit{\Lambda}):= \left(\in
 -- fluid momentum in (\ref{equation-fluid-ale-weak-form}) augmented by following term:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\widetilde{J}\widetilde{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
+r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\widehat{J}\widehat{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot\delta\bs{v}\,\mathrm{d}A
 \end{aligned}
 \end{equation}
 
@@ -1279,7 +1282,7 @@ r_v \leftarrow r_v + \int\limits_{\Gm_0^{\fF\text{-}\mathrm{0d}}}\!\mathit{\Lamb
 
 \begin{equation}
 \begin{aligned}
-r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fF\text{-}0d}}}\! \widetilde{J}\widetilde{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot(\bs{v}-\bs{w}(\bs{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
+r_{\mathit{\Lambda}}(\mathit{\Lambda},\bs{v},\bs{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\Gm_0^{\mathrm{\fF\text{-}0d}}}\! \widehat{J}\widehat{\bs{F}}^{-\mathrm{T}}\bs{n}_{0}\cdot(\bs{v}-\widehat{\bs{w}}(\bs{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
 \end{aligned}
 \end{equation}
 
@@ -1628,7 +1631,7 @@ in ventricular volume?
 
 \subsubsection*{Blocked pipe flow with 0D model bypass}
 
-\textit{\textbf{Note:} This demo only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}\\
+\textit{\textbf{Note:} This demo only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv `old' Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}\\
 
 This example demonstrates how to couple 3D fluid flow to a 0D lumped-parameter model. Incompressible transient Navier-Stokes flow in a pipe with prescribed inflow is solved,
 with the special constraint that an internal boundary (all-time closed valve) separates region 1 and region 2 of the pipe. This internal Dirichlet condition can only be achieved
@@ -1670,7 +1673,7 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 
 -- Input files: \verb"demos/fsi"\\
 
-\textit{\textbf{Note:} FSI only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}
+\textit{\textbf{Note:} FSI only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv `old' Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}
 
 \subsubsection*{Channel flow around elastic flag}
 
@@ -1762,16 +1765,16 @@ Figure \ref{fig:channel_flag_results} depicts the velocity at three instances in
 &\bs{v}, \hat{\bs{v}}_{0} &&: \text{fluid mechanics velocity, and prescribed initial value} \\
 &\delta\bs{v}, \Delta\bs{v} &&: \text{fluid mechanics velocity test, trial function} \\
 &\bs{a}=\frac{\partial\bs{v}}{\partial t} &&: \text{fluid mechanics acceleration} \\
-&\bs{d}, \hat{\bs{d}}_{0} &&: \text{ALE displacement field, and prescribed initial value} \\
-&\delta\bs{d}, \Delta\bs{d} &&: \text{ALE displacement test, trial function} \\
+&\bs{d} &&: \text{ALE domain displacement} \\
+&\delta\bs{d}, \Delta\bs{d} &&: \text{ALE domain displacement test, trial function} \\
 &\hat{\bs{b}}_0, \hat{\bs{b}} &&: \text{body force vector defined in the reference, current frame} \\
-&\bs{w}=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t}, \hat{\bs{w}}_{0} &&: \text{ALE velocity, and prescribed initial value} \\
+&\widehat{\bs{w}}=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t} &&: \text{ALE domain velocity} \\
 &\rho_0, \rho &&: \text{reference, current density} \\
 &\bs{P}=\bs{F}\bs{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
 &\bs{F}=\bs{I}+\bs{\nabla}_{0}\bs{u} &&: \text{solid deformation gradient} \\
-&\widetilde{\bs{F}}=\bs{I}+\bs{\nabla}_{0}\bs{d} &&: \text{ALE deformation gradient} \\
+&\widehat{\bs{F}}=\bs{I}+\bs{\nabla}_{0}\bs{d} &&: \text{ALE deformation gradient} \\
 &J=\det \bs{F} &&: \text{determinant of solid deformation gradient} \\
-&\widetilde{J}=\det \widetilde{\bs{F}} &&: \text{determinant of ALE deformation gradient} \\
+&\widehat{J}=\det \widehat{\bs{F}} &&: \text{determinant of ALE deformation gradient} \\
 &\bs{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\
 &\bs{\sigma} &&: \text{Cauchy stress tensor} \\
 &\bs{t}_0, \hat{\bs{t}}_{0} &&: \text{1st Piola-Kirchhoff traction, prescribed 1st Piola-Kirchhoff traction} \\

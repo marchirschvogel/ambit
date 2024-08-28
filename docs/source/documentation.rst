@@ -61,7 +61,7 @@ Preface
 | Implementations for a recently proposed novel physics- and
   projection-based model reduction for FSI, denoted as
   fluid-reduced-solid interaction (FrSI)
-  :cite:p:`hirschvogel2022preprint`, are provided, along with
+  :cite:p:`hirschvogel2024-frsi`, are provided, along with
   POD-based Galerkin model reduction techniques
   :cite:p:`farhat2014` using full or boundary subspaces.
 | The nonlinear (single- or multi-field) problems are solved with a
@@ -89,7 +89,7 @@ Installation
 
 | In order to use Ambit, you need to install FEniCSx
   (https://github.com/FEniCS/dolfinx#installation) (latest
-  Ambit-compatible dolfinx development version dates to 19 Aug 2023).
+  Ambit-compatible dolfinx development version dates to 28 Aug 2024).
 | Ambit can then be installed using pip, either the current release
 
 ::
@@ -684,9 +684,9 @@ ALE reference frame
   :math:`\boldsymbol{d}`
 | – Fluid mechanics formulated with respect to the reference frame,
   using ALE deformation gradient
-  :math:`\widetilde{\boldsymbol{F}}(\boldsymbol{d}) = \boldsymbol{I} + \boldsymbol{\nabla}_0\boldsymbol{d}`
+  :math:`\widehat{\boldsymbol{F}}(\boldsymbol{d}) = \boldsymbol{I} + \boldsymbol{\nabla}_0\boldsymbol{d}`
   and its determinant,
-  :math:`\widetilde{J}(\boldsymbol{d})=\det \widetilde{\boldsymbol{F}}(\boldsymbol{d})`
+  :math:`\widehat{J}(\boldsymbol{d})=\det \widehat{\boldsymbol{F}}(\boldsymbol{d})`
 | **ALE problem**
 | – Primary variable: domain displacement :math:`\boldsymbol{d}`
 | – Strong form:
@@ -717,7 +717,7 @@ ALE reference frame
 
   .. math::
      \begin{aligned}
-     \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = \frac{\partial \mathit{\Psi}}{\partial \widetilde{\boldsymbol{F}}}, \qquad \text{with}\quad \mathit{\Psi} = \frac{\mu}{2}\left(\mathrm{tr}(\widetilde{\boldsymbol{F}}^{\mathrm{T}}\widetilde{\boldsymbol{F}}) - 3\right) + \frac{\mu}{2\beta} \left(\widetilde{J}^{-2\beta} - 1\right)
+     \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = \frac{\partial \mathit{\Psi}}{\partial \widehat{\boldsymbol{F}}}, \qquad \text{with}\quad \mathit{\Psi} = \frac{\mu}{2}\left(\mathrm{tr}(\widehat{\boldsymbol{F}}^{\mathrm{T}}\widehat{\boldsymbol{F}}) - 3\right) + \frac{\mu}{2\beta} \left(\widehat{J}^{-2\beta} - 1\right)
      \end{aligned}
 
 – weak form:
@@ -737,8 +737,8 @@ ALE reference frame
      :label: fluid-ale-strong-form
 
      \begin{aligned}
-     \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
-     \boldsymbol{\nabla}_{0}\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \boldsymbol{\nabla}_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
      \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \\
      \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \\
      \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_0,
@@ -748,7 +748,7 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu \boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\boldsymbol{\nabla}_0 \boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1} + \widetilde{\boldsymbol{F}}^{-\mathrm{T}}(\boldsymbol{\nabla}_0 \boldsymbol{v})^{\mathrm{T}}\right)
+   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu \boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\boldsymbol{\nabla}_0 \boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} + \widehat{\boldsymbol{F}}^{-\mathrm{T}}(\boldsymbol{\nabla}_0 \boldsymbol{v})^{\mathrm{T}}\right)
    \end{aligned}
 
 | **Weak form (ALE)**
@@ -768,7 +768,7 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widetilde{J} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widehat{J} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
    \end{aligned}
 
 – Internal virtual power:
@@ -776,7 +776,7 @@ with a Newtonian fluid constitutive law
 .. math::
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) = 
-   \int\limits_{\mathit{\Omega}_0} \widetilde{J}\boldsymbol{\sigma}(\boldsymbol{v},p,\boldsymbol{d}) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1} \,\mathrm{d}V
+   \int\limits_{\mathit{\Omega}_0} \widehat{J}\boldsymbol{\sigma}(\boldsymbol{v},p,\boldsymbol{d}) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} \,\mathrm{d}V
    \end{aligned}
 
 – Pressure virtual power:
@@ -784,7 +784,7 @@ with a Newtonian fluid constitutive law
 .. math::
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p) = 
-   \int\limits_{\mathit{\Omega}_0} \widetilde{J}\,\boldsymbol{\nabla}_{0}\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
+   \int\limits_{\mathit{\Omega}_0} \widehat{J}\,\boldsymbol{\nabla}_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
    \end{aligned}
 
 | – External virtual power:
@@ -800,14 +800,14 @@ with a Newtonian fluid constitutive law
 
    .. math::
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= -\int\limits_{\mathit{\Gamma}_0^{\mathrm{N}}} \hat{p}(t)\,\widetilde{J}\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{v} \,\mathrm{d}A 
+      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= -\int\limits_{\mathit{\Gamma}_0^{\mathrm{N}}} \hat{p}(t)\,\widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0} \cdot \delta\boldsymbol{v} \,\mathrm{d}A 
       \end{aligned}
 
 -  body force:
 
    .. math::
       \begin{aligned}
-      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_0} \widetilde{J}\,\hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+      \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{d};\delta\boldsymbol{v}) &= \int\limits_{\mathit{\Omega}_0} \widehat{J}\,\hat{\boldsymbol{b}}(t) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
       \end{aligned}
 
 | **Stabilization (ALE)**
@@ -818,9 +818,9 @@ with a Newtonian fluid constitutive law
 
   .. math::
      \begin{aligned}
-     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widetilde{J}\, \tau_{\mathrm{SUPG}}\,(\boldsymbol{\nabla}_0\delta\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\;\cdot \\
-     & \qquad\quad \cdot\left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
-     & + \int\limits_{\mathit{\Omega}_0}\widetilde{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\boldsymbol{\nabla}_{0}\delta\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}})(\boldsymbol{\nabla}_{0}\boldsymbol{v} : \widetilde{\boldsymbol{F}}^{-\mathrm{T}})\,\mathrm{d}V
+     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\boldsymbol{\nabla}_0\delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\;\cdot \\
+     & \qquad\quad \cdot\left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
+     & + \int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\boldsymbol{\nabla}_{0}\delta\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})(\boldsymbol{\nabla}_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})\,\mathrm{d}V
      \end{aligned}
 
   – Pressure residual operator in
@@ -829,8 +829,8 @@ with a Newtonian fluid constitutive law
 
   .. math::
      \begin{aligned}
-     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widetilde{J}\, \tau_{\mathrm{PSPG}}\,(\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}\delta p) \;\cdot \\
-     & \qquad\quad \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widetilde{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\boldsymbol{w})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widetilde{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
+     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}\delta p) \;\cdot \\
+     & \qquad\quad \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
      \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
@@ -901,7 +901,7 @@ Systemic and pulmonary circulation
    &q_{\mathrm{v,in}}^{\ell} = q_{\mathrm{mv}}(p_{\mathrm{at}}^{\ell}-p_{\mathrm{v}}^{\ell}) && \text{mitral valve momentum}\\
    &-Q_{\mathrm{v}}^{\ell} = q_{\mathrm{v,in}}^{\ell} - q_{\mathrm{v,out}}^{\ell} && \text{left ventricle flow balance}\\
    &q_{\mathrm{v,out}}^{\ell} = q_{\mathrm{av}}(p_{\mathrm{v}}^{\ell}-p_{\mathrm{ar}}^{\mathrm{sys}}) && \text{aortic valve momentum}\\
-   &-Q_{\mathrm{aort}}^{\mathrm{sys}} = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}}\sum\limits_{i=1}^{2}q_{\mathrm{ar,cor,in},i}^{\mathrm{sys}} && \text{aortic root flow balance}\\
+   &-Q_{\mathrm{aort}}^{\mathrm{sys}} = q_{\mathrm{v,out}}^{\ell} - q_{\mathrm{ar,p}}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}}\sum\limits_{i\in\{\ell,r\}}q_{\mathrm{cor,p,in}}^{\mathrm{sys},i} && \text{aortic root flow balance}\\
    &I_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar,p}}^{\mathrm{sys}}}{\mathrm{d}t} + Z_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar,p}}^{\mathrm{sys}}=p_{\mathrm{ar}}^{\mathrm{sys}}-p_{\mathrm{ar,d}}^{\mathrm{sys}} && \text{aortic root inertia}\nonumber\\
    &C_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}p_{\mathrm{ar,d}}^{\mathrm{sys}}}{\mathrm{d}t} = q_{\mathrm{ar,p}}^{\mathrm{sys}} - q_{\mathrm{ar}}^{\mathrm{sys}} && \text{systemic arterial flow balance}\\
    &L_{\mathrm{ar}}^{\mathrm{sys}} \frac{\mathrm{d}q_{\mathrm{ar}}^{\mathrm{sys}}}{\mathrm{d}t} + R_{\mathrm{ar}}^{\mathrm{sys}}\,q_{\mathrm{ar}}^{\mathrm{sys}}=p_{\mathrm{ar,d}}^{\mathrm{sys}}-p_{\mathrm{ven}}^{\mathrm{sys}} && \text{systemic arterial momentum}\\
@@ -915,7 +915,7 @@ Systemic and pulmonary circulation
 
    \begin{aligned}
    &\text{right heart and pulmonary circulation} && \\
-   &-Q_{\mathrm{at}}^{r} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}} - \mathbb{I}^{\mathrm{cor}} q_{\mathrm{ven,cor,out}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r} && \text{right atrium flow balance}\\
+   &-Q_{\mathrm{at}}^{r} = \sum\limits_{i=1}^{n_{\mathrm{ven}}^{\mathrm{sys}}}q_{\mathrm{ven},i}^{\mathrm{sys}} + \mathbb{I}^{\mathrm{cor}} q_{\mathrm{cor,d,out}}^{\mathrm{sys}} - q_{\mathrm{v,in}}^{r} && \text{right atrium flow balance}\\
    &q_{\mathrm{v,in}}^{r} = q_{\mathrm{tv}}(p_{\mathrm{at}}^{r}-p_{\mathrm{v}}^{r}) && \text{tricuspid valve momentum}\\
    &-Q_{\mathrm{v}}^{r} = q_{\mathrm{v,in}}^{r} - q_{\mathrm{v,out}}^{r} && \text{right ventricle flow balance}\\
    &q_{\mathrm{v,out}}^{r} = q_{\mathrm{pv}}(p_{\mathrm{v}}^{r}-p_{\mathrm{ar}}^{\mathrm{pul}}) && \text{pulmonary valve momentum}\\
@@ -1316,14 +1316,14 @@ ALE fluid + 0D flow
 
   .. math::
      \begin{aligned}
-     r_v \leftarrow r_v + \int\limits_{\mathit{\Gamma}_0^{\text{f}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\widetilde{J}\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
+     r_v \leftarrow r_v + \int\limits_{\mathit{\Gamma}_0^{\text{f}\text{-}\mathrm{0d}}}\!\mathit{\Lambda}\,\widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{v}\,\mathrm{d}A
      \end{aligned}
 
 – Multiplier constraint
 
 .. math::
    \begin{aligned}
-   r_{\mathit{\Lambda}}(\mathit{\Lambda},\boldsymbol{v},\boldsymbol{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{f}\text{-}0d}}}\! \widetilde{J}\widetilde{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot(\boldsymbol{v}-\boldsymbol{w}(\boldsymbol{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
+   r_{\mathit{\Lambda}}(\mathit{\Lambda},\boldsymbol{v},\boldsymbol{d};\delta\mathit{\Lambda}):= \left(\int\limits_{\mathit{\Gamma}_0^{\mathrm{\text{f}\text{-}0d}}}\! \widehat{J}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot(\boldsymbol{v}-\widehat{\boldsymbol{w}}(\boldsymbol{d}))\,\mathrm{d}A - Q^{\mathrm{0d}}(\mathit{\Lambda})\right) \delta\mathit{\Lambda}, \quad \forall \; \delta\mathit{\Lambda}
    \end{aligned}
 
 | with
@@ -1768,7 +1768,7 @@ Blocked pipe flow with 0D model bypass
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 | **Note:** *This demo only runs with the mixed dolfinx branch, which is
-  pre-installed in the Ambit devenv Docker container. Pull this
+  pre-installed in the Ambit devenv ‘old’ Docker container. Pull this
   container and install Ambit in there according to the instructions in
   sec.* `2 <#installation>`__\ *.*
 | This example demonstrates how to couple 3D fluid flow to a 0D
@@ -1835,7 +1835,7 @@ Demo: FSI
   `4.4.4 <#fluid-solid-interaction-fsi>`__
 | – Input files: ``demos/fsi``
 | **Note:** *FSI only runs with the mixed dolfinx branch, which is
-  pre-installed in the Ambit devenv Docker container. Pull this
+  pre-installed in the Ambit devenv ‘old’ Docker container. Pull this
   container and install Ambit in there according to the instructions in
   sec.* `2 <#installation>`__\ *.*
 
@@ -1960,16 +1960,16 @@ Table of symbols
    &\boldsymbol{v}, \hat{\boldsymbol{v}}_{0} &&: \text{fluid mechanics velocity, and prescribed initial value} \\
    &\delta\boldsymbol{v}, \Delta\boldsymbol{v} &&: \text{fluid mechanics velocity test, trial function} \\
    &\boldsymbol{a}=\frac{\partial\boldsymbol{v}}{\partial t} &&: \text{fluid mechanics acceleration} \\
-   &\boldsymbol{d}, \hat{\boldsymbol{d}}_{0} &&: \text{ALE displacement field, and prescribed initial value} \\
-   &\delta\boldsymbol{d}, \Delta\boldsymbol{d} &&: \text{ALE displacement test, trial function} \\
+   &\boldsymbol{d} &&: \text{ALE domain displacement} \\
+   &\delta\boldsymbol{d}, \Delta\boldsymbol{d} &&: \text{ALE domain displacement test, trial function} \\
    &\hat{\boldsymbol{b}}_0, \hat{\boldsymbol{b}} &&: \text{body force vector defined in the reference, current frame} \\
-   &\boldsymbol{w}=\frac{\mathrm{d}\boldsymbol{d}}{\mathrm{d}t}, \hat{\boldsymbol{w}}_{0} &&: \text{ALE velocity, and prescribed initial value} \\
+   &\widehat{\boldsymbol{w}}=\frac{\mathrm{d}\boldsymbol{d}}{\mathrm{d}t} &&: \text{ALE domain velocity} \\
    &\rho_0, \rho &&: \text{reference, current density} \\
    &\boldsymbol{P}=\boldsymbol{F}\boldsymbol{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
    &\boldsymbol{F}=\boldsymbol{I}+\boldsymbol{\nabla}_{0}\boldsymbol{u} &&: \text{solid deformation gradient} \\
-   &\widetilde{\boldsymbol{F}}=\boldsymbol{I}+\boldsymbol{\nabla}_{0}\boldsymbol{d} &&: \text{ALE deformation gradient} \\
+   &\widehat{\boldsymbol{F}}=\boldsymbol{I}+\boldsymbol{\nabla}_{0}\boldsymbol{d} &&: \text{ALE deformation gradient} \\
    &J=\det \boldsymbol{F} &&: \text{determinant of solid deformation gradient} \\
-   &\widetilde{J}=\det \widetilde{\boldsymbol{F}} &&: \text{determinant of ALE deformation gradient} \\
+   &\widehat{J}=\det \widehat{\boldsymbol{F}} &&: \text{determinant of ALE deformation gradient} \\
    &\boldsymbol{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\
    &\boldsymbol{\sigma} &&: \text{Cauchy stress tensor} \\
    &\boldsymbol{t}_0, \hat{\boldsymbol{t}}_{0} &&: \text{1st Piola-Kirchhoff traction, prescribed 1st Piola-Kirchhoff traction} \\

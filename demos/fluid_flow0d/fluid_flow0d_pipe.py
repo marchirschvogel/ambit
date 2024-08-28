@@ -23,9 +23,9 @@ def main():
                             # For this setup in order to model an internal valve/Dirichlet boundary, we need to duplicate the pressure space at this boundary; otherwise,
                             # any Dirichlet condition on the velocity inside the domain will not prevent fluid to experience a pressure gradient across that plane, leading
                             # to unphysical de- and acceleration of fluid infront of and behind the valve.
-                            # This duplicate pressure space can only be achieved using the mixed Dolfinx branch, which is installed in the Ambit devenv Docker container.
+                            # This duplicate pressure space can only be achieved using the mixed Dolfinx branch, which is installed in the Ambit devenv 'old' Docker container.
                             # In the future, this functionality is expected to be merged into the main branch of Dolfinx (as it has been announced).
-                            'USE_MIXED_DOLFINX_BRANCH' : True,
+                            'USE_OLD_DOLFINX_MIXED_BRANCH' : True,
                             # indicate which domain IDs (specified in 'mesh_domain' file) should be split (creating a submesh)
                             'duplicate_mesh_domains': [[1],[2]],
                             # the meshes for the domain and boundary topology are specified separately

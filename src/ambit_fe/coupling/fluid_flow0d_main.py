@@ -87,7 +87,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.localsolve = self.pbf.localsolve
 
         self.sub_solve = True
-        self.print_enhanced_info = self.pbf.io.print_enhanced_info
+        self.io = self.pbf.io
 
         # 3D fluxes
         self.constr, self.constr_old = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
@@ -150,7 +150,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = self.pbf.io.ds(self.surface_vq_ids[n][i])
+                ds_vq = self.pbf.bmeasures[0](self.surface_vq_ids[n][i])
                 cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'])
                 cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'])
 
@@ -160,7 +160,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
 
-                ds_p = self.pbf.io.ds(self.surface_p_ids[n][i])
+                ds_p = self.pbf.bmeasures[0](self.surface_p_ids[n][i])
                 df_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale'])
                 df_mid_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale_mid'])
 
@@ -203,18 +203,11 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
 
         for i in range(self.num_coupling_surf):
-            if self.pbf.io.USE_MIXED_DOLFINX_BRANCH or self.pbf.io.USE_NEW_DOLFINX:
-                self.cq_form.append(fem.form(self.cq[i], entity_maps=self.pbf.io.entity_maps))
-                self.cq_old_form.append(fem.form(self.cq_old[i], entity_maps=self.pbf.io.entity_maps))
+            self.cq_form.append(fem.form(self.cq[i], entity_maps=self.pbf.io.entity_maps))
+            self.cq_old_form.append(fem.form(self.cq_old[i], entity_maps=self.pbf.io.entity_maps))
 
-                self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i], entity_maps=self.pbf.io.entity_maps))
-                self.dforce_form.append(fem.form(self.dforce[i], entity_maps=self.pbf.io.entity_maps))
-            else:
-                self.cq_form.append(fem.form(self.cq[i]))
-                self.cq_old_form.append(fem.form(self.cq_old[i]))
-
-                self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
-                self.dforce_form.append(fem.form(self.dforce[i]))
+            self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i], entity_maps=self.pbf.io.entity_maps))
+            self.dforce_form.append(fem.form(self.dforce[i], entity_maps=self.pbf.io.entity_maps))
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -772,10 +765,7 @@ class FluidmechanicsFlow0DSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.pbf.io.USE_MIXED_DOLFINX_BRANCH or self.pb.pbf.io.USE_NEW_DOLFINX:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
-            else:
-                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.pbf.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.pbf.io.entity_maps)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
             te = time.time() - ts

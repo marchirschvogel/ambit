@@ -86,8 +86,11 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.localsolve = False
         self.print_subiter = self.pbf0.print_subiter
 
-        P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
-        self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
+        if self.ios.USE_OLD_DOLFINX_MIXED_BRANCH:
+            P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
+            self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
+        else:
+            self.V_lm = fem.functionspace(self.io.msh_emap_lm[0], ("Lagrange", self.pbs.order_disp, (self.io.msh_emap_lm[0].geometry.dim,)))
 
         # Lagrange multiplier
         self.lm = fem.Function(self.V_lm)
@@ -108,7 +111,6 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.numdof = self.pbs.numdof + self.pbfa0.numdof + self.lm.vector.getSize()
 
         self.sub_solve = True
-        self.print_enhanced_info = self.pbf.io.print_enhanced_info
 
         # number of fields involved
         if self.pbs.incompressible_2field: self.nfields=7

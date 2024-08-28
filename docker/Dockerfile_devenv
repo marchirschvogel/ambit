@@ -1,14 +1,11 @@
-# Ambit-compatible dolfinx dev-env Docker image
-FROM ghcr.io/fenics/dolfinx/dev-env@sha256:8abdd30f7315deddd79277542639a3c2676d7a21451a6a669c7ce150c2ce5ae9
+# Ambit-compatible dolfinx Docker image (28 Aug 2024)
+FROM ghcr.io/fenics/dolfinx/dolfinx@sha256:3fb0184b9a15153f4ecdc73ff8b817af9d2bf85a2ef29119281d64100d70df0e
 
 LABEL org.opencontainers.image.source=https://github.com/marchirschvogel/ambit
 LABEL org.opencontainers.image.description="ambit_devenv"
 LABEL org.opencontainers.image.licenses=MIT
 
 ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
-
-ENV PETSC_DIR=/usr/local/petsc
-ENV PETSC_ARCH=linux-gnu-real64-32
 
 # install pip and git with apt
 RUN apt-get update && apt-get install -y python3-pip git
@@ -19,21 +16,11 @@ RUN python3 -m pip install pip setuptools --upgrade
 # set the working directory to install docker dependencies
 WORKDIR /tmp
 
-RUN git clone https://github.com/fenics/ufl.git && cd ufl && git checkout f195476 && cd ..
-RUN git clone https://github.com/fenics/basix.git && cd basix && git checkout 751ac1a && cd ..
-RUN git clone -b jpdean/meshview https://github.com/fenics/ffcx.git
-RUN git clone -b jpdean/mixed_domain https://github.com/fenics/dolfinx.git
-
-RUN cd ufl   && pip3 -v install --no-deps --no-cache-dir . && cd ..
-RUN cd basix && pip3 -v install --no-deps --no-cache-dir . && cd ..
-RUN cd ffcx  && pip3 -v install --no-deps --no-cache-dir . && cd ..
-
-RUN mkdir -p dolfinx/cpp/build && cd dolfinx/cpp/build && cmake .. && make install && cd ../../..
-
-RUN cd dolfinx/python && pip3 -v install --no-deps --no-cache-dir . && cd ../..
-
 # install Python modules that are additionally needed by Ambit
-RUN pip3 -v install --no-deps --no-cache-dir mpmath && pip3 -v install --no-deps --no-cache-dir sympy
+RUN pip3 -v install --no-deps --no-cache-dir mpmath
+RUN pip3 -v install --no-deps --no-cache-dir sympy
+RUN pip3 -v install --no-cache-dir h5py
+RUN pip3 -v install --no-cache-dir pytest
 
 # remove contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp

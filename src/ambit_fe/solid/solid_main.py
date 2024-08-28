@@ -64,6 +64,11 @@ class SolidmechanicsProblem(problem_base):
         try: self.domain_ids = self.io.io_params['domain_ids_solid']
         except: self.domain_ids = np.arange(1,self.num_domains+1)
 
+        self.dx, self.bmeasures = self.io.create_integration_measures(self.io.mesh, [self.io.mt_d,self.io.mt_b1,self.io.mt_b2])
+        # should go once moved completely to new dolfinx...
+        if self.pbase.problem_type=='fsi' or self.pbase.problem_type=='fsi_flow0d':
+            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_disp = fem_params['order_disp']
@@ -135,31 +140,7 @@ class SolidmechanicsProblem(problem_base):
         # will be set by solver base class
         self.rom = None
 
-        if self.io.USE_NEW_DOLFINX:
-
-            # function spaces for u and p
-            self.V_u = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
-            self.V_p = fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres))
-
-            # continuous tensor and scalar function spaces of order order_disp
-            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
-
-            # discontinuous function spaces
-            self.Vd_tensor = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.Vd_vector = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
-            self.Vd_scalar = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1))
-
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
-            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
-            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
-
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
-
-        else: # remove once update is fully compatible...
+        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
 
             # create finite element objects for u and p
             P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -184,6 +165,31 @@ class SolidmechanicsProblem(problem_base):
 
             # coordinate element function space - based on input mesh
             self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+
+        else:
+
+            # function spaces for u and p
+            self.V_u = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
+            self.V_p = fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres))
+
+            # continuous tensor and scalar function spaces of order order_disp
+            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
+
+            # discontinuous function spaces
+            self.Vd_tensor = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.Vd_vector = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
+            self.Vd_scalar = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1))
+
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+
 
         # # Quadrature tensor, vector, and scalar elements
         # Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
@@ -367,7 +373,7 @@ class SolidmechanicsProblem(problem_base):
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
-            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
+            growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
             self.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.growth_thres.interpolate(growth_thres_proj)
 
@@ -378,7 +384,7 @@ class SolidmechanicsProblem(problem_base):
             for nf in range(len(self.io.fiber_data)):
                 self.fibarray.append('f'+str(nf+1))
 
-            self.fib_func = self.io.readin_fibers(self.fibarray, self.V_u, self.io.dx, self.domain_ids, self.order_disp)
+            self.fib_func = self.io.readin_fibers(self.fibarray, self.V_u, self.dx, self.domain_ids, self.order_disp)
 
         else:
             self.fib_func = None
@@ -423,7 +429,6 @@ class SolidmechanicsProblem(problem_base):
         self.pbrom = self # self-pointer needed for ROM solver access
         self.pbrom_host = self
         self.V_rom = self.V_u
-        self.print_enhanced_info = self.io.print_enhanced_info
 
 
     def get_problem_var_list(self):
@@ -457,43 +462,43 @@ class SolidmechanicsProblem(problem_base):
 
             if self.timint != 'static':
                 # kinetic virtual work
-                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.io.dx(M))
-                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.io.dx(M))
-                self.deltaW_kin_mid += self.vf.deltaW_kin(self.acc_mid, self.rho0[n], self.io.dx(M))
+                self.deltaW_kin     += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx(M))
+                self.deltaW_kin_old += self.vf.deltaW_kin(self.a_old, self.rho0[n], self.dx(M))
+                self.deltaW_kin_mid += self.vf.deltaW_kin(self.acc_mid, self.rho0[n], self.dx(M))
 
             # internal virtual work
-            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.io.dx(M))
-            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.io.dx(M))
-            self.deltaW_int_mid += self.vf.deltaW_int(self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid), self.ki.F(self.us_mid), self.io.dx(M))
+            self.deltaW_int     += self.vf.deltaW_int(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(M))
+            self.deltaW_int_old += self.vf.deltaW_int(self.ma[n].S(self.u_old, self.p_old, self.v_old, ivar=self.internalvars_old), self.ki.F(self.u_old), self.dx(M))
+            self.deltaW_int_mid += self.vf.deltaW_int(self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid), self.ki.F(self.us_mid), self.dx(M))
 
             # pressure virtual work (for incompressible formulation)
             # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
             if self.mat_growth[n]: J, J_old, J_mid = self.ma[n].J_e(self.u, self.theta), self.ma[n].J_e(self.u_old, self.theta_old), self.ma[n].J_e(self.us_mid, self.timefac*self.theta+(1.-self.timefac)*self.theta_old)
             else:                  J, J_old, J_mid = self.ki.J(self.u), self.ki.J(self.u_old), self.ki.J(self.us_mid)
-            self.deltaW_p       += self.vf.deltaW_int_pres(J, self.io.dx(M))
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.io.dx(M))
-            self.deltaW_p_mid   += self.vf.deltaW_int_pres(J_mid, self.io.dx(M))
+            self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx(M))
+            self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx(M))
+            self.deltaW_p_mid   += self.vf.deltaW_int_pres(J_mid, self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin, w_membrane = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_old, w_body_old, w_robin_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_mid, w_body_mid, w_robin_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
-            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.io.bmeasures, F=self.ki.F(self.us_mid,ext=True), funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.bmeasures, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.bmeasures, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
+            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.bmeasures, F=self.ki.F(self.us_mid,ext=True), funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
-            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
-            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
+            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.io.bmeasures, u_pre=self.u_pre)
-            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.io.bmeasures, u_pre=self.u_pre)
-            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.us_mid, self.vel_mid, self.io.bmeasures, u_pre=self.u_pre)
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.bmeasures, u_pre=self.u_pre)
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.bmeasures, u_pre=self.u_pre)
+            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.us_mid, self.vel_mid, self.bmeasures, u_pre=self.u_pre)
         if 'membrane' in self.bc_dict.keys():
-            w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, self.io.bmeasures)
-            w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, self.io.bmeasures)
-            w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.us_mid, self.vel_mid, self.acc_mid, self.io.bmeasures)
+            w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u, self.vel, self.acc, self.bmeasures)
+            w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.u_old, self.v_old, self.a_old, self.bmeasures)
+            w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.us_mid, self.vel_mid, self.acc_mid, self.bmeasures)
 
         # for (quasi-static) prestressing, we need to eliminate dashpots in our external virtual work
         # plus no rate-dependent or inelastic constitutive models
@@ -501,7 +506,7 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             # internal virtual work
             for n, M in enumerate(self.domain_ids):
-                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.io.dx(M))
+                self.deltaW_prestr_int += self.vf.deltaW_int(self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.dx(M))
             # boundary conditions
             bc_dict_prestr = copy.deepcopy(self.bc_dict)
             # get rid of dashpots
@@ -510,9 +515,9 @@ class SolidmechanicsProblem(problem_base):
                     if r['type'] == 'dashpot': r['visc'] = 0.
             bc_prestr = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki)
             if 'neumann_prestress' in bc_dict_prestr.keys():
-                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
+                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'robin' in bc_dict_prestr.keys():
-                w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.io.bmeasures, u_pre=self.u_pre)
+                w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.bmeasures, u_pre=self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
         else:
             assert('neumann_prestress' not in self.bc_dict.keys())
@@ -612,9 +617,9 @@ class SolidmechanicsProblem(problem_base):
                 Ctang = Cmat
 
             if self.ti.eval_nonlin_terms=='trapezoidal':
-                self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.io.dx(M))
+                self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars), self.ki.F(self.u), self.ki.Fdot(self.vel), self.u, Ctang, Cmat_v, self.dx(M))
             if self.ti.eval_nonlin_terms=='midpoint':
-                self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid), self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.u, Ctang, Cmat_v, self.io.dx(M))
+                self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(self.ma[n].S(self.us_mid, self.ps_mid, self.vel_mid, ivar=self.internalvars_mid), self.ki.F(self.us_mid), self.ki.Fdot(self.vel_mid), self.u, Ctang, Cmat_v, self.dx(M))
 
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
         # since external tractions might be nonlinear w.r.t. displacement, there's a difference between 'trapezoidal' and 'midpoint'
@@ -661,15 +666,15 @@ class SolidmechanicsProblem(problem_base):
                     # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
                     dthetadp = self.ma[n].dtheta_dp(self.u, self.p, self.vel, self.internalvars, self.theta_old, self.pbase.dt, self.growth_thres)
                     if not isinstance(dthetadp, ufl.constantvalue.Zero):
-                        self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.io.dx(M)
+                        self.weakform_lin_pp += ufl.diff(J,self.theta) * dthetadp * self.dp * self.var_p * self.dx(M)
                 else:
                     Ctang_p = Cmat_p
                     Jtang = Jmat
 
-                if self.ti.eval_nonlin_terms=='trapezoidal': self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.io.dx(M))
-                if self.ti.eval_nonlin_terms=='midpoint': self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.us_mid), Ctang_p, self.io.dx(M))
+                if self.ti.eval_nonlin_terms=='trapezoidal': self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx(M))
+                if self.ti.eval_nonlin_terms=='midpoint': self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.us_mid), Ctang_p, self.dx(M))
 
-                self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.io.dx(M))
+                self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
 
         # set forms for active stress
         if self.have_active_stress and self.active_stress_trig == 'ode':
@@ -745,12 +750,12 @@ class SolidmechanicsProblem(problem_base):
     def evaluate_active_stress_ode(self):
 
         if self.have_frank_starling:
-            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
+            amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
             self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.amp_old.interpolate(amp_old_proj)
 
         # project and interpolate to quadrature function space
-        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.io.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
+        tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
         self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
@@ -763,7 +768,7 @@ class SolidmechanicsProblem(problem_base):
 
         dtheta_all = ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
-            dtheta_all += (self.theta - self.theta_old) / (self.pbase.dt) * self.io.dx(M)
+            dtheta_all += (self.theta - self.theta_old) / (self.pbase.dt) * self.dx(M)
 
         gr = fem.assemble_scalar(fem.form(dtheta_all))
         gr = self.comm.allgather(gr)
@@ -786,8 +791,8 @@ class SolidmechanicsProblem(problem_base):
 
         se_all, ip_all = ufl.as_ufl(0), ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
-            se_all += self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='strainenergy') * self.io.dx(M)
-            ip_all += ufl.inner(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),self.ki.Edot(self.u, self.vel)) * self.io.dx(M)
+            se_all += self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars, returnquantity='strainenergy') * self.dx(M)
+            ip_all += ufl.inner(self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),self.ki.Edot(self.u, self.vel)) * self.dx(M)
 
         se = fem.assemble_scalar(fem.form(se_all))
         se = self.pbase.comm.allgather(se)
@@ -823,11 +828,11 @@ class SolidmechanicsProblem(problem_base):
             if internal:
                 try: fcts = self.bc_dict['membrane'][nm]['facet_side']
                 except: fcts = '+'
-                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.io.dS(self.idmem[nm])
-                ip_mem_all += (self.bintpower[nm])(fcts) * self.io.dS(self.idmem[nm])
+                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
+                ip_mem_all += (self.bintpower[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
             else:
-                se_mem_all += self.bstrainenergy[nm] * self.io.ds(self.idmem[nm])
-                ip_mem_all += self.bintpower[nm] * self.io.ds(self.idmem[nm])
+                se_mem_all += self.bstrainenergy[nm] * self.bmeasures[0](self.idmem[nm])
+                ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])
 
         se_mem = fem.assemble_scalar(fem.form(se_mem_all))
         se_mem = self.pbase.comm.allgather(se_mem)
@@ -870,8 +875,8 @@ class SolidmechanicsProblem(problem_base):
 
         a, L = ufl.as_ufl(0), ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
-            a += ufl.inner(ufl.grad(uf), ufl.grad(vf))*self.io.dx(M)
-            L += ufl.dot(f,vf)*self.io.dx(M)
+            a += ufl.inner(ufl.grad(uf), ufl.grad(vf))*self.dx(M)
+            L += ufl.dot(f,vf)*self.dx(M)
 
         uf = fem.Function(self.V_u, name="uf")
 
@@ -884,7 +889,7 @@ class SolidmechanicsProblem(problem_base):
 
         vol_all = ufl.as_ufl(0)
         for n, M in enumerate(self.domain_ids):
-            vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.io.dx(M)
+            vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx(M)
 
         vol = fem.assemble_scalar(fem.form(vol_all))
         vol = self.pbase.comm.allgather(vol)
@@ -906,45 +911,24 @@ class SolidmechanicsProblem(problem_base):
         utilities.print_status("FEM form compilation for solid...", self.pbase.comm, e=" ")
 
         if not pre:
-            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
-                self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
-                self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
-                if self.incompressible_2field:
-                    self.res_p  = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
-                    self.jac_up = fem.form(self.weakform_lin_up, entity_maps=self.io.entity_maps)
-                    self.jac_pu = fem.form(self.weakform_lin_pu, entity_maps=self.io.entity_maps)
-                    if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
-                        self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
-                    else:
-                        self.jac_pp = None
-            else:
-                self.res_u  = fem.form(self.weakform_u)
-                self.jac_uu = fem.form(self.weakform_lin_uu)
-                if self.incompressible_2field:
-                    self.res_p  = fem.form(self.weakform_p)
-                    self.jac_up = fem.form(self.weakform_lin_up)
-                    self.jac_pu = fem.form(self.weakform_lin_pu)
-                    if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
-                        self.jac_pp = fem.form(self.weakform_lin_pp)
-                    else:
-                        self.jac_pp = None
+            self.res_u  = fem.form(self.weakform_u, entity_maps=self.io.entity_maps)
+            self.jac_uu = fem.form(self.weakform_lin_uu, entity_maps=self.io.entity_maps)
+            if self.incompressible_2field:
+                self.res_p  = fem.form(self.weakform_p, entity_maps=self.io.entity_maps)
+                self.jac_up = fem.form(self.weakform_lin_up, entity_maps=self.io.entity_maps)
+                self.jac_pu = fem.form(self.weakform_lin_pu, entity_maps=self.io.entity_maps)
+                if not isinstance(self.weakform_lin_pp, ufl.constantvalue.Zero):
+                    self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
+                else:
+                    self.jac_pp = None
         else:
-            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
-                self.res_u  = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
-                self.jac_uu = fem.form(self.weakform_lin_prestress_uu, entity_maps=self.io.entity_maps)
-                if self.incompressible_2field:
-                    self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
-                    self.jac_up = fem.form(self.weakform_lin_prestress_up, entity_maps=self.io.entity_maps)
-                    self.jac_pu = fem.form(self.weakform_lin_prestress_pu, entity_maps=self.io.entity_maps)
-                    self.jac_pp = None
-            else:
-                self.res_u  = fem.form(self.weakform_prestress_u)
-                self.jac_uu = fem.form(self.weakform_lin_prestress_uu)
-                if self.incompressible_2field:
-                    self.res_p  = fem.form(self.weakform_prestress_p)
-                    self.jac_up = fem.form(self.weakform_lin_prestress_up)
-                    self.jac_pu = fem.form(self.weakform_lin_prestress_pu)
-                    self.jac_pp = None
+            self.res_u  = fem.form(self.weakform_prestress_u, entity_maps=self.io.entity_maps)
+            self.jac_uu = fem.form(self.weakform_lin_prestress_uu, entity_maps=self.io.entity_maps)
+            if self.incompressible_2field:
+                self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
+                self.jac_up = fem.form(self.weakform_lin_prestress_up, entity_maps=self.io.entity_maps)
+                self.jac_pu = fem.form(self.weakform_lin_prestress_pu, entity_maps=self.io.entity_maps)
+                self.jac_pp = None
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
@@ -1069,7 +1053,7 @@ class SolidmechanicsProblem(problem_base):
 
         if 'fibers' in self.results_to_write and self.io.write_results_every > 0:
             for i in range(len(self.fibarray)):
-                fib_proj = project(self.fib_func[i], self.V_u, self.io.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.pbase.comm, entity_maps=self.io.entity_maps)
+                fib_proj = project(self.fib_func[i], self.V_u, self.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.pbase.comm, entity_maps=self.io.entity_maps)
                 self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+self.fibarray[i])
 
 

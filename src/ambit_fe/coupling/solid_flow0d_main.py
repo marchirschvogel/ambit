@@ -105,7 +105,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         else:
             self.sub_solve = False
 
-        self.print_enhanced_info = self.pbs.io.print_enhanced_info
+        self.io = self.pbs.io
 
         # 3D fluxes
         self.constr, self.constr_old = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
@@ -172,7 +172,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = self.pbs.io.ds(self.surface_vq_ids[n][i])
+                ds_vq = self.pbs.bmeasures[0](self.surface_vq_ids[n][i])
 
                 if coupling_quantity == 'volume':
                     assert(self.coupling_type == 'monolithic_direct' and variable_quantity == 'pressure')
@@ -201,7 +201,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
 
-                ds_p = self.pbs.io.ds(self.surface_p_ids[n][i])
+                ds_p = self.pbs.bmeasures[0](self.surface_p_ids[n][i])
                 df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
                 df_mid_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 

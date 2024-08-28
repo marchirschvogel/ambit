@@ -612,7 +612,7 @@ class ModelOrderReduction():
                 r_list_rom[n] = r_list[n]
 
         te = time.time() - ts
-        if self.pb.print_enhanced_info:
+        if self.pb.io.print_enhanced_info:
             utilities.print_status("       === ROM: Computed V^{T} * r[0], t = %.4f s" % (te), self.pb.comm)
 
 
@@ -642,7 +642,7 @@ class ModelOrderReduction():
                     K_list_rom[n][m] = K_list[n][m]
 
         te = time.time() - ts
-        if self.pb.print_enhanced_info:
+        if self.pb.io.print_enhanced_info:
             utilities.print_status("       === ROM: Computed V^{T} * K * V, te = %.4f s" % (te), self.pb.comm)
 
 
@@ -660,7 +660,7 @@ class ModelOrderReduction():
 
         te = time.time() - ts
 
-        if self.pb.print_enhanced_info:
+        if self.pb.io.print_enhanced_info:
             utilities.print_status("       === ROM: Computed V * dx_rom[0], te = %.4f s" % (te), self.pb.comm)
 
 

@@ -74,8 +74,12 @@ class FSIProblem(problem_base):
 
         self.have_condensed_variables = False
 
-        P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
-        self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
+        if self.ios.USE_OLD_DOLFINX_MIXED_BRANCH:
+            P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
+            self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
+
+        else:
+            self.V_lm = fem.functionspace(self.io.msh_emap_lm[0], ("Lagrange", self.pbs.order_disp, (self.io.msh_emap_lm[0].geometry.dim,)))
 
         # Lagrange multiplier
         self.lm = fem.Function(self.V_lm)
@@ -97,7 +101,6 @@ class FSIProblem(problem_base):
 
         self.localsolve = False
         self.sub_solve = False
-        self.print_enhanced_info = self.io.print_enhanced_info
 
         # number of fields involved
         if self.pbs.incompressible_2field: self.nfields=6

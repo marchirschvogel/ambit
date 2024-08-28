@@ -63,7 +63,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.sub_solve = False
         self.have_condensed_variables = False
 
-        self.print_enhanced_info = self.pbs.io.print_enhanced_info
+        self.io = self.pbs.io
 
         # 3D constraint variable (volume or flux)
         self.constr, self.constr_old = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
@@ -114,7 +114,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_c_ids[n])):
 
-                ds_vq = self.pbs.io.ds(self.surface_c_ids[n][i])
+                ds_vq = self.pbs.bmeasures[0](self.surface_c_ids[n][i])
 
                 # currently, only volume or flux constraints are supported
                 if self.coupling_params['constraint_quantity'][n] == 'volume':
@@ -132,7 +132,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
 
-                ds_p = self.pbs.io.ds(self.surface_p_ids[n][i])
+                ds_p = self.pbs.bmeasures[0](self.surface_p_ids[n][i])
                 df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
                 df_mid_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 

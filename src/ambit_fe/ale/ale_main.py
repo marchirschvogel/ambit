@@ -50,6 +50,12 @@ class AleProblem(problem_base):
         # for FSI, we want to specify the subdomains
         try: self.domain_ids = self.io.io_params['domain_ids_fluid']
         except: self.domain_ids = np.arange(1,self.num_domains+1)
+
+        self.dx, self.bmeasures = self.io.create_integration_measures(self.io.mesh, [self.io.mt_d,self.io.mt_b1,self.io.mt_b2])
+        # should go once moved completely to new dolfinx...
+        if self.pbase.problem_type=='fsi' or self.pbase.problem_type=='fsi_flow0d':
+            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_disp = fem_params['order_disp']
@@ -86,30 +92,7 @@ class AleProblem(problem_base):
         # will be set by solver base class
         self.rom = None
 
-        if self.io.USE_NEW_DOLFINX:
-
-            # function space for d
-            self.V_d = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
-
-            # continuous tensor and scalar function spaces of order order_disp
-            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
-
-            # a discontinuous tensor, vector, and scalar function space
-            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
-            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1))
-
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
-            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
-            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
-
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
-
-        else: # remove once update is fully compatible...
+        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
 
             # create finite element objects
             P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
@@ -132,6 +115,29 @@ class AleProblem(problem_base):
 
             # coordinate element function space - based on input mesh
             self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
+
+        else:
+
+            # function space for d
+            self.V_d = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
+
+            # continuous tensor and scalar function spaces of order order_disp
+            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
+
+            # a discontinuous tensor, vector, and scalar function space
+            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
+            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1))
+
+            # for output writing - function spaces on the degree of the mesh
+            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+
+            # coordinate element function space - based on input mesh
+            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
 
         # functions
         self.dd    = ufl.TrialFunction(self.V_d)            # Incremental displacement
@@ -176,8 +182,6 @@ class AleProblem(problem_base):
 
         self.set_variational_forms()
 
-        self.print_enhanced_info = self.io.print_enhanced_info
-
         # number of fields involved
         self.nfields = 1
 
@@ -203,16 +207,16 @@ class AleProblem(problem_base):
 
         for n, M in enumerate(self.domain_ids):
             # internal virtual work
-            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d, self.wel), self.io.dx(M))
+            self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d, self.wel), self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.io.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.io.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
         if 'robin' in self.bc_dict.keys():
-            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.io.bmeasures)
+            w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.bmeasures)
 
         self.deltaW_ext = w_neumann + w_body + w_robin
 
@@ -226,12 +230,8 @@ class AleProblem(problem_base):
         ts = time.time()
         utilities.print_status("FEM form compilation for ALE...", self.comm, e=" ")
 
-        if self.io.USE_MIXED_DOLFINX_BRANCH:
-            self.res_d = fem.form(self.weakform_d, entity_maps=self.io.entity_maps)
-            self.jac_dd = fem.form(self.weakform_lin_dd, entity_maps=self.io.entity_maps)
-        else:
-            self.res_d = fem.form(self.weakform_d)
-            self.jac_dd = fem.form(self.weakform_lin_dd)
+        self.res_d = fem.form(self.weakform_d, entity_maps=self.io.entity_maps)
+        self.jac_dd = fem.form(self.weakform_lin_dd, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)

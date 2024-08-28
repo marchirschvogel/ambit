@@ -88,7 +88,7 @@ class FluidmechanicsAleProblem(problem_base):
         self.sub_solve = False
         self.print_subiter = False
 
-        self.print_enhanced_info = self.pbf.io.print_enhanced_info
+        self.io = self.pbf.io
 
         # number of fields involved
         self.nfields = 3
@@ -236,20 +236,14 @@ class FluidmechanicsAleProblem(problem_base):
                 self.weakform_lin_pd = sum(self.weakform_lin_pd)
 
             # coupling
-            if self.io.USE_MIXED_DOLFINX_BRANCH or self.io.USE_NEW_DOLFINX:
-                self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.io.entity_maps)
-                self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.io.entity_maps)
-                if self.pbf.num_dupl > 1:
-                    self.jac_pd_ = []
-                    for j in range(self.pbf.num_dupl):
-                        self.jac_pd_.append([self.jac_pd[j]])
-                if self.have_weak_dirichlet_fluid_ale:
-                    self.jac_dv = fem.form(self.weakform_lin_dv, entity_maps=self.io.entity_maps)
-            else:
-                self.jac_vd = fem.form(self.weakform_lin_vd)
-                self.jac_pd = fem.form(self.weakform_lin_pd)
-                if self.have_weak_dirichlet_fluid_ale:
-                    self.jac_dv = fem.form(self.weakform_lin_dv)
+            self.jac_vd = fem.form(self.weakform_lin_vd, entity_maps=self.io.entity_maps)
+            self.jac_pd = fem.form(self.weakform_lin_pd, entity_maps=self.io.entity_maps)
+            if self.pbf.num_dupl > 1:
+                self.jac_pd_ = []
+                for j in range(self.pbf.num_dupl):
+                    self.jac_pd_.append([self.jac_pd[j]])
+            if self.have_weak_dirichlet_fluid_ale:
+                self.jac_dv = fem.form(self.weakform_lin_dv, entity_maps=self.io.entity_maps)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -560,10 +554,7 @@ class FluidmechanicsAleSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            if self.pb.io.USE_MIXED_DOLFINX_BRANCH or self.pb.io.USE_NEW_DOLFINX:
-                res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
-            else:
-                res_a, jac_aa  = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            res_a, jac_aa  = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
             self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
 
             te = time.time() - ts
