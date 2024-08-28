@@ -96,13 +96,17 @@ class sol_utils():
                 numres = 2
         elif ptype=="solid_constraint":
             if self.solver.pb[0].incompressible_2field:
-                eq1, eq2, eq3 = "solid momentum", "solid incompressibility", "3D0D coup constraint"
+                eq1, eq2, eq3 = "solid momentum", "solid incompressibility", "constraint"
                 v1, v2, v3 = "u", "p", "LM" # using greek symbol print (Λ) is not supported everywhere...
                 numres = 3
             else:
                 eq1, eq2 = "solid momentum", "3D0D coup constraint"
                 v1, v2 = "u", "lm"
                 numres = 2
+        elif ptype=="fluid_constraint":
+            eq1, eq2, eq3 = "fluid momentum", "fluid continuity", "constraint"
+            v1, v2, v3 = "v", "p", "LM" # using greek symbol print (Λ) is not supported everywhere...
+            numres = 3
         elif ptype=="fluid_flow0d":
             if not self.solver.pb[0].condense_0d_model:
                 eq1, eq2, eq3 = "fluid momentum", "fluid continuity", "3D0D coup constraint"
@@ -118,6 +122,10 @@ class sol_utils():
             numres = 3
         elif ptype=="fluid_ale_flow0d":
             eq1, eq2, eq3, eq4 = "fluid momentum", "fluid continuity", "3D0D coup constraint", "ALE momentum"
+            v1, v2, v3, v4 = "v", "p", "LM", "d" # using greek symbol print (Λ) is not supported everywhere...
+            numres = 4
+        elif ptype=="fluid_ale_constraint":
+            eq1, eq2, eq3, eq4 = "fluid momentum", "fluid continuity", "constraint", "ALE momentum"
             v1, v2, v3, v4 = "v", "p", "LM", "d" # using greek symbol print (Λ) is not supported everywhere...
             numres = 4
         elif ptype=="fsi":
@@ -258,72 +266,19 @@ class sol_utils():
         if ptype is None:
             ptype = self.solver.ptype
 
-        converged = False
+        converged = []
 
-        if ptype=="solid" and not self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"]:
-                converged = True
+        len_r = len(resnorms)
+        len_i = len(incnorms)
+        assert(len_r==len_i)
 
-        elif ptype=="solid" and self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"]:
-                converged = True
+        for i in range(len_r):
+            if resnorms["res"+str(i+1)] <= tolerances["res"+str(i+1)] and incnorms["inc"+str(i+1)] <= tolerances["inc"+str(i+1)]:
+                converged.append(True)
+            else:
+                converged.append(False)
 
-        elif ptype=="fluid":
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"]:
-                converged = True
-
-        elif ptype=="ale":
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"]:
-                converged = True
-
-        elif ptype=="flow0d":
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"]:
-                converged = True
-
-        elif (ptype=="solid_flow0d" or ptype=="solid_constraint") and not self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"]:
-                converged = True
-
-        elif (ptype=="solid_flow0d" or ptype=="solid_constraint") and self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"]:
-                converged = True
-
-        elif ptype=="fluid_flow0d" and not self.solver.pb[0].condense_0d_model:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"]:
-                converged = True
-
-        elif ptype=="fluid_flow0d" and self.solver.pb[0].condense_0d_model:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"]:
-                converged = True
-
-        elif ptype=="fluid_ale":
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"]:
-                converged = True
-
-        elif ptype=="fluid_ale_flow0d":
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"]:
-                converged = True
-
-        elif ptype=="fsi" and not self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"] and resnorms["res5"] <= tolerances["res5"] and incnorms["inc5"] <= tolerances["inc5"]:
-                converged = True
-
-        elif ptype=="fsi" and self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"] and resnorms["res5"] <= tolerances["res5"] and incnorms["inc5"] <= tolerances["inc5"] and resnorms["res6"] <= tolerances["res6"] and incnorms["inc6"] <= tolerances["inc6"]:
-                converged = True
-
-        elif ptype=="fsi_flow0d" and not self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"] and resnorms["res5"] <= tolerances["res5"] and incnorms["inc5"] <= tolerances["inc5"] and resnorms["res6"] <= tolerances["res6"] and incnorms["inc6"] <= tolerances["inc6"]:
-                converged = True
-
-        elif ptype=="fsi_flow0d" and self.solver.pb[0].incompressible_2field:
-            if resnorms["res1"] <= tolerances["res1"] and incnorms["inc1"] <= tolerances["inc1"] and resnorms["res2"] <= tolerances["res2"] and incnorms["inc2"] <= tolerances["inc2"] and resnorms["res3"] <= tolerances["res3"] and incnorms["inc3"] <= tolerances["inc3"] and resnorms["res4"] <= tolerances["res4"] and incnorms["inc4"] <= tolerances["inc4"] and resnorms["res5"] <= tolerances["res5"] and incnorms["inc5"] <= tolerances["inc5"] and resnorms["res6"] <= tolerances["res6"] and incnorms["inc6"] <= tolerances["inc6"] and resnorms["res7"] <= tolerances["res7"] and incnorms["inc7"] <= tolerances["inc7"]:
-                converged = True
-
-        else:
-            raise NameError("Unknown problem type!")
-
-        return converged
+        return all(converged)
 
 
     def timestep_separator_len(self):

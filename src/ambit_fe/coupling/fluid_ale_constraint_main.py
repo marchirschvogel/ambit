@@ -19,16 +19,15 @@ from .. import utilities
 from ..mpiroutines import allgather_vec
 
 from .fluid_ale_main import FluidmechanicsAleProblem
-from .fluid_flow0d_main import FluidmechanicsFlow0DProblem
+from .fluid_constraint_main import FluidmechanicsConstraintProblem
 from ..fluid.fluid_main import FluidmechanicsSolverPrestr
 from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
-from ..meshutils import gather_surface_dof_indices
 
 
-class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
+class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
 
-    def __init__(self, pbase, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, model_params_flow0d, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_flow0d, io, mor_params={}):
+    def __init__(self, pbase, io_params, time_params, fem_params_fluid, fem_params_ale, constitutive_models_fluid, constitutive_models_ale, bc_dict_fluid, bc_dict_ale, time_curves, coupling_params_fluid_ale, coupling_params_fluid_constr, io, mor_params={}):
 
         self.pbase = pbase
 
@@ -37,7 +36,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
 
-        self.problem_physics = 'fluid_ale_flow0d'
+        self.problem_physics = 'fluid_ale_constraint'
 
         try: self.coupling_fluid_ale = coupling_params_fluid_ale['coupling_fluid_ale']
         except: self.coupling_fluid_ale = {}
@@ -52,13 +51,12 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.have_condensed_variables = False
 
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
-        self.pba  = AleProblem(pbase, io_params, time_params_fluid, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
+        self.pba  = AleProblem(pbase, io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
         # ALE variables that are handed to fluid problem
         alevariables = {'Fale' : self.pba.ki.F(self.pba.d), 'Fale_old' : self.pba.ki.F(self.pba.d_old), 'w' : self.pba.wel, 'w_old' : self.pba.w_old}
-        self.pbf0 = FluidmechanicsFlow0DProblem(pbase, io_params, time_params_fluid, time_params_flow0d, fem_params_fluid, constitutive_models_fluid, model_params_flow0d, bc_dict_fluid, time_curves, coupling_params_fluid_flow0d, io, mor_params=mor_params, alevar=alevariables)
+        self.pbfc = FluidmechanicsConstraintProblem(pbase, io_params, time_params, fem_params_fluid, constitutive_models_fluid, bc_dict_fluid, time_curves, coupling_params_fluid_constr, io, mor_params=mor_params, alevar=alevariables)
 
-        self.pbf = self.pbf0.pbf
-        self.pb0 = self.pbf0.pb0
+        self.pbf = self.pbfc.pbf
 
         self.pbrom = self.pbf # ROM problem can only be fluid
         self.pbrom_host = self
@@ -67,13 +65,12 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pbf.results_to_write = io_params['results_to_write'][0]
         self.pba.results_to_write = io_params['results_to_write'][1]
 
+        self.sub_solve = False
+
         self.io = io
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
-
-        self.localsolve = False
-        self.print_subiter = self.pbf0.print_subiter
 
         # NOTE: Fluid and ALE function spaces should be of the same type, but are different objects.
         # For some reason, when applying a function from one funtion space as DBC to another function space,
@@ -87,11 +84,11 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.set_variational_forms()
 
         if self.coupling_strategy == 'monolithic':
-            self.numdof = self.pbf.numdof + self.pbf0.LM.getSize() + self.pba.numdof
+            self.numdof = self.pbf.numdof + self.pbfc.LM.getSize() + self.pba.numdof
         else:
-            self.numdof = [self.pbf.numdof + self.pbf0.LM.getSize(), self.pba.numdof]
+            self.numdof = [self.pbf.numdof + self.pbfc.LM.getSize(), self.pba.numdof]
 
-        self.sub_solve = True
+        self.localsolve = False
 
         self.io = self.pbf.io
 
@@ -105,33 +102,33 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
     def get_problem_var_list(self):
 
-        if self.pbf0.pbf.num_dupl > 1: is_ghosted = [1, 2, 0, 1]
+        if self.pbfc.pbf.num_dupl > 1: is_ghosted = [1, 2, 0, 1]
         else:                          is_ghosted = [1, 1, 0, 1]
-        return [self.pbf.v.vector, self.pbf.p.vector, self.pbf0.LM, self.pba.d.vector], is_ghosted
+        return [self.pbf.v.vector, self.pbf.p.vector, self.pbfc.LM, self.pba.d.vector], is_ghosted
 
 
     def set_variational_forms(self):
         super().set_variational_forms()
 
         self.dcqd = []
-        for n in range(self.pbf0.num_coupling_surf):
-            self.dcqd.append(ufl.derivative(self.pbf0.cq[n], self.pba.d, self.pba.dd))
+        for n in range(self.pbfc.num_coupling_surf):
+            self.dcqd.append(ufl.derivative(self.pbfc.cq[n], self.pba.d, self.pba.dd))
 
 
     def set_problem_residual_jacobian_forms(self, pre=False):
 
         super().set_problem_residual_jacobian_forms(pre=pre)
-        self.pbf0.set_problem_residual_jacobian_forms_coupling()
+        self.pbfc.set_problem_residual_jacobian_forms_coupling()
 
         if self.coupling_strategy=='monolithic':
 
             ts = time.time()
-            utilities.print_status("FEM form compilation for ALE-0D coupling...", self.comm, e=" ")
+            utilities.print_status("FEM form compilation for ALE-constraint coupling...", self.comm, e=" ")
 
             self.dcqd_form = []
 
-            for i in range(self.pbf0.num_coupling_surf):
-                self.dcqd_form.append(fem.form(self.pbf0.cq_factor[i]*self.dcqd[i], entity_maps=self.io.entity_maps))
+            for i in range(self.pbfc.num_coupling_surf):
+                self.dcqd_form.append(fem.form(self.dcqd[i], entity_maps=self.io.entity_maps))
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -140,7 +137,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
     def set_problem_vector_matrix_structures(self):
 
         super().set_problem_vector_matrix_structures()
-        self.pbf0.set_problem_vector_matrix_structures_coupling()
+        self.pbfc.set_problem_vector_matrix_structures_coupling()
 
         if self.coupling_strategy=='monolithic':
 
@@ -149,41 +146,42 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
 
             self.k_sd_vec = []
-            for i in range(len(self.pbf0.row_ids)):
+            for i in range(len(self.pbfc.row_ids)):
                 self.k_sd_vec.append(fem.petsc.create_vector(self.dcqd_form[i]))
 
-            self.dofs_coupling_vq = [[]]*self.pbf0.num_coupling_surf
+            self.dofs_coupling = [[]]*self.pbfc.num_coupling_surf
 
             self.k_sd_subvec, sze_sd = [], []
 
-            for n in range(self.pbf0.num_coupling_surf):
+            for n in range(self.pbfc.num_coupling_surf):
 
-                nds_vq_local = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[np.isin(self.pba.io.mt_b1.values, self.pbf0.surface_vq_ids[n])])
-                nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)), dtype=np.int32 )
-                self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_vq, comm=self.comm)
+                nds_c_local = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[np.isin(self.pba.io.mt_b1.values, self.pbfc.surface_c_ids[n])])
+                nds_c = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_c_local, dtype=np.int32)), dtype=np.int32 )
+                self.dofs_coupling[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_c, comm=self.comm)
 
-                self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
+                self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling[n]) )
 
                 sze_sd.append(self.k_sd_subvec[-1].getSize())
 
             # derivative of multiplier constraint w.r.t. fluid velocities
-            self.K_sd = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.pbf0.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_sd), csr=None, comm=self.comm)
+            self.K_sd = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.pbfc.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_sd), csr=None, comm=self.comm)
             self.K_sd.setUp()
             self.K_sd.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
+
 
 
     def assemble_residual(self, t, subsolver=None):
 
         self.evaluate_residual_dbc_coupling()
 
-        self.pbf0.assemble_residual(t, subsolver=subsolver)
+        self.pbfc.assemble_residual(t)
         self.pba.assemble_residual(t)
 
         # fluid
-        self.r_list[0] = self.pbf0.r_list[0]
-        self.r_list[1] = self.pbf0.r_list[1]
+        self.r_list[0] = self.pbfc.r_list[0]
+        self.r_list[1] = self.pbfc.r_list[1]
         # flow0d
-        self.r_list[2] = self.pbf0.r_list[2]
+        self.r_list[2] = self.pbfc.r_list[2]
         # ALE
         self.r_list[3] = self.pba.r_list[0]
 
@@ -208,20 +206,20 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         self.K_list[3][0] = self.K_dv
 
-        self.pbf0.assemble_stiffness(t, subsolver=subsolver)
+        self.pbfc.assemble_stiffness(t)
         self.pba.assemble_stiffness(t)
 
-        self.K_list[0][0] = self.pbf0.K_list[0][0]
-        self.K_list[0][1] = self.pbf0.K_list[0][1]
-        self.K_list[0][2] = self.pbf0.K_list[0][2]
+        self.K_list[0][0] = self.pbfc.K_list[0][0]
+        self.K_list[0][1] = self.pbfc.K_list[0][1]
+        self.K_list[0][2] = self.pbfc.K_list[0][2]
 
-        self.K_list[1][0] = self.pbf0.K_list[1][0]
-        self.K_list[1][1] = self.pbf0.K_list[1][1]
-        self.K_list[1][2] = self.pbf0.K_list[1][2]
+        self.K_list[1][0] = self.pbfc.K_list[1][0]
+        self.K_list[1][1] = self.pbfc.K_list[1][1]
+        self.K_list[1][2] = self.pbfc.K_list[1][2]
 
-        self.K_list[2][0] = self.pbf0.K_list[2][0]
-        self.K_list[2][1] = self.pbf0.K_list[2][1]
-        self.K_list[2][2] = self.pbf0.K_list[2][2]
+        self.K_list[2][0] = self.pbfc.K_list[2][0]
+        self.K_list[2][1] = self.pbfc.K_list[2][1]
+        self.K_list[2][2] = self.pbfc.K_list[2][2]
 
         # derivative of fluid momentum w.r.t. ALE displacement
         self.K_vd.zeroEntries()
@@ -239,17 +237,17 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.K_list[1][3] = self.K_pd
 
         # offdiagonal s-d rows: derivative of flux constraint w.r.t. ALE displacement (in case of moving coupling boundaries)
-        for i in range(len(self.pbf0.row_ids)):
+        for i in range(len(self.pbfc.row_ids)):
             with self.k_sd_vec[i].localForm() as r_local: r_local.set(0.0)
             fem.petsc.assemble_vector(self.k_sd_vec[i], self.dcqd_form[i])
             self.k_sd_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # set rows
-        for i in range(len(self.pbf0.row_ids)):
+        for i in range(len(self.pbfc.row_ids)):
             # NOTE: only set the surface-subset of the k_sd vector entries to avoid placing unnecessary zeros!
-            self.k_sd_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
-            self.K_sd.setValues(self.pbf0.row_ids[i], self.dofs_coupling_vq[i], self.k_sd_subvec[i].array, addv=PETSc.InsertMode.INSERT)
-            self.k_sd_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
+            self.k_sd_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_sd_subvec[i])
+            self.K_sd.setValues(self.pbfc.row_ids[i], self.dofs_coupling[i], self.k_sd_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+            self.k_sd_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_sd_subvec[i])
 
         self.K_sd.assemble()
 
@@ -266,7 +264,7 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
             vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
             vvec_ls = self.pbf.v.vector.getLocalSize()
 
-        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pbf0.LM.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
+        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pbfc.LM.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -277,9 +275,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         offset_s = offset_p + self.pbf.p.vector.getLocalSize()
-        iset_s = PETSc.IS().createStride(self.pbf0.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+        iset_s = PETSc.IS().createStride(self.pbfc.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
-        offset_d = offset_s + self.pbf0.LM.getLocalSize()
+        offset_d = offset_s + self.pbfc.LM.getLocalSize()
         iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -311,16 +309,15 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         if N > 0:
             self.io.readcheckpoint(self, N)
 
-        self.pb0.read_restart(sname, N)
-
-        if self.pbase.restart_step > 0:
-            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM)
-            self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname+'_lm', N, self.pbf0.LM_old)
+        # LM data
+        if N > 0:
+            restart_data = np.loadtxt(self.pbf.io.output_path+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', ndmin=1)
+            self.pbfc.LM[:], self.pbfc.LM_old[:] = restart_data[:], restart_data[:]
 
 
     def evaluate_initial(self):
 
-        self.pbf0.evaluate_initial()
+        self.pbfc.evaluate_initial()
         self.pba.evaluate_initial()
 
 
@@ -331,55 +328,54 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
     def write_output_pre(self):
 
-        self.pbf0.write_output_pre()
+        self.pbfc.write_output_pre()
         self.pba.write_output_pre()
 
 
     def get_time_offset(self):
 
-        return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
+        return 0.
 
 
     def evaluate_pre_solve(self, t, N, dt):
 
-        self.pbf0.evaluate_pre_solve(t, N, dt)
+        self.pbfc.evaluate_pre_solve(t, N, dt)
         self.pba.evaluate_pre_solve(t, N, dt)
 
 
     def evaluate_post_solve(self, t, N):
 
-        self.pbf0.evaluate_post_solve(t, N)
+        self.pbfc.evaluate_post_solve(t, N)
         self.pba.evaluate_post_solve(t, N)
 
 
     def set_output_state(self, N):
 
-        self.pbf0.set_output_state(N)
+        self.pbfc.set_output_state(N)
         self.pba.set_output_state(N)
 
 
     def write_output(self, N, t, mesh=False):
 
         self.io.write_output(self, N=N, t=t) # combined fluid-ALE output routine
-        self.pb0.write_output(N, t)
 
 
     def update(self):
 
         # update time step - fluid+flow0d and ALE
-        self.pbf0.update()
+        self.pbfc.update()
         self.pba.update()
 
 
     def print_to_screen(self):
 
-        self.pbf0.print_to_screen()
+        self.pbfc.print_to_screen()
         self.pba.print_to_screen()
 
 
     def induce_state_change(self):
 
-        self.pbf0.induce_state_change()
+        self.pbfc.induce_state_change()
         self.pba.induce_state_change()
 
 
@@ -387,53 +383,45 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         self.io.write_restart(self, N, force=force)
 
-        self.pb0.write_restart(sname, N, force=force)
-
         if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:
-            lm_sq = allgather_vec(self.pbf0.LM, self.comm)
+            LM_sq = allgather_vec(self.pbfc.LM, self.comm)
             if self.comm.rank == 0:
-                f = open(self.pb0.output_path_0D+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
-                for i in range(len(lm_sq)):
-                    f.write('%.16E\n' % (lm_sq[i]))
+                f = open(self.pbf.io.output_path+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', 'wt')
+                for i in range(len(LM_sq)):
+                    f.write('%.16E\n' % (LM_sq[i]))
                 f.close()
-            del lm_sq
+            del LM_sq
 
 
     def check_abort(self, t):
 
-        return self.pbf0.check_abort(t)
+        return self.pbfc.check_abort(t)
 
 
     def destroy(self):
 
-        self.pbf0.destroy()
+        self.pbfc.destroy()
         self.pba.destroy()
 
         if self.coupling_strategy=='monolithic':
-            for i in range(len(self.pbf0.row_ids)): self.k_sd_vec[i].destroy()
+            for i in range(len(self.pbfc.row_ids)): self.k_sd_vec[i].destroy()
 
 
 
-class FluidmechanicsAleFlow0DSolver(solver_base):
+class FluidmechanicsAleConstraintSolver(solver_base):
 
     def initialize_nonlinear_solver(self):
 
         self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbf.pre)
         self.pb.set_problem_vector_matrix_structures()
 
-        # sub-solver (for Lagrange-type constraints governed by a nonlinear system, e.g. 3D-0D coupling)
-        if self.pb.sub_solve:
-            self.subsol = solver_nonlin.solver_nonlinear_ode([self.pb.pb0], self.solver_params['subsolver_params'])
-        else:
-            self.subsol = None
-
-        self.evaluate_assemble_system_initial(subsolver=self.subsol)
+        self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
         if self.pb.coupling_strategy=='monolithic':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params, subsolver=self.subsol)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
         elif self.pb.coupling_strategy=='partitioned':
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbf0,self.pb.pba], self.solver_params, subsolver=self.subsol, cp=self.pb)
+            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbfc,self.pb.pba], self.solver_params, cp=self.pb)
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
@@ -464,7 +452,7 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
             utilities.print_status("Setting forms and solving for consistent initial acceleration...", self.pb.comm, e=" ")
 
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.pbf0.power_coupling_old
+            weakform_a = self.pb.pbf.deltaW_kin_old + self.pb.pbf.deltaW_int_old - self.pb.pbf.deltaW_ext_old - self.pb.pbfc.power_coupling_old
 
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv) # actually linear in a_old
 
@@ -485,8 +473,8 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
 
         if self.pb.coupling_strategy=='monolithic':
 
-            self.pb.assemble_residual(self.pb.pbase.t_init, subsolver=None) # note: subsolver only passed to stiffness eval to get correct sparsity pattern)
-            self.pb.assemble_stiffness(self.pb.pbase.t_init, subsolver=subsolver)
+            self.pb.assemble_residual(self.pb.pbase.t_init)
+            self.pb.assemble_stiffness(self.pb.pbase.t_init)
 
             # create ROM matrix structures
             if self.pb.rom:
@@ -502,18 +490,18 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
 
         elif self.pb.coupling_strategy=='partitioned':
 
-            self.pb.pbf0.rom = self.pb.rom
-            self.pb.pbrom_host = self.pb.pbf0 # overridden
+            self.pb.pbfc.rom = self.pb.rom
+            self.pb.pbrom_host = self.pb.pbfc # overridden
 
-            self.pb.assemble_residual(self.pb.pbase.t_init, subsolver=None)
-            self.pb.pbf0.assemble_stiffness(self.pb.pbase.t_init, subsolver=subsolver)
+            self.pb.assemble_residual(self.pb.pbase.t_init)
+            self.pb.pbfc.assemble_stiffness(self.pb.pbase.t_init)
             self.pb.pba.assemble_stiffness(self.pb.pbase.t_init)
 
             # create ROM matrix structures
-            if self.pb.pbf0.rom:
-                self.pb.pbf0.rom.set_reduced_data_structures_residual(self.pb.pbf0.r_list, self.pb.pbf0.r_list_rom)
-                self.pb.pbf0.K_list_tmp = [[None]]
-                self.pb.pbf0.rom.set_reduced_data_structures_matrix(self.pb.pbf0.K_list, self.pb.pbf0.K_list_rom, self.pb.pbf0.K_list_tmp)
+            if self.pb.pbfc.rom:
+                self.pb.pbfc.rom.set_reduced_data_structures_residual(self.pb.pbfc.r_list, self.pb.pbfc.r_list_rom)
+                self.pb.pbfc.K_list_tmp = [[None]]
+                self.pb.pbfc.rom.set_reduced_data_structures_matrix(self.pb.pbfc.K_list, self.pb.pbfc.K_list_rom, self.pb.pbfc.K_list_tmp)
 
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
@@ -527,4 +515,4 @@ class FluidmechanicsAleFlow0DSolver(solver_base):
     def print_timestep_info(self, N, t, ni, li, wt):
 
         # print time step info to screen
-        self.pb.pb0.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)
+        self.pb.pbf.ti.print_timestep(N, t, self.solnln.lsp, ni=ni, li=li, wt=wt)

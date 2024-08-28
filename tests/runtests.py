@@ -72,6 +72,9 @@ if category=='solid' or category=='all':
 
     errs['test_solid_membrane 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_membrane.py', branch])
     errs['test_solid_membrane 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_membrane.py', branch])
+    
+    errs['test_solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_constraint_volume_chamber.py', branch])
+    errs['test_solid_constraint_volume_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_constraint_volume_chamber.py', branch])
 
 if category=='fluid' or category=='all':
     errs['test_fluid_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fluid_taylorhood_cylinder.py', branch])
@@ -81,6 +84,8 @@ if category=='fluid' or category=='all':
     errs['test_fluid_p1p1_stab_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_fluid_p1p1_stab_cylinder.py', branch])
 
     errs['test_fluid_p1p1_stab_cylinder_schur2x2 4'] = subprocess.call(['mpiexec', '-n', '4', 'python3', 'test_fluid_p1p1_stab_cylinder_schur2x2.py', branch])
+    
+    errs['test_fluid_constraint_flux_p1p1_stab_cylinder 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_fluid_constraint_flux_p1p1_stab_cylinder.py', branch])
     
     if branch=='mixed':
         errs['test_fluid_p1p1_stab_cylinder_valve 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fluid_p1p1_stab_cylinder_valve.py', branch])
@@ -153,10 +158,6 @@ if category=='solid_flow0d' or category=='all':
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py', branch])
     errs['test_solid_flow0d_periodicref_syspul_lvchamber 1 restart'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_flow0d_periodicref_syspul_lvchamber.py', str(50), str(0), branch]) # TODO: Fix outer loop restart
 
-if category=='solid_constraint' or category=='all':
-    errs['test_solid_constraint_volume_chamber 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_solid_constraint_volume_chamber.py', branch])
-    errs['test_solid_constraint_volume_chamber 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_solid_constraint_volume_chamber.py', branch])
-
 if category=='frsi' or category=='fluid_ale' or category=='all':
     errs['test_frsi_artseg_prefile 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_frsi_artseg_prefile.py', branch])
     errs['test_frsi_artseg_prefile 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_artseg_prefile.py', branch])
@@ -168,6 +169,8 @@ if category=='frsi' or category=='fluid_ale' or category=='all':
     errs['test_frsi_artseg_modepartitionunity 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_artseg_modepartitionunity.py', str(2), branch])
 
     errs['test_frsi_artseg_prefile_bgsschur4x4 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_frsi_artseg_prefile_bgsschur4x4.py', branch])
+    
+    errs['test_frsi_artseg_constraint 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_artseg_constraint.py', branch])
 
 if category=='ale' or category=='all':
     errs['test_ale_linelast 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_ale_linelast.py', branch])

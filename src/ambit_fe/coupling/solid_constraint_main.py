@@ -40,10 +40,6 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.num_coupling_surf = len(self.surface_c_ids)
 
-        self.cq_factor = [1.]*self.num_coupling_surf
-
-        self.coupling_type = 'monolithic_lagrange'
-
         self.prescribed_curve = self.coupling_params['prescribed_curve']
 
         # initialize problem instances (also sets the variational forms for the solid problem)
@@ -54,7 +50,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.incompressible_2field = self.pbs.incompressible_2field
 
-        self.set_variational_forms_and_jacobians()
+        self.set_variational_forms()
 
         self.numdof = self.pbs.numdof + self.LM.getSize()
 
@@ -88,17 +84,13 @@ class SolidmechanicsConstraintProblem(problem_base):
 
 
     # defines the monolithic coupling forms for constraints and solid mechanics
-    def set_variational_forms_and_jacobians(self):
+    def set_variational_forms(self):
 
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
 
-        # Lagrange multiplier stiffness matrix (most likely to be zero!)
-        self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.K_lm.setUp()
-
         # Lagrange multipliers
-        self.LM, self.LM_old = self.K_lm.createVecLeft(), self.K_lm.createVecLeft()
+        self.LM, self.LM_old = PETSc.Vec().createMPI(size=self.num_coupling_surf), PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
         self.work_coupling, self.work_coupling_old, self.work_coupling_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
@@ -181,7 +173,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.cq_form.append(fem.form(self.cq[i]))
             self.cq_old_form.append(fem.form(self.cq_old[i]))
 
-            self.dcq_form.append(fem.form(self.cq_factor[i]*self.dcq[i]))
+            self.dcq_form.append(fem.form(self.dcq[i]))
             self.dforce_form.append(fem.form(self.dforce[i]))
 
         te = time.time() - ts
@@ -198,9 +190,6 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
-        self.K_lm = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=None, csr=None, comm=self.comm)
-        self.K_lm.setUp()
-        sze_coup = self.num_coupling_surf
         self.row_ids = list(range(self.num_coupling_surf))
         self.col_ids = list(range(self.num_coupling_surf))
 
@@ -235,11 +224,11 @@ class SolidmechanicsConstraintProblem(problem_base):
             sze_us.append(self.k_us_subvec[-1].getSize())
 
         # derivative of solid residual w.r.t. 0D pressures
-        self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(PETSc.DECIDE,sze_coup)), bsize=None, nnz=self.num_coupling_surf, csr=None, comm=self.comm)
+        self.K_us = PETSc.Mat().createAIJ(size=((locmatsize,matsize),(PETSc.DECIDE,self.num_coupling_surf)), bsize=None, nnz=self.num_coupling_surf, csr=None, comm=self.comm)
         self.K_us.setUp()
 
         # derivative of 0D residual w.r.t. solid displacements
-        self.K_su = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sze_coup),(locmatsize,matsize)), bsize=None, nnz=max(sze_su), csr=None, comm=self.comm)
+        self.K_su = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.num_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_su), csr=None, comm=self.comm)
         self.K_su.setUp()
         self.K_su.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
 
@@ -249,7 +238,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         if self.pbs.incompressible_2field: off = 1
         else: off = 0
 
-        # add to solid momentum equation
+        # interpolate LM into function
         self.set_pressure_fem(self.LM, self.coupfuncs)
 
         # solid main blocks
@@ -264,7 +253,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         for i in range(len(self.surface_p_ids)):
             cq = fem.assemble_scalar(self.cq_form[i])
             cq = self.comm.allgather(cq)
-            self.constr[i] = sum(cq)*self.cq_factor[i]
+            self.constr[i] = sum(cq)
 
         val, val_old = [], []
         for n in range(self.num_coupling_surf):
@@ -284,9 +273,6 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         if self.pbs.incompressible_2field: off = 1
         else: off = 0
-
-        # add to solid momentum equation
-        self.set_pressure_fem(self.LM, self.coupfuncs)
 
         # solid main blocks
         self.pbs.assemble_stiffness(t)
@@ -380,7 +366,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.read_restart(sname, N)
         # LM data
         if N > 0:
-            restart_data = np.loadtxt(self.pbs.io.output_path+'/checkpoint_lm_'+str(N)+'.txt')
+            restart_data = np.loadtxt(self.pbs.io.output_path+'/checkpoint_'+sname+'_lm_'+str(N)+'.txt', ndmin=1)
             self.LM[:], self.LM_old[:] = restart_data[:], restart_data[:]
 
 
@@ -440,8 +426,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.LM_old.axpby(1.0, 0.0, self.LM)
         self.set_pressure_fem(self.LM_old, self.coupfuncs_old)
         # update old 3D constraint variable
-        for i in range(self.num_coupling_surf):
-            self.constr_old[i] = self.constr[i]
+        self.constr_old[:] = self.constr[:]
 
 
     def print_to_screen(self):

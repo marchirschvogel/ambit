@@ -270,6 +270,32 @@ class Ambit():
             self.mp = solid_constraint_main.SolidmechanicsConstraintProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, coupling_params, io, mor_params=mor_params)
             self.ms = solid_constraint_main.SolidmechanicsConstraintSolver(self.mp, solver_params)
 
+        elif problem_type == 'fluid_constraint':
+
+            from .coupling import fluid_constraint_main
+
+            io = ioroutines.IO_fluid(io_params, fem_params, self.entity_maps, self.comm)
+            io.readin_mesh()
+            io.set_mesh_fields(io.mesh)
+
+            pbase = problem_base(io_params, time_params, comm=self.comm)
+
+            self.mp = fluid_constraint_main.FluidmechanicsConstraintProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, coupling_params, io, mor_params=mor_params)
+            self.ms = fluid_constraint_main.FluidmechanicsConstraintSolver(self.mp, solver_params)
+
+        elif problem_type == 'fluid_ale_constraint':
+
+            from .coupling import fluid_ale_constraint_main
+
+            io = ioroutines.IO_fluid_ale(io_params, fem_params[0], self.entity_maps, self.comm)
+            io.readin_mesh()
+            io.set_mesh_fields(io.mesh)
+
+            pbase = problem_base(io_params, time_params, comm=self.comm)
+
+            self.mp = fluid_ale_constraint_main.FluidmechanicsAleConstraintProblem(pbase, io_params, time_params, fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], boundary_conditions[0], boundary_conditions[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params)
+            self.ms = fluid_ale_constraint_main.FluidmechanicsAleConstraintSolver(self.mp, solver_params)
+
         elif problem_type == 'electrophysiology':
 
             raise RuntimeError("Electrophysiology not yet fully implemented!")

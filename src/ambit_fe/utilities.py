@@ -53,6 +53,12 @@ def print_problem(ptype, sname, comm, numdof):
         elif ptype == 'solid_constraint':
             print_status("############# Welcome to Lagrange multiplier constraint solid mechanics ###############", comm)
 
+        elif ptype == 'fluid_constraint':
+            print_status("############# Welcome to Lagrange multiplier constraint fluid mechanics ###############", comm)
+
+        elif ptype == 'fluid_ale_constraint':
+            print_status("########### Welcome to Lagrange multiplier constraint ALE fluid mechanics #############", comm)
+
         elif ptype == 'fluid_flow0d':
             print_status("########## Welcome to monolithic coupling of 3D fluid mechanics and 0D flow ###########", comm)
 

@@ -19,7 +19,6 @@ from .. import utilities, expression, ioparams
 from ..fluid.fluid_main import FluidmechanicsProblem, FluidmechanicsSolverPrestr
 from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
-from ..meshutils import gather_surface_dof_indices
 
 
 class FluidmechanicsAleProblem(problem_base):
