@@ -604,6 +604,8 @@ class FluidmechanicsProblem(problem_base):
                     h0_func = fem.Function(self.V_scalar)
                     self.io.readfunction(h0_func, self.bc_dict['membrane'][nm]['params']['h0']['field'])
                     self.wallfields.append(h0_func)
+                else:
+                    self.wallfields.append(None)
 
             w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
             w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.bmeasures, ivar=self.internalvars_old, wallfields=self.wallfields)

@@ -105,12 +105,21 @@ class FluidmechanicsConstraintProblem(problem_base):
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
             self.coupfuncs_mid.append(self.pbf.timefac * self.coupfuncs[-1] + (1.-self.pbf.timefac) * self.coupfuncs_old[-1])
 
+            if self.coupling_params['constraint_quantity'][n] == 'flux':
+                fct_side = None
+                bmi = 0 # to grep out ds from bmeasures
+            elif self.coupling_params['constraint_quantity'][n] == 'flux_internal':
+                fct_side = '+'
+                bmi = 2 # to grep out dS from bmeasures
+            else:
+                raise NameError("Unknown constraint quantity! Choose either volume or flux!")
+
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_c_ids[n])):
 
-                ds_vq = self.pbf.bmeasures[0](self.surface_c_ids[n][i])
-                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'])
-                cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'])
+                ds_vq = self.pbf.bmeasures[bmi](self.surface_c_ids[n][i])
+                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'], fcts=fct_side)
+                cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'], fcts=fct_side)
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
@@ -138,14 +147,14 @@ class FluidmechanicsConstraintProblem(problem_base):
                     # assert that there's no active stress model used in the membrane model at that boundary
                     assert('active_stress' not in self.pbf.bc_dict['membrane'][n]['params'])
                     # use the same parameters from the membrane model at that boundary
-                    h0field, memmodel = self.pbf.bc_dict['membrane'][n]['params']['h0'], self.pbf.bc_dict['membrane'][n]['params']['model']
+                    h0, memmodel = self.pbf.bc_dict['membrane'][n]['params']['h0'], self.pbf.bc_dict['membrane'][n]['params']['model']
 
                     if self.coupling_params['multiplier_physics'][n]['dir'] == 'iso':
-                        params_ = {'h0' : h0field, 'model' : memmodel, 'active_stress' : {'dir' : 'iso'}}
+                        params_ = {'h0' : h0, 'model' : memmodel, 'active_stress' : {'dir' : 'iso'}}
                     elif self.coupling_params['multiplier_physics'][n]['dir'] == 'cl':
                         assert(bool(self.pbf.io.fiber_data))
                         omega, iota, gamma = self.coupling_params['multiplier_physics'][n]['omega'], self.coupling_params['multiplier_physics'][n]['iota'], self.coupling_params['multiplier_physics'][n]['gamma']
-                        params_ = {'h0' : h0field, 'model' : memmodel, 'active_stress' : {'dir' : 'cl', 'omega' : omega, 'iota' : iota, 'gamma' : gamma}}
+                        params_ = {'h0' : h0, 'model' : memmodel, 'active_stress' : {'dir' : 'cl', 'omega' : omega, 'iota' : iota, 'gamma' : gamma}}
                     else:
                         raise NameError("Unknown active stress direction! Choose either iso or cl!")
 
@@ -154,13 +163,13 @@ class FluidmechanicsConstraintProblem(problem_base):
                     ivar_mid_ = {'tau_a' : self.coupfuncs_mid[-1]}
 
                     # add internal active stress power to fluid rhs contributions
-                    self.power_coupling += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power')
-                    self.power_coupling_old += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.uf_old), self.pbf.ki.Fdot(self.pbf.v_old), None, params_, ds_p, ivar=ivar_old_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power')
-                    self.power_coupling_mid += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power')
+                    self.power_coupling += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power')
+                    self.power_coupling_old += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.uf_old), self.pbf.ki.Fdot(self.pbf.v_old), None, params_, ds_p, ivar=ivar_old_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power')
+                    self.power_coupling_mid += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power')
 
                     # derivative w.r.t. multiplier
-                    df_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power_deriv')
-                    df_mid_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power_deriv')
+                    df_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
+                    df_mid_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
 
                 else:
                     raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")
