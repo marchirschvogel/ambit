@@ -46,7 +46,6 @@ class FluidmechanicsAleProblem(problem_base):
         except: self.coupling_strategy = 'monolithic'
 
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
-        self.have_condensed_variables = False
 
         # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
         self.pba = AleProblem(pbase, io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
@@ -86,6 +85,7 @@ class FluidmechanicsAleProblem(problem_base):
 
         self.sub_solve = False
         self.print_subiter = False
+        self.have_condensed_variables = False
 
         self.io = self.pbf.io
 
@@ -150,7 +150,7 @@ class FluidmechanicsAleProblem(problem_base):
                 self.pba.bc.dbcs += dbcs_coup_fluid_ale
                 # Dirichlet boundary conditions
                 if 'dirichlet' in self.pba.bc_dict.keys():
-                    self.pba.bc.dirichlet_bcs(self.pba.bc_dict['dirichlet'], self.pba.V_d)
+                    self.pba.bc.dirichlet_bcs(self.pba.bc_dict['dirichlet'])
                 self.have_dbc_fluid_ale = True
 
             if not isinstance(work_weak_dirichlet_fluid_ale, ufl.constantvalue.Zero):
@@ -195,7 +195,7 @@ class FluidmechanicsAleProblem(problem_base):
                 self.pbf.bc.dbcs += dbcs_coup_ale_fluid
                 # Dirichlet boundary conditions
                 if 'dirichlet' in self.pbf.bc_dict.keys():
-                    self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict['dirichlet'], self.pbf.V_v)
+                    self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict['dirichlet'])
                 self.have_dbc_ale_fluid = True
 
             if not isinstance(work_robin_ale_fluid, ufl.constantvalue.Zero):

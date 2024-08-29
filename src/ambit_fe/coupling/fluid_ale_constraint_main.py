@@ -48,7 +48,6 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
         except: self.coupling_strategy = 'monolithic'
 
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
-        self.have_condensed_variables = False
 
         # initialize problem instances (also sets the variational forms for the fluid flow0d problem)
         self.pba  = AleProblem(pbase, io_params, time_params, fem_params_ale, constitutive_models_ale, bc_dict_ale, time_curves, io, mor_params=mor_params)
@@ -66,11 +65,10 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
         self.pba.results_to_write = io_params['results_to_write'][1]
 
         self.sub_solve = False
+        self.print_subiter = False
+        self.have_condensed_variables = False
 
         self.io = io
-
-        # indicator for no periodic reference state estimation
-        self.noperiodicref = 1
 
         # NOTE: Fluid and ALE function spaces should be of the same type, but are different objects.
         # For some reason, when applying a function from one funtion space as DBC to another function space,
@@ -149,7 +147,7 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
             for i in range(len(self.pbfc.row_ids)):
                 self.k_sd_vec.append(fem.petsc.create_vector(self.dcqd_form[i]))
 
-            self.dofs_coupling = [[]]*self.pbfc.num_coupling_surf
+            self.dofs_coupling_vq = [[]]*self.pbfc.num_coupling_surf
 
             self.k_sd_subvec, sze_sd = [], []
 
@@ -157,9 +155,9 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
 
                 nds_c_local = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[np.isin(self.pba.io.mt_b1.values, self.pbfc.surface_c_ids[n])])
                 nds_c = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_c_local, dtype=np.int32)), dtype=np.int32 )
-                self.dofs_coupling[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_c, comm=self.comm)
+                self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_c, comm=self.comm)
 
-                self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling[n]) )
+                self.k_sd_subvec.append( self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
 
                 sze_sd.append(self.k_sd_subvec[-1].getSize())
 
@@ -241,13 +239,15 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
             with self.k_sd_vec[i].localForm() as r_local: r_local.set(0.0)
             fem.petsc.assemble_vector(self.k_sd_vec[i], self.dcqd_form[i])
             self.k_sd_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            if self.pbfc.have_regularization:
+                self.k_sd_vec[i].scale(self.pbfc.alpha_reg[i])
 
         # set rows
         for i in range(len(self.pbfc.row_ids)):
             # NOTE: only set the surface-subset of the k_sd vector entries to avoid placing unnecessary zeros!
-            self.k_sd_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_sd_subvec[i])
-            self.K_sd.setValues(self.pbfc.row_ids[i], self.dofs_coupling[i], self.k_sd_subvec[i].array, addv=PETSc.InsertMode.INSERT)
-            self.k_sd_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_sd_subvec[i])
+            self.k_sd_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
+            self.K_sd.setValues(self.pbfc.row_ids[i], self.dofs_coupling_vq[i], self.k_sd_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+            self.k_sd_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
 
         self.K_sd.assemble()
 
@@ -333,7 +333,6 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
 
 
     def get_time_offset(self):
-
         return 0.
 
 

@@ -6,6 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import inspect
 import numpy as np
 from dolfinx import fem, mesh
 from petsc4py import PETSc
@@ -19,7 +20,7 @@ Boundary condition classes for all problems
 
 class boundary_cond():
 
-    def __init__(self, io, fem_params=None, vf=None, ti=None, ki=None, ff=None, dim=None):
+    def __init__(self, io, fem_params=None, vf=None, ti=None, ki=None, ff=None, dim=None, V_field=None, Vdisc_scalar=None):
 
         self.io = io
         self.vf = vf
@@ -35,13 +36,18 @@ class boundary_cond():
         if fem_params is not None:
             self.quad_degree = fem_params['quad_degree']
 
+        # continuous function space of primary field (e.g. displacement or velocity)
+        self.V_field = V_field
+        # discontinuous scalar function space
+        self.Vdisc_scalar = Vdisc_scalar
+
         self.dbcs = []
 
         self.have_dirichlet_file = False
 
 
     # set Dirichlet BCs (should probably be overloaded for problems that do not have vector variables...)
-    def dirichlet_bcs(self, bcdict, V):
+    def dirichlet_bcs(self, bcdict):
 
         for d in bcdict:
 
@@ -52,7 +58,7 @@ class boundary_cond():
             if codim==self.dim-2: mdata = self.io.mt_b2
             if codim==self.dim-3: mdata = self.io.mt_b3
 
-            func = fem.Function(V)
+            func = fem.Function(self.V_field)
 
             if 'curve' in d.keys():
                 assert('val' not in d.keys() and 'expression' not in d.keys() and 'file' not in d.keys())
@@ -84,7 +90,7 @@ class boundary_cond():
                 try: ramp_curve = d['ramp_curve']
                 except: ramp_curve = None
                 if ramp_curve is not None:
-                    func_ramp, func_file = fem.Function(V), fem.Function(V)
+                    func_ramp, func_file = fem.Function(self.V_field), fem.Function(self.V_field)
                     # first read file into function
                     self.io.readfunction(func_file, fle, filetype=ftype)
                     # now store ramp curve into function
@@ -105,41 +111,41 @@ class boundary_cond():
                 raise RuntimeError("Need to have 'curve', 'val', 'expression', or 'file' specified!")
 
             if d['dir'] == 'all':
-                self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, codim, mdata.indices[np.isin(mdata.values, d['id'])])) )
+                self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(self.V_field, codim, mdata.indices[np.isin(mdata.values, d['id'])])) )
 
             elif d['dir'] == 'x':
-                dofs_x = fem.locate_dofs_topological(V.sub(0), codim, mdata.indices[np.isin(mdata.values, d['id'])])
+                dofs_x = fem.locate_dofs_topological(self.V_field.sub(0), codim, mdata.indices[np.isin(mdata.values, d['id'])])
                 self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
 
             elif d['dir'] == 'y':
-                dofs_y = fem.locate_dofs_topological(V.sub(1), codim, mdata.indices[np.isin(mdata.values, d['id'])])
+                dofs_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, mdata.indices[np.isin(mdata.values, d['id'])])
                 self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
 
             elif d['dir'] == 'z':
-                dofs_z = fem.locate_dofs_topological(V.sub(2), codim, mdata.indices[np.isin(mdata.values, d['id'])])
+                dofs_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, mdata.indices[np.isin(mdata.values, d['id'])])
                 self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
 
             elif d['dir'] == '2dimX':
-                dofs_x = fem.locate_dofs_topological(V.sub(0), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimX))
+                dofs_x = fem.locate_dofs_topological(self.V_field.sub(0), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimX))
                 self.dbcs.append( fem.dirichletbc(func.sub(0), dofs_x) )
 
             elif d['dir'] == '2dimY':
-                dofs_y = fem.locate_dofs_topological(V.sub(1), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimY))
+                dofs_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimY))
                 self.dbcs.append( fem.dirichletbc(func.sub(1), dofs_y) )
 
             elif d['dir'] == '2dimZ':
-                dofs_z = fem.locate_dofs_topological(V.sub(2), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimZ))
+                dofs_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimZ))
                 self.dbcs.append( fem.dirichletbc(func.sub(2), dofs_z) )
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
 
 
-    def dirichlet_vol(self, bcdict, V):
+    def dirichlet_vol(self, bcdict):
 
         for d in bcdict:
 
-            func = fem.Function(V)
+            func = fem.Function(self.V_field)
 
             if 'curve' in d.keys():
                 assert('val' not in d.keys() and 'file' not in d.keys())
@@ -163,7 +169,7 @@ class boundary_cond():
             else:
                 raise RuntimeError("Need to have 'curve', 'val', or 'file' specified!")
 
-            self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(V, self.dim, self.io.mt_d.indices[np.isin(self.io.mt_d.values, d['id'])])) )
+            self.dbcs.append( fem.dirichletbc(func, fem.locate_dofs_topological(self.V_field, self.dim, self.io.mt_d.indices[np.isin(self.io.mt_d.values, d['id'])])) )
 
 
     # function to mark x=0
@@ -180,7 +186,7 @@ class boundary_cond():
 
 
     # set Neumann BCs
-    def neumann_bcs(self, bcdict, V, V_real, ds_, F=None, funcs_to_update=None, funcs_to_update_vec=None, funcsexpr_to_update=None, funcsexpr_to_update_vec=None):
+    def neumann_bcs(self, bcdict, ds_, F=None, funcs_to_update=None, funcs_to_update_vec=None, funcsexpr_to_update=None, funcsexpr_to_update_vec=None):
 
         w = ufl.as_ufl(0)
 
@@ -195,7 +201,7 @@ class boundary_cond():
 
             if n['dir'] == 'xyz_ref': # reference xyz
 
-                func = fem.Function(V)
+                func = fem.Function(self.V_field)
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys() and 'expression' not in n.keys())
@@ -223,7 +229,7 @@ class boundary_cond():
 
             elif n['dir'] == 'normal_ref': # reference normal
 
-                func = fem.Function(V_real)
+                func = fem.Function(self.Vdisc_scalar)
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys() and 'expression' not in n.keys())
@@ -251,7 +257,7 @@ class boundary_cond():
 
             elif n['dir'] == 'xyz_cur': # current xyz
 
-                func = fem.Function(V)
+                func = fem.Function(self.V_field)
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys() and 'expression' not in n.keys())
@@ -279,7 +285,7 @@ class boundary_cond():
 
             elif n['dir'] == 'normal_cur': # current normal
 
-                func = fem.Function(V_real)
+                func = fem.Function(self.Vdisc_scalar)
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys() and 'expression' not in n.keys())
@@ -312,7 +318,7 @@ class boundary_cond():
 
 
     # set Neumann BCs for prestress
-    def neumann_prestress_bcs(self, bcdict, V, V_real, ds_, funcs_to_update=None, funcs_to_update_vec=None, funcsexpr_to_update=None, funcsexpr_to_update_vec=None):
+    def neumann_prestress_bcs(self, bcdict, ds_, funcs_to_update=None, funcs_to_update_vec=None, funcsexpr_to_update=None, funcsexpr_to_update_vec=None):
 
         w = ufl.as_ufl(0)
 
@@ -327,7 +333,7 @@ class boundary_cond():
 
             if n['dir'] == 'xyz_ref': # reference xyz
 
-                func = fem.Function(V)
+                func = fem.Function(self.V_field)
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys() and 'expression' not in n.keys())
@@ -355,7 +361,7 @@ class boundary_cond():
 
             elif n['dir'] == 'normal_ref': # reference normal
 
-                func = fem.Function(V_real)
+                func = fem.Function(self.Vdisc_scalar)
 
                 if 'curve' in n.keys():
                     assert('val' not in n.keys() and 'expression' not in n.keys())
@@ -388,9 +394,14 @@ class boundary_cond():
 
 
     # set Robin BCs
-    def robin_bcs(self, bcdict, u, v, ds_, u_pre=None):
+    def robin_bcs(self, bcdict, u, v, ds_, u_pre=None, wel=None, F=None):
 
         w = ufl.as_ufl(0)
+
+        if wel is None:
+            wel_ = ufl.constantvalue.zero(self.dim)
+        else:
+            wel_ = wel
 
         for r in bcdict:
 
@@ -403,23 +414,32 @@ class boundary_cond():
 
             if r['type'] == 'spring':
 
+                # may be an expression
+                stiff = r['stiff']
+                if inspect.isclass(stiff):
+                    stiff_expr = stiff()
+                    stiff_ = fem.Function(self.Vdisc_scalar)
+                    stiff_.interpolate(stiff_expr.evaluate)
+                else:
+                    stiff_ = stiff
+
                 if r['dir'] == 'xyz_ref': # reference xyz
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_spring(u, r['stiff'], ds_[dind](r['id'][i]), u_pre)
+                        w += self.vf.deltaW_ext_robin_spring(u, stiff_, ds_[dind](r['id'][i]), u_pre)
 
                 elif r['dir'] == 'normal_ref': # reference normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, r['stiff'], ds_[dind](r['id'][i]), u_pre)
+                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, stiff_, ds_[dind](r['id'][i]), u_pre)
 
                 elif r['dir'] == 'normal_cross': # cross normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, r['stiff'], ds_[dind](r['id'][i]), u_pre)
+                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, stiff_, ds_[dind](r['id'][i]), u_pre)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -427,23 +447,32 @@ class boundary_cond():
 
             elif r['type'] == 'dashpot':
 
+                # may be an expression
+                visc = r['visc']
+                if inspect.isclass(visc):
+                    visc_expr = visc()
+                    visc_ = fem.Function(self.Vdisc_scalar)
+                    visc_.interpolate(visc_expr.evaluate)
+                else:
+                    visc_ = visc
+
                 if r['dir'] == 'xyz_ref': # reference xyz
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_dashpot(v, r['visc'], ds_[dind](r['id'][i]))
+                        w += self.vf.deltaW_ext_robin_dashpot(v, visc_, ds_[dind](r['id'][i]))
 
                 elif r['dir'] == 'normal_ref': # reference normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, r['visc'], ds_[dind](r['id'][i]))
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, visc_, ds_[dind](r['id'][i]))
 
                 elif r['dir'] == 'normal_cross': # cross normal
 
                     for i in range(len(r['id'])):
 
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, r['visc'], ds_[dind](r['id'][i]))
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, visc_, ds_[dind](r['id'][i]))
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -502,13 +531,13 @@ class boundary_cond():
 
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def bodyforce(self, bcdict, V, V_real, dx_, funcs_to_update=None, funcsexpr_to_update=None):
+    def bodyforce(self, bcdict, dx_, funcs_to_update=None, funcsexpr_to_update=None):
 
         w = ufl.as_ufl(0)
 
         for b in bcdict:
 
-            func, func_dir = fem.Function(V_real), fem.Function(V)
+            func, func_dir = fem.Function(self.Vdisc_scalar), fem.Function(self.V_field)
 
             # direction needs to be set
             driection = expression.template_vector(dim=self.dim)
@@ -594,7 +623,7 @@ class boundary_cond_fluid(boundary_cond):
 
 
     # set Robin valve BCs
-    def robin_valve_bcs(self, bcdict, v, V_real, beta_, dS_, wel=None, F=None, dw=None):
+    def robin_valve_bcs(self, bcdict, v, beta_, dS_, wel=None, F=None, dw=None):
 
         w = ufl.as_ufl(0)
 
@@ -617,7 +646,7 @@ class boundary_cond_fluid(boundary_cond):
             elif codim==self.dim-2: dind=1
             else: raise ValueError("Wrong codimension of boundary.")
 
-            beta_.append( fem.Function(V_real) )
+            beta_.append( fem.Function(self.Vdisc_scalar) )
 
             if direction == 'xyz_ref': # reference xyz
 

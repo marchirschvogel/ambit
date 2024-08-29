@@ -169,16 +169,15 @@ class AleProblem(problem_base):
         self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0, ro0=self.io.ro0)
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond(self.io, fem_params=fem_params, vf=self.vf, ti=self.ti)
-
+        self.bc = boundaryconditions.boundary_cond(self.io, fem_params=fem_params, vf=self.vf, ti=self.ti, V_field=self.V_d, Vdisc_scalar=self.Vd_scalar)
         self.bc_dict = bc_dict
 
         # Dirichlet boundary conditions
         if 'dirichlet' in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_d)
+            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'])
 
         if 'dirichlet_vol' in self.bc_dict.keys():
-            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_d)
+            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'])
 
         self.set_variational_forms()
 
@@ -212,9 +211,9 @@ class AleProblem(problem_base):
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_d, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann = self.bc.neumann_bcs(self.bc_dict['neumann'], self.bmeasures, funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_d, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
         if 'robin' in self.bc_dict.keys():
             w_robin = self.bc.robin_bcs(self.bc_dict['robin'], self.d, self.wel, self.bmeasures)
 

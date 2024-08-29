@@ -56,6 +56,7 @@ def test_main():
 
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[4]],
                             'constraint_quantity'   : ['flux'],
+                            'multiplier_physics'    : [{'type' : 'pressure'}],
                             'prescribed_curve'      : [1]}
 
     MATERIALS           = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},

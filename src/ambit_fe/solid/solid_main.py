@@ -305,7 +305,7 @@ class SolidmechanicsProblem(problem_base):
                 if 'active_iso' in self.constitutive_models['MAT'+str(n+1)].keys(): self.activemodel[n] = 'active_iso'
                 if self.activemodel[n] == 'active_fiber' or self.activemodel[n] == 'active_crossfiber': assert(bool(self.io.fiber_data))
                 self.mat_active_stress[n], self.have_active_stress = True, True
-                # if one mat has a prescribed active stress, all have to be!
+                # if one mat has a prescribed/multiplier active stress, all have to be!
                 if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
                     self.active_stress_trig = 'prescribed'
                 if 'prescribed_from_file' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
@@ -414,15 +414,15 @@ class SolidmechanicsProblem(problem_base):
         self.vf = solid_variationalform.variationalform(self.var_u, var_p=self.var_p, du=self.du, dp=self.dp, n0=self.io.n0, x_ref=self.x_ref)
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki)
+        self.bc = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki, V_field=self.V_u, Vdisc_scalar=self.Vd_scalar)
         self.bc_dict = bc_dict
 
         # Dirichlet boundary conditions
         if 'dirichlet' in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_u)
+            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'])
 
         if 'dirichlet_vol' in self.bc_dict.keys():
-            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_u)
+            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'])
 
         self.set_variational_forms()
 
@@ -484,13 +484,13 @@ class SolidmechanicsProblem(problem_base):
         w_neumann_old, w_body_old, w_robin_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_mid, w_body_mid, w_robin_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.bmeasures, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.bmeasures, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
-            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_u, self.Vd_scalar, self.bmeasures, F=self.ki.F(self.us_mid,ext=True), funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.bmeasures, F=self.ki.F(self.u,ext=True), funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.bmeasures, F=self.ki.F(self.u_old,ext=True), funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
+            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.bmeasures, F=self.ki.F(self.us_mid,ext=True), funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
-            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
-            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_u, self.Vd_scalar, self.dx, funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
+            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
         if 'robin' in self.bc_dict.keys():
             w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.u, self.vel, self.bmeasures, u_pre=self.u_pre)
             w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.u_old, self.v_old, self.bmeasures, u_pre=self.u_pre)
@@ -513,9 +513,9 @@ class SolidmechanicsProblem(problem_base):
             if 'robin' in bc_dict_prestr.keys():
                 for r in bc_dict_prestr['robin']:
                     if r['type'] == 'dashpot': r['visc'] = 0.
-            bc_prestr = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki)
+            bc_prestr = boundaryconditions.boundary_cond(self.io, fem_params=self.fem_params, vf=self.vf, ti=self.ti, ki=self.ki, V_field=self.V_u, Vdisc_scalar=self.Vd_scalar)
             if 'neumann_prestress' in bc_dict_prestr.keys():
-                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.V_u, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
+                w_neumann_prestr = bc_prestr.neumann_prestress_bcs(bc_dict_prestr['neumann_prestress'], self.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'robin' in bc_dict_prestr.keys():
                 w_robin_prestr = bc_prestr.robin_bcs(bc_dict_prestr['robin'], self.u, self.vel, self.bmeasures, u_pre=self.u_pre)
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr

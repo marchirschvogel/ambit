@@ -48,6 +48,7 @@ def test_main():
 
     CONSTRAINT_PARAMS    = {'surface_ids'           : [[3]],
                             'constraint_quantity'   : ['volume'],
+                            'multiplier_physics'    : [{'type' : 'pressure'}],
                             'prescribed_curve'      : [1]}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100.}, 'inertia' : {'rho0' : 1.0e-6}}}

@@ -55,7 +55,13 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.localsolve = self.pbf.localsolve
 
         self.sub_solve = False
+        self.print_subiter = False
         self.have_condensed_variables = False
+
+        if 'regularization' in self.coupling_params:
+            self.have_regularization = True
+        else:
+            self.have_regularization = False
 
         self.io = self.pbf.io
 
@@ -113,34 +119,72 @@ class FluidmechanicsConstraintProblem(problem_base):
             for i in range(len(self.surface_p_ids[n])):
 
                 ds_p = self.pbf.bmeasures[0](self.surface_p_ids[n][i])
-                df_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale'])
-                df_mid_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale_mid'])
 
-                # add to fluid rhs contributions
-                self.power_coupling += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, F=self.pbf.alevar['Fale'])
-                self.power_coupling_old += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_old[-1], ds_p, F=self.pbf.alevar['Fale_old'])
-                self.power_coupling_mid += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_mid[-1], ds_p, F=self.pbf.alevar['Fale_mid'])
+                if self.coupling_params['multiplier_physics'][n]['type'] == 'pressure':
+
+                    # add to fluid rhs contributions - external power, but positive, since multiplier acts against outward normal
+                    self.power_coupling += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, F=self.pbf.alevar['Fale'])
+                    self.power_coupling_old += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_old[-1], ds_p, F=self.pbf.alevar['Fale_old'])
+                    self.power_coupling_mid += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_mid[-1], ds_p, F=self.pbf.alevar['Fale_mid'])
+
+                    # derivative w.r.t. multiplier
+                    df_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale'])
+                    df_mid_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale_mid'])
+
+                elif self.coupling_params['multiplier_physics'][n]['type'] == 'active_stress':
+
+                    # for safety reasons, we require a membrane model on each of the surfaces we use for applying the active stress multiplier!
+                    assert(self.surface_p_ids[n][i] == self.pbf.bc_dict['membrane'][n]['id'][i])
+                    # assert that there's no active stress model used in the membrane model at that boundary
+                    assert('active_stress' not in self.pbf.bc_dict['membrane'][n]['params'])
+                    # use the same parameters from the membrane model at that boundary
+                    h0field, memmodel = self.pbf.bc_dict['membrane'][n]['params']['h0'], self.pbf.bc_dict['membrane'][n]['params']['model']
+
+                    if self.coupling_params['multiplier_physics'][n]['dir'] == 'iso':
+                        params_ = {'h0' : h0field, 'model' : memmodel, 'active_stress' : {'dir' : 'iso'}}
+                    elif self.coupling_params['multiplier_physics'][n]['dir'] == 'cl':
+                        assert(bool(self.pbf.io.fiber_data))
+                        omega, iota, gamma = self.coupling_params['multiplier_physics'][n]['omega'], self.coupling_params['multiplier_physics'][n]['iota'], self.coupling_params['multiplier_physics'][n]['gamma']
+                        params_ = {'h0' : h0field, 'model' : memmodel, 'active_stress' : {'dir' : 'cl', 'omega' : omega, 'iota' : iota, 'gamma' : gamma}}
+                    else:
+                        raise NameError("Unknown active stress direction! Choose either iso or cl!")
+
+                    ivar_ = {'tau_a' : self.coupfuncs[-1]}
+                    ivar_old_ = {'tau_a' : self.coupfuncs_old[-1]}
+                    ivar_mid_ = {'tau_a' : self.coupfuncs_mid[-1]}
+
+                    # add internal active stress power to fluid rhs contributions
+                    self.power_coupling += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power')
+                    self.power_coupling_old += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.uf_old), self.pbf.ki.Fdot(self.pbf.v_old), None, params_, ds_p, ivar=ivar_old_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power')
+                    self.power_coupling_mid += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power')
+
+                    # derivative w.r.t. multiplier
+                    df_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power_deriv')
+                    df_mid_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, returnquantity='active_stress_power_deriv')
+
+                else:
+                    raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")
 
             if self.pbf.ti.eval_nonlin_terms=='trapezoidal': self.dforce.append(df_)
             if self.pbf.ti.eval_nonlin_terms=='midpoint': self.dforce.append(df_mid_)
 
         if self.pbf.ti.eval_nonlin_terms=='trapezoidal':
-            # minus sign, since contribution to external power!
-            self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling - (1.-self.pbf.timefac) * self.power_coupling_old
+            # add to fluid rhs
+            self.pbf.weakform_v += self.pbf.timefac * self.power_coupling + (1.-self.pbf.timefac) * self.power_coupling_old
             # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
+            self.pbf.weakform_lin_vv += self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
         if self.pbf.ti.eval_nonlin_terms=='midpoint':
-            # minus sign, since contribution to external power!
-            self.pbf.weakform_v += -self.power_coupling_mid
+            # add to fluid rhs
+            self.pbf.weakform_v += self.power_coupling_mid
             # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
+            self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
 
 
-    def set_pressure_fem(self, var, p0Da):
+    def set_multiplier(self, var, p0Da):
 
         # set pressure functions
         for i in range(self.num_coupling_surf):
-            self.pr0D.val = -allgather_vec_entry(var, i, self.comm)
+            self.pr0D.val = allgather_vec_entry(var, i, self.comm)
             p0Da[i].interpolate(self.pr0D.evaluate)
 
 
@@ -196,21 +240,25 @@ class FluidmechanicsConstraintProblem(problem_base):
         for i in range(len(self.row_ids)):
             self.k_sv_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
 
-        self.dofs_coupling = [[]]*self.num_coupling_surf
+        self.dofs_coupling_vq, self.dofs_coupling_p = [[]]*self.num_coupling_surf, [[]]*self.num_coupling_surf
 
         self.k_vs_subvec, self.k_sv_subvec, sze_vs, sze_sv = [], [], [], []
 
         for n in range(self.num_coupling_surf):
 
-            nds_c_local = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_c_ids[n])])
-            nds_c = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_c_local, dtype=np.int32)), dtype=np.int32 )
-            self.dofs_coupling[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_c, comm=self.comm)
+            nds_vq_local = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_c_ids[n])])
+            nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)), dtype=np.int32 )
+            self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
-            self.k_sv_subvec.append( self.k_sv_vec[n].getSubVector(self.dofs_coupling[n]) )
+            self.k_sv_subvec.append( self.k_sv_vec[n].getSubVector(self.dofs_coupling_vq[n]) )
 
             sze_sv.append(self.k_sv_subvec[-1].getSize())
 
-            self.k_vs_subvec.append( self.k_vs_vec[n].getSubVector(self.dofs_coupling[n]) )
+            nds_p_local = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_p_ids[n])])
+            nds_p = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)), dtype=np.int32 )
+            self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_p, comm=self.comm)
+
+            self.k_vs_subvec.append( self.k_vs_vec[n].getSubVector(self.dofs_coupling_p[n]) )
 
             sze_vs.append(self.k_vs_subvec[-1].getSize())
 
@@ -223,11 +271,19 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.K_sv.setUp()
         self.K_sv.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
 
+        self.constr_val = list(range(self.num_coupling_surf))
+
+        self.alpha_reg = list(range(self.num_coupling_surf))
+        self.kp_reg = list(range(self.num_coupling_surf))
+        if self.have_regularization:
+            for n in range(self.num_coupling_surf):
+                self.kp_reg[n] = self.coupling_params['regularization'][n]['kp']
+
 
     def assemble_residual(self, t, subsolver=None):
 
         # interpolate LM into function
-        self.set_pressure_fem(self.LM, self.coupfuncs)
+        self.set_multiplier(self.LM, self.coupfuncs)
 
         # fluid main blocks
         self.pbf.assemble_residual(t)
@@ -242,14 +298,12 @@ class FluidmechanicsConstraintProblem(problem_base):
             cq = self.comm.allgather(cq)
             self.constr[i] = sum(cq)
 
-        val, val_old = [], []
-        for n in range(self.num_coupling_surf):
-            curvenumber = self.prescribed_curve[n]
-            val.append(self.pbf.ti.timecurves(curvenumber)(t)), val_old.append(self.pbf.ti.timecurves(curvenumber)(t-self.pbase.dt))
-
         # Lagrange multiplier coupling residual
         for i in range(ls,le):
-            self.r_lm[i] = self.constr[i] - val[i]
+            if self.have_regularization:
+                self.r_lm[i] = self.alpha_reg[i]*(self.constr[i] - self.constr_val[i]) + (1.-self.alpha_reg[i])*self.kp_reg[i]*self.LM[i]
+            else:
+                self.r_lm[i] = self.constr[i] - self.constr_val[i]
 
         self.r_lm.assemble()
 
@@ -266,13 +320,15 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.K_list[1][0] = self.pbf.K_list[1][0]
         self.K_list[1][1] = self.pbf.K_list[1][1] # non-zero if we have stabilization
 
-        # offdiagonal s-u rows
+        # offdiagonal s-v rows
         for i in range(len(self.row_ids)):
             with self.k_sv_vec[i].localForm() as r_local: r_local.set(0.0)
             fem.petsc.assemble_vector(self.k_sv_vec[i], self.dcq_form[i])
             self.k_sv_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            if self.have_regularization:
+                self.k_sv_vec[i].scale(self.alpha_reg[i])
 
-        # offdiagonal u-s columns
+        # offdiagonal v-s columns
         for i in range(len(self.col_ids)):
             with self.k_vs_vec[i].localForm() as r_local: r_local.set(0.0)
             fem.petsc.assemble_vector(self.k_vs_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
@@ -283,23 +339,32 @@ class FluidmechanicsConstraintProblem(problem_base):
         # set columns
         for i in range(len(self.col_ids)):
             # NOTE: only set the surface-subset of the k_vs vector entries to avoid placing unnecessary zeros!
-            self.k_vs_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_vs_subvec[i])
-            self.K_vs.setValues(self.dofs_coupling[i], self.col_ids[i], self.k_vs_subvec[i].array, addv=PETSc.InsertMode.INSERT)
-            self.k_vs_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_vs_subvec[i])
+            self.k_vs_vec[i].getSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
+            self.K_vs.setValues(self.dofs_coupling_p[i], self.col_ids[i], self.k_vs_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+            self.k_vs_vec[i].restoreSubVector(self.dofs_coupling_p[i], subvec=self.k_vs_subvec[i])
 
         self.K_vs.assemble()
 
         # set rows
         for i in range(len(self.row_ids)):
             # NOTE: only set the surface-subset of the k_sv vector entries to avoid placing unnecessary zeros!
-            self.k_sv_vec[i].getSubVector(self.dofs_coupling[i], subvec=self.k_sv_subvec[i])
-            self.K_sv.setValues(self.row_ids[i], self.dofs_coupling[i], self.k_sv_subvec[i].array, addv=PETSc.InsertMode.INSERT)
-            self.k_sv_vec[i].restoreSubVector(self.dofs_coupling[i], subvec=self.k_sv_subvec[i])
+            self.k_sv_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
+            self.K_sv.setValues(self.row_ids[i], self.dofs_coupling_vq[i], self.k_sv_subvec[i].array, addv=PETSc.InsertMode.INSERT)
+            self.k_sv_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sv_subvec[i])
 
         self.K_sv.assemble()
 
         self.K_list[0][2] = self.K_vs
         self.K_list[2][0] = self.K_sv
+
+        if self.have_regularization:
+            ls, le = self.K_lm.getOwnershipRange()
+            for i in range(ls,le):
+                self.K_lm[i,i] = (1.-self.alpha_reg[i])*self.kp_reg[i]
+
+            self.K_lm.assemble()
+
+            self.K_list[2][2] = self.K_lm
 
 
     def get_index_sets(self, isoptions={}):
@@ -356,7 +421,7 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         self.pbf.evaluate_initial()
 
-        self.set_pressure_fem(self.LM_old, self.coupfuncs_old)
+        self.set_multiplier(self.LM_old, self.coupfuncs_old)
 
         for i in range(self.num_coupling_surf):
             con = fem.assemble_scalar(self.cq_form[i])
@@ -376,13 +441,19 @@ class FluidmechanicsConstraintProblem(problem_base):
 
 
     def get_time_offset(self):
-
         return 0.
 
 
     def evaluate_pre_solve(self, t, N, dt):
 
         self.pbf.evaluate_pre_solve(t, N, dt)
+
+        for n in range(self.num_coupling_surf):
+            self.constr_val[n] = self.pbf.ti.timecurves(self.prescribed_curve[n])(t)
+
+        if self.have_regularization:
+            for n in range(self.num_coupling_surf):
+                self.alpha_reg[n] = self.pbf.ti.timecurves(self.coupling_params['regularization'][n]['curve'])(t)
 
 
     def evaluate_post_solve(self, t, N):
@@ -407,7 +478,7 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         # update old pressures on solid
         self.LM_old.axpby(1.0, 0.0, self.LM)
-        self.set_pressure_fem(self.LM_old, self.coupfuncs_old)
+        self.set_multiplier(self.LM_old, self.coupfuncs_old)
         # update old 3D constraint variable
         self.constr_old[:] = self.constr[:]
 

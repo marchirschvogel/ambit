@@ -376,7 +376,7 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform_ale(self.var_v, var_p=self.var_p_, n0=self.io.n0, formulation=self.fluid_formulation)
 
         # read in fiber data - for reduced solid (FrSI)
-        if bool(self.io.fiber_data) and (self.pbase.problem_type=='fluid_ale' or self.pbase.problem_type=='fluid_ale_flow0d'): # only for FrSI problem
+        if bool(self.io.fiber_data) and (self.pbase.problem_type=='fluid_ale' or self.pbase.problem_type=='fluid_ale_flow0d' or self.pbase.problem_type=='fluid_ale_constraint'): # only for FrSI problem
 
             self.fibarray = ['circ']
             if len(self.io.fiber_data)>1: self.fibarray.append('long')
@@ -387,16 +387,16 @@ class FluidmechanicsProblem(problem_base):
             self.fib_func = None
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond_fluid(self.io, fem_params=fem_params, vf=self.vf, ti=self.ti, ki=self.ki, ff=self.fib_func)
+        self.bc = boundaryconditions.boundary_cond_fluid(self.io, fem_params=fem_params, vf=self.vf, ti=self.ti, ki=self.ki, ff=self.fib_func, V_field=self.V_v, Vdisc_scalar=self.Vd_scalar)
 
         self.bc_dict = bc_dict
 
         # Dirichlet boundary conditions
         if 'dirichlet' in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'], self.V_v)
+            self.bc.dirichlet_bcs(self.bc_dict['dirichlet'])
 
         if 'dirichlet_vol' in self.bc_dict.keys():
-            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'], self.V_v)
+            self.bc.dirichlet_vol(self.bc_dict['dirichlet_vol'])
 
         self.set_variational_forms()
 
@@ -503,17 +503,17 @@ class FluidmechanicsProblem(problem_base):
         w_neumann_old, w_body_old, w_robin_old, w_stabneumann_old, w_stabneumann_mod_old, w_robin_valve_old, w_membrane_old = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         w_neumann_mid, w_body_mid, w_robin_mid, w_stabneumann_mid, w_stabneumann_mod_mid, w_robin_valve_mid, w_membrane_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
         if 'neumann' in self.bc_dict.keys():
-            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.bmeasures, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
-            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.bmeasures, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
-            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.V_v, self.Vd_scalar, self.bmeasures, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
+            w_neumann     = self.bc.neumann_bcs(self.bc_dict['neumann'], self.bmeasures, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcs_to_update_vec=self.ti.funcs_to_update_vec, funcsexpr_to_update=self.ti.funcsexpr_to_update, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec)
+            w_neumann_old = self.bc.neumann_bcs(self.bc_dict['neumann'], self.bmeasures, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcs_to_update_vec=self.ti.funcs_to_update_vec_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_old)
+            w_neumann_mid = self.bc.neumann_bcs(self.bc_dict['neumann'], self.bmeasures, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcs_to_update_vec=self.ti.funcs_to_update_vec_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid)
         if 'bodyforce' in self.bc_dict.keys():
-            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
-            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
-            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.V_v, self.Vd_scalar, self.dx, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
+            w_body      = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, F=self.alevar['Fale'], funcs_to_update=self.ti.funcs_to_update, funcsexpr_to_update=self.ti.funcsexpr_to_update)
+            w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
+            w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.v, self.bmeasures, F=self.alevar['Fale'])
-            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.v_old, self.bmeasures, F=self.alevar['Fale_old'])
-            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.vel_mid, self.bmeasures, F=self.alevar['Fale_mid'])
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.ufluid, self.v, self.bmeasures, F=self.alevar['Fale'])
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.uf_old, self.v_old, self.bmeasures, F=self.alevar['Fale_old'])
+            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.ufluid_mid, self.vel_mid, self.bmeasures, F=self.alevar['Fale_mid'])
         if 'stabilized_neumann' in self.bc_dict.keys():
             w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, self.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
             w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, self.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
@@ -526,9 +526,9 @@ class FluidmechanicsProblem(problem_base):
             assert(self.num_dupl>1) # only makes sense if we have duplicate pressure domains
             self.have_robin_valve = True
             self.beta_valve, self.beta_valve_old = [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.Vd_scalar, self.beta_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.Vd_scalar, self.beta_valve_old, [self.bmeasures[2]], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.Vd_scalar, self.beta_valve, [self.bmeasures[2]], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v, self.beta_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.v_old, self.beta_valve_old, [self.bmeasures[2]], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve'], self.vel_mid, self.beta_valve, [self.bmeasures[2]], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
             # in case we manna make the min and max values spatially dependent (usage of an expression), prepare some functions
             self.beta_valve_min_expr, self.beta_valve_max_expr = [], []
             for m in range(len(self.bc_dict['robin_valve'])):
@@ -550,13 +550,13 @@ class FluidmechanicsProblem(problem_base):
             self.have_robin_valve_implicit = True
             raise RuntimeError("Implicit valve law not yet fully implemented!")
             self.state_valve, self.state_valve_old = [], []
-            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.state_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'])
-            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v_old, self.Vd_scalar, self.state_valve_old, [self.bmeasures[2]], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
-            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.vel_mid, self.Vd_scalar, self.state_valve, [self.bmeasures[2]], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
+            w_robin_valve     = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.state_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'])
+            w_robin_valve_old = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v_old, self.state_valve_old, [self.bmeasures[2]], wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
+            w_robin_valve_mid = self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.vel_mid, self.state_valve, [self.bmeasures[2]], wel=self.alevar['w_mid'], F=self.alevar['Fale_mid'])
             self.dbeta_dz_valve = []
             self.dw_robin_valve_dz = []
             for i in range(len(self.beta_valve)):
-                self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.Vd_scalar, self.dbeta_dz_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'], dw=self.dw_robin_valve_dz)
+                self.bc.robin_valve_bcs(self.bc_dict['robin_valve_implicit'], self.v, self.dbeta_dz_valve, [self.bmeasures[2]], wel=self.alevar['w'], F=self.alevar['Fale'], dw=self.dw_robin_valve_dz)
             # reduced valve variables (integrated pressures)
             self.num_valve_coupling_surf = len(self.bc_dict['robin_valve_implicit'])
             self.z, self.z_old = PETSc.Vec().createMPI(size=self.num_valve_coupling_surf), PETSc.Vec().createMPI(size=self.num_valve_coupling_surf)
@@ -629,7 +629,7 @@ class FluidmechanicsProblem(problem_base):
                 else:
                     raise ValueError("Unknown prestress_kinetic option. Choose either 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'none'.")
             if 'neumann_prestress' in self.bc_dict.keys():
-                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.V_v, self.Vd_scalar, self.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
+                w_neumann_prestr = self.bc.neumann_prestress_bcs(self.bc_dict['neumann_prestress'], self.bmeasures, funcs_to_update=self.ti.funcs_to_update_pre, funcs_to_update_vec=self.ti.funcs_to_update_vec_pre, funcsexpr_to_update=self.ti.funcsexpr_to_update_pre, funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_pre)
             if 'membrane' in self.bc_dict.keys():
                 self.ufluid_prestr = self.v * self.prestress_dt # only incremental displacement needed, since MULF update actually yields a zero displacement after the step
                 w_membrane_prestr, _, _, _, _ = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_prestr, self.v, self.acc_prestr, self.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)

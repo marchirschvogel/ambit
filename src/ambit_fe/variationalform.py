@@ -81,33 +81,33 @@ class variationalform_base:
     def deltaW_ext_robin_spring(self, u, k, dboundary, u_prestr=None):
 
         if u_prestr is not None:
-            return -k*(ufl.dot(u + u_prestr, self.var_u)*dboundary)
+            return -k*ufl.dot(u + u_prestr, self.var_u)*dboundary
         else:
-            return -k*(ufl.dot(u, self.var_u)*dboundary)
+            return -k*ufl.dot(u, self.var_u)*dboundary
 
     # Robin condition (spring) in reference normal direction
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring_normal_ref(self, u, k_n, dboundary, u_prestr=None):
 
         if u_prestr is not None:
-            return -k_n*(ufl.dot(ufl.outer(self.n0,self.n0)*(u + u_prestr), self.var_u)*dboundary)
+            return -k_n*ufl.dot(ufl.outer(self.n0,self.n0)*(u + u_prestr), self.var_u)*dboundary
         else:
-            return -k_n*(ufl.dot(ufl.outer(self.n0,self.n0)*u, self.var_u)*dboundary)
+            return -k_n*ufl.dot(ufl.outer(self.n0,self.n0)*u, self.var_u)*dboundary
 
     # Robin condition (spring) in cross normal direction
     def deltaW_ext_robin_spring_normal_cross(self, u, k_c, dboundary, u_prestr=None):
 
         if u_prestr is not None:
-            return -k_c*(ufl.dot((self.I - ufl.outer(self.n0,self.n0))*(u + u_prestr), self.var_u)*dboundary)
+            return -k_c*ufl.dot((self.I - ufl.outer(self.n0,self.n0))*(u + u_prestr), self.var_u)*dboundary
         else:
-            return -k_c*(ufl.dot((self.I - ufl.outer(self.n0,self.n0))*u, self.var_u)*dboundary)
+            return -k_c*ufl.dot((self.I - ufl.outer(self.n0,self.n0))*u, self.var_u)*dboundary
 
     # Robin condition (dashpot)
     # TeX: \int\limits_{\Gamma_0} c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot(self, v, c, dboundary):
 
         if not isinstance(v, ufl.constantvalue.Zero):
-            return -c*(ufl.dot(v, self.var_u)*dboundary)
+            return -c*ufl.dot(v, self.var_u)*dboundary
         else:
             return ufl.as_ufl(0)
 
@@ -116,7 +116,7 @@ class variationalform_base:
     def deltaW_ext_robin_dashpot_normal_ref(self, v, c_n, dboundary):
 
         if not isinstance(v, ufl.constantvalue.Zero):
-            return -c_n*(ufl.dot(ufl.outer(self.n0,self.n0)*v, self.var_u)*dboundary)
+            return -c_n*ufl.dot(ufl.outer(self.n0,self.n0)*v, self.var_u)*dboundary
         else:
             return ufl.as_ufl(0)
 
@@ -124,7 +124,7 @@ class variationalform_base:
     def deltaW_ext_robin_dashpot_normal_cross(self, v, c_c, dboundary):
 
         if not isinstance(v, ufl.constantvalue.Zero):
-            return -c_c*(ufl.dot((self.I - ufl.outer(self.n0,self.n0))*v, self.var_u)*dboundary)
+            return -c_c*ufl.dot((self.I - ufl.outer(self.n0,self.n0))*v, self.var_u)*dboundary
         else:
             return ufl.as_ufl(0)
 
@@ -153,8 +153,11 @@ class variationalform_base:
             if params['active_stress']['dir']=='cl':
                 c0, l0 = fibfnc[0], fibfnc[1]
                 omega, iota, gamma = params['active_stress']['omega'], params['active_stress']['iota'], params['active_stress']['gamma']
+                S_act = tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
+                dS_act = omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0))
             elif params['active_stress']['dir']=='iso':
-                pass
+                S_act = tau * self.I
+                dS_act = self.I
             else:
                 ValueError("Unknown ative stress dir!")
 
@@ -187,6 +190,9 @@ class variationalform_base:
         # time derivative of Cmod
         Cmoddot = Fdotmod.T*F0 + F0.T*Fdotmod - (IIIplanedot/(IIIplane**2.)) * n0n0
 
+        # only in-plane components of test function derivatives should be used!
+        var_F = ufl.grad(self.var_u) - ufl.grad(self.var_u)*n0n0
+
         if model=='membrane':
             Fmod = F0
         elif model=='membrane_fmod':
@@ -201,6 +207,12 @@ class variationalform_base:
             Fmod = R*Umod
         else:
             raise NameError("Unknown membrane model type!")
+
+        # return here, needed for estimating active stress
+        if returnquantity=='active_stress_power':
+            return h0*ufl.inner(Fmod*S_act,var_F)*dboundary
+        if returnquantity=='active_stress_power_deriv':
+            return h0*ufl.inner(Fmod*dS_act,var_F)*dboundary
 
         # first and second invariant
         Ic = ufl.tr(Cmod)
@@ -245,10 +257,7 @@ class variationalform_base:
 
         # add active stress
         if active is not None:
-            if params['active_stress']['dir']=='cl':
-                S += tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
-            if params['active_stress']['dir']=='iso':
-                S += tau * self.I
+            S += S_act
 
         # 1st PK stress P = FS
         P = Fmod * S
@@ -259,9 +268,6 @@ class variationalform_base:
         # strain energy and internal power of membrane, for postprocessing
         strainenergy = h0 * Psi
         internalpower = h0 * 0.5*ufl.inner(S,Cmoddot)
-
-        # only in-plane components of test function derivatives should be used!
-        var_F = ufl.grad(self.var_u) - ufl.grad(self.var_u)*n0n0
 
         # boundary inner virtual work/power
         if fcts is None:

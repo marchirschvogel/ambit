@@ -680,14 +680,29 @@ class kinematics:
 
     # fiber stretch
     def fibstretch(self, u_, fib_):
-        fof = ufl.outer(fib_,fib_)
-        return ufl.sqrt(ufl.inner(self.C(u_),fof))
+        struc = self.structural_fiber(fib_)
+        return ufl.sqrt(ufl.inner(self.C(u_),struc))
 
 
     # cross fiber stretch
     def crossfibstretch(self, u_, fib_):
-        fof = ufl.outer(fib_,fib_)
-        return ufl.sqrt(ufl.inner(self.C(u_),self.I-fof))
+        struc = self.structural_crossfiber(fib_)
+        return ufl.sqrt(ufl.inner(self.C(u_),struc))
+
+
+    # structural tensor fiber direction
+    def structural_fiber(self, f0):
+        return ufl.outer(f0,f0)
+
+
+    # structural tensor cross-fiber direction
+    def structural_crossfiber(self, f0):
+        return self.I - ufl.outer(f0,f0)
+
+
+    # isotropic structural tensor
+    def structural_iso(self):
+        return self.I
 
 
     # prestressing update (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010,
