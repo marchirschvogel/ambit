@@ -511,9 +511,9 @@ class FluidmechanicsProblem(problem_base):
             w_body_old  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, F=self.alevar['Fale_old'], funcs_to_update=self.ti.funcs_to_update_old, funcsexpr_to_update=self.ti.funcsexpr_to_update_old)
             w_body_mid  = self.bc.bodyforce(self.bc_dict['bodyforce'], self.dx, F=self.alevar['Fale_mid'], funcs_to_update=self.ti.funcs_to_update_mid, funcsexpr_to_update=self.ti.funcsexpr_to_update_mid)
         if 'robin' in self.bc_dict.keys():
-            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.ufluid, self.v, self.bmeasures, F=self.alevar['Fale'])
-            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.uf_old, self.v_old, self.bmeasures, F=self.alevar['Fale_old'])
-            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.ufluid_mid, self.vel_mid, self.bmeasures, F=self.alevar['Fale_mid'])
+            w_robin     = self.bc.robin_bcs(self.bc_dict['robin'], self.ufluid, self.v, self.bmeasures, F=self.alevar['Fale'], u_pre=self.uf_pre)
+            w_robin_old = self.bc.robin_bcs(self.bc_dict['robin'], self.uf_old, self.v_old, self.bmeasures, F=self.alevar['Fale_old'], u_pre=self.uf_pre)
+            w_robin_mid = self.bc.robin_bcs(self.bc_dict['robin'], self.ufluid_mid, self.vel_mid, self.bmeasures, F=self.alevar['Fale_mid'], u_pre=self.uf_pre)
         if 'stabilized_neumann' in self.bc_dict.keys():
             w_stabneumann     = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v, self.bmeasures, wel=self.alevar['w'], F=self.alevar['Fale'])
             w_stabneumann_old = self.bc.stabilized_neumann_bcs(self.bc_dict['stabilized_neumann'], self.v_old, self.bmeasures, wel=self.alevar['w_old'], F=self.alevar['Fale_old'])
