@@ -24,7 +24,7 @@ def test_main():
     IO_PARAMS            = {'problem_type'          : 'fluid_flow0d',
                             'mesh_domain'           : basepath+'/input/cylinder-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/cylinder-quad_boundary.xdmf',
-                            'write_results_every'   : -1,
+                            'write_results_every'   : 1,
                             'write_restart_every'   : 1,
                             'restart_step'          : restart_step,
                             'output_path'           : basepath+'/tmp/',

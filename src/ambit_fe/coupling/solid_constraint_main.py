@@ -496,6 +496,17 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.pbs.write_output(N, t)
 
+        if self.pbs.io.write_results_every > 0 and N % self.pbs.io.write_results_every == 0:
+            if np.isclose(t,self.pbase.dt): mode = 'wt'
+            else: mode = 'a'
+            LM_sq = allgather_vec(self.LM, self.comm)
+            if self.comm.rank == 0:
+                for i in range(len(LM_sq)):
+                    f = open(self.pbase.output_path+'/results_'+self.pbase.simname+'_LM'+str(i+1)+'.txt', mode)
+                    f.write('%.16E %.16E\n' % (t,LM_sq[i]))
+                    f.close()
+            del LM_sq
+
 
     def update(self):
 

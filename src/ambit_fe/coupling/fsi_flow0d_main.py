@@ -342,7 +342,7 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
 
         # self.io.write_output(self, N=N, t=t) # combined FSI output routine
         self.pbs.write_output(N, t)
-        self.pbfa0.write_output(N, t)
+        self.pbfa0.write_output(N, t) # writes LMs of 3D-0D
 
 
     def update(self):
