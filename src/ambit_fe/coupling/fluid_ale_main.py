@@ -132,7 +132,7 @@ class FluidmechanicsAleProblem(problem_base):
                     except: hscale = False
 
                     for i in range(len(ids_fluid_ale)):
-                        db_ = self.pba.io.ds(ids_fluid_ale[i])
+                        db_ = self.pba.bmeasures[0](ids_fluid_ale[i])
 
                         for n in range(self.pba.num_domains):
                             work_weak_dirichlet_fluid_ale += self.pba.vf.deltaW_int_nitsche_dirichlet(self.pba.d, self.pbf.ufluid, self.pba.ma[n].stress(self.pba.var_d,self.pba.var_d), beta, db_, hscale=hscale) # here, ufluid as form is used!
@@ -181,7 +181,7 @@ class FluidmechanicsAleProblem(problem_base):
                     for i in range(len(ids_ale_fluid)):
                         if self.coupling_ale_fluid[j]['type'] == 'robin':
                             beta = self.coupling_ale_fluid[j]['beta']
-                            db_ = self.pbf.io.ds(ids_ale_fluid[i])
+                            db_ = self.pbf.bmeasures[0](ids_ale_fluid[i])
                             work_robin_ale_fluid += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v, self.pba.wel, beta, db_, Fale=self.pba.ki.F(self.pba.d)) # here, wel as form is used!
                             work_robin_ale_fluid_old += self.pbf.vf.deltaW_int_robin_cur(self.pbf.v_old, self.pba.w_old, beta, db_, Fale=self.pba.ki.F(self.pba.d_old))
                             work_robin_ale_fluid_mid += self.pbf.vf.deltaW_int_robin_cur(self.pbf.vel_mid, self.pbf.timefac*self.pba.wel+(1.-self.pbf.timefac)*self.pba.w_old, beta, db_, Fale=self.pba.ki.F(self.pbf.timefac*self.pba.d+(1.-self.pbf.timefac)*self.pba.d_old))

@@ -169,6 +169,8 @@ if category=='frsi' or category=='fluid_ale' or category=='all':
     errs['test_frsi_artseg_modepartitionunity 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_artseg_modepartitionunity.py', str(2), branch])
 
     errs['test_frsi_artseg_prefile_bgsschur4x4 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_frsi_artseg_prefile_bgsschur4x4.py', branch])
+
+    errs['test_frsi_blocks_active 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_blocks_active.py', branch])
     
     errs['test_frsi_artseg_constraint 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_frsi_artseg_constraint.py', branch])
 
