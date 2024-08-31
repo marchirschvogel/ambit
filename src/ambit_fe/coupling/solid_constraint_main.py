@@ -145,8 +145,8 @@ class SolidmechanicsConstraintProblem(problem_base):
                     self.work_coupling_mid += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_mid[-1], ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 
                     # derivative w.r.t. multiplier
-                    df_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
-                    df_mid_ += self.pbs.timefac*self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
+                    df_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                    df_mid_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid,ext=True))
 
                 elif self.coupling_params['multiplier_physics'][n]['type'] == 'active_stress':
 
@@ -178,8 +178,8 @@ class SolidmechanicsConstraintProblem(problem_base):
                     self.work_coupling_mid += self.pbs.vf.deltaW_int(S_act_mid, self.pbs.ki.F(self.pbs.us_mid), dx_p)
 
                     # derivative w.r.t. multiplier
-                    df_ += self.pbs.vf.deltaW_int(dS_act, self.pbs.ki.F(self.pbs.u), dx_p)
-                    df_mid_ += self.pbs.vf.deltaW_int(dS_act, self.pbs.ki.F(self.pbs.us_mid), dx_p)
+                    df_ += self.pbs.timefac * self.pbs.vf.deltaW_int(dS_act, self.pbs.ki.F(self.pbs.u), dx_p)
+                    df_mid_ += self.pbs.timefac * self.pbs.vf.deltaW_int(dS_act, self.pbs.ki.F(self.pbs.us_mid), dx_p)
 
                 else:
                     raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")

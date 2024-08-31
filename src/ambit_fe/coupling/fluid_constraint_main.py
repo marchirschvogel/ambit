@@ -38,7 +38,7 @@ class FluidmechanicsConstraintProblem(problem_base):
         assert(len(self.coupling_params['constraint_physics'])==len(self.coupling_params['multiplier_physics']))
 
         # store surfaces in lists for convenience
-        self.surface_vq_ids, self.surface_lm_ids, self.vq_scales, self.btype = [], [], [], []
+        self.surface_vq_ids, self.surface_lm_ids, self.vq_scales, self.btype_vq, self.btype_lm = [], [], [], [], []
         for i in range(self.num_coupling_surf):
             self.surface_vq_ids.append(self.coupling_params['constraint_physics'][i]['id'])
             self.surface_lm_ids.append(self.coupling_params['multiplier_physics'][i]['id'])
@@ -47,9 +47,13 @@ class FluidmechanicsConstraintProblem(problem_base):
             else:
                 self.vq_scales.append([1.]*len(self.coupling_params['constraint_physics'][i]['id']))
             if 'boundary_type' in self.coupling_params['constraint_physics'][i]:
-                self.btype.append(self.coupling_params['constraint_physics'][i]['boundary_type'])
+                self.btype_vq.append(self.coupling_params['constraint_physics'][i]['boundary_type'])
             else:
-                self.btype.append(['ext']*len(self.coupling_params['constraint_physics'][i]['id']))
+                self.btype_vq.append(['ext']*len(self.coupling_params['constraint_physics'][i]['id']))
+            if 'boundary_type' in self.coupling_params['multiplier_physics'][i]:
+                self.btype_lm.append(self.coupling_params['multiplier_physics'][i]['boundary_type'])
+            else:
+                self.btype_lm.append(['ext']*len(self.coupling_params['multiplier_physics'][i]['id']))
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbf = FluidmechanicsProblem(pbase, io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, alevar=alevar)
@@ -117,14 +121,14 @@ class FluidmechanicsConstraintProblem(problem_base):
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_vq_ids[n])):
 
-                if self.btype[n][i]=='ext':
+                if self.btype_vq[n][i]=='ext':
                     fct_side = None
                     bmi = 0 # to grep out ds from bmeasures
-                elif self.btype[n][i]=='int':
+                elif self.btype_vq[n][i]=='int':
                     fct_side = '+'
                     bmi = 2 # to grep out dS from bmeasures
                 else:
-                    raise NameError("Unknown boundary type! Can only be 'ext' (external) or 'int' (internal).")
+                    raise NameError("Unknown boundary type for constraint! Can only be 'ext' (external) or 'int' (internal).")
 
                 ds_vq = self.pbf.bmeasures[bmi](self.surface_vq_ids[n][i])
                 cq_ += self.vq_scales[n][i] * self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'], fcts=fct_side)
@@ -136,7 +140,16 @@ class FluidmechanicsConstraintProblem(problem_base):
             df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_lm_ids[n])):
 
-                ds_p = self.pbf.bmeasures[0](self.surface_lm_ids[n][i])
+                if self.btype_lm[n][i]=='ext':
+                    fct_side = None
+                    bmi = 0 # to grep out ds from bmeasures
+                elif self.btype_lm[n][i]=='int':
+                    fct_side = '+'
+                    bmi = 2 # to grep out dS from bmeasures
+                else:
+                    raise NameError("Unknown boundary type for multiplier! Can only be 'ext' (external) or 'int' (internal).")
+
+                ds_p = self.pbf.bmeasures[bmi](self.surface_lm_ids[n][i])
 
                 if self.coupling_params['multiplier_physics'][n]['type'] == 'pressure':
 
@@ -146,8 +159,8 @@ class FluidmechanicsConstraintProblem(problem_base):
                     self.power_coupling_mid += self.pbf.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs_mid[-1], ds_p, F=self.pbf.alevar['Fale_mid'])
 
                     # derivative w.r.t. multiplier
-                    df_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale'])
-                    df_mid_ += self.pbf.timefac*self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale_mid'])
+                    df_ += self.pbf.timefac * self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale'])
+                    df_mid_ += self.pbf.timefac * self.pbf.vf.flux(self.pbf.var_v, ds_p, w=ufl.constantvalue.zero(self.pbf.ki.dim), F=self.pbf.alevar['Fale_mid'])
 
                 elif self.coupling_params['multiplier_physics'][n]['type'] == 'active_stress':
 
@@ -177,8 +190,19 @@ class FluidmechanicsConstraintProblem(problem_base):
                     self.power_coupling_mid += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power')
 
                     # derivative w.r.t. multiplier
-                    df_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
-                    df_mid_ += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
+                    df_ += self.pbf.timefac * self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
+                    df_mid_ += self.pbf.timefac * self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
+
+                elif self.coupling_params['multiplier_physics'][n]['type'] == 'valve_viscosity':
+
+                    # add to fluid rhs contributions - external power; should be positive, hence minus sign
+                    self.power_coupling += -self.pbf.vf.deltaW_ext_robin_valve(self.pbf.v, self.coupfuncs[-1], ds_p, fcts=fct_side, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'])
+                    self.power_coupling_old += -self.pbf.vf.deltaW_ext_robin_valve(self.pbf.v_old, self.coupfuncs_old[-1], ds_p, fcts=fct_side, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'])
+                    self.power_coupling_mid += -self.pbf.vf.deltaW_ext_robin_valve(self.pbf.vel_mid, self.coupfuncs_mid[-1], ds_p, fcts=fct_side, w=self.pbf.alevar['w_mid'], F=self.pbf.alevar['Fale_mid'])
+
+                    # derivative w.r.t. multiplier
+                    df_ += -self.pbf.timefac * self.pbf.vf.deltaW_ext_robin_valve_deriv_visc(self.pbf.v, ds_p, fcts=fct_side, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'])
+                    df_mid_ += -self.pbf.timefac * self.pbf.vf.deltaW_ext_robin_valve_deriv_visc(self.pbf.vel_mid, ds_p, fcts=fct_side, w=self.pbf.alevar['w_mid'], F=self.pbf.alevar['Fale_mid'])
 
                 else:
                     raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")

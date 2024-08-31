@@ -127,6 +127,10 @@ class variationalform(variationalform_base):
 
         return (-(beta*ufl.dot(v, self.var_v)))(fcts)*dboundary
 
+    def deltaW_ext_robin_valve_deriv_visc(self, v, dboundary, fcts='+', w=None, F=None):
+
+        return (-(ufl.dot(v, self.var_v)))(fcts)*dboundary
+
 
     # Robin condition for valve, over internal surface - normal direction
     def deltaW_ext_robin_valve_normal_ref(self, v, beta, dboundary, fcts='+', w=None, F=None):
@@ -328,6 +332,10 @@ class variationalform_ale(variationalform):
     def deltaW_ext_robin_valve(self, v, beta, dboundary, fcts='+', w=None, F=None):
 
         return (-(beta*ufl.dot((v-w), self.var_v)))(fcts)*dboundary
+
+    def deltaW_ext_robin_valve_deriv_visc(self, v, dboundary, fcts='+', w=None, F=None):
+
+        return (-(ufl.dot((v-w), self.var_v)))(fcts)*dboundary
 
 
     # Robin condition for valve, over internal surface - normal direction
