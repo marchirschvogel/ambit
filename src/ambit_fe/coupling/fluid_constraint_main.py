@@ -38,7 +38,7 @@ class FluidmechanicsConstraintProblem(problem_base):
         assert(len(self.coupling_params['constraint_physics'])==len(self.coupling_params['multiplier_physics']))
 
         # store surfaces in lists for convenience
-        self.surface_vq_ids, self.surface_lm_ids, self.vq_scales, self.btype_vq, self.btype_lm = [], [], [], [], []
+        self.surface_vq_ids, self.surface_lm_ids, self.vq_scales, self.btype_vq, self.btype_lm, self.on_subdomain = [], [], [], [], [], []
         for i in range(self.num_coupling_surf):
             self.surface_vq_ids.append(self.coupling_params['constraint_physics'][i]['id'])
             self.surface_lm_ids.append(self.coupling_params['multiplier_physics'][i]['id'])
@@ -54,6 +54,10 @@ class FluidmechanicsConstraintProblem(problem_base):
                 self.btype_lm.append(self.coupling_params['multiplier_physics'][i]['boundary_type'])
             else:
                 self.btype_lm.append(['ext']*len(self.coupling_params['multiplier_physics'][i]['id']))
+            if 'on_subdomain' in self.coupling_params['constraint_physics'][i]:
+                self.on_subdomain.append(self.coupling_params['constraint_physics'][i]['on_subdomain'])
+            else:
+                self.on_subdomain.append(False)
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbf = FluidmechanicsProblem(pbase, io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, alevar=alevar)
@@ -130,7 +134,12 @@ class FluidmechanicsConstraintProblem(problem_base):
                 else:
                     raise NameError("Unknown boundary type for constraint! Can only be 'ext' (external) or 'int' (internal).")
 
-                ds_vq = self.pbf.bmeasures[bmi](self.surface_vq_ids[n][i])
+                if self.on_subdomain[n]:
+                    assert(self.btype_vq[n][i]=='ext') # cannot do an internal intergral on a subdomain here...
+                    dom_u = self.coupling_params['constraint_physics'][n]['domain']
+                    ds_vq = ufl.ds(domain=self.pbf.io.submshes_emap[dom_u][0], subdomain_data=self.pbf.io.sub_mt_b1[dom_u], subdomain_id=self.surface_vq_ids[n][i], metadata={'quadrature_degree': self.pbf.io.quad_degree})
+                else:
+                    ds_vq = self.pbf.bmeasures[bmi](self.surface_vq_ids[n][i])
                 cq_ += self.vq_scales[n][i] * self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'], fcts=fct_side)
                 cq_old_ += self.vq_scales[n][i] * self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'], fcts=fct_side)
 
@@ -244,10 +253,15 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.cq_form, self.cq_old_form, self.dcq_form, self.dforce_form = [], [], [], []
 
         for i in range(self.num_coupling_surf):
-            self.cq_form.append(fem.form(self.cq[i], entity_maps=self.pbf.io.entity_maps))
-            self.cq_old_form.append(fem.form(self.cq_old[i], entity_maps=self.pbf.io.entity_maps))
+            if self.on_subdomain[i]:
+                # entity map child to parent
+                em_u = {self.io.mesh : self.pbf.io.submshes_emap[self.coupling_params['constraint_physics'][i]['domain']][1]}
+            else:
+                em_u = self.pbf.io.entity_maps
+            self.cq_form.append(fem.form(self.cq[i], entity_maps=em_u))
+            self.cq_old_form.append(fem.form(self.cq_old[i], entity_maps=em_u))
 
-            self.dcq_form.append(fem.form(self.dcq[i], entity_maps=self.pbf.io.entity_maps))
+            self.dcq_form.append(fem.form(self.dcq[i], entity_maps=em_u))
             self.dforce_form.append(fem.form(self.dforce[i], entity_maps=self.pbf.io.entity_maps))
 
         te = time.time() - ts

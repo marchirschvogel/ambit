@@ -126,7 +126,12 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
             self.dcqd_form = []
 
             for i in range(self.pbfc.num_coupling_surf):
-                self.dcqd_form.append(fem.form(self.dcqd[i], entity_maps=self.io.entity_maps))
+                if self.pbfc.on_subdomain[i]:
+                    # entity map child to parent
+                    em_u = {self.io.mesh : self.pbf.io.submshes_emap[self.pbfc.coupling_params['constraint_physics'][i]['domain']][1]}
+                else:
+                    em_u = self.pbf.io.entity_maps
+                self.dcqd_form.append(fem.form(self.dcqd[i], entity_maps=em_u))
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.comm)
