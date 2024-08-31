@@ -80,7 +80,7 @@ def test_main():
 
     MATERIALS            = {'MAT1' : {'holzapfelogden_dev' : {'a_0' : 0.059, 'b_0' : 8.023, 'a_f' : 18.472, 'b_f' : 16.026, 'a_s' : 2.481, 'b_s' : 11.120, 'a_fs' : 0.216, 'b_fs' : 11.436},
                                       'sussmanbathe_vol'   : {'kappa' : 1.0e3},
-                                      'active_fiber'       : {'prescribed_from_file' : basepath+'/input/checkpoint_ROM_2Dheart_solid_tau_a_*.txt'},
+                                      'active_fiber'       : {'type' : 'prescribed_from_file', 'prescribed_file' : basepath+'/input/checkpoint_ROM_2Dheart_solid_tau_a_*.txt'},
                                       'inertia'            : {'rho0' : 1.0e-6}}}
 
 

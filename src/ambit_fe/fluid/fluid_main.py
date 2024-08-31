@@ -579,11 +579,12 @@ class FluidmechanicsProblem(problem_base):
             self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_old_, self.a_d_old_, self.pint_u_old_, self.pint_d_old_, self.p_old__, F=self.alevar['Fale_old'])
             self.bc.dp_monitor_bcs(self.bc_dict['dp_monitor'], self.a_u_mid_, self.a_d_mid_, self.pint_u_mid_, self.pint_d_mid_, self.pf_mid__, F=self.alevar['Fale_mid'])
 
+        self.mem_active_stress = [False]
+
         # reduced-solid for FrSI problem
-        self.have_active_stress, self.active_stress_trig = False, 'ode'
         if 'membrane' in self.bc_dict.keys():
 
-            self.mem_active_stress = [False]*len(self.bc_dict['membrane'])
+            self.mem_active_stress, self.mem_active_stress_type = [False]*len(self.bc_dict['membrane']), ['ode']*len(self.bc_dict['membrane'])
 
             self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
@@ -591,13 +592,23 @@ class FluidmechanicsProblem(problem_base):
             for nm in range(len(self.bc_dict['membrane'])):
 
                 if 'active_stress' in self.bc_dict['membrane'][nm]['params'].keys():
-                    self.mem_active_stress[nm], self.have_active_stress = True, True
+                    self.mem_active_stress[nm] = True
 
-                    self.act_curve.append( fem.Function(self.Vd_scalar) )
-                    self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])})
-                    self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <- tau_a at end of time step
+                    try: self.mem_active_stress_type[nm] = self.bc_dict['membrane'][nm]['params']['active_stress']['type']
+                    except: pass # default is 'ode'
 
-                    self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], self.act_curve[-1], x_ref=self.x_ref))
+                    if self.mem_active_stress_type[nm] == 'ode':
+                        self.act_curve.append( fem.Function(self.Vd_scalar) )
+                        self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['activation_curve'])})
+                        self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <- tau_a at end of time step
+                        # the active stress ODE class
+                        self.actstress.append(activestress_activation(self.bc_dict['membrane'][nm]['params']['active_stress'], self.act_curve[-1], x_ref=self.x_ref))
+                    elif self.mem_active_stress_type[nm] == 'prescribed': # here we use act_curve as the prescibed stress directly
+                        self.act_curve.append( fem.Function(self.Vd_scalar) )
+                        self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.bc_dict['membrane'][nm]['params']['active_stress']['prescribed_curve'])})
+                        self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <- tau_a at end of time step
+                    else:
+                        raise NameError("Unknown active stress type for membrane!")
 
                 if 'field' in self.bc_dict['membrane'][nm]['params']['h0'].keys():
                     # wall thickness field for reduced solid
@@ -813,14 +824,17 @@ class FluidmechanicsProblem(problem_base):
                 else: j=n
                 self.weakform_lin_pp.append( ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]) )
 
-        if self.have_active_stress and self.active_stress_trig == 'ode':
+        if any(self.mem_active_stress):
             # active stress for reduced solid (FrSI)
             self.tau_a_, na = [], 0
             for nm in range(len(self.bc_dict['membrane'])):
 
                 if self.mem_active_stress[nm]:
-                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.pbase.dt))
-                    na+=1
+                    if self.mem_active_stress_type[nm] == 'ode':
+                        self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.pbase.dt))
+                        na+=1
+                    if self.mem_active_stress_type[nm] == 'prescribed':
+                        self.tau_a_.append(self.act_curve[nm]) # act_curve now stores the prescribed active stress
                 else:
                     self.tau_a_.append(ufl.as_ufl(0))
 
@@ -842,8 +856,8 @@ class FluidmechanicsProblem(problem_base):
                     self.weakform_lin_prestress_pp.append( ufl.derivative(self.weakform_prestress_p[n], self.p_[j], self.dp_[j]) )
 
 
-    # active stress ODE evaluation - for reduced solid model
-    def evaluate_active_stress_ode(self):
+    # active stress projection - for reduced solid model
+    def evaluate_active_stress(self):
 
         # project and interpolate to quadrature function space
         tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps) # TODO: Should be self.ds here, but yields error; why?
@@ -917,8 +931,8 @@ class FluidmechanicsProblem(problem_base):
     def evaluate_rate_equations(self, t_abs, t_off=0):
 
         # take care of active stress
-        if self.have_active_stress and self.active_stress_trig == 'ode':
-            self.evaluate_active_stress_ode()
+        if any(self.mem_active_stress):
+            self.evaluate_active_stress()
 
 
     def set_problem_residual_jacobian_forms(self, pre=False):

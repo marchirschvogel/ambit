@@ -289,8 +289,9 @@ class SolidmechanicsProblem(problem_base):
         else: self.midp = False
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
-        self.have_active_stress, self.active_stress_trig, self.have_frank_starling, self.have_growth, self.have_plasticity = False, 'ode', False, False, False
+        self.have_frank_starling, self.have_growth, self.have_plasticity = False, False, False
         self.mat_active_stress, self.mat_growth, self.mat_remodel, self.mat_growth_dir, self.mat_growth_trig, self.mat_growth_thres, self.mat_plastic = [False]*self.num_domains, [False]*self.num_domains, [False]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains, []*self.num_domains, [False]*self.num_domains
+        self.mat_active_stress_type = ['ode']*self.num_domains
 
         self.localsolve, growth_dir = False, None
         self.actstress, self.act_curve, self.act_curve_old, self.activemodel = [], [], [], [None]*self.num_domains
@@ -304,15 +305,11 @@ class SolidmechanicsProblem(problem_base):
                 if 'active_crossfiber' in self.constitutive_models['MAT'+str(n+1)].keys(): self.activemodel[n] = 'active_crossfiber'
                 if 'active_iso' in self.constitutive_models['MAT'+str(n+1)].keys(): self.activemodel[n] = 'active_iso'
                 if self.activemodel[n] == 'active_fiber' or self.activemodel[n] == 'active_crossfiber': assert(bool(self.io.fiber_data))
-                self.mat_active_stress[n], self.have_active_stress = True, True
-                # if one mat has a prescribed/multiplier active stress, all have to be!
-                if 'prescribed_curve' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
-                    self.active_stress_trig = 'prescribed'
-                if 'prescribed_from_file' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
-                    self.active_stress_trig, self.actpid = 'prescribed_from_file', n+1 # file acts for all active stress models in all domains!
-                if 'prescribed_multiscale' in self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]:
-                    self.active_stress_trig = 'prescribed_multiscale'
-                if self.active_stress_trig == 'ode':
+                self.mat_active_stress[n] = True
+                # get type of active stress
+                try: self.mat_active_stress_type[n] = self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['type']
+                except: pass # default is 'ode'
+                if self.mat_active_stress_type[n] == 'ode':
                     self.act_curve.append( fem.Function(self.Vd_scalar) )
                     self.ti.funcs_to_update.append({self.act_curve[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
                     self.actstress.append(activestress_activation(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]], self.act_curve[-1], x_ref=self.x_ref))
@@ -328,9 +325,12 @@ class SolidmechanicsProblem(problem_base):
                         self.actstress[-1].act_curve_old = self.act_curve_old[-1] # needed for Frank-Starling law
                     else:
                         self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <- tau_a at end of time step
-                if self.active_stress_trig == 'prescribed':
+                if self.mat_active_stress_type[n] == 'prescribed':
+                    self.act_curve.append( fem.Function(self.Vd_scalar) )
                     self.ti.funcs_to_update.append({self.tau_a : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['prescribed_curve'])})
                     self.ti.funcs_to_update_old.append({None : -1}) # not needed, since tau_a_old <- tau_a at end of time step
+                if self.mat_active_stress_type[n] == 'prescribed_from_file':
+                    self.actpid = n+1 # file acts for all active stress models in all domains!
                 self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
             if 'growth' in self.constitutive_models['MAT'+str(n+1)].keys():
@@ -677,7 +677,7 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
 
         # set forms for active stress
-        if self.have_active_stress and self.active_stress_trig == 'ode':
+        if any(self.mat_active_stress):
             # take care of Frank-Starling law (fiber stretch-dependent contractility)
             if self.have_frank_starling:
 
@@ -707,24 +707,29 @@ class SolidmechanicsProblem(problem_base):
             for n in range(self.num_domains):
 
                 if self.mat_active_stress[n]:
-                    # stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
-                    if self.actstress[na].frankstarling:
-                        if self.activemodel[n]=='active_fiber':
-                            if self.mat_growth[n]: lam_fib = self.ma[n].fibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
-                            else:                  lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
-                        elif self.activemodel[n]=='active_crossfiber':
-                            if self.mat_growth[n]: lam_fib = self.ma[n].crossfibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
-                            else:                  lam_fib = self.ki.crossfibstretch(self.u, self.fib_func[0])
-                        elif self.activemodel[n]=='active_iso':
-                            if self.mat_growth[n]: lam_fib = self.ma[n].isostretch_e(self.ki.C(self.u), self.theta)
-                            else:                  lam_fib = self.ki.isostretch(self.u)
+                    if self.mat_active_stress_type[n] == 'ode':
+                        # stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
+                        if self.actstress[na].frankstarling:
+                            if self.activemodel[n]=='active_fiber':
+                                if self.mat_growth[n]: lam_fib = self.ma[n].fibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
+                                else:                  lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
+                            elif self.activemodel[n]=='active_crossfiber':
+                                if self.mat_growth[n]: lam_fib = self.ma[n].crossfibstretch_e(self.ki.C(self.u), self.theta, self.fib_func[0])
+                                else:                  lam_fib = self.ki.crossfibstretch(self.u, self.fib_func[0])
+                            elif self.activemodel[n]=='active_iso':
+                                if self.mat_growth[n]: lam_fib = self.ma[n].isostretch_e(self.ki.C(self.u), self.theta)
+                                else:                  lam_fib = self.ki.isostretch(self.u)
+                            else:
+                                raise ValueError("Unknown active model!")
                         else:
-                            raise ValueError("Unknown active model!")
-                    else:
-                        lam_fib = ufl.as_ufl(1)
+                            lam_fib = ufl.as_ufl(1)
 
-                    self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.pbase.dt, lam=lam_fib, amp_old=self.amp_old))
-                    na+=1
+                        self.tau_a_.append(self.actstress[na].tau_act(self.tau_a_old, self.pbase.dt, lam=lam_fib, amp_old=self.amp_old))
+                        na+=1
+                    if self.mat_active_stress_type[n] == 'prescribed':
+                        self.tau_a_.append(self.act_curve[n]) # act_curve now stores the prescribed active stress
+                    if self.mat_active_stress_type[n] == 'prescribed_from_file':
+                        pass
                 else:
                     self.tau_a_.append(ufl.as_ufl(0))
 
@@ -746,8 +751,8 @@ class SolidmechanicsProblem(problem_base):
         self.K_list, self.K_list_rom = [[None]*self.nfields for _ in range(self.nfields)],  [[None]*self.nfields for _ in range(self.nfields)]
 
 
-    # active stress ODE evaluation
-    def evaluate_active_stress_ode(self):
+    # active stress projection
+    def evaluate_active_stress(self):
 
         if self.have_frank_starling:
             amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
@@ -860,8 +865,8 @@ class SolidmechanicsProblem(problem_base):
     def evaluate_rate_equations(self, t_abs, t_off=0):
 
         # take care of active stress
-        if self.have_active_stress and self.active_stress_trig == 'ode':
-            self.evaluate_active_stress_ode()
+        if any(self.mat_active_stress) and 'prescribed_from_file' not in self.mat_active_stress_type:
+            self.evaluate_active_stress()
 
 
     # compute volumes of a surface from a Laplace problem
@@ -1078,8 +1083,8 @@ class SolidmechanicsProblem(problem_base):
                 sc = m['scale']
                 if sc != 1.0: func.vector.scale(sc)
 
-        if self.active_stress_trig == 'prescribed_from_file':
-            self.io.readfunction(self.tau_a, self.constitutive_models['MAT'+str(self.actpid)][self.activemodel[self.actpid-1]]['prescribed_from_file'].replace('*',str(N)))
+        if 'prescribed_from_file' in (self.mat_active_stress_type):
+            self.io.readfunction(self.tau_a, self.constitutive_models['MAT'+str(self.actpid)][self.activemodel[self.actpid-1]]['prescribed_file'].replace('*',str(N)))
 
 
     def evaluate_post_solve(self, t, N):

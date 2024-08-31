@@ -722,7 +722,7 @@ class IO_solid(IO):
         if pb.have_growth:
             vecs_to_read[pb.theta] = 'theta'
             vecs_to_read[pb.theta_old] = 'theta'
-        if pb.have_active_stress:
+        if any(pb.mat_active_stress):
             vecs_to_read[pb.tau_a] = 'tau_a'
             vecs_to_read[pb.tau_a_old] = 'tau_a'
             if pb.have_frank_starling:
@@ -742,7 +742,7 @@ class IO_solid(IO):
             vecs_to_read[pb.growth_thres] = 'growth_thres'
             if pb.incompressible_2field:
                 vecs_to_read[pb.p_set] = 'p_set'
-            if pb.have_active_stress:
+            if any(pb.mat_active_stress):
                 vecs_to_read[pb.tau_a_set] = 'tau_a_set'
                 if pb.have_frank_starling:
                     vecs_to_read[pb.amp_old_set] = 'amp_old_set'
@@ -770,7 +770,7 @@ class IO_solid(IO):
             vecs_to_write[pb.p] = 'p'
         if pb.have_growth:
             vecs_to_write[pb.theta] = 'theta'
-        if pb.have_active_stress:
+        if any(pb.mat_active_stress):
             vecs_to_write[pb.tau_a] = 'tau_a'
             if pb.have_frank_starling:
                 vecs_to_write[pb.amp_old] = 'amp_old'
@@ -786,7 +786,7 @@ class IO_solid(IO):
             vecs_to_write[pb.growth_thres] = 'growth_thres'
             if pb.incompressible_2field:
                 vecs_to_write[pb.p_set] = 'p_set'
-            if pb.have_active_stress:
+            if any(pb.mat_active_stress):
                 vecs_to_write[pb.tau_a_set] = 'tau_a_set'
                 if pb.have_frank_starling:
                     vecs_to_write[pb.amp_old_set] = 'amp_old_set'
@@ -934,7 +934,7 @@ class IO_fluid(IO):
         vecs_to_read[pb.v_old] = 'v_old'
         vecs_to_read[pb.a_old] = 'a_old'
         vecs_to_read[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
-        if pb.have_active_stress: # for active membrane model (FrSI)
+        if any(pb.mem_active_stress): # for active membrane model (FrSI)
             vecs_to_read[pb.tau_a] = 'tau_a'
             vecs_to_read[pb.tau_a_old] = 'tau_a'
 
@@ -969,7 +969,7 @@ class IO_fluid(IO):
         vecs_to_write[pb.v_old] = 'v_old'
         vecs_to_write[pb.a_old] = 'a_old'
         vecs_to_write[pb.uf_old] = 'uf_old' # needed for ALE fluid / FSI / FrSI
-        if pb.have_active_stress:
+        if any(pb.mem_active_stress):
             vecs_to_write[pb.tau_a] = 'tau_a'
 
         # pressure may be discontinuous across domains

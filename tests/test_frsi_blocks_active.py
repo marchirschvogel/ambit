@@ -88,11 +88,18 @@ def test_main():
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
+        def tc2(self, t): # active stress from file - precomputed from the ODE, should yield same results
+
+            actstressinterp = np.loadtxt(basepath+'/input/actstress.txt', skiprows=1, usecols=(1))
+            tme = np.loadtxt(basepath+'/input/actstress.txt', skiprows=1, usecols=(0))
+            
+            return np.interp(t, tme, actstressinterp)
+
 
     BC_DICT_ALE          = { 'dirichlet' : [{'id' : [5,11,17], 'dir' : 'all', 'val' : 0.}] } # bottom
 
     BC_DICT_FLUID        = { 'membrane' :  [{'id' : [2], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'ode', 'dir' : 'cl', 'sigma0' : 10., 'alpha_max' : 10.0, 'alpha_min' : -30.0, 'activation_curve' : 1, 'omega' : 0.667, 'iota' : 0.333, 'gamma' : 0.0}}},
-                                            {'id' : [8], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'ode', 'dir' : 'cl', 'sigma0' : 10., 'alpha_max' : 10.0, 'alpha_min' : -30.0, 'activation_curve' : 1, 'omega' : 0.667, 'iota' : 0.333, 'gamma' : 0.0}}},
+                                            {'id' : [8], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'prescribed', 'dir' : 'cl', 'prescribed_curve' : 2, 'omega' : 0.667, 'iota' : 0.333, 'gamma' : 0.0}}},
                                             {'id' : [14], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'ode', 'dir' : 'iso', 'sigma0' : 100., 'alpha_max' : 10.0, 'alpha_min' : -30.0, 'activation_curve' : 1}}}] }
 
 
