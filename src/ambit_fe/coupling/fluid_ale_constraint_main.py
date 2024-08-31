@@ -153,7 +153,7 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
 
             for n in range(self.pbfc.num_coupling_surf):
 
-                nds_c_local = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[np.isin(self.pba.io.mt_b1.values, self.pbfc.surface_c_ids[n])])
+                nds_c_local = fem.locate_dofs_topological(self.pba.V_d, self.pba.io.mesh.topology.dim-1, self.pba.io.mt_b1.indices[np.isin(self.pba.io.mt_b1.values, self.pbfc.surface_vq_ids[n])])
                 nds_c = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_c_local, dtype=np.int32)), dtype=np.int32 )
                 self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pba.V_d.dofmap.index_map_bs, nds_c, comm=self.comm)
 

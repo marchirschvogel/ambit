@@ -46,10 +46,8 @@ def test_main():
                             'quad_degree'           : 5,
                             'incompressible_2field' : True}
 
-    CONSTRAINT_PARAMS    = {'surface_ids'           : [[3]],
-                            'constraint_quantity'   : ['volume'],
-                            'multiplier_physics'    : [{'type' : 'pressure'}],
-                            'prescribed_curve'      : [1]}
+    CONSTRAINT_PARAMS    = {'constraint_physics'   : [{'id' : [3], 'type' : 'volume', 'prescribed_curve' : 1}],
+                            'multiplier_physics'   : [{'id' : [3], 'type' : 'pressure'}]}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100.}, 'inertia' : {'rho0' : 1.0e-6}}}
 

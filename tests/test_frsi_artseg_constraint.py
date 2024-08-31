@@ -61,11 +61,9 @@ def test_main():
                             'quad_degree'           : 6}
 
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}]}
-
-    CONSTRAINT_PARAMS    = {'surface_ids'           : [[2,3]],
-                            'constraint_quantity'   : ['flux'],
-                            'multiplier_physics'    : [{'type' : 'pressure'}],
-                            'prescribed_curve'      : [1]}
+    
+    CONSTRAINT_PARAMS    = {'constraint_physics'   : [{'id' : [2,3], 'type' : 'flux', 'prescribed_curve' : 1}],
+                            'multiplier_physics'   : [{'id' : [2,3], 'type' : 'pressure'}]}
 
     MATERIALS_FLUID      = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                        'inertia'   : {'rho' : 1.025e-6}} }

@@ -34,13 +34,18 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.coupling_params = coupling_params
 
-        self.surface_c_ids = self.coupling_params['surface_ids']
-        try: self.surface_p_ids = self.coupling_params['surface_p_ids'] # could be also domain IDs in case of active stress multiplier!
-        except: self.surface_p_ids = self.surface_c_ids
+        self.num_coupling_surf = len(self.coupling_params['constraint_physics'])
+        assert(len(self.coupling_params['constraint_physics'])==len(self.coupling_params['multiplier_physics']))
 
-        self.num_coupling_surf = len(self.surface_c_ids)
-
-        self.prescribed_curve = self.coupling_params['prescribed_curve']
+        # store surfaces in lists for convenience
+        self.surface_vq_ids, self.surface_lm_ids, self.vq_scales = [], [], []
+        for i in range(self.num_coupling_surf):
+            self.surface_vq_ids.append(self.coupling_params['constraint_physics'][i]['id'])
+            self.surface_lm_ids.append(self.coupling_params['multiplier_physics'][i]['id'])
+            if 'scales' in self.coupling_params['constraint_physics'][i]:
+                self.vq_scales.append(self.coupling_params['constraint_physics'][i]['scales'])
+            else:
+                self.vq_scales.append([1.]*len(self.coupling_params['constraint_physics'][i]['id']))
 
         # initialize problem instances (also sets the variational forms for the solid problem)
         self.pbs = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params)
@@ -110,17 +115,17 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.coupfuncs_mid.append(self.pbs.timefac * self.coupfuncs[-1] + (1.-self.pbs.timefac) * self.coupfuncs_old[-1])
 
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
-            for i in range(len(self.surface_c_ids[n])):
+            for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = self.pbs.bmeasures[0](self.surface_c_ids[n][i])
+                ds_vq = self.pbs.bmeasures[0](self.surface_vq_ids[n][i])
 
                 # currently, only volume or flux constraints are supported
-                if self.coupling_params['constraint_quantity'][n] == 'volume':
-                    cq_ += self.pbs.vf.volume(self.pbs.u, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
-                    cq_old_ += self.pbs.vf.volume(self.pbs.u_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
-                elif self.coupling_params['constraint_quantity'][n] == 'flux':
-                    cq_ += self.pbs.vf.flux(self.pbs.vel, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
-                    cq_old_ += self.pbs.vf.flux(self.pbs.v_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
+                if self.coupling_params['constraint_physics'][n]['type']  == 'volume':
+                    cq_ += self.vq_scales[n][i] * self.pbs.vf.volume(self.pbs.u, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                    cq_old_ += self.vq_scales[n][i] * self.pbs.vf.volume(self.pbs.u_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
+                elif self.coupling_params['constraint_physics'][n]['type']  == 'flux':
+                    cq_ += self.vq_scales[n][i] * self.pbs.vf.flux(self.pbs.vel, ds_vq, F=self.pbs.ki.F(self.pbs.u,ext=True))
+                    cq_old_ += self.vq_scales[n][i] * self.pbs.vf.flux(self.pbs.v_old, ds_vq, F=self.pbs.ki.F(self.pbs.u_old,ext=True))
                 else:
                     raise NameError("Unknown constraint quantity! Choose either volume or flux!")
 
@@ -128,11 +133,11 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
 
             df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
-            for i in range(len(self.surface_p_ids[n])):
+            for i in range(len(self.surface_lm_ids[n])):
 
                 if self.coupling_params['multiplier_physics'][n]['type'] == 'pressure':
 
-                    ds_p = self.pbs.bmeasures[0](self.surface_p_ids[n][i])
+                    ds_p = self.pbs.bmeasures[0](self.surface_lm_ids[n][i])
 
                     # add to solid rhs contributions - external work, but positive, since multiplier acts against outward normal
                     self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(self.coupfuncs[-1], ds_p, F=self.pbs.ki.F(self.pbs.u,ext=True))
@@ -145,7 +150,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
                 elif self.coupling_params['multiplier_physics'][n]['type'] == 'active_stress':
 
-                    dx_p = self.pbs.dx(self.surface_p_ids[n][i]) # here a domain actually...
+                    dx_p = self.pbs.dx(self.surface_lm_ids[n][i]) # here a domain actually...
 
                     if self.coupling_params['multiplier_physics'][n]['dir'] == 'iso':
                         S_act = self.coupfuncs[-1] * self.pbs.ki.structural_iso()
@@ -260,7 +265,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         for n in range(self.num_coupling_surf):
 
-            nds_vq_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_c_ids[n])])
+            nds_vq_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_vq_ids[n])])
             nds_vq = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
@@ -269,9 +274,9 @@ class SolidmechanicsConstraintProblem(problem_base):
             sze_su.append(self.k_su_subvec[-1].getSize())
 
             if self.coupling_params['multiplier_physics'][n]['type'] == 'pressure':
-                nds_p_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_p_ids[n])])
+                nds_p_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_lm_ids[n])])
             if self.coupling_params['multiplier_physics'][n]['type'] == 'active_stress':
-                nds_p_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim, self.pbs.io.mt_d.indices[np.isin(self.pbs.io.mt_d.values, self.surface_p_ids[n])])
+                nds_p_local = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim, self.pbs.io.mt_d.indices[np.isin(self.pbs.io.mt_d.values, self.surface_lm_ids[n])])
             nds_p = np.array( self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_p, comm=self.comm)
 
@@ -314,7 +319,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         ls, le = self.LM.getOwnershipRange()
 
-        for i in range(len(self.surface_p_ids)):
+        for i in range(len(self.surface_lm_ids)):
             cq = fem.assemble_scalar(self.cq_form[i])
             cq = self.comm.allgather(cq)
             self.constr[i] = sum(cq)
@@ -475,7 +480,7 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.pbs.evaluate_pre_solve(t, N, dt)
 
         for n in range(self.num_coupling_surf):
-            self.constr_val[n] = self.pbs.ti.timecurves(self.prescribed_curve[n])(t)
+            self.constr_val[n] = self.pbs.ti.timecurves(self.coupling_params['constraint_physics'][n]['prescribed_curve'])(t)
 
         if self.have_regularization:
             for n in range(self.num_coupling_surf):

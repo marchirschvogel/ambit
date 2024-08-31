@@ -54,10 +54,8 @@ def test_main():
                            'fluid_formulation'     : 'nonconservative', # nonconservative (default), conservative
                            'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'reduced_scheme' : True}}
 
-    CONSTRAINT_PARAMS    = {'surface_ids'           : [[4]],
-                            'constraint_quantity'   : ['flux'],
-                            'multiplier_physics'    : [{'type' : 'pressure'}],
-                            'prescribed_curve'      : [1]}
+    CONSTRAINT_PARAMS    = {'constraint_physics'   : [{'id' : [4], 'type' : 'flux', 'prescribed_curve' : 1}],
+                            'multiplier_physics'   : [{'id' : [4], 'type' : 'pressure'}]}
 
     MATERIALS           = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                       'inertia' : {'rho' : 1.025e-6}},

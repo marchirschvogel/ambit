@@ -34,13 +34,22 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         self.coupling_params = coupling_params
 
-        self.surface_c_ids = self.coupling_params['surface_ids']
-        try: self.surface_p_ids = self.coupling_params['surface_p_ids']
-        except: self.surface_p_ids = self.surface_c_ids
+        self.num_coupling_surf = len(self.coupling_params['constraint_physics'])
+        assert(len(self.coupling_params['constraint_physics'])==len(self.coupling_params['multiplier_physics']))
 
-        self.num_coupling_surf = len(self.surface_c_ids)
-
-        self.prescribed_curve = self.coupling_params['prescribed_curve']
+        # store surfaces in lists for convenience
+        self.surface_vq_ids, self.surface_lm_ids, self.vq_scales, self.btype = [], [], [], []
+        for i in range(self.num_coupling_surf):
+            self.surface_vq_ids.append(self.coupling_params['constraint_physics'][i]['id'])
+            self.surface_lm_ids.append(self.coupling_params['multiplier_physics'][i]['id'])
+            if 'scales' in self.coupling_params['constraint_physics'][i]:
+                self.vq_scales.append(self.coupling_params['constraint_physics'][i]['scales'])
+            else:
+                self.vq_scales.append([1.]*len(self.coupling_params['constraint_physics'][i]['id']))
+            if 'boundary_type' in self.coupling_params['constraint_physics'][i]:
+                self.btype.append(self.coupling_params['constraint_physics'][i]['boundary_type'])
+            else:
+                self.btype.append(['ext']*len(self.coupling_params['constraint_physics'][i]['id']))
 
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbf = FluidmechanicsProblem(pbase, io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, alevar=alevar)
@@ -105,29 +114,29 @@ class FluidmechanicsConstraintProblem(problem_base):
             self.coupfuncs[-1].interpolate(self.pr0D.evaluate), self.coupfuncs_old[-1].interpolate(self.pr0D.evaluate)
             self.coupfuncs_mid.append(self.pbf.timefac * self.coupfuncs[-1] + (1.-self.pbf.timefac) * self.coupfuncs_old[-1])
 
-            if self.coupling_params['constraint_quantity'][n] == 'flux':
-                fct_side = None
-                bmi = 0 # to grep out ds from bmeasures
-            elif self.coupling_params['constraint_quantity'][n] == 'flux_internal':
-                fct_side = '+'
-                bmi = 2 # to grep out dS from bmeasures
-            else:
-                raise NameError("Unknown constraint quantity! Choose either volume or flux!")
-
             cq_, cq_old_ = ufl.as_ufl(0), ufl.as_ufl(0)
-            for i in range(len(self.surface_c_ids[n])):
+            for i in range(len(self.surface_vq_ids[n])):
 
-                ds_vq = self.pbf.bmeasures[bmi](self.surface_c_ids[n][i])
-                cq_ += self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'], fcts=fct_side)
-                cq_old_ += self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'], fcts=fct_side)
+                if self.btype[n][i]=='ext':
+                    fct_side = None
+                    bmi = 0 # to grep out ds from bmeasures
+                elif self.btype[n][i]=='int':
+                    fct_side = '+'
+                    bmi = 2 # to grep out dS from bmeasures
+                else:
+                    raise NameError("Unknown boundary type! Can only be 'ext' (external) or 'int' (internal).")
+
+                ds_vq = self.pbf.bmeasures[bmi](self.surface_vq_ids[n][i])
+                cq_ += self.vq_scales[n][i] * self.pbf.vf.flux(self.pbf.v, ds_vq, w=self.pbf.alevar['w'], F=self.pbf.alevar['Fale'], fcts=fct_side)
+                cq_old_ += self.vq_scales[n][i] * self.pbf.vf.flux(self.pbf.v_old, ds_vq, w=self.pbf.alevar['w_old'], F=self.pbf.alevar['Fale_old'], fcts=fct_side)
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
 
             df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
-            for i in range(len(self.surface_p_ids[n])):
+            for i in range(len(self.surface_lm_ids[n])):
 
-                ds_p = self.pbf.bmeasures[0](self.surface_p_ids[n][i])
+                ds_p = self.pbf.bmeasures[0](self.surface_lm_ids[n][i])
 
                 if self.coupling_params['multiplier_physics'][n]['type'] == 'pressure':
 
@@ -143,7 +152,7 @@ class FluidmechanicsConstraintProblem(problem_base):
                 elif self.coupling_params['multiplier_physics'][n]['type'] == 'active_stress':
 
                     # for safety reasons, we require a membrane model on each of the surfaces we use for applying the active stress multiplier!
-                    assert(self.surface_p_ids[n][i] == self.pbf.bc_dict['membrane'][n]['id'][i])
+                    assert(self.surface_lm_ids[n][i] == self.pbf.bc_dict['membrane'][n]['id'][i])
                     # assert that there's no active stress model used in the membrane model at that boundary
                     assert('active_stress' not in self.pbf.bc_dict['membrane'][n]['params'])
                     # use the same parameters from the membrane model at that boundary
@@ -255,7 +264,7 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         for n in range(self.num_coupling_surf):
 
-            nds_vq_local = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_c_ids[n])])
+            nds_vq_local = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_vq_ids[n])])
             nds_vq = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_vq, comm=self.comm)
 
@@ -263,7 +272,7 @@ class FluidmechanicsConstraintProblem(problem_base):
 
             sze_sv.append(self.k_sv_subvec[-1].getSize())
 
-            nds_p_local = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_p_ids[n])])
+            nds_p_local = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_lm_ids[n])])
             nds_p = np.array( self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)), dtype=np.int32 )
             self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_p, comm=self.comm)
 
@@ -302,7 +311,7 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         ls, le = self.LM.getOwnershipRange()
 
-        for i in range(len(self.surface_p_ids)):
+        for i in range(len(self.surface_lm_ids)):
             cq = fem.assemble_scalar(self.cq_form[i])
             cq = self.comm.allgather(cq)
             self.constr[i] = sum(cq)
@@ -458,7 +467,7 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.pbf.evaluate_pre_solve(t, N, dt)
 
         for n in range(self.num_coupling_surf):
-            self.constr_val[n] = self.pbf.ti.timecurves(self.prescribed_curve[n])(t)
+            self.constr_val[n] = self.pbf.ti.timecurves(self.coupling_params['constraint_physics'][n]['prescribed_curve'])(t)
 
         if self.have_regularization:
             for n in range(self.num_coupling_surf):
