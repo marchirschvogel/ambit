@@ -663,12 +663,14 @@ class FluidmechanicsProblem(problem_base):
             vscale = self.stabilization['vscale']
             try: vscale_vel_dep = self.stabilization['vscale_vel_dep']
             except: vscale_vel_dep = False
+            try: vscale_vel_amp = self.stabilization['vscale_vel_amp']
+            except: vscale_vel_amp = 1.0
 
             # TODO: Is this a good choice in general if we wanna make it state dependent?
             if vscale_vel_dep:
-                vscale_max = ufl.max_value(ufl.sqrt(ufl.dot(self.v_old,self.v_old)), vscale)
+                vscale_max = vscale_vel_amp * ufl.max_value(ufl.sqrt(ufl.dot(self.v_old,self.v_old)), vscale)
             else:
-                vscale_max = vscale
+                vscale_max = vscale_vel_amp * vscale
 
             h = self.io.hd0 # cell diameter (could also use max edge length self.io.emax0, but seems to yield similar/same results)
 
