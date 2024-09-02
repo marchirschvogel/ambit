@@ -1222,6 +1222,13 @@ class FluidmechanicsProblem(problem_base):
         # dp_ = pd_ - pu_ (downstream minus upstream)
         for m in range(len(self.bc_dict['robin_valve'])):
 
+            # try to set time if present in expression
+            try: self.beta_valve_max_expr[m].t = t
+            except: pass
+
+            try: self.beta_valve_min_expr[m].t = t
+            except: pass
+
             if self.bc_dict['robin_valve'][m]['type'] == 'dp':
                 dp_id = self.bc_dict['robin_valve'][m]['dp_monitor_id']
                 if dp_[dp_id] > 0.:
