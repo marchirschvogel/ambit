@@ -214,7 +214,7 @@ Strong form
      :label: solid-strong-form
 
      \begin{aligned}
-     \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+     \nabla_{0} \cdot \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
      \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
      \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{N}} \times [0, T],\\
      \boldsymbol{u}(\boldsymbol{x}_{0},0) &= \hat{\boldsymbol{u}}_{0}(\boldsymbol{x}_{0}) &&\text{in} \; \mathit{\Omega}_{0},\\
@@ -229,7 +229,7 @@ Strong form
      :label: solid-strong-form-inc
 
      \begin{aligned}
-     \boldsymbol{\nabla}_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
+     \nabla_{0} \cdot \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) + \hat{\boldsymbol{b}}_{0} &= \rho_{0} \boldsymbol{a}(\boldsymbol{u}) &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
      J(\boldsymbol{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
      \boldsymbol{u} &= \hat{\boldsymbol{u}} &&\text{on} \; \mathit{\Gamma}_{0}^{\mathrm{D}} \times [0, T],\\
      \boldsymbol{t}_{0} = \boldsymbol{P}\boldsymbol{n}_{0} &= \hat{\boldsymbol{t}}_{0} &&\text{on} \; \mathit{\mathit{\Gamma}}_{0}^{\mathrm{N}} \times [0, T],\\
@@ -265,7 +265,7 @@ Weak form
      :label: deltaw-int
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{S}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
+     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \nabla_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{S}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
      \end{aligned}
 
   – External virtual work:
@@ -344,7 +344,7 @@ Weak form
      :label: deltaw-int-inc
 
      \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{S}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
+     \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) &= \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{P}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \nabla_{0} \delta\boldsymbol{u} \,\mathrm{d}V = \int\limits_{\mathit{\Omega}_{0}} \boldsymbol{S}(\boldsymbol{u},p,\boldsymbol{v}(\boldsymbol{u})) : \frac{1}{2}\delta\boldsymbol{C}(\boldsymbol{u}) \,\mathrm{d}V
      \end{aligned}
 
   – Pressure virtual work:
@@ -535,8 +535,8 @@ Eulerian reference frame
      :label: fluid-strong-form
 
      \begin{aligned}
-     \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
-     \boldsymbol{\nabla}\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\\
+     \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
+     \nabla\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\\
      \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{D}} \times [0, T],\\
      \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{N}} \times [0, T],\\
      \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_t,
@@ -546,7 +546,7 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu\,\boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\boldsymbol{\nabla} \boldsymbol{v} + (\boldsymbol{\nabla} \boldsymbol{v})^{\mathrm{T}}\right)
+   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu\,\boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\nabla \boldsymbol{v} + (\nabla \boldsymbol{v})^{\mathrm{T}}\right)
    \end{aligned}
 
 | **Weak Form**
@@ -568,7 +568,7 @@ with a Newtonian fluid constitutive law
    :label: deltap-kin
 
    \begin{aligned}
-   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_t} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_t} \rho\left[\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right] \cdot \delta\boldsymbol{v} \,\mathrm{d}v
    \end{aligned}
 
 – Internal virtual power:
@@ -578,7 +578,7 @@ with a Newtonian fluid constitutive law
 
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p;\delta\boldsymbol{v}) = 
-   \int\limits_{\mathit{\Omega}_t} \boldsymbol{\sigma}(\boldsymbol{v},p) : \boldsymbol{\nabla} \delta\boldsymbol{v} \,\mathrm{d}v 
+   \int\limits_{\mathit{\Omega}_t} \boldsymbol{\sigma}(\boldsymbol{v},p) : \nabla \delta\boldsymbol{v} \,\mathrm{d}v 
    \end{aligned}
 
 – Pressure virtual power:
@@ -588,7 +588,7 @@ with a Newtonian fluid constitutive law
 
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v};\delta p) = 
-   \int\limits_{\mathit{\Omega}_t} (\boldsymbol{\nabla}\cdot\boldsymbol{v})\,\delta p\,\mathrm{d}v
+   \int\limits_{\mathit{\Omega}_t} (\nabla\cdot\boldsymbol{v})\,\delta p\,\mathrm{d}v
    \end{aligned}
 
 | – External virtual power:
@@ -639,8 +639,8 @@ with a Newtonian fluid constitutive law
 
   .. math::
      \begin{aligned}
-     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{SUPG}}\,(\boldsymbol{\nabla}\delta\boldsymbol{v})\,\boldsymbol{v} \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) - \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v \\
-     & + \int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{LSIC}}\,\rho\,(\boldsymbol{\nabla}\cdot\delta\boldsymbol{v})(\boldsymbol{\nabla}\cdot\boldsymbol{v})\,\mathrm{d}v
+     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{SUPG}}\,(\nabla\delta\boldsymbol{v})\,\boldsymbol{v} \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v \\
+     & + \int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{LSIC}}\,\rho\,(\nabla\cdot\delta\boldsymbol{v})(\nabla\cdot\boldsymbol{v})\,\mathrm{d}v
      \end{aligned}
 
   – Pressure residual operator in
@@ -649,7 +649,7 @@ with a Newtonian fluid constitutive law
 
   .. math::
      \begin{aligned}
-     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{PSPG}}\,(\boldsymbol{\nabla}\delta p) \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\,\boldsymbol{v}\right) - \boldsymbol{\nabla} \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v 
+     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{PSPG}}\,(\nabla\delta p) \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v 
      \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
@@ -684,7 +684,7 @@ ALE reference frame
   :math:`\boldsymbol{d}`
 | – Fluid mechanics formulated with respect to the reference frame,
   using ALE deformation gradient
-  :math:`\widehat{\boldsymbol{F}}(\boldsymbol{d}) = \boldsymbol{I} + \boldsymbol{\nabla}_0\boldsymbol{d}`
+  :math:`\widehat{\boldsymbol{F}}(\boldsymbol{d}) = \boldsymbol{I} + \nabla_0\boldsymbol{d}`
   and its determinant,
   :math:`\widehat{J}(\boldsymbol{d})=\det \widehat{\boldsymbol{F}}(\boldsymbol{d})`
 | **ALE problem**
@@ -695,7 +695,7 @@ ALE reference frame
      :label: ale-strong-form
 
      \begin{aligned}
-     \boldsymbol{\nabla}_{0} \cdot \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) &= \boldsymbol{0} &&\text{in} \; \mathit{\mathit{\Omega}}_0, \\
+     \nabla_{0} \cdot \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) &= \boldsymbol{0} &&\text{in} \; \mathit{\mathit{\Omega}}_0, \\
      \boldsymbol{d} &= \hat{\boldsymbol{d}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}},
      \end{aligned}
 
@@ -703,14 +703,14 @@ ALE reference frame
 
   .. math::
      \begin{aligned}
-     \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = 2\mu \,\boldsymbol{\varepsilon} + \lambda \,\mathrm{tr}\boldsymbol{\varepsilon}\,\boldsymbol{I}, \qquad \text{with}\quad \boldsymbol{\varepsilon} = \frac{1}{2}\left(\boldsymbol{\nabla}_0\boldsymbol{d} + (\boldsymbol{\nabla}_0\boldsymbol{d})^{\mathrm{T}}\right)
+     \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = 2\mu \,\boldsymbol{\varepsilon} + \lambda \,\mathrm{tr}\boldsymbol{\varepsilon}\,\boldsymbol{I}, \qquad \text{with}\quad \boldsymbol{\varepsilon} = \frac{1}{2}\left(\nabla_0\boldsymbol{d} + (\nabla_0\boldsymbol{d})^{\mathrm{T}}\right)
      \end{aligned}
 
   – ALE material ``diffusion``:
 
   .. math::
      \begin{aligned}
-     \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = D \,\boldsymbol{\nabla}_0\boldsymbol{d}
+     \boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) = D \,\nabla_0\boldsymbol{d}
      \end{aligned}
 
   – ALE material ``neohooke`` (fully nonlinear model):
@@ -726,7 +726,7 @@ ALE reference frame
    :label: ale-weak-form
 
    \begin{aligned}
-   r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) := \int\limits_{\mathit{\Omega}_0}\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) : \boldsymbol{\nabla}_{0}\delta\boldsymbol{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\boldsymbol{d}
+   r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) := \int\limits_{\mathit{\Omega}_0}\boldsymbol{\sigma}^{\mathrm{G}}(\boldsymbol{d}) : \nabla_{0}\delta\boldsymbol{d}\,\mathrm{d}V = 0, \quad \forall \; \delta\boldsymbol{d}
    \end{aligned}
 
 | **Strong form (ALE)**
@@ -737,8 +737,8 @@ ALE reference frame
      :label: fluid-ale-strong-form
 
      \begin{aligned}
-     \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
-     \boldsymbol{\nabla}_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \nabla_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left[\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right] &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \nabla_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
      \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \\
      \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \\
      \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_0,
@@ -748,7 +748,7 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu \boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\boldsymbol{\nabla}_0 \boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} + \widehat{\boldsymbol{F}}^{-\mathrm{T}}(\boldsymbol{\nabla}_0 \boldsymbol{v})^{\mathrm{T}}\right)
+   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu \boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\nabla_0 \boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} + \widehat{\boldsymbol{F}}^{-\mathrm{T}}(\nabla_0 \boldsymbol{v})^{\mathrm{T}}\right)
    \end{aligned}
 
 | **Weak form (ALE)**
@@ -768,7 +768,7 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widehat{J} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widehat{J} \rho\left[\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_{0}\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right] \cdot \delta\boldsymbol{v} \,\mathrm{d}V
    \end{aligned}
 
 – Internal virtual power:
@@ -776,7 +776,7 @@ with a Newtonian fluid constitutive law
 .. math::
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) = 
-   \int\limits_{\mathit{\Omega}_0} \widehat{J}\boldsymbol{\sigma}(\boldsymbol{v},p,\boldsymbol{d}) : \boldsymbol{\nabla}_{0} \delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} \,\mathrm{d}V
+   \int\limits_{\mathit{\Omega}_0} \widehat{J}\boldsymbol{\sigma}(\boldsymbol{v},p,\boldsymbol{d}) : \nabla_{0} \delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} \,\mathrm{d}V
    \end{aligned}
 
 – Pressure virtual power:
@@ -784,7 +784,7 @@ with a Newtonian fluid constitutive law
 .. math::
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p) = 
-   \int\limits_{\mathit{\Omega}_0} \widehat{J}\,\boldsymbol{\nabla}_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
+   \int\limits_{\mathit{\Omega}_0} \widehat{J}\,\nabla_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
    \end{aligned}
 
 | – External virtual power:
@@ -818,9 +818,9 @@ with a Newtonian fluid constitutive law
 
   .. math::
      \begin{aligned}
-     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\boldsymbol{\nabla}_0\delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\;\cdot \\
-     & \qquad\quad \cdot\left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
-     & + \int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\boldsymbol{\nabla}_{0}\delta\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})(\boldsymbol{\nabla}_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})\,\mathrm{d}V
+     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\nabla_0\delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\;\cdot \\
+     & \qquad\quad \cdot\left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
+     & + \int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\nabla_{0}\delta\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})(\nabla_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})\,\mathrm{d}V
      \end{aligned}
 
   – Pressure residual operator in
@@ -829,8 +829,8 @@ with a Newtonian fluid constitutive law
 
   .. math::
      \begin{aligned}
-     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\boldsymbol{F}}^{-\mathrm{T}}\boldsymbol{\nabla}_{0}\delta p) \;\cdot \\
-     & \qquad\quad \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \boldsymbol{\nabla}_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
+     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_{0}\delta p) \;\cdot \\
+     & \qquad\quad \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
      \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
@@ -1474,6 +1474,13 @@ incompressible solid:
 Fluid-reduced-Solid Interaction (FrSI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+– Boundary term:
+
+.. math::
+   \begin{aligned}
+       r_{\tilde{\text{s}}} := \int\limits_{\mathit{\Gamma}_{0}^{\text{f}\mhyphen\tilde{\text{s}}}} h_{0} \left[\rho_{0,s}\frac{\partial\boldsymbol{v}}{\partial t}\cdot\delta\boldsymbol{v} + \tilde{\boldsymbol{P}}(\boldsymbol{u}_{\text{f}}(\boldsymbol{v}) + \tilde{\boldsymbol{u}}_{\mathrm{pre}},\boldsymbol{v}) : \tilde{\nabla}_{0}\delta\boldsymbol{v}\right]\mathrm{d}A
+   \end{aligned}
+
 – Discrete nonlinear system to solve in each time step :math:`n`:
 
 .. math::
@@ -1949,7 +1956,7 @@ Table of symbols
    &\boldsymbol{x}_0, \boldsymbol{x} &&: \text{coordinates of the reference, current frame} \\
    &\boldsymbol{e}_x, \boldsymbol{e}_y, \boldsymbol{e}_z &&: \text{unit vectors of the cartesian reference frame} \\
    &\boldsymbol{n}_0, \boldsymbol{n} &&: \text{unit outward normal defined in the reference, current frame} \\
-   &\boldsymbol{\nabla}_{0},\boldsymbol{\nabla} &&: \text{Nabla operator with respect to the reference, current frame} \\
+   &\nabla_{0},\nabla &&: \text{Nabla operator with respect to the reference, current frame} \\
    &t, T &&: \text{current, end time of an initial boundary value problem} \\
    &\boldsymbol{u}, \hat{\boldsymbol{u}}_{0} &&: \text{solid mechanics displacement field, and prescribed initial value} \\
    &\delta\boldsymbol{u}, \Delta\boldsymbol{u} &&: \text{solid mechanics displacement test, trial function} \\
@@ -1966,8 +1973,8 @@ Table of symbols
    &\widehat{\boldsymbol{w}}=\frac{\mathrm{d}\boldsymbol{d}}{\mathrm{d}t} &&: \text{ALE domain velocity} \\
    &\rho_0, \rho &&: \text{reference, current density} \\
    &\boldsymbol{P}=\boldsymbol{F}\boldsymbol{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
-   &\boldsymbol{F}=\boldsymbol{I}+\boldsymbol{\nabla}_{0}\boldsymbol{u} &&: \text{solid deformation gradient} \\
-   &\widehat{\boldsymbol{F}}=\boldsymbol{I}+\boldsymbol{\nabla}_{0}\boldsymbol{d} &&: \text{ALE deformation gradient} \\
+   &\boldsymbol{F}=\boldsymbol{I}+\nabla_{0}\boldsymbol{u} &&: \text{solid deformation gradient} \\
+   &\widehat{\boldsymbol{F}}=\boldsymbol{I}+\nabla_{0}\boldsymbol{d} &&: \text{ALE deformation gradient} \\
    &J=\det \boldsymbol{F} &&: \text{determinant of solid deformation gradient} \\
    &\widehat{J}=\det \widehat{\boldsymbol{F}} &&: \text{determinant of ALE deformation gradient} \\
    &\boldsymbol{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\

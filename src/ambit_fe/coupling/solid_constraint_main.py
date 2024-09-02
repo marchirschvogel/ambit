@@ -529,6 +529,11 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.pbs.print_to_screen()
 
+        LM_sq = allgather_vec(self.LM, self.comm)
+        for i in range(self.num_coupling_surf):
+            utilities.print_status("LM"+str(i+1)+" = %.4e" % (LM_sq[i]), self.comm)
+        del LM_sq
+
 
     def induce_state_change(self):
 
