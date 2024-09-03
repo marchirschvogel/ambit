@@ -5,7 +5,7 @@
 
 import ambit_fe
 
-import sys
+import sys, math
 import numpy as np
 from pathlib import Path
 import pytest
@@ -54,22 +54,26 @@ def test_main():
     class time_curves:
 
         def tc1(self, t): # atrial activation
+            
+            tmod = math.fmod(t, 1.0) # periodic function
 
             act_dur = 2.*param()['t_ed']
             t0 = 0.
 
-            if t >= t0 and t <= t0 + act_dur:
-                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            if tmod >= t0 and tmod <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(tmod-t0)/act_dur))
             else:
                 return 0.0
 
         def tc2(self, t): # ventricular activation
+            
+            tmod = math.fmod(t, 1.0) # periodic function
 
             act_dur = 1.8*(param()['t_es'] - param()['t_ed'])
             t0 = param()['t_ed']
 
-            if t >= t0 and t <= t0 + act_dur:
-                return 0.5*(1.-np.cos(2.*np.pi*(t-t0)/act_dur))
+            if tmod >= t0 and tmod <= t0 + act_dur:
+                return 0.5*(1.-np.cos(2.*np.pi*(tmod-t0)/act_dur))
             else:
                 return 0.0
 

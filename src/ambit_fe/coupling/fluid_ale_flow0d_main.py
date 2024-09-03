@@ -335,11 +335,6 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
         self.pba.write_output_pre()
 
 
-    def get_time_offset(self):
-
-        return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
-
-
     def evaluate_pre_solve(self, t, N, dt):
 
         self.pbf0.evaluate_pre_solve(t, N, dt)

@@ -700,11 +700,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pb0.write_output_pre()
 
 
-    def get_time_offset(self):
-
-        return (self.pb0.ti.cycle[0]-1) * self.pb0.cardvasc0D.T_cycl * self.noperiodicref # zero if T_cycl variable is not specified
-
-
     def evaluate_pre_solve(self, t, N, dt):
 
         self.pbs.evaluate_pre_solve(t, N, dt)
@@ -717,7 +712,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.pb0.evaluate_post_solve(t, N)
 
         if self.have_multiscale_gandr:
-            self.set_homeostatic_threshold(t), self.set_growth_trigger(t-t_off)
+            self.set_homeostatic_threshold(t), self.set_growth_trigger(t)
 
 
     def set_output_state(self, t):

@@ -289,10 +289,6 @@ class AleProblem(problem_base):
         pass
 
 
-    def get_time_offset(self):
-        return 0.
-
-
     def evaluate_pre_solve(self, t, N, dt):
 
         # set time-dependent functions

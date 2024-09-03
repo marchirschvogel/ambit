@@ -6,7 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys, time
+import sys, time, math
 import numpy as np
 import sympy as sp
 
@@ -33,7 +33,7 @@ class cardiovascular0Dbase(ode):
 
         is_periodic = False
 
-        if self.T_cycl > 0. and np.isclose(t, self.T_cycl):
+        if self.T_cycl > 0. and np.isclose(math.fmod(t,self.T_cycl), 0.):
 
             varTc[vs:ve] = var[vs:ve]
             auxTc[:] = aux[:]

@@ -337,10 +337,6 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
         self.pba.write_output_pre()
 
 
-    def get_time_offset(self):
-        return 0.
-
-
     def evaluate_pre_solve(self, t, N, dt):
 
         self.pbfc.evaluate_pre_solve(t, N, dt)

@@ -862,7 +862,7 @@ class SolidmechanicsProblem(problem_base):
 
 
     # rate equations
-    def evaluate_rate_equations(self, t_abs, t_off=0):
+    def evaluate_rate_equations(self, t_abs):
 
         # take care of active stress
         if any(self.mat_active_stress) and 'prescribed_from_file' not in self.mat_active_stress_type:
@@ -1060,10 +1060,6 @@ class SolidmechanicsProblem(problem_base):
             for i in range(len(self.fibarray)):
                 fib_proj = project(self.fib_func[i], self.V_u, self.dx, domids=self.domain_ids, nm='Fiber'+str(i+1), comm=self.pbase.comm, entity_maps=self.io.entity_maps)
                 self.io.write_output_pre(self, fib_proj, 0.0, 'fib_'+self.fibarray[i])
-
-
-    def get_time_offset(self):
-        return 0.
 
 
     def evaluate_pre_solve(self, t, N, dt):
