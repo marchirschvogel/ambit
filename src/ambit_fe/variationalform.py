@@ -150,20 +150,20 @@ class variationalform_base:
 
         if active is not None:
             tau = ivar['tau_a']
-            if params['active_stress']['dir']=='cl':
-                c0, l0 = fibfnc[0], fibfnc[1]
-                omega, iota, gamma = params['active_stress']['omega'], params['active_stress']['iota'], params['active_stress']['gamma']
-                S_act = tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
-                dS_act = omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0))
-            elif params['active_stress']['dir']=='iso':
-                S_act = tau * self.I
-                dS_act = self.I
-            else:
-                ValueError("Unknown ative stress dir!")
             if actweight is not None:
                 w_act = actweight
             else:
                 w_act = 1.0
+            if params['active_stress']['dir']=='cl':
+                c0, l0 = fibfnc[0], fibfnc[1]
+                omega, iota, gamma = params['active_stress']['omega'], params['active_stress']['iota'], params['active_stress']['gamma']
+                S_act = w_act * tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
+                dS_act = w_act * omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0))
+            elif params['active_stress']['dir']=='iso':
+                S_act = w_act * tau * self.I
+                dS_act = w_act * self.I
+            else:
+                ValueError("Unknown ative stress dir!")
 
         # wall thickness - can be constant or a field
         wall_thickness = params['h0']
@@ -261,7 +261,7 @@ class variationalform_base:
 
         # add active stress
         if active is not None:
-            S += w_act * S_act
+            S += S_act
 
         # 1st PK stress P = FS
         P = Fmod * S
