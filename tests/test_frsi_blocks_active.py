@@ -2,6 +2,7 @@
 
 """
 FrSI test case of three blocks with an active membrane surface, paritioned POD space per block that allows in-plane contraction of the membrane
+tests also active stress weight for first block (though using only the first partition field, hence multiply by 1)
 """
 
 import ambit_fe
@@ -98,7 +99,7 @@ def test_main():
 
     BC_DICT_ALE          = { 'dirichlet' : [{'id' : [5,11,17], 'dir' : 'all', 'val' : 0.}] } # bottom
 
-    BC_DICT_FLUID        = { 'membrane' :  [{'id' : [2], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'ode', 'dir' : 'cl', 'sigma0' : 10., 'alpha_max' : 10.0, 'alpha_min' : -30.0, 'activation_curve' : 1, 'omega' : 0.667, 'iota' : 0.333, 'gamma' : 0.0}}},
+    BC_DICT_FLUID        = { 'membrane' :  [{'id' : [2], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'ode', 'dir' : 'cl', 'sigma0' : 10., 'alpha_max' : 10.0, 'alpha_min' : -30.0, 'activation_curve' : 1, 'omega' : 0.667, 'iota' : 0.333, 'gamma' : 0.0, 'weight' : basepath+'/input/blocks3_part-1.txt'}}},
                                             {'id' : [8], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'prescribed', 'dir' : 'cl', 'prescribed_curve' : 2, 'omega' : 0.667, 'iota' : 0.333, 'gamma' : 0.0}}},
                                             {'id' : [14], 'params' : {'model' : 'membrane', 'a_0' : 1.0, 'b_0' : 6.0, 'eta' : 0.01, 'rho0' : 1e-6, 'h0' : {'val' : 1.0}, 'active_stress' : {'type' : 'ode', 'dir' : 'iso', 'sigma0' : 100., 'alpha_max' : 10.0, 'alpha_min' : -30.0, 'activation_curve' : 1}}}] }
 

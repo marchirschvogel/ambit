@@ -134,7 +134,7 @@ class variationalform_base:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u},\boldsymbol{v}(\boldsymbol{u})) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{u}\,\mathrm{d}A
     # for fluid mechanics, contribution to virtual power is:
     # TeX: h_0\int\limits_{\Gamma_0} \boldsymbol{P}(\boldsymbol{u}_{\mathrm{f}}(\boldsymbol{v}),\boldsymbol{v}) : \boldsymbol{\nabla}_{\tilde{\boldsymbol{X}}}\delta\boldsymbol{v}\,\mathrm{d}A
-    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, wallfield=None, fcts=None, returnquantity='weakform'):
+    def deltaW_ext_membrane(self, F, Fdot, a, params, dboundary, ivar=None, fibfnc=None, wallfield=None, actweight=None, fcts=None, returnquantity='weakform'):
 
         C = F.T*F
 
@@ -160,6 +160,10 @@ class variationalform_base:
                 dS_act = self.I
             else:
                 ValueError("Unknown ative stress dir!")
+            if actweight is not None:
+                w_act = actweight
+            else:
+                w_act = 1.0
 
         # wall thickness - can be constant or a field
         wall_thickness = params['h0']
@@ -257,7 +261,7 @@ class variationalform_base:
 
         # add active stress
         if active is not None:
-            S += S_act
+            S += w_act * S_act
 
         # 1st PK stress P = FS
         P = Fmod * S

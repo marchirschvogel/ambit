@@ -588,7 +588,7 @@ class FluidmechanicsProblem(problem_base):
 
             self.internalvars['tau_a'], self.internalvars_old['tau_a'], self.internalvars_mid['tau_a'] = self.tau_a, self.tau_a_old, self.timefac*self.tau_a + (1.-self.timefac)*self.tau_a_old
 
-            self.actstress, self.act_curve, self.wallfields = [], [], []
+            self.actstress, self.act_curve, self.wallfields, self.actweights = [], [], [], []
             for nm in range(len(self.bc_dict['membrane'])):
 
                 if 'active_stress' in self.bc_dict['membrane'][nm]['params'].keys():
@@ -610,6 +610,14 @@ class FluidmechanicsProblem(problem_base):
                     else:
                         raise NameError("Unknown active stress type for membrane!")
 
+                    if 'weight' in self.bc_dict['membrane'][nm]['params']['active_stress'].keys():
+                        # active stress weighting for reduced solid
+                        wact_func = fem.Function(self.V_scalar)
+                        self.io.readfunction(wact_func, self.bc_dict['membrane'][nm]['params']['active_stress']['weight'])
+                        self.actweights.append(wact_func)
+                    else:
+                        self.actweights.append(None)
+
                 if 'field' in self.bc_dict['membrane'][nm]['params']['h0'].keys():
                     # wall thickness field for reduced solid
                     h0_func = fem.Function(self.V_scalar)
@@ -618,9 +626,9 @@ class FluidmechanicsProblem(problem_base):
                 else:
                     self.wallfields.append(None)
 
-            w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.bmeasures, ivar=self.internalvars, wallfields=self.wallfields)
-            w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.bmeasures, ivar=self.internalvars_old, wallfields=self.wallfields)
-            w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_mid, self.vel_mid, self.acc_mid, self.bmeasures, ivar=self.internalvars_mid, wallfields=self.wallfields)
+            w_membrane, self.idmem, self.bstress, self.bstrainenergy, self.bintpower = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid, self.v, self.acc, self.bmeasures, ivar=self.internalvars, wallfields=self.wallfields, actweights=self.actweights)
+            w_membrane_old, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.uf_old, self.v_old, self.a_old, self.bmeasures, ivar=self.internalvars_old, wallfields=self.wallfields, actweights=self.actweights)
+            w_membrane_mid, _, _, _, _                                               = self.bc.membranesurf_bcs(self.bc_dict['membrane'], self.ufluid_mid, self.vel_mid, self.acc_mid, self.bmeasures, ivar=self.internalvars_mid, wallfields=self.wallfields, actweights=self.actweights)
 
         w_neumann_prestr, self.deltaW_prestr_kin, self.deltaW_prestr_int, self.deltaW_p_prestr = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), []
         if self.prestress_initial or self.prestress_initial_only:

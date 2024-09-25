@@ -193,14 +193,22 @@ class FluidmechanicsConstraintProblem(problem_base):
                     ivar_old_ = {'tau_a' : self.coupfuncs_old[-1]}
                     ivar_mid_ = {'tau_a' : self.coupfuncs_mid[-1]}
 
+                    if 'weight' in self.coupling_params['multiplier_physics'][n].keys():
+                        # active stress weighting for reduced solid
+                        wact_func = fem.Function(self.pbf.V_scalar)
+                        self.pbf.io.readfunction(wact_func, self.coupling_params['multiplier_physics'][n]['weight'])
+                        self.pbf.actweights.append(wact_func)
+                    else:
+                        self.pbf.actweights.append(None)
+
                     # add internal active stress power to fluid rhs contributions
-                    self.power_coupling += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power')
-                    self.power_coupling_old += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.uf_old), self.pbf.ki.Fdot(self.pbf.v_old), None, params_, ds_p, ivar=ivar_old_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power')
-                    self.power_coupling_mid += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power')
+                    self.power_coupling += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], actweight=self.pbf.actweights[-1], returnquantity='active_stress_power')
+                    self.power_coupling_old += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.uf_old), self.pbf.ki.Fdot(self.pbf.v_old), None, params_, ds_p, ivar=ivar_old_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], actweight=self.pbf.actweights[-1], returnquantity='active_stress_power')
+                    self.power_coupling_mid += self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], actweight=self.pbf.actweights[-1], returnquantity='active_stress_power')
 
                     # derivative w.r.t. multiplier
-                    df_ += self.pbf.timefac * self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
-                    df_mid_ += self.pbf.timefac * self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], returnquantity='active_stress_power_deriv')
+                    df_ += self.pbf.timefac * self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid), self.pbf.ki.Fdot(self.pbf.v), None, params_, ds_p, ivar=ivar_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], actweight=self.pbf.actweights[-1], returnquantity='active_stress_power_deriv')
+                    df_mid_ += self.pbf.timefac * self.pbf.vf.deltaW_ext_membrane(self.pbf.ki.F(self.pbf.ufluid_mid), self.pbf.ki.Fdot(self.pbf.vel_mid), None, params_, ds_p, ivar=ivar_mid_, fibfnc=self.pbf.fib_func, wallfield=self.pbf.wallfields[n], actweight=self.pbf.actweights[-1], returnquantity='active_stress_power_deriv')
 
                 elif self.coupling_params['multiplier_physics'][n]['type'] == 'valve_viscosity':
 

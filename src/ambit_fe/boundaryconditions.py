@@ -485,7 +485,7 @@ class boundary_cond():
 
 
     # set membrane surface BCs
-    def membranesurf_bcs(self, bcdict, u, v, a, ds_, ivar=None, wallfields=[]):
+    def membranesurf_bcs(self, bcdict, u, v, a, ds_, ivar=None, wallfields=[], actweights=[]):
 
         w, idmem, bstress, bstrainenergy, bintpower = ufl.as_ufl(0), [], [], [], []
 
@@ -515,12 +515,18 @@ class boundary_cond():
             else:
                 wallfield = None
 
+            # field for active stress weighting
+            if bool(actweights):
+                actweight = actweights[mi]
+            else:
+                actweight = None
+
             for i in range(len(m['id'])):
 
                 idmem.append(m['id'][i])
 
-                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield, fcts=fcts)
-                bstr, bse, bip = self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield, fcts=fcts, returnquantity='stress_energy_power')
+                w += self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield, actweight=actweight, fcts=fcts)
+                bstr, bse, bip = self.vf.deltaW_ext_membrane(self.ki.F(u), self.ki.Fdot(v), a, m['params'], ds_[dind](m['id'][i]), ivar=ivar, fibfnc=self.ff, wallfield=wallfield, actweight=actweight, fcts=fcts, returnquantity='stress_energy_power')
                 bstress.append(bstr)
                 bstrainenergy.append(bse)
                 bintpower.append(bip)
