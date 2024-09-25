@@ -158,7 +158,7 @@ class variationalform_base:
                 c0, l0 = fibfnc[0], fibfnc[1]
                 omega, iota, gamma = params['active_stress']['omega'], params['active_stress']['iota'], params['active_stress']['gamma']
                 S_act = w_act * tau * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
-                dS_act = w_act * omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0))
+                dS_act = w_act * ( omega*ufl.outer(c0,c0) + iota*ufl.outer(l0,l0) + 2.*gamma*ufl.sym(ufl.outer(c0,l0)) )
             elif params['active_stress']['dir']=='iso':
                 S_act = w_act * tau * self.I
                 dS_act = w_act * self.I
