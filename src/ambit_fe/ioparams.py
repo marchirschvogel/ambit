@@ -247,6 +247,7 @@ def check_params_rom(params):
                     'modes_from_files',
                     'numredbasisvec',
                     'numsnapshots',
+                    'orthogonalize_rom_basis',
                     'partitions',
                     'pod_only',
                     'print_eigenproblem',

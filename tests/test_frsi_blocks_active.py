@@ -31,6 +31,7 @@ def test_main():
 
     ROM_PARAMS           = {'modes_from_files'      : [basepath+'/input/blocks3_mode_*.txt'],
                             'partitions'            : [basepath+'/input/blocks3_part-1.txt',basepath+'/input/blocks3_part-2.txt',basepath+'/input/blocks3_part-3.txt'],
+                            'orthogonalize_rom_basis' : True,
                             'numredbasisvec'        : 2,
                             'surface_rom'           : [2,8,14],
                             'write_pod_modes'       : True}

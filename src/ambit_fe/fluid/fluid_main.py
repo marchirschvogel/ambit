@@ -617,6 +617,8 @@ class FluidmechanicsProblem(problem_base):
                         self.actweights.append(wact_func)
                     else:
                         self.actweights.append(None)
+                else:
+                    self.actweights.append(None)
 
                 if 'field' in self.bc_dict['membrane'][nm]['params']['h0'].keys():
                     # wall thickness field for reduced solid

@@ -57,6 +57,9 @@ class ModelOrderReduction():
         try: self.numredbasisvec = self.params['numredbasisvec']
         except: self.numredbasisvec = self.numsnapshots
 
+        try: self.orthogonalize_rom_basis = self.params['orthogonalize_rom_basis']
+        except: self.orthogonalize_rom_basis = False
+
         try: self.surface_rom = self.params['surface_rom']
         except: self.surface_rom = []
 
@@ -147,6 +150,21 @@ class ModelOrderReduction():
 
         self.partition_pod_space()
 
+        # gather Phi
+        phi_arr = self.pb.comm.allgather(self.Phi)
+        self.Phi = np.zeros(self.Phi.shape)
+        for i in range(len(phi_arr)):
+            self.Phi += phi_arr[i]
+
+        if self.orthogonalize_rom_basis:
+            ts = time.time()
+            utilities.print_status("ROM: Orthonormalizing ROM basis...", self.pb.comm, e=" ")
+
+            self.Phi, _ = np.linalg.qr(self.Phi, mode='reduced')
+
+            te = time.time() - ts
+            utilities.print_status("t = %.4f s" % (te), self.pb.comm)
+
         if self.write_pod_modes and self.pb.pbase.restart_step==0:
             self.write_modes()
 
@@ -159,8 +177,9 @@ class ModelOrderReduction():
         else:
             self.build_reduced_basis()
 
-        if self.have_regularization_terms:
-            self.VTV = self.V.transposeMatMult(self.V)
+        self.VTV = self.V.transposeMatMult(self.V)
+        norm_vtv = self.VTV.norm(PETSc.NormType.NORM_MAX)
+        utilities.print_status("ROM: Max-norm of V^{T}*V: %.16f" % (norm_vtv), self.pb.comm)
 
         # we need to add Cpen * V^T * V to the stiffness - compute here since term is constant
         # V^T * V - normally I, but for badly converged eigenvalues may have non-zero off-diagonal terms...
@@ -181,9 +200,7 @@ class ModelOrderReduction():
             self.CpenderivVTV = self.Cpenderiv.matMult(self.VTV) # Cpeninteg * V^T * V
             self.Vtx_deriv, self.regtermx_deriv = self.V.createVecRight(), self.V.createVecRight()
 
-        if self.have_regularization_terms:
-            self.VTV.destroy()
-
+        self.VTV.destroy()
         self.S_d.destroy()
 
 
