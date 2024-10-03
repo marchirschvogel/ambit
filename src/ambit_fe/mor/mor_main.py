@@ -151,10 +151,7 @@ class ModelOrderReduction():
         self.partition_pod_space()
 
         # gather Phi
-        phi_arr = self.pb.comm.allgather(self.Phi)
-        self.Phi = np.zeros(self.Phi.shape)
-        for i in range(len(phi_arr)):
-            self.Phi += phi_arr[i]
+        self.Phi = self.pb.comm.allreduce(self.Phi)
 
         if self.orthogonalize_rom_basis:
             ts = time.time()
