@@ -33,6 +33,7 @@ def test_main():
                             'partitions'            : [basepath+'/input/blocks3_part-1.txt',basepath+'/input/blocks3_part-2.txt',basepath+'/input/blocks3_part-3.txt'],
                             'orthogonalize_rom_basis' : True,
                             'numredbasisvec'        : 2,
+                            'numredbasisvec_partition' : [2,2,2],
                             'surface_rom'           : [2,8,14],
                             'write_pod_modes'       : True}
 

@@ -103,6 +103,9 @@ class ModelOrderReduction():
         else:
             self.num_partitions = 1
 
+        try: self.numredbasisvec_partition = self.params['numredbasisvec_partition']
+        except: self.numredbasisvec_partition = [self.numredbasisvec]*self.num_partitions
+
         # some sanity checks
         if not self.modes_from_files:
             if self.num_hdms <= 0:
@@ -286,6 +289,11 @@ class ModelOrderReduction():
         if len(self.redbasisvec_indices) != self.numredbasisvec_true:
             utilities.print_status("Eigenvalues below cutoff tolerance: Number of reduced basis vectors for ROB changed from %i to %i." % (len(self.redbasisvec_indices),self.numredbasisvec_true), self.pb.comm)
 
+        # override if some larger than self.numredbasisvec_true are requested
+        for i in range(len(self.numredbasisvec_partition)):
+            if self.numredbasisvec_partition[i] > self.numredbasisvec_true:
+                self.numredbasisvec_partition[i] = self.numredbasisvec_true
+
         # pop out undesired ones
         for i in range(len(self.redbasisvec_indices)-self.numredbasisvec_true):
             evecs.pop(-1)
@@ -304,32 +312,37 @@ class ModelOrderReduction():
 
     def partition_pod_space(self):
 
-        self.Phi = np.zeros((self.matsize_u, self.numredbasisvec_true*self.num_partitions))
+        self.Phi = np.zeros((self.matsize_u, sum(self.numredbasisvec_partition)))
 
         # first set the entries for the partitions (same for all prior to weighting)
+        off=0
         for h in range(self.num_partitions):
-            for i in range(self.numredbasisvec_true):
-                self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i] = self.Phi_all[self.ss:self.se, i]
+            for i in range(self.numredbasisvec_partition[h]):
+                self.Phi[self.ss:self.se, off+i] = self.Phi_all[self.ss:self.se, i]
+            off += self.numredbasisvec_partition[h]
 
         # read partitions and apply to reduced-order basis
         if bool(self.partitions):
             self.readin_partitions()
+            off=0
             for h in range(self.num_partitions):
-                for i in range(self.numredbasisvec_true):
-                    self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i] *= self.part_rvar[h].vector[self.ss:self.se]
-
+                for i in range(self.numredbasisvec_partition[h]):
+                    self.Phi[self.ss:self.se, off+i] *= self.part_rvar[h].vector[self.ss:self.se]
+                off += self.numredbasisvec_partition[h]
 
     def write_modes(self):
         # write out POD modes
+        off=0
         for h in range(self.num_partitions):
-            for i in range(self.numredbasisvec_true):
+            for i in range(self.numredbasisvec_partition[h]):
                 outfile = io.XDMFFile(self.pb.comm, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1)+'.xdmf', 'w')
                 outfile.write_mesh(self.pb.io.mesh)
                 podfunc = fem.Function(self.Vspace, name="POD_Mode_P"+str(h+1)+"_"+str(i+1))
-                podfunc.vector[self.ss:self.se] = self.Phi[self.ss:self.se, self.numredbasisvec_true*h+i]
+                podfunc.vector[self.ss:self.se] = self.Phi[self.ss:self.se, off+i]
                 outfile.write_function(podfunc)
                 # also as txt (id_val file) for efficient read-in later on...
                 self.pb.io.writefunction(podfunc, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1), filetype=self.filetype)
+            off += self.numredbasisvec_partition[h]
 
 
     # read modes from files
@@ -382,7 +395,7 @@ class ModelOrderReduction():
         utilities.print_status("ROM: Building reduced basis operator...", self.pb.comm, e=" ")
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions+1), csr=None, comm=self.pb.comm)
+        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,sum(self.numredbasisvec_partition))), bsize=None, nnz=(sum(self.numredbasisvec_partition)+1), csr=None, comm=self.pb.comm)
         self.V.setUp()
 
         vrs, vre = self.V.getOwnershipRange()
@@ -394,9 +407,9 @@ class ModelOrderReduction():
 
         # set regularizations terms on reduced variable
         if bool(self.regularizations):
-            assert(len(self.regularizations)==self.numredbasisvec_true*self.num_partitions)
+            assert(len(self.regularizations)==sum(self.numredbasisvec_partition))
 
-            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
+            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sum(self.numredbasisvec_partition)),(PETSc.DECIDE,sum(self.numredbasisvec_partition))), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()
 
             for i in range(len(self.regularizations)):
@@ -406,9 +419,9 @@ class ModelOrderReduction():
 
         # set regularizations terms on integration of reduced variable
         if bool(self.regularizations_integ):
-            assert(len(self.regularizations_integ)==self.numredbasisvec_true*self.num_partitions)
+            assert(len(self.regularizations_integ)==sum(self.numredbasisvec_partition))
 
-            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
+            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sum(self.numredbasisvec_partition)),(PETSc.DECIDE,sum(self.numredbasisvec_partition))), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpeninteg.setUp()
 
             for i in range(len(self.regularizations_integ)):
@@ -418,9 +431,9 @@ class ModelOrderReduction():
 
         # set regularizations terms on derivative of reduced variable
         if bool(self.regularizations_deriv):
-            assert(len(self.regularizations_deriv)==self.numredbasisvec_true*self.num_partitions)
+            assert(len(self.regularizations_deriv)==sum(self.numredbasisvec_partition))
 
-            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
+            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sum(self.numredbasisvec_partition)),(PETSc.DECIDE,sum(self.numredbasisvec_partition))), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpenderiv.setUp()
 
             for i in range(len(self.regularizations_deriv)):
@@ -455,9 +468,9 @@ class ModelOrderReduction():
                 # increase counter for number of reduced dofs
                 nr += 1
                 # column shift if we've exceeded the number of reduced basis vectors
-                if nr <= self.numredbasisvec_true*self.num_partitions:
+                if nr <= sum(self.numredbasisvec_partition):
                     col_fd.append(row)
-                if nr > self.numredbasisvec_true*self.num_partitions:
+                if nr > sum(self.numredbasisvec_partition):
                     a += 1
             else:
                 # column id of non-reduced dof (left-shifted by a)
@@ -471,7 +484,7 @@ class ModelOrderReduction():
         col_fd_set = set(col_fd)
 
         # create aij matrix - important to specify an approximation for nnz (number of non-zeros per row) for efficient value setting
-        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(self.numredbasisvec_true*self.num_partitions+1), csr=None, comm=self.pb.comm)
+        self.V = PETSc.Mat().createAIJ(size=((self.locmatsize_u,self.matsize_u),(PETSc.DECIDE,sum(self.numredbasisvec_partition)+ndof_bulk)), bsize=None, nnz=(sum(self.numredbasisvec_partition)+1), csr=None, comm=self.pb.comm)
         self.V.setUp()
 
         vrs, vre = self.V.getOwnershipRange()
@@ -488,7 +501,7 @@ class ModelOrderReduction():
 
         # column loop to insert columns of Phi
         n=0
-        for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
+        for col in range(sum(self.numredbasisvec_partition)+ndof_bulk):
             # set Phi column
             if col in col_fd_set:
                 # prepare index set list for block iterative solver
@@ -504,13 +517,13 @@ class ModelOrderReduction():
 
         # set regularizations terms on reduced variable
         if bool(self.regularizations):
-            assert(len(self.regularizations)==self.numredbasisvec_true*self.num_partitions)
+            assert(len(self.regularizations)==sum(self.numredbasisvec_partition))
 
-            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
+            self.Cpen = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sum(self.numredbasisvec_partition)+ndof_bulk),(PETSc.DECIDE,sum(self.numredbasisvec_partition)+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpen.setUp()
 
             n=0
-            for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
+            for col in range(sum(self.numredbasisvec_partition)+ndof_bulk):
                 if col in col_fd_set:
                     self.Cpen[col,col] = self.regularizations[n]
                     n += 1
@@ -519,13 +532,13 @@ class ModelOrderReduction():
 
         # set regularizations terms on integration of reduced variable
         if bool(self.regularizations_integ):
-            assert(len(self.regularizations_integ)==self.numredbasisvec_true*self.num_partitions)
+            assert(len(self.regularizations_integ)==sum(self.numredbasisvec_partition))
 
-            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
+            self.Cpeninteg = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sum(self.numredbasisvec_partition)+ndof_bulk),(PETSc.DECIDE,sum(self.numredbasisvec_partition)+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpeninteg.setUp()
 
             n=0
-            for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
+            for col in range(sum(self.numredbasisvec_partition)+ndof_bulk):
                 if col in col_fd_set:
                     self.Cpeninteg[col,col] = self.regularizations_integ[n]
                     n += 1
@@ -534,13 +547,13 @@ class ModelOrderReduction():
 
         # set regularizations terms on derivative of reduced variable
         if bool(self.regularizations_deriv):
-            assert(len(self.regularizations_deriv)==self.numredbasisvec_true*self.num_partitions)
+            assert(len(self.regularizations_deriv)==sum(self.numredbasisvec_partition))
 
-            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk),(PETSc.DECIDE,self.numredbasisvec_true*self.num_partitions+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
+            self.Cpenderiv = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,sum(self.numredbasisvec_partition)+ndof_bulk),(PETSc.DECIDE,sum(self.numredbasisvec_partition)+ndof_bulk)), bsize=None, nnz=(1,1), csr=None, comm=self.pb.comm)
             self.Cpenderiv.setUp()
 
             n=0
-            for col in range(self.numredbasisvec_true*self.num_partitions+ndof_bulk):
+            for col in range(sum(self.numredbasisvec_partition)+ndof_bulk):
                 if col in col_fd_set:
                     self.Cpenderiv[col,col] = self.regularizations_deriv[n]
                     n += 1

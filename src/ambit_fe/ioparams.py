@@ -246,6 +246,7 @@ def check_params_rom(params):
                     'hdmfilenames',
                     'modes_from_files',
                     'numredbasisvec',
+                    'numredbasisvec_partition',
                     'numsnapshots',
                     'orthogonalize_rom_basis',
                     'partitions',
