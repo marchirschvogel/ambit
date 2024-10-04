@@ -363,38 +363,37 @@ class IO:
             for i in range(len(im_no_ghosts_gathered[n])):
                 igi_flat.append(igi_gathered[n][i])
 
-        igi_flat_array = np.asarray(igi_flat)
-
         # gather PETSc vector
         vec_sq = allgather_vec(f.vector, self.comm)
 
         sz = f.vector.getSize()
         bs = f.vector.getBlockSize()
+        nb = int(sz/bs)
 
-        igi_flat_sorted = sorted(igi_flat)
+        # first collect vector as numpy array in sorted manner
+        vec_out = np.zeros(sz)
+        for i, ind in enumerate(igi_flat):
+            vec_out[bs*ind:bs*(ind+1)] = vec_sq[bs*i:bs*(i+1)]
 
         # write to file
         if filetype=='id_val':
             if self.comm.rank==0:
                 f = open(filenm+'.txt', 'wt')
-                for i in igi_flat_sorted:
-                    ind = np.where(igi_flat_array == i)[0][0]
-                    f.write(str(i) + ' ' + ' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
+                for i in range(nb):
+                    f.write(str(i) + ' ' + ' '.join(map(str, vec_out[bs*i:bs*(i+1)])) + '\n')
                 f.close()
         elif filetype=='val':
             if self.comm.rank==0:
                 f = open(filenm+'.txt', 'wt')
-                for i in igi_flat_sorted:
-                    ind = np.where(igi_flat_array == i)[0][0]
-                    f.write(' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
+                for i in range(nb):
+                    f.write(' '.join(map(str, vec_out[bs*i:bs*(i+1)])) + '\n')
                 f.close()
         elif filetype=='cheart': # CHeart .D file
             if self.comm.rank==0:
                 f = open(filenm+'.D', 'wt')
-                f.write(str(len(igi_flat_sorted)) + ' ' + str(bs) + '\n')
-                for i in igi_flat_sorted:
-                    ind = np.where(igi_flat_array == i)[0][0]
-                    f.write(' '.join(map(str, vec_sq[bs*ind:bs*(ind+1)])) + '\n')
+                f.write(str(nb) + ' ' + str(bs) + '\n')
+                for i in range(nb):
+                    f.write(' '.join(map(str, vec_out[bs*i:bs*(i+1)])) + '\n')
                 f.close()
         else:
             raise ValueError("Unknown filetype!")
