@@ -57,10 +57,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
         except: self.Nmax_periodicref = 10
 
         try: self.condense_0d_model = self.coupling_params['condense_0d_model']
-        except: self.condense_0d_model = False
+        except: self.condense_0d_model = 'no'
+
+        if self.condense_0d_model=='full' or self.condense_0d_model=='diag':
+            self.condense_0d = True
+        elif self.condense_0d_model=='no':
+            self.condense_0d = False
+        else:
+            raise ValueError("Unknown condense_0d_model option!")
 
         self.have_condensed_variables = False
-        if self.condense_0d_model:
+        if self.condense_0d:
             self.have_condensed_variables = True
 
         # only option in fluid mechanics!
@@ -103,7 +110,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pb0.c = [[]]*(self.num_coupling_surf+self.offc)
 
         # number of fields involved
-        if not self.condense_0d_model:
+        if not self.condense_0d:
             self.nfields = 3
         else:
             self.nfields = 2
@@ -115,7 +122,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def get_problem_var_list(self):
 
-        if not self.condense_0d_model:
+        if not self.condense_0d:
             if self.pbf.num_dupl > 1: is_ghosted = [1, 2, 0]
             else:                     is_ghosted = [1, 1, 0]
             varlist = [self.pbf.v.vector, self.pbf.p.vector, self.LM]
@@ -277,11 +284,14 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # This will eliminate the multiplier from the system, hence the fluid momentum and Jacobian need to be updated accordingly.
         # If iterative solvers are used, this approach may severely compromise the sparsity pattern and break the solver performance!
         # Also, it is in genetral difficult to find a reason why this should be done (write me if you have one).
-        if self.condense_0d_model:
+        if self.condense_0d:
 
             # inverse of LM stiffness matrix
             self.K_lm_inv = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=self.num_coupling_surf*self.num_coupling_surf, csr=None, comm=self.comm)
             self.K_lm_inv.setUp()
+            if self.condense_0d_model=='diag':
+                self.K_lm_invmat = PETSc.Mat().createAIJ(size=(self.num_coupling_surf,self.num_coupling_surf), bsize=None, nnz=self.num_coupling_surf, csr=None, comm=self.comm)
+                self.K_lm_invmat.setUp()
 
             # need to set K_vs here to get correct sparsity patterns for mat-mat products
             for i in range(len(self.col_ids)):
@@ -305,9 +315,19 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.K_lm_inv.assemble()
             # numpy array for serial inverse
             self.K_lm_array_inv = np.zeros((self.num_coupling_surf,self.num_coupling_surf))
+            self.K_lm_array_invmat = np.zeros((self.num_coupling_surf,self.num_coupling_surf))
+
+            if self.condense_0d_model=='diag':
+                self.K_lm_invmat.assemble()
+                self.K_lm_invmat.shift(1.0)
 
             self.Kvs_Klminv = self.K_vs.matMult(self.K_lm_inv)
+            if self.condense_0d_model=='diag':
+                self.Kvs_Klminvmat = self.K_vs.matMult(self.K_lm_invmat)
+
             self.Kvs_Klminv_Ksv = self.Kvs_Klminv.matMult(self.K_sv)
+            if self.condense_0d_model=='diag':
+                self.Kvs_Klminvmat_Ksv = self.Kvs_Klminvmat.matMult(self.K_sv)
 
             self.r_v_kcondens = self.Kvs_Klminv.createVecLeft()
             self.ksv_v = self.K_lm.createVecLeft()
@@ -367,7 +387,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.r_lm.assemble()
 
-        if self.condense_0d_model:
+        if self.condense_0d:
             # call those parts of assemble_stiffness_3d0d that are needed for forming the residual
             self.assemble_stiffness_3d0d(t, LM_sq, subsolver=subsolver, condensed_res_action=True)
             self.Kvs_Klminv.mult(self.r_lm, self.r_v_kcondens)
@@ -446,7 +466,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.K_lm.assemble()
 
-        if not self.condense_0d_model:
+        if not self.condense_0d:
             self.K_list[2][2] = self.K_lm
 
         del LM_sq
@@ -485,7 +505,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
             self.K_sv.assemble()
 
-        if self.condense_0d_model:
+        if self.condense_0d:
 
             if subsolver is not None:
                 # gather matrix and do a serial inverse with numpy (matrix is always super small!)
@@ -495,21 +515,35 @@ class FluidmechanicsFlow0DProblem(problem_base):
                     self.K_lm_array_inv[:] = np.linalg.inv(K_lm_array)
                 self.comm.Barrier()
                 self.K_lm_array_inv[:] = self.comm.bcast(self.K_lm_array_inv, root=0)
+                if self.condense_0d_model=='diag':
+                    for i in range(self.num_coupling_surf):
+                        self.K_lm_array_invmat[i,i] = self.K_lm_array_inv[i,i]
 
                 # now set back to parallel K_lm_inv matrix (for efficient multiplications later on)
                 for i in range(ls, le):
                     for j in range(self.num_coupling_surf):
                         self.K_lm_inv.setValue(i, j, self.K_lm_array_inv[i,j], addv=PETSc.InsertMode.INSERT)
-
                 self.K_lm_inv.assemble()
+
+                if self.condense_0d_model=='diag':
+                    for i in range(ls, le):
+                        self.K_lm_invmat.setValue(i, i, self.K_lm_array_invmat[i,i], addv=PETSc.InsertMode.INSERT)
+                    self.K_lm_invmat.assemble()
 
                 del K_lm_array
 
             self.K_vs.matMult(self.K_lm_inv, result=self.Kvs_Klminv)
 
             if not condensed_res_action:
-                self.Kvs_Klminv.matMult(self.K_sv, result=self.Kvs_Klminv_Ksv)
-                self.K_list[0][0].axpy(-1., self.Kvs_Klminv_Ksv)
+                if self.condense_0d_model=='full':
+                    self.Kvs_Klminv.matMult(self.K_sv, result=self.Kvs_Klminv_Ksv)
+                    self.K_list[0][0].axpy(-1., self.Kvs_Klminv_Ksv)
+                elif self.condense_0d_model=='diag':
+                    self.K_vs.matMult(self.K_lm_invmat, result=self.Kvs_Klminvmat)
+                    self.Kvs_Klminvmat.matMult(self.K_sv, result=self.Kvs_Klminvmat_Ksv)
+                    self.K_list[0][0].axpy(-1., self.Kvs_Klminvmat_Ksv)
+                else:
+                    raise RuntimeError("You should not be here!")
 
         else:
             self.K_list[0][2] = self.K_vs
@@ -518,7 +552,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def get_index_sets(self, isoptions={}):
 
-        if self.condense_0d_model:
+        if self.condense_0d:
             return self.pbf.get_index_sets(isoptions=isoptions)
 
         if self.rom is not None: # currently, ROM can only be on (subset of) first variable

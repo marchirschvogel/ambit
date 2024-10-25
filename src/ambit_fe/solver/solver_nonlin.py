@@ -354,6 +354,10 @@ class solver_nonlinear:
                     else:
                         self.del_full = PETSc.Vec().createNest(self.del_x_sol[npr])
 
+                    # have to merge mat when using plain AMG for a block problem
+                    if self.block_precond[npr] == 'amg':
+                        self.merge_prec_mat = True
+
                     # prepare merged preconditioner matrix structure
                     if self.merge_prec_mat:
 
@@ -521,6 +525,20 @@ class solver_nonlinear:
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.jacobi_2x2(self.iset[npr], self.precond_fields[npr], self.pb[npr].io, self.solver_params, self.comm)
                         self.ksp[npr].getPC().setPythonContext(bj)
+
+                    # plain AMG for block problem (there could be cases where this is worth a try...)
+                    elif self.block_precond[npr] == 'amg':
+                        self.ksp[npr].getPC().setType("hypre")
+                        self.ksp[npr].getPC().setHYPREType("boomeramg")
+
+                        # set additional PETSc options for single-field preconditioner
+                        if 'petsc_options' in self.precond_fields[npr][0].keys():
+                            opt_dict = self.precond_fields[npr][0]['petsc_options']
+                            opts = PETSc.Options()
+                            for o in opt_dict:
+                                opts.setValue(o, opt_dict[o])
+                            self.ksp[npr].getPC().setFromOptions()
+                            for key in opts.getAll(): opts.delValue(key) # clear options - opts.clear() doesn't seem to work?!
 
                     else:
                         raise ValueError("Unknown block_precond option!")

@@ -60,7 +60,7 @@ def test_main():
                             'coupling_quantity'     : ['pressure'],
                             'variable_quantity'     : ['flux'],
                             'print_subiter'         : True,
-                            'condense_0d_model'     : True}
+                            'condense_0d_model'     : 'diag'} # full, diag
 
     MATERIALS         = { 'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                     'inertia' : {'rho' : 1.025e-6}} }

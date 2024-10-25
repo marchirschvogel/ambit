@@ -108,7 +108,7 @@ class sol_utils():
             v1, v2, v3 = "v", "p", "LM" # using greek symbol print (Λ) is not supported everywhere...
             numres = 3
         elif ptype=="fluid_flow0d":
-            if not self.solver.pb[0].condense_0d_model:
+            if not self.solver.pb[0].condense_0d:
                 eq1, eq2, eq3 = "fluid momentum", "fluid continuity", "3D0D coup constraint"
                 v1, v2, v3 = "v", "p", "LM" # using greek symbol print (Λ) is not supported everywhere...
                 numres = 3
