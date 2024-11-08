@@ -93,7 +93,7 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
                 self.pb.pbs.ti.funcsexpr_to_update_pre[m].val = allgather_vec_entry(self.pb.LM_old, list(range(self.pb.num_coupling_surf))[i], self.pb.comm)
 
             m.interpolate(self.pb.pbs.ti.funcsexpr_to_update_pre[m].evaluate)
-            m.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            m.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # we need to invoke the prestress forms here
         self.pb.pbs.set_problem_residual_jacobian_forms(pre=True)
@@ -102,31 +102,31 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
     # set state to zero
     def reset_state_initial(self):
 
-        self.pb.pbs.u.vector.set(0.0)
-        self.pb.pbs.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.pbs.u_old.vector.set(0.0)
-        self.pb.pbs.u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbs.u.x.petsc_vec.set(0.0)
+        self.pb.pbs.u.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbs.u_old.x.petsc_vec.set(0.0)
+        self.pb.pbs.u_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.pb.pbs.v_old.vector.set(0.0)
-        self.pb.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.pbs.a_old.vector.set(0.0)
-        self.pb.pbs.a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbs.v_old.x.petsc_vec.set(0.0)
+        self.pb.pbs.v_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbs.a_old.x.petsc_vec.set(0.0)
+        self.pb.pbs.a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if self.pb.pbs.incompressible_2field:
-            self.pb.pbs.p.vector.set(0.0)
-            self.pb.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            self.pb.pbs.p_old.vector.set(0.0)
-            self.pb.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pbs.p.x.petsc_vec.set(0.0)
+            self.pb.pbs.p.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pbs.p_old.x.petsc_vec.set(0.0)
+            self.pb.pbs.p_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if self.pb.pbs.prestress_initial:
-            self.pb.pbs.u_pre.vector.set(0.0)
-            self.pb.pbs.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pbs.u_pre.x.petsc_vec.set(0.0)
+            self.pb.pbs.u_pre.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # reset internal variables
         for i in range(len(self.pb.pbs.internalvars)):
-            list(self.pb.pbs.internalvars.values())[i].vector.set(0.0)
-            list(self.pb.pbs.internalvars.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            list(self.pb.pbs.internalvars_old.values())[i].vector.set(0.0)
-            list(self.pb.pbs.internalvars_old.values())[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            list(self.pb.pbs.internalvars.values())[i].x.petsc_vec.set(0.0)
+            list(self.pb.pbs.internalvars.values())[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            list(self.pb.pbs.internalvars_old.values())[i].x.petsc_vec.set(0.0)
+            list(self.pb.pbs.internalvars_old.values())[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # 0D variables s and s_old are already correctly set from the previous run (end values) and should serve as new initial conditions

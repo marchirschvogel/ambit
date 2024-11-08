@@ -231,36 +231,36 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(solver_base):
     def set_state_small(self):
 
         # set delta small to large
-        u_delta = PETSc.Vec().createMPI((self.pb.pblarge.u.vector.getLocalSize(),self.pb.pblarge.u.vector.getSize()), bsize=self.pb.pblarge.u.vector.getBlockSize(), comm=self.pb.comm)
-        u_delta.waxpy(-1.0, self.pb.pbsmall.pbs.u_set.vector, self.pb.pblarge.u.vector)
+        u_delta = PETSc.Vec().createMPI((self.pb.pblarge.u.x.petsc_vec.getLocalSize(),self.pb.pblarge.u.x.petsc_vec.getSize()), bsize=self.pb.pblarge.u.x.petsc_vec.getBlockSize(), comm=self.pb.comm)
+        u_delta.waxpy(-1.0, self.pb.pbsmall.pbs.u_set.x.petsc_vec, self.pb.pblarge.u.x.petsc_vec)
         if self.pb.pbsmall.pbs.incompressible_2field:
-            p_delta = PETSc.Vec().createMPI((self.pb.pblarge.p.vector.getLocalSize(),self.pb.pblarge.p.vector.getSize()), bsize=self.pb.pblarge.p.vector.getBlockSize(), comm=self.pb.comm)
-            p_delta.waxpy(-1.0, self.pb.pbsmall.pbs.p_set.vector, self.pb.pblarge.p.vector)
+            p_delta = PETSc.Vec().createMPI((self.pb.pblarge.p.x.petsc_vec.getLocalSize(),self.pb.pblarge.p.x.petsc_vec.getSize()), bsize=self.pb.pblarge.p.x.petsc_vec.getBlockSize(), comm=self.pb.comm)
+            p_delta.waxpy(-1.0, self.pb.pbsmall.pbs.p_set.x.petsc_vec, self.pb.pblarge.p.x.petsc_vec)
 
         # update small scale variables - add delta from growth to last small scale displacement
-        self.pb.pbsmall.pbs.u.vector.axpy(1.0, u_delta)
-        self.pb.pbsmall.pbs.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.pbsmall.pbs.u_old.vector.axpy(1.0, u_delta)
-        self.pb.pbsmall.pbs.u_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.u.x.petsc_vec.axpy(1.0, u_delta)
+        self.pb.pbsmall.pbs.u.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.u_old.x.petsc_vec.axpy(1.0, u_delta)
+        self.pb.pbsmall.pbs.u_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         if self.pb.pbsmall.pbs.incompressible_2field:
-            self.pb.pbsmall.pbs.p.vector.axpy(1.0, p_delta)
-            self.pb.pbsmall.pbs.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-            self.pb.pbsmall.pbs.p_old.vector.axpy(1.0, p_delta)
-            self.pb.pbsmall.pbs.p_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pbsmall.pbs.p.x.petsc_vec.axpy(1.0, p_delta)
+            self.pb.pbsmall.pbs.p.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pbsmall.pbs.p_old.x.petsc_vec.axpy(1.0, p_delta)
+            self.pb.pbsmall.pbs.p_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # we come from a quasi-static simulation - old v and a from previous small scale run have to be set to zero
-        self.pb.pbsmall.pbs.v_old.vector.set(0.0)
-        self.pb.pbsmall.pbs.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.pbsmall.pbs.a_old.vector.set(0.0)
-        self.pb.pbsmall.pbs.a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.v_old.x.petsc_vec.set(0.0)
+        self.pb.pbsmall.pbs.v_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.a_old.x.petsc_vec.set(0.0)
+        self.pb.pbsmall.pbs.a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # 0D variables s and s_old are already correctly set from the previous small scale run (end values)
 
         # set constant prescribed growth stretch for subsequent small scale
-        self.pb.pbsmall.pbs.theta.vector.axpby(1.0, 0.0, self.pb.pblarge.theta.vector)
-        self.pb.pbsmall.pbs.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.pbsmall.pbs.theta_old.vector.axpby(1.0, 0.0, self.pb.pblarge.theta.vector)
-        self.pb.pbsmall.pbs.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.theta.x.petsc_vec.axpby(1.0, 0.0, self.pb.pblarge.theta.x.petsc_vec)
+        self.pb.pbsmall.pbs.theta.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pbsmall.pbs.theta_old.x.petsc_vec.axpby(1.0, 0.0, self.pb.pblarge.theta.x.petsc_vec)
+        self.pb.pbsmall.pbs.theta_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def set_state_large(self, N):
@@ -268,31 +268,31 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(solver_base):
         # update large scale variables
         # only needed once - set prestress displacement from small scale
         if self.pb.prestress_initial and N == 1:
-            self.pb.pblarge.u_pre.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_pre.vector)
-            self.pb.pblarge.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pblarge.u_pre.x.petsc_vec.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_pre.x.petsc_vec)
+            self.pb.pblarge.u_pre.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.pb.pblarge.u_set.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_set.vector)
-        self.pb.pblarge.u_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pblarge.u_set.x.petsc_vec.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_set.x.petsc_vec)
+        self.pb.pblarge.u_set.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        self.pb.pblarge.u.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_set.vector)
-        self.pb.pblarge.u.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pblarge.u.x.petsc_vec.axpby(1.0, 0.0, self.pb.pbsmall.pbs.u_set.x.petsc_vec)
+        self.pb.pblarge.u.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         if self.pb.pblarge.incompressible_2field:
-            self.pb.pblarge.p.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.p_set.vector)
-            self.pb.pblarge.p.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pblarge.p.x.petsc_vec.axpby(1.0, 0.0, self.pb.pbsmall.pbs.p_set.x.petsc_vec)
+            self.pb.pblarge.p.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # constant large scale active tension
-        self.pb.pblarge.tau_a.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.tau_a_set.vector)
-        self.pb.pblarge.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pblarge.tau_a.x.petsc_vec.axpby(1.0, 0.0, self.pb.pbsmall.pbs.tau_a_set.x.petsc_vec)
+        self.pb.pblarge.tau_a.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         if self.pb.pblarge.have_frank_starling:
-            self.pb.pblarge.amp_old.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.amp_old_set.vector)
-            self.pb.pblarge.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pb.pblarge.amp_old.x.petsc_vec.axpby(1.0, 0.0, self.pb.pbsmall.pbs.amp_old_set.x.petsc_vec)
+            self.pb.pblarge.amp_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # pressures from growth set point
         self.pb.pbsmall.pb0.cardvasc0D.set_pressure_fem(self.pb.pbsmall.pb0.s_set, self.pb.pbsmall.pb0.cardvasc0D.v_ids, self.pb.pbsmall.pr0D, self.pb.neumann_funcs)
 
         # growth thresholds from set point
-        self.pb.pblarge.growth_thres.vector.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.vector)
-        self.pb.pblarge.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.pblarge.growth_thres.x.petsc_vec.axpby(1.0, 0.0, self.pb.pbsmall.pbs.growth_thres.x.petsc_vec)
+        self.pb.pblarge.growth_thres.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def compute_volume_large(self):

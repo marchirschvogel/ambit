@@ -192,7 +192,7 @@ Alternatively, you can pull a pre-built Docker image with FEniCSx and Ambit inst
 docker pull ghcr.io/marchirschvogel/ambit:latest
 \end{verbatim}
 
-If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit (including the dolfinx mixed branch):
+If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit:
 \begin{verbatim}
 docker pull ghcr.io/marchirschvogel/ambit:devenv
 \end{verbatim}
@@ -1639,12 +1639,9 @@ in ventricular volume?
 
 \subsubsection*{Blocked pipe flow with 0D model bypass}
 
-\textit{\textbf{Note:} This demo only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv `old' Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}\\
-
 This example demonstrates how to couple 3D fluid flow to a 0D lumped-parameter model. Incompressible transient Navier-Stokes flow in a pipe with prescribed inflow is solved,
 with the special constraint that an internal boundary (all-time closed valve) separates region 1 and region 2 of the pipe. This internal Dirichlet condition can only be achieved
-by splitting the pressure space, hence having duplicate pressure nodes at the valve plane. Otherwise, fluid would experience deceleration towards the valve and unphysical acceleration behind it, since the pressure gradient drives fluid flow. To achieve this, the mixed Dolfinx branch instead of the main branch is used. It is installed inside the Ambit devenv Docker
-container. In the future, this functionality is expected to be merged into the Dolfinx main branch (at least it was announced...).\\
+by splitting the pressure space, hence having duplicate pressure nodes at the valve plane. Otherwise, fluid would experience deceleration towards the valve and unphysical acceleration behind it, since the pressure gradient drives fluid flow.\\
 
 This example demonstrates how the closed valve can be bypassed by a 0D flow model that links the 3D fluid out-flow of one region to the in-flow of the other region. The 0D model consists of two Windkessel models in series, each having compliance, resistance, and inertance elements.
 
@@ -1680,8 +1677,6 @@ Figure shows the velocity streamlines and magnitude at the end of the simulation
 -- Physics description given in sec. \ref{fluid-solid-interaction-fsi}\\
 
 -- Input files: \verb"demos/fsi"\\
-
-\textit{\textbf{Note:} FSI only runs with the mixed dolfinx branch, which is pre-installed in the Ambit devenv `old' Docker container. Pull this container and install Ambit in there according to the instructions in sec. \ref{installation}.}
 
 \subsubsection*{Channel flow around elastic flag}
 
@@ -1763,20 +1758,23 @@ Figure \ref{fig:channel_flag_results} depicts the velocity at three instances in
 &\bs{e}_x, \bs{e}_y, \bs{e}_z &&: \text{unit vectors of the cartesian reference frame} \\
 &\bs{n}_0, \bs{n} &&: \text{unit outward normal defined in the reference, current frame} \\
 &\nabla_{0},\nabla &&: \text{Nabla operator with respect to the reference, current frame} \\
+&\nabla\bs{v} := \frac{\partial v_i}{\partial x_j} \bs{e}_{i} \otimes\bs{e}_{j} &&: \text{Gradient of a vector field} \\
+&\nabla\cdot\bs{v} := \frac{\partial v_i}{\partial x_j} \bs{e}_{i} \cdot\bs{e}_{j} &&: \text{Divergence of a vector field} \\
+&\bs{e}_{i} &&: \text{Basis vectors}, i\in \{1,2,3\} \\
 &t, T &&: \text{current, end time of an initial boundary value problem} \\
 &\bs{u}, \hat{\bs{u}}_{0} &&: \text{solid mechanics displacement field, and prescribed initial value} \\
 &\delta\bs{u}, \Delta\bs{u} &&: \text{solid mechanics displacement test, trial function} \\
 & p &&: \text{solid mechanics hydrostatic pressure, or fluid mechanics pressure} \\
 & \delta p, \Delta p &&: \text{solid or fluid mechanics pressure test, trial function} \\
-&\bs{v}=\frac{\mathrm{d}\bs{u}}{\mathrm{d}t}, \hat{\bs{v}}_{0} &&: \text{solid mechanics velocity, and prescribed initial value} \\
-&\bs{a}=\frac{\mathrm{d}^2\bs{u}}{\mathrm{d}t^2} &&: \text{solid mechanics acceleration} \\
+&\bs{v}=\frac{\partial\bs{u}}{\partial t}, \hat{\bs{v}}_{0} &&: \text{solid mechanics velocity, and prescribed initial value} \\
+&\bs{a}=\frac{\partial^2\bs{u}}{\partial t^2} &&: \text{solid mechanics acceleration} \\
 &\bs{v}, \hat{\bs{v}}_{0} &&: \text{fluid mechanics velocity, and prescribed initial value} \\
 &\delta\bs{v}, \Delta\bs{v} &&: \text{fluid mechanics velocity test, trial function} \\
 &\bs{a}=\frac{\partial\bs{v}}{\partial t} &&: \text{fluid mechanics acceleration} \\
 &\bs{d} &&: \text{ALE domain displacement} \\
 &\delta\bs{d}, \Delta\bs{d} &&: \text{ALE domain displacement test, trial function} \\
 &\hat{\bs{b}}_0, \hat{\bs{b}} &&: \text{body force vector defined in the reference, current frame} \\
-&\widehat{\bs{w}}=\frac{\mathrm{d}\bs{d}}{\mathrm{d}t} &&: \text{ALE domain velocity} \\
+&\widehat{\bs{w}}=\frac{\partial\bs{d}}{\partial t} &&: \text{ALE domain velocity} \\
 &\rho_0, \rho &&: \text{reference, current density} \\
 &\bs{P}=\bs{F}\bs{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
 &\bs{F}=\bs{I}+\nabla_{0}\bs{u} &&: \text{solid deformation gradient} \\

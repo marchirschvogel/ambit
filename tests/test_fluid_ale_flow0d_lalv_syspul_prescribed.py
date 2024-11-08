@@ -20,7 +20,6 @@ import pytest
 
 
 @pytest.mark.fluid_ale_flow0d
-@pytest.mark.skip(reason="Currently not tested! Waiting for mixed domain functionality to be working in latest dolfinx version...")
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())

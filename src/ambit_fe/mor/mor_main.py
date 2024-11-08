@@ -227,7 +227,7 @@ class ModelOrderReduction():
                 # own read function: requires plain txt format of type node-id valx valy valz
                 self.pb.io.readfunction(field, self.hdmfilenames[h].replace('*',str(step)), filetype=self.filetype)
 
-                self.S_d[self.ss:self.se, self.numsnapshots*h+i] = field.vector[self.ss:self.se]
+                self.S_d[self.ss:self.se, self.numsnapshots*h+i] = field.x.petsc_vec[self.ss:self.se]
 
         # for a surface-restricted ROM, we need to eliminate any snapshots related to non-surface dofs
         if bool(self.surface_rom):
@@ -327,7 +327,7 @@ class ModelOrderReduction():
             off=0
             for h in range(self.num_partitions):
                 for i in range(self.numredbasisvec_partition[h]):
-                    self.Phi[self.ss:self.se, off+i] *= self.part_rvar[h].vector[self.ss:self.se]
+                    self.Phi[self.ss:self.se, off+i] *= self.part_rvar[h].x.petsc_vec[self.ss:self.se]
                 off += self.numredbasisvec_partition[h]
 
     def write_modes(self):
@@ -338,7 +338,7 @@ class ModelOrderReduction():
                 outfile = io.XDMFFile(self.pb.comm, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1)+'.xdmf', 'w')
                 outfile.write_mesh(self.pb.io.mesh)
                 podfunc = fem.Function(self.Vspace, name="POD_Mode_P"+str(h+1)+"_"+str(i+1))
-                podfunc.vector[self.ss:self.se] = self.Phi[self.ss:self.se, off+i]
+                podfunc.x.petsc_vec[self.ss:self.se] = self.Phi[self.ss:self.se, off+i]
                 outfile.write_function(podfunc)
                 # also as txt (id_val file) for efficient read-in later on...
                 self.pb.io.writefunction(podfunc, self.pb.io.output_path+'/results_'+self.pb.pbase.simname+'_PODmode_P'+str(h+1)+'_'+str(i+1), filetype=self.filetype)
@@ -361,7 +361,7 @@ class ModelOrderReduction():
 
                 field = fem.Function(self.Vspace)
                 self.pb.io.readfunction(field, self.modes_from_files[h].replace('*',str(i+1)), filetype=self.filetype)
-                self.Phi_all[self.ss:self.se, i] = field.vector[self.ss:self.se]
+                self.Phi_all[self.ss:self.se, i] = field.x.petsc_vec[self.ss:self.se]
 
 
     # read partitions from files
@@ -380,13 +380,13 @@ class ModelOrderReduction():
             self.part_rvar.append( fem.Function(self.Vspace) )
 
             # map to a vector with same block size as the reduced variable
-            bs = self.part_rvar[-1].vector.getBlockSize()
-            ps,pe = self.part[-1].vector.getOwnershipRange()
+            bs = self.part_rvar[-1].x.petsc_vec.getBlockSize()
+            ps,pe = self.part[-1].x.petsc_vec.getOwnershipRange()
             for i in range(ps,pe):
                 for j in range(bs):
-                    self.part_rvar[-1].vector[bs*i+j] = self.part[-1].vector[i]
+                    self.part_rvar[-1].x.petsc_vec[bs*i+j] = self.part[-1].x.petsc_vec[i]
 
-            self.part_rvar[-1].vector.assemble()
+            self.part_rvar[-1].x.petsc_vec.assemble()
 
 
     def build_reduced_basis(self):
@@ -698,10 +698,10 @@ class ModelOrderReduction():
         if self.pb.pre: timefac, dt = 1.0, self.pb.prestress_dt
 
         if bool(self.regularizations):
-            self.xreg.axpby(timefac, 0.0, self.pb.xr_.vector)
-            self.xreg.axpy(1.-timefac, self.pb.xr_old_.vector)
+            self.xreg.axpby(timefac, 0.0, self.pb.xr_.x.petsc_vec)
+            self.xreg.axpy(1.-timefac, self.pb.xr_old_.x.petsc_vec)
             if self.pb.xrpre_ is not None:
-                self.xreg.axpy(1.0, self.pb.xrpre_.vector)
+                self.xreg.axpy(1.0, self.pb.xrpre_.x.petsc_vec)
             # project
             self.V.multTranspose(self.xreg, self.Vtx) # V^T * x
             self.Cpen.mult(self.Vtx, self.regtermx) # Cpen * V^T * x
@@ -709,10 +709,10 @@ class ModelOrderReduction():
 
         if bool(self.regularizations_integ):
             # get integration of variable
-            self.pb.ti.update_varint(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xintr_old_.vector, dt, varintout=self.xreginteg, uflform=False)
-            self.xreginteg.axpby(1.-timefac, timefac, self.pb.xintr_old_.vector)
+            self.pb.ti.update_varint(self.pb.xr_.x.petsc_vec, self.pb.xr_old_.x.petsc_vec, self.pb.xintr_old_.x.petsc_vec, dt, varintout=self.xreginteg, uflform=False)
+            self.xreginteg.axpby(1.-timefac, timefac, self.pb.xintr_old_.x.petsc_vec)
             if self.pb.xintrpre_ is not None:
-                self.xreginteg.axpy(1.0, self.pb.xintrpre_.vector)
+                self.xreginteg.axpy(1.0, self.pb.xintrpre_.x.petsc_vec)
             # project
             self.V.multTranspose(self.xreginteg, self.Vtx_integ) # V^T * x_integ
             self.Cpeninteg.mult(self.Vtx_integ, self.regtermx_integ) # Cpeninteg * V^T * x_integ
@@ -720,8 +720,8 @@ class ModelOrderReduction():
 
         if bool(self.regularizations_deriv):
             # get derivative of variable
-            self.pb.ti.update_dvar(self.pb.xr_.vector, self.pb.xr_old_.vector, self.pb.xdtr_old_.vector, dt, dvarout=self.xregderiv, uflform=False)
-            self.xregderiv.axpby(1.-timefac, timefac, self.pb.xdtr_old_.vector)
+            self.pb.ti.update_dvar(self.pb.xr_.x.petsc_vec, self.pb.xr_old_.x.petsc_vec, self.pb.xdtr_old_.x.petsc_vec, dt, dvarout=self.xregderiv, uflform=False)
+            self.xregderiv.axpby(1.-timefac, timefac, self.pb.xdtr_old_.x.petsc_vec)
             # project
             self.V.multTranspose(self.xregderiv, self.Vtx_deriv) # V^T * x_deriv
             self.Cpenderiv.mult(self.Vtx_deriv, self.regtermx_deriv) # Cpenderiv * V^T * x_deriv

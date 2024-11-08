@@ -59,11 +59,11 @@ def project(v, V, dx_, domids=np.arange(1,2), bcs=[], nm=None, comm=None, entity
     ksp.getPC().setFactorSolverType("mumps")
 
     ksp.setOperators(A)
-    ksp.solve(b, function.vector)
+    ksp.solve(b, function.x.petsc_vec)
 
     b.destroy(), A.destroy()
     ksp.destroy()
 
-    function.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+    function.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     return function

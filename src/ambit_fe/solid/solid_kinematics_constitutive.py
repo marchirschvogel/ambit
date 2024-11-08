@@ -709,8 +709,8 @@ class kinematics:
     # displacement formulation according to Schein and Gee 2021)
     def prestress_update(self, u_):
 
-        self.u_pre.vector.axpy(1.0, u_.vector)
-        self.u_pre.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.u_pre.x.petsc_vec.axpy(1.0, u_.x.petsc_vec)
+        self.u_pre.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        u_.vector.set(0.0)
-        u_.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        u_.x.petsc_vec.set(0.0)
+        u_.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

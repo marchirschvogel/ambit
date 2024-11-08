@@ -4,6 +4,7 @@
 FrSI test case of an axially clamped arterial segment that is prestressed prior to being subject to a constant load
 We have some mild dynamics in there, therefore the velocity state is not perfectly zero.
 Tests transient Stokes, conservative formulation.
+Tests BGS-S3x3s (=bgsschur4x4simple) + S3x3s solver (=schur3x3simple)
 """
 
 import ambit_fe
@@ -37,7 +38,21 @@ def test_main():
                             'print_eigenproblem'    : True,
                             'surface_rom'           : [1,6]}
 
-    SOLVER_PARAMS        = {'solve_type'            : 'direct',
+    SOLVER_PARAMS        = {'solve_type'            : 'iterative',
+                            'solve_type_prestr'     : 'iterative',
+                            'iterative_solver'      : 'gmres',
+                            'block_precond'         : 'bgsschur4x4simple', # can as well use bgsschur4x4 version - interestingly, the SIMPLE version yields fewer linear iterations!
+                            'precond_fields'        : [{'prec':'direct'},  # fluid-v
+                                                       {'prec':'direct'},  # fluid-p (Schur)
+                                                       {'prec':'direct'},  # fluid-red.v
+                                                       {'prec':'direct'}], # ale-d
+                            'block_precond_prestr'  : 'schur3x3simple',
+                            'precond_fields_prestr' : [{'prec':'direct'},  # fluid-v
+                                                       {'prec':'direct'},  # fluid-p (Schur)
+                                                       {'prec':'direct'}], # fluid-red.v
+                            'indexset_options'      : {'rom_to_new' : True},
+                            'print_liniter_every'   : 10,
+                            'lin_norm_type'         : 'unpreconditioned',
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 

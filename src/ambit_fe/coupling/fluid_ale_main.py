@@ -101,7 +101,7 @@ class FluidmechanicsAleProblem(problem_base):
 
         if self.pbf.num_dupl > 1: is_ghosted = [1, 2, 1]
         else:                     is_ghosted = [1, 1, 1]
-        return [self.pbf.v.vector, self.pbf.p.vector, self.pba.d.vector], is_ghosted
+        return [self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec, self.pba.d.x.petsc_vec], is_ghosted
 
 
     # defines the monolithic coupling forms for fluid mechanics in ALE reference frame
@@ -351,15 +351,15 @@ class FluidmechanicsAleProblem(problem_base):
 
         if self.have_dbc_fluid_ale:
             # we need a vector representation of ufluid to apply in ALE DBCs
-            self.pbf.ti.update_varint(self.pbf.v.vector, self.pbf.v_old.vector, self.pbf.uf_old.vector, self.pbase.dt, varintout=self.pbf.uf.vector, uflform=False)
-            self.ufa.vector.axpby(1.0, 0.0, self.pbf.uf.vector)
-            self.ufa.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pbf.ti.update_varint(self.pbf.v.x.petsc_vec, self.pbf.v_old.x.petsc_vec, self.pbf.uf_old.x.petsc_vec, self.pbase.dt, varintout=self.pbf.uf.x.petsc_vec, uflform=False)
+            self.ufa.x.petsc_vec.axpby(1.0, 0.0, self.pbf.uf.x.petsc_vec)
+            self.ufa.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         if self.have_dbc_ale_fluid:
             # we need a vector representation of w to apply in fluid DBCs
-            self.pba.ti.update_dvar(self.pba.d.vector, self.pba.d_old.vector, self.pba.w_old.vector, self.pbase.dt, dvarout=self.pba.w.vector, uflform=False)
-            self.wf.vector.axpby(1.0, 0.0, self.pba.w.vector)
-            self.wf.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pba.ti.update_dvar(self.pba.d.x.petsc_vec, self.pba.d_old.x.petsc_vec, self.pba.w_old.x.petsc_vec, self.pbase.dt, dvarout=self.pba.w.x.petsc_vec, uflform=False)
+            self.wf.x.petsc_vec.axpby(1.0, 0.0, self.pba.w.x.petsc_vec)
+            self.wf.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def get_index_sets(self, isoptions={}):
@@ -368,10 +368,10 @@ class FluidmechanicsAleProblem(problem_base):
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
-            vvec_ls = self.pbf.v.vector.getLocalSize()
+            vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
+            vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
 
-        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
+        offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -379,10 +379,10 @@ class FluidmechanicsAleProblem(problem_base):
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
-        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+        iset_p = PETSc.IS().createStride(self.pbf.p.x.petsc_vec.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        offset_d = offset_p + self.pbf.p.vector.getLocalSize()
-        iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
+        offset_d = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+        iset_d = PETSc.IS().createStride(self.pba.d.x.petsc_vec.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
         if isoptions['ale_to_v']:
             iset_v = iset_v.expand(iset_d) # add ALE to velocity block
@@ -526,7 +526,7 @@ class FluidmechanicsAleSolver(solver_base):
             try: solver_params_prestr['precond_fields'] = self.solver_params['precond_fields_prestr']
             except: pass
             # initialize fluid mechanics solver
-            self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, self.solver_params)
+            self.solverprestr = FluidmechanicsSolverPrestr(self.pb.pbf, solver_params_prestr)
 
 
     def solve_initial_state(self):

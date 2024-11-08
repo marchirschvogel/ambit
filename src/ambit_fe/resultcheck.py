@@ -20,7 +20,7 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec', rea
     success = True
 
     # block size of vector to check
-    bs = u.vector.getBlockSize()
+    bs = u.x.petsc_vec.getBlockSize()
 
     # computed errors (difference between simulation and expected results)
     errs = np.zeros(bs*len(check_node))
@@ -58,7 +58,7 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm='vec', rea
     dof_indices_unique = list(dict.fromkeys(dof_indices_flat))
 
     # gather vector to check
-    u_sq = allgather_vec(u.vector, comm)
+    u_sq = allgather_vec(u.x.petsc_vec, comm)
 
     for i in range(len(check_node)):
         for j in range(bs):

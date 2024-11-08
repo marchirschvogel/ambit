@@ -74,12 +74,8 @@ class FSIProblem(problem_base):
 
         self.have_condensed_variables = False
 
-        if self.ios.USE_OLD_DOLFINX_MIXED_BRANCH:
-            P_lm = ufl.VectorElement("CG", self.io.msh_emap_lm[0].ufl_cell(), self.pbs.order_disp)
-            self.V_lm = fem.FunctionSpace(self.io.msh_emap_lm[0], P_lm)
-
-        else:
-            self.V_lm = fem.functionspace(self.io.msh_emap_lm[0], ("Lagrange", self.pbs.order_disp, (self.io.msh_emap_lm[0].geometry.dim,)))
+        # Lagrange multiplier function space
+        self.V_lm = fem.functionspace(self.io.msh_emap_lm[0], ("Lagrange", self.pbs.order_disp, (self.io.msh_emap_lm[0].geometry.dim,)))
 
         # Lagrange multiplier
         self.lm = fem.Function(self.V_lm)
@@ -116,11 +112,11 @@ class FSIProblem(problem_base):
         if self.pbs.incompressible_2field:
             if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 1, 2, 1, 1]
             else:                     is_ghosted = [1, 1, 1, 1, 1, 1]
-            return [self.pbs.u.vector, self.pbs.p.vector, self.pbf.v.vector, self.pbf.p.vector, self.lm.vector, self.pba.d.vector], is_ghosted
+            return [self.pbs.u.x.petsc_vec, self.pbs.p.x.petsc_vec, self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec, self.lm.x.petsc_vec, self.pba.d.x.petsc_vec], is_ghosted
         else:
             if self.pbf.num_dupl > 1: is_ghosted = [1, 1, 2, 1, 1]
             else:                     is_ghosted = [1, 1, 1, 1, 1]
-            return [self.pbs.u.vector, self.pbf.v.vector, self.pbf.p.vector, self.lm.vector, self.pba.d.vector], is_ghosted
+            return [self.pbs.u.x.petsc_vec, self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec, self.lm.x.petsc_vec, self.pba.d.x.petsc_vec], is_ghosted
 
 
     # defines the monolithic coupling forms for FSI
@@ -205,9 +201,9 @@ class FSIProblem(problem_base):
 
         with self.r_l.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_l, self.res_l)
-        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.lm.vector], scale=-1.0)
+        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.lm.x.petsc_vec])
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.vector, scale=-1.0)
+        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.x.petsc_vec, scale=-1.0)
 
         self.r_list[0] = self.pbs.r_list[0]
 
@@ -338,8 +334,8 @@ class FSIProblem(problem_base):
         self.pbfa.update()
 
         # update Lagrange multiplier
-        self.lm_old.vector.axpby(1.0, 0.0, self.lm.vector)
-        self.lm_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.lm_old.x.petsc_vec.axpby(1.0, 0.0, self.lm.x.petsc_vec)
+        self.lm_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     def print_to_screen(self):

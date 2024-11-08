@@ -44,5 +44,11 @@ class template_vector:
 # dummy function
 class function_dummy:
     def __init__(self, veclist, comm):
-        self.vector = PETSc.Vec().createNest(veclist, comm=comm)
-        self.vector.assemble()
+        # self.vector = PETSc.Vec().createNest(veclist, comm=comm)
+        # self.vector.assemble()
+        self.x = x_dummy()
+        self.x.petsc_vec = PETSc.Vec().createNest(veclist, comm=comm)
+        self.x.petsc_vec.assemble()
+class x_dummy:
+    def __init__(self):
+        pass

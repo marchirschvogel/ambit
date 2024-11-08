@@ -81,14 +81,6 @@ class IO:
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
 
-        # TODO: Should go away once mixed stuff is fully functional in latest dolfinx!
-        try: self.USE_OLD_DOLFINX_MIXED_BRANCH = io_params['USE_OLD_DOLFINX_MIXED_BRANCH']
-        except: self.USE_OLD_DOLFINX_MIXED_BRANCH = False
-
-        # may also be set from command line
-        if sys.argv[-1]=='mixed':
-            self.USE_OLD_DOLFINX_MIXED_BRANCH = True
-
         # entity map dict - for coupled multiphysics/multimesh problems
         self.entity_maps = entity_maps
 
@@ -153,8 +145,6 @@ class IO:
                 NOTE: We cannot perform line/edge integrals in 3D in an intuitive manner by
                 defining and using a 1-dimensional ufl ds measure. This is not yet implemented
                 in dolfinx.
-                But, we can use the mixed dimensional branch to create a submesh and collect the
-                integration edges, performing the integration over the 1D boundary using entitiy maps.
                 """
                 raise RuntimeError("Weak integrations over edges in 3D currently not fully supported.")
 
@@ -270,7 +260,7 @@ class IO:
     def readfunction(self, f, datafile, normalize=False, filetype='id_val'):
 
         # block size of vector
-        bs = f.vector.getBlockSize()
+        bs = f.x.petsc_vec.getBlockSize()
 
         # load data and input node indices
         if filetype=='id_val':
@@ -326,12 +316,12 @@ class IO:
                     norm = 1.
 
                 for j in range(bs):
-                    f.vector[bs*i+j] = data[ind[0],j] / norm
+                    f.x.petsc_vec[bs*i+j] = data[ind[0],j] / norm
 
             ci+=1
 
-        f.vector.assemble()
-        f.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        f.x.petsc_vec.assemble()
+        f.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
     # own write function - working for nodal fields that are defined on the input mesh
@@ -364,10 +354,10 @@ class IO:
                 igi_flat.append(igi_gathered[n][i])
 
         # gather PETSc vector
-        vec_sq = allgather_vec(f.vector, self.comm)
+        vec_sq = allgather_vec(f.x.petsc_vec, self.comm)
 
-        sz = f.vector.getSize()
-        bs = f.vector.getBlockSize()
+        sz = f.x.petsc_vec.getSize()
+        bs = f.x.petsc_vec.getBlockSize()
         nb = int(sz/bs)
 
         # first collect vector as numpy array in sorted manner
@@ -413,10 +403,7 @@ class IO:
         except: self.order_fib_input = order_disp
 
         # define input fiber function space
-        if self.USE_OLD_DOLFINX_MIXED_BRANCH:
-            V_fib_input = fem.VectorFunctionSpace(self.mesh, ("CG", self.order_fib_input))
-        else:
-            V_fib_input = fem.functionspace(self.mesh, ("Lagrange", self.order_fib_input, (self.mesh.geometry.dim,)))
+        V_fib_input = fem.functionspace(self.mesh, ("Lagrange", self.order_fib_input, (self.mesh.geometry.dim,)))
 
         si = 0
         for s in fibarray:
@@ -752,8 +739,8 @@ class IO_solid(IO):
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-                key.vector.load(viewer)
-                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                key.x.petsc_vec.load(viewer)
+                key.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.readfunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
@@ -796,7 +783,7 @@ class IO_solid(IO):
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-                key.vector.view(viewer)
+                key.x.petsc_vec.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))
@@ -860,10 +847,7 @@ class IO_fluid(IO):
                     elif res=='pressure':
                         if bool(self.duplicate_mesh_domains):
                             for m, mp in enumerate(self.duplicate_mesh_domains):
-                                if self.USE_OLD_DOLFINX_MIXED_BRANCH:
-                                    V_out_scalar_sub = fem.FunctionSpace(self.submshes_emap[m+1][0], ("CG", pb.mesh_degree))
-                                else:
-                                    V_out_scalar_sub = fem.functionspace(self.submshes_emap[m+1][0], ("Lagrange", pb.mesh_degree))
+                                V_out_scalar_sub = fem.functionspace(self.submshes_emap[m+1][0], ("Lagrange", pb.mesh_degree))
                                 p_out = fem.Function(V_out_scalar_sub, name=pb.p_[m].name)
                                 p_out.interpolate(pb.p_[m])
                                 self.resultsfiles[res+str(m+1)].write_function(p_out, indicator)
@@ -952,8 +936,8 @@ class IO_fluid(IO):
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-                key.vector.load(viewer)
-                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                key.x.petsc_vec.load(viewer)
+                key.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.readfunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
@@ -986,7 +970,7 @@ class IO_fluid(IO):
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-                key.vector.view(viewer)
+                key.x.petsc_vec.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))
@@ -1076,8 +1060,8 @@ class IO_ale(IO):
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-                key.vector.load(viewer)
-                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                key.x.petsc_vec.load(viewer)
+                key.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.readfunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
@@ -1098,7 +1082,7 @@ class IO_ale(IO):
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-                key.vector.view(viewer)
+                key.x.petsc_vec.view(viewer)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))
@@ -1150,8 +1134,8 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
                 # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                 # and for safety reasons, include the number of cores in the dat file name
                 viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'_'+str(self.comm.size)+'proc.dat', 'r', self.comm)
-                key.vector.load(viewer)
-                key.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                key.x.petsc_vec.load(viewer)
+                key.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                 viewer.destroy()
             elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                 self.readfunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_read[key]+'_'+str(N_rest)+'.txt')
@@ -1177,7 +1161,7 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
                     # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
                     # and for safety reasons, include the number of cores in the dat file name
                     viewer = PETSc.Viewer().createMPIIO(self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N)+'_'+str(self.comm.size)+'proc.dat', 'w', self.comm)
-                    key.vector.view(viewer)
+                    key.x.petsc_vec.view(viewer)
                     viewer.destroy()
                 elif self.restart_io_type=='rawtxt': # only working for nodal fields!
                     self.writefunction(key, self.output_path+'/checkpoint_'+pb.pbase.simname+'_'+pb.problem_physics+'_'+vecs_to_write[key]+'_'+str(N))

@@ -88,10 +88,10 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         if self.pbs.incompressible_2field:
             is_ghosted = [1, 1, 0]
-            return [self.pbs.u.vector, self.pbs.p.vector, self.LM], is_ghosted
+            return [self.pbs.u.x.petsc_vec, self.pbs.p.x.petsc_vec, self.LM], is_ghosted
         else:
             is_ghosted = [1, 0]
-            return [self.pbs.u.vector, self.LM], is_ghosted
+            return [self.pbs.u.x.petsc_vec, self.LM], is_ghosted
 
 
     # defines the monolithic coupling forms for constraints and solid mechanics
@@ -364,7 +364,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             fem.petsc.assemble_vector(self.k_us_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
             self.k_us_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             # set zeros at DBC entries
-            fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
+            fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.x.petsc_vec, scale=0.0)
 
         # set columns
         for i in range(len(self.col_ids)):
@@ -403,19 +403,19 @@ class SolidmechanicsConstraintProblem(problem_base):
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            uvec_or0 = self.pbs.u.vector.getOwnershipRange()[0]
-            uvec_ls = self.pbs.u.vector.getLocalSize()
+            uvec_or0 = self.pbs.u.x.petsc_vec.getOwnershipRange()[0]
+            uvec_ls = self.pbs.u.x.petsc_vec.getLocalSize()
 
         offset_u = uvec_or0 + self.LM.getOwnershipRange()[0]
-        if self.pbs.incompressible_2field: offset_u += self.pbs.p.vector.getOwnershipRange()[0]
+        if self.pbs.incompressible_2field: offset_u += self.pbs.p.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
             offset_p = offset_u + uvec_ls
-            iset_p = PETSc.IS().createStride(self.pbs.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+            iset_p = PETSc.IS().createStride(self.pbs.p.x.petsc_vec.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
-            offset_s = offset_p + self.pbs.p.vector.getLocalSize()
+            offset_s = offset_p + self.pbs.p.x.petsc_vec.getLocalSize()
         else:
             offset_s = offset_u + uvec_ls
 

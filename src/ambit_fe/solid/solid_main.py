@@ -140,56 +140,27 @@ class SolidmechanicsProblem(problem_base):
         # will be set by solver base class
         self.rom = None
 
-        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
+        # function spaces for u and p
+        self.V_u = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
+        self.V_p = fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres))
 
-            # create finite element objects for u and p
-            P_u = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-            P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
-            # function spaces for u and p
-            self.V_u = fem.FunctionSpace(self.io.mesh, P_u)
-            self.V_p = fem.FunctionSpace(self.io.mesh, P_p)
-            # continuous tensor and scalar function spaces of order order_disp
-            self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
-            self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
+        # continuous tensor and scalar function spaces of order order_disp
+        self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
 
-            # discontinuous function spaces
-            self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
-            self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
-            self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (self.dg_type, self.order_disp-1))
+        # discontinuous function spaces
+        self.Vd_tensor = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.Vd_vector = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
+        self.Vd_scalar = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1))
 
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
-            self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-            self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-            self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        # for output writing - function spaces on the degree of the mesh
+        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+        self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+        self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
 
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
-
-        else:
-
-            # function spaces for u and p
-            self.V_u = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
-            self.V_p = fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres))
-
-            # continuous tensor and scalar function spaces of order order_disp
-            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
-
-            # discontinuous function spaces
-            self.Vd_tensor = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.Vd_vector = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
-            self.Vd_scalar = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp-1))
-
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
-            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
-            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
-
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
-
+        # coordinate element function space - based on input mesh
+        self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
 
         # # Quadrature tensor, vector, and scalar elements
         # Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
@@ -231,15 +202,15 @@ class SolidmechanicsProblem(problem_base):
         self.F_plast = fem.Function(self.Vd_tensor)
         self.F_plast_old = fem.Function(self.Vd_tensor)
         # initialize to one (theta = 1 means no growth)
-        self.theta.vector.set(1.0), self.theta_old.vector.set(1.0)
-        self.theta.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.theta_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.theta.x.petsc_vec.set(1.0), self.theta_old.x.petsc_vec.set(1.0)
+        self.theta.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.theta_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # active stress
         # self.tau_a = fem.Function(self.Vq_scalar, name="tau_a")
         self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
         self.tau_a_old = fem.Function(self.Vd_scalar)
         self.amp_old, self.amp_old_set = fem.Function(self.Vd_scalar), fem.Function(self.Vd_scalar)
-        self.amp_old.vector.set(1.0), self.amp_old_set.vector.set(1.0)
-        self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.amp_old.x.petsc_vec.set(1.0), self.amp_old_set.x.petsc_vec.set(1.0)
+        self.amp_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD), self.amp_old_set.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         # prestress displacement
         if (self.prestress_initial or self.prestress_initial_only) or bool(self.prestress_from_file):
             self.u_pre = fem.Function(self.V_u, name="Displacement_prestress")
@@ -274,9 +245,9 @@ class SolidmechanicsProblem(problem_base):
         self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
 
         if self.incompressible_2field:
-            self.numdof = self.u.vector.getSize() + self.p.vector.getSize()
+            self.numdof = self.u.x.petsc_vec.getSize() + self.p.x.petsc_vec.getSize()
         else:
-            self.numdof = self.u.vector.getSize()
+            self.numdof = self.u.x.petsc_vec.getSize()
 
         self.mor_params = mor_params
 
@@ -320,7 +291,7 @@ class SolidmechanicsProblem(problem_base):
                         load = expression.template()
                         load.val = self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])(self.pbase.t_init)
                         self.act_curve_old[-1].interpolate(load.evaluate)
-                        self.act_curve_old[-1].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                        self.act_curve_old[-1].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
                         self.ti.funcs_to_update_old.append({self.act_curve_old[-1] : self.ti.timecurves(self.constitutive_models['MAT'+str(n+1)][self.activemodel[n]]['activation_curve'])})
                         self.actstress[-1].act_curve_old = self.act_curve_old[-1] # needed for Frank-Starling law
                     else:
@@ -374,7 +345,7 @@ class SolidmechanicsProblem(problem_base):
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
             growth_thres_proj = project(self.mat_growth_thres, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
-            self.growth_thres.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            self.growth_thres.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.growth_thres.interpolate(growth_thres_proj)
 
         # read in fiber data
@@ -435,10 +406,10 @@ class SolidmechanicsProblem(problem_base):
 
         if self.incompressible_2field:
             is_ghosted = [1, 1]
-            return [self.u.vector, self.p.vector], is_ghosted
+            return [self.u.x.petsc_vec, self.p.x.petsc_vec], is_ghosted
         else:
             is_ghosted = [1]
-            return [self.u.vector], is_ghosted
+            return [self.u.x.petsc_vec], is_ghosted
 
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
@@ -756,12 +727,12 @@ class SolidmechanicsProblem(problem_base):
 
         if self.have_frank_starling:
             amp_old_proj = project(self.amp_old_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
-            self.amp_old.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            self.amp_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.amp_old.interpolate(amp_old_proj)
 
         # project and interpolate to quadrature function space
         tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.pbase.comm, entity_maps=self.io.entity_maps)
-        self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        self.tau_a.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
         #mathutils.quad_interpolation(tau_a_[0], self.Vq_scalar, self.io.mesh, self.quadrature_points, self.tau_a)
@@ -961,9 +932,9 @@ class SolidmechanicsProblem(problem_base):
         # assemble rhs vector
         with self.r_u.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_u, self.res_u)
-        fem.apply_lifting(self.r_u, [self.jac_uu], [self.bc.dbcs], x0=[self.u.vector], scale=-1.0)
+        fem.apply_lifting(self.r_u, [self.jac_uu], [self.bc.dbcs], x0=[self.u.x.petsc_vec])
         self.r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_u, self.bc.dbcs, x0=self.u.vector, scale=-1.0)
+        fem.set_bc(self.r_u, self.bc.dbcs, x0=self.u.x.petsc_vec, scale=-1.0)
 
         if self.incompressible_2field:
 
@@ -1024,14 +995,14 @@ class SolidmechanicsProblem(problem_base):
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            uvec_or0 = self.u.vector.getOwnershipRange()[0]
-            uvec_ls = self.u.vector.getLocalSize()
+            uvec_or0 = self.u.x.petsc_vec.getOwnershipRange()[0]
+            uvec_ls = self.u.x.petsc_vec.getLocalSize()
 
-        offset_u = uvec_or0 + self.p.vector.getOwnershipRange()[0]
+        offset_u = uvec_or0 + self.p.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.pbase.comm)
 
         offset_p = offset_u + uvec_ls
-        iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.pbase.comm)
+        iset_p = PETSc.IS().createStride(self.p.x.petsc_vec.getLocalSize(), first=offset_p, step=1, comm=self.pbase.comm)
 
         return [iset_u, iset_p]
 
@@ -1077,7 +1048,7 @@ class SolidmechanicsProblem(problem_base):
                 func = list(m.keys())[0]
                 self.io.readfunction(func, file)
                 sc = m['scale']
-                if sc != 1.0: func.vector.scale(sc)
+                if sc != 1.0: func.x.petsc_vec.scale(sc)
 
         if 'prescribed_from_file' in (self.mat_active_stress_type):
             self.io.readfunction(self.tau_a, self.constitutive_models['MAT'+str(self.actpid)][self.activemodel[self.actpid-1]]['prescribed_file'].replace('*',str(N)))

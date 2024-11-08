@@ -92,52 +92,26 @@ class AleProblem(problem_base):
         # will be set by solver base class
         self.rom = None
 
-        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
+        # function space for d
+        self.V_d = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
 
-            # create finite element objects
-            P_d = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_disp)
-            # function space
-            self.V_d = fem.FunctionSpace(self.io.mesh, P_d)
-            # continuous tensor and scalar function spaces of order order_disp
-            self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_disp))
-            self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_disp))
+        # continuous tensor and scalar function spaces of order order_disp
+        self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
 
-            # a discontinuous tensor, vector, and scalar function space
-            self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-            self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
-            self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_disp-1))
+        # a discontinuous tensor, vector, and scalar function space
+        self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
+        self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1))
 
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
-            self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-            self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-            self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
+        # for output writing - function spaces on the degree of the mesh
+        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+        self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+        self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
 
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
-
-        else:
-
-            # function space for d
-            self.V_d = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)))
-
-            # continuous tensor and scalar function spaces of order order_disp
-            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
-
-            # a discontinuous tensor, vector, and scalar function space
-            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1, (self.io.mesh.geometry.dim,)))
-            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_disp-1))
-
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
-            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
-            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
-
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+        # coordinate element function space - based on input mesh
+        self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
 
         # functions
         self.dd    = ufl.TrialFunction(self.V_d)            # Incremental displacement
@@ -152,7 +126,7 @@ class AleProblem(problem_base):
         # reference coordinates
         self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
 
-        self.numdof = self.d.vector.getSize()
+        self.numdof = self.d.x.petsc_vec.getSize()
 
         # initialize ALE time-integration class
         self.ti = timeintegration.timeintegration_ale(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
@@ -192,7 +166,7 @@ class AleProblem(problem_base):
     def get_problem_var_list(self):
 
         is_ghosted = [1]
-        return [self.d.vector], is_ghosted
+        return [self.d.x.petsc_vec], is_ghosted
 
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
@@ -250,9 +224,9 @@ class AleProblem(problem_base):
         # assemble rhs vector
         with self.r_d.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_d, self.res_d)
-        fem.apply_lifting(self.r_d, [self.jac_dd], [self.bc.dbcs], x0=[self.d.vector], scale=-1.0)
+        fem.apply_lifting(self.r_d, [self.jac_dd], [self.bc.dbcs], x0=[self.d.x.petsc_vec])
         self.r_d.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_d, self.bc.dbcs, x0=self.d.vector, scale=-1.0)
+        fem.set_bc(self.r_d, self.bc.dbcs, x0=self.d.x.petsc_vec, scale=-1.0)
 
         self.r_list[0] = self.r_d
 
@@ -301,7 +275,7 @@ class AleProblem(problem_base):
                 func = list(m.keys())[0]
                 self.io.readfunction(func, file)
                 sc = m['scale']
-                if sc != 1.0: func.vector.scale(sc)
+                if sc != 1.0: func.x.petsc_vec.scale(sc)
 
 
     def evaluate_post_solve(self, t, N):

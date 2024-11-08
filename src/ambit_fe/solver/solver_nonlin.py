@@ -604,9 +604,9 @@ class solver_nonlinear:
         r_a.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         ksp.setOperators(M_a)
-        ksp.solve(-r_a, a_old.vector)
+        ksp.solve(-r_a, a_old.x.petsc_vec)
 
-        a_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        a_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         r_a.destroy(), M_a.destroy()
         ksp.destroy()
@@ -968,22 +968,22 @@ class solver_nonlinear:
 
                 # interpolate symbolic increment form into increment vector
                 increment_proj = project(increment_forms[i], functionspaces[i], self.pb[0].dx, domids=self.pb[0].domain_ids, comm=self.comm)
-                increments[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                increments[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 increments[i].interpolate(increment_proj)
 
             for i in range(num_loc_res):
                 # update var vector
-                var[i].vector.axpy(1.0, increments[i].vector)
-                var[i].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                var[i].x.petsc_vec.axpy(1.0, increments[i].x.petsc_vec)
+                var[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             for i in range(num_loc_res):
                 # interpolate symbolic residual form into residual vector
                 residual_proj = project(residual_forms[i], functionspaces[i], self.pb[0].dx, domids=self.pb[0].domain_ids, comm=self.comm)
-                residuals[i].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+                residuals[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 residuals[i].interpolate(residual_proj)
                 # get residual and increment inf norms
-                res_norms[i] = residuals[i].vector.norm(norm_type=3)
-                inc_norms[i] = increments[i].vector.norm(norm_type=3)
+                res_norms[i] = residuals[i].x.petsc_vec.norm(norm_type=3)
+                inc_norms[i] = increments[i].x.petsc_vec.norm(norm_type=3)
 
             if self.print_local_iter:
                 utilities.print_status("      (it_local = %i, res: %.4e, inc: %.4e)" % (it_local,np.sum(res_norms),np.sum(inc_norms)), self.comm)

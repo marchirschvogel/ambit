@@ -102,7 +102,7 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
 
         if self.pbfc.pbf.num_dupl > 1: is_ghosted = [1, 2, 0, 1]
         else:                          is_ghosted = [1, 1, 0, 1]
-        return [self.pbf.v.vector, self.pbf.p.vector, self.pbfc.LM, self.pba.d.vector], is_ghosted
+        return [self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec, self.pbfc.LM, self.pba.d.x.petsc_vec], is_ghosted
 
 
     def set_variational_forms(self):
@@ -266,10 +266,10 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
-            vvec_ls = self.pbf.v.vector.getLocalSize()
+            vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
+            vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
 
-        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.pbfc.LM.getOwnershipRange()[0] + self.pba.d.vector.getOwnershipRange()[0]
+        offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbfc.LM.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -277,13 +277,13 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem,problem_base):
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
-        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+        iset_p = PETSc.IS().createStride(self.pbf.p.x.petsc_vec.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        offset_s = offset_p + self.pbf.p.vector.getLocalSize()
+        offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbfc.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         offset_d = offset_s + self.pbfc.LM.getLocalSize()
-        iset_d = PETSc.IS().createStride(self.pba.d.vector.getLocalSize(), first=offset_d, step=1, comm=self.comm)
+        iset_d = PETSc.IS().createStride(self.pba.d.x.petsc_vec.getLocalSize(), first=offset_d, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
             iset_s = iset_s.expand(iset_r) # add to 0D block

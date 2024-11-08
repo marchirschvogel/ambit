@@ -20,9 +20,8 @@ import pytest
 
 
 @pytest.mark.fluid
-@pytest.mark.skip(reason="Currently not tested! Waiting for mixed domain functionality to be working in latest dolfinx version...")
 def test_main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
 
     # reads in restart step from the command line
@@ -51,7 +50,7 @@ def test_main():
                            'timint'                : 'ost',
                            'theta_ost'             : 1.0,
                            'fluid_governing_type'  : 'navierstokes_transient'}
-    
+
     FEM_PARAMS          = {'order_vel'             : 1,
                            'order_pres'            : 1,
                            'quad_degree'           : 5,
@@ -67,7 +66,7 @@ def test_main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
-        
+
         def tc1(self, t):
             t_ramp = 1.0
             pmax = 1.0
@@ -82,7 +81,7 @@ def test_main():
                        'neumann'     : [{'id' : [2], 'dir' : 'normal_ref', 'curve' : 1},
                                         {'id' : [4], 'dir' : 'normal_ref', 'curve' : 2}],
                        'robin_valve' : [{'id' : [5], 'type' : 'dp_smooth', 'beta_max' : 1e3, 'beta_min' : 1e-3, 'epsilon' : 1e-6, 'dp_monitor_id' : 0}], # 5 is internal surface (valve)
-                       'dp_monitor'  : [{'id' : [5], 'upstream_domain' : 2, 'downstream_domain' : 1}], 
+                       'dp_monitor'  : [{'id' : [5], 'upstream_domain' : 2, 'downstream_domain' : 1}],
                        'flux_monitor': [{'id' : [5], 'on_subdomain' : True, 'internal' : False, 'domain' : 2}] }
 
 
@@ -116,5 +115,5 @@ def test_main():
 
 
 if __name__ == "__main__":
-    
+
     test_main()

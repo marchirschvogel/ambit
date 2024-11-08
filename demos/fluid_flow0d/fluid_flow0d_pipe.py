@@ -23,10 +23,7 @@ def main():
                             # For this setup in order to model an internal valve/Dirichlet boundary, we need to duplicate the pressure space at this boundary; otherwise,
                             # any Dirichlet condition on the velocity inside the domain will not prevent fluid to experience a pressure gradient across that plane, leading
                             # to unphysical de- and acceleration of fluid infront of and behind the valve.
-                            # This duplicate pressure space can only be achieved using the mixed Dolfinx branch, which is installed in the Ambit devenv 'old' Docker container.
-                            # In the future, this functionality is expected to be merged into the main branch of Dolfinx (as it has been announced).
-                            'USE_OLD_DOLFINX_MIXED_BRANCH' : True,
-                            # indicate which domain IDs (specified in 'mesh_domain' file) should be split (creating a submesh)
+                            # Indicate which domain IDs (specified in 'mesh_domain' file) should be split (creating a submesh)
                             'duplicate_mesh_domains': [[1],[2]],
                             # the meshes for the domain and boundary topology are specified separately
                             'mesh_domain'           : basepath+'/input/pipe_domain.xdmf',
@@ -40,7 +37,7 @@ def main():
                             'results_to_write'      : ['velocity','pressure'],
                             # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5/.txt
                             'simname'               : 'fluid_flow0d_pipe'}
-                      
+
     """
     Parameters for the linear and nonlinear solution schemes
     """
@@ -139,20 +136,20 @@ def main():
     """
     class expression1:
         def __init__(self):
-            
+
             self.t = 0.0
 
             self.T = 0.4
             self.vmax = 1e3
-            
+
             self.r = 15.0 # pipe radius
 
         def evaluate(self, x):
-            
+
             vel_inflow_xy = (x[0]**2. - self.r**2.)*(x[1]**2. - self.r**2.) / (self.r**4.) # parabolic inflow profile
 
             val_t = 0.5*self.vmax*(1.-np.cos(2.*np.pi*self.t/self.T)) * vel_inflow_xy
-            
+
             return ( np.full(x.shape[1], 0.0),
                      np.full(x.shape[1], 0.0),
                      np.full(x.shape[1], val_t) )

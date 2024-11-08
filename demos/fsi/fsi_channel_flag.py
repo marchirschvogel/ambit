@@ -62,7 +62,6 @@ def main():
     """
     IO_PARAMS            = {# problem type 'fsi': fluid-solid interaction
                             'problem_type'          : 'fsi',
-                            'USE_OLD_DOLFINX_MIXED_BRANCH' : True,
                             # at which step frequency to write results
                             'write_results_every'   : 1,
                             'write_restart_every'   : -1,
@@ -72,7 +71,7 @@ def main():
                             'mesh_domain'           : basepath+'/input/channel-flag_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/channel-flag_boundary.xdmf',
                             'results_to_write'      : [['displacement','velocity'], [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']]],
-                            'domain_ids_solid'      : [1], 
+                            'domain_ids_solid'      : [1],
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
                             'simname'               : 'fsi_channel_flag_turek_'+case}
@@ -124,13 +123,13 @@ def main():
     FEM_PARAMS_FLUID     = {'order_vel'             : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
-    
+
     """
     Finite element parameters for ALE
     """
     FEM_PARAMS_ALE       = {'order_disp'            : 2,
                             'quad_degree'           : 5}
-    
+
     """
     FSI coupling parameters
     """
@@ -141,12 +140,12 @@ def main():
 
     # solid material: St.-Venant Kirchhoff
     MATERIALS_SOLID      = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 2.*mu_s*(1.+nu_s), 'nu' : nu_s},
-                                      'inertia'           : {'rho0' : rho0_s}}} 
+                                      'inertia'           : {'rho0' : rho0_s}}}
 
     # fluid material: standard Newtonian fluid
     MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : mu_f},
                                       'inertia'   : {'rho' : rho_f}}}
-    
+
     # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
     MATERIALS_ALE        = {'MAT1' : {'exponential' : {'a_0' : 1.0, 'b_0' : 10.0, 'kappa' : 1e2}}}
 
@@ -157,16 +156,16 @@ def main():
     """
     class expression1:
         def __init__(self):
-            
+
             self.t = 0.0
 
             self.t_ramp = 2.0
-            
+
             self.H = 0.41e3 # channel height
             self.Ubar = Ubar
 
         def evaluate(self, x):
-            
+
             vel_inflow_y = 1.5*self.Ubar*( x[1]*(self.H-x[1])/((self.H/2.)**2.) )
 
             val_t = vel_inflow_y * 0.5*(1.-np.cos(np.pi*self.t/self.t_ramp)) * (self.t < self.t_ramp) + vel_inflow_y * (self.t >= self.t_ramp)

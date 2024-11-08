@@ -148,14 +148,7 @@ class FluidmechanicsProblem(problem_base):
         self.alevar = alevar
 
         # function space for v
-        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
-            P_v = ufl.VectorElement("CG", self.io.mesh.ufl_cell(), self.order_vel)
-            self.V_v = fem.FunctionSpace(self.io.mesh, P_v)
-
-        else:
-            self.V_v = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,)))
-
-        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH: P_p = ufl.FiniteElement("CG", self.io.mesh.ufl_cell(), self.order_pres)
+        self.V_v = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,)))
 
         # now collect those for p (pressure space may be duplicate!)
         self.V_p__ = {}
@@ -182,10 +175,7 @@ class FluidmechanicsProblem(problem_base):
             num_cells = cell_imap.size_local + cell_imap.num_ghosts
 
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
-                if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
-                    self.V_p__[m+1] = fem.FunctionSpace(self.io.submshes_emap[m+1][0], P_p)
-                else:
-                    self.V_p__[m+1] = fem.functionspace(self.io.submshes_emap[m+1][0], ("Lagrange", self.order_pres))
+                self.V_p__[m+1] = fem.functionspace(self.io.submshes_emap[m+1][0], ("Lagrange", self.order_pres))
 
                 inv_emap[m+1] = np.full(num_cells, -1)
 
@@ -204,52 +194,27 @@ class FluidmechanicsProblem(problem_base):
 
         else:
             self.num_dupl = 1
-            if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
-                self.V_p_ = [ fem.FunctionSpace(self.io.mesh, P_p) ]
-            else:
-                self.V_p_ = [ fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres)) ]
+            self.V_p_ = [ fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres)) ]
             self.dx_p.append(self.dx)
             self.bmeasures_p.append(self.bmeasures)
 
-        if self.io.USE_OLD_DOLFINX_MIXED_BRANCH:
+        # continuous tensor and scalar function spaces of order order_vel
+        self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel))
 
-            # continuous tensor and scalar function spaces of order order_vel
-            self.V_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.order_vel))
-            self.V_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.order_vel))
+        # a discontinuous tensor, vector, and scalar function space
+        self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,)))
+        self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1))
 
-            # a discontinuous tensor, vector, and scalar function space
-            self.Vd_tensor = fem.TensorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
-            self.Vd_vector = fem.VectorFunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
-            self.Vd_scalar = fem.FunctionSpace(self.io.mesh, (dg_type, self.order_vel-1))
+        # for output writing - function spaces on the degree of the mesh
+        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+        self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
+        self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
+        self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
 
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element.degree()
-            self.V_out_scalar = fem.FunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-            self.V_out_vector = fem.VectorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-            self.V_out_tensor = fem.TensorFunctionSpace(self.io.mesh, ("CG", self.mesh_degree))
-
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.FunctionSpace(self.io.mesh, self.Vex)
-
-        else:
-
-            # continuous tensor and scalar function spaces of order order_vel
-            self.V_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel))
-
-            # a discontinuous tensor, vector, and scalar function space
-            self.Vd_tensor = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.Vd_vector = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1, (self.io.mesh.geometry.dim,)))
-            self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_vel-1))
-
-            # for output writing - function spaces on the degree of the mesh
-            self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
-            self.V_out_tensor = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,self.io.mesh.geometry.dim)))
-            self.V_out_vector = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)))
-            self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
-
-            # coordinate element function space - based on input mesh
-            self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+        # coordinate element function space - based on input mesh
+        self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
 
         # functions
         self.dv     = ufl.TrialFunction(self.V_v)            # Incremental velocity
@@ -305,8 +270,8 @@ class FluidmechanicsProblem(problem_base):
         self.pvecs_, self.pvecs_old_ = [], []
         if self.num_dupl > 1:
             for m in range(self.num_dupl):
-                self.pvecs_.append(self.p_[m].vector)
-                self.pvecs_old_.append(self.p_old_[m].vector)
+                self.pvecs_.append(self.p_[m].x.petsc_vec)
+                self.pvecs_old_.append(self.p_old_[m].x.petsc_vec)
                 # full pressure vectors - dummy function that holds a class variable "vector"
                 self.p = expression.function_dummy(self.pvecs_,self.comm)
                 self.p_old = expression.function_dummy(self.pvecs_old_,self.comm)
@@ -318,10 +283,10 @@ class FluidmechanicsProblem(problem_base):
             if bool(self.initial_fluid_pressure):
                 for m in range(self.num_dupl):
                     val = self.initial_fluid_pressure[m]
-                    self.p_[m].vector.set(val)
-                    self.p_[m].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-                    self.p_old_[m].vector.set(val)
-                    self.p_old_[m].vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                    self.p_[m].x.petsc_vec.set(val)
+                    self.p_[m].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                    self.p_old_[m].x.petsc_vec.set(val)
+                    self.p_old_[m].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
@@ -342,7 +307,7 @@ class FluidmechanicsProblem(problem_base):
         # reference coordinates
         self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
 
-        self.numdof = self.v.vector.getSize() + self.p.vector.getSize()
+        self.numdof = self.v.x.petsc_vec.getSize() + self.p.x.petsc_vec.getSize()
 
         # initialize fluid time-integration class
         self.ti = timeintegration.timeintegration_fluid(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
@@ -417,7 +382,7 @@ class FluidmechanicsProblem(problem_base):
 
         if self.num_dupl > 1: is_ghosted = [1, 2]
         else:                 is_ghosted = [1, 1]
-        varlist = [self.v.vector, self.p.vector]
+        varlist = [self.v.x.petsc_vec, self.p.x.petsc_vec]
 
         if self.have_robin_valve_implicit:
             varlist.append(self.z)
@@ -873,7 +838,7 @@ class FluidmechanicsProblem(problem_base):
 
         # project and interpolate to quadrature function space
         tau_a_proj = project(self.tau_a_, self.Vd_scalar, self.dx, domids=self.domain_ids, comm=self.comm, entity_maps=self.io.entity_maps) # TODO: Should be self.ds here, but yields error; why?
-        self.tau_a.vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        self.tau_a.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
 
@@ -1105,9 +1070,9 @@ class FluidmechanicsProblem(problem_base):
         # assemble velocity rhs vector
         with self.r_v.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_v, self.res_v)
-        fem.apply_lifting(self.r_v, [self.jac_vv], [self.bc.dbcs], x0=[self.v.vector], scale=-1.0)
+        fem.apply_lifting(self.r_v, [self.jac_vv], [self.bc.dbcs], x0=[self.v.x.petsc_vec])
         self.r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_v, self.bc.dbcs, x0=self.v.vector, scale=-1.0)
+        fem.set_bc(self.r_v, self.bc.dbcs, x0=self.v.x.petsc_vec, scale=-1.0)
 
         # assemble pressure rhs vector
         with self.r_p.localForm() as r_local: r_local.set(0.0)
@@ -1175,7 +1140,7 @@ class FluidmechanicsProblem(problem_base):
                 fem.petsc.assemble_vector(self.k_vz_vec[i], self.dw_robin_valve_dz_form[i]) # already multiplied by time-integration factor
                 self.k_vz_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 # set zeros at DBC entries
-                fem.set_bc(self.k_vz_vec[i], self.bc.dbcs, x0=self.v.vector, scale=0.0)
+                fem.set_bc(self.k_vz_vec[i], self.bc.dbcs, x0=self.v.x.petsc_vec)#, scale=0.0)
 
             # set columns
             for i in range(len(self.col_ids)):
@@ -1205,10 +1170,10 @@ class FluidmechanicsProblem(problem_base):
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            vvec_or0 = self.v.vector.getOwnershipRange()[0]
-            vvec_ls = self.v.vector.getLocalSize()
+            vvec_or0 = self.v.x.petsc_vec.getOwnershipRange()[0]
+            vvec_ls = self.v.x.petsc_vec.getLocalSize()
 
-        offset_v = vvec_or0 + self.p.vector.getOwnershipRange()[0]
+        offset_v = vvec_or0 + self.p.x.petsc_vec.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -1216,7 +1181,7 @@ class FluidmechanicsProblem(problem_base):
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
-        iset_p = PETSc.IS().createStride(self.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+        iset_p = PETSc.IS().createStride(self.p.x.petsc_vec.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
             ilist = [iset_v, iset_p, iset_r]
@@ -1390,7 +1355,7 @@ class FluidmechanicsProblem(problem_base):
                 func = list(m.keys())[0]
                 self.io.readfunction(func, file)
                 sc = m['scale']
-                if sc != 1.0: func.vector.scale(sc)
+                if sc != 1.0: func.x.petsc_vec.scale(sc)
 
 
     def evaluate_post_solve(self, t, N):
@@ -1513,13 +1478,13 @@ class FluidmechanicsSolver(solver_base):
             self.solnln.newton(tprestr)
 
             # update uf_pre
-            self.pb.ki.prestress_update(self.pb.prestress_dt, self.pb.v.vector)
+            self.pb.ki.prestress_update(self.pb.prestress_dt, self.pb.v.x.petsc_vec)
             utilities.print_prestress('updt', self.pb.comm)
 
             # update fluid velocity: v_old <- v
             if self.pb.prestress_kinetic!='none':
-                self.pb.v_old.vector.axpby(1.0, 0.0, self.pb.v.vector)
-                self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                self.pb.v_old.x.petsc_vec.axpby(1.0, 0.0, self.pb.v.x.petsc_vec)
+                self.pb.v_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             wt = time.time() - wts
 
@@ -1545,10 +1510,10 @@ class FluidmechanicsSolver(solver_base):
             os._exit(0)
 
         # reset state
-        self.pb.v.vector.set(0.0)
-        self.pb.v.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.pb.v_old.vector.set(0.0)
-        self.pb.v_old.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.v.x.petsc_vec.set(0.0)
+        self.pb.v.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.pb.v_old.x.petsc_vec.set(0.0)
+        self.pb.v_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
         # reset PTC flag to what it was
         if self.pb.prestress_ptc:

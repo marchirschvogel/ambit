@@ -127,18 +127,18 @@ class SolidmechanicsFlow0DProblem(problem_base):
         if self.coupling_type == 'monolithic_lagrange':
             if self.pbs.incompressible_2field:
                 is_ghosted = [1, 1, 0]
-                return [self.pbs.u.vector, self.pbs.p.vector, self.LM], is_ghosted
+                return [self.pbs.u.x.petsc_vec, self.pbs.p.x.petsc_vec, self.LM], is_ghosted
             else:
                 is_ghosted = [1, 0]
-                return [self.pbs.u.vector, self.LM], is_ghosted
+                return [self.pbs.u.x.petsc_vec, self.LM], is_ghosted
 
         if self.coupling_type == 'monolithic_direct':
             if self.pbs.incompressible_2field:
                 is_ghosted = [1, 1, 0]
-                return [self.pbs.u.vector, self.pbs.p.vector, self.pb0.s], is_ghosted
+                return [self.pbs.u.x.petsc_vec, self.pbs.p.x.petsc_vec, self.pb0.s], is_ghosted
             else:
                 is_ghosted = [1, 0]
-                return [self.pbs.u.vector, self.pb0.s], is_ghosted
+                return [self.pbs.u.x.petsc_vec, self.pb0.s], is_ghosted
 
 
     # defines the monolithic coupling forms for 0D flow and solid mechanics
@@ -259,7 +259,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
                     growth_thresolds.append(ufl.as_ufl(0))
 
             growth_thres_proj = project(growth_thresolds, self.pbs.Vd_scalar, self.pbs.dx_, comm=self.comm)
-            self.pbs.growth_param_funcs['growth_thres'].vector.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            self.pbs.growth_param_funcs['growth_thres'].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             self.pbs.growth_param_funcs['growth_thres'].interpolate(growth_thres_proj)
 
 
@@ -273,18 +273,18 @@ class SolidmechanicsFlow0DProblem(problem_base):
             utilities.print_status("Set growth triggers...", self.comm)
             time.sleep(1)
 
-            self.pbs.u_set.vector.axpby(1.0, 0.0, self.pbs.u.vector)
-            self.pbs.u_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pbs.u_set.x.petsc_vec.axpby(1.0, 0.0, self.pbs.u.x.petsc_vec)
+            self.pbs.u_set.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
             if self.pbs.incompressible_2field:
-                self.pbs.p_set.vector.axpby(1.0, 0.0, self.pbs.p.vector)
-                self.pbs.p_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                self.pbs.p_set.x.petsc_vec.axpby(1.0, 0.0, self.pbs.p.x.petsc_vec)
+                self.pbs.p_set.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-            self.pbs.tau_a_set.vector.axpby(1.0, 0.0, self.pbs.tau_a.vector)
-            self.pbs.tau_a_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            self.pbs.tau_a_set.x.petsc_vec.axpby(1.0, 0.0, self.pbs.tau_a.x.petsc_vec)
+            self.pbs.tau_a_set.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             if self.pbs.have_frank_starling:
-                self.pbs.amp_old_set.vector.axpby(1.0, 0.0, self.pbs.amp_old.vector)
-                self.pbs.amp_old_set.vector.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+                self.pbs.amp_old_set.x.petsc_vec.axpby(1.0, 0.0, self.pbs.amp_old.x.petsc_vec)
+                self.pbs.amp_old_set.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
             self.pb0.s_set.axpby(1.0, 0.0, self.pb0.s)
 
@@ -552,7 +552,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             fem.petsc.assemble_vector(self.k_us_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
             self.k_us_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             # set zeros at DBC entries
-            fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.vector, scale=0.0)
+            fem.set_bc(self.k_us_vec[i], self.pbs.bc.dbcs, x0=self.pbs.u.x.petsc_vec, scale=0.0)
 
         # set columns
         for i in range(len(self.col_ids)):
@@ -582,22 +582,22 @@ class SolidmechanicsFlow0DProblem(problem_base):
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            uvec_or0 = self.pbs.u.vector.getOwnershipRange()[0]
-            uvec_ls = self.pbs.u.vector.getLocalSize()
+            uvec_or0 = self.pbs.u.x.petsc_vec.getOwnershipRange()[0]
+            uvec_ls = self.pbs.u.x.petsc_vec.getLocalSize()
 
         if self.coupling_type == 'monolithic_direct':   rvec = self.pb0.s
         if self.coupling_type == 'monolithic_lagrange': rvec = self.LM
 
         offset_u = uvec_or0 + rvec.getOwnershipRange()[0]
-        if self.pbs.incompressible_2field: offset_u += self.pbs.p.vector.getOwnershipRange()[0]
+        if self.pbs.incompressible_2field: offset_u += self.pbs.p.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
             offset_p = offset_u + uvec_ls
-            iset_p = PETSc.IS().createStride(self.pbs.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+            iset_p = PETSc.IS().createStride(self.pbs.p.x.petsc_vec.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
         if self.pbs.incompressible_2field:
-            offset_s = offset_p + self.pbs.p.vector.getLocalSize()
+            offset_s = offset_p + self.pbs.p.x.petsc_vec.getLocalSize()
         else:
             offset_s = offset_u + uvec_ls
 

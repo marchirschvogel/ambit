@@ -26,7 +26,7 @@ def test_main():
                             'mesh_domain'           : basepath+'/input/artseg-fsi-hex-quad_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-fsi-hex-quad_boundary.xdmf',
                             'results_to_write'      : [['displacement','velocity'], [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']]],
-                            'domain_ids_solid'      : [1], 
+                            'domain_ids_solid'      : [1],
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
                             'simname'               : 'fsi_taylorhood_artseg'}
@@ -54,10 +54,10 @@ def test_main():
     FEM_PARAMS_FLUID     = {'order_vel'             : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5}
-    
+
     FEM_PARAMS_ALE       = {'order_disp'            : 2,
                             'quad_degree'           : 5}
-    
+
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
                             'fsi_governing_type'    : 'fluid_governed'} # solid_governed, fluid_governed
 
@@ -66,7 +66,7 @@ def test_main():
 
     MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                       'inertia' : {'rho' : 1.025e-6}}}
-    
+
     MATERIALS_ALE        = {'MAT1' : {'linelast' : {'Emod' : 2.0, 'nu' : 0.1}}}
 
 
@@ -112,7 +112,7 @@ def test_main():
     u_corr[0] = 1.2538881876233117E-04 # x
     u_corr[1] = 1.2538882125343086E-04 # y
     u_corr[2] = 0.0 # z
-    
+
     v_corr[0] = 2.2544983563815716E-03 # x
     v_corr[1] = 2.2544983916726047E-03 # y
     v_corr[2] = 0.0 # z

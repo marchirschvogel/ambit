@@ -59,7 +59,7 @@ Documentation can be viewed at https://ambit.readthedocs.io
 In order to use Ambit, you need to [install FEniCSx](https://github.com/FEniCS/dolfinx#installation)
 
 Latest Ambit-compatible dolfinx release version: v0.8.0\
-Latest tested Ambit-compatible dolfinx development version dating to 28 Aug 2024
+Latest tested Ambit-compatible dolfinx development version dating to 6 Nov 2024
 
 Ambit can then be installed using pip, either the current release
 ```
@@ -76,7 +76,7 @@ Alternatively, you can pull a pre-built Docker image with FEniCSx and Ambit inst
 docker pull ghcr.io/marchirschvogel/ambit:latest
 ```
 
-If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit (including the dolfinx mixed branch):
+If a Docker image for development is desired, the following image contains all dependencies needed to install and run Ambit:
 ```
 docker pull ghcr.io/marchirschvogel/ambit:devenv
 ```
@@ -96,3 +96,8 @@ Build your input file and run it with the command
 ```
 mpiexec -n <NUMBER_OF_CORES> python3 your_file.py
 ```
+
+Papers explicitly using and citing Ambit:
+
+* Hirschvogel M, Bonini M, Balmus M, Nordsletten D. **Effective Block Preconditioners for Fluid Dynamics Coupled to Reduced Models of a Non-Local Nature.** *Computer Methods in Applied Mechanics and Engineering,* 2024, *Accepted*
+* Aróstica R, Nolte D, Brown A, Gebauer A, Karabelas E, Jilberto J, Salvador M, Bucelli M, Piersanti R, Osouli K, Augustin C, Finsberg H, Shi L, Hirschvogel M, Pfaller M, Africa PC, Gsell M, Marsden A, Nordsletten D, Regazzoni F, Plank G, Sundnes J, Dede' L, Peirlinck M, Vedula V, Wall WA, Bertoglio C. **A software benchmark for cardiac elastodynamics.** *Computer Methods in Applied Mechanics and Engineering,* 2024, *Accepted*

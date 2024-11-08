@@ -97,7 +97,7 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         if self.pbf.num_dupl > 1: is_ghosted = [1, 2, 0]
         else:                     is_ghosted = [1, 1, 0]
-        varlist = [self.pbf.v.vector, self.pbf.p.vector, self.LM]
+        varlist = [self.pbf.v.x.petsc_vec, self.pbf.p.x.petsc_vec, self.LM]
 
         return varlist, is_ghosted
 
@@ -398,7 +398,7 @@ class FluidmechanicsConstraintProblem(problem_base):
             fem.petsc.assemble_vector(self.k_vs_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
             self.k_vs_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             # set zeros at DBC entries
-            fem.set_bc(self.k_vs_vec[i], self.pbf.bc.dbcs, x0=self.pbf.v.vector, scale=0.0)
+            fem.set_bc(self.k_vs_vec[i], self.pbf.bc.dbcs, x0=self.pbf.v.x.petsc_vec, scale=0.0)
 
         # set columns
         for i in range(len(self.col_ids)):
@@ -437,10 +437,10 @@ class FluidmechanicsConstraintProblem(problem_base):
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
         else:
-            vvec_or0 = self.pbf.v.vector.getOwnershipRange()[0]
-            vvec_ls = self.pbf.v.vector.getLocalSize()
+            vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
+            vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
 
-        offset_v = vvec_or0 + self.pbf.p.vector.getOwnershipRange()[0] + self.LM.getOwnershipRange()[0]
+        offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.LM.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
@@ -448,9 +448,9 @@ class FluidmechanicsConstraintProblem(problem_base):
             iset_v = iset_v.difference(iset_r) # subtract
 
         offset_p = offset_v + vvec_ls
-        iset_p = PETSc.IS().createStride(self.pbf.p.vector.getLocalSize(), first=offset_p, step=1, comm=self.comm)
+        iset_p = PETSc.IS().createStride(self.pbf.p.x.petsc_vec.getLocalSize(), first=offset_p, step=1, comm=self.comm)
 
-        offset_s = offset_p + self.pbf.p.vector.getLocalSize()
+        offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
         iset_s = PETSc.IS().createStride(self.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         if isoptions['rom_to_new']:
