@@ -101,7 +101,7 @@ mpiexec -n <NUMBER_OF_CORES> python3 your_file.py
 
 Software paper:
 
-* Hirschvogel M. **Ambit -- A FEniCS-based cardiovascular multi-physics solver.** *Journal of Open Source Software,* 9(93), 2024, DOI: 10.21105/joss.05744
+* Hirschvogel M. **Ambit – A FEniCS-based cardiovascular multi-physics solver.** *Journal of Open Source Software,* 9(93), 2024, DOI: 10.21105/joss.05744
 
 Papers explicitly using and citing Ambit:
 
