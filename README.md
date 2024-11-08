@@ -97,6 +97,12 @@ Build your input file and run it with the command
 mpiexec -n <NUMBER_OF_CORES> python3 your_file.py
 ```
 
+### References ###
+
+Software paper:
+
+* Hirschvogel M. **Ambit -- A FEniCS-based cardiovascular multi-physics solver.** *Journal of Open Source Software,* 9(93), 2024, DOI: 10.21105/joss.05744
+
 Papers explicitly using and citing Ambit:
 
 * Hirschvogel M, Bonini M, Balmus M, Nordsletten D. **Effective Block Preconditioners for Fluid Dynamics Coupled to Reduced Models of a Non-Local Nature.** *Computer Methods in Applied Mechanics and Engineering,* 2024, *Accepted*
