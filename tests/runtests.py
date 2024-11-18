@@ -85,16 +85,16 @@ if category=='fluid' or category=='all':
     errs['test_fluid_p1p1_stab_cylinder_valve 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fluid_p1p1_stab_cylinder_valve.py'])
     errs['test_fluid_p1p1_stab_cylinder_valve 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fluid_p1p1_stab_cylinder_valve.py'])
 
-#if category=='fsi' or category=='all':
-    #errs['test_fsi_taylorhood_artseg 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fsi_taylorhood_artseg.py'])
-    #errs['test_fsi_taylorhood_artseg 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_fsi_taylorhood_artseg.py'])
+if category=='fsi' or category=='all':
+    errs['test_fsi_taylorhood_artseg 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fsi_taylorhood_artseg.py'])
+    errs['test_fsi_taylorhood_artseg 3'] = subprocess.call(['mpiexec', '-n', '3', 'python3', 'test_fsi_taylorhood_artseg.py'])
 
-    #errs['test_fsi_p1p1_stab_artseg 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
-    #errs['test_fsi_p1p1_stab_artseg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
-    #errs['test_fsi_p1p1_stab_artseg 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py', str(4)])
+    errs['test_fsi_p1p1_stab_artseg 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
+    errs['test_fsi_p1p1_stab_artseg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py'])
+    errs['test_fsi_p1p1_stab_artseg 2 restart'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_p1p1_stab_artseg.py', str(4)])
 
-#if category=='fsi_flow0d' or category=='all':
-    #errs['test_fsi_flow0d_p1p1_stab_artseg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_flow0d_p1p1_stab_artseg.py'])
+if category=='fsi_flow0d' or category=='all':
+    errs['test_fsi_flow0d_p1p1_stab_artseg 2'] = subprocess.call(['mpiexec', '-n', '2', 'python3', 'test_fsi_flow0d_p1p1_stab_artseg.py'])
 
 if category=='fluid_flow0d' or category=='all':
     errs['test_fluid_flow0d_monolagr_taylorhood_cylinder 1'] = subprocess.call(['mpiexec', '-n', '1', 'python3', 'test_fluid_flow0d_monolagr_taylorhood_cylinder.py'])

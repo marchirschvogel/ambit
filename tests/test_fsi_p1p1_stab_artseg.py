@@ -14,11 +14,10 @@ import pytest
 
 @pytest.mark.fsi
 @pytest.mark.fluid_solid
-@pytest.mark.skip(reason="Currently not tested! Waiting for mixed domain functionality to be working in latest dolfinx version...")
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
-    
+
     # reads in restart step from the command line
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
@@ -33,7 +32,7 @@ def test_main():
                             'mesh_domain'           : basepath+'/input/artseg-fsi-tet-lin_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/artseg-fsi-tet-lin_boundary.xdmf',
                             'results_to_write'      : [['displacement','velocity'], [['fluiddisplacement','velocity','pressure'],['aledisplacement','alevelocity']]],
-                            'domain_ids_solid'      : [1], 
+                            'domain_ids_solid'      : [1],
                             'domain_ids_fluid'      : [2],
                             'surface_ids_interface' : [1],
                             'simname'               : 'fsi_p1p1_stab_artseg'}
@@ -64,10 +63,10 @@ def test_main():
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : True, 'reduced_scheme' : True}}
-    
+
     FEM_PARAMS_ALE       = {'order_disp'            : 1,
                             'quad_degree'           : 5}
-    
+
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1], 'type' : 'strong_dirichlet'}],
                             'fsi_governing_type'    : 'solid_governed'} # solid_governed, fluid_governed
 
@@ -77,7 +76,7 @@ def test_main():
 
     MATERIALS_FLUID      = {'MAT1' : {'newtonian' : {'mu' : 4.0e-6},
                                       'inertia' : {'rho' : 1.025e-6}}}
-    
+
     MATERIALS_ALE        = {'MAT1' : {'linelast' : {'Emod' : 2.0, 'nu' : 0.1}}}
 
 
@@ -91,17 +90,17 @@ def test_main():
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
-    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}]}
+    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,4], 'dir' : 'z', 'val' : 0.},
+                                            {'id' : [6], 'dir' : 'y', 'val' : 0.},
+                                            {'id' : [8], 'dir' : 'x', 'val' : 0.}]}
 
-    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
-                             'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [3,5], 'dir' : 'normal_cur', 'curve' : 1}],
+                             'dirichlet' : [{'id' : [7], 'dir' : 'y', 'val' : 0.},
+                                            {'id' : [9], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    BC_DICT_ALE          = { 'dirichlet' : [{'id' : [3,5], 'dir' : 'z', 'val' : 0.},
+                                            {'id' : [7], 'dir' : 'y', 'val' : 0.},
+                                            {'id' : [9], 'dir' : 'x', 'val' : 0.}] }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
@@ -122,7 +121,7 @@ def test_main():
     u_corr[0] = 1.4135667472799776E-04 # x
     u_corr[1] = 1.4218659625759257E-04 # y
     u_corr[2] = -1.7638258092165119E-07 # z
-    
+
     v_corr[0] = 2.8005565683996473E-03 # x
     v_corr[1] = 2.8176524733115717E-03 # y
     v_corr[2] = -3.4904136083075215E-06 # z

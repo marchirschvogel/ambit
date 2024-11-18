@@ -14,7 +14,6 @@ import pytest
 
 @pytest.mark.fsi
 @pytest.mark.fluid_solid
-@pytest.mark.skip(reason="Currently not tested! Waiting for mixed domain functionality to be working in latest dolfinx version...")
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
@@ -80,17 +79,17 @@ def test_main():
             return (0.5*(-(pinfl-p0))*(1.-np.cos(np.pi*t/t_ramp)) + (-p0)) * (t<t_ramp) + (-pinfl)*(t>=t_ramp)
 
 
-    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}]}
+    BC_DICT_SOLID        = { 'dirichlet' : [{'id' : [2,4], 'dir' : 'z', 'val' : 0.},
+                                            {'id' : [6], 'dir' : 'y', 'val' : 0.},
+                                            {'id' : [8], 'dir' : 'x', 'val' : 0.}]}
 
-    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [2,3], 'dir' : 'normal_cur', 'curve' : 1}],
-                             'dirichlet' : [{'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    BC_DICT_FLUID        = { 'neumann' :   [{'id' : [3,5], 'dir' : 'normal_cur', 'curve' : 1}],
+                             'dirichlet' : [{'id' : [7], 'dir' : 'y', 'val' : 0.},
+                                            {'id' : [9], 'dir' : 'x', 'val' : 0.}] }
 
-    BC_DICT_ALE          = { 'dirichlet' : [{'id' : [2,3], 'dir' : 'z', 'val' : 0.},
-                                            {'id' : [4], 'dir' : 'y', 'val' : 0.},
-                                            {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
+    BC_DICT_ALE          = { 'dirichlet' : [{'id' : [3,5], 'dir' : 'z', 'val' : 0.},
+                                            {'id' : [7], 'dir' : 'y', 'val' : 0.},
+                                            {'id' : [9], 'dir' : 'x', 'val' : 0.}] }
 
 
     # problem setup

@@ -51,10 +51,11 @@ class AleProblem(problem_base):
         try: self.domain_ids = self.io.io_params['domain_ids_fluid']
         except: self.domain_ids = np.arange(1,self.num_domains+1)
 
-        self.dx, self.bmeasures = self.io.create_integration_measures(self.io.mesh, [self.io.mt_d,self.io.mt_b1,self.io.mt_b2])
-        # should go once moved completely to new dolfinx...
+        # TODO: Find nicer solution here...
         if self.pbase.problem_type=='fsi' or self.pbase.problem_type=='fsi_flow0d':
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+        else:
+            self.dx, self.bmeasures = self.io.create_integration_measures(self.io.mesh, [self.io.mt_d,self.io.mt_b1,self.io.mt_b2])
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
