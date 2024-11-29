@@ -1,5 +1,5 @@
-# Ambit-compatible dolfinx Docker image (6 Nov 2024)
-FROM ghcr.io/fenics/dolfinx/dolfinx@sha256:062e6d47b6a9df06e8ba4d4713cfa22223af34395feeb3227268db882ba372f0
+# Ambit-compatible dolfinx Docker image (29 Nov 2024)
+FROM ghcr.io/fenics/dolfinx/dolfinx@sha256:6bed905ff94a1810707ec6d70f34adb52d2157d22fa5505b40760a126cc31f44
 
 LABEL org.opencontainers.image.source=https://github.com/marchirschvogel/ambit
 LABEL org.opencontainers.image.version=latest
