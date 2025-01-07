@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -172,32 +172,16 @@ class solver_nonlinear:
 
     def set_solver_params(self, solver_params):
 
-        try: self.maxiter = solver_params['maxiter']
-        except: self.maxiter = 25
+        self.maxiter = solver_params.get('maxiter', 25)
+        self.divcont = solver_params.get('divergence_continue', None)
+        self.PTC = solver_params.get('ptc', False)
+        self.k_PTC_initial = solver_params.get('k_ptc_initial', 0.1)
+        self.PTC_randadapt_range = solver_params.get('ptc_randadapt_range', [0.85, 1.35])
+        self.maxresval = solver_params.get('catch_max_res_value', 1e16)
+        self.direct_solver = solver_params.get('direct_solver', 'mumps')
+        self.iterative_solver = solver_params.get('iterative_solver', 'gmres')
 
-        try: self.divcont = solver_params['divergence_continue']
-        except: self.divcont = None
-
-        try: self.PTC = solver_params['ptc']
-        except: self.PTC = False
-
-        try: self.k_PTC_initial = solver_params['k_ptc_initial']
-        except: self.k_PTC_initial = 0.1
-
-        try: self.PTC_randadapt_range = solver_params['ptc_randadapt_range']
-        except: self.PTC_randadapt_range = [0.85, 1.35]
-
-        try: self.maxresval = solver_params['catch_max_res_value']
-        except: self.maxresval = 1e16
-
-        try: self.direct_solver = solver_params['direct_solver']
-        except: self.direct_solver = 'mumps'
-
-        try: self.iterative_solver = solver_params['iterative_solver']
-        except: self.iterative_solver = 'gmres'
-
-        try: precond_fields = solver_params['precond_fields']
-        except: precond_fields = [[]]
+        precond_fields = solver_params.get('precond_fields', [[]])
 
         self.precond_fields = [[]]*self.nprob
         for npr in range(self.nprob):
@@ -206,11 +190,8 @@ class solver_nonlinear:
             else:
                 self.precond_fields[npr] = precond_fields
 
-        try: self.fieldsplit_type = solver_params['fieldsplit_type']
-        except: self.fieldsplit_type = 'jacobi'
-
-        try: block_precond = solver_params['block_precond']
-        except: block_precond = 'fieldsplit'
+        self.fieldsplit_type = solver_params.get('fieldsplit_type', 'jacobi')
+        block_precond = solver_params.get('block_precond', 'fieldsplit')
 
         self.block_precond = [[]]*self.nprob
         for npr in range(self.nprob):
@@ -219,8 +200,7 @@ class solver_nonlinear:
             else:
                 self.block_precond[npr] = block_precond
 
-        try: petsc_options_ksp = solver_params['petsc_options_ksp']
-        except: petsc_options_ksp = None
+        petsc_options_ksp = solver_params.get('petsc_options_ksp', None)
 
         self.petsc_options_ksp = [[]]*self.nprob
         for npr in range(self.nprob):
@@ -229,20 +209,11 @@ class solver_nonlinear:
             else:
                 self.petsc_options_ksp[npr] = petsc_options_ksp
 
-        try: self.tol_lin_rel = solver_params['tol_lin_rel']
-        except: self.tol_lin_rel = 1e-5
-
-        try: self.tol_lin_abs = solver_params['tol_lin_abs']
-        except: self.tol_lin_abs = 1e-50
-
-        try: self.res_lin_monitor = solver_params['res_lin_monitor']
-        except: self.res_lin_monitor = 'rel'
-
-        try: self.maxliniter = solver_params['max_liniter']
-        except: self.maxliniter = 1000
-
-        try: self.lin_norm_type = solver_params['lin_norm_type']
-        except: self.lin_norm_type = 'unpreconditioned'
+        self.tol_lin_rel = solver_params.get('tol_lin_rel', 1e-5)
+        self.tol_lin_abs = solver_params.get('tol_lin_abs', 1e-50)
+        self.res_lin_monitor = solver_params.get('res_lin_monitor', 'rel')
+        self.maxliniter = solver_params.get('max_liniter', 1000)
+        self.lin_norm_type = solver_params.get('lin_norm_type', 'unpreconditioned')
 
         # cf. https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/petsc4py.PETSc.KSP.NormType-class.html
         if self.lin_norm_type=='preconditioned':
@@ -252,11 +223,9 @@ class solver_nonlinear:
         else:
             raise ValueError("Unknown lin_norm_type option!")
 
-        try: self.print_liniter_every = solver_params['print_liniter_every']
-        except: self.print_liniter_every = 1
+        self.print_liniter_every = solver_params.get('print_liniter_every', 1)
+        self.iset_options = solver_params.get('indexset_options', {})
 
-        try: self.iset_options = solver_params['indexset_options']
-        except: self.iset_options = {}
         is_option_keys = ['lms_to_p','lms_to_v','rom_to_new','ale_to_v']
         # revert to defaults if not set by the user
         for k in is_option_keys:
@@ -269,17 +238,10 @@ class solver_nonlinear:
 
         self.iset = [[]]*self.nprob
 
-        try: self.print_local_iter = solver_params['print_local_iter']
-        except: self.print_local_iter = False
-
-        try: self.rebuild_prec_every_it = solver_params['rebuild_prec_every_it']
-        except: self.rebuild_prec_every_it = 1
-
-        try: self.tol_res_local = solver_params['tol_res_local']
-        except: self.tol_res_local = 1e-10
-
-        try: self.tol_inc_local = solver_params['tol_inc_local']
-        except: self.tol_inc_local = 1e-10
+        self.print_local_iter = solver_params.get('print_local_iter', False)
+        self.rebuild_prec_every_it = solver_params.get('rebuild_prec_every_it', 1)
+        self.tol_res_local = solver_params.get('tol_res_local', 1e-10)
+        self.tol_inc_local = solver_params.get('tol_inc_local', 1e-10)
 
         self.solvetype = [[]]*self.nprob
         for npr in range(self.nprob):
@@ -433,11 +395,9 @@ class solver_nonlinear:
                         for n in range(nsets):
 
                             if self.precond_fields[npr][n]['prec'] == 'amg':
-                                try: solvetype = self.precond_fields[npr][n]['solve']
-                                except: solvetype = "preonly"
+                                solvetype = self.precond_fields[npr][n].get('solve', 'preonly')
                                 ksp_fields[n].setType(solvetype)
-                                try: amgtype = self.precond_fields[npr][n]['amgtype']
-                                except: amgtype = "hypre"
+                                amgtype = self.precond_fields[npr][n].get('amgtype', 'hypre')
                                 ksp_fields[n].getPC().setType(amgtype)
                                 if amgtype=="hypre":
                                     ksp_fields[n].getPC().setHYPREType("boomeramg")
@@ -1042,11 +1002,9 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         self.ptype = self.pb.problem_physics
 
-        try: self.maxiter = solver_params['maxiter']
-        except: self.maxiter = 25
+        self.maxiter = solver_params.get('maxiter', 25)
 
-        try: self.direct_solver = solver_params['direct_solver']
-        except: self.direct_solver = 'mumps'
+        self.direct_solver = solver_params.get('direct_solver', 'mumps')
 
         self.tolres = solver_params['tol_res']
         self.tolinc = solver_params['tol_inc']

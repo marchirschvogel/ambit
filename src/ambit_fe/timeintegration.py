@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -20,8 +20,7 @@ class timeintegration():
 
     def __init__(self, time_params, dt, Nmax, time_curves=None, t_init=0., dim=3, comm=None):
 
-        try: self.timint = time_params['timint']
-        except: self.timint = 'static'
+        self.timint = time_params.get('timint', 'static')
 
         self.dt = dt
         self.numstep = Nmax
@@ -29,8 +28,7 @@ class timeintegration():
         self.time_curves = time_curves
         self.t_init = t_init
 
-        try: self.eval_nonlin_terms = time_params['eval_nonlin_terms']
-        except: self.eval_nonlin_terms = 'trapezoidal'
+        self.eval_nonlin_terms = time_params.get('eval_nonlin_terms', 'trapezoidal')
 
         self.dim = dim
 
@@ -334,8 +332,7 @@ class timeintegration_solid(timeintegration):
 
             self.theta_ost = time_params['theta_ost']
 
-        try: self.incompressible_2field = fem_params['incompressible_2field']
-        except: self.incompressible_2field = False
+        self.incompressible_2field = fem_params.get('incompressible_2field', False)
 
 
     def set_acc_vel(self, u, u_old, v_old, a_old):

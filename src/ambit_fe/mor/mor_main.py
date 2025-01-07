@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -27,72 +27,43 @@ class ModelOrderReduction():
 
         ioparams.check_params_rom(self.params)
 
-        try: self.modes_from_files = self.params['modes_from_files']
-        except: self.modes_from_files = False
+        self.modes_from_files = self.params.get('modes_from_files', False)
 
         if not self.modes_from_files:
-
             self.hdmfilenames = self.params['hdmfilenames']
             self.num_hdms = len(self.hdmfilenames)
             self.numsnapshots = self.params['numsnapshots']
-
-            try: self.snapshotincr = self.params['snapshotincr']
-            except: self.snapshotincr = 1
-
-            try: self.snapshotoffset = self.params['snapshotoffset']
-            except: self.snapshotoffset = 0
-
-            try: self.print_eigenproblem = self.params['print_eigenproblem']
-            except: self.print_eigenproblem = False
-
-            try: self.eigenvalue_cutoff = self.params['eigenvalue_cutoff']
-            except: self.eigenvalue_cutoff = 0.0
-
-            try: self.pod_only = self.params['pod_only']
-            except: self.pod_only = False
+            self.snapshotincr = self.params.get('snapshotincr', 1)
+            self.snapshotoffset = self.params.get('snapshotoffset', 0)
+            self.print_eigenproblem = self.params.get('print_eigenproblem', False)
+            self.eigenvalue_cutoff = self.params.get('eigenvalue_cutoff', 0.)
+            self.pod_only = self.params.get('pod_only', False)
         else:
             self.num_hdms, self.numsnapshots = len(self.modes_from_files), 1
             self.pod_only = False
 
-        try: self.numredbasisvec = self.params['numredbasisvec']
-        except: self.numredbasisvec = self.numsnapshots
-
-        try: self.orthogonalize_rom_basis = self.params['orthogonalize_rom_basis']
-        except: self.orthogonalize_rom_basis = False
-
-        try: self.surface_rom = self.params['surface_rom']
-        except: self.surface_rom = []
-
-        try: self.filetype = self.params['filetype']
-        except: self.filetype = 'id_val'
-
-        try: self.write_pod_modes = self.params['write_pod_modes']
-        except: self.write_pod_modes = False
+        self.numredbasisvec = self.params.get('numredbasisvec', self.numsnapshots)
+        self.orthogonalize_rom_basis = self.params.get('orthogonalize_rom_basis', False)
+        self.surface_rom = self.params.get('surface_rom', [])
+        self.filetype = self.params.get('filetype', 'id_val')
+        self.write_pod_modes = self.params.get('write_pod_modes', False)
 
         try: self.redbasisvec_indices = self.params['redbasisvec_indices']
         except:
             self.redbasisvec_indices = []
             for i in range(self.numredbasisvec): self.redbasisvec_indices.append(i)
 
-        try: self.regularizations = self.params['regularizations']
-        except: self.regularizations = []
-
-        try: self.regularizations_integ = self.params['regularizations_integ']
-        except: self.regularizations_integ = []
-
-        try: self.regularizations_deriv = self.params['regularizations_deriv']
-        except: self.regularizations_deriv = []
+        self.regularizations = self.params.get('regularizations', [])
+        self.regularizations_integ = self.params.get('regularizations_integ', [])
+        self.regularizations_deriv = self.params.get('regularizations_deriv', [])
 
         if bool(self.regularizations) or bool(self.regularizations_integ) or bool(self.regularizations_deriv):
             self.have_regularization_terms = True
         else:
             self.have_regularization_terms = False
 
-        try: self.partitions = self.params['partitions']
-        except: self.partitions = []
-
-        try: self.exclude_from_snap = self.params['exclude_from_snap']
-        except: self.exclude_from_snap = []
+        self.partitions = self.params.get('partitions', [])
+        self.exclude_from_snap = self.params.get('exclude_from_snap', [])
 
         # # mode partitions are either determined by the mode files or partition files
         # if bool(self.modes_from_files):
@@ -103,8 +74,7 @@ class ModelOrderReduction():
         else:
             self.num_partitions = 1
 
-        try: self.numredbasisvec_partition = self.params['numredbasisvec_partition']
-        except: self.numredbasisvec_partition = [self.numredbasisvec]*self.num_partitions
+        self.numredbasisvec_partition = self.params.get('numredbasisvec_partition', [self.numredbasisvec]*self.num_partitions)
 
         # some sanity checks
         if not self.modes_from_files:

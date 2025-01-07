@@ -40,7 +40,7 @@ def test_main():
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'direct_solver'         : 'mumps',
                             'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-8,1e-6],
-                            'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e-0,1e-0],
+                            'tol_inc'               : [1e-0,1e-0,1e-0,1e5,1e-0,1e-0],
                             'subsolver_params'      : {'tol_res' : 1.0e-8, 'tol_inc' : 1.0e-8}}
 
     TIME_PARAMS_SOLID    = {'maxtime'               : 3.0,

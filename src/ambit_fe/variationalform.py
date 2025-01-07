@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -141,12 +141,8 @@ class variationalform_base:
         n0n0 = ufl.outer(self.n0,self.n0)
 
         model = params['model']
-
-        try: material = params['material']
-        except: material = 'isoexp'
-
-        try: active = params['active_stress']
-        except: active = None
+        material = params.get('material', 'isoexp')
+        active = params.get('active_stress', None)
 
         if active is not None:
             tau = ivar['tau_a']
@@ -227,10 +223,8 @@ class variationalform_base:
         Cmoddot_ = ufl.variable(Cmoddot)
 
         a_0 = params['a_0']
-        try: eta = params['eta']
-        except: eta = 0.
-        try: rho0 = params['rho0']
-        except: rho0 = 0.
+        eta = params.get('eta', 0.)
+        rho0 = params.get('rho0', 0.)
 
         # exponential isotropic strain energy
         if material == 'isoexp':

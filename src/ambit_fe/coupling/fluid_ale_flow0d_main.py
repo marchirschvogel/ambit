@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -39,14 +39,9 @@ class FluidmechanicsAleFlow0DProblem(FluidmechanicsAleProblem,problem_base):
 
         self.problem_physics = 'fluid_ale_flow0d'
 
-        try: self.coupling_fluid_ale = coupling_params_fluid_ale['coupling_fluid_ale']
-        except: self.coupling_fluid_ale = {}
-
-        try: self.coupling_ale_fluid = coupling_params_fluid_ale['coupling_ale_fluid']
-        except: self.coupling_ale_fluid = {}
-
-        try: self.coupling_strategy = coupling_params_fluid_ale['coupling_strategy']
-        except: self.coupling_strategy = 'monolithic'
+        self.coupling_fluid_ale = coupling_params_fluid_ale.get('coupling_fluid_ale', {})
+        self.coupling_ale_fluid = coupling_params_fluid_ale.get('coupling_ale_fluid', {})
+        self.coupling_strategy = coupling_params_fluid_ale.get('coupling_strategy', 'monolithic')
 
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
         self.have_condensed_variables = False

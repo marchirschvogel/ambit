@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -385,12 +385,8 @@ class constitutive:
         grfnc = growthfunction(theta_,self.I)
 
         thres = self.gandrparams['growth_thres']
-
-        try: omega = self.gandrparams['thres_tol']
-        except: omega = 0
-
-        try: reduc = self.gandrparams['trigger_reduction']
-        except: reduc = 1
+        omega = self.gandrparams.get('thres_tol', 0.)
+        reduc = self.gandrparams.get('trigger_reduction', 1.)
 
         # threshold should not be lower than specified (only relevant for multiscale analysis, where threshold is set element-wise)
         threshold = ufl.conditional(ufl.gt(thres,self.gandrparams['growth_thres']), (1.+omega)*thres, self.gandrparams['growth_thres'])

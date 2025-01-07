@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -35,10 +35,8 @@ class coronary_circ_ZCRp_CRd():
         self.C_cord_sys = params['C_cord_sys']
         self.R_cord_sys = params['R_cord_sys']
 
-        try: self.V_corp_sys_u = params['V_corp_sys_u']
-        except: self.V_corp_sys_u = 0
-        try: self.V_cord_sys_u = params['V_cord_sys_u']
-        except: self.V_cord_sys_u = 0
+        self.V_corp_sys_u = params.get('V_corp_sys_u', 0.)
+        self.V_cord_sys_u = params.get('V_cord_sys_u', 0.)
 
         self.ndcor = 4
 
@@ -137,16 +135,10 @@ class coronary_circ_ZCRp_CRd_lr():
         self.C_cord_sys_r = params['C_cord_sys_r']
         self.R_cord_sys_r = params['R_cord_sys_r']
 
-
-        try: self.V_corp_sys_l_u = params['V_corp_sys_l_u']
-        except: self.V_corp_sys_l_u = 0
-        try: self.V_cord_sys_l_u = params['V_cord_sys_l_u']
-        except: self.V_cord_sys_l_u = 0
-
-        try: self.V_corp_sys_r_u = params['V_corp_sys_r_u']
-        except: self.V_corp_sys_r_u = 0
-        try: self.V_cord_sys_r_u = params['V_cord_sys_r_u']
-        except: self.V_cord_sys_r_u = 0
+        self.V_corp_sys_l_u = params.get('V_corp_sys_l_u', 0.)
+        self.V_cord_sys_l_u = params.get('V_cord_sys_l_u', 0.)
+        self.V_corp_sys_r_u = params.get('V_corp_sys_r_u', 0.)
+        self.V_cord_sys_r_u = params.get('V_cord_sys_r_u', 0.)
 
         self.ndcor = 9
 

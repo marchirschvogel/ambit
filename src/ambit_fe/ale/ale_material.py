@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -23,10 +23,8 @@ class materiallaw:
     def diffusion(self, params):
 
         D = params['D']
-        try: scale_det = params['scale_det']
-        except: scale_det = False
-        try: scale_exp = params['scale_exp']
-        except: scale_exp = 1.
+        scale_det = params.get('scale_det', False)
+        scale_exp = params.get('scale_exp', 1.)
 
         if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
@@ -37,10 +35,8 @@ class materiallaw:
     def diffusion_rate(self, params):
 
         D = params['D']
-        try: scale_det = params['scale_det']
-        except: scale_det = False
-        try: scale_exp = params['scale_exp']
-        except: scale_exp = 1.
+        scale_det = params.get('scale_det', False)
+        scale_exp = params.get('scale_exp', 1.)
 
         if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
@@ -51,10 +47,8 @@ class materiallaw:
     def diffusion_sym(self, params):
 
         D = params['D']
-        try: scale_det = params['scale_det']
-        except: scale_det = False
-        try: scale_exp = params['scale_exp']
-        except: scale_exp = 1.
+        scale_det = params.get('scale_det', False)
+        scale_exp = params.get('scale_exp', 1.)
 
         if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
@@ -65,10 +59,8 @@ class materiallaw:
     def diffusion_rate_sym(self, params):
 
         D = params['D']
-        try: scale_det = params['scale_det']
-        except: scale_det = False
-        try: scale_exp = params['scale_exp']
-        except: scale_exp = 1.
+        scale_det = params.get('scale_det', False)
+        scale_exp = params.get('scale_exp', 1.)
 
         if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
@@ -80,10 +72,8 @@ class materiallaw:
 
         Emod = params['Emod']
         nu = params['nu']
-        try: scale_det = params['scale_det']
-        except: scale_det = False
-        try: scale_exp = params['scale_exp']
-        except: scale_exp = 1.
+        scale_det = params.get('scale_det', False)
+        scale_exp = params.get('scale_exp', 1.)
 
         if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
@@ -101,10 +91,8 @@ class materiallaw:
 
         # shear modulus and Poisson's ratio
         mu, nu = params['mu'], params['nu']
-        try: scale_det = params['scale_det']
-        except: scale_det = False
-        try: scale_exp = params['scale_exp']
-        except: scale_exp = 1.
+        scale_det = params.get('scale_det', False)
+        scale_exp = params.get('scale_exp', 1.)
 
         if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.
@@ -125,10 +113,8 @@ class materiallaw:
     def exponential(self, params):
 
         a_0, b_0, kappa = params['a_0'], params['b_0'], params['kappa']
-        try: scale_det = params['scale_det']
-        except: scale_det = False
-        try: scale_exp = params['scale_exp']
-        except: scale_exp = 1.
+        scale_det = params.get('scale_det', False)
+        scale_exp = params.get('scale_exp', 1.)
 
         if scale_det: fac = (1./self.jac_det)**scale_exp
         else:         fac = 1.

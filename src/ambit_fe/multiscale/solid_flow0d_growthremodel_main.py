@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -30,14 +30,11 @@ class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(problem_base):
 
         self.N_cycles = multiscale_params['numcycles']
 
-        try: self.write_checkpoints = multiscale_params['write_checkpoints']
-        except: self.write_checkpoints = False
+        self.write_checkpoints = multiscale_params.get('write_checkpoints', False)
 
-        try: self.restart_cycle = multiscale_params['restart_cycle']
-        except: self.restart_cycle = 0
+        self.restart_cycle = multiscale_params.get('restart_cycle', 0)
 
-        try: self.restart_from_small = multiscale_params['restart_from_small']
-        except: self.restart_from_small = False
+        self.restart_from_small = multiscale_params.get('restart_from_small', False)
 
         constitutive_models_large = copy.deepcopy(constitutive_models)
 

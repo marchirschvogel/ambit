@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -51,8 +51,7 @@ class boundary_cond():
 
         for d in bcdict:
 
-            try: codim = d['codimension']
-            except: codim = self.dim - 1
+            codim = d.get('codimension', self.dim-1)
 
             if codim==self.dim-1: mdata = self.io.mt_b1
             if codim==self.dim-2: mdata = self.io.mt_b2
@@ -84,11 +83,9 @@ class boundary_cond():
             elif 'file' in d.keys():
                 assert('curve' not in d.keys() and 'val' not in d.keys() and 'expression' not in d.keys())
                 fle = d['file'] # a single file
-                try: ftype = d['ftype']
-                except: ftype = 'id_val'
+                ftype = d.get('ftype', 'id_val')
                 # to ramp the file by a time curve
-                try: ramp_curve = d['ramp_curve']
-                except: ramp_curve = None
+                ramp_curve = d.get('ramp_curve', None)
                 if ramp_curve is not None:
                     func_ramp, func_file = fem.Function(self.V_field), fem.Function(self.V_field)
                     # first read file into function
@@ -162,8 +159,7 @@ class boundary_cond():
                 func.x.petsc_vec.set(d['val'])
             elif 'file' in d.keys(): # file series, where we'd have one file per time step
                 assert('val' not in d.keys() and 'curve' not in d.keys())
-                try: scale = d['scale']
-                except: scale = 1.0
+                scale = d.get('scale', 1.)
                 self.ti.funcs_data.append({func : d['file'], 'scale' : scale})
                 self.have_dirichlet_file = True
             else:
@@ -192,8 +188,7 @@ class boundary_cond():
 
         for n in bcdict:
 
-            try: codim = n['codimension']
-            except: codim = self.dim - 1
+            codim = n.get('codimension', self.dim-1)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -324,8 +319,7 @@ class boundary_cond():
 
         for n in bcdict:
 
-            try: codim = n['codimension']
-            except: codim = self.dim - 1
+            codim = n.get('codimension', self.dim-1)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -405,8 +399,7 @@ class boundary_cond():
 
         for r in bcdict:
 
-            try: codim = r['codimension']
-            except: codim = self.dim - 1
+            codim = r.get('codimension', self.dim-1)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -492,11 +485,9 @@ class boundary_cond():
         mi=0
         for m in bcdict:
 
-            try: codim = m['codimension']
-            except: codim = self.dim - 1
+            codim = m.get('codimension', self.dim-1)
 
-            try: internal = m['internal']
-            except: internal = False
+            internal = m.get('internal', False)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -504,8 +495,7 @@ class boundary_cond():
 
             if internal:
                 dind=2
-                try: fcts = m['facet_side']
-                except: fcts = '+'
+                fcts = m.get('facet_side', '+')
             else:
                 fcts = None
 
@@ -588,8 +578,7 @@ class boundary_cond_fluid(boundary_cond):
 
         for sn in bcdict:
 
-            try: codim = sn['codimension']
-            except: codim = self.dim - 1
+            codim = sn.get('codimension', self.dim-1)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -611,8 +600,7 @@ class boundary_cond_fluid(boundary_cond):
 
         for sn in bcdict:
 
-            try: codim = sn['codimension']
-            except: codim = self.dim - 1
+            codim = sn.get('codimension', self.dim-1)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -642,11 +630,9 @@ class boundary_cond_fluid(boundary_cond):
 
             dwddp = ufl.as_ufl(0)
 
-            try: codim = r['codimension']
-            except: codim = self.dim - 1
+            codim = r.get('codimension', self.dim-1)
 
-            try: direction = r['dir']
-            except: direction = 'xyz_ref'
+            direction = r.get('dir', 'xyz_ref')
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -694,8 +680,7 @@ class boundary_cond_fluid(boundary_cond):
 
         for r in bcdict:
 
-            try: codim = r['codimension']
-            except: codim = self.dim - 1
+            codim = r.get('codimension', self.dim-1)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1
@@ -703,16 +688,12 @@ class boundary_cond_fluid(boundary_cond):
 
             q = ufl.as_ufl(0)
 
-            try: internal = r['internal']
-            except: internal = False
-
-            try: on_subdomain = r['on_subdomain']
-            except: on_subdomain = False
+            internal = r.get('internal', False)
+            on_subdomain = r.get('on_subdomain', False)
 
             if internal:
                 assert(not on_subdomain)
-                try: fcts = r['facet_side']
-                except: fcts = '+'
+                fcts = r.get('facet_side', '+')
             else:
                 fcts = None
 
@@ -744,11 +725,9 @@ class boundary_cond_fluid(boundary_cond):
 
         for r in bcdict:
 
-            try: codim = r['codimension']
-            except: codim = self.dim - 1
+            codim = r.get('codimension', self.dim-1)
 
-            try: spatial = r['spatial']
-            except: spatial = False
+            spatial = r.get('spatial', False)
 
             if codim==self.dim-1: dind=0
             elif codim==self.dim-2: dind=1

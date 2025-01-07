@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -128,10 +128,8 @@ class cardiovascular0Dbase(ode):
         # can be zero for a 3D chamber that is linked to another 3D one (e.g. LA and LV)
         num_infl, num_outfl = [1]*5, [1]*5
         for i, ch in enumerate(['lv','rv','la','ra', 'ao']):
-            try: num_infl[i] = self.chmodels[ch]['num_inflows']
-            except: num_infl[i] = 1
-            try: num_outfl[i] = self.chmodels[ch]['num_outflows'] # actually not used so far...
-            except: num_outfl[i] = 1
+            num_infl[i] = self.chmodels[ch].get('num_inflows', 1)
+            num_outfl[i] = self.chmodels[ch].get('num_outflows', 1) # actually not used so far...
 
         # loop over chambers
         for i, ch in enumerate(['lv','rv','la','ra', 'ao']):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -49,11 +49,9 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         if 'dt' in time_params_solid.keys() or 'dt' in time_params_fluid.keys():
             assert(time_params_fluid['dt'] == time_params_solid['dt'])
 
-        try: self.fsi_governing_type = self.coupling_params['fsi_governing_type']
-        except: self.fsi_governing_type = 'solid_governed'
+        self.fsi_governing_type = coupling_params_fluid_ale.get('fsi_governing_type', 'solid_governed')
 
-        try: self.zero_lm_boundary = self.coupling_params['zero_lm_boundary']
-        except: self.zero_lm_boundary = False
+        self.zero_lm_boundary = coupling_params_fluid_ale.get('zero_lm_boundary', False)
 
         self.have_condensed_variables = False
 

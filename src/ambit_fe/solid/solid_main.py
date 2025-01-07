@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -51,8 +51,7 @@ class SolidmechanicsProblem(problem_base):
 
         self.problem_physics = 'solid'
 
-        try: self.timint = time_params['timint']
-        except: self.timint = 'static'
+        self.timint = time_params.get('timint', 'static')
 
         self.results_to_write = io_params['results_to_write']
 
@@ -61,8 +60,7 @@ class SolidmechanicsProblem(problem_base):
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         # for FSI, we want to specify the subdomains
-        try: self.domain_ids = self.io.io_params['domain_ids_solid']
-        except: self.domain_ids = np.arange(1,self.num_domains+1)
+        self.domain_ids = self.io.io_params.get('domain_ids_solid', np.arange(1,self.num_domains+1))
 
         # TODO: Find nicer solution here...
         if self.pbase.problem_type=='fsi' or self.pbase.problem_type=='fsi_flow0d':
@@ -73,11 +71,9 @@ class SolidmechanicsProblem(problem_base):
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         self.order_disp = fem_params['order_disp']
-        try: self.order_pres = fem_params['order_pres']
-        except: self.order_pres = 1
+        self.order_pres = fem_params.get('order_pres', 1)
         self.quad_degree = fem_params['quad_degree']
-        try: self.incompressible_2field = fem_params['incompressible_2field']
-        except: self.incompressible_2field = False
+        self.incompressible_2field = fem_params.get('incompressible_2field', False)
 
         self.fem_params = fem_params
 
@@ -88,21 +84,14 @@ class SolidmechanicsProblem(problem_base):
             if self.timint != 'static':
                 self.rho0.append(self.constitutive_models['MAT'+str(n+1)]['inertia']['rho0'])
 
-        try: self.prestress_initial = fem_params['prestress_initial']
-        except: self.prestress_initial = False
-        try: self.prestress_initial_only = fem_params['prestress_initial_only']
-        except: self.prestress_initial_only = False
-        try: self.prestress_maxtime = fem_params['prestress_maxtime']
-        except: self.prestress_maxtime = 1.0
-        try: self.prestress_numstep = fem_params['prestress_numstep']
-        except: self.prestress_numstep = 1
-        try: self.prestress_dt = fem_params['prestress_dt']
-        except: self.prestress_dt = self.prestress_maxtime/self.prestress_numstep
+        self.prestress_initial = fem_params.get('prestress_initial', False)
+        self.prestress_initial_only = fem_params.get('prestress_initial_only', False)
+        self.prestress_maxtime = fem_params.get('prestress_maxtime', 1.0)
+        self.prestress_numstep = fem_params.get('prestress_numstep', 1)
+        self.prestress_dt = fem_params.get('prestress_dt', self.prestress_maxtime/self.prestress_numstep)
         if 'prestress_dt' in fem_params.keys(): self.prestress_numstep = int(self.prestress_maxtime/self.prestress_dt)
-        try: self.prestress_ptc = fem_params['prestress_ptc']
-        except: self.prestress_ptc = False
-        try: self.prestress_from_file = fem_params['prestress_from_file']
-        except: self.prestress_from_file = False
+        self.prestress_ptc = fem_params.get('prestress_ptc', False)
+        self.prestress_from_file = fem_params.get('prestress_from_file', False)
 
         if bool(self.prestress_from_file): self.prestress_initial, self.prestress_initial_only = False, False
 
@@ -236,8 +225,7 @@ class SolidmechanicsProblem(problem_base):
                     self.io.readfunction(self.p, self.prestress_from_file[1])
                     self.io.readfunction(self.p_old, self.prestress_from_file[1])
 
-        try: self.volume_laplace = io_params['volume_laplace']
-        except: self.volume_laplace = []
+        self.volume_laplace = io_params.get('volume_laplace', [])
 
         # dictionaries of internal variables
         self.internalvars, self.internalvars_old, self.internalvars_mid = {}, {}, {}
@@ -340,8 +328,7 @@ class SolidmechanicsProblem(problem_base):
 
         # full linearization of our remodeling law can lead to excessive compiler times for FFCx... :-/
         # let's try if we might can go without one of the critial terms (derivative of remodeling fraction w.r.t. C)
-        try: self.lin_remod_full = fem_params['lin_remodeling_full']
-        except: self.lin_remod_full = True
+        self.lin_remod_full = fem_params.get('lin_remodeling_full', True)
 
         # growth threshold (as function, since in multiscale approach, it can vary element-wise)
         if self.have_growth and self.localsolve:
@@ -799,12 +786,10 @@ class SolidmechanicsProblem(problem_base):
         se_mem_all, ip_mem_all = ufl.as_ufl(0), ufl.as_ufl(0)
         for nm in range(len(self.bc_dict['membrane'])):
 
-            try: internal = self.bc_dict['membrane'][nm]['internal']
-            except: internal = False
+            internal = self.bc_dict['membrane'][nm].get('internal', False)
 
             if internal:
-                try: fcts = self.bc_dict['membrane'][nm]['facet_side']
-                except: fcts = '+'
+                fcts = self.bc_dict['membrane'][nm].get('facet_side', '+')
                 se_mem_all += (self.bstrainenergy[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
                 ip_mem_all += (self.bintpower[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
             else:
@@ -1199,8 +1184,7 @@ class SolidmechanicsSolver(solver_base):
 
         # reset PTC flag to what it was
         if self.pb.prestress_ptc:
-            try: self.solnln.PTC = self.solver_params['ptc']
-            except: self.solnln.PTC = False
+            self.solnln.PTC = self.solver_params.get('ptc', False)
 
         # now build main (non-prestress) forms
         self.pb.set_problem_residual_jacobian_forms()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -35,8 +35,7 @@ class block_precond():
         self.solparams = solparams
 
         # type of scaling for approximation of Schur complement
-        try: schur_block_scaling = self.solparams['schur_block_scaling']
-        except: schur_block_scaling = [{'type' : 'diag', 'val' : 1.0}]*2
+        schur_block_scaling = self.solparams.get('schur_block_scaling', [{'type' : 'diag', 'val' : 1.0}]*2)
 
         if isinstance(schur_block_scaling, list):
             self.schur_block_scaling = schur_block_scaling
@@ -65,20 +64,15 @@ class block_precond():
         # set the options
         for n in range(self.nfields):
             if self.precond_fields[n]['prec'] == 'amg':
-                try: solvetype = self.precond_fields[n]['solve']
-                except: solvetype = "preonly"
+                solvetype = self.precond_fields[n].get('solve', 'preonly')
                 self.ksp_fields[n].setType(solvetype)
                 # GMRES or FGMES for inner solve
                 if solvetype == 'gmres' or solvetype == 'fgmres':
-                    try: maxiter = self.precond_fields[n]['maxiter']
-                    except: maxiter = 1000
-                    try: tolrel = self.precond_fields[n]['tolrel']
-                    except: tolrel = 1e-5
-                    try: tolabs = self.precond_fields[n]['tolabs']
-                    except: tolabs = 1e-50
+                    maxiter = self.precond_fields[n].get('maxiter', 1000)
+                    tolrel = self.precond_fields[n].get('tolrel', 1e-5)
+                    tolabs = self.precond_fields[n].get('tolabs', 1e-50)
                     self.ksp_fields[n].setTolerances(rtol=tolrel, atol=tolabs, divtol=None, max_it=maxiter)
-                try: amgtype = self.precond_fields[n]['amgtype']
-                except: amgtype = "hypre"
+                amgtype = self.precond_fields[n].get('amgtype', 'hypre')
                 self.ksp_fields[n].getPC().setType(amgtype)
                 if amgtype=="hypre":
                     self.ksp_fields[n].getPC().setHYPREType("boomeramg")
@@ -93,8 +87,7 @@ class block_precond():
                 # print to view some settings...
                 #print(self.ksp_fields[n].getPC().view())
                 if solvetype == 'python':
-                    try: niter = self.precond_fields[n]['stat_iter']
-                    except: niter = 1
+                    niter = self.precond_fields[n].get('stat_iter', 1)
                     if self.precond_fields[n]['py_solver'] == "stat_iter_fixed":
                         self.ksp_py_solver[n] = stat_iter_fixed(niter)
                         self.ksp_fields[n].setPythonContext(self.ksp_py_solver[n])

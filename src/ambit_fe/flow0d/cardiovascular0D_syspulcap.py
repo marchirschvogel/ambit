@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -65,8 +65,7 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.C_ar_sys = params['C_ar_sys']
         self.L_ar_sys = params['L_ar_sys']
         self.Z_ar_sys = params['Z_ar_sys']
-        try: self.I_ar_sys = params['I_ar_sys']
-        except: self.I_ar_sys = 0
+        self.I_ar_sys = params.get('I_ar_sys', 0.)
 
         # peripheral arterial compliances and resistances
         self.R_arspl_sys = params['R_arspl_sys']
@@ -132,14 +131,10 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.R_vout_r_max = params['R_vout_r_max']
 
         # valve inertances
-        try: self.L_vin_l = params['L_vin_l']
-        except: self.L_vin_l = 0
-        try: self.L_vin_r = params['L_vin_r']
-        except: self.L_vin_r = 0
-        try: self.L_vout_l = params['L_vout_l']
-        except: self.L_vout_l = 0
-        try: self.L_vout_r = params['L_vout_r']
-        except: self.L_vout_r = 0
+        self.L_vin_l = params.get('L_vin_l', 0.)
+        self.L_vin_r = params.get('L_vin_r', 0.)
+        self.L_vout_l = params.get('L_vout_l', 0.)
+        self.L_vout_r = params.get('L_vout_r', 0.)
 
         # end-diastolic and end-systolic timings
         self.t_ed = params['t_ed']
@@ -147,44 +142,25 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.T_cycl = params['T_cycl']
 
         # unstressed compartment volumes (for post-processing)
-        try: self.V_at_l_u = params['V_at_l_u']
-        except: self.V_at_l_u = 0
-        try: self.V_at_r_u = params['V_at_r_u']
-        except: self.V_at_r_u = 0
-        try: self.V_v_l_u = params['V_v_l_u']
-        except: self.V_v_l_u = 0
-        try: self.V_v_r_u = params['V_v_r_u']
-        except: self.V_v_r_u = 0
-        try: self.V_ar_sys_u = params['V_ar_sys_u']
-        except: self.V_ar_sys_u = 0
-        try: self.V_arspl_sys_u = params['V_arspl_sys_u']
-        except: self.V_arspl_sys_u = 0
-        try: self.V_arespl_sys_u = params['V_arespl_sys_u']
-        except: self.V_arespl_sys_u = 0
-        try: self.V_armsc_sys_u = params['V_armsc_sys_u']
-        except: self.V_armsc_sys_u = 0
-        try: self.V_arcer_sys_u = params['V_arcer_sys_u']
-        except: self.V_arcer_sys_u = 0
-        try: self.V_arcor_sys_u = params['V_arcor_sys_u']
-        except: self.V_arcor_sys_u = 0
-        try: self.V_venspl_sys_u = params['V_venspl_sys_u']
-        except: self.V_venspl_sys_u = 0
-        try: self.V_venespl_sys_u = params['V_venespl_sys_u']
-        except: self.V_venespl_sys_u = 0
-        try: self.V_venmsc_sys_u = params['V_venmsc_sys_u']
-        except: self.V_venmsc_sys_u = 0
-        try: self.V_vencer_sys_u = params['V_vencer_sys_u']
-        except: self.V_vencer_sys_u = 0
-        try: self.V_vencor_sys_u = params['V_vencor_sys_u']
-        except: self.V_vencor_sys_u = 0
-        try: self.V_ven_sys_u = params['V_ven_sys_u']
-        except: self.V_ven_sys_u = 0
-        try: self.V_ar_pul_u = params['V_ar_pul_u']
-        except: self.V_ar_pul_u = 0
-        try: self.V_cap_pul_u = params['V_cap_pul_u']
-        except: self.V_cap_pul_u = 0
-        try: self.V_ven_pul_u = params['V_ven_pul_u']
-        except: self.V_ven_pul_u = 0
+        self.V_at_l_u = params.get('V_at_l_u', 0.)
+        self.V_at_r_u = params.get('V_at_r_u', 0.)
+        self.V_v_l_u = params.get('V_v_l_u', 0.)
+        self.V_v_r_u = params.get('V_v_r_u', 0.)
+        self.V_ar_sys_u = params.get('V_ar_sys_u', 0.)
+        self.V_arspl_sys_u = params.get('V_arspl_sys_u', 0.)
+        self.V_arespl_sys_u = params.get('V_arespl_sys_u', 0.)
+        self.V_armsc_sys_u = params.get('V_armsc_sys_u', 0.)
+        self.V_arcer_sys_u = params.get('V_arcer_sys_u', 0.)
+        self.V_arcor_sys_u = params.get('V_arcor_sys_u', 0.)
+        self.V_venspl_sys_u = params.get('V_venspl_sys_u', 0.)
+        self.V_venespl_sys_u = params.get('V_venespl_sys_u', 0.)
+        self.V_venmsc_sys_u = params.get('V_venmsc_sys_u', 0.)
+        self.V_vencer_sys_u = params.get('V_vencer_sys_u', 0.)
+        self.V_vencor_sys_u = params.get('V_vencor_sys_u', 0.)
+        self.V_ven_sys_u = params.get('V_ven_sys_u', 0.)
+        self.V_ar_pul_u = params.get('V_ar_pul_u', 0.)
+        self.V_cap_pul_u = params.get('V_cap_pul_u', 0.)
+        self.V_ven_pul_u = params.get('V_ven_pul_u', 0.)
 
         self.params = params
 
@@ -193,12 +169,9 @@ class cardiovascular0Dsyspulcap(cardiovascular0Dbase):
         self.valvelaws = valvelaws
 
         # number of systemic venous inflows (to right atrium)
-        try: self.vs = self.chmodels['ra']['num_inflows']
-        except: self.vs = 1
-
+        self.vs = self.chmodels['ra'].get('num_inflows', 1)
         # number of pulmonary venous inflows (to left atrium)
-        try: self.vp = self.chmodels['la']['num_inflows']
-        except: self.vp = 1
+        self.vp = self.chmodels['la'].get('num_inflows', 1)
 
         self.cq = cq
         self.vq = vq

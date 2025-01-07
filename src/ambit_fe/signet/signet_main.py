@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -35,33 +35,27 @@ class SignallingNetworkProblem(problem_base):
 
         self.time_params = time_params
 
-        try: initial_file = time_params['initial_file']
-        except: initial_file = ''
+        initial_file = time_params.get('initial_file', '')
 
         # could use extra write frequency setting for signet model (i.e. for coupled problem)
         try: self.write_results_every_signet = io_params['write_results_every_signet']
         except: self.write_results_every_signet = io_params['write_results_every']
 
         # for restart
-        try: self.write_restart_every = io_params['write_restart_every']
-        except: self.write_restart_every = -1
+        self.write_restart_every = io_params.get('write_restart_every', -1)
 
         # could use extra output path setting for signet model (i.e. for coupled problem)
         try: self.output_path_signet = io_params['output_path_signet']
         except: self.output_path_signet = io_params['output_path']
 
         # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
-        try: self.output_midpoint = io_params['output_midpoint_0D']
-        except: self.output_midpoint = False
+        self.output_midpoint = io_params.get('output_midpoint_0D', False)
 
-        try: self.prescribed_variables = model_params['prescribed_variables']
-        except: self.prescribed_variables = {}
+        self.prescribed_variables = model_params.get('prescribed_variables', {})
 
-        try: self.initial_backwardeuler = time_params['initial_backwardeuler']
-        except: self.initial_backwardeuler = False
+        self.initial_backwardeuler = time_params.get('initial_backwardeuler', False)
 
-        try: self.ode_parallel = io_params['ode_parallel']
-        except: self.ode_parallel = False
+        self.ode_parallel = io_params.get('ode_parallel', False)
 
         # initialize signet model class
         if model_params['modeltype'] == 'hypertrophy':

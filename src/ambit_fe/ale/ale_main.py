@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -48,8 +48,7 @@ class AleProblem(problem_base):
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         # for FSI, we want to specify the subdomains
-        try: self.domain_ids = self.io.io_params['domain_ids_fluid']
-        except: self.domain_ids = np.arange(1,self.num_domains+1)
+        self.domain_ids = self.io.io_params.get('domain_ids_fluid', np.arange(1,self.num_domains+1))
 
         # TODO: Find nicer solution here...
         if self.pbase.problem_type=='fsi' or self.pbase.problem_type=='fsi_flow0d':

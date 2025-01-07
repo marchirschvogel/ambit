@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -36,14 +36,9 @@ class FluidmechanicsAleProblem(problem_base):
 
         self.coupling_params = coupling_params
 
-        try: self.coupling_fluid_ale = self.coupling_params['coupling_fluid_ale']
-        except: self.coupling_fluid_ale = {}
-
-        try: self.coupling_ale_fluid = self.coupling_params['coupling_ale_fluid']
-        except: self.coupling_ale_fluid = {}
-
-        try: self.coupling_strategy = self.coupling_params['coupling_strategy']
-        except: self.coupling_strategy = 'monolithic'
+        self.coupling_fluid_ale = self.coupling_params.get('coupling_fluid_ale', {})
+        self.coupling_ale_fluid = self.coupling_params.get('coupling_ale_fluid', {})
+        self.coupling_strategy = self.coupling_params.get('coupling_strategy', 'monolithic')
 
         self.have_dbc_fluid_ale, self.have_weak_dirichlet_fluid_ale, self.have_dbc_ale_fluid, self.have_robin_ale_fluid = False, False, False, False
 
@@ -128,8 +123,7 @@ class FluidmechanicsAleProblem(problem_base):
                 elif self.coupling_fluid_ale[j]['type'] == 'weak_dirichlet':
 
                     beta = self.coupling_fluid_ale[j]['beta']
-                    try: hscale = self.coupling_fluid_ale[j]['hscale']
-                    except: hscale = False
+                    hscale = self.coupling_fluid_ale[j].get('hscale', False)
 
                     for i in range(len(ids_fluid_ale)):
                         db_ = self.pba.bmeasures[0](ids_fluid_ale[i])

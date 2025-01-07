@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -38,17 +38,13 @@ class problem_base():
         else:
             raise RuntimeError("Need to specify either 'numstep' or 'dt' in time parameters!")
 
-        try: self.restart_step = io_params['restart_step']
-        except: self.restart_step = 0
+        self.restart_step = io_params.get('restart_step', 0)
 
-        try: self.numstep_stop = time_params['numstep_stop']
-        except: self.numstep_stop = self.numstep
+        self.numstep_stop = time_params.get('numstep_stop', self.numstep)
 
-        try: self.results_to_write = io_params['results_to_write']
-        except: self.results_to_write = []
+        self.results_to_write = io_params.get('results_to_write', [])
 
-        try: self.residual_scale = time_params['residual_scale']
-        except: self.residual_scale = []
+        self.residual_scale = time_params.get('residual_scale', [])
 
         self.t_init = self.restart_step * self.dt
 

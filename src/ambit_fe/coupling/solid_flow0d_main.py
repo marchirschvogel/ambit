@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -37,31 +37,21 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.coupling_params = coupling_params
 
         self.surface_vq_ids = self.coupling_params['surface_ids']
-        try: self.surface_p_ids = self.coupling_params['surface_p_ids']
-        except: self.surface_p_ids = self.surface_vq_ids
+        self.surface_p_ids = self.coupling_params.get('surface_p_ids', self.surface_vq_ids)
 
         self.num_coupling_surf = len(self.surface_vq_ids)
 
-        try: self.cq_factor = self.coupling_params['cq_factor']
-        except: self.cq_factor = [1.]*self.num_coupling_surf
+        self.cq_factor = self.coupling_params.get('cq_factor', [1.]*self.num_coupling_surf)
 
-        try: self.coupling_type = self.coupling_params['coupling_type']
-        except: self.coupling_type = 'monolithic_direct'
+        self.coupling_type = self.coupling_params.get('coupling_type', 'monolithic_direct')
 
-        try: self.eps_fd = self.coupling_params['eps_fd']
-        except: self.eps_fd = 1.0e-5
+        self.eps_fd = self.coupling_params.get('eps_fd', 1e-5)
 
-        try: self.print_subiter = self.coupling_params['print_subiter']
-        except: self.print_subiter = False
+        self.print_subiter = self.coupling_params.get('print_subiter', False)
 
-        try: self.write_checkpoints_periodicref = self.coupling_params['write_checkpoints_periodicref']
-        except: self.write_checkpoints_periodicref = False
-
-        try: self.restart_periodicref = self.coupling_params['restart_periodicref']
-        except: self.restart_periodicref = 0
-
-        try: self.Nmax_periodicref = self.coupling_params['Nmax_periodicref']
-        except: self.Nmax_periodicref = 10
+        self.write_checkpoints_periodicref = self.coupling_params.get('write_checkpoints_periodicref', False)
+        self.restart_periodicref = self.coupling_params.get('restart_periodicref', 0)
+        self.Nmax_periodicref = self.coupling_params.get('Nmax_periodicref', 10)
 
         self.have_condensed_variables = False
 

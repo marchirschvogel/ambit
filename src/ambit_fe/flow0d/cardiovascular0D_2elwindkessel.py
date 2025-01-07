@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -26,8 +26,7 @@ class cardiovascular0D2elwindkessel(cardiovascular0Dbase):
         super().__init__(init=init, ode_par=ode_par, comm=comm)
 
         # number of (independent) models
-        try: self.num_models = params['num_models']
-        except: self.num_models = 1
+        self.num_models = params.get('num_models', 1)
 
         self.C, self.R, self.p_ref = [], [], []
 

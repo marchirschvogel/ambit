@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -37,8 +37,6 @@ class FSIProblem(problem_base):
 
         self.problem_physics = 'fsi'
 
-        self.coupling_params = coupling_params
-
         self.io = io
         self.ios, self.iof = ios, iof
 
@@ -66,11 +64,9 @@ class FSIProblem(problem_base):
 
         self.incompressible_2field = self.pbs.incompressible_2field
 
-        try: self.fsi_governing_type = self.coupling_params['fsi_governing_type']
-        except: self.fsi_governing_type = 'solid_governed'
+        self.fsi_governing_type = coupling_params.get('fsi_governing_type', 'solid_governed')
 
-        try: self.zero_lm_boundary = self.coupling_params['zero_lm_boundary']
-        except: self.zero_lm_boundary = False
+        self.zero_lm_boundary = coupling_params.get('zero_lm_boundary', False)
 
         self.have_condensed_variables = False
 

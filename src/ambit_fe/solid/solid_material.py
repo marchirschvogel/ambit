@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -89,8 +89,7 @@ class materiallaw:
     def holzapfelogden_dev(self, params, fib1, fib2, C):
 
         # to tell the material what kind of fibers we have: fs, fn, or sn
-        try: fibers_type = params['fibers_type']
-        except: fibers_type = 'fs'
+        fibers_type = params.get('fibers_type', 'fs')
 
         if fibers_type == 'fs':
             f0, s0 = fib1, fib2
@@ -116,8 +115,7 @@ class materiallaw:
         a_s, b_s = params['a_s'], params['b_s']
         a_fs, b_fs = params['a_fs'], params['b_fs']
 
-        try: fiber_comp_switch = params['fiber_comp_switch']
-        except: fiber_comp_switch = 'hard'
+        fiber_comp_switch = params.get('fiber_comp_switch', 'hard')
 
         # conditional parameters: if fiber_comp_switch is 'hard' (default) or 'soft', fibers are only active in tension; for 'no' also in compression
         if fiber_comp_switch=='hard':
@@ -228,9 +226,7 @@ class materiallaw:
     def ogden_vol(self, params, C):
 
         kappa = params['kappa']
-
-        try: beta = params['beta']
-        except: beta = -2.
+        beta = params.get('beta', -2.)
 
         # classical Ogden volumetric material (Holzapfel eq. 6.137)
         Psi_vol = (kappa/(beta**2.)) * (beta*ufl.ln(self.J) + self.J**(-beta) - 1.)
@@ -243,9 +239,7 @@ class materiallaw:
     def ogden_mod_vol(self, params, C):
 
         kappa = params['kappa']
-
-        try: beta = params['beta']
-        except: beta = -2.
+        beta = params.get('beta', -2.)
 
         # a modified variant of the classical Ogden model (spotted somewhere... use with care!)
         Psi_vol = (kappa/(beta**2.)) * (ufl.ln(self.J)**(-beta) + (self.J - 1.)**(-beta))
@@ -368,8 +362,7 @@ class activestress_activation:
         # reference coordinates - needed e.g. for spatial scaling functions of activation
         self.x_ref = x_ref
 
-        try: self.activation_weight = self.params['activation_weight']
-        except: self.activation_weight = None
+        self.activation_weight = self.params.get('activation_weight', None)
 
         if self.activation_weight is not None:
             self.act_weight_type = self.activation_weight['type']

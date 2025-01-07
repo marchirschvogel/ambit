@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -42,72 +42,52 @@ class Flow0DProblem(problem_base):
             if 'ao' not in self.chamber_models.keys(): self.chamber_models['ao'] = {'type' : '0D_rigid'} # add aortic root model
         except: self.chamber_models = {}
 
-        try: self.coronary_model = model_params['coronary_model']
-        except: self.coronary_model = None
+        self.coronary_model = model_params.get('coronary_model', None)
+        self.vad_model = model_params.get('vad_model', None)
 
-        try: self.vad_model = model_params['vad_model']
-        except: self.vad_model = None
+        self.excitation_curve = model_params.get('excitation_curve', None)
 
-        try: self.excitation_curve = model_params['excitation_curve']
-        except: self.excitation_curve = None
-
-        try: initial_file = time_params['initial_file']
-        except: initial_file = ''
+        initial_file = time_params.get('initial_file', '')
 
         # could use extra write frequency setting for 0D model (i.e. for coupled problem)
         try: self.write_results_every_0D = io_params['write_results_every_0D']
         except: self.write_results_every_0D = io_params['write_results_every']
 
         # for restart
-        try: self.write_restart_every = io_params['write_restart_every']
-        except: self.write_restart_every = -1
+        self.write_restart_every = io_params.get('write_restart_every', -1)
 
         # could use extra output path setting for 0D model (i.e. for coupled problem)
         try: self.output_path_0D = io_params['output_path_0D']
         except: self.output_path_0D = io_params['output_path']
 
         # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
-        try: self.output_midpoint = io_params['output_midpoint_0D']
-        except: self.output_midpoint = False
+        self.output_midpoint = io_params.get('output_midpoint_0D', False)
 
-        try: valvelaws = model_params['valvelaws']
-        except: valvelaws = {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]}
+        valvelaws = model_params.get('valvelaws', {'av' : ['pwlin_pres',0], 'mv' : ['pwlin_pres',0], 'pv' : ['pwlin_pres',0], 'tv' : ['pwlin_pres',0]})
 
-        try: self.cq = coupling_params['coupling_quantity']
-        except: self.cq = ['volume']*5
+        self.cq = coupling_params.get('coupling_quantity', ['volume']*5)
+        self.vq = coupling_params.get('variable_quantity', ['pressure']*5)
 
-        try: self.vq = coupling_params['variable_quantity']
-        except: self.vq = ['pressure']*5
+        self.coup_type = coupling_params.get('coupling_type', None)
 
-        try: self.coup_type = coupling_params['coupling_type']
-        except: self.coup_type = None
+        self.eps_periodic = time_params.get('eps_periodic', 1e-20)
 
-        try: self.eps_periodic = time_params['eps_periodic']
-        except: self.eps_periodic = 1.0e-20
+        self.periodic_checktype = time_params.get('periodic_checktype', ['allvar'])
 
-        try: self.periodic_checktype = time_params['periodic_checktype']
-        except: self.periodic_checktype = ['allvar']
-
-        try: self.prescribed_variables = model_params['prescribed_variables']
-        except: self.prescribed_variables = {}
+        self.prescribed_variables = model_params.get('prescribed_variables', {})
 
         try: self.perturb_type = model_params['perturb_type'][0]
         except: self.perturb_type = None
-
         try: self.perturb_factor = model_params['perturb_type'][1]
         except: self.perturb_factor = 1.
-
         try: self.perturb_id = model_params['perturb_type'][2]
         except: self.perturb_id = -1
 
-        try: self.initial_backwardeuler = time_params['initial_backwardeuler']
-        except: self.initial_backwardeuler = False
+        self.initial_backwardeuler = time_params.get('initial_backwardeuler', False)
 
-        try: self.ode_parallel = io_params['ode_parallel']
-        except: self.ode_parallel = False
+        self.ode_parallel = io_params.get('ode_parallel', False)
 
-        try: self.perturb_after_cylce = model_params['perturb_after_cylce']
-        except: self.perturb_after_cylce = -1
+        self.perturb_after_cylce = model_params.get('perturb_after_cylce', -1)
         # definitely set to -1 if we don't have a perturb type
         if self.perturb_type is None: self.perturb_after_cylce = -1
 

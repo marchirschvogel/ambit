@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2024, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -31,52 +31,29 @@ class IO:
 
         self.write_results_every = io_params['write_results_every']
         self.output_path = io_params['output_path']
-
-        try: self.output_path_pre = io_params['output_path_pre']
-        except: self.output_path_pre = self.output_path
+        self.output_path_pre = io_params.get('output_path_pre', self.output_path)
 
         self.mesh_domain = io_params['mesh_domain']
-        try: self.mesh_boundary = io_params['mesh_boundary']
-        except: self.mesh_boundary = None
-        try: self.mesh_edge = io_params['mesh_edge']
-        except: self.mesh_edge = None
-        try: self.mesh_point = io_params['mesh_point']
-        except: self.mesh_point = None
+        self.mesh_boundary = io_params.get('mesh_boundary', None)
+        self.mesh_edge = io_params.get('mesh_edge', None)
+        self.mesh_point = io_params.get('mesh_point', None)
 
         self.quad_degree = fem_params['quad_degree']
 
-        try: self.fiber_data = io_params['fiber_data']
-        except: self.fiber_data = []
+        self.fiber_data = io_params.get('fiber_data', [])
 
-        try: self.write_restart_every = io_params['write_restart_every']
-        except: self.write_restart_every = -1
+        self.meshfile_format = io_params.get('meshfile_format', 'XDMF')
+        self.meshfile_type = io_params.get('meshfile_type', 'ASCII')
+        self.mesh_dim = io_params.get('mesh_dim', 3) # actually only needed/used for gmsh read-in
+        self.gridname_domain = io_params.get('gridname_domain', 'Grid')
+        self.gridname_boundary = io_params.get('gridname_boundary', 'Grid')
+        self.duplicate_mesh_domains = io_params.get('duplicate_mesh_domains', [])
 
-        try: self.meshfile_format = io_params['meshfile_format']
-        except: self.meshfile_format = 'XDMF'
+        self.write_restart_every = io_params.get('write_restart_every', -1)
+        self.restart_io_type = io_params.get('restart_io_type', 'petscvector')
+        self.indicate_results_by = io_params.get('indicate_results_by', 'time')
 
-        try: self.meshfile_type = io_params['meshfile_type']
-        except: self.meshfile_type = 'ASCII'
-
-        try: self.mesh_dim = io_params['mesh_dim'] # actually only needed/used for gmsh read-in
-        except: self.mesh_dim = 3
-
-        try: self.gridname_domain = io_params['gridname_domain']
-        except: self.gridname_domain = 'Grid'
-
-        try: self.gridname_boundary = io_params['gridname_boundary']
-        except: self.gridname_boundary = 'Grid'
-
-        try: self.duplicate_mesh_domains = io_params['duplicate_mesh_domains']
-        except: self.duplicate_mesh_domains = []
-
-        try: self.restart_io_type = io_params['restart_io_type']
-        except: self.restart_io_type = 'petscvector'
-
-        try: self.indicate_results_by = io_params['indicate_results_by']
-        except: self.indicate_results_by = 'time'
-
-        try: self.print_enhanced_info = io_params['print_enhanced_info']
-        except: self.print_enhanced_info = False
+        self.print_enhanced_info = io_params.get('print_enhanced_info', False)
 
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
@@ -109,7 +86,7 @@ class IO:
         elif self.meshfile_format=='gmsh':
 
             # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
-            self.mesh, self.mt_d, self.mt_b1 = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)
+            self.mesh, self.mt_d, self.mt_b1 = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)[0:3]
             assert(self.mesh.geometry.dim==self.mesh_dim) # would be weird if this wasn't true...
 
         else:
@@ -399,8 +376,7 @@ class IO:
 
         fib_func_input, fib_func = [], []
 
-        try: self.order_fib_input = self.io_params['order_fib_input']
-        except: self.order_fib_input = order_disp
+        self.order_fib_input = self.io_params.get('order_fib_input', order_disp)
 
         # define input fiber function space
         V_fib_input = fem.functionspace(self.mesh, ("Lagrange", self.order_fib_input, (self.mesh.geometry.dim,)))
