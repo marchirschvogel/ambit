@@ -101,9 +101,9 @@ mpiexec -n <NUMBER_OF_CORES> python3 your_file.py
 
 Software paper:
 
-* Hirschvogel M. **Ambit – A FEniCS-based cardiovascular multi-physics solver.** *Journal of Open Source Software,* 9(93), 2024, DOI: 10.21105/joss.05744
+* Hirschvogel M. **Ambit – A FEniCS-based cardiovascular multi-physics solver.** *Journal of Open Source Software,* 9(93), 2024, DOI: https://doi.org/10.21105/joss.05744
 
 Papers explicitly using and citing Ambit:
 
-* Hirschvogel M, Bonini M, Balmus M, Nordsletten D. **Effective Block Preconditioners for Fluid Dynamics Coupled to Reduced Models of a Non-Local Nature.** *Computer Methods in Applied Mechanics and Engineering,* 435, 2025, DOI: 10.1016/j.cma.2024.117541
-* Aróstica R, Nolte D, Brown A, Gebauer A, Karabelas E, Jilberto J, Salvador M, Bucelli M, Piersanti R, Osouli K, Augustin C, Finsberg H, Shi L, Hirschvogel M, Pfaller M, Africa PC, Gsell M, Marsden A, Nordsletten D, Regazzoni F, Plank G, Sundnes J, Dede' L, Peirlinck M, Vedula V, Wall WA, Bertoglio C. **A software benchmark for cardiac elastodynamics.** *Computer Methods in Applied Mechanics and Engineering,* 435, 2025, DOI: 10.1016/j.cma.2024.117485
+* Hirschvogel M, Bonini M, Balmus M, Nordsletten D. **Effective Block Preconditioners for Fluid Dynamics Coupled to Reduced Models of a Non-Local Nature.** *Computer Methods in Applied Mechanics and Engineering,* 435, 2025, DOI: https://doi.org/10.1016/j.cma.2024.117541
+* Aróstica R, Nolte D, Brown A, Gebauer A, Karabelas E, Jilberto J, Salvador M, Bucelli M, Piersanti R, Osouli K, Augustin C, Finsberg H, Shi L, Hirschvogel M, Pfaller M, Africa PC, Gsell M, Marsden A, Nordsletten D, Regazzoni F, Plank G, Sundnes J, Dede' L, Peirlinck M, Vedula V, Wall WA, Bertoglio C. **A software benchmark for cardiac elastodynamics.** *Computer Methods in Applied Mechanics and Engineering,* 435, 2025, DOI: https://doi.org/10.1016/j.cma.2024.117485
