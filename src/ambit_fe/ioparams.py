@@ -87,7 +87,8 @@ def check_params_solver(params):
 
 def check_params_fem_solid(params):
 
-    valid_params = ['incompressible_2field',
+    valid_params = ['bulkmod',
+                    'incompressibility',
                     'lin_remodeling_full',
                     'order_disp',
                     'order_pres',

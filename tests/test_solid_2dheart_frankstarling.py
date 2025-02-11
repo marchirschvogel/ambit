@@ -51,7 +51,7 @@ def test_main():
     FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'incompressible_2field' : True}
+                            'incompressibility'     : 'full'}
 
     MATERIALS            = {'MAT1' : {'mooneyrivlin_dev'  : {'c1' : 60., 'c2' : -20.},
                                       'active_fiber'      : {'sigma0' : 100.0, 'alpha_max' : 15.0, 'alpha_min' : -20.0, 'activation_curve' : 3, 'frankstarling' : True, 'amp_min' : 1., 'amp_max' : 1.7, 'lam_threslo' : 1.01, 'lam_maxlo' : 1.15, 'lam_threshi' : 999., 'lam_maxhi' : 9999.},

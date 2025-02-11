@@ -115,7 +115,7 @@ def main():
     FEM_PARAMS_SOLID     = {'order_disp'            : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'incompressible_2field' : False}
+                            'incompressibility'     : 'no'}
 
     """
     Finite element parameters for fluid: Taylor-Hood space

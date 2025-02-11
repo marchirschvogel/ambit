@@ -64,7 +64,7 @@ def test_main():
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 1,
-                            'incompressible_2field' : False,
+                            'incompressibility'     : 'no',
                             'prestress_initial'     : False,#True,
                             'lin_remodeling_full'   : False}
 

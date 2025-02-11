@@ -71,7 +71,7 @@ def test_main():
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 2,
-                            'incompressible_2field' : False}
+                            'incompressibility'     : 'no'}
 
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
                             'cq_factor'             : [80.,80.],

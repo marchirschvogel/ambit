@@ -312,7 +312,7 @@ class timeintegration():
 # Solid mechanics time integration class
 class timeintegration_solid(timeintegration):
 
-    def __init__(self, time_params, dt, Nmax, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+    def __init__(self, time_params, dt, Nmax, incompr=False, time_curves=None, t_init=0., dim=3, comm=None):
         timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
 
         if self.timint == 'genalpha':
@@ -332,7 +332,7 @@ class timeintegration_solid(timeintegration):
 
             self.theta_ost = time_params['theta_ost']
 
-        self.incompressible_2field = fem_params.get('incompressible_2field', False)
+        self.incompr = incompr
 
 
     def set_acc_vel(self, u, u_old, v_old, a_old):
@@ -363,7 +363,7 @@ class timeintegration_solid(timeintegration):
         self.update_fields(u, u_old, v, v_old, a, a_old)
 
         # update pressure variable
-        if self.incompressible_2field:
+        if self.incompr:
             p_old.x.petsc_vec.axpby(1.0, 0.0, p.x.petsc_vec)
             p_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
@@ -460,7 +460,7 @@ class timeintegration_solid(timeintegration):
 # Fluid mechanics time integration class
 class timeintegration_fluid(timeintegration):
 
-    def __init__(self, time_params, dt, Nmax, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+    def __init__(self, time_params, dt, Nmax, time_curves=None, t_init=0., dim=3, comm=None):
         timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
 
         if self.timint == 'ost':
@@ -650,7 +650,7 @@ class timeintegration_ale(timeintegration_fluid):
 # Electrophysiology time integration class
 class timeintegration_electrophysiology(timeintegration_fluid):
 
-    def __init__(self, time_params, dt, Nmax, fem_params, time_curves=None, t_init=0., dim=3, comm=None):
+    def __init__(self, time_params, dt, Nmax, time_curves=None, t_init=0., dim=3, comm=None):
         timeintegration.__init__(self, time_params, dt, Nmax, time_curves=time_curves, t_init=t_init, dim=dim, comm=comm)
 
         assert(self.timint == 'ost')

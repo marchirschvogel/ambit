@@ -65,7 +65,7 @@ def test_main():
     FEM_PARAMS_SOLID     = {'order_disp'            : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'incompressible_2field' : False}
+                            'incompressibility'     : 'no'}
 
     FEM_PARAMS_FLUID     = {'order_vel'             : 1,
                             'order_pres'            : 1,

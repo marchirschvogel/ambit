@@ -45,7 +45,7 @@ def test_main():
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 2,
-                         'incompressible_2field' : False}
+                         'incompressibility'     : 'no'}
 
     MATERIALS         = {'MAT1' : {'visco_green' : {'eta' : 2.0},
                                    'inertia'     : {'rho0' : 1.0e-6}}}

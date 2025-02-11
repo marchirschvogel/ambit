@@ -13,7 +13,6 @@ from dolfinx import fem, io, mesh
 import ufl
 # import adios4dolfinx
 
-#from solver import projection
 from .solver.projection import project
 from .mpiroutines import allgather_vec
 from . import meshutils, expression, ioparams, utilities

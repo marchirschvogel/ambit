@@ -34,7 +34,7 @@ def main():
                             'results_to_write'      : ['displacement','fibers'],
                             # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5/.txt
                             'simname'               : 'solid_flow0d_heart_cycle'}
-                      
+
     """
     Parameters for the linear and nonlinear solution schemes
     """
@@ -97,7 +97,7 @@ def main():
                             # the quadrature degree (should be > 1 but can be only 2 here for linear tetrahedral finite elements)
                             'quad_degree'           : 2,
                             # whether we want to model the heart as purely incompressible (would involve a 2-field functional with additional pressure degrees of freedom)
-                            'incompressible_2field' : False,
+                            'incompressibility'     : 'no',
                             # the prestress settings: initial prestressing with the MULF method using 5 load steps and PTC (pseudo-transient continuation) for more stable load stepping
                             'prestress_initial'     : True,
                             'prestress_numstep'     : 5,
@@ -147,7 +147,7 @@ def main():
 
         # the activation curve for the contraction of the 3D heart ventricles
         def tc1(self, t):
-            
+
             tmod = t % param()['T_cycl']
 
             K = 5.
@@ -164,7 +164,7 @@ def main():
 
         # the activation curves for the contraction of the 0D atria
         def tc2(self, t):
-            
+
             tmod = t % param()['T_cycl']
 
             act_dur = 2.*param()['t_ed']
@@ -212,7 +212,7 @@ def main():
 
 
 def init():
-    
+
     # values in kg-mm-s unit system
 
     return {'Q_v_l_0' : 0.0,               # initial left ventricular flux

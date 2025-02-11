@@ -16,7 +16,7 @@ import pytest
 def test_main():
 
     basepath = str(Path(__file__).parent.absolute())
-    
+
     # reads in restart step from the command line
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
@@ -44,7 +44,8 @@ def test_main():
     FEM_PARAMS           = {'order_disp'            : 2,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'incompressible_2field' : True}
+                            'incompressibility'     : 'nearly',
+                            'bulkmod'               : 1e6}
 
     CONSTRAINT_PARAMS    = {'constraint_physics'   : [{'id' : [3], 'type' : 'volume', 'prescribed_curve' : 1}],
                             'multiplier_physics'   : [{'id' : [3], 'type' : 'pressure'}]}
@@ -81,9 +82,9 @@ def test_main():
     u_corr = np.zeros(3*len(check_node))
 
     ## correct results
-    u_corr[0] = 6.2559851561638546E-01 # x
-    u_corr[1] = 1.6295349430772595E-02 # y
-    u_corr[2] = -1.6268062830756734E-02 # z
+    u_corr[0] = 6.2559609940771665E-01 # x
+    u_corr[1] = 1.6294285193894000E-02 # y
+    u_corr[2] = -1.6267010564912726E-02 # z
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.pbs.u, check_node, u_corr, problem.mp.pbs.V_u, problem.mp.comm, tol=tol, nm='u')
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)

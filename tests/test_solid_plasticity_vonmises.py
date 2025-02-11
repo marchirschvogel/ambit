@@ -42,7 +42,7 @@ def main():
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 1,
-                         'incompressible_2field' : False}
+                         'incompressibility'     : 'no'}
 
     MATERIALS         = {'MAT1' : {'neohooke_dev' : {'mu' : 10.},
                                    'ogden_vol'    : {'kappa' : 10./(1.-2.*0.49)},

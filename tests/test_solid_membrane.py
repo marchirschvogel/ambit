@@ -37,7 +37,7 @@ def test_main():
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 5,
-                         'incompressible_2field' : False}
+                         'incompressibility'     : 'no'}
 
     MATERIALS         = {'MAT1' : {'neohooke_compressible' : {'mu' : 10.0, 'nu' : 0.49}},
                          'MAT2' : {'neohooke_compressible' : {'mu' : 10.0, 'nu' : 0.49}},
@@ -87,7 +87,7 @@ def test_main():
                                          {'id' : [17], 'dir' : 'x', 'expression' : expression1}, # simple shear in membrane plane
                           # block4 - simple shear out of membrane plane
                                          {'id' : [21,24], 'dir' : 'z', 'val' : 0.}, # out of 2D plane XY
-                                         {'id' : [19], 'dir' : 'all', 'val' : 0.},    
+                                         {'id' : [19], 'dir' : 'all', 'val' : 0.},
                                          {'id' : [22], 'dir' : 'x', 'val' : 0.},
                                          {'id' : [22], 'dir' : 'y', 'curve' : 1}, # simple shear out of membrane plane
                           # block5 - pure shear
@@ -140,7 +140,7 @@ def test_main():
 
     check1 = ambit_fe.resultcheck.results_check_node(problem.mp.io.cauchystress_membrane_principal, check_node, cauchy_corr, problem.mp.Vd_vector, problem.mp.comm, tol=tol, nm='sigma')
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
-    
+
     if not success:
         raise RuntimeError("Test failed!")
 

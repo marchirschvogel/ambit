@@ -129,7 +129,7 @@ class AleProblem(problem_base):
         self.numdof = self.d.x.petsc_vec.getSize()
 
         # initialize ALE time-integration class
-        self.ti = timeintegration.timeintegration_ale(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
+        self.ti = timeintegration.timeintegration_ale(time_params, self.pbase.dt, self.pbase.numstep, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
 
         # initialize kinematics_constitutive class
         self.ki = ale_kinematics_constitutive.kinematics(self.dim, elem_metrics={'jac_det' : self.io.detj0})

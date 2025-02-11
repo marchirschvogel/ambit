@@ -29,7 +29,7 @@ def test_main():
     FEM_PARAMS           = {'order_disp'             : 1,
                             'order_pres'             : 1,
                             'quad_degree'            : 1,
-                            'incompressible_2field'  : True}
+                            'incompressibility'      : 'full'}
 
     SOLVER_PARAMS_SOLID  = {'solve_type'             : 'direct',
                             'tol_res'                : 1.0e-8,

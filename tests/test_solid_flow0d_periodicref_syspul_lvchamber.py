@@ -22,7 +22,7 @@ def test_main():
     # reads in restart step from the command line
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
-    
+
     try: restart_step_outer = int(sys.argv[2])
     except: restart_step_outer = 0
 
@@ -64,13 +64,13 @@ def test_main():
                                                        'la' : {'type' : '0D_elast', 'activation_curve' : 3},
                                                        'ra' : {'type' : '0D_elast', 'activation_curve' : 3}}}
 
-    FEM_PARAMS           = {'order_disp'            : 1, 
+    FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
-                            'incompressible_2field' : False,
+                            'incompressibility'     : 'no',
                             'prestress_initial'     : True,
                             'prestress_numstep'     : 1}
-    
+
     COUPLING_PARAMS      = {'surface_ids'           : [[1]],
                             'coupling_quantity'     : ['pressure']*4,
                             'variable_quantity'     : ['flux']*4,
@@ -87,37 +87,37 @@ def test_main():
 
 
     class time_curves:
-        
+
         def tc1(self, t):
-            
+
             K = 5.
             t_contr, t_relax = 0.2, 0.53
-            
+
             alpha_max = MATERIALS['MAT1']['active_fiber']['alpha_max']
             alpha_min = MATERIALS['MAT1']['active_fiber']['alpha_min']
-            
+
             c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-            
+
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
-        
+
         def tc2(self, t): # RV
-            
+
             t_ed, t_es = 0.2, 0.53
-            
+
             tvu, tvr = 0.25, 0.1
-            
+
             act_rv_up = 0.5*(1.0)*(1.0-np.cos(np.pi*(t-t_ed)/tvu))
             act_rv_down = 0.5*(1.0)*(1.0-np.cos(np.pi*(t-(t_es+tvr))/tvr))
-            
+
             # return 0.5*(1.-cos(2.*np.pi*(t-t_ed)/(1.8*(t_es-t_ed)))) * (t >= t_ed) * (t <= t_ed + 1.8*(t_es-t_ed))
             return 0 * (t < t_ed) + act_rv_up * (t >= t_ed)*(t < (t_ed+tvu)) + (1.0) * (t >= (t_ed+tvu))*(t < (t_es)) + act_rv_down * (t >= t_es)*(t < (t_es+tvr)) + 0 * (t > (t_es+tvr))
 
         def tc3(self, t): # RA
-            
+
             t_ed, t_es = 0.2, 0.53
-            
+
             return 0.5*(1.-np.cos(2.*np.pi*(t)/(2.*t_ed))) * (t >= 0.) * (t <= 2.*t_ed)
 
     class expression1: # prestress load
@@ -139,7 +139,7 @@ def test_main():
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
-    
+
     # problem solve
     problem.solve_problem()
 
@@ -175,7 +175,7 @@ def test_main():
     if not success:
         raise RuntimeError("Test failed!")
 
-    
+
 
 def init():
 

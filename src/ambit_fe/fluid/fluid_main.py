@@ -296,7 +296,7 @@ class FluidmechanicsProblem(problem_base):
         self.numdof = self.v.x.petsc_vec.getSize() + self.p.x.petsc_vec.getSize()
 
         # initialize fluid time-integration class
-        self.ti = timeintegration.timeintegration_fluid(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
+        self.ti = timeintegration.timeintegration_fluid(time_params, self.pbase.dt, self.pbase.numstep, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.comm)
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()

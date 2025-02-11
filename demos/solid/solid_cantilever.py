@@ -54,7 +54,7 @@ def main():
                          # the degree of the quadrature rule
                          'quad_degree'           : 6,
                          # whether to run fully incompressible: here we have a steel cantilever, so far from being incompressible
-                         'incompressible_2field' : False}
+                         'incompressibility'     : 'no'}
 
     """
     Constitutive parameters: assume the cantilever is made of steel

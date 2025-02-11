@@ -42,6 +42,10 @@ class variationalform(variationalform_base):
         # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1\right)\delta p\,\mathrm{d}V
         return (J-1.)*self.var_p*ddomain
 
+    def deltaW_int_pres_nearly(self, J, p, bulk, ddomain):
+        # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1+\frac{1}{\kappa} p\right)\delta p\,\mathrm{d}V
+        return (J-1.+(1./bulk)*p)*self.var_p*ddomain
+
 
     # linearization of internal virtual work
     # we could use ufl to compute the derivative directly via ufl.derivative(...), however then, no material tangents from nonlinear consitutive laws
@@ -84,6 +88,12 @@ class variationalform(variationalform_base):
 
         C = F.T*F
         return ufl.inner(Jtang, ufl.derivative(C, u, self.du)) * self.var_p*ddomain
+
+
+    # TeX: \int\limits_{\Omega_0}\frac{1}{\kappa}\Delta p\,\delta p\,\mathrm{d}V
+    def Lin_deltaW_int_pres_nearly_dp(self, bulk, ddomain):
+
+        return (1./bulk)*self.dp*self.var_p*ddomain
 
 
     ### Volume / flux coupling conditions

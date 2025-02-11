@@ -50,7 +50,7 @@ def test_main():
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 2,
-                         'incompressible_2field' : False}
+                         'incompressibility'     : 'no'}
 
     #MATERIALS         = {'MAT1' : {'neohooke_compressible' : {'mu' : 10., 'nu' : 0.1}}}
     MATERIALS         = {'MAT1' : {'neohooke_dev' : {'mu' : 10.},

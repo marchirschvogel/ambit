@@ -44,7 +44,7 @@ def test_main():
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 2,
-                         'incompressible_2field' : False}
+                         'incompressibility'     : 'no'}
 
     MATERIALS         = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 210e9, 'nu' : 0.3}, # Pa
                                    'inertia'           : {'rho0' : 7850.}}} # kg/m^3
@@ -79,7 +79,7 @@ def test_main():
     u_corr[0] = 0.0 # x
     u_corr[1] = 0.0 # y
     u_corr[2] = -4.905 # z - should be -0.5*g*t^2
-    
+
     v_corr[0] = 0.0 # x
     v_corr[1] = 0.0 # y
     v_corr[2] = -9.81 # z - should be -g*t

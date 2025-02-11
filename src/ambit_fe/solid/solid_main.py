@@ -73,7 +73,18 @@ class SolidmechanicsProblem(problem_base):
         self.order_disp = fem_params['order_disp']
         self.order_pres = fem_params.get('order_pres', 1)
         self.quad_degree = fem_params['quad_degree']
-        self.incompressible_2field = fem_params.get('incompressible_2field', False)
+
+        self.incompressibility = fem_params.get('incompressibility', 'no')
+
+        if self.incompressibility=='no':
+            self.incompressible_2field = False
+        elif self.incompressibility=='full':
+            self.incompressible_2field = True
+        elif self.incompressibility=='nearly':
+            self.incompressible_2field = True
+            self.bulkmod = fem_params['bulkmod']
+        else:
+            raise ValueError("Unknown setting for 'incompressibility'. Choose 'no', 'full', or 'nearly'.")
 
         self.fem_params = fem_params
 
@@ -241,7 +252,7 @@ class SolidmechanicsProblem(problem_base):
         self.mor_params = mor_params
 
         # initialize solid time-integration class
-        self.ti = timeintegration.timeintegration_solid(time_params, self.pbase.dt, self.pbase.numstep, fem_params, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.pbase.comm)
+        self.ti = timeintegration.timeintegration_solid(time_params, self.pbase.dt, self.pbase.numstep, incompr=self.incompressible_2field, time_curves=time_curves, t_init=self.pbase.t_init, dim=self.dim, comm=self.pbase.comm)
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
@@ -434,9 +445,14 @@ class SolidmechanicsProblem(problem_base):
             # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
             if self.mat_growth[n]: J, J_old, J_mid = self.ma[n].J_e(self.u, self.theta), self.ma[n].J_e(self.u_old, self.theta_old), self.ma[n].J_e(self.us_mid, self.timefac*self.theta+(1.-self.timefac)*self.theta_old)
             else:                  J, J_old, J_mid = self.ki.J(self.u), self.ki.J(self.u_old), self.ki.J(self.us_mid)
-            self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx(M))
-            self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx(M))
-            self.deltaW_p_mid   += self.vf.deltaW_int_pres(J_mid, self.dx(M))
+            if self.incompressibility=='full':
+                self.deltaW_p       += self.vf.deltaW_int_pres(J, self.dx(M))
+                self.deltaW_p_old   += self.vf.deltaW_int_pres(J_old, self.dx(M))
+                self.deltaW_p_mid   += self.vf.deltaW_int_pres(J_mid, self.dx(M))
+            if self.incompressibility=='nearly':
+                self.deltaW_p       += self.vf.deltaW_int_pres_nearly(J, self.p, self.bulkmod, self.dx(M))
+                self.deltaW_p_old   += self.vf.deltaW_int_pres_nearly(J_old, self.p_old, self.bulkmod, self.dx(M))
+                self.deltaW_p_mid   += self.vf.deltaW_int_pres_nearly(J_mid, self.ps_mid, self.bulkmod, self.dx(M))
 
         # external virtual work (from Neumann or Robin boundary conditions, body forces, ...)
         w_neumann, w_body, w_robin, w_membrane = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
@@ -634,6 +650,8 @@ class SolidmechanicsProblem(problem_base):
                 if self.ti.eval_nonlin_terms=='midpoint': self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.us_mid), Ctang_p, self.dx(M))
 
                 self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
+                if self.incompressibility=='nearly':
+                    self.weakform_lin_pp += self.vf.Lin_deltaW_int_pres_nearly_dp(self.bulkmod, self.dx(M))
 
         # set forms for active stress
         if any(self.mat_active_stress):
@@ -700,6 +718,7 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_prestress_p = self.deltaW_p
                 self.weakform_lin_prestress_up = ufl.derivative(self.weakform_prestress_u, self.p, self.dp)
                 self.weakform_lin_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
+                self.weakform_lin_prestress_pp = ufl.derivative(self.weakform_prestress_p, self.p, self.dp)
 
         # number of fields involved
         if self.incompressible_2field: self.nfields=2
@@ -890,7 +909,7 @@ class SolidmechanicsProblem(problem_base):
                 self.res_p  = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
                 self.jac_up = fem.form(self.weakform_lin_prestress_up, entity_maps=self.io.entity_maps)
                 self.jac_pu = fem.form(self.weakform_lin_prestress_pu, entity_maps=self.io.entity_maps)
-                self.jac_pp = None
+                self.jac_pp = fem.form(self.weakform_lin_prestress_pp, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)

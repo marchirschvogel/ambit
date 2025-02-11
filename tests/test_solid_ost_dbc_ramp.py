@@ -47,7 +47,7 @@ def test_main():
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 2,
-                         'incompressible_2field' : False}
+                         'incompressibility'     : 'no'}
 
     MATERIALS         = {'MAT1' : {'neohooke_compressible' : {'mu' : 100., 'nu' : 0.3},
                                    'inertia'           : {'rho0' : 1.0e-4}},
@@ -96,7 +96,7 @@ def test_main():
     check_node.append(np.array([1.0, 1.0, 1.0]))
     check_node.append(np.array([1.0, 1.0, 2.25]))
     check_node.append(np.array([1.0, 1.0, 3.5]))
-    
+
     u_corr = np.zeros(3*len(check_node))
 
     ## correct results
