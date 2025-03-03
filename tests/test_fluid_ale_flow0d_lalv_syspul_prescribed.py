@@ -37,6 +37,7 @@ def test_main():
                             'output_path'           : basepath+'/tmp/',
                             'mesh_domain'           : basepath+'/input/lalv_domain.xdmf',
                             'mesh_boundary'         : basepath+'/input/lalv_boundary.xdmf',
+                            'meshfile_type'         : 'HDF5',
                             'results_to_write'      : [['velocity','pressure'],['aledisplacement']], # first fluid, then ale results
                             'simname'               : 'fluid_ale_flow0d_lalv_syspul_prescribed'}
 
