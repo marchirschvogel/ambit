@@ -89,7 +89,7 @@ Installation
 
 | In order to use Ambit, you need to install FEniCSx
   (https://github.com/FEniCS/dolfinx#installation) (latest
-  Ambit-compatible dolfinx development version dates to 7 Jan 2025).
+  Ambit-compatible dolfinx development version dates to 10 Mar 2025).
 | Ambit can then be installed using pip, either the current release
 
 ::
