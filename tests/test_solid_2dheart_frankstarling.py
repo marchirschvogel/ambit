@@ -36,15 +36,16 @@ def test_main():
                             'results_to_write'      : ['displacement','pressure','fiberstretch'],
                             'simname'               : 'solid_2Dheart_frankstarling'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 10,
+                            'numstep_stop'          : 5}
+
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8,
                             'ptc'                   : False}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
-                            'numstep'               : 10,
-                            'numstep_stop'          : 5,
-                            'timint'                : 'genalpha',
+    TIME_PARAMS_SOLID    = {'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
 
@@ -98,7 +99,7 @@ def test_main():
                             'robin' : [{'type' : 'spring', 'id' : [3], 'dir' : 'normal_ref', 'stiff' : 0.075}] }
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

@@ -18,9 +18,9 @@ import pytest
 
 @pytest.mark.fluid
 def test_main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
-    
+
 
     IO_PARAMS           = {'problem_type'          : 'fluid',
                            'mesh_domain'           : basepath+'/input/cylinder_domain.xdmf',
@@ -29,6 +29,10 @@ def test_main():
                            'output_path'           : basepath+'/tmp/',
                            'results_to_write'      : ['velocity','pressure'],
                            'simname'               : 'fluid_p1p1_stab_cylinder_schur2x2'}
+
+    CONTROL_PARAMS      = {'maxtime'               : 1.0,
+                           'numstep'               : 10,
+                           'numstep_stop'          : 2}
 
     SOLVER_PARAMS       = {'solve_type'            : 'iterative',
                            'iterative_solver'      : 'fgmres',
@@ -41,13 +45,10 @@ def test_main():
                            'tol_res'               : 1.0e-8,
                            'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS_FLUID   = {'maxtime'               : 1.0,
-                           'numstep'               : 10,
-                           'numstep_stop'          : 2,
-                           'timint'                : 'ost',
+    TIME_PARAMS_FLUID   = {'timint'                : 'ost',
                            'theta_ost'             : 1.0,
                            'fluid_governing_type'  : 'navierstokes_steady'}
-    
+
     FEM_PARAMS          = {'order_vel'             : 1,
                            'order_pres'            : 1,
                            'quad_degree'           : 5,
@@ -63,9 +64,9 @@ def test_main():
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
-        
+
         def tc1(self, t):
-            return -0.001*np.sin(2.*np.pi*t/TIME_PARAMS_FLUID['maxtime'])
+            return -0.001*np.sin(2.*np.pi*t/CONTROL_PARAMS['maxtime'])
 
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}], # lateral surf
@@ -73,7 +74,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -105,5 +106,5 @@ def test_main():
 
 
 if __name__ == "__main__":
-    
+
     test_main()

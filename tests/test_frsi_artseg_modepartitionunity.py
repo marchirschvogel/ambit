@@ -37,6 +37,10 @@ def test_main():
                             'results_to_write'      : [['velocity','pressure'],['aledisplacement']], # first fluid, then ale results
                             'simname'               : 'frsi_artseg_modepartitionunity'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 3.0,
+                            'numstep'               : 150,
+                            'numstep_stop'          : 3}
+
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'partitions'            : [basepath+'/input/artseg_part-1.txt',basepath+'/input/artseg_part-2.txt',basepath+'/input/artseg_part-3.txt'],
                             'numsnapshots'          : 1,
@@ -53,10 +57,7 @@ def test_main():
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-8],
                             'tol_inc'               : [1.0e-8,1.0e-8,1.0e-8]}
 
-    TIME_PARAMS          = {'maxtime'               : 3.0,
-                            'numstep'               : 150,
-                            'numstep_stop'          : 3,
-                            'timint'                : 'ost',
+    TIME_PARAMS          = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
                             'eval_nonlin_terms'     : 'midpoint',
                             'fluid_governing_type'  : 'stokes_transient'}
@@ -98,7 +99,7 @@ def test_main():
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

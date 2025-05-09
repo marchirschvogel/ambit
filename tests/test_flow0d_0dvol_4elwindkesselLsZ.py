@@ -22,14 +22,14 @@ def test_main():
                          'output_path'           : basepath+'/tmp/',
                          'simname'               : 'test'}
 
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 100}
+
     SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 100,
-                         'numstep_stop'          : 100,
-                         'timint'                : 'ost',
+    TIME_PARAMS       = {'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init()}
 
@@ -46,7 +46,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

@@ -9,6 +9,7 @@
 import sys, time
 import numpy as np
 from . import utilities
+from . import ioparams
 
 """
 Ambit problem and solver base classes
@@ -16,8 +17,11 @@ Ambit problem and solver base classes
 
 class problem_base():
 
-    def __init__(self, io_params, time_params, comm=None, comm_sq=None):
+    def __init__(self, io_params, ctrl_params, comm=None, comm_sq=None):
 
+        ioparams.check_params_ctrl(ctrl_params)
+
+        self.ctrl_params = ctrl_params
         self.comm = comm
         self.comm_sq = comm_sq
 
@@ -26,25 +30,25 @@ class problem_base():
         self.simname = io_params['simname']
         self.output_path = io_params['output_path']
 
-        self.maxtime = time_params['maxtime']
-        if 'numstep' in time_params.keys():
-            assert('dt' not in time_params.keys())
-            self.numstep = time_params['numstep']
+        self.maxtime = ctrl_params['maxtime']
+        if 'numstep' in ctrl_params.keys():
+            assert('dt' not in ctrl_params.keys())
+            self.numstep = ctrl_params['numstep']
             self.dt = self.maxtime/self.numstep
-        elif 'dt' in time_params.keys():
-            assert('numstep' not in time_params.keys())
-            self.dt = time_params['dt']
+        elif 'dt' in ctrl_params.keys():
+            assert('numstep' not in ctrl_params.keys())
+            self.dt = ctrl_params['dt']
             self.numstep = int(self.maxtime/self.dt)
         else:
             raise RuntimeError("Need to specify either 'numstep' or 'dt' in time parameters!")
 
         self.restart_step = io_params.get('restart_step', 0)
 
-        self.numstep_stop = time_params.get('numstep_stop', self.numstep)
+        self.numstep_stop = ctrl_params.get('numstep_stop', self.numstep)
 
         self.results_to_write = io_params.get('results_to_write', [])
 
-        self.residual_scale = time_params.get('residual_scale', [])
+        self.residual_scale = ctrl_params.get('residual_scale', [])
 
         self.t_init = self.restart_step * self.dt
 

@@ -45,6 +45,21 @@ def check_params_io(params):
         if k not in valid_params:
             raise RuntimeError("Unknown parameter found in I/O params: "+k)
 
+def check_params_ctrl(params):
+
+    valid_params = ['dt',
+                    'maxtime',
+                    'numstep',
+                    'numstep_stop',
+                    'prestress_dt',
+                    'prestress_maxtime',
+                    'prestress_numstep',
+                    'residual_scale']
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in control params: "+k)
+
 
 def check_params_solver(params):
 
@@ -92,12 +107,9 @@ def check_params_fem_solid(params):
                     'lin_remodeling_full',
                     'order_disp',
                     'order_pres',
-                    'prestress_dt',
                     'prestress_from_file',
                     'prestress_initial',
                     'prestress_initial_only',
-                    'prestress_maxtime',
-                    'prestress_numstep',
                     'prestress_ptc',
                     'quad_degree']
 
@@ -112,13 +124,10 @@ def check_params_fem_fluid(params):
                     'fluid_formulation',
                     'order_vel',
                     'order_pres',
-                    'prestress_dt',
                     'prestress_from_file',
                     'prestress_initial',
                     'prestress_initial_only',
                     'prestress_kinetic',
-                    'prestress_maxtime',
-                    'prestress_numstep',
                     'prestress_ptc',
                     'quad_degree',
                     'stabilization']
@@ -153,13 +162,8 @@ def check_params_time_solid(params):
     valid_params = ['alpha_m',
                     'alpha_f',
                     'beta',
-                    'dt',
                     'eval_nonlin_terms',
                     'gamma',
-                    'maxtime',
-                    'numstep',
-                    'numstep_stop',
-                    'residual_scale',
                     'rho_inf_genalpha',
                     'timint',
                     'theta_ost']
@@ -173,14 +177,9 @@ def check_params_time_fluid(params):
 
     valid_params = ['alpha_m',
                     'alpha_f',
-                    'dt',
                     'eval_nonlin_terms',
                     'fluid_governing_type',
                     'gamma',
-                    'maxtime',
-                    'numstep',
-                    'numstep_stop',
-                    'residual_scale',
                     'rho_inf_genalpha',
                     'timint',
                     'theta_ost']
@@ -192,12 +191,7 @@ def check_params_time_fluid(params):
 
 def check_params_time_electrophysiology(params):
 
-    valid_params = ['dt',
-                    'eval_nonlin_terms',
-                    'maxtime',
-                    'numstep',
-                    'numstep_stop',
-                    'residual_scale',
+    valid_params = ['eval_nonlin_terms',
                     'timint',
                     'theta_ost']
 
@@ -208,14 +202,10 @@ def check_params_time_electrophysiology(params):
 
 def check_params_time_flow0d(params):
 
-    valid_params = ['dt',
-                    'eps_periodic',
+    valid_params = ['eps_periodic',
                     'initial_backwardeuler',
                     'initial_conditions',
                     'initial_file',
-                    'maxtime',
-                    'numstep',
-                    'numstep_stop',
                     'periodic_checktype',
                     'timint',
                     'theta_ost']

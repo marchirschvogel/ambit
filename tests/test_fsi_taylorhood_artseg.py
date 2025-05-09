@@ -30,19 +30,18 @@ def test_main():
                             'surface_ids_interface' : [1],
                             'simname'               : 'fsi_taylorhood_artseg'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 0.1,
+                            'dt'                    : 0.02}
+
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'direct_solver'         : 'mumps',
                             'tol_res'               : [1e-8,1e-8,1e-8,1e-8,1e-8,1e-6],
                             'tol_inc'               : [1e-0,1e-0,1e-0,1e-0,1e-0,1e-0]}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 0.1,
-                            'dt'                    : 0.02,
-                            'timint'                : 'ost',
+    TIME_PARAMS_SOLID    = {'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
-    TIME_PARAMS_FLUID    = {'maxtime'               : 0.1,
-                            'dt'                    : 0.02,
-                            'timint'                : 'ost',
+    TIME_PARAMS_FLUID    = {'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
     FEM_PARAMS_SOLID     = {'order_disp'            : 2,
@@ -93,7 +92,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # problem solve
     problem.solve_problem()

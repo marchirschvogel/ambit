@@ -38,6 +38,10 @@ def test_main():
                             'restart_step'          : restart_step,
                             'ode_parallel'          : True}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 500,
+                            'numstep_stop'          : 5}
+
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_romsnaps_2Dheart_u_*.txt'],
                             'numsnapshots'          : 5,
                             'snapshotincr'          : 1,
@@ -50,10 +54,7 @@ def test_main():
                             'tol_res'               : [1.0e-8,1.0e-6],
                             'tol_inc'               : [1.0e-8,1.0e-6]}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
-                            'numstep'               : 500,
-                            'numstep_stop'          : 5,
-                            'timint'                : 'genalpha',
+    TIME_PARAMS_SOLID    = {'timint'                : 'genalpha',
                             'rho_inf_genalpha'      : 0.8}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
@@ -105,7 +106,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()

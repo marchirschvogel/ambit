@@ -27,12 +27,13 @@ def test_main():
                          'write_restart_every'   : 50,
                          'restart_step'          : restart_step}
 
+    CONTROL_PARAMS    = {'maxtime'               : 10*1.0,
+                         'numstep'               : 10*100}
+
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS       = {'maxtime'               : 10*1.0,
-                         'numstep'               : 10*100,
-                         'timint'                : 'ost',
+    TIME_PARAMS       = {'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          'initial_conditions'    : init(),
                          'eps_periodic'          : 0.03,
@@ -54,7 +55,7 @@ def test_main():
     class time_curves:
 
         def tc1(self, t): # atrial activation
-            
+
             tmod = math.fmod(t, 1.0) # periodic function
 
             act_dur = 2.*param()['t_ed']
@@ -66,7 +67,7 @@ def test_main():
                 return 0.0
 
         def tc2(self, t): # ventricular activation
-            
+
             tmod = math.fmod(t, 1.0) # periodic function
 
             act_dur = 1.8*(param()['t_es'] - param()['t_ed'])
@@ -79,7 +80,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

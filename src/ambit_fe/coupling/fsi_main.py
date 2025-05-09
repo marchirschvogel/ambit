@@ -40,13 +40,6 @@ class FSIProblem(problem_base):
         self.io = io
         self.ios, self.iof = ios, iof
 
-        # assert that we do not have conflicting timings - TODO: Find better solution by moving these to global control parameters...
-        assert(time_params_fluid['maxtime'] == time_params_solid['maxtime'])
-        if 'numstep' in time_params_solid.keys() or 'numstep' in time_params_fluid.keys():
-            assert(time_params_fluid['numstep'] == time_params_solid['numstep'])
-        if 'dt' in time_params_solid.keys() or 'dt' in time_params_fluid.keys():
-            assert(time_params_fluid['dt'] == time_params_solid['dt'])
-
         # initialize problem instances (also sets the variational forms for the solid and fluid problem)
         self.pbs  = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params_solid, constitutive_models_solid, bc_dict_solid, time_curves, ios, mor_params=mor_params)
         self.pbfa = FluidmechanicsAleProblem(pbase, io_params, time_params_fluid, fem_params_fluid, fem_params_ale, constitutive_models_fluid_ale[0], constitutive_models_fluid_ale[1], bc_dict_fluid_ale[0], bc_dict_fluid_ale[1], time_curves, coupling_params, iof, mor_params=mor_params)

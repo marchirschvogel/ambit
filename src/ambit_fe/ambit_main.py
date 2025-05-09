@@ -29,15 +29,17 @@ class Ambit():
         Model solver object
     """
 
-    def __init__(self, io_params, time_params, solver_params, fem_params={}, constitutive_params={}, boundary_conditions={}, time_curves=None, coupling_params={}, multiscale_params={}, mor_params={}):
+    def __init__(self, io_params, ctrl_params, time_params, solver_params, fem_params={}, constitutive_params={}, boundary_conditions={}, time_curves=None, coupling_params={}, multiscale_params={}, mor_params={}):
         """
         Parameters
         ----------
-        io_params : dict or list of dicts
+        io_params : dict
             Input/output parameters
+        ctrl_params : dict
+            Global control parameters
         time_params : dict or list of dicts
             Time integration parameters
-        solver_params : dict or list of dicts
+        solver_params : dict
             Solver parameters for nonlinear and linear solution schemes
         fem_params : dict or list of dicts, optional
             Finite element parameters
@@ -72,7 +74,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = solid_main.SolidmechanicsProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, io, mor_params=mor_params)
             self.ms = solid_main.SolidmechanicsSolver(self.mp, solver_params)
@@ -85,7 +87,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = fluid_main.FluidmechanicsProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, io, mor_params=mor_params)
             self.ms = fluid_main.FluidmechanicsSolver(self.mp, solver_params)
@@ -98,7 +100,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = ale_main.AleProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, io, mor_params=mor_params)
             self.ms = ale_main.AleSolver(self.mp, solver_params)
@@ -111,7 +113,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = fluid_ale_main.FluidmechanicsAleProblem(pbase, io_params, time_params, fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], boundary_conditions[0], boundary_conditions[1], time_curves, coupling_params, io, mor_params=mor_params)
             self.ms = fluid_ale_main.FluidmechanicsAleSolver(self.mp, solver_params)
@@ -124,7 +126,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params[0], comm=self.comm, comm_sq=self.comm_sq)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
             self.mp = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DProblem(pbase, io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], constitutive_params[2], boundary_conditions[0], boundary_conditions[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params)
             self.ms = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DSolver(self.mp, solver_params)
@@ -133,7 +135,7 @@ class Ambit():
 
             from .flow0d import flow0d_main
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = flow0d_main.Flow0DProblem(pbase, io_params, time_params, constitutive_params, time_curves)
             self.ms = flow0d_main.Flow0DSolver(self.mp, solver_params)
@@ -146,7 +148,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params[0], comm=self.comm, comm_sq=self.comm_sq)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
             self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(pbase, io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], boundary_conditions, time_curves, coupling_params, io, mor_params=mor_params)
             self.ms = solid_flow0d_main.SolidmechanicsFlow0DSolver(self.mp, solver_params)
@@ -160,7 +162,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params[0], comm=self.comm, comm_sq=self.comm_sq)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
             self.mp = solid_flow0d_main.SolidmechanicsFlow0DProblem(pbase, io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], boundary_conditions, time_curves, coupling_params, io, mor_params=mor_params)
             self.ms = solid_flow0d_periodicref_main.SolidmechanicsFlow0DPeriodicRefSolver(self.mp, solver_params)
@@ -173,7 +175,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params[0], comm=self.comm, comm_sq=self.comm_sq)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
             self.mp = fluid_flow0d_main.FluidmechanicsFlow0DProblem(pbase, io_params, time_params[0], time_params[1], fem_params, constitutive_params[0], constitutive_params[1], boundary_conditions, time_curves, coupling_params, io, mor_params=mor_params)
             self.ms = fluid_flow0d_main.FluidmechanicsFlow0DSolver(self.mp, solver_params)
@@ -188,7 +190,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params[0], comm=self.comm, comm_sq=self.comm_sq)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
             self.mp = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(pbase, io_params, time_params[0], time_params[1], time_params[2], fem_params, constitutive_params[0], constitutive_params[1], boundary_conditions, time_curves, coupling_params, multiscale_params, io)
             self.ms = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(self.mp, solver_params)
@@ -220,7 +222,7 @@ class Ambit():
 
             iof.set_mesh_fields(io.mesh) # we want the fields on the master, entity maps will restrict
 
-            pbase = problem_base(io_params, time_params[0], comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = fsi_main.FSIProblem(pbase, io_params, time_params[0], time_params[1], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], boundary_conditions[0], [boundary_conditions[1],boundary_conditions[2]], time_curves, coupling_params, io, ios, iof, mor_params=mor_params)
             self.ms = fsi_main.FSISolver(self.mp, solver_params)
@@ -252,7 +254,7 @@ class Ambit():
 
             iof.set_mesh_fields(io.mesh) # we want the fields on the master, entity maps will restrict
 
-            pbase = problem_base(io_params, time_params[0], comm=self.comm, comm_sq=self.comm_sq)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
             self.mp = fsi_flow0d_main.FSIFlow0DProblem(pbase, io_params, time_params[0], time_params[1], time_params[2], fem_params[0], fem_params[1], fem_params[2], constitutive_params[0], [constitutive_params[1],constitutive_params[2]], constitutive_params[3], boundary_conditions[0], [boundary_conditions[1],boundary_conditions[2]], time_curves, coupling_params[0], coupling_params[1], io, ios, iof, mor_params=mor_params)
             self.ms = fsi_flow0d_main.FSIFlow0DSolver(self.mp, solver_params)
@@ -265,7 +267,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = solid_constraint_main.SolidmechanicsConstraintProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, coupling_params, io, mor_params=mor_params)
             self.ms = solid_constraint_main.SolidmechanicsConstraintSolver(self.mp, solver_params)
@@ -278,7 +280,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = fluid_constraint_main.FluidmechanicsConstraintProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, coupling_params, io, mor_params=mor_params)
             self.ms = fluid_constraint_main.FluidmechanicsConstraintSolver(self.mp, solver_params)
@@ -291,7 +293,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = fluid_ale_constraint_main.FluidmechanicsAleConstraintProblem(pbase, io_params, time_params, fem_params[0], fem_params[1], constitutive_params[0], constitutive_params[1], boundary_conditions[0], boundary_conditions[1], time_curves, coupling_params[0], coupling_params[1], io, mor_params=mor_params)
             self.ms = fluid_ale_constraint_main.FluidmechanicsAleConstraintSolver(self.mp, solver_params)
@@ -306,7 +308,7 @@ class Ambit():
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
-            pbase = problem_base(io_params, time_params, comm=self.comm)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
             self.mp = electrophysiology_main.ElectrophysiologyProblem(pbase, io_params, time_params, fem_params, constitutive_params, boundary_conditions, time_curves, io, mor_params=mor_params)
             self.ms = electrophysiology_main.ElectrophysiologySolver(self.mp, solver_params)
@@ -315,7 +317,7 @@ class Ambit():
 
             from .signet import signet_main
 
-            pbase = problem_base(io_params, time_params, comm=self.comm, comm_sq=self.comm_sq)
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
             self.mp = signet_main.SignallingNetworkProblem(pbase, io_params, time_params, constitutive_params, time_curves)
             self.ms = signet_main.SignallingNetworkSolver(self.mp, solver_params)

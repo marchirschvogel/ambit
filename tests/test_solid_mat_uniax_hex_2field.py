@@ -33,15 +33,16 @@ def test_main():
                          'results_to_write'      : ['displacement','cauchystress','cauchystress_principal','vonmises_cauchystress','pk1stress','pk2stress','glstrain','glstrain_principal','eastrain','eastrain_principal','jacobian','fibers','strainenergy','internalpower'],
                          'simname'               : 'solid_mat_uniax_hex_2field'}
 
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 1}
+
     SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8,
                          'maxiter'               : 25,
                          'divergence_continue'   : None}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 1,
-                         'timint'                : 'static'}
+    TIME_PARAMS       = {'timint'                : 'static'}
 
     FEM_PARAMS        = {'order_disp'            : 2, # hex27 elements
                          'order_pres'            : 1, # hex8 elements
@@ -87,30 +88,30 @@ def test_main():
 
         def tc1(self, t):
             umax = 1.0
-            return umax*t/TIME_PARAMS['maxtime']
+            return umax*t/CONTROL_PARAMS['maxtime']
 
         def tc2(self, t):
             umax = 1.0
-            return umax*t/TIME_PARAMS['maxtime']
+            return umax*t/CONTROL_PARAMS['maxtime']
 
         def tc3(self, t):
             umax = 0.1
-            return umax*t/TIME_PARAMS['maxtime']
+            return umax*t/CONTROL_PARAMS['maxtime']
 
         # PK1 stress that yields to a x-displacement of 1.0 for NH material
         def tc4(self, t):
             tmax = 17.5
-            return tmax*t/TIME_PARAMS['maxtime']
+            return tmax*t/CONTROL_PARAMS['maxtime']
 
         # PK1 stress that yields to a x-displacement of 1.0 for MR material
         def tc5(self, t):
             tmax = 13.125
-            return tmax*t/TIME_PARAMS['maxtime']
+            return tmax*t/CONTROL_PARAMS['maxtime']
 
         # PK1 stress that yields to a x-displacement of 0.1 for HO material
         def tc6(self, t):
             tmax = 17.32206451195601
-            return tmax*t/TIME_PARAMS['maxtime']
+            return tmax*t/CONTROL_PARAMS['maxtime']
 
 
 
@@ -132,7 +133,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

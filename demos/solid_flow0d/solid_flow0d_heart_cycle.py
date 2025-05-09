@@ -35,6 +35,17 @@ def main():
                             # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5/.txt
                             'simname'               : 'solid_flow0d_heart_cycle'}
 
+    number_of_cycles = 1
+    """
+    Parameters for the global time control
+    """
+    CONTROL_PARAMS       = {# the maximum simulation time - here, we want our heart cycle to last 1 s
+                            'maxtime'               : number_of_cycles*1.0,
+                            # the number of time steps which the simulation time is divided into - so here, a time step lasts 1/500 s = 0.002 s = 2 ms
+                            'numstep'               : number_of_cycles*500,
+                            # number of prestressing steps
+                            'prestress_numstep'     : 5}
+
     """
     Parameters for the linear and nonlinear solution schemes
     """
@@ -47,15 +58,10 @@ def main():
                             'subsolver_params'      : {'tol_res' : 1e-6,
                                                        'tol_inc' : 1e-6}}
 
-    number_of_cycles = 1
     """
-    Parameters for the solid mechanics time integration scheme, plus the global time parameters
+    Parameters for the solid mechanics time integration scheme
     """
-    TIME_PARAMS_SOLID    = {# the maximum simulation time - here, we want our heart cycle to last 1 s
-                            'maxtime'               : number_of_cycles*1.0,
-                            # the number of time steps which the simulation time is divided into - so here, a time step lasts 1/500 s = 0.002 s = 2 ms
-                            'numstep'               : number_of_cycles*500,
-                            # the solid mechanics time integration scheme: we use the Generalized-alpha method with a spectral radius of 0.8
+    TIME_PARAMS_SOLID    = {# the solid mechanics time integration scheme: we use the Generalized-alpha method with a spectral radius of 0.8
                             'timint'                : 'genalpha',
                             'rho_inf_genalpha'      : 0.8}
 
@@ -98,9 +104,8 @@ def main():
                             'quad_degree'           : 2,
                             # whether we want to model the heart as purely incompressible (would involve a 2-field functional with additional pressure degrees of freedom)
                             'incompressibility'     : 'no',
-                            # the prestress settings: initial prestressing with the MULF method using 5 load steps and PTC (pseudo-transient continuation) for more stable load stepping
+                            # the prestress settings: initial prestressing with the MULF method using 5 load steps (cf. CONTROL_PARAMS) and PTC (pseudo-transient continuation) for more stable load stepping
                             'prestress_initial'     : True,
-                            'prestress_numstep'     : 5,
                             'prestress_ptc'         : True}
 
     """
@@ -204,7 +209,7 @@ def main():
                                         {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz_ref', 'visc'  : 0.0005}] }
 
     # Pass parameters to Ambit to set up the problem
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # Call the Ambit solver to solve the problem
     problem.solve_problem()

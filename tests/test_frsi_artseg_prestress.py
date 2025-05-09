@@ -30,6 +30,12 @@ def test_main():
                             'results_to_write'      : [['fluiddisplacement','velocity','pressure'],['aledisplacement']], # first fluid, then ale results
                             'simname'               : 'frsi_artseg_prestress'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 3.0,
+                            'numstep'               : 150,
+                            'numstep_stop'          : 1,
+                            'prestress_maxtime'     : 1.0,
+                            'prestress_numstep'     : 30}
+
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'numsnapshots'          : 1,
                             'snapshotincr'          : 1,
@@ -56,10 +62,7 @@ def test_main():
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 
-    TIME_PARAMS          = {'maxtime'               : 3.0,
-                            'numstep'               : 150,
-                            'numstep_stop'          : 1,
-                            'timint'                : 'ost',
+    TIME_PARAMS          = {'timint'                : 'ost',
                             'theta_ost'             : 1.0,
                             'fluid_governing_type'  : 'stokes_transient'}
 
@@ -68,9 +71,7 @@ def test_main():
                             'quad_degree'           : 6,
                             'fluid_formulation'     : 'conservative',
                             'prestress_initial'     : True,
-                            'prestress_kinetic'     : 'stokes_transient',
-                            'prestress_maxtime'     : 1.0,
-                            'prestress_numstep'     : 30}
+                            'prestress_kinetic'     : 'stokes_transient'}
 
     FEM_PARAMS_ALE       = {'order_disp'            : 2,
                             'quad_degree'           : 6}
@@ -110,7 +111,7 @@ def test_main():
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

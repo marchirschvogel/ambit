@@ -28,6 +28,10 @@ def test_main():
                             'simname'               : 'test',
                             'ode_parallel'          : True}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 20,
+                            'numstep_stop'          : 10}
+
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',
                             'block_precond'         : 'bgs2x2',
@@ -38,10 +42,7 @@ def test_main():
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
-                            'numstep'               : 20,
-                            'numstep_stop'          : 10,
-                            'timint'                : 'genalpha',
+    TIME_PARAMS_SOLID    = {'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8}
 
@@ -68,7 +69,7 @@ def test_main():
 
         def tc1(self, t):
             pmax = -10.
-            return pmax*t/TIME_PARAMS_SOLID['maxtime']
+            return pmax*t/CONTROL_PARAMS['maxtime']
 
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'x', 'val' : 0.},
@@ -78,7 +79,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()

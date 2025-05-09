@@ -39,15 +39,15 @@ def test_main():
                            'results_to_write'      : ['velocity','pressure'],
                            'simname'               : 'fluid_p1p1_stab_cylinder_valve'}
 
+    CONTROL_PARAMS      = {'maxtime'               : 1.0,
+                           'numstep'               : 10}
+
     SOLVER_PARAMS       = {'solve_type'            : 'direct',
                            'direct_solver'         : 'mumps',
                            'tol_res'               : 1.0e-8,
                            'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS_FLUID   = {'maxtime'               : 1.0,
-                           'numstep'               : 10,
-                           #'numstep_stop'          : 3,
-                           'timint'                : 'ost',
+    TIME_PARAMS_FLUID   = {'timint'                : 'ost',
                            'theta_ost'             : 1.0,
                            'fluid_governing_type'  : 'navierstokes_transient'}
 
@@ -86,7 +86,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

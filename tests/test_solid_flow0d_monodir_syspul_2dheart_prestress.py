@@ -36,14 +36,16 @@ def test_main():
                             'restart_step'          : restart_step,
                             'ode_parallel'          : True}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 500,
+                            'numstep_stop'          : 5,
+                            'prestress_numstep'     : 1}
+
     SOLVER_PARAMS         = {'solve_type'            : 'direct',
                             'tol_res'               : [1.0e-8,1.0e-6],
                             'tol_inc'               : [1.0e-8,1.0e-6]}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
-                            'numstep'               : 500,
-                            'numstep_stop'          : 5,
-                            'timint'                : 'genalpha',
+    TIME_PARAMS_SOLID    = {'timint'                : 'genalpha',
                             'theta_ost'             : 1.0,
                             'rho_inf_genalpha'      : 0.8,
                             'eval_nonlin_terms'     : 'trapezoidal'}
@@ -61,7 +63,6 @@ def test_main():
                             'quad_degree'           : 4,
                             'incompressibility'     : 'no',
                             'prestress_initial'     : True,
-                            'prestress_numstep'     : 1,
                             'prestress_ptc'         : True}
 
     COUPLING_PARAMS      = {'surface_ids'           : [[1],[2]],
@@ -125,7 +126,7 @@ def test_main():
                                                     {'id' : [2], 'dir' : 'normal_ref', 'expression' : expression2}] }
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()

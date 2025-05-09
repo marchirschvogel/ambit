@@ -55,10 +55,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         self.have_condensed_variables = False
 
-        # assert that we do not have conflicting timings
-        time_params_flow0d['maxtime'] = time_params_solid['maxtime']
-        time_params_flow0d['numstep'] = time_params_solid['numstep']
-
         # initialize problem instances (also sets the variational forms for the solid problem)
         self.pbs = SolidmechanicsProblem(pbase, io_params, time_params_solid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params)
         self.pb0 = Flow0DProblem(pbase, io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params)

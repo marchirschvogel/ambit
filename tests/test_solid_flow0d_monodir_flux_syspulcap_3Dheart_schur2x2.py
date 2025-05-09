@@ -32,6 +32,10 @@ def test_main():
                             'simname'               : 'test',
                             'ode_parallel'          : True}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 100,
+                            'numstep_stop'          : 1}
+
     SOLVER_PARAMS        = {'solve_type'            : 'iterative',
                             'iterative_solver'      : 'gmres',
                             'block_precond'         : 'schur2x2simple', # can as well use schur2x2 version - interestingly, the SIMPLE version yields fewer linear iterations!
@@ -45,10 +49,7 @@ def test_main():
                             'ptc'                   : False,
                             'k_ptc_initial'         : 0.1}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
-                            'numstep'               : 100,
-                            'numstep_stop'          : 1,
-                            'timint'                : 'ost',
+    TIME_PARAMS_SOLID    = {'timint'                : 'ost',
                             'theta_ost'             : 0.5}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
@@ -102,7 +103,7 @@ def test_main():
                                         {'type' : 'dashpot', 'id' : [4], 'dir' : 'xyz_ref', 'visc'  : 0.0005}] }
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # problem solve
     problem.solve_problem()

@@ -30,13 +30,14 @@ def test_main():
                          'results_to_write'      : ['displacement'],
                          'simname'               : 'solid_2d_pres'}
 
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 5}
+
     SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-5}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 5,
-                         'timint'                : 'static'}
+    TIME_PARAMS       = {'timint'                : 'static'}
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'quad_degree'           : 3}
@@ -50,7 +51,7 @@ def test_main():
 
         def tc1(self, t):
             pmax = 0.003
-            return -pmax*t/TIME_PARAMS['maxtime']
+            return -pmax*t/CONTROL_PARAMS['maxtime']
 
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}], # id 1: left foot
@@ -58,7 +59,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

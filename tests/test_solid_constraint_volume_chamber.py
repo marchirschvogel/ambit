@@ -31,14 +31,15 @@ def test_main():
                             'results_to_write'      : ['displacement','pressure'],
                             'simname'               : 'solid_constraint_volume_chamber'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 10,
+                            'numstep_stop'          : 5}
+
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
-                            'numstep'               : 10,
-                            'numstep_stop'          : 5,
-                            'timint'                : 'ost',
+    TIME_PARAMS_SOLID    = {'timint'                : 'ost',
                             'theta_ost'             : 0.5}
 
     FEM_PARAMS           = {'order_disp'            : 2,
@@ -58,7 +59,7 @@ def test_main():
         def tc1(self, t):
             vini = 1.
             vmax = 2.0
-            return (vmax-vini)*t/TIME_PARAMS_SOLID['maxtime'] + vini
+            return (vmax-vini)*t/CONTROL_PARAMS['maxtime'] + vini
 
 
 
@@ -68,7 +69,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()

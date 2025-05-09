@@ -27,6 +27,10 @@ def test_main():
                             'results_to_write'      : [['fluiddisplacement','velocity','pressure','strainenergy_membrane','internalpower_membrane'],['aledisplacement','alevelocity']], # first fluid, then ale results
                             'simname'               : 'frsi_artseg_prefile'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 3.0,
+                            'numstep'               : 150,
+                            'numstep_stop'          : 3}
+
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'numsnapshots'          : 1,
                             'snapshotincr'          : 1,
@@ -39,10 +43,7 @@ def test_main():
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-1],
                             'tol_inc'               : [1.0e-1,1.0e-3,1.0e-1]}
 
-    TIME_PARAMS          = {'maxtime'               : 3.0,
-                            'numstep'               : 150,
-                            'numstep_stop'          : 3,
-                            'timint'                : 'ost',
+    TIME_PARAMS          = {'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
     FEM_PARAMS_FLUID     = {'order_vel'             : 2,
@@ -82,7 +83,7 @@ def test_main():
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

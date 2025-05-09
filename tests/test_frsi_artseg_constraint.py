@@ -34,6 +34,9 @@ def test_main():
                             'results_to_write'      : [['velocity','pressure'],['aledisplacement']], # first fluid, then ale results
                             'simname'               : 'frsi_artseg_constraint'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 0.05,
+                            'dt'                    : 0.01}
+
     ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/artseg_vel_snapshot-*.txt'],
                             'numsnapshots'          : 1,
                             'snapshotincr'          : 1,
@@ -46,9 +49,7 @@ def test_main():
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-5,1.0e-8],
                             'tol_inc'               : [1.0e-3,1.0e-3,1.0e-3,1.0e-3]}
 
-    TIME_PARAMS          = {'maxtime'               : 0.05,
-                            'dt'                    : 0.01,
-                            'timint'                : 'ost',
+    TIME_PARAMS          = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
                             'eval_nonlin_terms'     : 'midpoint'}
 
@@ -61,7 +62,7 @@ def test_main():
                             'quad_degree'           : 6}
 
     COUPLING_PARAMS      = {'coupling_fluid_ale'    : [{'surface_ids' : [1,6], 'type' : 'strong_dirichlet'}]}
-    
+
     CONSTRAINT_PARAMS    = {'constraint_physics'   : [{'id' : [2,3], 'type' : 'flux', 'prescribed_curve' : 1}],
                             'multiplier_physics'   : [{'id' : [2,3], 'type' : 'pressure'}]}
 
@@ -89,7 +90,7 @@ def test_main():
                                             {'id' : [5], 'dir' : 'x', 'val' : 0.}] }
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS,CONSTRAINT_PARAMS], mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS,CONSTRAINT_PARAMS], mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

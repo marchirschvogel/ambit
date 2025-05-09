@@ -42,13 +42,6 @@ class FSIFlow0DProblem(FSIProblem,problem_base):
         self.io = io
         self.ios, self.iof = ios, iof
 
-        # assert that we do not have conflicting timings - TODO: Find better solution by moving these to global control parameters...
-        assert(time_params_fluid['maxtime'] == time_params_solid['maxtime'])
-        if 'numstep' in time_params_solid.keys() or 'numstep' in time_params_fluid.keys():
-            assert(time_params_fluid['numstep'] == time_params_solid['numstep'])
-        if 'dt' in time_params_solid.keys() or 'dt' in time_params_fluid.keys():
-            assert(time_params_fluid['dt'] == time_params_solid['dt'])
-
         self.fsi_governing_type = coupling_params_fluid_ale.get('fsi_governing_type', 'solid_governed')
 
         self.zero_lm_boundary = coupling_params_fluid_ale.get('zero_lm_boundary', False)

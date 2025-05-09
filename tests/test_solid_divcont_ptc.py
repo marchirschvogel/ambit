@@ -25,6 +25,10 @@ def test_main():
                          'results_to_write'      : ['displacement'],
                          'simname'               : 'solid_divcont_ptc'}
 
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 10,
+                         'numstep_stop'          : 1}
+
     SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'divergence_continue'   : 'PTC',
                          'k_ptc_initial'         : 10.,
@@ -32,10 +36,7 @@ def test_main():
                          'tol_inc'               : 1.0e-8,
                          'maxiter'               : 25}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 10,
-                         'numstep_stop'          : 1,
-                         'timint'                : 'genalpha',
+    TIME_PARAMS       = {'timint'                : 'genalpha',
                          'rho_inf_genalpha'      : 1.0}
 
     FEM_PARAMS        = {'order_disp'            : 1,
@@ -57,7 +58,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

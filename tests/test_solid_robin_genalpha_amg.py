@@ -37,6 +37,9 @@ def test_main():
                          'results_to_write'      : [''],
                          'simname'               : 'solid_robin_genalpha'}
 
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 10}
+
     SOLVER_PARAMS     = {'solve_type'            : 'iterative',
                          'petsc_options_ksp'     : {'ksp_gmres_modifiedgramschmidt':True, 'ksp_gmres_restart':100},
                          'precond_fields'        : [{'prec':'amg', 'petsc_options':{'pc_hypre_boomeramg_strong_threshold':0.7}}],
@@ -48,10 +51,7 @@ def test_main():
                          'maxiter'               : 25,
                          'divergence_continue'   : None}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 10,
-                         'numstep_stop'          : 10,
-                         'timint'                : 'genalpha',
+    TIME_PARAMS       = {'timint'                : 'genalpha',
                          'eval_nonlin_terms'     : 'midpoint',
                          'rho_inf_genalpha'      : 1.0}
 
@@ -78,7 +78,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT)
 
     # solve time-dependent problem
     problem.solve_problem()

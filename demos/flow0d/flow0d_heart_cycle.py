@@ -25,6 +25,13 @@ def main():
                          # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.txt
                          'simname'               : 'flow0d_heart_cycle'}
 
+    number_of_cycles = 10
+    """
+    Parameters for the global time control
+    """
+    CONTROL_PARAMS    = {'maxtime'               : number_of_cycles*1.0,
+                         'numstep'               : number_of_cycles*100}
+
     """
     Parameters for the nonlinear solution scheme (Newton solver)
     """
@@ -32,13 +39,10 @@ def main():
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
-    number_of_cycles = 10
     """
     Parameters for the 0D model time integration scheme
     """
-    TIME_PARAMS       = {'maxtime'               : number_of_cycles*1.0,
-                         'numstep'               : number_of_cycles*100,
-                         # the 0D model time integration scheme: we use a One-Step-theta method with theta = 0.5, which corresponds to the trapezoidal rule
+    TIME_PARAMS       = {# the 0D model time integration scheme: we use a One-Step-theta method with theta = 0.5, which corresponds to the trapezoidal rule
                          'timint'                : 'ost',
                          'theta_ost'             : 0.5,
                          # do initial time step using backward scheme (theta=1), to avoid fluctuations for quantities whose d/dt is zero
@@ -71,7 +75,7 @@ def main():
 
         # the activation curves for the contraction of the 0D atria
         def tc1(self, t):
-            
+
             tmod = t % param()['T_cycl']
 
             act_dur = 2.*param()['t_ed']
@@ -84,7 +88,7 @@ def main():
 
         # the activation curves for the contraction of the 0D ventricles
         def tc2(self, t):
-            
+
             tmod = t % param()['T_cycl']
 
             act_dur = 1.8*(param()['t_es'] - param()['t_ed'])
@@ -97,7 +101,7 @@ def main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

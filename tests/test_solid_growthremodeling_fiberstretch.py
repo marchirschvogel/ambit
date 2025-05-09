@@ -31,13 +31,14 @@ def test_main():
                             'results_to_write'      : ['displacement','theta','fiberstretch','fiberstretch_e','phi_remod'],
                             'simname'               : 'solid_growthremodeling_fiberstretch'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 20}
+
     SOLVER_PARAMS_SOLID  = {'solve_type'            : 'direct',
                             'tol_res'               : 1.0e-8,
                             'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS_SOLID    = {'maxtime'               : 1.0,
-                            'numstep'               : 20,
-                            'timint'                : 'static'}
+    TIME_PARAMS_SOLID    = {'timint'                : 'static'}
 
     FEM_PARAMS           = {'order_disp'            : 1,
                             'order_pres'            : 1,
@@ -63,7 +64,7 @@ def test_main():
 
         def tc1(self, t):
             pmax = 10.0
-            return pmax*t/TIME_PARAMS_SOLID['maxtime']
+            return pmax*t/CONTROL_PARAMS['maxtime']
 
 
 
@@ -74,7 +75,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

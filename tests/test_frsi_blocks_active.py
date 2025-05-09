@@ -29,6 +29,9 @@ def test_main():
                             'results_to_write'      : [['velocity','pressure'],['aledisplacement']], # first fluid, then ale results
                             'simname'               : 'frsi_blocks_active'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 0.3,
+                            'numstep'               : 50}
+
     ROM_PARAMS           = {'modes_from_files'      : [basepath+'/input/blocks3_mode_*.txt'],
                             'partitions'            : [basepath+'/input/blocks3_part-1.txt',basepath+'/input/blocks3_part-2.txt',basepath+'/input/blocks3_part-3.txt'],
                             'orthogonalize_rom_basis' : True,
@@ -41,10 +44,7 @@ def test_main():
                             'tol_res'               : [1.0e-8,1.0e-8,1.0e-5],
                             'tol_inc'               : [1.0e-3,1.0e-3,1.0e-3]}
 
-    TIME_PARAMS          = {'maxtime'               : 0.3,
-                            'numstep'               : 50,
-                            #'numstep_stop'          : 1,
-                            'timint'                : 'ost',
+    TIME_PARAMS          = {'timint'                : 'ost',
                             'theta_ost'             : 0.67,
                             'eval_nonlin_terms'     : 'midpoint',
                             'fluid_governing_type'  : 'stokes_transient'}
@@ -78,16 +78,16 @@ def test_main():
     class time_curves():
 
         def tc1(self, t):
-            
+
             K = 5.
             t_contr, t_relax = 0.0, 0.2
-            
+
             alpha_max = BC_DICT_FLUID['membrane'][0]['params']['active_stress']['alpha_max']
             alpha_min = BC_DICT_FLUID['membrane'][0]['params']['active_stress']['alpha_min']
-            
+
             c1 = t_contr + alpha_max/(K*(alpha_max-alpha_min))
             c2 = t_relax - alpha_max/(K*(alpha_max-alpha_min))
-            
+
             # Diss Hirschvogel eq. 2.101
             return (K*(t-c1)+1.)*((K*(t-c1)+1.)>0.) - K*(t-c1)*((K*(t-c1))>0.) - K*(t-c2)*((K*(t-c2))>0.) + (K*(t-c2)-1.)*((K*(t-c2)-1.)>0.)
 
@@ -95,7 +95,7 @@ def test_main():
 
             actstressinterp = np.loadtxt(basepath+'/input/actstress.txt', skiprows=1, usecols=(1))
             tme = np.loadtxt(basepath+'/input/actstress.txt', skiprows=1, usecols=(0))
-            
+
             return np.interp(t, tme, actstressinterp)
 
 
@@ -107,7 +107,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=COUPLING_PARAMS, mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()
@@ -131,7 +131,7 @@ def test_main():
     d_corr[3] = -7.2739472331760840E-02 # x
     d_corr[4] = 0.0 # y
     d_corr[5] = 9.3307639402266801E-03 # z
-    
+
     d_corr[6] = -8.1979482461195838E-02 # x
     d_corr[7] = 0.0 # y
     d_corr[8] = 8.1979482461195810E-02 # z

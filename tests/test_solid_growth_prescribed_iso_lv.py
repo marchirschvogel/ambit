@@ -26,6 +26,9 @@ def test_main():
                             'results_to_write'       : ['displacement','theta'],
                             'simname'                : 'solid_growth_prescribed_iso_lv'}
 
+    CONTROL_PARAMS       = {'maxtime'                : 1.0,
+                            'numstep'                : 10}
+
     FEM_PARAMS           = {'order_disp'             : 1,
                             'order_pres'             : 1,
                             'quad_degree'            : 1,
@@ -36,9 +39,7 @@ def test_main():
                             'tol_inc'                : 1.0e-8}
 
 
-    TIME_PARAMS_SOLID    = {'maxtime'                : 1.0,
-                            'numstep'                : 10,
-                            'timint'                 : 'static'}
+    TIME_PARAMS_SOLID    = {'timint'                 : 'static'}
 
     MATERIALS            = {'MAT1' : {'neohooke_dev' : {'mu' : 100.},
                                       'growth'       : {'growth_dir' : 'isotropic',
@@ -52,13 +53,13 @@ def test_main():
         def tc1(self, t):
             thetamax = 2.0
             gr = thetamax-1.
-            return 1.0 + gr*t/TIME_PARAMS_SOLID['maxtime']
+            return 1.0 + gr*t/CONTROL_PARAMS['maxtime']
 
 
     BC_DICT              = { 'dirichlet' : [{'id' : [2], 'dir' : 'all', 'val' : 0.}]}
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

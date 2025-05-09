@@ -39,6 +39,14 @@ def main():
                             'simname'               : 'fluid_flow0d_pipe'}
 
     """
+    Parameters for the global time control
+    """
+    CONTROL_PARAMS       = {# the maximum simulation time - here 0.2 seconds
+                            'maxtime'               : 0.2,
+                            # the number of time steps which the simulation time is divided into - so here, a time step lasts 0.2/100 s = 0.002 s = 2 ms
+                            'numstep'               : 100}
+
+    """
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS        = {# this specifies which linear solution strategy to use; since this problem has less than 10'000 degrees of freedom, we comfortably can use a direct solver
@@ -51,13 +59,9 @@ def main():
                                                        'tol_inc' : 1e-6}}
 
     """
-    Parameters for the solid mechanics time integration scheme, plus the global time parameters
+    Parameters for the fluid mechanics time integration scheme
     """
-    TIME_PARAMS_FLUID    = {# the maximum simulation time - here 0.2 seconds
-                            'maxtime'               : 0.2,
-                            # the number of time steps which the simulation time is divided into - so here, a time step lasts 0.2/100 s = 0.002 s = 2 ms
-                            'numstep'               : 100,
-                            # the fluid mechanics time integration scheme: we use a One-Step-theta scheme with theta=1, hence a Backward Euler
+    TIME_PARAMS_FLUID    = {# the fluid mechanics time integration scheme: we use a One-Step-theta scheme with theta=1, hence a Backward Euler
                             'timint'                : 'ost',
                             'theta_ost'             : 1.0}
 
@@ -165,7 +169,7 @@ def main():
                              'stabilized_neumann' : [{'id' : [4,6,7], 'beta' : 0.205e-6}] }  # beta should be ~ 0.2*rho
 
     # Pass parameters to Ambit to set up the problem
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS_FLUID, MODEL_PARAMS_FLOW0D], BC_DICT, coupling_params=COUPLING_PARAMS)
 
     # Call the Ambit solver to solve the problem
     problem.solve_problem()

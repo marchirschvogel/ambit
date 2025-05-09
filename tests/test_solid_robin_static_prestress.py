@@ -24,20 +24,21 @@ def test_main():
                          'results_to_write'      : [''],
                          'simname'               : 'solid_robin_static_prestress'}
 
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 1,
+                         'prestress_numstep'     : 1}
+
     SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 1,
-                         'timint'                : 'static'}
+    TIME_PARAMS       = {'timint'                : 'static'}
 
     FEM_PARAMS        = {'order_disp'            : 1,
                          'order_pres'            : 1,
                          'quad_degree'           : 2,
                          'incompressibility'     : 'no',
-                         'prestress_initial'     : True,
-                         'prestress_numstep'     : 1}
+                         'prestress_initial'     : True}
 
     MATERIALS         = {'MAT1' : {'stvenantkirchhoff' : {'Emod' : 1000., 'nu' : 0.3}}}
 
@@ -58,7 +59,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

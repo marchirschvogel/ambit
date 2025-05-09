@@ -31,6 +31,15 @@ def main():
                             'restart_step'          : 0, # OPTIONAL: at which time step to restart a former simulation (that crashed and shoud be resumed or whatever) (default: 0)
                             'print_enhanced_info'   : False} # OPTIONAL: some extra level of printing, e.g. assembly, ROM projection, preconditioner setup times, ... (default: False)
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0, # maximum simulation time
+                            'numstep'               : 500, # OPTIONAL: number of steps over maxtime (maxtime/numstep governs the time step size)
+                            'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
+                            'dt'                    : 0.1, # OPTIONAL: time step size (can specify either 'numstep' or 'dt'!)
+                            'prestress_numstep'     : 100, # OPTIONAL: number of load steps for prestress (default: 1)
+                            'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
+                            'prestress_dt'          : 0.1, # OPTIONAL: prestress pseudo time step size (can specify either 'prestress_numstep' or 'prestress_dt'!)
+                            'residual_scale'        : [0.001,0.001,0.001]} # OPTIONAL: if residuals should be scaled or not (e.g. for better comparisons to solvers where this is done...) (list needs to have the length of residuals involved) (default: [])
+
     # for all problem types
     SOLVER_PARAMS        = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-8, # residual tolerance for nonlinear solver: can be either a scalar (applying to all problems) or a list, which has to have the length of the list of all state variables involved
@@ -64,15 +73,11 @@ def main():
                             'tol_inc_local'         : 1.0e-10} # OPTIONAL: local Newton increment inf-norm tolerance (default: 1.0e-10)
 
     # for solid*, fluid* problem types
-    TIME_PARAMS_3D       = {'maxtime'               : 1.0, # maximum simulation time
-                            'numstep'               : 500, # number of steps over maxtime (maxtime/numstep governs the time step size)
-                            'numstep_stop'          : 5, # OPTIONAL: if we want the simulation to stop earlier (default: numstep)
-                            'timint'                : 'genalpha', # time-integration algorithm: 'genalpha', 'ost', 'static'
+    TIME_PARAMS_3D       = {'timint'                : 'genalpha', # time-integration algorithm: 'genalpha', 'ost', 'static'
                             'eval_nonlin_terms'     : 'trapezoidal', # OPTIONAL: how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme: 'trapezoidal': theta * f(x_{n+1}) + (1-theta) * f(x_{n}), 'midpoint': f(theta*x_{n+1} + (1-theta)*x_{n}) (default: 'trapezoidal')
                             'theta_ost'             : 1.0, # One-Step-Theta (ost) time integration factor, \in ]0;1]
                             'rho_inf_genalpha'      : 0.8, # spectral radius of Generalized-alpha (genalpha) time-integration (governs all other parameters alpha_m, alpha_f, beta, gamma), \in [0;1]
-                            'fluid_governing_type'  : 'navierstokes_transient', # OPTIONAL: governing equation type for fluid mechanics: 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'stokes_steady' (default: 'navierstokes_transient')
-                            'residual_scale'        : [0.001,0.001,0.001]} # OPTIONAL: if residuals should be scaled or not (e.g. for better comparisons to solvers where this is done...) (list needs to have the length of residuals involved) (default: [])
+                            'fluid_governing_type'  : 'navierstokes_transient'} # OPTIONAL: governing equation type for fluid mechanics: 'navierstokes_transient', 'navierstokes_steady', 'stokes_transient', or 'stokes_steady' (default: 'navierstokes_transient')
 
     # for flow0d, solid_flow0d, or fluid_flow0d problem types
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost', # time-integration algorithm: 'ost'
@@ -105,8 +110,6 @@ def main():
                             'initial_fluid_pressure': [0.3,0.3,7.0], # OPTIONAL: initialize (separated) fluid regions with different uniform pressure values (default: [])
                             'prestress_initial'     : False, # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
                             'prestress_initial_only': False, # OPTIONAL: same as 'prestress_initial', but will terminate after prestressing (in case one wants to compute u_pre only once and read it in later using 'prestress_from_file' for mutliple different simulations that use the same u_pre) (default: False)
-                            'prestress_numstep'     : 100, # OPTIONAL: number of load steps for prestress (default: 1)
-                            'prestress_maxtime'     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
                             'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt'], # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             'prestress_ptc'         : False, # OPTIONAL: whether to use PTC in prestress or not (default: False)
                             'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : False, 'reduced_scheme' : False}} # OPTIONAL: stabilization for equal-order fluid mechanics, where 'scheme' can only be 'supg_pspg' (default: None)
@@ -266,10 +269,10 @@ def main():
                                             {'type' : 'dashpot', 'id' : [3], 'dir' : 'xyz_ref', 'visc' : 0.005}] }
 
     # problem setup - exemplary for 3D-0D coupling of solid/fluid to flow0d
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS_3D0D, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS_3D0D, multiscale_params=MULTISCALE_GR_PARAMS, mor_params=ROM_PARAMS)
 
     # problem setup for solid/fluid only: just pass parameters related to solid (fluid) instead of lists, so:
-    #problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
+    #problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_SOLID, SOLVER_PARAMS_SOLID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), mor_params=ROM_PARAMS)
 
     # problem solve
     problem.solve_problem()

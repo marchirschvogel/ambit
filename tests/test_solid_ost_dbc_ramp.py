@@ -35,13 +35,14 @@ def test_main():
                          'results_to_write'      : ['displacement'],
                          'simname'               : 'solid_ost_dbc_ramp'}
 
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 10}
+
     SOLVER_PARAMS     = {'solve_type'            : 'direct',
                          'tol_res'               : 1.0e-8,
                          'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 10,
-                         'timint'                : 'ost',
+    TIME_PARAMS       = {'timint'                : 'ost',
                          'eval_nonlin_terms'     : 'midpoint',
                          'theta_ost'             : 0.5}
 
@@ -83,7 +84,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

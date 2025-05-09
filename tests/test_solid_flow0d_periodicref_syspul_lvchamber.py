@@ -37,6 +37,10 @@ def test_main():
                             'results_to_write'      : ['displacement','pressure','fibers','counters', 'tau_a'],
                             'simname'               : 'solid_flow0d_periodicref'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 100,
+                            'prestress_numstep'     : 1}
+
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
                             'solve_type_prestr'     : 'direct',
                             'tol_res'               : [1e-8,1e-8,1e-8],
@@ -45,9 +49,7 @@ def test_main():
 
     number_of_cycles = 1
 
-    TIME_PARAMS          = {'maxtime'               : 1.0,
-                            'numstep'               : 100,
-                            'timint'                : 'genalpha',
+    TIME_PARAMS          = {'timint'                : 'genalpha',
                             'rho_inf_genalpha'      : 0.8}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
@@ -68,8 +70,7 @@ def test_main():
                             'order_pres'            : 1,
                             'quad_degree'           : 5,
                             'incompressibility'     : 'no',
-                            'prestress_initial'     : True,
-                            'prestress_numstep'     : 1}
+                            'prestress_initial'     : True}
 
     COUPLING_PARAMS      = {'surface_ids'           : [[1]],
                             'coupling_quantity'     : ['pressure']*4,
@@ -138,7 +139,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, FEM_PARAMS, [MATERIALS, MODEL_PARAMS_FLOW0D], BC_DICT, time_curves=time_curves(), coupling_params=COUPLING_PARAMS)
 
     # problem solve
     problem.solve_problem()

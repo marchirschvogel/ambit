@@ -66,10 +66,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # only option in fluid mechanics!
         self.coupling_type = 'monolithic_lagrange'
 
-        # assert that we do not have conflicting timings
-        time_params_flow0d['maxtime'] = time_params_fluid['maxtime']
-        time_params_flow0d['numstep'] = time_params_fluid['numstep']
-
         # initialize problem instances (also sets the variational forms for the fluid problem)
         self.pbf = FluidmechanicsProblem(pbase, io_params, time_params_fluid, fem_params, constitutive_models, bc_dict, time_curves, io, mor_params=mor_params, alevar=alevar)
         self.pb0 = Flow0DProblem(pbase, io_params, time_params_flow0d, model_params_flow0d, time_curves, coupling_params)

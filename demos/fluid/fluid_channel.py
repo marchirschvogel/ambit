@@ -31,6 +31,12 @@ def main():
                            'simname'               : 'fluid_channel'}
 
     """
+    Parameters for the global time control
+    """
+    CONTROL_PARAMS      = {'maxtime'               : 0.5,
+                           'numstep'               : 100}
+
+    """
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS       = {'solve_type'            : 'direct',
@@ -39,11 +45,9 @@ def main():
                            'tol_inc'               : [1e-8, 1e-8]}
 
     """
-    Parameters for the fluid mechanics time integration scheme, plus the global time parameters
+    Parameters for the fluid mechanics time integration scheme
     """
-    TIME_PARAMS         = {'maxtime'               : 0.5,
-                           'numstep'               : 100,
-                           'timint'                : 'ost',
+    TIME_PARAMS         = {'timint'                : 'ost',
                            'theta_ost'             : 1.0}
 
     """
@@ -68,13 +72,13 @@ def main():
     class time_curves:
 
         def tc1(self, t):
-            
+
             Umax = 1e3
-            
+
             t_ramp = 0.3
-            
+
             return Umax * 0.5*(1.-np.cos(np.pi*t/t_ramp)) * (t < t_ramp) + Umax * (t >= t_ramp)
-        
+
 
     """
     Boundary conditions: ids: 1: inflow, 2: bottom wall, 3: axial outflow, 4: top wall - 5: obstacle
@@ -85,7 +89,7 @@ def main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

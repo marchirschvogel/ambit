@@ -77,6 +77,12 @@ def main():
                             'simname'               : 'fsi_channel_flag_turek_'+case}
 
     """
+    Parameters for the global time control
+    """
+    CONTROL_PARAMS       = {'maxtime'               : maxtime,
+                            'dt'                    : dt}
+
+    """
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS        = {'solve_type'            : 'direct',
@@ -86,10 +92,9 @@ def main():
                             'tol_inc'               : [1e-0,1e-0,1e-0,1e10,1e-0]} # du,dv,dp,dlm,dd
 
     """
-    Parameters for the solid mechanics time integration scheme, plus the global time parameters
+    Parameters for the solid mechanics time integration scheme
     """
-    TIME_PARAMS_SOLID    = {'maxtime'               : maxtime,
-                            'dt'                    : dt,
+    TIME_PARAMS_SOLID    = {
                             'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Chung and Hulbert 1993)
                             'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, beta = 0.25, gamma = 0.5
                             # how to evaluat nonlinear terms f(x) in the midpoint time-integration scheme:
@@ -98,11 +103,9 @@ def main():
                             'eval_nonlin_terms'     : 'midpoint'} # trapezoidal, midpoint
 
     """
-    Parameters for the fluid mechanics time integration scheme, plus the global time parameters
+    Parameters for the fluid mechanics time integration scheme
     """
-    TIME_PARAMS_FLUID    = {'maxtime'               : maxtime,
-                            'dt'                    : dt,
-                            'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Jansen et al. 2000)
+    TIME_PARAMS_FLUID    = {'timint'                : 'genalpha', # Generalized-alpha time-integration scheme (Jansen et al. 2000)
                             'rho_inf_genalpha'      : 1.0, # spectral radius of Gen-alpha: 1.0 (= no high-freq. damping) yields alpha_m = alpha_f = 0.5, gamma = 0.5
                             # how to evaluate nonlinear terms f(x) in the midpoint time-integration scheme:
                             # trapezoidal: theta * f(x_{n+1}) + (1-theta) * f(x_{n})
@@ -186,7 +189,7 @@ def main():
 
 
     # Pass parameters to Ambit to set up the problem
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], coupling_params=COUPLING_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID], SOLVER_PARAMS, [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE], [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE], coupling_params=COUPLING_PARAMS)
 
     # Call the Ambit solver to solve the problem
     problem.solve_problem()

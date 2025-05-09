@@ -18,13 +18,13 @@ import pytest
 @pytest.mark.fluid
 @pytest.mark.fluid_constraint
 def test_main():
-    
+
     basepath = str(Path(__file__).parent.absolute())
-    
+
     # reads in restart step from the command line
     try: restart_step = int(sys.argv[1])
     except: restart_step = 0
-    
+
     IO_PARAMS           = {'problem_type'          : 'fluid_constraint',
                            'mesh_domain'           : basepath+'/input/cylinder_domain.xdmf',
                            'mesh_boundary'         : basepath+'/input/cylinder_boundary.xdmf',
@@ -35,19 +35,20 @@ def test_main():
                            'results_to_write'      : ['velocity','pressure'],
                            'simname'               : 'fluid_constraint_flux_p1p1_stab_cylinder'}
 
+    CONTROL_PARAMS      = {'maxtime'               : 1.0,
+                           'numstep'               : 10,
+                           'numstep_stop'          : 2}
+
     SOLVER_PARAMS       = {'solve_type'            : 'direct',
                            'direct_solver'         : 'mumps',
                            'tol_res'               : 1.0e-8,
                            'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS_FLUID   = {'maxtime'               : 1.0,
-                           'numstep'               : 10,
-                           'numstep_stop'          : 2,
-                           'timint'                : 'ost',
+    TIME_PARAMS_FLUID   = {'timint'                : 'ost',
                            'theta_ost'             : 0.5,
                            'eval_nonlin_terms'     : 'trapezoidal',
                            'fluid_governing_type'  : 'navierstokes_transient'}
-    
+
     FEM_PARAMS          = {'order_vel'             : 1,
                            'order_pres'            : 1,
                            'quad_degree'           : 5,
@@ -69,14 +70,14 @@ def test_main():
         def tc1(self, t):
             qini = 0.
             qmax = -1e4
-            return (qmax-qini)*t/TIME_PARAMS_FLUID['maxtime'] + qini
+            return (qmax-qini)*t/CONTROL_PARAMS['maxtime'] + qini
 
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}] } # lateral surf
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves(), coupling_params=CONSTRAINT_PARAMS)
 
     # solve time-dependent problem
     problem.solve_problem()
@@ -108,5 +109,5 @@ def test_main():
 
 
 if __name__ == "__main__":
-    
+
     test_main()

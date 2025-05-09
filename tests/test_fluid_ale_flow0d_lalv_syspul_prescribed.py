@@ -41,6 +41,11 @@ def test_main():
                             'results_to_write'      : [['velocity','pressure'],['aledisplacement']], # first fluid, then ale results
                             'simname'               : 'fluid_ale_flow0d_lalv_syspul_prescribed'}
 
+    CONTROL_PARAMS       = {'maxtime'               : 1.0,
+                            'numstep'               : 1000,
+                            'numstep_stop'          : 2,
+                            'residual_scale'        : [0.001,0.001,0.001,0.001]}
+
     SOLVER_PARAMS        = {'solve_type'            : 'direct', # direct, iterative
                             'tol_res'               : 1.0e-7,
                             'tol_inc'               : 1.0e-7,
@@ -48,12 +53,8 @@ def test_main():
                             'k_ptc_initial'         : 0.1,
                             'catch_max_res_value'   : 1e12}
 
-    TIME_PARAMS          = {'maxtime'               : 1.0,
-                            'numstep'               : 1000,
-                            'numstep_stop'          : 2,
-                            'timint'                : 'ost',
-                            'theta_ost'             : 1.0,
-                            'residual_scale'        : [0.001,0.001,0.001,0.001]}
+    TIME_PARAMS          = {'timint'                : 'ost',
+                            'theta_ost'             : 1.0}
 
     TIME_PARAMS_FLOW0D   = {'timint'                : 'ost',
                             'theta_ost'             : 0.5,
@@ -122,7 +123,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS_ALE_FLUID,COUPLING_PARAMS_FLUID_FLOW0D])
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, [TIME_PARAMS, TIME_PARAMS_FLOW0D], SOLVER_PARAMS, [FEM_PARAMS_FLUID, FEM_PARAMS_ALE], [MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D], [BC_DICT_FLUID, BC_DICT_ALE], time_curves=time_curves(), coupling_params=[COUPLING_PARAMS_ALE_FLUID,COUPLING_PARAMS_FLUID_FLOW0D])
 
 
     # problem solve

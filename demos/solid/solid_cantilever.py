@@ -31,6 +31,12 @@ def main():
                          'simname'               : 'solid_cantilever'}
 
     """
+    Parameters for the global time control
+    """
+    CONTROL_PARAMS    = {'maxtime'               : 1.0,
+                         'numstep'               : 100}
+
+    """
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS     = {# this specifies which linear solution strategy to use; since this problem has less than 3'000 degrees of freedom, we comfortably can use a direct solver
@@ -40,11 +46,9 @@ def main():
                          'tol_inc'               : 1.0e-8} # m
 
     """
-    Parameters for the solid mechanics time integration scheme, as well as the global time parameters
+    Parameters for the solid mechanics time integration scheme
     """
-    TIME_PARAMS       = {'maxtime'               : 1.0,
-                         'numstep'               : 100,
-                         'timint'                : 'static'}
+    TIME_PARAMS       = {'timint'                : 'static'}
 
     """
     Finite element parameters
@@ -73,7 +77,7 @@ def main():
 
         def tc1(self, t): # curve controlling transversal load, here linearly ramped from 0 to load
             load = 1e7 # Pa
-            return load*t/TIME_PARAMS['maxtime']
+            return load*t/CONTROL_PARAMS['maxtime']
 
     """
     Boundary conditions: The cantilever is fixed on one end (Dirichlet condition) and transversally loaded with a convervative (PK1) Neumann traction, ramped by curve no. 1
@@ -83,7 +87,7 @@ def main():
 
 
     # Pass parameters to Ambit to set up the problem
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # Call the Ambit solver to solve the problem
     problem.solve_problem()

@@ -28,15 +28,16 @@ def test_main():
                            'results_to_write'      : ['velocity','pressure','acceleration','cauchystress','fluiddisplacement','internalpower'],
                            'simname'               : 'fluid_taylorhood_cylinder'}
 
+    CONTROL_PARAMS      = {'maxtime'               : 1.0,
+                           'numstep'               : 10,
+                           'numstep_stop'          : 2}
+
     SOLVER_PARAMS_FLUID = {'solve_type'            : 'direct',
                            'direct_solver'         : 'superlu_dist', # no idea why, but mumps does not seem to like this system in parallel...
                            'tol_res'               : 1.0e-8,
                            'tol_inc'               : 1.0e-8}
 
-    TIME_PARAMS_FLUID   = {'maxtime'               : 1.0,
-                           'numstep'               : 10,
-                           'numstep_stop'          : 2,
-                           'timint'                : 'ost',
+    TIME_PARAMS_FLUID   = {'timint'                : 'ost',
                            'eval_nonlin_terms'     : 'midpoint',
                            'theta_ost'             : 0.5}
 
@@ -52,7 +53,7 @@ def test_main():
     class time_curves:
 
         def tc1(self, t):
-            return -0.001*np.sin(2.*np.pi*t/TIME_PARAMS_FLUID['maxtime'])
+            return -0.001*np.sin(2.*np.pi*t/CONTROL_PARAMS['maxtime'])
 
 
     BC_DICT           = { 'dirichlet' : [{'id' : [1], 'dir' : 'all', 'val' : 0.}], # lateral surf
@@ -60,7 +61,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS_FLUID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS_FLUID, SOLVER_PARAMS_FLUID, FEM_PARAMS, MATERIALS, BC_DICT, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()

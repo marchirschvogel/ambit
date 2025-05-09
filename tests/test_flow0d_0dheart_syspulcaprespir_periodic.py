@@ -22,12 +22,13 @@ def test_main():
                          'simname'               : 'test',
                          'ode_parallel'          : True}
 
+    CONTROL_PARAMS    = {'maxtime'               : 5.0,
+                         'numstep'               : 500}
+
     SOLVER_PARAMS     = {'tol_res'               : 1.0e-7,
                          'tol_inc'               : 1.0e-7}
 
-    TIME_PARAMS       = {'maxtime'               : 5.0,
-                         'numstep'               : 500,
-                         'timint'                : 'ost',
+    TIME_PARAMS       = {'timint'                : 'ost',
                          'theta_ost'             : 1.0,
                          'initial_conditions'    : init(),
                          'eps_periodic'          : 0.05,
@@ -86,7 +87,7 @@ def test_main():
 
 
     # problem setup
-    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
+    problem = ambit_fe.ambit_main.Ambit(IO_PARAMS, CONTROL_PARAMS, TIME_PARAMS, SOLVER_PARAMS, constitutive_params=MODEL_PARAMS, time_curves=time_curves())
 
     # solve time-dependent problem
     problem.solve_problem()
