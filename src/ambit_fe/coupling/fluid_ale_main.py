@@ -277,7 +277,7 @@ class FluidmechanicsAleProblem(problem_base):
                 self.K_dv = None
 
             if self.pbf.num_dupl > 1:
-                self.K_pd = fem.petsc.create_matrix_block(self.jac_pd_)
+                self.K_pd = fem.petsc.create_matrix(self.jac_pd_)
             else:
                 self.K_pd = fem.petsc.create_matrix(self.jac_pd)
 
@@ -332,7 +332,7 @@ class FluidmechanicsAleProblem(problem_base):
         # derivative of fluid continuity w.r.t. ALE displacement
         self.K_pd.zeroEntries()
         if self.pbf.num_dupl > 1:
-            fem.petsc.assemble_matrix_block(self.K_pd, self.jac_pd_, [])
+            fem.petsc.assemble_matrix(self.K_pd, self.jac_pd_, [])
         else:
             fem.petsc.assemble_matrix(self.K_pd, self.jac_pd, [])
         self.K_pd.assemble()

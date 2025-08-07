@@ -59,7 +59,7 @@ Documentation can be viewed at https://ambit.readthedocs.io
 In order to use Ambit, you need to [install FEniCSx](https://github.com/FEniCS/dolfinx#installation)
 
 Latest Ambit-compatible dolfinx release version: N/A\
-Latest tested Ambit-compatible dolfinx development version dating to 10 Mar 2025
+Latest tested Ambit-compatible dolfinx development version dating to 6 Aug 2025
 
 Ambit can then be installed using pip, either the current release
 ```

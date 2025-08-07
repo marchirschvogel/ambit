@@ -714,7 +714,7 @@ class boundary_cond_fluid(boundary_cond):
 
             if on_subdomain:
                 # entity map child to parent
-                em_u = {self.io.mesh : self.io.submshes_emap[dom_u][1]}
+                em_u = [self.io.submshes_emap[dom_u][1]]
                 qdict_.append( fem.form(q, entity_maps=em_u) )
             else:
                 qdict_.append( fem.form(q) )
@@ -758,8 +758,8 @@ class boundary_cond_fluid(boundary_cond):
                 pint_d += pdict[dom_d]*ja*db_d_
 
             # entity maps child to parent
-            em_u = {self.io.mesh : self.io.submshes_emap[dom_u][1]}
-            em_d = {self.io.mesh : self.io.submshes_emap[dom_d][1]}
+            em_u = [self.io.submshes_emap[dom_u][1]]
+            em_d = [self.io.submshes_emap[dom_d][1]]
 
             a_u_.append( fem.form(a_u, entity_maps=em_u) )
             a_d_.append( fem.form(a_d, entity_maps=em_d) )

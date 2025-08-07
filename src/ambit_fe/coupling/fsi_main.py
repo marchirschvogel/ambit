@@ -190,9 +190,9 @@ class FSIProblem(problem_base):
 
         with self.r_l.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_l, self.res_l)
-        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.lm.x.petsc_vec])
+        fem.apply_lifting(self.r_l, [self.jac_ll], [self.bclm.dbcs], x0=[self.lm.x.petsc_vec], alpha=-1.0)
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.x.petsc_vec, scale=-1.0)
+        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.x.petsc_vec, alpha=-1.0)
 
         self.r_list[0] = self.pbs.r_list[0]
 

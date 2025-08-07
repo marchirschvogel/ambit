@@ -1175,17 +1175,10 @@ class IO_fsi(IO_solid,IO_fluid,IO_ale):
         num_facets = facet_imap.size_local + facet_imap.num_ghosts
         num_cells = cell_imap.size_local + cell_imap.num_ghosts
 
-        inv_emap_solid = np.full(num_cells, -1)
-        inv_emap_solid[self.msh_emap_solid[1]] = np.arange(len(self.msh_emap_solid[1]))
-        self.entity_maps[self.msh_emap_solid[0]] = inv_emap_solid
-
-        inv_emap_fluid = np.full(num_cells, -1)
-        inv_emap_fluid[self.msh_emap_fluid[1]] = np.arange(len(self.msh_emap_fluid[1]))
-        self.entity_maps[self.msh_emap_fluid[0]] = inv_emap_fluid
-
-        inv_emap_lm = np.full(num_facets, -1)
-        inv_emap_lm[self.msh_emap_lm[1]] = np.arange(len(self.msh_emap_lm[1]))
-        self.entity_maps[self.msh_emap_lm[0]] = inv_emap_lm
+        # append to entity map list
+        self.entity_maps.append( self.msh_emap_solid[1] )
+        self.entity_maps.append( self.msh_emap_fluid[1] )
+        self.entity_maps.append( self.msh_emap_lm[1] )
 
 
     # create domain and boundary integration measures

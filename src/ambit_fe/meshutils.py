@@ -77,11 +77,13 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
 
     sub_values = np.zeros(num_sub_ent, dtype=np.int32)
 
-    for i, entity in enumerate(childmsh_emap):
-        parent_ent = c_to_e.links(entity)
-        child_ent = c_to_e_sub.links(i)
-        for child, parent in zip(child_ent, parent_ent):
-            sub_values[child] = all_values[parent]
+    subtop_to_top = childmsh_emap.sub_topology_to_topology(np.arange(num_sub_ent, dtype=np.int32), inverse=True)
+    for entity, i in enumerate(subtop_to_top):
+        if i > -1:
+            parent_ent = c_to_e.links(entity)
+            child_ent = c_to_e_sub.links(i)
+            for child, parent in zip(child_ent, parent_ent):
+                sub_values[child] = all_values[parent]
 
     return mesh.meshtags(childmsh, dim_c, np.arange(num_sub_ent, dtype=np.int32), sub_values)
 

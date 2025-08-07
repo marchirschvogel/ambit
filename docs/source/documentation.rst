@@ -89,7 +89,7 @@ Installation
 
 | In order to use Ambit, you need to install FEniCSx
   (https://github.com/FEniCS/dolfinx#installation) (latest
-  Ambit-compatible dolfinx development version dates to 10 Mar 2025).
+  Ambit-compatible dolfinx development version dates to 6 Aug 2025).
 | Ambit can then be installed using pip, either the current release
 
 ::
@@ -148,10 +148,12 @@ individual time, finite element, and constitutive parameters.
                                       "vonmises_cauchystress"], # results to output
              "simname"             : "my_results_name"}         # midfix of output name
        
+       # Global control
+       CTR = {"maxtime"            : 1.0,  # maximum simulation time
+              "dt"                 : 0.01} # time step size 
+       
        # Time discretization  
-       TME = {"maxtime"            : 1.0,        # maximum simulation time
-              "dt"                 : 0.01,       # time step size
-              "timint"             : "genalpha", # time integration: Generalized-alpha
+       TME = {"timint"             : "genalpha", # time integration: Generalized-alpha
               "rho_inf_genalpha"   : 1.0}        # spectral radius of Gen-alpha scheme
        
        # Solver
@@ -184,7 +186,7 @@ individual time, finite element, and constitutive parameters.
                              "curve" : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
 
        # Problem setup
-       problem = ambit_fe.ambit_main.Ambit(io_params=IO, time_params=TME, solver_params=SOL, fem_params=FEM, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
+       problem = ambit_fe.ambit_main.Ambit(io_params=IO, ctrl_params=CTR, time_params=TME, solver_params=SOL, fem_params=FEM, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
 
        # Run: solve the problem
        problem.solve_problem()
@@ -1477,7 +1479,7 @@ Fluid-reduced-Solid Interaction (FrSI)
 
 .. math::
    \begin{aligned}
-       r_{\tilde{\text{s}}} := \int\limits_{\mathit{\Gamma}_{0}^{\text{f}\mhyphen\tilde{\text{s}}}} h_{0} \left[\rho_{0,s}\frac{\partial\boldsymbol{v}}{\partial t}\cdot\delta\boldsymbol{v} + \tilde{\boldsymbol{P}}(\boldsymbol{u}_{\text{f}}(\boldsymbol{v}) + \tilde{\boldsymbol{u}}_{\mathrm{pre}},\boldsymbol{v}) : \tilde{\nabla}_{0}\delta\boldsymbol{v}\right]\mathrm{d}A
+       r_{\tilde{\text{s}}} := \int\limits_{\mathit{\Gamma}_{0}^{\text{f}\text{-}\tilde{\text{s}}}} h_{0} \left[\rho_{0,s}\frac{\partial\boldsymbol{v}}{\partial t}\cdot\delta\boldsymbol{v} + \tilde{\boldsymbol{P}}(\boldsymbol{u}_{\text{f}}(\boldsymbol{v}) + \tilde{\boldsymbol{u}}_{\mathrm{pre}},\boldsymbol{v}) : \tilde{\nabla}_{0}\delta\boldsymbol{v}\right]\mathrm{d}A
    \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:

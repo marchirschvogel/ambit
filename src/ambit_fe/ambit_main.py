@@ -21,7 +21,7 @@ class Ambit():
         MPI communicator
     comm_sq :
         Sequential MPI communicator for one core
-    entity_maps : dict
+    entity_maps : list
         Entity maps for mixed domain problems
     mp :
         Model problem object
@@ -64,7 +64,7 @@ class Ambit():
         problem_type = io_params['problem_type']
 
         # entity maps for coupled/multi-mesh problems
-        self.entity_maps = {}
+        self.entity_maps = []
 
         if problem_type == 'solid':
 

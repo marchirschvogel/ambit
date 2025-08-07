@@ -937,9 +937,9 @@ class SolidmechanicsProblem(problem_base):
         # assemble rhs vector
         with self.r_u.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_u, self.res_u)
-        fem.apply_lifting(self.r_u, [self.jac_uu], [self.bc.dbcs], x0=[self.u.x.petsc_vec])
+        fem.apply_lifting(self.r_u, [self.jac_uu], [self.bc.dbcs], x0=[self.u.x.petsc_vec], alpha=-1.0)
         self.r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_u, self.bc.dbcs, x0=self.u.x.petsc_vec, scale=-1.0)
+        fem.set_bc(self.r_u, self.bc.dbcs, x0=self.u.x.petsc_vec, alpha=-1.0)
 
         if self.incompressible_2field:
 

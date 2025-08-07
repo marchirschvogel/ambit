@@ -398,7 +398,7 @@ class FluidmechanicsConstraintProblem(problem_base):
             fem.petsc.assemble_vector(self.k_vs_vec[i], self.dforce_form[i]) # already multiplied by time-integration factor
             self.k_vs_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             # set zeros at DBC entries
-            fem.set_bc(self.k_vs_vec[i], self.pbf.bc.dbcs, x0=self.pbf.v.x.petsc_vec, scale=0.0)
+            fem.set_bc(self.k_vs_vec[i], self.pbf.bc.dbcs, x0=self.pbf.v.x.petsc_vec, alpha=0.0)
 
         # set columns
         for i in range(len(self.col_ids)):

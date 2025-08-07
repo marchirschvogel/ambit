@@ -119,8 +119,6 @@
 \newcommand{\lmi}{\lambda} % LM FSI (index)
 \newcommand{\lmzi}{\mathit{\Lambda}} % LM FSI (index)
 
-\mathchardef\mhyphen="2D
-
 \usepackage{scalerel}
 \DeclareMathOperator*{\assembly}{\scalerel*{\mathsf{A}}{\sum}}
 %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -175,7 +173,7 @@ This documentation is structured as follows. In sec. \ref{installation}, instruc
 
 \section{Installation}\label{installation}
 
-In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible dolfinx development version dates to 10 Mar 2025).\\
+In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible dolfinx development version dates to 6 Aug 2025).\\
 
 Ambit can then be installed using pip, either the current release
 \begin{verbatim}
@@ -222,10 +220,12 @@ def main():
                                    "vonmises_cauchystress"], # results to output
           "simname"             : "my_results_name"}         # midfix of output name
     
+    # Global control
+    CTR = {"maxtime"            : 1.0,  # maximum simulation time
+           "dt"                 : 0.01} # time step size 
+    
     # Time discretization  
-    TME = {"maxtime"            : 1.0,        # maximum simulation time
-           "dt"                 : 0.01,       # time step size
-           "timint"             : "genalpha", # time integration: Generalized-alpha
+    TME = {"timint"             : "genalpha", # time integration: Generalized-alpha
            "rho_inf_genalpha"   : 1.0}        # spectral radius of Gen-alpha scheme
     
     # Solver
@@ -258,7 +258,7 @@ def main():
                           "curve" : [1,0,0]}]} # load in x-direction controlled by curve #1 (see time curves)
 
     # Problem setup
-    problem = ambit_fe.ambit_main.Ambit(io_params=IO, time_params=TME, solver_params=SOL, fem_params=FEM, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
+    problem = ambit_fe.ambit_main.Ambit(io_params=IO, ctrl_params=CTR, time_params=TME, solver_params=SOL, fem_params=FEM, constitutive_params=MAT, boundary_conditions=BC, time_curves=TC)
 
     # Run: solve the problem
     problem.solve_problem()
@@ -1427,7 +1427,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 -- Boundary term:
 
 \begin{align}
-	r_{\fSr} := \int\limits_{\Gm_{0}^{\fF\mhyphen\fSr}} h_{0} \left[\rho_{0,s}\frac{\partial\bs{v}}{\partial t}\cdot\delta\bs{v} + \tilde{\bs{P}}(\bs{u}_{\fF}(\bs{v}) + \tilde{\bs{u}}_{\mathrm{pre}},\bs{v}) : \tilde{\nabla}_{0}\delta\bs{v}\right]\mathrm{d}A
+	r_{\fSr} := \int\limits_{\Gm_{0}^{\fF\text{-}\fSr}} h_{0} \left[\rho_{0,s}\frac{\partial\bs{v}}{\partial t}\cdot\delta\bs{v} + \tilde{\bs{P}}(\bs{u}_{\fF}(\bs{v}) + \tilde{\bs{u}}_{\mathrm{pre}},\bs{v}) : \tilde{\nabla}_{0}\delta\bs{v}\right]\mathrm{d}A
 \end{align}
 
 

@@ -166,8 +166,7 @@ class FluidmechanicsProblem(problem_base):
                 inv_emap[m+1] = np.full(num_cells, -1)
 
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
-                inv_emap[m+1][self.io.submshes_emap[m+1][1]] = np.arange(len(self.io.submshes_emap[m+1][1]))
-                self.io.entity_maps[self.io.submshes_emap[m+1][0]] = inv_emap[m+1]
+                self.io.entity_maps.append( self.io.submshes_emap[m+1][1] )
                 # transfer meshtags to submesh
                 self.io.sub_mt_d[m+1] = meshutils.meshtags_parent_to_child(self.io.mt_d, self.io.submshes_emap[m+1][0], self.io.submshes_emap[m+1][1], self.io.mesh, 'domain')
                 self.io.sub_mt_b1[m+1] = meshutils.meshtags_parent_to_child(self.io.mt_b1, self.io.submshes_emap[m+1][0], self.io.submshes_emap[m+1][1], self.io.mesh, 'boundary')
@@ -962,21 +961,21 @@ class FluidmechanicsProblem(problem_base):
 
         self.r_v = fem.petsc.create_vector(self.res_v)
         if self.num_dupl > 1:
-            self.r_p = fem.petsc.create_vector_block(self.res_p)
+            self.r_p = fem.petsc.create_vector(self.res_p, kind=PETSc.Vec.Type.MPI)
         else:
             self.r_p = fem.petsc.create_vector(self.res_p)
 
         self.K_vv = fem.petsc.create_matrix(self.jac_vv)
         if self.num_dupl > 1:
-            self.K_vp = fem.petsc.create_matrix_block(self.jac_vp_)
-            self.K_pv = fem.petsc.create_matrix_block(self.jac_pv_)
+            self.K_vp = fem.petsc.create_matrix(self.jac_vp_)
+            self.K_pv = fem.petsc.create_matrix(self.jac_pv_)
         else:
             self.K_vp = fem.petsc.create_matrix(self.jac_vp)
             self.K_pv = fem.petsc.create_matrix(self.jac_pv)
 
         if self.stabilization is not None:
             if self.num_dupl > 1:
-                self.K_pp = fem.petsc.create_matrix_block(self.jac_pp_)
+                self.K_pp = fem.petsc.create_matrix(self.jac_pp_)
             else:
                 self.K_pp = fem.petsc.create_matrix(self.jac_pp)
         else:
@@ -1049,17 +1048,14 @@ class FluidmechanicsProblem(problem_base):
         # assemble velocity rhs vector
         with self.r_v.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_v, self.res_v)
-        fem.apply_lifting(self.r_v, [self.jac_vv], [self.bc.dbcs], x0=[self.v.x.petsc_vec])
+        fem.apply_lifting(self.r_v, [self.jac_vv], [self.bc.dbcs], x0=[self.v.x.petsc_vec], alpha=-1.0)
         self.r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_v, self.bc.dbcs, x0=self.v.x.petsc_vec, scale=-1.0)
+        fem.set_bc(self.r_v, self.bc.dbcs, x0=self.v.x.petsc_vec, alpha=-1.0)
 
         # assemble pressure rhs vector
         with self.r_p.localForm() as r_local: r_local.set(0.0)
-        if self.num_dupl > 1:
-            fem.petsc.assemble_vector_block(self.r_p, self.res_p, self.dummat, bcs=[]) # ghosts are updated inside assemble_vector_block
-        else:
-            fem.petsc.assemble_vector(self.r_p, self.res_p)
-            self.r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        fem.petsc.assemble_vector(self.r_p, self.res_p)
+        self.r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         self.r_list[0] = self.r_v
         self.r_list[1] = self.r_p
@@ -1084,14 +1080,14 @@ class FluidmechanicsProblem(problem_base):
         # assemble system matrices
         self.K_vp.zeroEntries()
         if self.num_dupl > 1:
-            fem.petsc.assemble_matrix_block(self.K_vp, self.jac_vp_, self.bc.dbcs)
+            fem.petsc.assemble_matrix(self.K_vp, self.jac_vp_, self.bc.dbcs)
         else:
             fem.petsc.assemble_matrix(self.K_vp, self.jac_vp, self.bc.dbcs)
         self.K_vp.assemble()
 
         self.K_pv.zeroEntries()
         if self.num_dupl > 1:
-            fem.petsc.assemble_matrix_block(self.K_pv, self.jac_pv_, []) # currently, we do not consider pressure DBCs
+            fem.petsc.assemble_matrix(self.K_pv, self.jac_pv_, []) # currently, we do not consider pressure DBCs
         else:
             fem.petsc.assemble_matrix(self.K_pv, self.jac_pv, []) # currently, we do not consider pressure DBCs
         self.K_pv.assemble()
@@ -1099,7 +1095,7 @@ class FluidmechanicsProblem(problem_base):
         if self.stabilization is not None:
             self.K_pp.zeroEntries()
             if self.num_dupl > 1:
-                fem.petsc.assemble_matrix_block(self.K_pp, self.jac_pp_, []) # currently, we do not consider pressure DBCs
+                fem.petsc.assemble_matrix(self.K_pp, self.jac_pp_, []) # currently, we do not consider pressure DBCs
             else:
                 fem.petsc.assemble_matrix(self.K_pp, self.jac_pp, []) # currently, we do not consider pressure DBCs
             self.K_pp.assemble()
