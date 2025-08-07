@@ -75,7 +75,7 @@ class FSIProblem(problem_base):
 
         self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
         # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
-        if self.zero_lm_boundary: # TODO: Seems to not work properly!
+        if self.zero_lm_boundary: # TODO: Seems to not work properly - investigate!
             self.io.msh_emap_lm[0].topology.create_connectivity(self.io.msh_emap_lm[0].topology.dim-1, self.io.msh_emap_lm[0].topology.dim)
             boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
             self.bclm.dbcs.append( fem.dirichletbc(self.lm, boundary_facets_lm) )
