@@ -6,25 +6,22 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time, sys
+import time
 from petsc4py import PETSc
 
-from .. import utilities
 from ..mpiroutines import allgather_vec_entry
 from .solid_flow0d_main import SolidmechanicsFlow0DSolver
 
 
-class SolidmechanicsFlow0DPeriodicRefSolver():
-
+class SolidmechanicsFlow0DPeriodicRefSolver:
     def __init__(self, problem, solver_params):
-
         self.pb = problem
 
         # set indicator to zero (no temporal offsets)
         self.pb.noperiodicref = 0
 
         if self.pb.pbase.restart_step > 0:
-            self.pb.pbase.simname += str(self.pb.restart_periodicref+1)
+            self.pb.pbase.simname += str(self.pb.restart_periodicref + 1)
 
         if self.pb.restart_periodicref > 0:
             raise RuntimeError("Outer restart of this problem currently broken!")
@@ -42,14 +39,11 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
             if self.pb.pbs.prestress_initial:
                 self.set_prestress_state()
 
-
     def solve_problem(self):
-
         start = time.time()
 
         # outer heart cycle loop
-        for N in range(self.pb.restart_periodicref+1, self.pb.Nmax_periodicref+1):
-
+        for N in range(self.pb.restart_periodicref + 1, self.pb.Nmax_periodicref + 1):
             wts = time.time()
 
             # change output name
@@ -77,20 +71,25 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
 
         self.solver.destroy()
 
-
     def set_prestress_state(self):
-
         self.pb.pbs.pre = True
 
         for i, m in enumerate(self.pb.pbs.ti.funcsexpr_to_update_pre):
-
             # we need to have the class variable 'val' in our expression!
-            assert('val' in dir(self.pb.pbs.ti.funcsexpr_to_update_pre[m]))
+            assert "val" in dir(self.pb.pbs.ti.funcsexpr_to_update_pre[m])
 
-            if self.pb.coupling_type == 'monolithic_direct':
-                self.pb.pbs.ti.funcsexpr_to_update_pre[m].val = allgather_vec_entry(self.pb.pb0.s_old, self.pb.pb0.cardvasc0D.v_ids[i], self.pb.comm)
-            if self.pb.coupling_type == 'monolithic_lagrange':
-                self.pb.pbs.ti.funcsexpr_to_update_pre[m].val = allgather_vec_entry(self.pb.LM_old, list(range(self.pb.num_coupling_surf))[i], self.pb.comm)
+            if self.pb.coupling_type == "monolithic_direct":
+                self.pb.pbs.ti.funcsexpr_to_update_pre[m].val = allgather_vec_entry(
+                    self.pb.pb0.s_old,
+                    self.pb.pb0.cardvasc0D.v_ids[i],
+                    self.pb.comm,
+                )
+            if self.pb.coupling_type == "monolithic_lagrange":
+                self.pb.pbs.ti.funcsexpr_to_update_pre[m].val = allgather_vec_entry(
+                    self.pb.LM_old,
+                    list(range(self.pb.num_coupling_surf))[i],
+                    self.pb.comm,
+                )
 
             m.interpolate(self.pb.pbs.ti.funcsexpr_to_update_pre[m].evaluate)
             m.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
@@ -98,10 +97,8 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # we need to invoke the prestress forms here
         self.pb.pbs.set_problem_residual_jacobian_forms(pre=True)
 
-
     # set state to zero
     def reset_state_initial(self):
-
         self.pb.pbs.u.x.petsc_vec.set(0.0)
         self.pb.pbs.u.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self.pb.pbs.u_old.x.petsc_vec.set(0.0)
@@ -125,8 +122,12 @@ class SolidmechanicsFlow0DPeriodicRefSolver():
         # reset internal variables
         for i in range(len(self.pb.pbs.internalvars)):
             list(self.pb.pbs.internalvars.values())[i].x.petsc_vec.set(0.0)
-            list(self.pb.pbs.internalvars.values())[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            list(self.pb.pbs.internalvars.values())[i].x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD
+            )
             list(self.pb.pbs.internalvars_old.values())[i].x.petsc_vec.set(0.0)
-            list(self.pb.pbs.internalvars_old.values())[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+            list(self.pb.pbs.internalvars_old.values())[i].x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD
+            )
 
         # 0D variables s and s_old are already correctly set from the previous run (end values) and should serve as new initial conditions

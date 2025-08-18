@@ -6,22 +6,19 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import ufl
 
 # returns the Cauchy stress sigma for different material laws
 
-class materiallaw:
 
+class materiallaw:
     def __init__(self, gamma, I):
         self.gamma = gamma
         self.I = I
 
-
     def newtonian(self, params):
-
-        mu = params['mu'] # dynamic viscosity
+        mu = params["mu"]  # dynamic viscosity
 
         # classical Newtonian fluid
-        sigma = 2.*mu*self.gamma
+        sigma = 2.0 * mu * self.gamma
 
         return sigma

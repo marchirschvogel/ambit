@@ -1,0 +1,21 @@
+<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="Grid" GridType="Uniform">
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="889 3" Format="HDF">
+          fib_normal_sphere.h5:/nodes
+        </DataItem>
+      </Geometry>
+      <Topology NodesPerElement="27" NumberOfElements="81" TopologyType="hexahedron_27">
+        <DataItem DataType="Int" Dimensions="81 27" Format="HDF">
+          fib_normal_sphere.h5:/cells
+        </DataItem>
+      </Topology>
+      <Attribute AttributeType="Vector" Center="Node" Name="fibers">
+        <DataItem DataType="Float" Dimensions="889 3" Format="HDF">
+          fib_normal_sphere.h5:/fibers
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

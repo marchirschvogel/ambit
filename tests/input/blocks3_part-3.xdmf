@@ -1,0 +1,21 @@
+<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="Grid" GridType="Uniform">
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="42 3" Format="HDF">
+          blocks3_part-3.h5:/nodes
+        </DataItem>
+      </Geometry>
+      <Topology NodesPerElement="4" NumberOfElements="72" TopologyType="tetrahedron">
+        <DataItem DataType="Int" Dimensions="72 4" Format="HDF">
+          blocks3_part-3.h5:/cells
+        </DataItem>
+      </Topology>
+      <Attribute AttributeType="Scalar" Center="Node" Name="part">
+        <DataItem DataType="Float" Dimensions="42 1" Format="HDF">
+          blocks3_part-3.h5:/part
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

@@ -11,13 +11,15 @@ import numpy as np
 
 
 def gather_surface_dof_indices(io, Vspace, surflist, comm):
-
     # get boundary dofs into a list
-    fn=[]
+    fn = []
     for i in range(len(surflist)):
-
         # these are local node indices!
-        fnode_indices_local = fem.locate_dofs_topological(Vspace, io.mesh.topology.dim-1, io.mt_b1.indices[io.mt_b1.values == surflist[i]])
+        fnode_indices_local = fem.locate_dofs_topological(
+            Vspace,
+            io.mesh.topology.dim - 1,
+            io.mt_b1.indices[io.mt_b1.values == surflist[i]],
+        )
 
         # get global indices
         fnode_indices = Vspace.dofmap.index_map.local_to_global(fnode_indices_local)
@@ -40,23 +42,22 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
     fn_unique = list(dict.fromkeys(fn_flat))
 
     # now make list of dof indices according to block size
-    fd=[]
+    fd = []
     for i in range(len(fn_unique)):
         for j in range(Vspace.dofmap.index_map_bs):
-            fd.append(Vspace.dofmap.index_map_bs*fn_unique[i]+j)
+            fd.append(Vspace.dofmap.index_map_bs * fn_unique[i] + j)
 
     return fd
 
 
 # cf. https://fenicsproject.discourse.group/t/transfer-meshtags-to-submesh-in-dolfinx/8952/6
 def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, dimentity):
-
-    if dimentity=='domain':
+    if dimentity == "domain":
         dim_p = parentmsh.topology.dim
         dim_c = childmsh.topology.dim
-    elif dimentity=='boundary':
-        dim_p = parentmsh.topology.dim-1
-        dim_c = childmsh.topology.dim-1
+    elif dimentity == "boundary":
+        dim_p = parentmsh.topology.dim - 1
+        dim_c = childmsh.topology.dim - 1
     else:
         raise ValueError("Unknown dim entity!")
 
@@ -89,7 +90,6 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
 
 
 def get_integration_entities(msh, entity_indices, codim, integration_entities):
-
     dim = msh.topology.dim
 
     entity_imap = msh.topology.index_map(codim)
@@ -109,7 +109,6 @@ def get_integration_entities(msh, entity_indices, codim, integration_entities):
 
 
 def get_integration_entities_internal(msh, entity_indices, entities_a, codim, integration_entities, ids):
-
     dim = msh.topology.dim
 
     integration_entities_a = []
@@ -127,8 +126,10 @@ def get_integration_entities_internal(msh, entity_indices, entities_a, codim, in
         if entity < entity_imap.size_local:
             # get cells connected to the facet
             cells = e_to_c.links(entity)
-            local_entities = [c_to_e.links(cells[0]).tolist().index(entity),
-                              c_to_e.links(cells[1]).tolist().index(entity)]
+            local_entities = [
+                c_to_e.links(cells[0]).tolist().index(entity),
+                c_to_e.links(cells[1]).tolist().index(entity),
+            ]
 
             # add (cell, local_facet_index) pairs to correct side
             if cells[0] in entities_a:
@@ -142,5 +143,9 @@ def get_integration_entities_internal(msh, entity_indices, entities_a, codim, in
     # over the correct entities
     interface_id_a = ids[0]
     interface_id_b = ids[1]
-    integration_entities.extend([(interface_id_a, integration_entities_a),
-                                 (interface_id_b, integration_entities_b)])
+    integration_entities.extend(
+        [
+            (interface_id_a, integration_entities_a),
+            (interface_id_b, integration_entities_b),
+        ]
+    )

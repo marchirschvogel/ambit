@@ -13,10 +13,9 @@ from .ale_material import materiallaw
 ALE kinematics and constitutive class
 """
 
+
 class constitutive:
-
     def __init__(self, kin, materials):
-
         self.kin = kin
 
         self.matmodels = []
@@ -27,54 +26,43 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
-
     def stress(self, d_, w_):
-
         F_ = ufl.variable(self.kin.F(d_))
 
         dim = len(d_)
 
-        stress = ufl.constantvalue.zero((dim,dim))
+        stress = ufl.constantvalue.zero((dim, dim))
 
         mat = materiallaw(d_, w_, F_, self.kin.elem_metrics)
 
         m = 0
         for matlaw in self.matmodels:
-
             # extract associated material parameters
             matparams_m = self.matparams[m]
 
-            if matlaw == 'diffusion':
-
+            if matlaw == "diffusion":
                 stress += mat.diffusion(matparams_m)
 
-            elif matlaw == 'diffusion_rate':
-
+            elif matlaw == "diffusion_rate":
                 stress += mat.diffusion_rate(matparams_m)
 
-            elif matlaw == 'diffusion_sym':
-
+            elif matlaw == "diffusion_sym":
                 stress += mat.diffusion_sym(matparams_m)
 
-            elif matlaw == 'diffusion_rate_sym':
-
+            elif matlaw == "diffusion_rate_sym":
                 stress += mat.diffusion_rate_sym(matparams_m)
 
-            elif matlaw == 'linelast':
-
+            elif matlaw == "linelast":
                 stress += mat.linelast(matparams_m)
 
-            elif matlaw == 'neohooke':
-
+            elif matlaw == "neohooke":
                 stress += mat.neohooke(matparams_m)
 
-            elif matlaw == 'exponential':
-
+            elif matlaw == "exponential":
                 stress += mat.exponential(matparams_m)
 
             else:
-
-                raise NameError('Unknown ALE material law!')
+                raise NameError("Unknown ALE material law!")
 
             m += 1
 
@@ -82,16 +70,13 @@ class constitutive:
 
 
 class kinematics:
-
     def __init__(self, dim, elem_metrics=None):
-
         self.dim = dim
 
         # identity tensor
         self.I = ufl.Identity(self.dim)
 
         self.elem_metrics = elem_metrics
-
 
     # ALE deformation gradient
     def F(self, d_):

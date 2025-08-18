@@ -25,9 +25,18 @@ keywords = [
 ]
 dependencies = [
     "mpmath",
-    "sympy"
+    "sympy",
+    "h5py",
+    "pytest"
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/marchirschvogel/ambit"
 "Bug Tracker" = "https://github.com/marchirschvogel/ambit/issues"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 72

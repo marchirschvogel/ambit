@@ -9,6 +9,7 @@
 import numpy as np
 from petsc4py import PETSc
 
+
 # template expression class
 class template:
     def __init__(self):
@@ -21,7 +22,6 @@ class template:
 # template vector expression class
 class template_vector:
     def __init__(self, dim=3):
-
         self.dim = dim
 
         self.val_x = 0.0
@@ -29,14 +29,17 @@ class template_vector:
         self.val_z = 0.0
 
     def evaluate(self, x):
-
-        if self.dim==3:
-            return ( np.full(x.shape[1], self.val_x),
-                     np.full(x.shape[1], self.val_y),
-                     np.full(x.shape[1], self.val_z) )
-        elif self.dim==2:
-            return ( np.full(x.shape[1], self.val_x),
-                     np.full(x.shape[1], self.val_y) )
+        if self.dim == 3:
+            return (
+                np.full(x.shape[1], self.val_x),
+                np.full(x.shape[1], self.val_y),
+                np.full(x.shape[1], self.val_z),
+            )
+        elif self.dim == 2:
+            return (
+                np.full(x.shape[1], self.val_x),
+                np.full(x.shape[1], self.val_y),
+            )
         else:
             raise ValueError("Unknown dimension, %i" % (self.dim))
 
@@ -49,6 +52,8 @@ class function_dummy:
         self.x = x_dummy()
         self.x.petsc_vec = PETSc.Vec().createNest(veclist, comm=comm)
         self.x.petsc_vec.assemble()
+
+
 class x_dummy:
     def __init__(self):
         pass

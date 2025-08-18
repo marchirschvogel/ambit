@@ -15,10 +15,9 @@ from .fluid_material import materiallaw
 Fluid kinematics and constitutive class
 """
 
+
 class constitutive:
-
     def __init__(self, kin, materials):
-
         self.kin = kin
 
         self.matmodels = []
@@ -32,33 +31,28 @@ class constitutive:
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
 
-
     # Cauchy stress core routine
     def sigma(self, v_, p_, F=None):
+        gamma_ = self.kin.gamma(v_, F=F)
 
-        gamma_ = self.kin.gamma(v_,F=F)
+        stress = ufl.constantvalue.zero((self.kin.dim, self.kin.dim))
 
-        stress = ufl.constantvalue.zero((self.kin.dim,self.kin.dim))
-
-        mat = materiallaw(gamma_,self.I)
+        mat = materiallaw(gamma_, self.I)
 
         m = 0
         for matlaw in self.matmodels:
-
             # extract associated material parameters
             matparams_m = self.matparams[m]
 
-            if matlaw == 'newtonian':
-
+            if matlaw == "newtonian":
                 stress += mat.newtonian(matparams_m)
 
-            elif matlaw == 'inertia':
+            elif matlaw == "inertia":
                 # density is added to kinetic virtual power
                 pass
 
             else:
-
-                raise NameError('Unknown fluid material law!')
+                raise NameError("Unknown fluid material law!")
 
             m += 1
 
@@ -68,11 +62,8 @@ class constitutive:
         return stress
 
 
-
 class kinematics:
-
     def __init__(self, dim, uf_pre=None):
-
         self.dim = dim
 
         # prestress displacement
@@ -81,37 +72,29 @@ class kinematics:
         # identity tensor
         self.I = ufl.Identity(self.dim)
 
-
     # velocity gradient: gamma = 0.5(dv/dx + (dv/dx)^T)
     def gamma(self, v_, F=None):
-
         if F is not None:
-            return 0.5*(ufl.grad(v_)*ufl.inv(F) + ufl.inv(F).T*ufl.grad(v_).T)
+            return 0.5 * (ufl.grad(v_) * ufl.inv(F) + ufl.inv(F).T * ufl.grad(v_).T)
         else:
-            return 0.5*(ufl.grad(v_) + ufl.grad(v_).T)
-
+            return 0.5 * (ufl.grad(v_) + ufl.grad(v_).T)
 
     # fluid deformation gradient (relevant on boundary for FrSI): F = I + duf/dx0
     def F(self, uf_):
-
         if self.uf_pre is not None:
-            return self.I + ufl.grad(uf_+self.uf_pre) # Schein and Gee 2021, equivalent to Gee et al. 2010
+            return self.I + ufl.grad(uf_ + self.uf_pre)  # Schein and Gee 2021, equivalent to Gee et al. 2010
         else:
             return self.I + ufl.grad(uf_)
 
-
     # rate of deformation gradient: dF/dt = dv/dx0
     def Fdot(self, v_):
-
         if not isinstance(v_, ufl.constantvalue.Zero):
             return ufl.grad(v_)
         else:
-            return ufl.constantvalue.zero((self.dim,self.dim))
-
+            return ufl.constantvalue.zero((self.dim, self.dim))
 
     # prestressing update for FrSI (MULF - Modified Updated Lagrangian Formulation, cf. Gee et al. 2010,
     # displacement formulation according to Schein and Gee 2021)
     def prestress_update(self, dt, v_vec):
-
         self.uf_pre.x.petsc_vec.axpy(dt, v_vec)
         self.uf_pre.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

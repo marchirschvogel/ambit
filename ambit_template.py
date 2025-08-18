@@ -15,7 +15,7 @@ def main():
                             'mesh_domain'           : basepath+'/input/blocks_domain.xdmf', # domain mesh file
                             'mesh_boundary'         : basepath+'/input/blocks_boundary.xdmf', # boundary mesh file
                             'meshfile_type'         : 'ASCII', # OPTIONAL: type of encoding of your mesh file (ASCII or HDF5) (default: 'ASCII')
-                            'fiber_data'            : [basepath+'/file1.txt',basepath+'/file2.txt'], # OPTIONAL: only for anisotropic solid materials
+                            'fiber_data'            : [basepath+'/file1.xdmf',basepath+'/file2.xdmf'], # OPTIONAL: only for anisotropic solid materials
                             'order_fib_input'       : 1, # OPTIONAL: input degree of function space of fiber data (default: equal to 'order_disp' or 'order_vel' from FEM_PARAMS section)
                             'write_results_every'   : 1, # frequency for results output (negative value for no output, 1 for every time step, etc.)
                             'write_results_every_0D': 1, # OPTIONAL: for flow0d results (default: write_results_every)
@@ -110,7 +110,7 @@ def main():
                             'initial_fluid_pressure': [0.3,0.3,7.0], # OPTIONAL: initialize (separated) fluid regions with different uniform pressure values (default: [])
                             'prestress_initial'     : False, # OPTIONAL: if we want to use MULF prestressing (Gee et al. 2010) prior to solving a dynamic/other kind of solid or solid-coupled problem (experimental, not thoroughly tested!) (default: False)
                             'prestress_initial_only': False, # OPTIONAL: same as 'prestress_initial', but will terminate after prestressing (in case one wants to compute u_pre only once and read it in later using 'prestress_from_file' for mutliple different simulations that use the same u_pre) (default: False)
-                            'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.txt'], # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
+                            'prestress_from_file'   : [basepath+'/input/artseg_uf_pre.xdmf'], # OPTIONAL: if prestress displacement should be read from a file instead of solving for it (default: False)
                             'prestress_ptc'         : False, # OPTIONAL: whether to use PTC in prestress or not (default: False)
                             'stabilization'         : {'scheme' : 'supg_pspg', 'vscale' : 1e3, 'dscales' : [1.,1.,1.], 'symmetric' : False, 'reduced_scheme' : False}} # OPTIONAL: stabilization for equal-order fluid mechanics, where 'scheme' can only be 'supg_pspg' (default: None)
 
@@ -134,9 +134,9 @@ def main():
                             'prescribed_curve'      : [5,6]} # time curves that set the volumes/fluxes that shall be met
 
     # for model order reduction
-    ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_simname_u_*_1proc.dat'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
-                            'partitions'            : [basepath+'/input/artseg_part-1.txt',basepath+'/input/artseg_part-2.txt',basepath+'/input/artseg_part-3.txt'], # OPTIONAL: scalar fields that partition our POD mode space (default: [])
-                            'modes_from_files'      : [basepath+'/input/PODmode-*.txt'], # OPTIONAL: if modes should be directly read from file bypassing POD (default: False)
+    ROM_PARAMS           = {'hdmfilenames'          : [basepath+'/input/checkpoint_simname_u_*.xdmf'], # input files of high-dimensional model (HDM), need "*" indicating the numbered file series
+                            'partitions'            : [basepath+'/input/artseg_part-1.xdmf',basepath+'/input/artseg_part-2.xdmf',basepath+'/input/artseg_part-3.xdmf'], # OPTIONAL: scalar fields that partition our POD mode space (default: [])
+                            'modes_from_files'      : [basepath+'/input/PODmode-*.xdmf'], # OPTIONAL: if modes should be directly read from file bypassing POD (default: False)
                             'numsnapshots'          : 10, # number of snapshots
                             'snapshotincr'          : 1, # OPTIONAL: snapshot increment (default: 1)
                             'numredbasisvec'        : 10, # OPTIONAL: number of reduced basis vectors to consider (default: numsnapshots)
@@ -144,7 +144,7 @@ def main():
                             'print_eigenproblem'    : False, # OPTIONAL: print output of Proper Orthogonal Decomposition (POD) eigensolve (default: False)
                             'surface_rom'           : [1], # OPTIONAL: apply reduced-order model only to a (set of) surface(s) specified by boundary id(s) (default: [])
                             'exclude_from_snap'     : [6,7], # OPTIONAL: surface IDs whose dofs should be excluded from the snapshot matrix (e.g. if we have DBCs there) (default : [])
-                            'filetype'              : 'id_val', # OPTIONAL: file type of snapshot/mode data: 'id_val', 'val', 'cheart' (default: 'id_val')
+                            'filetype'              : 'xdmf_h5', # OPTIONAL: file type of snapshot/mode data: 'xdmf_h5', 'plaintext', 'cheart' (default: 'xdmf_h5')
                             'write_pod_modes'       : False} # OPTIONAL: whether to write out POD modes (default: False)
 
     # for solid_flow0d_multiscale_gandr problem type

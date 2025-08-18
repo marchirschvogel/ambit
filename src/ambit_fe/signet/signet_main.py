@@ -19,10 +19,17 @@ from ..base import problem_base, solver_base
 Framework of signalling network models
 """
 
+
 class SignallingNetworkProblem(problem_base):
-
-    def __init__(self, pbase, io_params, time_params, model_params, time_curves, coupling_params={}):
-
+    def __init__(
+        self,
+        pbase,
+        io_params,
+        time_params,
+        model_params,
+        time_curves,
+        coupling_params={},
+    ):
         self.pbase = pbase
 
         # pointer to communicator
@@ -31,36 +38,45 @@ class SignallingNetworkProblem(problem_base):
 
         ioparams.check_params_io(io_params)
 
-        self.problem_physics = 'signet'
+        self.problem_physics = "signet"
 
         self.time_params = time_params
 
-        initial_file = time_params.get('initial_file', '')
+        initial_file = time_params.get("initial_file", "")
 
         # could use extra write frequency setting for signet model (i.e. for coupled problem)
-        try: self.write_results_every_signet = io_params['write_results_every_signet']
-        except: self.write_results_every_signet = io_params['write_results_every']
+        try:
+            self.write_results_every_signet = io_params["write_results_every_signet"]
+        except:
+            self.write_results_every_signet = io_params["write_results_every"]
 
         # for restart
-        self.write_restart_every = io_params.get('write_restart_every', -1)
+        self.write_restart_every = io_params.get("write_restart_every", -1)
 
         # could use extra output path setting for signet model (i.e. for coupled problem)
-        try: self.output_path_signet = io_params['output_path_signet']
-        except: self.output_path_signet = io_params['output_path']
+        try:
+            self.output_path_signet = io_params["output_path_signet"]
+        except:
+            self.output_path_signet = io_params["output_path"]
 
         # whether to output midpoint (t_{n+theta}) of state variables or endpoint (t_{n+1}) - for post-processing
-        self.output_midpoint = io_params.get('output_midpoint_0D', False)
+        self.output_midpoint = io_params.get("output_midpoint_0D", False)
 
-        self.prescribed_variables = model_params.get('prescribed_variables', {})
+        self.prescribed_variables = model_params.get("prescribed_variables", {})
 
-        self.initial_backwardeuler = time_params.get('initial_backwardeuler', False)
+        self.initial_backwardeuler = time_params.get("initial_backwardeuler", False)
 
-        self.ode_parallel = io_params.get('ode_parallel', False)
+        self.ode_parallel = io_params.get("ode_parallel", False)
 
         # initialize signet model class
-        if model_params['modeltype'] == 'hypertrophy':
+        if model_params["modeltype"] == "hypertrophy":
             from .signet_hypertrophy import signethypertrophy
-            self.signet = signethypertrophy(model_params['parameters'], ode_par=self.ode_parallel, comm=self.comm)
+
+            self.signet = signethypertrophy(
+                model_params["parameters"],
+                ode_par=self.ode_parallel,
+                comm=self.comm,
+            )
         else:
             raise NameError("Unknown signet modeltype!")
 
@@ -68,11 +84,17 @@ class SignallingNetworkProblem(problem_base):
 
         # vectors and matrices
         if self.ode_parallel:
-            self.K = PETSc.Mat().createAIJ(size=(self.numdof,self.numdof), bsize=None, nnz=None, csr=None, comm=self.comm)
+            self.K = PETSc.Mat().createAIJ(
+                size=(self.numdof, self.numdof),
+                bsize=None,
+                nnz=None,
+                csr=None,
+                comm=self.comm,
+            )
         else:
             self.K = PETSc.Mat().create(comm=self.comm_sq)
             self.K.setType(PETSc.Mat.Type.SEQAIJ)
-            self.K.setSizes(size=(self.numdof,self.numdof))
+            self.K.setSizes(size=(self.numdof, self.numdof))
         self.K.setUp()
 
         self.K.assemble()
@@ -81,47 +103,60 @@ class SignallingNetworkProblem(problem_base):
 
         self.r = self.K.createVecLeft()
 
-        self.s, self.s_old, self.s_mid = self.K.createVecLeft(), self.K.createVecLeft(), self.K.createVecLeft()
+        self.s, self.s_old, self.s_mid = (
+            self.K.createVecLeft(),
+            self.K.createVecLeft(),
+            self.K.createVecLeft(),
+        )
         self.sTc, self.sTc_old = self.K.createVecLeft(), self.K.createVecLeft()
 
         self.df, self.df_old = self.K.createVecLeft(), self.K.createVecLeft()
-        self.f, self.f_old   = self.K.createVecLeft(), self.K.createVecLeft()
+        self.f, self.f_old = self.K.createVecLeft(), self.K.createVecLeft()
 
-        self.aux, self.aux_old, self.aux_mid = np.zeros(self.numdof), np.zeros(self.numdof), np.zeros(self.numdof)
+        self.aux, self.aux_old, self.aux_mid = (
+            np.zeros(self.numdof),
+            np.zeros(self.numdof),
+            np.zeros(self.numdof),
+        )
 
-        self.s_set = self.K.createVecLeft() # set point for multisale analysis
+        self.s_set = self.K.createVecLeft()  # set point for multisale analysis
 
         self.c, self.y = [], []
 
         # initialize signet time-integration class
-        self.ti = timeintegration.timeintegration_signet(time_params, self.pbase.dt, self.pbase.numstep, time_curves, self.pbase.t_init, comm=self.comm)
+        self.ti = timeintegration.timeintegration_signet(
+            time_params,
+            self.pbase.dt,
+            self.pbase.numstep,
+            time_curves,
+            self.pbase.t_init,
+            comm=self.comm,
+        )
 
         if initial_file:
             initialconditions = self.signet.set_initial_from_file(initial_file)
         else:
-            initialconditions = time_params['initial_conditions']
+            initialconditions = time_params["initial_conditions"]
 
         self.signet.initialize(self.s, initialconditions)
         self.signet.initialize(self.s_old, initialconditions)
         self.signet.initialize(self.sTc_old, initialconditions)
 
-        self.theta_ost = time_params['theta_ost']
+        self.theta_ost = time_params["theta_ost"]
 
         self.odemodel = self.signet
 
         # number of fields involved
-        self.nfields=1
+        self.nfields = 1
 
         # residual and matrix lists
-        self.r_list = [None]*self.nfields
-        self.K_list = [[None]*self.nfields for _ in range(self.nfields)]
+        self.r_list = [None] * self.nfields
+        self.K_list = [[None] * self.nfields for _ in range(self.nfields)]
 
         self.K_list[0][0] = self.K
         self.r_list[0] = self.r
 
-
     def assemble_residual(self, t):
-
         self.signet.evaluate(self.s, t, self.df, self.f, None, None, self.c, self.y, self.aux)
 
         theta = self.thetasn_timint(t)
@@ -132,17 +167,15 @@ class SignallingNetworkProblem(problem_base):
         # signet rhs vector: r = (df - df_old)/dt + theta * f + (1-theta) * f_old
         self.r.zeroEntries()
 
-        self.r.axpy(1./self.pbase.dt, self.df)
-        self.r.axpy(-1./self.pbase.dt, self.df_old)
+        self.r.axpy(1.0 / self.pbase.dt, self.df)
+        self.r.axpy(-1.0 / self.pbase.dt, self.df_old)
 
         self.r.axpy(theta, self.f)
-        self.r.axpy(1.-theta, self.f_old)
+        self.r.axpy(1.0 - theta, self.f_old)
 
         self.r_list[0] = self.r
 
-
     def assemble_stiffness(self, t):
-
         self.signet.evaluate(self.s, t, None, None, self.dK_, self.K_, self.c, self.y, self.aux)
 
         theta = self.thetasn_timint(t)
@@ -152,16 +185,14 @@ class SignallingNetworkProblem(problem_base):
         self.K.assemble()
 
         self.K.zeroEntries()
-        self.K.axpy(1./self.pbase.dt, self.dK_)
+        self.K.axpy(1.0 / self.pbase.dt, self.dK_)
         self.K.axpy(theta, self.K_)
 
         self.K_list[0][0] = self.K
 
-
     def thetasn_timint(self, t):
-
         if self.initial_backwardeuler:
-            if np.isclose(t,self.pbase.dt):
+            if np.isclose(t, self.pbase.dt):
                 theta = 1.0
             else:
                 theta = self.theta_ost
@@ -170,133 +201,147 @@ class SignallingNetworkProblem(problem_base):
 
         return theta
 
-
     def writerestart(self, sname, N, ms=False):
+        self.signet.write_restart(self.output_path_signet, sname + "_s", N, self.s)
+        self.signet.write_restart(self.output_path_signet, sname + "_aux", N, self.aux)
+        self.signet.write_restart(self.output_path_signet, sname + "_sTc_old", N, self.sTc_old)
+        if ms:
+            self.signet.write_restart(self.output_path_signet, sname + "_s_set", N, self.s_set)
 
-        self.signet.write_restart(self.output_path_signet, sname+'_s', N, self.s)
-        self.signet.write_restart(self.output_path_signet, sname+'_aux', N, self.aux)
-        self.signet.write_restart(self.output_path_signet, sname+'_sTc_old', N, self.sTc_old)
-        if ms: self.signet.write_restart(self.output_path_signet, sname+'_s_set', N, self.s_set)
-
-        if self.signet.T_cycl > 0: # write heart cycle info
+        if self.signet.T_cycl > 0:  # write heart cycle info
             if self.comm.rank == 0:
-                filename = self.output_path_signet+'/checkpoint_'+sname+'_cycledata_'+str(N)+'.txt'
-                f = open(filename, 'wt')
-                f.write('%i %.8f' % (self.ti.cycle[0],self.ti.cycleerror[0]))
+                filename = self.output_path_signet + "/checkpoint_" + sname + "_cycledata_" + str(N) + ".txt"
+                f = open(filename, "wt")
+                f.write("%i %.8f" % (self.ti.cycle[0], self.ti.cycleerror[0]))
                 f.close()
 
-
     def readrestart(self, sname, rst, ms=False):
+        self.signet.read_restart(self.output_path_signet, sname + "_s", rst, self.s)
+        self.signet.read_restart(self.output_path_signet, sname + "_s", rst, self.s_old)
+        self.signet.read_restart(self.output_path_signet, sname + "_aux", rst, self.aux)
+        self.signet.read_restart(self.output_path_signet, sname + "_aux", rst, self.aux_old)
+        self.signet.read_restart(self.output_path_signet, sname + "_sTc_old", rst, self.sTc_old)
+        if ms:
+            self.signet.read_restart(self.output_path_signet, sname + "_s_set", rst, self.s_set)
 
-        self.signet.read_restart(self.output_path_signet, sname+'_s', rst, self.s)
-        self.signet.read_restart(self.output_path_signet, sname+'_s', rst, self.s_old)
-        self.signet.read_restart(self.output_path_signet, sname+'_aux', rst, self.aux)
-        self.signet.read_restart(self.output_path_signet, sname+'_aux', rst, self.aux_old)
-        self.signet.read_restart(self.output_path_signet, sname+'_sTc_old', rst, self.sTc_old)
-        if ms: self.signet.read_restart(self.output_path_signet, sname+'_s_set', rst, self.s_set)
-
-        if self.signet.T_cycl > 0: # read heart cycle info
-            self.ti.cycle[0] = np.loadtxt(self.output_path_signet+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(0), dtype=int)
-            self.ti.cycleerror[0] = np.loadtxt(self.output_path_signet+'/checkpoint_'+sname+'_cycledata_'+str(rst)+'.txt', usecols=(1), dtype=float)
-            self.pbase.t_init -= (self.ti.cycle[0]-1) * self.signet.T_cycl
-
+        if self.signet.T_cycl > 0:  # read heart cycle info
+            self.ti.cycle[0] = np.loadtxt(
+                self.output_path_signet + "/checkpoint_" + sname + "_cycledata_" + str(rst) + ".txt",
+                usecols=(0),
+                dtype=int,
+            )
+            self.ti.cycleerror[0] = np.loadtxt(
+                self.output_path_signet + "/checkpoint_" + sname + "_cycledata_" + str(rst) + ".txt",
+                usecols=(1),
+                dtype=float,
+            )
+            self.pbase.t_init -= (self.ti.cycle[0] - 1) * self.signet.T_cycl
 
     ### now the base routines for this problem
 
     def read_restart(self, sname, N):
-
         # read restart information
         if self.pbase.restart_step > 0:
-            self.readrestart(sname+'_'+self.problem_physics, N)
-
+            self.readrestart(sname + "_" + self.problem_physics, N)
 
     def evaluate_initial(self):
-
-        self.signet.evaluate(self.s_old, self.pbase.t_init, self.df_old, self.f_old, None, None, self.c, self.y, self.aux_old)
-
+        self.signet.evaluate(
+            self.s_old,
+            self.pbase.t_init,
+            self.df_old,
+            self.f_old,
+            None,
+            None,
+            self.c,
+            self.y,
+            self.aux_old,
+        )
 
     def write_output_ini(self):
         pass
 
-
     def write_output_pre(self):
         pass
-
 
     def evaluate_pre_solve(self, t, N, dt):
         pass
 
-
     def evaluate_post_solve(self, t, N):
         pass
 
-
     def set_output_state(self, t):
-
         # get midpoint dof values for post-processing (has to be called before update!)
         self.s.assemble(), self.s_old.assemble(), self.s_mid.assemble()
-        self.signet.set_output_state(self.s, self.s_old, self.s_mid, self.thetasn_timint(t), midpoint=self.output_midpoint)
-        self.signet.set_output_state(self.aux, self.aux_old, self.aux_mid, self.thetasn_timint(t), midpoint=self.output_midpoint)
-
+        self.signet.set_output_state(
+            self.s,
+            self.s_old,
+            self.s_mid,
+            self.thetasn_timint(t),
+            midpoint=self.output_midpoint,
+        )
+        self.signet.set_output_state(
+            self.aux,
+            self.aux_old,
+            self.aux_mid,
+            self.thetasn_timint(t),
+            midpoint=self.output_midpoint,
+        )
 
     def write_output(self, N, t):
-
         # raw txt file output of 0D model quantities
         if self.write_results_every_signet > 0 and N % self.write_results_every_signet == 0:
-            self.signet.write_output(self.output_path_signet, t, self.s_mid, self.aux_mid, self.pbase.simname+'_'+self.problem_physics)
-
+            self.signet.write_output(
+                self.output_path_signet,
+                t,
+                self.s_mid,
+                self.aux_mid,
+                self.pbase.simname + "_" + self.problem_physics,
+            )
 
     def update(self):
-
         # update timestep
-        self.signet.update(self.s, self.df, self.f, self.s_old, self.df_old, self.f_old, self.aux, self.aux_old)
-
+        self.signet.update(
+            self.s,
+            self.df,
+            self.f,
+            self.s_old,
+            self.df_old,
+            self.f_old,
+            self.aux,
+            self.aux_old,
+        )
 
     def print_to_screen(self):
         pass
 
-
     def induce_state_change(self):
         pass
 
-
     def write_restart(self, sname, N, force=False):
-
         # write 0D restart info - old and new quantities are the same at this stage (except cycle values sTc)
         if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
-            self.writerestart(sname+'_'+self.problem_physics, N)
-
+            self.writerestart(sname + "_" + self.problem_physics, N)
 
     def check_abort(self, t):
         pass
-
 
     def destroy(self):
         pass
 
 
-
 class SignallingNetworkSolver(solver_base):
-
-
     def initialize_nonlinear_solver(self):
-
         self.evaluate_system_initial()
 
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear_ode([self.pb], self.solver_params)
 
-
     def solve_initial_state(self):
         pass
 
-
     def solve_nonlinear_problem(self, t):
-
         self.solnln.newton(t)
 
-
     def print_timestep_info(self, N, t, ni, li, wt):
-
         # print time step info to screen
         self.pb.ti.print_timestep(N, t, self.solnln.lsp, self.pb.pbase.numstep, ni=ni, li=li, wt=wt)

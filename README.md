@@ -83,11 +83,11 @@ docker pull ghcr.io/marchirschvogel/ambit:devenv
 
 ### Usage ###
 
-Check out the examples for the basic problem types in demos to quickly get started running solid, fluid, or 0D model problems. Further, you can have a look
-at input files in ambit/tests and the file ambit_template.py in the main folder as example of all available input options.
+Check out the examples for the basic problem types in demos/ to quickly get started running solid, fluid, or 0D model problems. Further, you can have a look
+at input files in tests/ and the file ambit_template.py in the main folder as example of all available input options.
 
 
-Best, check if all testcases run and pass, by navigating to ambit/tests and executing
+Best, check if all testcases run and pass, by navigating to tests/ and executing
 ```
 ./runtests.py
 ```

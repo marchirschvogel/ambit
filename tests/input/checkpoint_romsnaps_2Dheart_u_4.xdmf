@@ -1,0 +1,21 @@
+<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="Grid" GridType="Uniform">
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="717 3" Format="HDF">
+          checkpoint_romsnaps_2Dheart_u_4.h5:/nodes
+        </DataItem>
+      </Geometry>
+      <Topology NodesPerElement="3" NumberOfElements="1182" TopologyType="Triangle">
+        <DataItem DataType="Int" Dimensions="1182 3" Format="HDF">
+          checkpoint_romsnaps_2Dheart_u_4.h5:/cells
+        </DataItem>
+      </Topology>
+      <Attribute AttributeType="Vector" Center="Node" Name="disp">
+        <DataItem DataType="Float" Dimensions="717 3" Format="HDF">
+          checkpoint_romsnaps_2Dheart_u_4.h5:/disp
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

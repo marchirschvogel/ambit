@@ -6,33 +6,42 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'ambit'
-copyright = '2023, Marc Hirschvogel'
-author = 'Marc Hirschvogel'
-release = '1.1.3'
+project = "ambit"
+copyright = "2025, Marc Hirschvogel"
+author = "Marc Hirschvogel"
+release = "1.3"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["myst_parser", # to have Markdown working with Sphinx...
-              "sphinxcontrib.bibtex",
-              "sphinx.ext.autodoc"]
+extensions = [
+    "myst_parser",  # to have Markdown working with Sphinx...
+    "sphinxcontrib.bibtex",
+    "sphinx.ext.autodoc",
+]
 
-autodoc_mock_imports = ["mpi4py","petsc4py","dolfinx","basix","ufl","numpy"]
+autodoc_mock_imports = [
+    "mpi4py",
+    "petsc4py",
+    "dolfinx",
+    "basix",
+    "ufl",
+    "numpy",
+]
 
-bibtex_bibfiles = ['ref.bib']
+bibtex_bibfiles = ["ref.bib"]
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
 
 latex_elements = {
-    'preamble': r'''
+    "preamble": r"""
 \mathchardef\mhyphen="2D
-''',
+""",
 }
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]

@@ -12,8 +12,16 @@ import ufl
 from petsc4py import PETSc
 
 
-def project(v, V, dx_, domids=np.arange(1,2), bcs=[], nm=None, comm=None, entity_maps={}):
-
+def project(
+    v,
+    V,
+    dx_,
+    domids=np.arange(1, 2),
+    bcs=[],
+    nm=None,
+    comm=None,
+    entity_maps={},
+):
     w = ufl.TestFunction(V)
     Pv = ufl.TrialFunction(V)
 
@@ -21,7 +29,6 @@ def project(v, V, dx_, domids=np.arange(1,2), bcs=[], nm=None, comm=None, entity
     zerofnc = fem.Function(V)
 
     for n, N in enumerate(domids):
-
         # check if we have passed in a list of functions or a function
         if isinstance(v, list):
             fnc = v[n]
@@ -39,7 +46,10 @@ def project(v, V, dx_, domids=np.arange(1,2), bcs=[], nm=None, comm=None, entity
     function = fem.Function(V, name=nm)
 
     if bool(entity_maps):
-        a_form, L_form = fem.form(a, entity_maps=entity_maps), fem.form(L, entity_maps=entity_maps)
+        a_form, L_form = (
+            fem.form(a, entity_maps=entity_maps),
+            fem.form(L, entity_maps=entity_maps),
+        )
     else:
         a_form, L_form = fem.form(a), fem.form(L)
 
