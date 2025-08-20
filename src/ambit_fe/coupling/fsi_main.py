@@ -125,6 +125,8 @@ class FSIProblem(problem_base):
         self.lm = fem.Function(self.V_lm)
         self.lm_old = fem.Function(self.V_lm)
 
+        self.zero_lm = fem.Function(self.V_lm)
+
         if self.fsi_system == "neumann_neumann":
             self.dlm = ufl.TrialFunction(self.V_lm)  # incremental lm
             self.var_lm = ufl.TestFunction(self.V_lm)  # lm test function
@@ -137,7 +139,7 @@ class FSIProblem(problem_base):
                     self.io.msh_emap_lm[0].topology.dim,
                 )
                 boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
-                self.bclm.dbcs.append(fem.dirichletbc(self.lm, boundary_facets_lm))
+                self.bclm.dbcs.append(fem.dirichletbc(self.zero_lm, boundary_facets_lm))
 
         self.set_variational_forms()
 
