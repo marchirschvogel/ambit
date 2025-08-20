@@ -50,43 +50,42 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
     return fd
 
 
-# cf. https://fenicsproject.discourse.group/t/transfer-meshtags-to-submesh-in-dolfinx/8952/6
 def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, dimentity):
-    if dimentity == "domain":
+    if dimentity=='domain':
         dim_p = parentmsh.topology.dim
         dim_c = childmsh.topology.dim
-    elif dimentity == "boundary":
-        dim_p = parentmsh.topology.dim - 1
-        dim_c = childmsh.topology.dim - 1
+    elif dimentity=='boundary':
+        dim_p = parentmsh.topology.dim-1
+        dim_c = childmsh.topology.dim-1
     else:
         raise ValueError("Unknown dim entity!")
 
     d_map = parentmsh.topology.index_map(dim_p)
-    all_ent = d_map.size_local + d_map.num_ghosts
+    num_p_ent = d_map.size_local + d_map.num_ghosts
 
     # create array with zeros for all entities that are not marked
-    all_values = np.zeros(all_ent, dtype=np.int32)
+    all_values = np.zeros(num_p_ent, dtype=np.int32)
     all_values[mshtags.indices] = mshtags.values
 
-    c_to_e = parentmsh.topology.connectivity(parentmsh.topology.dim, dim_p)
-
     childmsh.topology.create_entities(dim_c)
-    subf_map = childmsh.topology.index_map(dim_c)
-    childmsh.topology.create_connectivity(parentmsh.topology.dim, dim_p)
-    c_to_e_sub = childmsh.topology.connectivity(parentmsh.topology.dim, dim_p)
-    num_sub_ent = subf_map.size_local + subf_map.size_global
+    subf_map = childmsh.topology.index_map(dim_c)  # should be same as childmsh_emap.sub_topology.index_map(dim_c)
+    childmsh.topology.create_connectivity(childmsh.topology.dim, dim_c)
+    num_c_ent = subf_map.size_local + subf_map.num_ghosts
 
-    sub_values = np.zeros(num_sub_ent, dtype=np.int32)
+    sub_values = np.zeros(num_c_ent, dtype=np.int32)
 
-    subtop_to_top = childmsh_emap.sub_topology_to_topology(np.arange(num_sub_ent, dtype=np.int32), inverse=True)
-    for entity, i in enumerate(subtop_to_top):
-        if i > -1:
-            parent_ent = c_to_e.links(entity)
-            child_ent = c_to_e_sub.links(i)
+    c_to_e = parentmsh.topology.connectivity(parentmsh.topology.dim, dim_p)
+    c_to_e_sub = childmsh.topology.connectivity(childmsh.topology.dim, dim_c)
+
+    subtop_to_top = childmsh_emap.sub_topology_to_topology(np.arange(num_p_ent, dtype=np.int32), inverse=True)
+    for i, entity in enumerate(subtop_to_top):
+        if entity > -1:
+            parent_ent = c_to_e.links(i)
+            child_ent = c_to_e_sub.links(entity)
             for child, parent in zip(child_ent, parent_ent):
                 sub_values[child] = all_values[parent]
 
-    return mesh.meshtags(childmsh, dim_c, np.arange(num_sub_ent, dtype=np.int32), sub_values)
+    return mesh.meshtags(childmsh, dim_c, np.arange(num_c_ent, dtype=np.int32), sub_values)
 
 
 def get_integration_entities(msh, entity_indices, codim, integration_entities):
