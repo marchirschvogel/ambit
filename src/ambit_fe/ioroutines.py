@@ -1722,12 +1722,12 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             self.mesh,
             self.mesh.topology.dim,
             self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)],
-        )[0:2]
+        )[0:4] # returns: submesh, cell entity_map, vert entity map, original geo verts
         self.msh_emap_fluid = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim,
             self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)],
-        )[0:2]
+        )[0:4] # returns: submesh, cell entity_map, vert entity map, original geo verts
 
         self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim)
         self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim - 1, self.mesh.topology.dim)

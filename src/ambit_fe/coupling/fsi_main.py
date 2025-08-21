@@ -134,12 +134,39 @@ class FSIProblem(problem_base):
             self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
             # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
             if self.zero_lm_boundary:  # TODO: Seems to not work properly - investigate!
-                self.io.msh_emap_lm[0].topology.create_connectivity(
-                    self.io.msh_emap_lm[0].topology.dim - 1,
-                    self.io.msh_emap_lm[0].topology.dim,
-                )
-                boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
-                self.bclm.dbcs.append(fem.dirichletbc(self.zero_lm, boundary_facets_lm))
+
+                num_vertices_s = self.pbs.V_u.dofmap.index_map.size_local + self.pbs.V_u.dofmap.index_map.num_ghosts
+                bs = self.pbs.V_u.dofmap.bs
+                dofs_solid_ = np.empty(bs*num_vertices_s, dtype=np.int32)
+                for i, vert in enumerate(self.io.msh_emap_solid[3]):
+                    for j in range(bs):
+                        dofs_solid_[bs*i+j] = bs*vert+j
+
+                num_vertices_f = self.pbf.V_v.dofmap.index_map.size_local + self.pbf.V_v.dofmap.index_map.num_ghosts
+                bs = self.pbf.V_v.dofmap.bs
+                dofs_fluid_ = np.empty(bs*num_vertices_f, dtype=np.int32)
+                for i, vert in enumerate(self.io.msh_emap_fluid[3]):
+                    for j in range(bs):
+                        dofs_fluid_[bs*i+j] = bs*vert+j
+
+                dbcs_dofs_solid_all, dbcs_dofs_fluid_all = [], []
+                for i in range(len(self.pbs.bc.dbcs)):
+                    dbcs_dofs_solid_all.append(self.pbs.bc.dbcs[i].dof_indices()[0])
+                for i in range(len(self.pbf.bc.dbcs)):
+                    dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[i].dof_indices()[0])
+
+                dbcs_dofs_solid_all_con = np.sort(np.concatenate(dbcs_dofs_solid_all))
+                dbcs_dofs_fluid_all_con = np.sort(np.concatenate(dbcs_dofs_fluid_all))
+
+                dofs_solid_ = np.sort(dofs_solid_)
+                dofs_fluid_ = np.sort(dofs_fluid_)
+
+                dbcs_dofs_solid_all_glob = dofs_solid_[dbcs_dofs_solid_all_con]
+                dbcs_dofs_fluid_all_glob = dofs_fluid_[dbcs_dofs_fluid_all_con]
+
+                common_dbcs_glob = np.intersect1d(dbcs_dofs_solid_all_glob, dbcs_dofs_fluid_all_glob)
+
+                raise ValueError("Under development!")
 
         self.set_variational_forms()
 
