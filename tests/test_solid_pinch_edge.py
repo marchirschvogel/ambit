@@ -27,7 +27,6 @@ def test_main():
 
     IO_PARAMS = {
         "problem_type": "solid",
-        "USE_MIXED_DOLFINX_BRANCH": True,
         "mesh_domain": basepath + "/input/block_domain.xdmf",
         "mesh_boundary": basepath + "/input/block_boundary.xdmf",
         "mesh_edge": basepath + "/input/block_edge.xdmf",

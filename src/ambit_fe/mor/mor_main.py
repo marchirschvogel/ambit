@@ -26,6 +26,8 @@ class ModelOrderReduction:
         self.pb = pb
         self.params = self.pb.mor_params
 
+        self.fid = 0 # field id in system matrix to reduce - currently hard-coded to 0
+
         ioparams.check_params_rom(self.params)
 
         self.modes_from_files = self.params.get("modes_from_files", False)
@@ -382,7 +384,6 @@ class ModelOrderReduction:
 
         self.Phi_all = np.zeros((self.matsize_u, self.numredbasisvec_true))
 
-        # own read function: requires plain txt format of type valx valy valz x z y
         for h in range(self.num_hdms):
             for i in range(self.numredbasisvec_true):
                 utilities.print_status("Mode %i ..." % (i + 1), self.pb.comm)
@@ -399,7 +400,6 @@ class ModelOrderReduction:
     def readin_partitions(self):
         self.part, self.part_rvar = [], []
 
-        # own read function: requires plain txt format of type val x z y
         for h in range(self.num_partitions):
             utilities.print_status("Partition %i ..." % (h + 1), self.pb.comm)
 
@@ -704,8 +704,8 @@ class ModelOrderReduction:
         utilities.print_status("ROM: Project residual, V^{T} * r[0]...", self.pb.comm, e=" ")
 
         # projection of main block: residual
-        r_list_rom[0] = self.V.createVecRight()
-        self.V.multTranspose(r_list[0], r_list_rom[0])  # V^T * r_u
+        r_list_rom[self.fid] = self.V.createVecRight()
+        self.V.multTranspose(r_list[self.fid], r_list_rom[self.fid])  # V^T * r_u
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pb.comm)
@@ -715,18 +715,19 @@ class ModelOrderReduction:
         utilities.print_status("ROM: Project Jacobian, V^{T} * K * V...", self.pb.comm, e=" ")
 
         # projection of main block: system matrix
-        K_list_tmp[0][0] = K_list[0][0].matMult(self.V)  # K_00 * V
-        K_list_rom[0][0] = self.V.transposeMatMult(K_list_tmp[0][0])  # V^T * K_00 * V
+        K_list_tmp[self.fid][self.fid] = K_list[self.fid][self.fid].matMult(self.V)  # K_{fid,fid} * V
+        K_list_rom[self.fid][self.fid] = self.V.transposeMatMult(K_list_tmp[self.fid][self.fid])  # V^T * K_{fid,fid} * V
 
         nfields = len(K_list)
 
         # now the offdiagonal blocks
         if nfields > 1:
-            for n in range(1, nfields):
-                if K_list[0][n] is not None:
-                    K_list_rom[0][n] = self.V.transposeMatMult(K_list[0][n])  # V^T * K_{0,n+1}
-                if K_list[n][0] is not None:
-                    K_list_rom[n][0] = K_list[n][0].matMult(self.V)  # K_{n+1,0} * V
+            for n in range(nfields):
+                if n!=self.fid:
+                    if K_list[self.fid][n] is not None:
+                        K_list_rom[self.fid][n] = self.V.transposeMatMult(K_list[self.fid][n])  # V^T * K_{fid,n}
+                    if K_list[n][self.fid] is not None:
+                        K_list_rom[n][self.fid] = K_list[n][self.fid].matMult(self.V)  # K_{n,fid} * V
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pb.comm)
@@ -738,15 +739,16 @@ class ModelOrderReduction:
         nfields = len(r_list)
 
         # projection of main block: residual
-        self.V.multTranspose(r_list[0], r_list_rom[0])  # V^T * r_u
+        self.V.multTranspose(r_list[self.fid], r_list_rom[self.fid])  # V^T * r_u
 
         # deal with regularizations that may be added to reduced residual to penalize certain modes
         if self.have_regularization_terms:
             self.add_residual_regularization(r_list_rom)
 
-        if nfields > 1:  # only implemented for the first var in list so far!
-            for n in range(1, nfields):
-                r_list_rom[n] = r_list[n]
+        if nfields > 1:
+            for n in range(nfields):
+                if n!=self.fid:
+                    r_list_rom[n] = r_list[n]
 
         te = time.time() - ts
         if self.pb.io.print_enhanced_info:
@@ -761,8 +763,8 @@ class ModelOrderReduction:
         nfields = len(K_list)
 
         # projection of main block: stiffness
-        K_list[0][0].matMult(self.V, result=K_list_tmp[0][0])  # K_00 * V
-        self.V.transposeMatMult(K_list_tmp[0][0], result=K_list_rom[0][0])  # V^T * K_00 * V
+        K_list[self.fid][self.fid].matMult(self.V, result=K_list_tmp[self.fid][self.fid])  # K_{fid,fid} * V
+        self.V.transposeMatMult(K_list_tmp[self.fid][self.fid], result=K_list_rom[self.fid][self.fid])  # V^T * K_{fid,fid} * V
 
         # deal with regularizations that may be added to reduced residual to penalize certain modes
         if self.have_regularization_terms:
@@ -770,14 +772,16 @@ class ModelOrderReduction:
 
         # now the offdiagonal blocks
         if nfields > 1:
-            for n in range(1, nfields):
-                if K_list[0][n] is not None:
-                    self.V.transposeMatMult(K_list[0][n], result=K_list_rom[0][n])  # V^T * K_{0,n+1}
-                if K_list[n][0] is not None:
-                    K_list[n][0].matMult(self.V, result=K_list_rom[n][0])  # K_{n+1,0} * V
-                # no reduction for all other matrices not referring to first field index
-                for m in range(1, nfields):
-                    K_list_rom[n][m] = K_list[n][m]
+            for n in range(nfields):
+                if n!=self.fid:
+                    if K_list[self.fid][n] is not None:
+                        self.V.transposeMatMult(K_list[self.fid][n], result=K_list_rom[self.fid][n])  # V^T * K_{fid,n}
+                    if K_list[n][self.fid] is not None:
+                        K_list[n][self.fid].matMult(self.V, result=K_list_rom[n][self.fid])  # K_{n,fid} * V
+                    # no reduction for all other matrices not referring to index fid
+                    for m in range(nfields):
+                        if m!=self.fid:
+                            K_list_rom[n][m] = K_list[n][m]
 
         te = time.time() - ts
         if self.pb.io.print_enhanced_info:
@@ -791,11 +795,12 @@ class ModelOrderReduction:
 
         nfields = len(del_x)
 
-        self.V.mult(del_x_rom[0], del_x[0])  # V * dx_red
+        self.V.mult(del_x_rom[self.fid], del_x[self.fid])  # V * dx_red
 
-        if nfields > 1:  # only implemented for the first var in list so far!
-            for n in range(1, nfields):
-                del_x[n] = del_x_rom[n]
+        if nfields > 1:
+            for n in range(nfields):
+                if n!=self.fid:
+                    del_x[n] = del_x_rom[n]
 
         te = time.time() - ts
 
@@ -819,7 +824,7 @@ class ModelOrderReduction:
             # project
             self.V.multTranspose(self.xreg, self.Vtx)  # V^T * x
             self.Cpen.mult(self.Vtx, self.regtermx)  # Cpen * V^T * x
-            r_list_rom[0].axpy(1.0, self.regtermx)  # add penalty term to reduced residual
+            r_list_rom[self.fid].axpy(1.0, self.regtermx)  # add penalty term to reduced residual
 
         if bool(self.regularizations_integ):
             # get integration of variable
@@ -837,7 +842,7 @@ class ModelOrderReduction:
             # project
             self.V.multTranspose(self.xreginteg, self.Vtx_integ)  # V^T * x_integ
             self.Cpeninteg.mult(self.Vtx_integ, self.regtermx_integ)  # Cpeninteg * V^T * x_integ
-            r_list_rom[0].axpy(1.0, self.regtermx_integ)  # add penalty term to reduced residual
+            r_list_rom[self.fid].axpy(1.0, self.regtermx_integ)  # add penalty term to reduced residual
 
         if bool(self.regularizations_deriv):
             # get derivative of variable
@@ -853,7 +858,7 @@ class ModelOrderReduction:
             # project
             self.V.multTranspose(self.xregderiv, self.Vtx_deriv)  # V^T * x_deriv
             self.Cpenderiv.mult(self.Vtx_deriv, self.regtermx_deriv)  # Cpenderiv * V^T * x_deriv
-            r_list_rom[0].axpy(1.0, self.regtermx_deriv)  # add penalty term to reduced residual
+            r_list_rom[self.fid].axpy(1.0, self.regtermx_deriv)  # add penalty term to reduced residual
 
     def add_jacobian_regularization(self, K_list_rom):
         _, timefac = self.pb.ti.timefactors()
@@ -861,13 +866,13 @@ class ModelOrderReduction:
             timefac = 1.0
 
         if bool(self.regularizations):
-            K_list_rom[0][0].axpy(timefac, self.CpenVTV)  # K_00 + Cpen * V^T * V - add penalty to stiffness
+            K_list_rom[self.fid][self.fid].axpy(timefac, self.CpenVTV)  # K_00 + Cpen * V^T * V - add penalty to stiffness
 
         if bool(self.regularizations_integ):
             fac_timint = self.pb.ti.get_factor_deriv_varint(self.pb.pbase.dt)
             if self.pb.pre:
                 fac_timint = self.pb.prestress_dt
-            K_list_rom[0][0].axpy(
+            K_list_rom[self.fid][self.fid].axpy(
                 timefac * fac_timint, self.CpenintegVTV
             )  # K_00 + Cpeninteg * V^T * V - add penalty to stiffness
 
@@ -875,7 +880,7 @@ class ModelOrderReduction:
             fac_timint = self.pb.ti.get_factor_deriv_dvar(self.pb.pbase.dt)
             if self.pb.pre:
                 fac_timint = 1.0 / self.pb.prestress_dt
-            K_list_rom[0][0].axpy(
+            K_list_rom[self.fid][self.fid].axpy(
                 timefac * fac_timint, self.CpenderivVTV
             )  # K_00 + Cpenderiv * V^T * V - add penalty to stiffness
 

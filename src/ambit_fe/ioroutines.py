@@ -126,9 +126,7 @@ class IO:
                 edge_imap = self.mesh.topology.index_map(self.mesh.topology.dim - 2)
                 num_edges = edge_imap.size_local + edge_imap.num_ghosts
 
-                inv_emap = np.full(num_edges, -1)
-                inv_emap[self.mesh_e[1]] = np.arange(len(self.mesh_e[1]))
-                self.entity_maps[self.mesh_e[0]] = inv_emap
+                self.entity_maps.append( self.mesh_e[1] )
 
                 edge_indices = self.mt_b2.indices[self.mt_b2.values == 1]
 
