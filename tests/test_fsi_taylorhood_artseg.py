@@ -62,8 +62,9 @@ def test_main():
 
     COUPLING_PARAMS = {
         "coupling_fluid_ale": [{"surface_ids": [1], "type": "strong_dirichlet"}],
-        "fsi_governing_type": "fluid_governed",
-    }  # solid_governed, fluid_governed
+        "fsi_governing_type": "fluid_governed",  # solid_governed, fluid_governed
+        "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
+    }
 
     MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": 100.0}, "inertia": {"rho0": 1.0e-6}}}
 

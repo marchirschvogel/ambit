@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
-import sys
+import sys, math
 import numpy as np
 from dolfinx import fem, mesh
 import dolfinx.fem.petsc
@@ -107,7 +107,7 @@ class FSIProblem(problem_base):
 
         self.fsi_system = coupling_params.get("fsi_system", "neumann_neumann")
 
-        self.zero_lm_boundary = coupling_params.get("zero_lm_boundary", False)
+        self.remove_mutual_solid_fluid_bcs = coupling_params.get("remove_mutual_solid_fluid_bcs", False)
 
         self.have_condensed_variables = False
 
@@ -125,48 +125,95 @@ class FSIProblem(problem_base):
         self.lm = fem.Function(self.V_lm)
         self.lm_old = fem.Function(self.V_lm)
 
-        self.zero_lm = fem.Function(self.V_lm)
-
         if self.fsi_system == "neumann_neumann":
             self.dlm = ufl.TrialFunction(self.V_lm)  # incremental lm
             self.var_lm = ufl.TestFunction(self.V_lm)  # lm test function
 
-            self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
-            # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
-            if self.zero_lm_boundary:  # TODO: Seems to not work properly - investigate!
+            if self.remove_mutual_solid_fluid_bcs:  # TODO: Seems to not work properly - investigate!
+
+                from scipy.spatial import cKDTree
+
+                V_G = fem.functionspace(self.io.mesh, ("Lagrange", self.pbs.order_disp, (self.io.mesh.geometry.dim,)))
+
+                dofs_G = V_G.tabulate_dof_coordinates()
+                dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
+                dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
+
+                # create index mapping according to distance tree
+                tree = cKDTree(dofs_G)
+                _, map_solid = tree.query(dofs_s, distance_upper_bound=1e-6)
+                _, map_fluid = tree.query(dofs_f, distance_upper_bound=1e-6)
 
                 num_vertices_s = self.pbs.V_u.dofmap.index_map.size_local + self.pbs.V_u.dofmap.index_map.num_ghosts
                 bs = self.pbs.V_u.dofmap.bs
                 dofs_solid_ = np.empty(bs*num_vertices_s, dtype=np.int32)
-                for i, vert in enumerate(self.io.msh_emap_solid[3]):
+                for i, vert in enumerate(map_solid):
                     for j in range(bs):
                         dofs_solid_[bs*i+j] = bs*vert+j
 
                 num_vertices_f = self.pbf.V_v.dofmap.index_map.size_local + self.pbf.V_v.dofmap.index_map.num_ghosts
                 bs = self.pbf.V_v.dofmap.bs
                 dofs_fluid_ = np.empty(bs*num_vertices_f, dtype=np.int32)
-                for i, vert in enumerate(self.io.msh_emap_fluid[3]):
+                for i, vert in enumerate(map_fluid):
                     for j in range(bs):
                         dofs_fluid_[bs*i+j] = bs*vert+j
 
+                ndbc_solid, ndbc_fluid = len(self.pbs.bc.dbcs), len(self.pbf.bc.dbcs)
+
                 dbcs_dofs_solid_all, dbcs_dofs_fluid_all = [], []
-                for i in range(len(self.pbs.bc.dbcs)):
-                    dbcs_dofs_solid_all.append(self.pbs.bc.dbcs[i].dof_indices()[0])
-                for i in range(len(self.pbf.bc.dbcs)):
-                    dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[i].dof_indices()[0])
+                for k in range(ndbc_solid):
+                    dbcs_dofs_solid_all.append(self.pbs.bc.dbcs[k].dof_indices()[0])
+                for k in range(ndbc_fluid):
+                    dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[k].dof_indices()[0])
 
-                dbcs_dofs_solid_all_con = np.sort(np.concatenate(dbcs_dofs_solid_all))
-                dbcs_dofs_fluid_all_con = np.sort(np.concatenate(dbcs_dofs_fluid_all))
-
-                dofs_solid_ = np.sort(dofs_solid_)
-                dofs_fluid_ = np.sort(dofs_fluid_)
-
-                dbcs_dofs_solid_all_glob = dofs_solid_[dbcs_dofs_solid_all_con]
+                dbcs_dofs_solid_all_glob, dbcs_dofs_fluid_all_glob = [], []
+                for k in range(ndbc_solid):
+                    dbcs_dofs_solid_all_glob.append(dofs_solid_[dbcs_dofs_solid_all[k]])
+                # dbcs_dofs_fluid_all_con = np.sort(np.concatenate(dbcs_dofs_fluid_all))
+                dbcs_dofs_fluid_all_con = np.concatenate(dbcs_dofs_fluid_all)
                 dbcs_dofs_fluid_all_glob = dofs_fluid_[dbcs_dofs_fluid_all_con]
 
-                common_dbcs_glob = np.intersect1d(dbcs_dofs_solid_all_glob, dbcs_dofs_fluid_all_glob)
+                common_dbcs_glob = []
+                for k in range(ndbc_solid):
+                    common_dbcs_glob.append( np.intersect1d(dbcs_dofs_solid_all_glob[k], dbcs_dofs_fluid_all_glob) )
 
-                raise ValueError("Under development!")
+                dbc_dofs_solid_all_glob_new = [[] for _ in range(ndbc_solid)]
+                for k in range(ndbc_solid):
+                    if common_dbcs_glob[k].size > 0:
+                        dbc_dofs_solid_all_glob_new[k] = np.setdiff1d(dbcs_dofs_solid_all_glob[k], dbcs_dofs_fluid_all_glob)
+                    else:
+                        dbc_dofs_solid_all_glob_new[k] = dbcs_dofs_solid_all_glob[k]
+
+                dbcs_dofs_solid_all_new = [[] for _ in range(ndbc_solid)]
+                for k in range(ndbc_solid):
+                    dbcs_dofs_solid_all_new[k] = dbcs_dofs_solid_all[k][np.argsort(dbc_dofs_solid_all_glob_new[k])]
+
+                dbcs_dofs_solid_all_new_tmp = [[] for _ in range(ndbc_solid)]
+                for k in range(ndbc_solid):
+                    if self.pbs.bc_dict["dirichlet"][k]['dir']=='all':
+                        dbcs_dofs_solid_all_new_tmp[k] = dbcs_dofs_solid_all_new[k]
+                    elif self.pbs.bc_dict["dirichlet"][k]['dir']=='x' or self.pbs.bc_dict["dirichlet"][k]['dir']=='y' or self.pbs.bc_dict["dirichlet"][k]['dir']=='z':
+                        dbcs_dofs_solid_all_new_tmp[k] = np.empty(bs*len(dbcs_dofs_solid_all_new[k]), dtype=np.int32)
+                        for i in range(len(dbcs_dofs_solid_all_new[k])):
+                            for j in range(bs):
+                                dbcs_dofs_solid_all_new_tmp[k][bs*i+j] = dbcs_dofs_solid_all_new[k][i]
+
+                dbcs_verts_solid_all_new = [[] for _ in range(ndbc_solid)]
+                for k in range(ndbc_solid):
+                    dbcs_verts_solid_all_new[k] = np.empty(int(len(dbcs_dofs_solid_all_new[k]/bs)), dtype=np.int32)
+
+                for k in range(ndbc_solid):
+                    for i in range(len(dbcs_verts_solid_all_new[k])):
+                        dbcs_verts_solid_all_new[k][i] = int(dbcs_dofs_solid_all_new_tmp[k][bs*i] / bs)
+
+                self.pbs.bc.dbcs = []
+                for k in range(ndbc_solid):
+                    # if common_dbcs_glob[k].size > 0: # ...
+                    self.pbs.bc_dict["dirichlet"][k]['dir'] += '_by_dofs'
+                    self.pbs.bc_dict["dirichlet"][k]['dofs'] = dbcs_verts_solid_all_new[k] # vertices!
+                self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"])
+
+                raise RuntimeError("Under development!")
 
         self.set_variational_forms()
 
@@ -282,13 +329,6 @@ class FSIProblem(problem_base):
             self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
             self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
 
-            # even though this is zero, we still want to explicitly form and create the matrix for DBC application
-            self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)
-            # dummy form to initially get a sparsity pattern for LM DBC application
-            self.from_ll_diag_dummy = ufl.inner(self.dlm, self.var_lm) * self.io.ds(self.io.interface_id_s) - ufl.inner(
-                self.dlm, self.var_lm
-            ) * self.io.ds(self.io.interface_id_f)
-
         elif self.fsi_system == "neumann_dirichlet":
             dbcs_coup_fluid_solid = []
             dbcs_coup_fluid_solid.append(
@@ -366,10 +406,6 @@ class FSIProblem(problem_base):
             self.jac_ul = fem.form(self.weakform_lin_ul, entity_maps=self.io.entity_maps)
             self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
 
-            # even though this is zero, we still want to explicitly form and create the matrix for DBC application
-            self.jac_ll = fem.form(self.weakform_lin_ll, entity_maps=self.io.entity_maps)
-            self.jac_ll_dummy = fem.form(self.from_ll_diag_dummy, entity_maps=self.io.entity_maps)
-
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
@@ -386,8 +422,6 @@ class FSIProblem(problem_base):
 
             self.K_lu = fem.petsc.create_matrix(self.jac_lu)
             self.K_lv = fem.petsc.create_matrix(self.jac_lv)
-
-            self.K_ll = fem.petsc.create_matrix(self.jac_ll_dummy)
 
         elif self.fsi_system == "neumann_dirichlet":
             # create unity vector with 1's on surface dofs and zeros elsewhere
@@ -453,15 +487,7 @@ class FSIProblem(problem_base):
             with self.r_l.localForm() as r_local:
                 r_local.set(0.0)
             fem.petsc.assemble_vector(self.r_l, self.res_l)
-            fem.apply_lifting(
-                self.r_l,
-                [self.jac_ll],
-                [self.bclm.dbcs],
-                x0=[self.lm.x.petsc_vec],
-                alpha=-1.0,
-            )
             self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.x.petsc_vec, alpha=-1.0)
         elif self.fsi_system == "neumann_dirichlet":
             self.evaluate_residual_forces_interface()
 
@@ -526,17 +552,13 @@ class FSIProblem(problem_base):
         # LM
         if self.fsi_system == "neumann_neumann":
             self.K_lu.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, self.bclm.dbcs)
+            fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, [])
             self.K_lu.assemble()
             self.K_list[3 + off][0] = self.K_lu
             self.K_lv.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, self.bclm.dbcs)
+            fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, [])
             self.K_lv.assemble()
             self.K_list[3 + off][1 + off] = self.K_lv
-            self.K_ll.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_ll, self.jac_ll, self.bclm.dbcs)
-            self.K_ll.assemble()
-            self.K_list[3 + off][3 + off] = self.K_ll
 
             # ALE displacement
             self.K_list[4 + off][4 + off] = self.pbfa.K_list[2][2]

@@ -147,16 +147,6 @@ class FSIFlow0DProblem(FSIProblem, problem_base):
         self.dlm = ufl.TrialFunction(self.V_lm)  # incremental LM
         self.var_lm = ufl.TestFunction(self.V_lm)  # LM test function
 
-        self.bclm = boundaryconditions.boundary_cond(self.io, dim=self.io.msh_emap_lm[0].topology.dim)
-        # set the whole boundary of the LM subspace to zero (beneficial when we have solid and fluid with overlapping DBCs)
-        if self.zero_lm_boundary:  # TODO: Seems to not work properly!
-            self.io.msh_emap_lm[0].topology.create_connectivity(
-                self.io.msh_emap_lm[0].topology.dim - 1,
-                self.io.msh_emap_lm[0].topology.dim,
-            )
-            boundary_facets_lm = mesh.exterior_facet_indices(self.io.msh_emap_lm[0].topology)
-            self.bclm.dbcs.append(fem.dirichletbc(self.lm, boundary_facets_lm))
-
         self.set_variational_forms()
 
         self.numdof = self.pbs.numdof + self.pbfa0.numdof + self.lm.x.petsc_vec.getSize()
@@ -230,10 +220,6 @@ class FSIFlow0DProblem(FSIProblem, problem_base):
         self.jac_ul = fem.form(self.weakform_lin_ul, entity_maps=self.io.entity_maps)
         self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
 
-        # even though this is zero, we still want to explicitly form and create the matrix for DBC application
-        self.jac_ll = fem.form(self.weakform_lin_ll, entity_maps=self.io.entity_maps)
-        self.jac_ll_dummy = fem.form(self.from_ll_diag_dummy, entity_maps=self.io.entity_maps)
-
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
@@ -249,8 +235,6 @@ class FSIFlow0DProblem(FSIProblem, problem_base):
 
         self.K_lu = fem.petsc.create_matrix(self.jac_lu)
         self.K_lv = fem.petsc.create_matrix(self.jac_lv)
-
-        self.K_ll = fem.petsc.create_matrix(self.jac_ll_dummy)
 
     def assemble_residual(self, t, subsolver=None):
         if self.pbs.incompressible_2field:
@@ -276,15 +260,7 @@ class FSIFlow0DProblem(FSIProblem, problem_base):
         with self.r_l.localForm() as r_local:
             r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_l, self.res_l)
-        fem.apply_lifting(
-            self.r_l,
-            [self.jac_ll],
-            [self.bclm.dbcs],
-            x0=[self.lm.x.petsc_vec],
-            alpha=-1.0,
-        )
         self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_l, self.bclm.dbcs, x0=self.lm.x.petsc_vec, alpha=-1.0)
 
         self.r_list[3 + off] = self.r_l
 
@@ -337,17 +313,13 @@ class FSIFlow0DProblem(FSIProblem, problem_base):
 
         # FSI LM
         self.K_lu.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, self.bclm.dbcs)
+        fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, [])
         self.K_lu.assemble()
         self.K_list[3 + off][0] = self.K_lu
         self.K_lv.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, self.bclm.dbcs)
+        fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, [])
         self.K_lv.assemble()
         self.K_list[3 + off][1 + off] = self.K_lv
-        self.K_ll.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_ll, self.jac_ll, self.bclm.dbcs)
-        self.K_ll.assemble()
-        self.K_list[3 + off][3 + off] = self.K_ll
 
         # 3D-0D LM
         self.K_list[4 + off][1 + off] = self.pbfa0.K_list[2][0]

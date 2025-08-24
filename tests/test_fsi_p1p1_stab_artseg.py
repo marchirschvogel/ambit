@@ -84,8 +84,9 @@ def test_main():
     COUPLING_PARAMS = {
         "coupling_fluid_ale": [{"surface_ids": [1], "type": "strong_dirichlet"}],
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
-        "fsi_system": "neumann_neumann",
-    }  # neumann_neumann, neumann_dirichlet
+        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
+        "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
+    }
 
     MATERIALS_SOLID = {
         "MAT1": {

@@ -71,6 +71,7 @@ def main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/channel-flag_domain.xdmf",
         "mesh_boundary": basepath + "/input/channel-flag_boundary.xdmf",
+        "meshfile_type": "HDF5",
         "results_to_write": [
             ["displacement", "velocity"],
             [
@@ -103,7 +104,7 @@ def main():
             1e-8,
             1e-3,
         ],  # solid-mom,fluid-mom,fluid-cont,FSI-coup,ALE-mom
-        "tol_inc": [1e-0, 1e-0, 1e-0, 1e10, 1e-0],
+        "tol_inc": [1e-0, 1e-0, 1e-0, 1e5, 1e-0],
     }  # du,dv,dp,dlm,dd
 
     """
@@ -156,8 +157,8 @@ def main():
     COUPLING_PARAMS = {
         "coupling_fluid_ale": [{"surface_ids": [1], "type": "strong_dirichlet"}],
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
-        "zero_lm_boundary": False,
-    }  # TODO: Seems to select the wrong dofs on LM mesh! Do not turn on!
+        "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
+    }
 
     # solid material: St.-Venant Kirchhoff
     MATERIALS_SOLID = {

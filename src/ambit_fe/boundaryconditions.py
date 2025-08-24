@@ -226,6 +226,18 @@ class boundary_cond:
                 )
                 self.dbcs.append(fem.dirichletbc(func.sub(2), dofs_z))
 
+            elif d["dir"] == "all_by_dofs":
+                self.dbcs.append(fem.dirichletbc(func, d["dofs"]))
+
+            elif d["dir"] == "x_by_dofs":
+                self.dbcs.append(fem.dirichletbc(func.sub(0), d["dofs"]))
+
+            elif d["dir"] == "y_by_dofs":
+                self.dbcs.append(fem.dirichletbc(func.sub(1), d["dofs"]))
+
+            elif d["dir"] == "z_by_dofs":
+                self.dbcs.append(fem.dirichletbc(func.sub(2), d["dofs"]))
+
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
 
