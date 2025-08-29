@@ -40,6 +40,7 @@ def check_params_io(params):
         "write_results_every",
         "write_results_every_0D",
         "write_restart_every",
+        "write_submeshes",
     ]
 
     for k in params.keys():

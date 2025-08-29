@@ -56,8 +56,8 @@ def allgather_mat(var, comm):
     mrs, mre = var.getOwnershipRange()
 
     var_tmp, var_all = (
-        np.zeros((var.getSize()[0], var.getSize()[1])),
-        np.zeros((var.getSize()[0], var.getSize()[1])),
+        np.zeros(var.getSize()),
+        np.zeros(var.getSize()),
     )
 
     for i in range(mrs, mre):

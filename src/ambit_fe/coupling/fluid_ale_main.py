@@ -410,7 +410,7 @@ class FluidmechanicsAleProblem(problem_base):
                 self.K_pd = fem.petsc.create_matrix(self.jac_pd)
 
     def assemble_residual(self, t, subsolver=None):
-        self.evaluate_residual_dbc_coupling()
+        self.evaluate_residual_dbc_coupling() # prior to ALE residual assemble!
 
         self.pbf.assemble_residual(t)
         self.pba.assemble_residual(t)

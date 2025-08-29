@@ -93,9 +93,6 @@ class FSIProblem(problem_base):
         self.pbf = self.pbfa.pbf
         self.pba = self.pbfa.pba
 
-        # fluid displacement, but defined within solid function space
-        self.ufs = fem.Function(self.pbs.V_u)
-
         # modify results to write...
         self.pbs.results_to_write = io_params["results_to_write"][0]
         self.pbf.results_to_write = io_params["results_to_write"][1][0]
@@ -105,7 +102,9 @@ class FSIProblem(problem_base):
 
         self.fsi_governing_type = coupling_params.get("fsi_governing_type", "solid_governed")
 
-        self.fsi_system = coupling_params.get("fsi_system", "neumann_neumann")
+        self.fsi_system = coupling_params.get("fsi_system", "neumann_neumann") # neumann_neumann, neumann_dirichlet
+        if self.fsi_system=="neumann_dirichlet":
+            raise RuntimeError("Monolithic Neumann-Dirichlet scheme not yet fully implemented!")
 
         self.remove_mutual_solid_fluid_bcs = coupling_params.get("remove_mutual_solid_fluid_bcs", False)
 
@@ -125,38 +124,12 @@ class FSIProblem(problem_base):
         self.lm = fem.Function(self.V_lm)
         self.lm_old = fem.Function(self.V_lm)
 
+        self.dlm = ufl.TrialFunction(self.V_lm)  # incremental lm
+        self.var_lm = ufl.TestFunction(self.V_lm)  # lm test function
+
         if self.fsi_system == "neumann_neumann":
-            self.dlm = ufl.TrialFunction(self.V_lm)  # incremental lm
-            self.var_lm = ufl.TestFunction(self.V_lm)  # lm test function
 
             if self.remove_mutual_solid_fluid_bcs:  # TODO: Seems to not work properly - investigate!
-
-                from scipy.spatial import cKDTree
-
-                V_G = fem.functionspace(self.io.mesh, ("Lagrange", self.pbs.order_disp, (self.io.mesh.geometry.dim,)))
-
-                dofs_G = V_G.tabulate_dof_coordinates()
-                dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
-                dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
-
-                # create index mapping according to distance tree
-                tree = cKDTree(dofs_G)
-                _, map_solid = tree.query(dofs_s, distance_upper_bound=1e-6)
-                _, map_fluid = tree.query(dofs_f, distance_upper_bound=1e-6)
-
-                num_vertices_s = self.pbs.V_u.dofmap.index_map.size_local + self.pbs.V_u.dofmap.index_map.num_ghosts
-                bs = self.pbs.V_u.dofmap.bs
-                dofs_solid_ = np.empty(bs*num_vertices_s, dtype=np.int32)
-                for i, vert in enumerate(map_solid):
-                    for j in range(bs):
-                        dofs_solid_[bs*i+j] = bs*vert+j
-
-                num_vertices_f = self.pbf.V_v.dofmap.index_map.size_local + self.pbf.V_v.dofmap.index_map.num_ghosts
-                bs = self.pbf.V_v.dofmap.bs
-                dofs_fluid_ = np.empty(bs*num_vertices_f, dtype=np.int32)
-                for i, vert in enumerate(map_fluid):
-                    for j in range(bs):
-                        dofs_fluid_[bs*i+j] = bs*vert+j
 
                 ndbc_solid, ndbc_fluid = len(self.pbs.bc.dbcs), len(self.pbf.bc.dbcs)
 
@@ -168,10 +141,10 @@ class FSIProblem(problem_base):
 
                 dbcs_dofs_solid_all_glob, dbcs_dofs_fluid_all_glob = [], []
                 for k in range(ndbc_solid):
-                    dbcs_dofs_solid_all_glob.append(dofs_solid_[dbcs_dofs_solid_all[k]])
+                    dbcs_dofs_solid_all_glob.append(self.dofs_solid_main[dbcs_dofs_solid_all[k]])
                 # dbcs_dofs_fluid_all_con = np.sort(np.concatenate(dbcs_dofs_fluid_all))
                 dbcs_dofs_fluid_all_con = np.concatenate(dbcs_dofs_fluid_all)
-                dbcs_dofs_fluid_all_glob = dofs_fluid_[dbcs_dofs_fluid_all_con]
+                dbcs_dofs_fluid_all_glob = self.dofs_fluid_main[dbcs_dofs_fluid_all_con]
 
                 common_dbcs_glob = []
                 for k in range(ndbc_solid):
@@ -218,6 +191,8 @@ class FSIProblem(problem_base):
         self.set_variational_forms()
 
         self.numdof = self.pbs.numdof + self.pbfa.numdof
+        if self.fsi_system == "neumann_neumann":
+            self.numdof += self.lm.x.petsc_vec.getSize()
 
         self.localsolve = False
         self.sub_solve = False
@@ -298,20 +273,75 @@ class FSIProblem(problem_base):
 
     # defines the monolithic coupling forms for FSI
     def set_variational_forms(self):
-        self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-        self.work_coupling_solid_old = ufl.dot(self.lm_old, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-        self.power_coupling_fluid = ufl.dot(self.lm, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
-        self.power_coupling_fluid_old = ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
 
-        # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
-        self.pbs.weakform_u += (
-            self.pbs.timefac * self.work_coupling_solid + (1.0 - self.pbs.timefac) * self.work_coupling_solid_old
-        )
-        self.pbf.weakform_v += (
-            -self.pbf.timefac * self.power_coupling_fluid - (1.0 - self.pbf.timefac) * self.power_coupling_fluid_old
-        )
+        # fluid displacement, but defined on solid domain
+        self.ufs = fem.Function(self.pbs.V_u)
+        self.ufs_old = fem.Function(self.pbs.V_u)
+
+        # establish dof mappings from submeshes to mainmesh
+        if self.fsi_system=="neumann_dirichlet":
+            self.submesh_to_mainmesh_mappings()
+
+            # get surface dofs on each of the three subdomains
+            # solid
+            fnode_indices_solid_local = fem.locate_dofs_topological(
+                self.pbs.V_u,
+                self.pbs.io.mesh.topology.dim - 1,
+                self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)],
+            )
+            fnode_indices_solid_global = np.array(
+                self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnode_indices_solid_local, dtype=np.int32)),
+                dtype=np.int32,
+            )
+
+            sorter_solid = np.argsort(self.map_solid[fnode_indices_solid_global])
+            fnode_indices_solid_global = fnode_indices_solid_global[sorter_solid]
+
+            self.fdofs_solid_global_sub = PETSc.IS().createBlock(
+                self.pbs.V_u.dofmap.index_map_bs,
+                fnode_indices_solid_global,
+                comm=self.comm,
+            )
+
+            # fluid
+            fnode_indices_fluid_local = fem.locate_dofs_topological(
+                self.pbf.V_v,
+                self.pbf.io.mesh.topology.dim - 1,
+                self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.io.surf_interf)],
+            )
+            fnode_indices_fluid_global = np.array(
+                self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(fnode_indices_fluid_local, dtype=np.int32)),
+                dtype=np.int32,
+            )
+
+            sorter_fluid = np.argsort(self.map_fluid[fnode_indices_fluid_global])
+            fnode_indices_fluid_global = fnode_indices_fluid_global[sorter_fluid]
+
+            self.fdofs_fluid_global_sub = PETSc.IS().createBlock(
+                self.pbf.V_v.dofmap.index_map_bs,
+                fnode_indices_fluid_global,
+                comm=self.comm,
+            )
+
+            #print("rank: ",self.comm.rank,"fdofs_solid_global_sub:     ",self.fdofs_solid_global_sub.array)
+            #print("rank: ",self.comm.rank,"fdofs_fluid_global_sub:     ",self.fdofs_fluid_global_sub.array)
+
+            self.interface_is_loc = PETSc.IS().createStride(self.lm.x.petsc_vec.getLocalSize(), first=0, step=1, comm=self.comm)
 
         if self.fsi_system == "neumann_neumann":
+            self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+            self.work_coupling_solid_old = ufl.dot(self.lm_old, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+            self.power_coupling_fluid = ufl.dot(self.lm, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+            self.power_coupling_fluid_old = ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+
+            # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
+            self.pbs.weakform_u += (
+                self.pbs.timefac * self.work_coupling_solid + (1.0 - self.pbs.timefac) * self.work_coupling_solid_old
+            )
+            self.pbf.weakform_v += (
+                -self.pbf.timefac * self.power_coupling_fluid - (1.0 - self.pbf.timefac) * self.power_coupling_fluid_old
+            )
+
             if self.fsi_governing_type == "solid_governed":
                 self.weakform_l = ufl.dot(self.pbs.u, self.var_lm) * self.io.ds(self.io.interface_id_s) - ufl.dot(
                     self.pbf.ufluid, self.var_lm
@@ -330,8 +360,11 @@ class FSIProblem(problem_base):
             self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
 
         elif self.fsi_system == "neumann_dirichlet":
-            dbcs_coup_fluid_solid = []
-            dbcs_coup_fluid_solid.append(
+
+            self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
+
+            self.dbcs_coup_fluid_solid = []
+            self.dbcs_coup_fluid_solid.append(
                 fem.dirichletbc(
                     self.ufs,
                     fem.locate_dofs_topological(
@@ -342,53 +375,32 @@ class FSIProblem(problem_base):
                 )
             )
 
-            # get surface dofs for dr_solid/dv matrix entry
-            fnode_indices_local = fem.locate_dofs_topological(
-                self.pbs.V_u,
-                self.pbs.io.mesh.topology.dim - 1,
-                self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)],
-            )
-            fnode_indices_all = np.array(
-                self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnode_indices_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-            self.fdofs_solid = PETSc.IS().createBlock(
-                self.pbs.V_u.dofmap.index_map_bs,
-                fnode_indices_all,
-                comm=self.comm,
-            )
-
-            fnode_indices_local = fem.locate_dofs_topological(
-                self.pbf.V_v,
-                self.pbf.io.mesh.topology.dim - 1,
-                self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.io.surf_interf)],
-            )
-            fnode_indices_all = np.array(
-                self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(fnode_indices_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-            self.fdofs_fluid = PETSc.IS().createBlock(
-                self.pbf.V_v.dofmap.index_map_bs,
-                fnode_indices_all,
-                comm=self.comm,
-            )
-
             # now add the DBCs: pay attention to order... first u=uf, then the others... hence re-set!
-            if bool(dbcs_coup_fluid_solid):
+            if bool(self.dbcs_coup_fluid_solid):
                 # store DBCs without those from fluid
                 self.pbs.bc.dbcs_nofluid = []
                 for k in self.pbs.bc.dbcs:
                     self.pbs.bc.dbcs_nofluid.append(k)
                 self.pbs.bc.dbcs = []
-                self.pbs.bc.dbcs += dbcs_coup_fluid_solid
+                self.pbs.bc.dbcs += self.dbcs_coup_fluid_solid
                 # Dirichlet boundary conditions
                 if "dirichlet" in self.pbs.bc_dict.keys():
                     self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"])
 
-            # self.fluid_solid_disp_data = fem.create_nonmatching_meshes_interpolation_data(
-            #         self.pbs.u.function_space.mesh._cpp_object,
-            #         self.pbs.u.function_space.element,
-            #         self.ufs.function_space.mesh._cpp_object)
+            self.weakform_reaction_solid = self.pbs.weakform_u
+            #self.weakform_reaction_solid2 = ufl.replace(self.pbs.weakform_u, {self.pbs.u:self.ufs})
+            # self.weakform_reaction_solid2 = self.pbs.weakform_u - ufl.action(self.pbs.weakform_lin_uu, self.ufs)
+            self.weakform_reaction_solid2 = ufl.action(self.pbs.weakform_lin_uu, self.ufs)
+
+            # offdiagonal aux terms - have correct dimension, but cannot be assembled to matrix due to the disjunct domains!
+            self.weakform_lin_uv_aux = ufl.derivative(self.pbs.weakform_u, self.pbs.u, self.pbf.dv)
+            self.weakform_lin_vu_aux = ufl.derivative(self.pbf.weakform_v, self.pbf.v, self.pbs.du)
+
+            self.weakform_lin_uv_2 = ufl.derivative(self.weakform_reaction_solid2, self.ufs, self.pbs.du)
+
+        else:
+            raise ValueError("Unknown value for 'fsi_system'. Choose 'neumann_neumann' or 'neumann_dirichlet'.")
+
 
     def set_problem_residual_jacobian_forms(self):
         # solid + ALE-fluid
@@ -405,6 +417,13 @@ class FSIProblem(problem_base):
 
             self.jac_ul = fem.form(self.weakform_lin_ul, entity_maps=self.io.entity_maps)
             self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
+
+        if self.fsi_system == "neumann_dirichlet":
+            self.res_reac_sol = fem.form(self.weakform_reaction_solid, entity_maps=self.io.entity_maps)
+            self.jac_uv_aux = fem.form(self.weakform_lin_uv_aux, entity_maps=self.io.entity_maps)
+            self.jac_vu_aux = fem.form(self.weakform_lin_vu_aux, entity_maps=self.io.entity_maps)
+
+            self.jac_uv_2 = fem.form(self.weakform_lin_uv_2, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -423,12 +442,21 @@ class FSIProblem(problem_base):
             self.K_lu = fem.petsc.create_matrix(self.jac_lu)
             self.K_lv = fem.petsc.create_matrix(self.jac_lv)
 
-        elif self.fsi_system == "neumann_dirichlet":
+        if self.fsi_system == "neumann_dirichlet":
+
+            self.r_reac_sol = fem.petsc.create_vector(self.res_reac_sol)
+
+            self.K_uv = fem.petsc.create_matrix(self.jac_uv_aux) # empty, to be filled manually
+            self.K_vu = fem.petsc.create_matrix(self.jac_vu_aux) # empty, to be filled manually
+            self.K_uv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+            self.K_vu.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+            self.pbf.K_vv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+
             # create unity vector with 1's on surface dofs and zeros elsewhere
             self.Isol = self.pbs.K_uu.createVecLeft()
             self.Isol.setValues(
-                self.fdofs_solid,
-                np.ones(self.fdofs_solid.getLocalSize()),
+                self.fdofs_solid_global_sub,
+                np.ones(self.fdofs_solid_global_sub.getLocalSize()),
                 addv=PETSc.InsertMode.INSERT,
             )
             self.Isol.assemble()
@@ -447,33 +475,37 @@ class FSIProblem(problem_base):
             # now only set the 1's at surface dofs
             self.Diag_sol.setDiagonal(self.Isol, addv=PETSc.InsertMode.INSERT)
             self.Diag_sol.assemble()
-            # create from ALE matrix and only keep the necessary columns
+
+            # create from solid matrix and only keep the necessary columns
             # need to assemble here to get correct sparsity pattern when doing the column product
-            self.K_uv_ = fem.petsc.assemble_matrix(self.pbs.jac_uu, [])
-            self.K_uv_.assemble()
+            self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, [])
+            self.K_uu_work.assemble()
+            self.K_uu_work2 = fem.petsc.assemble_matrix(self.jac_uv_2, [])
+            self.K_uu_work2.assemble()
             # now multiply to grep out the correct columns
-            self.K_uv = self.K_uv_.matMult(self.Diag_sol)
-            self.K_uv.setOption(
+            self.K_uv_on_uu = self.K_uu_work.matMult(self.Diag_sol)
+            self.K_uv_on_uu.setOption(
                 PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True
             )  # needed so that zeroRows does not change it!
+            self.K_uv_i = self.K_uv_on_uu.createSubMatrix(self.indices_solid_all, self.fdofs_solid_global_sub)
+            #
+            self.K_uv_loc_submat = self.K_uv.getLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub)
+
+            self.K_vu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all)
+            self.K_vu_loc_submat = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all)
+            self.K_vu_loc_submat_i = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub)
+
+            # self.K_uu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
+            self.K_uu_i = self.K_uu_work2.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
+            self.K_vv_loc_submat_i = self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub)
+
             # get interface solid rhs vector
-            self.r_u_interface = self.pbs.r_u.getSubVector(self.fdofs_solid)
-            self.r_v_solid = self.pbf.K_vv.createVecLeft()
+            self.r_u_interface = self.pbs.r_u.getSubVector(self.fdofs_solid_global_sub)
 
-            # Jacobian contributions
-            self.K_uu_nodbc = fem.petsc.create_matrix(self.pbs.jac_uu)
-            self.K_uu_nodbc.assemble()
-            self.K_uu_nodbc_interface = self.K_uu_nodbc.createSubMatrix(self.fdofs_solid, self.fdofs_solid)
-
-            self.K_vv_solid = fem.petsc.create_matrix(self.pbf.jac_vv)
-            self.K_vv_solid.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
-
-            self.K_vu_solid = fem.petsc.create_matrix(self.pbf.jac_vv)
-            self.K_vu_solid.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
 
     def assemble_residual(self, t, subsolver=None):
         if self.fsi_system == "neumann_dirichlet":
-            self.evaluate_residual_dbc_coupling()
+            self.evaluate_residual_dbc_coupling() # prior to solid residual assemble!
 
         if self.pbs.incompressible_2field:
             off = 1
@@ -488,7 +520,7 @@ class FSIProblem(problem_base):
                 r_local.set(0.0)
             fem.petsc.assemble_vector(self.r_l, self.res_l)
             self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        elif self.fsi_system == "neumann_dirichlet":
+        if self.fsi_system == "neumann_dirichlet":
             self.evaluate_residual_forces_interface()
 
         self.r_list[0] = self.pbs.r_list[0]
@@ -560,30 +592,85 @@ class FSIProblem(problem_base):
             self.K_lv.assemble()
             self.K_list[3 + off][1 + off] = self.K_lv
 
-            # ALE displacement
-            self.K_list[4 + off][4 + off] = self.pbfa.K_list[2][2]
-            self.K_list[4 + off][1 + off] = self.pbfa.K_list[2][0]
-        elif self.fsi_system == "neumann_dirichlet":
-            self.K_uv_.zeroEntries()  # TODO!!!
-            fem.petsc.assemble_matrix(self.K_uv_, self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
-            self.K_uv_.assemble()
+        if self.fsi_system == "neumann_dirichlet":
+            np.set_printoptions(threshold=sys.maxsize)
+
+            ### first do stiffness from Dirichlet conditions fluid-to-solid
+            # self.K_uv.zeroEntries()
+            # fem.petsc.assemble_matrix(self.K_uv, self.jac_uv_aux, [])
+            # self.K_uv.assemble()
+
+            self.K_uu_work.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_uu_work, self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
+            self.K_uu_work.assemble()
             # multiply to get the relevant columns only
-            self.K_uv_.matMult(self.Diag_sol, result=self.K_uv)
+            self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv_on_uu)
             # zero rows where DBC is applied and set diagonal entry to -1
-            self.K_uv.zeroRows(self.fdofs_solid, diag=-1.0)
+            self.K_uv_on_uu.zeroRows(self.fdofs_solid_global_sub, diag=-1.0)
             # we apply u_fluid to solid, hence get du_fluid/dv
             fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
-            self.K_uv.scale(fac)
+            self.K_uv_on_uu.scale(fac)
 
-            self.evaluate_stiffness_forces_interface()
+            self.K_uv_on_uu.createSubMatrix(self.indices_solid_all, self.fdofs_solid_global_sub, submat=self.K_uv_i) # need all rows here!!!
+
+            # now set
+            self.K_uv.getLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub, submat=self.K_uv_loc_submat)
+            self.K_uv_loc_submat.setValuesLocal(self.indices_solid_all, self.interface_is_loc, self.K_uv_i[:,:], addv=PETSc.InsertMode.INSERT)
+            self.K_uv.restoreLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub, submat=self.K_uv_loc_submat)
+            self.K_uv.assemble()
 
             self.K_list[0][1 + off] = self.K_uv
 
+            ### now do stiffness from Neumann conditions solid-to-fluid
+            # the transferred residual also incorporates internal solid dofs not on the interface! So we need to take care of these
+            # AND: the interface solid dofs are actually removed by DBC, so they have to go away here!!!
+            # self.K_vu.zeroEntries()
+            # fem.petsc.assemble_matrix(self.K_vu, self.jac_vu_aux, [])
+            # self.K_vu.assemble()
+
+            self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all, submat=self.K_vu_i)
+
+            # now set
+            self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all, submat=self.K_vu_loc_submat)
+            self.K_vu_loc_submat.setValuesLocal(self.interface_is_loc, self.indices_solid_all, self.K_vu_i[:,:], addv=PETSc.InsertMode.INSERT)
+            self.K_vu.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all, submat=self.K_vu_loc_submat)
+            # eliminate interface!
+            self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, submat=self.K_vu_loc_submat_i)
+            self.K_vu_loc_submat_i.setValuesLocal(self.interface_is_loc, self.interface_is_loc, np.zeros((self.interface_is_loc.getLocalSize(), self.interface_is_loc.getLocalSize())), addv=PETSc.InsertMode.INSERT)
+            self.K_vu.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, submat=self.K_vu_loc_submat_i)
+
+            self.K_vu.assemble()
+            self.K_vu.scale(-1.)
+
+            self.K_list[1 + off][0] = self.K_vu
+
+            self.K_uu_work2.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_uu_work2, self.jac_uv_2, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
+            self.K_uu_work2.assemble()
+
+            # self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub, submat=self.K_uu_i)
+            self.K_uu_work2.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub, submat=self.K_uu_i)
+
+            # get du_fluid/dv, and consider minus sign!
+            fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
+            self.K_uu_i.scale(-fac)
+
+            self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vv_loc_submat_i)
+            self.K_vv_loc_submat_i.setValuesLocal(self.interface_is_loc, self.interface_is_loc, self.K_uu_i[:,:], addv=PETSc.InsertMode.ADD)
+            self.pbf.K_vv.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vu_loc_submat_i)
+            self.pbf.K_vv.assemble()
+
+        if self.fsi_system == "neumann_neumann":
+            # ALE displacement
+            self.K_list[4 + off][4 + off] = self.pbfa.K_list[2][2]
+            self.K_list[4 + off][1 + off] = self.pbfa.K_list[2][0]
+        else:
             # ALE displacement
             self.K_list[3 + off][3 + off] = self.pbfa.K_list[2][2]
             self.K_list[3 + off][1 + off] = self.pbfa.K_list[2][0]
 
     def evaluate_residual_dbc_coupling(self):
+
         # we need a vector representation of ufluid to apply in solid DBCs
         self.pbf.ti.update_varint(
             self.pbf.v.x.petsc_vec,
@@ -593,46 +680,119 @@ class FSIProblem(problem_base):
             varintout=self.pbf.uf.x.petsc_vec,
             uflform=False,
         )
-        # self.ufs.x.petsc_vec.axpby(1.0, 0.0, self.pbf.uf.x.petsc_vec)
-        # self.ufs.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-        self.ufs.interpolate(self.pbf.uf)
-        self.ufs.x.scatter_forward()
+
+        self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub, subvec=self.ufs_subvec)
+
+        self.ufs.x.petsc_vec.setValues(self.fdofs_solid_global_sub, self.ufs_subvec.array)
+        self.pbf.uf.x.petsc_vec.restoreSubVector(self.fdofs_fluid_global_sub, subvec=self.ufs_subvec)
+        self.ufs.x.petsc_vec.assemble()
 
     def evaluate_residual_forces_interface(self):
+        with self.r_reac_sol.localForm() as r_local: r_local.set(0.0)
+        fem.petsc.assemble_vector(self.r_reac_sol, self.res_reac_sol)
+        # no DBC lifting needed...
+
         # get solid reaction forces on interface
-        self.pbs.r_u.getSubVector(self.fdofs_solid, subvec=self.r_u_interface)  # TODO: Before or after set_bc??
-        self.r_v_solid.setValues(self.fdofs_fluid, self.r_u_interface.array)
-        self.pbs.r_u.restoreSubVector(self.fdofs_solid, subvec=self.r_u_interface)
-        # update fluid residual
-        self.pbf.r_v.axpy(-1.0, self.r_v_solid)
-        self.pbf.r_v.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub, subvec=self.r_u_interface)
+        # add negative solid residual to fluid
+        self.r_u_interface.scale(-1.)
+        self.pbf.r_v.setValues(self.fdofs_fluid_global_sub, self.r_u_interface.array, addv=PETSc.InsertMode.ADD)
+        self.r_reac_sol.restoreSubVector(self.fdofs_solid_global_sub, subvec=self.r_u_interface)
+        self.pbf.r_v.assemble()
 
-    def evaluate_stiffness_forces_interface(self):
-        self.K_uu_nodbc.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_uu_nodbc, self.pbs.jac_uu, [])  # self.pbs.bc.dbcs
-        self.K_uu_nodbc.assemble()
-
-        self.K_uu_nodbc.createSubMatrix(
-            self.fdofs_solid,
-            self.fdofs_solid,
-            submat=self.K_uu_nodbc_interface,
+    def submesh_to_mainmesh_mappings(self):
+        ts = time.time()
+        utilities.print_status(
+            "Getting dof mappings from submeshes to mainmesh...",
+            self.comm,
+            e=" ",
         )
 
-        # need to update K_vv
-        self.K_vv_solid.zeroEntries()
-        self.K_vv_solid.setValues(
-            self.fdofs_fluid,
-            self.fdofs_fluid,
-            self.K_uu_nodbc_interface[:, :],
-            addv=PETSc.InsertMode.INSERT,
+        from scipy.spatial import cKDTree
+
+        V_G = fem.functionspace(self.io.mesh, ("Lagrange", self.pbs.order_disp, (self.io.mesh.geometry.dim,)))
+
+        dofs_G = V_G.tabulate_dof_coordinates()
+        dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
+        dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
+
+        self.map_solid = np.empty(dofs_s.shape[0], dtype=np.int32)
+        self.map_fluid = np.empty(dofs_f.shape[0], dtype=np.int32)
+
+        # np.set_printoptions(threshold=sys.maxsize)
+        # print("dofs_s: ",dofs_s[:,:2].flatten())
+        # print("dofs_f: ",dofs_f[:,:2].flatten())
+
+        # create index mapping according to distance tree
+        tree = cKDTree(dofs_G)
+        _, self.map_solid[:] = tree.query(dofs_s, distance_upper_bound=1e-6)
+        _, self.map_fluid[:] = tree.query(dofs_f, distance_upper_bound=1e-6)
+
+        dofs_solid_all = np.asarray(
+            self.pbs.V_u.dofmap.index_map.local_to_global(
+                np.arange(
+                    self.pbs.V_u.dofmap.index_map.size_local + self.pbs.V_u.dofmap.index_map.num_ghosts,
+                    dtype=np.int32,
+                )
+            ),
+            dtype=PETSc.IntType,
         )
-        self.K_vv_solid.assemble()
-        np.set_printoptions(threshold=sys.maxsize)
-        print(self.K_uu_nodbc[:, :])
 
-        self.pbf.K_vv.axpy(-1.0, self.K_vv_solid)
+        sorter_solid = np.argsort(self.map_solid[dofs_solid_all])
+        dofs_solid_all = dofs_solid_all[sorter_solid]
 
-        # self.K_uu_nodbc.matMult(self.Diag_sol, result=self.K_uu_nodbc_interface)
+        self.indices_solid_all = PETSc.IS().createBlock(
+            self.pbs.V_u.dofmap.index_map_bs,
+            dofs_solid_all,
+            comm=self.comm,
+        )
+
+        dofs_fluid_all = np.asarray(
+            self.pbf.V_v.dofmap.index_map.local_to_global(
+                np.arange(
+                    self.pbf.V_v.dofmap.index_map.size_local + self.pbf.V_v.dofmap.index_map.num_ghosts,
+                    dtype=np.int32,
+                )
+            ),
+            dtype=PETSc.IntType,
+        )
+
+        sorter_fluid = np.argsort(self.map_fluid[dofs_fluid_all])
+        dofs_fluid_all = dofs_fluid_all[sorter_fluid]
+
+        self.indices_fluid_all = PETSc.IS().createBlock(
+            self.pbf.V_v.dofmap.index_map_bs,
+            dofs_fluid_all,
+            comm=self.comm,
+        )
+
+        self.dofs_solid_sub = PETSc.IS().createBlock(
+            self.pbs.V_u.dofmap.index_map_bs,
+            self.indices_solid_all,
+            comm=self.comm,
+        )
+
+        self.dofs_fluid_sub = PETSc.IS().createBlock(
+            self.pbf.V_v.dofmap.index_map_bs,
+            self.indices_fluid_all,
+            comm=self.comm,
+        )
+
+        self.dofs_solid_main = PETSc.IS().createBlock(
+            self.pbs.V_u.dofmap.index_map_bs,
+            self.map_solid,
+            comm=self.comm,
+        )
+
+        self.dofs_fluid_main = PETSc.IS().createBlock(
+            self.pbf.V_v.dofmap.index_map_bs,
+            self.map_fluid,
+            comm=self.comm,
+        )
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
+
 
     ### now the base routines for this problem
 
@@ -676,9 +836,10 @@ class FSIProblem(problem_base):
         self.pbs.update()
         self.pbfa.update()
 
-        # update Lagrange multiplier
-        self.lm_old.x.petsc_vec.axpby(1.0, 0.0, self.lm.x.petsc_vec)
-        self.lm_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        if self.fsi_system == "neumann_neumann":
+            # update Lagrange multiplier
+            self.lm_old.x.petsc_vec.axpby(1.0, 0.0, self.lm.x.petsc_vec)
+            self.lm_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     def print_to_screen(self):
         self.pbs.print_to_screen()
@@ -720,12 +881,19 @@ class FSISolver(solver_base):
             )
 
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a_solid = (
-                self.pb.pbs.deltaW_kin_old
-                + self.pb.pbs.deltaW_int_old
-                - self.pb.pbs.deltaW_ext_old
-                + self.pb.work_coupling_solid_old
-            )
+            if self.pb.fsi_system=="neumann_dirichlet":
+                weakform_a_solid = (
+                    self.pb.pbs.deltaW_kin_old
+                    + self.pb.pbs.deltaW_int_old
+                    - self.pb.pbs.deltaW_ext_old
+                )
+            else:
+                weakform_a_solid = (
+                    self.pb.pbs.deltaW_kin_old
+                    + self.pb.pbs.deltaW_int_old
+                    - self.pb.pbs.deltaW_ext_old
+                    + self.pb.work_coupling_solid_old # TODO: check sign!
+                )
 
             weakform_lin_aa_solid = ufl.derivative(
                 weakform_a_solid, self.pb.pbs.a_old, self.pb.pbs.du
@@ -754,12 +922,19 @@ class FSISolver(solver_base):
             )
 
             # weak form at initial state for consistent initial acceleration solve
-            weakform_a_fluid = (
-                self.pb.pbf.deltaW_kin_old
-                + self.pb.pbf.deltaW_int_old
-                - self.pb.pbf.deltaW_ext_old
-                - self.pb.power_coupling_fluid_old
-            )
+            if self.pb.fsi_system=="neumann_dirichlet":
+                weakform_a_fluid = (
+                    self.pb.pbf.deltaW_kin_old
+                    + self.pb.pbf.deltaW_int_old
+                    - self.pb.pbf.deltaW_ext_old
+                )
+            else:
+                weakform_a_fluid = (
+                    self.pb.pbf.deltaW_kin_old
+                    + self.pb.pbf.deltaW_int_old
+                    - self.pb.pbf.deltaW_ext_old
+                    - self.pb.power_coupling_fluid_old # TODO: check sign!
+                )
 
             weakform_lin_aa_fluid = ufl.derivative(
                 weakform_a_fluid, self.pb.pbf.a_old, self.pb.pbf.dv

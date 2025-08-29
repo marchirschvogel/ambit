@@ -51,6 +51,8 @@ class IO:
 
         self.print_enhanced_info = io_params.get("print_enhanced_info", False)
 
+        self.write_submeshes = io_params.get("write_submeshes", False)
+
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
 
@@ -1783,6 +1785,16 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         self.entity_maps.append(self.msh_emap_solid[1])
         self.entity_maps.append(self.msh_emap_fluid[1])
         self.entity_maps.append(self.msh_emap_lm[1])
+
+        if self.write_submeshes:
+            tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_solid.xdmf", "w")
+            tmp.write_mesh(self.msh_emap_solid[0])
+            tmp.write_meshtags(self.mt_d_solid, self.msh_emap_solid[0].geometry)
+            tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_fluid.xdmf", "w")
+            tmp.write_mesh(self.msh_emap_fluid[0])
+            tmp.write_meshtags(self.mt_d_fluid, self.msh_emap_fluid[0].geometry)
+            tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_interface.xdmf", "w")
+            tmp.write_mesh(self.msh_emap_lm[0])
 
     # create domain and boundary integration measures
     def create_integration_measures(self, msh):
