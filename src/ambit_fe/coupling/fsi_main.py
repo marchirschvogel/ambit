@@ -303,6 +303,11 @@ class FSIProblem(problem_base):
                 comm=self.comm,
             )
 
+
+
+
+
+
             # fluid
             fnode_indices_fluid_local = fem.locate_dofs_topological(
                 self.pbf.V_v,
@@ -323,10 +328,12 @@ class FSIProblem(problem_base):
                 comm=self.comm,
             )
 
+            ndbc_fluid = len(self.pbf.bc.dbcs)
+
             #print("rank: ",self.comm.rank,"fdofs_solid_global_sub:     ",self.fdofs_solid_global_sub.array)
             #print("rank: ",self.comm.rank,"fdofs_fluid_global_sub:     ",self.fdofs_fluid_global_sub.array)
 
-            self.interface_is_loc = PETSc.IS().createStride(self.lm.x.petsc_vec.getLocalSize(), first=0, step=1, comm=self.comm)
+            # self.interface_is_loc = PETSc.IS().createStride(self.lm.x.petsc_vec.getLocalSize(), first=0, step=1, comm=self.comm)
 
         if self.fsi_system == "neumann_neumann":
             self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
@@ -361,8 +368,6 @@ class FSIProblem(problem_base):
 
         elif self.fsi_system == "neumann_dirichlet":
 
-            self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
-
             self.dbcs_coup_fluid_solid = []
             self.dbcs_coup_fluid_solid.append(
                 fem.dirichletbc(
@@ -387,16 +392,32 @@ class FSIProblem(problem_base):
                 if "dirichlet" in self.pbs.bc_dict.keys():
                     self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"])
 
-            self.weakform_reaction_solid = self.pbs.weakform_u
-            #self.weakform_reaction_solid2 = ufl.replace(self.pbs.weakform_u, {self.pbs.u:self.ufs})
-            # self.weakform_reaction_solid2 = self.pbs.weakform_u - ufl.action(self.pbs.weakform_lin_uu, self.ufs)
-            self.weakform_reaction_solid2 = ufl.action(self.pbs.weakform_lin_uu, self.ufs)
+                dbcs_dofs_solid_all = []
+                for k in range(len(self.pbs.bc.dbcs_nofluid)):
+                    dbcs_dofs_solid_all.append(self.pbs.bc.dbcs_nofluid[k].dof_indices()[0])
+                if bool(dbcs_dofs_solid_all): dbcs_dofs_solid_all = np.concatenate(dbcs_dofs_solid_all)
+                self.dbcs_solid_is = PETSc.IS().createGeneral(dbcs_dofs_solid_all, comm=self.comm)
+
+                self.fdofs_solid_global_sub = self.fdofs_solid_global_sub.difference(self.dbcs_solid_is)
+
+                dbcs_dofs_fluid_all = []
+                for k in range(len(self.pbf.bc.dbcs)):
+                    dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[k].dof_indices()[0])
+                if bool(dbcs_dofs_fluid_all): dbcs_dofs_fluid_all = np.concatenate(dbcs_dofs_fluid_all)
+                self.dbcs_fluid_is = PETSc.IS().createGeneral(dbcs_dofs_fluid_all, comm=self.comm)
+
+                self.fdofs_fluid_global_sub = self.fdofs_fluid_global_sub.difference(self.dbcs_fluid_is)
+
+            # NOTE: If a solid dof of the interface is subject to a DBC, the respective fluid dof necessarily needs that DBC set, too (and vice versa)
+            assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
+
+            self.interface_is_loc = PETSc.IS().createStride(self.fdofs_fluid_global_sub.getLocalSize(), first=0, step=1, comm=self.comm)
+
+            self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
 
             # offdiagonal aux terms - have correct dimension, but cannot be assembled to matrix due to the disjunct domains!
             self.weakform_lin_uv_aux = ufl.derivative(self.pbs.weakform_u, self.pbs.u, self.pbf.dv)
             self.weakform_lin_vu_aux = ufl.derivative(self.pbf.weakform_v, self.pbf.v, self.pbs.du)
-
-            self.weakform_lin_uv_2 = ufl.derivative(self.weakform_reaction_solid2, self.ufs, self.pbs.du)
 
         else:
             raise ValueError("Unknown value for 'fsi_system'. Choose 'neumann_neumann' or 'neumann_dirichlet'.")
@@ -419,11 +440,8 @@ class FSIProblem(problem_base):
             self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
 
         if self.fsi_system == "neumann_dirichlet":
-            self.res_reac_sol = fem.form(self.weakform_reaction_solid, entity_maps=self.io.entity_maps)
             self.jac_uv_aux = fem.form(self.weakform_lin_uv_aux, entity_maps=self.io.entity_maps)
             self.jac_vu_aux = fem.form(self.weakform_lin_vu_aux, entity_maps=self.io.entity_maps)
-
-            self.jac_uv_2 = fem.form(self.weakform_lin_uv_2, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -444,7 +462,7 @@ class FSIProblem(problem_base):
 
         if self.fsi_system == "neumann_dirichlet":
 
-            self.r_reac_sol = fem.petsc.create_vector(self.res_reac_sol)
+            self.r_reac_sol = fem.petsc.create_vector(self.pbs.res_u)
 
             self.K_uv = fem.petsc.create_matrix(self.jac_uv_aux) # empty, to be filled manually
             self.K_vu = fem.petsc.create_matrix(self.jac_vu_aux) # empty, to be filled manually
@@ -480,23 +498,19 @@ class FSIProblem(problem_base):
             # need to assemble here to get correct sparsity pattern when doing the column product
             self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, [])
             self.K_uu_work.assemble()
-            self.K_uu_work2 = fem.petsc.assemble_matrix(self.jac_uv_2, [])
-            self.K_uu_work2.assemble()
             # now multiply to grep out the correct columns
             self.K_uv_on_uu = self.K_uu_work.matMult(self.Diag_sol)
             self.K_uv_on_uu.setOption(
                 PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True
             )  # needed so that zeroRows does not change it!
             self.K_uv_i = self.K_uv_on_uu.createSubMatrix(self.indices_solid_all, self.fdofs_solid_global_sub)
-            #
             self.K_uv_loc_submat = self.K_uv.getLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub)
 
             self.K_vu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all)
             self.K_vu_loc_submat = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all)
             self.K_vu_loc_submat_i = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub)
 
-            # self.K_uu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
-            self.K_uu_i = self.K_uu_work2.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
+            self.K_uu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
             self.K_vv_loc_submat_i = self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub)
 
             # get interface solid rhs vector
@@ -595,14 +609,11 @@ class FSIProblem(problem_base):
         if self.fsi_system == "neumann_dirichlet":
             np.set_printoptions(threshold=sys.maxsize)
 
-            ### first do stiffness from Dirichlet conditions fluid-to-solid
-            # self.K_uv.zeroEntries()
-            # fem.petsc.assemble_matrix(self.K_uv, self.jac_uv_aux, [])
-            # self.K_uv.assemble()
-
+            # first do stiffness from Dirichlet conditions fluid-to-solid
             self.K_uu_work.zeroEntries()
             fem.petsc.assemble_matrix(self.K_uu_work, self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
             self.K_uu_work.assemble()
+
             # multiply to get the relevant columns only
             self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv_on_uu)
             # zero rows where DBC is applied and set diagonal entry to -1
@@ -612,21 +623,18 @@ class FSIProblem(problem_base):
             self.K_uv_on_uu.scale(fac)
 
             self.K_uv_on_uu.createSubMatrix(self.indices_solid_all, self.fdofs_solid_global_sub, submat=self.K_uv_i) # need all rows here!!!
-
             # now set
             self.K_uv.getLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub, submat=self.K_uv_loc_submat)
             self.K_uv_loc_submat.setValuesLocal(self.indices_solid_all, self.interface_is_loc, self.K_uv_i[:,:], addv=PETSc.InsertMode.INSERT)
             self.K_uv.restoreLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub, submat=self.K_uv_loc_submat)
+
             self.K_uv.assemble()
 
             self.K_list[0][1 + off] = self.K_uv
 
-            ### now do stiffness from Neumann conditions solid-to-fluid
+            # now do stiffness from Neumann conditions solid-to-fluid
             # the transferred residual also incorporates internal solid dofs not on the interface! So we need to take care of these
             # AND: the interface solid dofs are actually removed by DBC, so they have to go away here!!!
-            # self.K_vu.zeroEntries()
-            # fem.petsc.assemble_matrix(self.K_vu, self.jac_vu_aux, [])
-            # self.K_vu.assemble()
 
             self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all, submat=self.K_vu_i)
 
@@ -644,12 +652,7 @@ class FSIProblem(problem_base):
 
             self.K_list[1 + off][0] = self.K_vu
 
-            self.K_uu_work2.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_uu_work2, self.jac_uv_2, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
-            self.K_uu_work2.assemble()
-
-            # self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub, submat=self.K_uu_i)
-            self.K_uu_work2.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub, submat=self.K_uu_i)
+            self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub, submat=self.K_uu_i)
 
             # get du_fluid/dv, and consider minus sign!
             fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
@@ -658,6 +661,7 @@ class FSIProblem(problem_base):
             self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vv_loc_submat_i)
             self.K_vv_loc_submat_i.setValuesLocal(self.interface_is_loc, self.interface_is_loc, self.K_uu_i[:,:], addv=PETSc.InsertMode.ADD)
             self.pbf.K_vv.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vu_loc_submat_i)
+
             self.pbf.K_vv.assemble()
 
         if self.fsi_system == "neumann_neumann":
@@ -681,16 +685,23 @@ class FSIProblem(problem_base):
             uflform=False,
         )
 
+        # overwrite interface dofs with uf
         self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub, subvec=self.ufs_subvec)
-
         self.ufs.x.petsc_vec.setValues(self.fdofs_solid_global_sub, self.ufs_subvec.array)
         self.pbf.uf.x.petsc_vec.restoreSubVector(self.fdofs_fluid_global_sub, subvec=self.ufs_subvec)
         self.ufs.x.petsc_vec.assemble()
 
     def evaluate_residual_forces_interface(self):
         with self.r_reac_sol.localForm() as r_local: r_local.set(0.0)
-        fem.petsc.assemble_vector(self.r_reac_sol, self.res_reac_sol)
-        # no DBC lifting needed...
+        fem.petsc.assemble_vector(self.r_reac_sol, self.pbs.res_u)
+
+        fem.apply_lifting(
+            self.r_reac_sol,
+            [self.pbs.jac_uu],
+            [self.dbcs_coup_fluid_solid],
+            x0=[self.pbs.u.x.petsc_vec],
+            alpha=-1.0,
+        )
 
         # get solid reaction forces on interface
         self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub, subvec=self.r_u_interface)
@@ -763,18 +774,6 @@ class FSIProblem(problem_base):
         self.indices_fluid_all = PETSc.IS().createBlock(
             self.pbf.V_v.dofmap.index_map_bs,
             dofs_fluid_all,
-            comm=self.comm,
-        )
-
-        self.dofs_solid_sub = PETSc.IS().createBlock(
-            self.pbs.V_u.dofmap.index_map_bs,
-            self.indices_solid_all,
-            comm=self.comm,
-        )
-
-        self.dofs_fluid_sub = PETSc.IS().createBlock(
-            self.pbf.V_v.dofmap.index_map_bs,
-            self.indices_fluid_all,
             comm=self.comm,
         )
 
