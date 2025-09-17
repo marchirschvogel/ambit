@@ -707,6 +707,12 @@ class ModelOrderReduction:
         r_list_rom[self.fid] = self.V.createVecRight()
         self.V.multTranspose(r_list[self.fid], r_list_rom[self.fid])  # V^T * r_u
 
+        nfields = len(r_list)
+        if nfields > 1:
+            for n in range(nfields):
+                if n!=self.fid:
+                    r_list_rom[n] = r_list[n]
+
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
@@ -714,12 +720,12 @@ class ModelOrderReduction:
         ts = time.time()
         utilities.print_status("ROM: Project Jacobian, V^{T} * K * V...", self.pb.comm, e=" ")
 
-        # projection of main block: system matrix
-        K_list_tmp[self.fid][self.fid] = K_list[self.fid][self.fid].matMult(self.V)  # K_{fid,fid} * V
-        K_list_rom[self.fid][self.fid] = self.V.transposeMatMult(K_list_tmp[self.fid][self.fid])  # V^T * K_{fid,fid} * V
+        if K_list[self.fid][self.fid] is not None:
+            # projection of main block: system matrix
+            K_list_tmp[0][0] = K_list[self.fid][self.fid].matMult(self.V)  # K_{fid,fid} * V
+            K_list_rom[self.fid][self.fid] = self.V.transposeMatMult(K_list_tmp[0][0])  # V^T * K_{fid,fid} * V
 
         nfields = len(K_list)
-
         # now the offdiagonal blocks
         if nfields > 1:
             for n in range(nfields):
@@ -728,6 +734,10 @@ class ModelOrderReduction:
                         K_list_rom[self.fid][n] = self.V.transposeMatMult(K_list[self.fid][n])  # V^T * K_{fid,n}
                     if K_list[n][self.fid] is not None:
                         K_list_rom[n][self.fid] = K_list[n][self.fid].matMult(self.V)  # K_{n,fid} * V
+                    # no reduction for all other matrices not referring to index fid
+                    for m in range(nfields):
+                        if m!=self.fid:
+                            K_list_rom[n][m] = K_list[n][m]
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.pb.comm)
@@ -736,19 +746,12 @@ class ModelOrderReduction:
     def reduce_residual(self, r_list, r_list_rom):
         ts = time.time()
 
-        nfields = len(r_list)
-
         # projection of main block: residual
         self.V.multTranspose(r_list[self.fid], r_list_rom[self.fid])  # V^T * r_u
 
         # deal with regularizations that may be added to reduced residual to penalize certain modes
         if self.have_regularization_terms:
             self.add_residual_regularization(r_list_rom)
-
-        if nfields > 1:
-            for n in range(nfields):
-                if n!=self.fid:
-                    r_list_rom[n] = r_list[n]
 
         te = time.time() - ts
         if self.pb.io.print_enhanced_info:
@@ -762,9 +765,10 @@ class ModelOrderReduction:
 
         nfields = len(K_list)
 
-        # projection of main block: stiffness
-        K_list[self.fid][self.fid].matMult(self.V, result=K_list_tmp[self.fid][self.fid])  # K_{fid,fid} * V
-        self.V.transposeMatMult(K_list_tmp[self.fid][self.fid], result=K_list_rom[self.fid][self.fid])  # V^T * K_{fid,fid} * V
+        if K_list[self.fid][self.fid] is not None:
+            # projection of main block: stiffness
+            K_list[self.fid][self.fid].matMult(self.V, result=K_list_tmp[0][0])  # K_{fid,fid} * V
+            self.V.transposeMatMult(K_list_tmp[0][0], result=K_list_rom[self.fid][self.fid])  # V^T * K_{fid,fid} * V
 
         # deal with regularizations that may be added to reduced residual to penalize certain modes
         if self.have_regularization_terms:
@@ -778,10 +782,6 @@ class ModelOrderReduction:
                         self.V.transposeMatMult(K_list[self.fid][n], result=K_list_rom[self.fid][n])  # V^T * K_{fid,n}
                     if K_list[n][self.fid] is not None:
                         K_list[n][self.fid].matMult(self.V, result=K_list_rom[n][self.fid])  # K_{n,fid} * V
-                    # no reduction for all other matrices not referring to index fid
-                    for m in range(nfields):
-                        if m!=self.fid:
-                            K_list_rom[n][m] = K_list[n][m]
 
         te = time.time() - ts
         if self.pb.io.print_enhanced_info:
