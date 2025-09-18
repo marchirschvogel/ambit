@@ -90,6 +90,16 @@ if category == "solid" or category == "all":
         ]
     )
 
+    errs["test_solid_sphere_inverse 2"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "2",
+            "python3",
+            "test_solid_sphere_inverse.py",
+        ]
+    )
+
     errs["test_solid_divcont_ptc 2"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_solid_divcont_ptc.py"])
 
     errs["test_solid_growth_volstressmandel 1"] = subprocess.call(

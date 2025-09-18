@@ -596,7 +596,7 @@ class constitutive:
 
 
 class kinematics:
-    def __init__(self, dim, fib_funcs=None, u_pre=None):
+    def __init__(self, dim, fib_funcs=None, u_pre=None, inverse=False):
         # physics dimension
         self.dim = dim
 
@@ -606,6 +606,9 @@ class kinematics:
         # prestress displacement
         self.u_pre = u_pre
 
+        # inverse mechanics
+        self.inverse = inverse
+
         # identity tensor
         self.I = ufl.Identity(self.dim)
 
@@ -613,12 +616,16 @@ class kinematics:
     def F(self, u_, ext=False):
         if not ext:
             if self.u_pre is not None:
-                return self.I + ufl.grad(u_ + self.u_pre)  # Schein and Gee 2021, equivalent to Gee et al. 2010
+                F_ = self.I + ufl.grad(u_ + self.u_pre)  # Schein and Gee 2021, equivalent to Gee et al. 2010
             else:
-                return self.I + ufl.grad(u_)
+                F_ = self.I + ufl.grad(u_)
         else:
             # prestress defgrad only enters internal force vector
-            return self.I + ufl.grad(u_)
+            F_ = self.I + ufl.grad(u_)
+        # inverse mechanics
+        if self.inverse:
+            F_ = ufl.inv(F_)
+        return F_
 
     # rate of deformation gradient: dF/dt = dv/dx0
     def Fdot(self, v_):

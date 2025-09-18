@@ -44,7 +44,7 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm="vec", rea
     # re-ordered local co array and then grep out the corresponding dof index from the index map
     dof_indices, dof_indices_gathered = {}, []
     for i in range(len(check_node)):
-        ind = np.where((np.round(check_node[i], readtolerance) == np.round(co, readtolerance)).all(axis=1))[0]
+        ind = np.where((np.round(check_node[i], readtolerance) == np.round(co, readtolerance)).all(axis=1))[0] # TODO: Needs to be improved!!!
 
         if len(ind):
             dof_indices[i] = im[ind[0]]

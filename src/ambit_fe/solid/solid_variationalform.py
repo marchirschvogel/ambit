@@ -35,6 +35,11 @@ class variationalform(variationalform_base):
         var_C = ufl.grad(self.var_u).T * F + F.T * ufl.grad(self.var_u)
         return ufl.inner(S, 0.5 * var_C) * ddomain
 
+    def deltaW_int_spatial(self, S, F, ddomain):
+        # TeX: \int\limits_{\Omega_t}\boldsymbol{sigma} : \delta \nabla\delta\boldsymbol{u}\mathrm{d}v
+        sigma = (1./ufl.det(F))*F*S*F.T
+        return ufl.inner(sigma, ufl.grad(self.var_u)) * ddomain
+
     def deltaW_int_pres(self, J, ddomain):
         # TeX: \int\limits_{\Omega_0}\left(J(\boldsymbol{u})-1\right)\delta p\,\mathrm{d}V
         return (J - 1.0) * self.var_p * ddomain

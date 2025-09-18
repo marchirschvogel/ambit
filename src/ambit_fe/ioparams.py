@@ -109,6 +109,7 @@ def check_params_fem_solid(params):
     valid_params = [
         "bulkmod",
         "incompressibility",
+        "inverse_mechanics",
         "lin_remodeling_full",
         "order_disp",
         "order_pres",

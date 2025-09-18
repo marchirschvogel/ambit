@@ -107,6 +107,10 @@ class SolidmechanicsProblem(problem_base):
             if self.timint != "static":
                 self.rho0.append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho0"])
 
+        self.inverse_mechanics = fem_params.get("inverse_mechanics", False)
+        if self.inverse_mechanics:
+            assert(self.timint == "static")
+
         self.prestress_initial = fem_params.get("prestress_initial", False)
         self.prestress_initial_only = fem_params.get("prestress_initial_only", False)
         self.prestress_maxtime = self.pbase.ctrl_params.get("prestress_maxtime", 1.0)
@@ -577,7 +581,7 @@ class SolidmechanicsProblem(problem_base):
         self.tol_stop_large = 0
 
         # initialize kinematics class
-        self.ki = solid_kinematics_constitutive.kinematics(self.dim, fib_funcs=self.fib_func, u_pre=self.u_pre)
+        self.ki = solid_kinematics_constitutive.kinematics(self.dim, fib_funcs=self.fib_func, u_pre=self.u_pre, inverse=self.inverse_mechanics)
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
@@ -693,31 +697,40 @@ class SolidmechanicsProblem(problem_base):
                 self.deltaW_kin_mid += self.vf.deltaW_kin(self.acc_mid, self.rho0[n], self.dx(M))
 
             # internal virtual work
-            self.deltaW_int += self.vf.deltaW_int(
-                self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
-                self.ki.F(self.u),
-                self.dx(M),
-            )
-            self.deltaW_int_old += self.vf.deltaW_int(
-                self.ma[n].S(
-                    self.u_old,
-                    self.p_old,
-                    self.v_old,
-                    ivar=self.internalvars_old,
-                ),
-                self.ki.F(self.u_old),
-                self.dx(M),
-            )
-            self.deltaW_int_mid += self.vf.deltaW_int(
-                self.ma[n].S(
-                    self.us_mid,
-                    self.ps_mid,
-                    self.vel_mid,
-                    ivar=self.internalvars_mid,
-                ),
-                self.ki.F(self.us_mid),
-                self.dx(M),
-            )
+            if not self.inverse_mechanics:
+
+                self.deltaW_int += self.vf.deltaW_int(
+                    self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
+                    self.ki.F(self.u),
+                    self.dx(M),
+                )
+                self.deltaW_int_old += self.vf.deltaW_int(
+                    self.ma[n].S(
+                        self.u_old,
+                        self.p_old,
+                        self.v_old,
+                        ivar=self.internalvars_old,
+                    ),
+                    self.ki.F(self.u_old),
+                    self.dx(M),
+                )
+                self.deltaW_int_mid += self.vf.deltaW_int(
+                    self.ma[n].S(
+                        self.us_mid,
+                        self.ps_mid,
+                        self.vel_mid,
+                        ivar=self.internalvars_mid,
+                    ),
+                    self.ki.F(self.us_mid),
+                    self.dx(M),
+                )
+            else:
+                # For inverse mechanics, we want a spatial virtual work expression
+                self.deltaW_int += self.vf.deltaW_int_spatial(
+                    self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
+                    self.ki.F(self.u),
+                    self.dx(M),
+                )
 
             # pressure virtual work (for incompressible formulation)
             # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
@@ -1010,42 +1023,34 @@ class SolidmechanicsProblem(problem_base):
         # of the linearization which involves the fourth-order material tangent operator Ctang ("derivative" cannot take care of the
         # dependence of the internal variables on the deformation if this dependence is nonlinear and cannot be expressed analytically)
         for n, M in enumerate(self.domain_ids):
-            # elastic and viscous material tangent operator
-            if self.ti.eval_nonlin_terms == "trapezoidal":
-                Cmat, Cmat_v = self.ma[n].S(
-                    self.u,
-                    self.p,
-                    self.vel,
-                    ivar=self.internalvars,
-                    returnquantity="tangent",
-                )
-            if self.ti.eval_nonlin_terms == "midpoint":
-                Cmat, Cmat_v = self.ma[n].S(
-                    self.us_mid,
-                    self.ps_mid,
-                    self.vel_mid,
-                    ivar=self.internalvars_mid,
-                    returnquantity="tangent",
-                )
 
-            if (
-                self.mat_growth[n]
-                and self.mat_growth_trig[n] != "prescribed"
-                and self.mat_growth_trig[n] != "prescribed_multiscale"
-            ):
-                # growth tangent operator
-                Cgrowth = self.ma[n].Cgrowth(
-                    self.u,
-                    self.p,
-                    self.vel,
-                    self.internalvars,
-                    self.theta_old,
-                    self.pbase.dt,
-                    self.growth_thres,
-                )
-                if self.mat_remodel[n] and self.lin_remod_full:
-                    # remodeling tangent operator
-                    Cremod = self.ma[n].Cremod(
+            if not self.inverse_mechanics:
+
+                # elastic and viscous material tangent operator
+                if self.ti.eval_nonlin_terms == "trapezoidal":
+                    Cmat, Cmat_v = self.ma[n].S(
+                        self.u,
+                        self.p,
+                        self.vel,
+                        ivar=self.internalvars,
+                        returnquantity="tangent",
+                    )
+                if self.ti.eval_nonlin_terms == "midpoint":
+                    Cmat, Cmat_v = self.ma[n].S(
+                        self.us_mid,
+                        self.ps_mid,
+                        self.vel_mid,
+                        ivar=self.internalvars_mid,
+                        returnquantity="tangent",
+                    )
+
+                if (
+                    self.mat_growth[n]
+                    and self.mat_growth_trig[n] != "prescribed"
+                    and self.mat_growth_trig[n] != "prescribed_multiscale"
+                ):
+                    # growth tangent operator
+                    Cgrowth = self.ma[n].Cgrowth(
                         self.u,
                         self.p,
                         self.vel,
@@ -1054,37 +1059,52 @@ class SolidmechanicsProblem(problem_base):
                         self.pbase.dt,
                         self.growth_thres,
                     )
-                    Ctang = Cmat + Cgrowth + Cremod
+                    if self.mat_remodel[n] and self.lin_remod_full:
+                        # remodeling tangent operator
+                        Cremod = self.ma[n].Cremod(
+                            self.u,
+                            self.p,
+                            self.vel,
+                            self.internalvars,
+                            self.theta_old,
+                            self.pbase.dt,
+                            self.growth_thres,
+                        )
+                        Ctang = Cmat + Cgrowth + Cremod
+                    else:
+                        Ctang = Cmat + Cgrowth
                 else:
-                    Ctang = Cmat + Cgrowth
-            else:
-                Ctang = Cmat
+                    Ctang = Cmat
 
-            if self.ti.eval_nonlin_terms == "trapezoidal":
-                self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(
-                    self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
-                    self.ki.F(self.u),
-                    self.ki.Fdot(self.vel),
-                    self.u,
-                    Ctang,
-                    Cmat_v,
-                    self.dx(M),
-                )
-            if self.ti.eval_nonlin_terms == "midpoint":
-                self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(
-                    self.ma[n].S(
-                        self.us_mid,
-                        self.ps_mid,
-                        self.vel_mid,
-                        ivar=self.internalvars_mid,
-                    ),
-                    self.ki.F(self.us_mid),
-                    self.ki.Fdot(self.vel_mid),
-                    self.u,
-                    Ctang,
-                    Cmat_v,
-                    self.dx(M),
-                )
+                if self.ti.eval_nonlin_terms == "trapezoidal":
+                    self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(
+                        self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
+                        self.ki.F(self.u),
+                        self.ki.Fdot(self.vel),
+                        self.u,
+                        Ctang,
+                        Cmat_v,
+                        self.dx(M),
+                    )
+                if self.ti.eval_nonlin_terms == "midpoint":
+                    self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(
+                        self.ma[n].S(
+                            self.us_mid,
+                            self.ps_mid,
+                            self.vel_mid,
+                            ivar=self.internalvars_mid,
+                        ),
+                        self.ki.F(self.us_mid),
+                        self.ki.Fdot(self.vel_mid),
+                        self.u,
+                        Ctang,
+                        Cmat_v,
+                        self.dx(M),
+                    )
+
+            else:
+                # No support for any growth/plasticity/fancy stuff when doing inverse mechanics...
+                self.weakform_lin_uu += ufl.derivative(self.weakform_u, self.u, self.du)
 
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
         # since external tractions might be nonlinear w.r.t. displacement, there's a difference between 'trapezoidal' and 'midpoint'
@@ -1106,57 +1126,49 @@ class SolidmechanicsProblem(problem_base):
             )
 
             for n, M in enumerate(self.domain_ids):
-                # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
-                if self.mat_growth[n]:
-                    J = self.ma[n].J_e(self.u, self.theta)
-                    Jmat = self.ma[n].dJedC(self.u, self.theta)
-                else:
-                    J = self.ki.J(self.u)
-                    Jmat = self.ki.dJdC(self.u)
 
-                if self.ti.eval_nonlin_terms == "trapezoidal":
-                    Cmat_p = ufl.diff(
-                        self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
-                        self.p,
-                    )
-                if self.ti.eval_nonlin_terms == "midpoint":
-                    Cmat_p = ufl.diff(
-                        self.ma[n].S(
-                            self.us_mid,
-                            self.ps_mid,
-                            self.vel_mid,
-                            ivar=self.internalvars_mid,
-                        ),
-                        self.p,
-                    )
+                if not self.inverse_mechanics:
 
-                if (
-                    self.mat_growth[n]
-                    and self.mat_growth_trig[n] != "prescribed"
-                    and self.mat_growth_trig[n] != "prescribed_multiscale"
-                ):
-                    # elastic and viscous material tangent operator
-                    Cmat, Cmat_v = self.ma[n].S(
-                        self.u,
-                        self.p,
-                        self.vel,
-                        ivar=self.internalvars,
-                        returnquantity="tangent",
-                    )
-                    # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
-                    # for stress-mediated growth, we get a contribution to the pressure material tangent operator
-                    Cgrowth_p = self.ma[n].Cgrowth_p(
-                        self.u,
-                        self.p,
-                        self.vel,
-                        self.internalvars,
-                        self.theta_old,
-                        self.pbase.dt,
-                        self.growth_thres,
-                    )
-                    if self.mat_remodel[n] and self.lin_remod_full:
-                        # remodeling tangent operator
-                        Cremod_p = self.ma[n].Cremod_p(
+                    # this has to be treated like the evaluation of a volumetric material, hence with the elastic part of J
+                    if self.mat_growth[n]:
+                        J = self.ma[n].J_e(self.u, self.theta)
+                        Jmat = self.ma[n].dJedC(self.u, self.theta)
+                    else:
+                        J = self.ki.J(self.u)
+                        Jmat = self.ki.dJdC(self.u)
+
+                    if self.ti.eval_nonlin_terms == "trapezoidal":
+                        Cmat_p = ufl.diff(
+                            self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
+                            self.p,
+                        )
+                    if self.ti.eval_nonlin_terms == "midpoint":
+                        Cmat_p = ufl.diff(
+                            self.ma[n].S(
+                                self.us_mid,
+                                self.ps_mid,
+                                self.vel_mid,
+                                ivar=self.internalvars_mid,
+                            ),
+                            self.p,
+                        )
+
+                    if (
+                        self.mat_growth[n]
+                        and self.mat_growth_trig[n] != "prescribed"
+                        and self.mat_growth_trig[n] != "prescribed_multiscale"
+                    ):
+                        # elastic and viscous material tangent operator
+                        Cmat, Cmat_v = self.ma[n].S(
+                            self.u,
+                            self.p,
+                            self.vel,
+                            ivar=self.internalvars,
+                            returnquantity="tangent",
+                        )
+                        # growth tangent operators - keep in mind that we have theta = theta(C(u),p) in general!
+                        # for stress-mediated growth, we get a contribution to the pressure material tangent operator
+                        Cgrowth_p = self.ma[n].Cgrowth_p(
                             self.u,
                             self.p,
                             self.vel,
@@ -1165,49 +1177,66 @@ class SolidmechanicsProblem(problem_base):
                             self.pbase.dt,
                             self.growth_thres,
                         )
-                        Ctang_p = Cmat_p + Cgrowth_p + Cremod_p
+                        if self.mat_remodel[n] and self.lin_remod_full:
+                            # remodeling tangent operator
+                            Cremod_p = self.ma[n].Cremod_p(
+                                self.u,
+                                self.p,
+                                self.vel,
+                                self.internalvars,
+                                self.theta_old,
+                                self.pbase.dt,
+                                self.growth_thres,
+                            )
+                            Ctang_p = Cmat_p + Cgrowth_p + Cremod_p
+                        else:
+                            Ctang_p = Cmat_p + Cgrowth_p
+                        # for all types of deformation-dependent growth, we need to add the growth contributions to the Jacobian tangent operator
+                        Jgrowth = ufl.diff(J, self.theta) * self.ma[n].dtheta_dC(
+                            self.u,
+                            self.p,
+                            self.vel,
+                            self.internalvars,
+                            self.theta_old,
+                            self.pbase.dt,
+                            self.growth_thres,
+                        )
+                        Jtang = Jmat + Jgrowth
+                        # ok... for stress-mediated growth, we actually get a non-zero right-bottom (11) block in our saddle-point system matrix,
+                        # since Je = Je(C,theta(C,p)) ---> dJe/dp = dJe/dtheta * dtheta/dp
+                        # TeX: D_{\Delta p}\!\int\limits_{\Omega_0} (J^{\mathrm{e}}-1)\delta p\,\mathrm{d}V = \int\limits_{\Omega_0} \frac{\partial J^{\mathrm{e}}}{\partial p}\Delta p \,\delta p\,\mathrm{d}V,
+                        # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
+                        dthetadp = self.ma[n].dtheta_dp(
+                            self.u,
+                            self.p,
+                            self.vel,
+                            self.internalvars,
+                            self.theta_old,
+                            self.pbase.dt,
+                            self.growth_thres,
+                        )
+                        if not isinstance(dthetadp, ufl.constantvalue.Zero):
+                            self.weakform_lin_pp += ufl.diff(J, self.theta) * dthetadp * self.dp * self.var_p * self.dx(M)
                     else:
-                        Ctang_p = Cmat_p + Cgrowth_p
-                    # for all types of deformation-dependent growth, we need to add the growth contributions to the Jacobian tangent operator
-                    Jgrowth = ufl.diff(J, self.theta) * self.ma[n].dtheta_dC(
-                        self.u,
-                        self.p,
-                        self.vel,
-                        self.internalvars,
-                        self.theta_old,
-                        self.pbase.dt,
-                        self.growth_thres,
-                    )
-                    Jtang = Jmat + Jgrowth
-                    # ok... for stress-mediated growth, we actually get a non-zero right-bottom (11) block in our saddle-point system matrix,
-                    # since Je = Je(C,theta(C,p)) ---> dJe/dp = dJe/dtheta * dtheta/dp
-                    # TeX: D_{\Delta p}\!\int\limits_{\Omega_0} (J^{\mathrm{e}}-1)\delta p\,\mathrm{d}V = \int\limits_{\Omega_0} \frac{\partial J^{\mathrm{e}}}{\partial p}\Delta p \,\delta p\,\mathrm{d}V,
-                    # with \frac{\partial J^{\mathrm{e}}}{\partial p} = \frac{\partial J^{\mathrm{e}}}{\partial \vartheta}\frac{\partial \vartheta}{\partial p}
-                    dthetadp = self.ma[n].dtheta_dp(
-                        self.u,
-                        self.p,
-                        self.vel,
-                        self.internalvars,
-                        self.theta_old,
-                        self.pbase.dt,
-                        self.growth_thres,
-                    )
-                    if not isinstance(dthetadp, ufl.constantvalue.Zero):
-                        self.weakform_lin_pp += ufl.diff(J, self.theta) * dthetadp * self.dp * self.var_p * self.dx(M)
+                        Ctang_p = Cmat_p
+                        Jtang = Jmat
+
+                    if self.ti.eval_nonlin_terms == "trapezoidal":
+                        self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(
+                            self.ki.F(self.u), Ctang_p, self.dx(M)
+                        )
+                    if self.ti.eval_nonlin_terms == "midpoint":
+                        self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.us_mid), Ctang_p, self.dx(M))
+
+                    self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
+                    if self.incompressibility == "nearly":
+                        self.weakform_lin_pp += self.vf.Lin_deltaW_int_pres_nearly_dp(self.bulkmod, self.dx(M))
+
                 else:
-                    Ctang_p = Cmat_p
-                    Jtang = Jmat
 
-                if self.ti.eval_nonlin_terms == "trapezoidal":
-                    self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(
-                        self.ki.F(self.u), Ctang_p, self.dx(M)
-                    )
-                if self.ti.eval_nonlin_terms == "midpoint":
-                    self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.us_mid), Ctang_p, self.dx(M))
-
-                self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
-                if self.incompressibility == "nearly":
-                    self.weakform_lin_pp += self.vf.Lin_deltaW_int_pres_nearly_dp(self.bulkmod, self.dx(M))
+                    self.weakform_lin_pp += ufl.derivative(self.weakform_p, self.p, self.dp)
+                    self.weakform_lin_pu += ufl.derivative(self.weakform_p, self.u, self.du)
+                    self.weakform_lin_up += ufl.derivative(self.weakform_u, self.p, self.dp)
 
         # set forms for active stress
         if any(self.mat_active_stress):
