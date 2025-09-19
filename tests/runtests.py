@@ -289,6 +289,15 @@ if category == "fsi" or category == "all":
             str(4),
         ]
     )
+    errs["test_fsi_tank2d_p1p1_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_tank2d_p1p1_neumann_neumann.py"]
+    )
+    errs["test_fsi_tank2d_p1p1_neumann_neumann 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_tank2d_p1p1_neumann_neumann.py"]
+    )
+    errs["test_fsi_tank2d_p1p1_neumann_dirichlet 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_tank2d_p1p1_neumann_dirichlet.py"]
+    )
 
 if category == "fsi_flow0d" or category == "all":
     errs["test_fsi_flow0d_p1p1_stab_artseg 2"] = subprocess.call(
