@@ -455,8 +455,6 @@ class FSIProblem(problem_base):
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
 
-            self.pbf.K_vv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
-
             # identity and zero numpy arrays
             self.I_loc = np.eye(self.interface_is_loc.getSize())
             self.Z_loc = np.zeros((self.interface_is_loc.getSize(),self.interface_is_loc.getSize()))
@@ -485,11 +483,10 @@ class FSIProblem(problem_base):
             # now multiply to grep out the correct columns / rows
             self.K_uv_ = self.K_uu_work.matMult(self.Diag_sol)
             self.K_vu_ = self.Diag_sol.transposeMatMult(self.K_uu_work)
+            # contributions to fluid main block on interface
+            self.K_vv_i = self.Diag_sol.transposeMatMult(self.K_uv_)
 
             self.K_uv_.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
-
-            self.K_uu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
-            self.K_vv_loc_submat_i = self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub)
 
             self.K_uv = self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort()) # need sorted fluid indices here (?)
 
@@ -590,25 +587,27 @@ class FSIProblem(problem_base):
             fem.petsc.assemble_matrix(self.K_uu_work, self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
             self.K_uu_work.assemble()
 
+            # we apply u_fluid to solid, hence get du_fluid/dv
+            fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
+
             # multiply to get the relevant columns only
             self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv_)
+
+            # get vv interface contribution prior to modification
+            self.Diag_sol.transposeMatMult(self.K_uv_, result=self.K_vv_i)
+            # scale with du_fluid/dv and update fluid main block
+            self.pbf.K_vv.axpy(fac, self.K_vv_i)
 
             # zero rows where DBC is applied and set interface entries to -1
             self.K_uv_.zeroRows(self.fdofs_solid_global_sub, diag=0.0)
             self.K_uv_.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, -self.I_loc, addv=PETSc.InsertMode.INSERT)
 
-            # we apply u_fluid to solid, hence get du_fluid/dv
-            fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
             self.K_uv_.assemble()
             self.K_uv_.scale(fac)
 
             self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort(), submat=self.K_uv)
 
             self.K_list[0][1 + off] = self.K_uv
-
-            # now do stiffness from Neumann conditions solid-to-fluid
-            # the transferred residual also incorporates internal solid dofs not on the interface! So we need to take care of these
-            # AND: the interface solid dofs are actually removed by DBC, so they have to go away here!!!
 
             # multiply to get the relevant rows only
             self.Diag_sol.transposeMatMult(self.K_uu_work, result=self.K_vu_)
@@ -618,17 +617,6 @@ class FSIProblem(problem_base):
             self.K_vu_.assemble()
 
             self.K_list[1 + off][0] = self.K_vu_
-
-            self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub, submat=self.K_uu_i)
-
-            # scale with du_fluid/dv
-            self.K_uu_i.scale(fac)
-
-            self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vv_loc_submat_i)
-            self.K_vv_loc_submat_i.setValuesLocal(self.interface_is_loc, self.interface_is_loc, self.K_uu_i[:,:], addv=PETSc.InsertMode.ADD)
-            self.pbf.K_vv.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vv_loc_submat_i)
-
-            self.pbf.K_vv.assemble()
 
         if self.fsi_system == "neumann_neumann":
             # ALE displacement
