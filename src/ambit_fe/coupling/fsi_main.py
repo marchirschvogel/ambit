@@ -410,9 +410,6 @@ class FSIProblem(problem_base):
 
             self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
 
-            # offdiagonal aux terms - have correct dimension, but cannot be assembled to matrix due to the disjunct domains!
-            self.weakform_lin_vu_aux = ufl.derivative(self.pbf.weakform_v, self.pbf.v, self.pbs.du)
-
         else:
             raise ValueError("Unknown value for 'fsi_system'. Choose 'neumann_neumann' or 'neumann_dirichlet'.")
 
@@ -432,9 +429,6 @@ class FSIProblem(problem_base):
 
             self.jac_ul = fem.form(self.weakform_lin_ul, entity_maps=self.io.entity_maps)
             self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
-
-        if self.fsi_system == "neumann_dirichlet":
-            self.jac_vu_aux = fem.form(self.weakform_lin_vu_aux, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -461,12 +455,11 @@ class FSIProblem(problem_base):
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
 
-            self.K_vu = fem.petsc.create_matrix(self.jac_vu_aux) # empty, to be filled manually
-            self.K_vu.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
             self.pbf.K_vv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
 
-            # identity numpy array
+            # identity and zero numpy arrays
             self.I_loc = np.eye(self.interface_is_loc.getSize())
+            self.Z_loc = np.zeros((self.interface_is_loc.getSize(),self.interface_is_loc.getSize()))
 
             self.Diag_sol = PETSc.Mat().createAIJ(
                 (self.pbs.K_uu.getSizes()[0],self.pbf.K_vv.getSizes()[0]),
@@ -494,11 +487,6 @@ class FSIProblem(problem_base):
             self.K_vu_ = self.Diag_sol.transposeMatMult(self.K_uu_work)
 
             self.K_uv_.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
-
-            self.K_vu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all)
-
-            self.K_vu_loc_submat = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all)
-            self.K_vu_loc_submat_i = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub)
 
             self.K_uu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
             self.K_vv_loc_submat_i = self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub)
@@ -596,7 +584,6 @@ class FSIProblem(problem_base):
             self.K_list[3 + off][1 + off] = self.K_lv
 
         if self.fsi_system == "neumann_dirichlet":
-            np.set_printoptions(threshold=sys.maxsize)
 
             # first do stiffness from Dirichlet conditions fluid-to-solid
             self.K_uu_work.zeroEntries()
@@ -626,20 +613,11 @@ class FSIProblem(problem_base):
             # multiply to get the relevant rows only
             self.Diag_sol.transposeMatMult(self.K_uu_work, result=self.K_vu_)
 
-            self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all, submat=self.K_vu_i)
-
-            # now set
-            self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all, submat=self.K_vu_loc_submat)
-            self.K_vu_loc_submat.setValuesLocal(self.interface_is_loc, self.indices_solid_all, self.K_vu_i[:,:], addv=PETSc.InsertMode.INSERT)
-            self.K_vu.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all, submat=self.K_vu_loc_submat)
             # eliminate interface!
-            self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, submat=self.K_vu_loc_submat_i)
-            self.K_vu_loc_submat_i.setValuesLocal(self.interface_is_loc, self.interface_is_loc, np.zeros((self.interface_is_loc.getLocalSize(), self.interface_is_loc.getLocalSize())), addv=PETSc.InsertMode.INSERT)
-            self.K_vu.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, submat=self.K_vu_loc_submat_i)
+            self.K_vu_.setValues(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, self.Z_loc, addv=PETSc.InsertMode.INSERT)
+            self.K_vu_.assemble()
 
-            self.K_vu.assemble()
-
-            self.K_list[1 + off][0] = self.K_vu
+            self.K_list[1 + off][0] = self.K_vu_
 
             self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub, submat=self.K_uu_i)
 
@@ -648,7 +626,7 @@ class FSIProblem(problem_base):
 
             self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vv_loc_submat_i)
             self.K_vv_loc_submat_i.setValuesLocal(self.interface_is_loc, self.interface_is_loc, self.K_uu_i[:,:], addv=PETSc.InsertMode.ADD)
-            self.pbf.K_vv.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vu_loc_submat_i)
+            self.pbf.K_vv.restoreLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub, submat=self.K_vv_loc_submat_i)
 
             self.pbf.K_vv.assemble()
 
