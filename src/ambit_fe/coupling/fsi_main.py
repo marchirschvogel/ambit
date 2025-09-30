@@ -411,7 +411,6 @@ class FSIProblem(problem_base):
             self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
 
             # offdiagonal aux terms - have correct dimension, but cannot be assembled to matrix due to the disjunct domains!
-            self.weakform_lin_uv_aux = ufl.derivative(self.pbs.weakform_u, self.pbs.u, self.pbf.dv)
             self.weakform_lin_vu_aux = ufl.derivative(self.pbf.weakform_v, self.pbf.v, self.pbs.du)
 
         else:
@@ -435,7 +434,6 @@ class FSIProblem(problem_base):
             self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
 
         if self.fsi_system == "neumann_dirichlet":
-            self.jac_uv_aux = fem.form(self.weakform_lin_uv_aux, entity_maps=self.io.entity_maps)
             self.jac_vu_aux = fem.form(self.weakform_lin_vu_aux, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
@@ -463,23 +461,15 @@ class FSIProblem(problem_base):
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
 
-            self.K_uv = fem.petsc.create_matrix(self.jac_uv_aux) # empty, to be filled manually
             self.K_vu = fem.petsc.create_matrix(self.jac_vu_aux) # empty, to be filled manually
-            self.K_uv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
             self.K_vu.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
             self.pbf.K_vv.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
 
-            # create unity vector with 1's on surface dofs and zeros elsewhere
-            self.Isol = self.pbs.K_uu.createVecLeft()
-            self.Isol.setValues(
-                self.fdofs_solid_global_sub,
-                np.ones(self.fdofs_solid_global_sub.getLocalSize()),
-                addv=PETSc.InsertMode.INSERT,
-            )
-            self.Isol.assemble()
-            # create diagonal matrix
+            # identity numpy array
+            self.I_loc = np.eye(self.interface_is_loc.getSize())
+
             self.Diag_sol = PETSc.Mat().createAIJ(
-                self.pbs.K_uu.getSizes(),
+                (self.pbs.K_uu.getSizes()[0],self.pbf.K_vv.getSizes()[0]),
                 bsize=None,
                 nnz=(1, 1),
                 csr=None,
@@ -489,29 +479,31 @@ class FSIProblem(problem_base):
             self.Diag_sol.assemble()
             # set 1's to get correct allocation pattern
             self.Diag_sol.shift(1.0)
+            self.Diag_sol.zeroEntries()
             # now only set the 1's at surface dofs
-            self.Diag_sol.setDiagonal(self.Isol, addv=PETSc.InsertMode.INSERT)
+            self.Diag_sol.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+            self.Diag_sol.setValues(self.fdofs_solid_global_sub.sort(), self.fdofs_fluid_global_sub.sort(), self.I_loc, addv=PETSc.InsertMode.INSERT)
             self.Diag_sol.assemble()
 
             # create from solid matrix and only keep the necessary columns
             # need to assemble here to get correct sparsity pattern when doing the column product
-            self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, [])
+            self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)
             self.K_uu_work.assemble()
-            # now multiply to grep out the correct columns
-            self.K_uv_on_uu = self.K_uu_work.matMult(self.Diag_sol) # NOTE: Not needed, we pull out the relevant columns by createSubMatrix!
-            # self.K_uv_on_uu = self.K_uu_work.copy()
-            self.K_uv_on_uu.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
+            # now multiply to grep out the correct columns / rows
+            self.K_uv_ = self.K_uu_work.matMult(self.Diag_sol)
+            self.K_vu_ = self.Diag_sol.transposeMatMult(self.K_uu_work)
 
-            self.K_uv_i = self.K_uv_on_uu.createSubMatrix(self.indices_solid_all, self.fdofs_solid_global_sub)
-            self.K_uv_loc_submat = self.K_uv.getLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub)
+            self.K_uv_.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
 
             self.K_vu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all)
-            # self.K_vu_i = self.pbs.K_uu.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all)
+
             self.K_vu_loc_submat = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.indices_solid_all)
             self.K_vu_loc_submat_i = self.K_vu.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub)
 
             self.K_uu_i = self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.fdofs_solid_global_sub)
             self.K_vv_loc_submat_i = self.pbf.K_vv.getLocalSubMatrix(self.fdofs_fluid_global_sub, self.fdofs_fluid_global_sub)
+
+            self.K_uv = self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort()) # need sorted fluid indices here (?)
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -612,26 +604,27 @@ class FSIProblem(problem_base):
             self.K_uu_work.assemble()
 
             # multiply to get the relevant columns only
-            self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv_on_uu) # NOTE: Not needed, we pull out the relevant columns by createSubMatrix!
-            # self.K_uu_work.copy(result=self.K_uv_on_uu)
-            # zero rows where DBC is applied and set diagonal entry to -1
-            self.K_uv_on_uu.zeroRows(self.fdofs_solid_global_sub, diag=-1.0)
+            self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv_)
+
+            # zero rows where DBC is applied and set interface entries to -1
+            self.K_uv_.zeroRows(self.fdofs_solid_global_sub, diag=0.0)
+            self.K_uv_.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, -self.I_loc, addv=PETSc.InsertMode.INSERT)
+
             # we apply u_fluid to solid, hence get du_fluid/dv
             fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
-            self.K_uv_on_uu.scale(fac)
-            self.K_uv_on_uu.createSubMatrix(self.indices_solid_all, self.fdofs_solid_global_sub, submat=self.K_uv_i) # need all rows here!!!
-            # now set
-            self.K_uv.getLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub, submat=self.K_uv_loc_submat)
-            self.K_uv_loc_submat.setValuesLocal(self.indices_solid_all, self.interface_is_loc, self.K_uv_i[:,:], addv=PETSc.InsertMode.INSERT) # TODO: slow!!!!
-            self.K_uv.restoreLocalSubMatrix(self.indices_solid_all, self.fdofs_fluid_global_sub, submat=self.K_uv_loc_submat)
+            self.K_uv_.assemble()
+            self.K_uv_.scale(fac)
 
-            self.K_uv.assemble()
+            self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort(), submat=self.K_uv)
 
             self.K_list[0][1 + off] = self.K_uv
 
             # now do stiffness from Neumann conditions solid-to-fluid
             # the transferred residual also incorporates internal solid dofs not on the interface! So we need to take care of these
             # AND: the interface solid dofs are actually removed by DBC, so they have to go away here!!!
+
+            # multiply to get the relevant rows only
+            self.Diag_sol.transposeMatMult(self.K_uu_work, result=self.K_vu_)
 
             self.K_uu_work.createSubMatrix(self.fdofs_solid_global_sub, self.indices_solid_all, submat=self.K_vu_i)
 
@@ -727,16 +720,12 @@ class FSIProblem(problem_base):
         self.map_solid = np.empty(dofs_s.shape[0], dtype=np.int32)
         self.map_fluid = np.empty(dofs_f.shape[0], dtype=np.int32)
 
-        # np.set_printoptions(threshold=sys.maxsize)
-        # print("dofs_s: ",dofs_s[:,:2].flatten())
-        # print("dofs_f: ",dofs_f[:,:2].flatten())
-
         # create index mapping according to distance tree
         tree = cKDTree(dofs_G)
         _, self.map_solid[:] = tree.query(dofs_s, distance_upper_bound=1e-6)
         _, self.map_fluid[:] = tree.query(dofs_f, distance_upper_bound=1e-6)
 
-        dofs_solid_all = np.asarray(
+        nodes_solid_all = np.asarray(
             self.pbs.V_u.dofmap.index_map.local_to_global(
                 np.arange(
                     self.pbs.V_u.dofmap.index_map.size_local + self.pbs.V_u.dofmap.index_map.num_ghosts,
@@ -746,16 +735,16 @@ class FSIProblem(problem_base):
             dtype=PETSc.IntType,
         )
 
-        sorter_solid = np.argsort(self.map_solid[dofs_solid_all])
-        dofs_solid_all = dofs_solid_all[sorter_solid]
+        sorter_solid = np.argsort(self.map_solid[nodes_solid_all])
+        nodes_solid_all = nodes_solid_all[sorter_solid]
 
         self.indices_solid_all = PETSc.IS().createBlock(
             self.pbs.V_u.dofmap.index_map_bs,
-            dofs_solid_all,
+            nodes_solid_all,
             comm=self.comm,
         )
 
-        dofs_fluid_all = np.asarray(
+        nodes_fluid_all = np.asarray(
             self.pbf.V_v.dofmap.index_map.local_to_global(
                 np.arange(
                     self.pbf.V_v.dofmap.index_map.size_local + self.pbf.V_v.dofmap.index_map.num_ghosts,
@@ -765,12 +754,12 @@ class FSIProblem(problem_base):
             dtype=PETSc.IntType,
         )
 
-        sorter_fluid = np.argsort(self.map_fluid[dofs_fluid_all])
-        dofs_fluid_all = dofs_fluid_all[sorter_fluid]
+        sorter_fluid = np.argsort(self.map_fluid[nodes_fluid_all])
+        nodes_fluid_all = nodes_fluid_all[sorter_fluid]
 
         self.indices_fluid_all = PETSc.IS().createBlock(
             self.pbf.V_v.dofmap.index_map_bs,
-            dofs_fluid_all,
+            nodes_fluid_all,
             comm=self.comm,
         )
 
