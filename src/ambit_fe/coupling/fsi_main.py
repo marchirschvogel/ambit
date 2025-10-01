@@ -321,7 +321,7 @@ class FSIProblem(problem_base):
                 self.pbf.V_v.dofmap.index_map_bs,
                 fnode_indices_fluid_global,
                 comm=self.comm,
-            ).setPermutation()
+            )
 
             ndbc_fluid = len(self.pbf.bc.dbcs)
 
