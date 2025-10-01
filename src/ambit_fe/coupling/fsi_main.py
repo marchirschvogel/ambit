@@ -321,7 +321,7 @@ class FSIProblem(problem_base):
                 self.pbf.V_v.dofmap.index_map_bs,
                 fnode_indices_fluid_global,
                 comm=self.comm,
-            )
+            ).setPermutation()
 
             ndbc_fluid = len(self.pbf.bc.dbcs)
 
@@ -385,23 +385,30 @@ class FSIProblem(problem_base):
                 if "dirichlet" in self.pbs.bc_dict.keys():
                     self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"])
 
+                # Here, we remove any DBC indices from the interface
+                # NOTE: Do not use PETSc's index set "difference" method as it will not preserve the specific ordering needed!
+
                 dbcs_dofs_solid_all = []
                 for k in range(len(self.pbs.bc.dbcs_nofluid)):
                     dbcs_dofs_solid_all.append(self.pbs.bc.dbcs_nofluid[k].dof_indices()[0])
                 if bool(dbcs_dofs_solid_all): dbcs_dofs_solid_all = np.concatenate(dbcs_dofs_solid_all)
                 self.dbcs_solid_is = PETSc.IS().createGeneral(dbcs_dofs_solid_all, comm=self.comm)
-                # print(self.fdofs_solid_global_sub.array)
-                self.fdofs_solid_global_sub = self.fdofs_solid_global_sub.difference(self.dbcs_solid_is)  #ATTENTION: Breaks order!!!
-                # print(self.fdofs_solid_global_sub.array)
+
+                idxs_d = set(self.dbcs_solid_is.getIndices())
+                idxs_i = self.fdofs_solid_global_sub.getIndices()
+                diff = [i for i in idxs_i if i not in idxs_d]
+                self.fdofs_solid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
                 dbcs_dofs_fluid_all = []
                 for k in range(len(self.pbf.bc.dbcs)):
                     dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[k].dof_indices()[0])
                 if bool(dbcs_dofs_fluid_all): dbcs_dofs_fluid_all = np.concatenate(dbcs_dofs_fluid_all)
                 self.dbcs_fluid_is = PETSc.IS().createGeneral(dbcs_dofs_fluid_all, comm=self.comm)
-                # print(self.fdofs_fluid_global_sub.array)
-                self.fdofs_fluid_global_sub = self.fdofs_fluid_global_sub.difference(self.dbcs_fluid_is)  #ATTENTION: Breaks order!!!
-                # print(self.fdofs_fluid_global_sub.array)
+
+                idxs_d = set(self.dbcs_fluid_is.getIndices())
+                idxs_i = self.fdofs_fluid_global_sub.getIndices()
+                diff = [i for i in idxs_i if i not in idxs_d]
+                self.fdofs_fluid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
             # NOTE: If a solid dof of the interface is subject to a DBC, the respective fluid dof necessarily needs that DBC set, too (and vice versa)
             assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
@@ -473,7 +480,7 @@ class FSIProblem(problem_base):
             self.Diag_sol.zeroEntries()
             # now only set the 1's at surface dofs
             self.Diag_sol.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
-            self.Diag_sol.setValues(self.fdofs_solid_global_sub.sort(), self.fdofs_fluid_global_sub.sort(), self.I_loc, addv=PETSc.InsertMode.INSERT)
+            self.Diag_sol.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, self.I_loc, addv=PETSc.InsertMode.INSERT)
             self.Diag_sol.assemble()
 
             # create from solid matrix and only keep the necessary columns
@@ -481,14 +488,14 @@ class FSIProblem(problem_base):
             self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)
             self.K_uu_work.assemble()
             # now multiply to grep out the correct columns / rows
-            self.K_uv_ = self.K_uu_work.matMult(self.Diag_sol)
-            self.K_vu_ = self.Diag_sol.transposeMatMult(self.K_uu_work)
+            self.K_uv = self.K_uu_work.matMult(self.Diag_sol)
+            self.K_vu = self.Diag_sol.transposeMatMult(self.K_uu_work)
             # contributions to fluid main block on interface
-            self.K_vv_i = self.Diag_sol.transposeMatMult(self.K_uv_)
+            self.K_vv_i = self.Diag_sol.transposeMatMult(self.K_uv)
 
-            self.K_uv_.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
+            self.K_uv.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
 
-            self.K_uv = self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort()) # need sorted fluid indices here (?)
+            #self.K_uv = self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort()) # need sorted fluid indices here (?)
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -591,32 +598,32 @@ class FSIProblem(problem_base):
             fac = self.pbf.ti.get_factor_deriv_varint(self.pbase.dt)
 
             # multiply to get the relevant columns only
-            self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv_)
+            self.K_uu_work.matMult(self.Diag_sol, result=self.K_uv)
 
             # get vv interface contribution prior to modification
-            self.Diag_sol.transposeMatMult(self.K_uv_, result=self.K_vv_i)
+            self.Diag_sol.transposeMatMult(self.K_uv, result=self.K_vv_i)
             # scale with du_fluid/dv and update fluid main block
             self.pbf.K_vv.axpy(fac, self.K_vv_i)
 
             # zero rows where DBC is applied and set interface entries to -1
-            self.K_uv_.zeroRows(self.fdofs_solid_global_sub, diag=0.0)
-            self.K_uv_.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, -self.I_loc, addv=PETSc.InsertMode.INSERT)
+            self.K_uv.zeroRows(self.fdofs_solid_global_sub, diag=0.0)
+            self.K_uv.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, -self.I_loc, addv=PETSc.InsertMode.INSERT)
 
-            self.K_uv_.assemble()
-            self.K_uv_.scale(fac)
+            self.K_uv.assemble()
+            self.K_uv.scale(fac)
 
-            self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort(), submat=self.K_uv)
+            # self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all, submat=self.K_uv)
 
             self.K_list[0][1 + off] = self.K_uv
 
             # multiply to get the relevant rows only
-            self.Diag_sol.transposeMatMult(self.K_uu_work, result=self.K_vu_)
+            self.Diag_sol.transposeMatMult(self.K_uu_work, result=self.K_vu)
 
             # eliminate interface!
-            self.K_vu_.setValues(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, self.Z_loc, addv=PETSc.InsertMode.INSERT)
-            self.K_vu_.assemble()
+            self.K_vu.setValues(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, self.Z_loc, addv=PETSc.InsertMode.INSERT)
+            self.K_vu.assemble()
 
-            self.K_list[1 + off][0] = self.K_vu_
+            self.K_list[1 + off][0] = self.K_vu
 
         if self.fsi_system == "neumann_neumann":
             # ALE displacement
