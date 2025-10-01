@@ -392,6 +392,7 @@ class FSIProblem(problem_base):
                 for k in range(len(self.pbs.bc.dbcs_nofluid)):
                     dbcs_dofs_solid_all.append(self.pbs.bc.dbcs_nofluid[k].dof_indices()[0])
                 if bool(dbcs_dofs_solid_all): dbcs_dofs_solid_all = np.concatenate(dbcs_dofs_solid_all)
+                dbcs_dofs_solid_all = np.unique(dbcs_dofs_solid_all)
                 self.dbcs_solid_is = PETSc.IS().createGeneral(dbcs_dofs_solid_all, comm=self.comm)
 
                 idxs_d = set(self.dbcs_solid_is.getIndices())
@@ -403,6 +404,7 @@ class FSIProblem(problem_base):
                 for k in range(len(self.pbf.bc.dbcs)):
                     dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[k].dof_indices()[0])
                 if bool(dbcs_dofs_fluid_all): dbcs_dofs_fluid_all = np.concatenate(dbcs_dofs_fluid_all)
+                dbcs_dofs_fluid_all = np.unique(dbcs_dofs_fluid_all)
                 self.dbcs_fluid_is = PETSc.IS().createGeneral(dbcs_dofs_fluid_all, comm=self.comm)
 
                 idxs_d = set(self.dbcs_fluid_is.getIndices())
@@ -494,8 +496,6 @@ class FSIProblem(problem_base):
             self.K_vv_i = self.Diag_sol.transposeMatMult(self.K_uv)
 
             self.K_uv.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
-
-            #self.K_uv = self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all.sort()) # need sorted fluid indices here (?)
 
 
     def assemble_residual(self, t, subsolver=None):
@@ -611,8 +611,6 @@ class FSIProblem(problem_base):
 
             self.K_uv.assemble()
             self.K_uv.scale(fac)
-
-            # self.K_uv_.createSubMatrix(self.indices_solid_all, self.indices_fluid_all, submat=self.K_uv)
 
             self.K_list[0][1 + off] = self.K_uv
 

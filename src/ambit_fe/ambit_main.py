@@ -329,7 +329,7 @@ class Ambit:
             ios.mt_d, ios.mt_b1, ios.mt_b2 = (
                 io.mt_d_solid,
                 io.mt_b1_solid,
-                None,
+                io.mt_b2_solid,
             )  # for DBCs, we need to access the tags on the submesh
             ios.dx, ios.bmeasures = io.dx, io.bmeasures
 
@@ -342,7 +342,7 @@ class Ambit:
             iof.mt_d, iof.mt_b1, iof.mt_b2 = (
                 io.mt_d_fluid,
                 io.mt_b1_fluid,
-                None,
+                io.mt_b2_fluid,
             )  # for DBCs, we need to access the tags on the submesh
             iof.dx, iof.bmeasures = io.dx, io.bmeasures
 
@@ -386,7 +386,7 @@ class Ambit:
             ios.mt_d, ios.mt_b1, ios.mt_b2 = (
                 io.mt_d_solid,
                 io.mt_b1_solid,
-                None,
+                io.mt_b2_solid,
             )  # for DBCs, we need to access the tags on the submesh
             ios.dx, ios.bmeasures = io.dx, io.bmeasures
 
@@ -399,7 +399,7 @@ class Ambit:
             iof.mt_d, iof.mt_b1, iof.mt_b2 = (
                 io.mt_d_fluid,
                 io.mt_b1_fluid,
-                None,
+                io.mt_b2_fluid,
             )  # for DBCs, we need to access the tags on the submesh
             iof.dx, iof.bmeasures = io.dx, io.bmeasures
 

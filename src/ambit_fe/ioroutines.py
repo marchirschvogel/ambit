@@ -112,35 +112,6 @@ class IO:
                 with io.XDMFFile(self.comm, self.mesh_edge, "r", encoding=encoding) as infile:
                     self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
 
-                """
-                NOTE: We cannot perform line/edge integrals in 3D in an intuitive manner by
-                defining and using a 1-dimensional ufl ds measure. This is not yet implemented
-                in dolfinx.
-                """
-                raise RuntimeError("Weak integrations over edges in 3D currently not fully supported.")
-
-                self.mesh_e = mesh.create_submesh(
-                    self.mesh,
-                    self.mesh.topology.dim - 2,
-                    self.mt_b2.indices[self.mt_b2.values == 1],
-                )[0:2]
-
-                edge_imap = self.mesh.topology.index_map(self.mesh.topology.dim - 2)
-                num_edges = edge_imap.size_local + edge_imap.num_ghosts
-
-                self.entity_maps.append( self.mesh_e[1] )
-
-                edge_indices = self.mt_b2.indices[self.mt_b2.values == 1]
-
-                edge_integration_entities = []
-                meshutils.get_integration_entities(self.mesh, edge_indices, 1, edge_integration_entities)
-
-                self.de = ufl.Measure(
-                    "ds",
-                    domain=self.mesh,
-                    subdomain_data=[(1, edge_integration_entities)],
-                )
-
             if self.mesh_point is not None:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_point, "r", encoding=encoding) as infile:
@@ -1731,9 +1702,11 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
 
         self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim)
         self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim - 1, self.mesh.topology.dim)
+        self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim - 2, self.mesh.topology.dim)
 
         self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim)
         self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim - 1, self.mesh.topology.dim)
+        self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim - 2, self.mesh.topology.dim)
 
         # TODO: Assert that meshtags start actually from 1 when transferred!
         self.mt_d_solid = meshutils.meshtags_parent_to_child(
@@ -1765,6 +1738,24 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             self.mesh,
             "boundary",
         )
+
+        if self.mt_b2 is not None:
+            self.mt_b2_solid = meshutils.meshtags_parent_to_child(
+                self.mt_b2,
+                self.msh_emap_solid[0],
+                self.msh_emap_solid[1],
+                self.mesh,
+                "boundary_2",
+            )
+            self.mt_b2_fluid = meshutils.meshtags_parent_to_child(
+                self.mt_b2,
+                self.msh_emap_fluid[0],
+                self.msh_emap_fluid[1],
+                self.mesh,
+                "boundary_2",
+            )
+        else:
+            self.mt_b2_solid, self.mt_b2_fluid = None, None
 
         self.msh_emap_lm = mesh.create_submesh(
             self.mesh,

@@ -29,10 +29,11 @@ def test_main():
         "indicate_results_by": "step",
         "write_restart_every": 1,
         "restart_step": restart_step,
-        "restart_io_type": "petscvector",  # petscvector, rawtxt
+        "restart_io_type": "petscvector",  # petscvector, plaintext
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-tet-lin_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-tet-lin_boundary.xdmf",
+        "mesh_edge": basepath + "/input/artseg-fsi-tet-lin_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet"
         "results_to_write": [
             ["displacement", "velocity"],
             [
@@ -44,6 +45,7 @@ def test_main():
         "domain_ids_fluid": [2],
         "surface_ids_interface": [1],
         "simname": "fsi_p1p1_stab_artseg",
+        "write_submeshes":True,
     }
 
     CONTROL_PARAMS = {"maxtime": 3.0, "numstep": 150, "numstep_stop": 5}
@@ -123,6 +125,7 @@ def test_main():
         "dirichlet": [
             {"id": [7], "dir": "y", "val": 0.0},
             {"id": [9], "dir": "x", "val": 0.0},
+            {"id": [1,2], "dir": "z", "val": 0.0, "codimension": 1}, # DBC on edge: needed if "fsi_system" is set to "neumann_dirichlet"!
         ],
     }
 

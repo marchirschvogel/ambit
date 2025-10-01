@@ -57,6 +57,9 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
     elif dimentity=='boundary':
         dim_p = parentmsh.topology.dim-1
         dim_c = childmsh.topology.dim-1
+    elif dimentity=='boundary_2':
+        dim_p = parentmsh.topology.dim-2
+        dim_c = childmsh.topology.dim-2
     else:
         raise ValueError("Unknown dim entity!")
 
