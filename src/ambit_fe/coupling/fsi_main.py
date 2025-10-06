@@ -15,7 +15,7 @@ import ufl
 from petsc4py import PETSc
 
 from ..solver import solver_nonlin
-from .. import utilities
+from .. import utilities, meshutils
 from .. import boundaryconditions
 
 from ..solid.solid_main import SolidmechanicsProblem
@@ -281,52 +281,10 @@ class FSIProblem(problem_base):
         # establish dof mappings from submeshes to mainmesh
         if self.fsi_system=="neumann_dirichlet":
             self.submesh_to_mainmesh_mappings()
-
-            # get surface dofs on each of the three subdomains
             # solid
-            fnode_indices_solid_local = fem.locate_dofs_topological(
-                self.pbs.V_u,
-                self.pbs.io.mesh.topology.dim - 1,
-                self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)],
-            )
-            fnode_indices_solid_global = np.array(
-                self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnode_indices_solid_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-
-            sorter_solid = np.argsort(self.map_solid[fnode_indices_solid_global])
-            fnode_indices_solid_global = fnode_indices_solid_global[sorter_solid]
-
-            self.fdofs_solid_global_sub = PETSc.IS().createBlock(
-                self.pbs.V_u.dofmap.index_map_bs,
-                fnode_indices_solid_global,
-                comm=self.comm,
-            )
-
+            self.fdofs_solid_global_sub = meshutils.get_index_set_id_global(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_solid)
             # fluid
-            fnode_indices_fluid_local = fem.locate_dofs_topological(
-                self.pbf.V_v,
-                self.pbf.io.mesh.topology.dim - 1,
-                self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.io.surf_interf)],
-            )
-            fnode_indices_fluid_global = np.array(
-                self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(fnode_indices_fluid_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-
-            sorter_fluid = np.argsort(self.map_fluid[fnode_indices_fluid_global])
-            fnode_indices_fluid_global = fnode_indices_fluid_global[sorter_fluid]
-
-            self.fdofs_fluid_global_sub = PETSc.IS().createBlock(
-                self.pbf.V_v.dofmap.index_map_bs,
-                fnode_indices_fluid_global,
-                comm=self.comm,
-            )
-
-            ndbc_fluid = len(self.pbf.bc.dbcs)
-
-            #print("rank: ",self.comm.rank,"fdofs_solid_global_sub:     ",self.fdofs_solid_global_sub.array)
-            #print("rank: ",self.comm.rank,"fdofs_fluid_global_sub:     ",self.fdofs_fluid_global_sub.array)
+            self.fdofs_fluid_global_sub = meshutils.get_index_set_id_global(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_fluid)
 
         if self.fsi_system == "neumann_neumann":
             self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
@@ -388,28 +346,49 @@ class FSIProblem(problem_base):
                 # Here, we remove any DBC indices from the interface
                 # NOTE: Do not use PETSc's index set "difference" method as it will not preserve the specific ordering needed!
 
-                dbcs_dofs_solid_all = []
+                dbcs_id_list_solid = []
                 for k in range(len(self.pbs.bc.dbcs_nofluid)):
-                    dbcs_dofs_solid_all.append(self.pbs.bc.dbcs_nofluid[k].dof_indices()[0])
-                if bool(dbcs_dofs_solid_all): dbcs_dofs_solid_all = np.concatenate(dbcs_dofs_solid_all)
-                dbcs_dofs_solid_all = np.unique(dbcs_dofs_solid_all)
-                self.dbcs_solid_is = PETSc.IS().createGeneral(dbcs_dofs_solid_all, comm=self.comm)
+                    dbcs_id_list_solid.append(self.pbs.bc_dict["dirichlet"][k]["id"])
+                dbcs_id_list_solid_flat = [item for sublist in dbcs_id_list_solid for item in sublist]
+                dbc_dofs_solid_global = meshutils.get_index_set_id_global(self.pbs.io, self.pbs.V_u, dbcs_id_list_solid_flat, self.pbs.io.mesh.topology.dim-1, self.comm)
 
-                idxs_d = set(self.dbcs_solid_is.getIndices())
+                dbcs_dofs_solid_all = self.comm.allgather(dbc_dofs_solid_global.array)
+
+                # number of present partitions (number of cores we're running on)
+                npart = len(dbcs_dofs_solid_all)
+                # get the dbc node indices of all partitions
+                dbcs_dofs_solid_all_flat = []
+                for n in range(npart):
+                    for i in range(len(dbcs_dofs_solid_all[n])):
+                        dbcs_dofs_solid_all_flat.append(dbcs_dofs_solid_all[n][i])
+
+                # idxs_d = set(self.dbcs_solid_is.getIndices())
+                idxs_d = set(dbcs_dofs_solid_all_flat)
                 idxs_i = self.fdofs_solid_global_sub.getIndices()
                 diff = [i for i in idxs_i if i not in idxs_d]
+
                 self.fdofs_solid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
-                dbcs_dofs_fluid_all = []
+                dbcs_id_list_fluid = []
                 for k in range(len(self.pbf.bc.dbcs)):
-                    dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[k].dof_indices()[0])
-                if bool(dbcs_dofs_fluid_all): dbcs_dofs_fluid_all = np.concatenate(dbcs_dofs_fluid_all)
-                dbcs_dofs_fluid_all = np.unique(dbcs_dofs_fluid_all)
-                self.dbcs_fluid_is = PETSc.IS().createGeneral(dbcs_dofs_fluid_all, comm=self.comm)
+                    dbcs_id_list_fluid.append(self.pbf.bc_dict["dirichlet"][k]["id"])
+                dbcs_id_list_fluid_flat = [item for sublist in dbcs_id_list_fluid for item in sublist]
+                dbc_dofs_fluid_global = meshutils.get_index_set_id_global(self.pbf.io, self.pbf.V_v, dbcs_id_list_fluid_flat, self.pbf.io.mesh.topology.dim-1, self.comm)
 
-                idxs_d = set(self.dbcs_fluid_is.getIndices())
+                dbcs_dofs_fluid_all = self.comm.allgather(dbc_dofs_fluid_global.array)
+
+                # number of present partitions (number of cores we're running on)
+                npart = len(dbcs_dofs_fluid_all)
+                # get the dbc node indices of all partitions
+                dbcs_dofs_fluid_all_flat = []
+                for n in range(npart):
+                    for i in range(len(dbcs_dofs_fluid_all[n])):
+                        dbcs_dofs_fluid_all_flat.append(dbcs_dofs_fluid_all[n][i])
+
+                idxs_d = set(dbcs_dofs_fluid_all_flat)
                 idxs_i = self.fdofs_fluid_global_sub.getIndices()
                 diff = [i for i in idxs_i if i not in idxs_d]
+
                 self.fdofs_fluid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
             # NOTE: If a solid dof of the interface is subject to a DBC, the respective fluid dof necessarily needs that DBC set, too (and vice versa)
@@ -465,8 +444,9 @@ class FSIProblem(problem_base):
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
 
             # identity and zero numpy arrays
-            self.I_loc = np.eye(self.interface_is_loc.getSize())
-            self.Z_loc = np.zeros((self.interface_is_loc.getSize(),self.interface_is_loc.getSize()))
+            self.I_loc = np.zeros((self.fdofs_solid_global_sub.getLocalSize(),self.fdofs_fluid_global_sub.getLocalSize()))
+            np.fill_diagonal(self.I_loc, 1.0)
+            self.Z_loc = np.zeros((self.fdofs_solid_global_sub.getLocalSize(),self.fdofs_fluid_global_sub.getLocalSize()))
 
             self.Diag_sol = PETSc.Mat().createAIJ(
                 (self.pbs.K_uu.getSizes()[0],self.pbf.K_vv.getSizes()[0]),
@@ -476,13 +456,11 @@ class FSIProblem(problem_base):
                 comm=self.comm,
             )
             self.Diag_sol.setUp()
-            self.Diag_sol.assemble()
-            # set 1's to get correct allocation pattern
-            self.Diag_sol.shift(1.0)
-            self.Diag_sol.zeroEntries()
+
             # now only set the 1's at surface dofs
             self.Diag_sol.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
             self.Diag_sol.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, self.I_loc, addv=PETSc.InsertMode.INSERT)
+
             self.Diag_sol.assemble()
 
             # create from solid matrix and only keep the necessary columns
@@ -706,8 +684,8 @@ class FSIProblem(problem_base):
             dtype=PETSc.IntType,
         )
 
-        sorter_solid = np.argsort(self.map_solid[nodes_solid_all])
-        nodes_solid_all = nodes_solid_all[sorter_solid]
+        # sorter_solid = np.argsort(self.map_solid[nodes_solid_all])
+        # nodes_solid_all = nodes_solid_all[sorter_solid]
 
         self.indices_solid_all = PETSc.IS().createBlock(
             self.pbs.V_u.dofmap.index_map_bs,
@@ -725,8 +703,8 @@ class FSIProblem(problem_base):
             dtype=PETSc.IntType,
         )
 
-        sorter_fluid = np.argsort(self.map_fluid[nodes_fluid_all])
-        nodes_fluid_all = nodes_fluid_all[sorter_fluid]
+        # sorter_fluid = np.argsort(self.map_fluid[nodes_fluid_all])
+        # nodes_fluid_all = nodes_fluid_all[sorter_fluid]
 
         self.indices_fluid_all = PETSc.IS().createBlock(
             self.pbf.V_v.dofmap.index_map_bs,

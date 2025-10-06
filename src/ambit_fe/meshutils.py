@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dolfinx import fem, mesh
+from petsc4py import PETSc
 import numpy as np
 
 
@@ -49,6 +50,44 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
+def get_index_set_id_global(io, Vspace, idlist, codim, comm, remove_ghosts=False, mapper=None):
+    if codim == io.mesh.topology.dim:
+        mdata = io.mt_d
+    if codim == io.mesh.topology.dim - 1:
+        mdata = io.mt_b1
+    if codim == io.mesh.topology.dim - 2:
+        mdata = io.mt_b2
+    if codim == io.mesh.topology.dim - 3:
+        mdata = io.mt_b3
+
+    nodes_loc = fem.locate_dofs_topological(
+        Vspace,
+        codim,
+        io.mt_b1.indices[np.isin(mdata.values, idlist)],
+    )
+
+    nodes_glb = np.array(
+        Vspace.dofmap.index_map.local_to_global(np.asarray(nodes_loc, dtype=np.int32)),
+        dtype=np.int32,
+    )
+
+    if mapper is not None:
+        sorter = np.argsort(mapper[nodes_glb])
+        nodes_glb = nodes_glb[sorter]
+
+    iset = PETSc.IS().createBlock(
+        Vspace.dofmap.index_map_bs,
+        nodes_glb,
+        comm=comm,
+    )
+
+    if remove_ghosts: # Is there any application where we want to do this?
+        idxs_g = set(Vspace.dofmap.index_map.ghosts)
+        idxs_i = iset.getIndices()
+        diff = [i for i in idxs_i if i not in idxs_g]
+        iset = PETSc.IS().createGeneral(diff, comm=comm)
+
+    return iset
 
 def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, dimentity):
     if dimentity=='domain':

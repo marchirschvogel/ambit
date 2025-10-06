@@ -16,7 +16,7 @@ from petsc4py import PETSc
 
 from ..solver import solver_nonlin
 from .. import ioparams
-from .. import utilities
+from .. import utilities, meshutils
 from ..mpiroutines import allgather_vec
 
 from .fluid_ale_main import FluidmechanicsAleProblem
@@ -214,23 +214,7 @@ class FluidmechanicsAleConstraintProblem(FluidmechanicsAleProblem, problem_base)
             self.k_sd_subvec, sze_sd = [], []
 
             for n in range(self.pbfc.num_coupling_surf):
-                nds_c_local = fem.locate_dofs_topological(
-                    self.pba.V_d,
-                    self.pba.io.mesh.topology.dim - 1,
-                    self.pba.io.mt_b1.indices[
-                        np.isin(
-                            self.pba.io.mt_b1.values,
-                            self.pbfc.surface_vq_ids[n],
-                        )
-                    ],
-                )
-                nds_c = np.array(
-                    self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_c_local, dtype=np.int32)),
-                    dtype=np.int32,
-                )
-                self.dofs_coupling_vq[n] = PETSc.IS().createBlock(
-                    self.pba.V_d.dofmap.index_map_bs, nds_c, comm=self.comm
-                )
+                self.dofs_coupling_vq[n] = meshutils.get_index_set_id_global(self.pba.io, self.pba.V_d, self.pbfc.surface_vq_ids[n], self.pba.io.mesh.topology.dim-1, self.comm)
 
                 self.k_sd_subvec.append(self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 

@@ -14,7 +14,7 @@ import ufl
 from petsc4py import PETSc
 
 from ..solver import solver_nonlin
-from .. import utilities, expression
+from .. import utilities, meshutils, expression
 from ..mpiroutines import allgather_vec, allgather_vec_entry
 
 from ..fluid.fluid_main import FluidmechanicsProblem
@@ -524,31 +524,13 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.k_vs_subvec, self.k_sv_subvec, sze_vs, sze_sv = [], [], [], []
 
         for n in range(self.num_coupling_surf):
-            nds_vq_local = fem.locate_dofs_topological(
-                self.pbf.V_v,
-                self.pbf.io.mesh.topology.dim - 1,
-                self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_vq_ids[n])],
-            )
-            nds_vq = np.array(
-                self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-            self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_vq, comm=self.comm)
+            self.dofs_coupling_vq[n] = meshutils.get_index_set_id_global(self.pbf.io, self.pbf.V_v, self.surface_vq_ids[n], self.pbf.io.mesh.topology.dim-1, self.comm)
 
             self.k_sv_subvec.append(self.k_sv_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
             sze_sv.append(self.k_sv_subvec[-1].getSize())
 
-            nds_p_local = fem.locate_dofs_topological(
-                self.pbf.V_v,
-                self.pbf.io.mesh.topology.dim - 1,
-                self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.surface_lm_ids[n])],
-            )
-            nds_p = np.array(
-                self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-            self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbf.V_v.dofmap.index_map_bs, nds_p, comm=self.comm)
+            self.dofs_coupling_p[n] = meshutils.get_index_set_id_global(self.pbf.io, self.pbf.V_v, self.surface_lm_ids[n], self.pbf.io.mesh.topology.dim-1, self.comm)
 
             self.k_vs_subvec.append(self.k_vs_vec[n].getSubVector(self.dofs_coupling_p[n]))
 

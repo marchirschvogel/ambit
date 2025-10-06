@@ -15,7 +15,7 @@ import ufl
 from petsc4py import PETSc
 
 from ..solver import solver_nonlin
-from .. import utilities, expression
+from .. import utilities, meshutils, expression
 from ..mpiroutines import allgather_vec, allgather_vec_entry
 
 from ..solid.solid_main import (
@@ -357,38 +357,16 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.k_us_subvec, self.k_su_subvec, sze_us, sze_su = [], [], [], []
 
         for n in range(self.num_coupling_surf):
-            nds_vq_local = fem.locate_dofs_topological(
-                self.pbs.V_u,
-                self.pbs.io.mesh.topology.dim - 1,
-                self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_vq_ids[n])],
-            )
-            nds_vq = np.array(
-                self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_vq_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-            self.dofs_coupling_vq[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_vq, comm=self.comm)
+            self.dofs_coupling_vq[n] = meshutils.get_index_set_id_global(self.pbs.io, self.pbs.V_u, self.surface_vq_ids[n], self.pbs.io.mesh.topology.dim-1, self.comm)
 
             self.k_su_subvec.append(self.k_su_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
             sze_su.append(self.k_su_subvec[-1].getSize())
 
             if self.coupling_params["multiplier_physics"][n]["type"] == "pressure":
-                nds_p_local = fem.locate_dofs_topological(
-                    self.pbs.V_u,
-                    self.pbs.io.mesh.topology.dim - 1,
-                    self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.surface_lm_ids[n])],
-                )
+                self.dofs_coupling_p[n] = meshutils.get_index_set_id_global(self.pbs.io, self.pbs.V_u, self.surface_lm_ids[n], self.pbs.io.mesh.topology.dim-1, self.comm)
             if self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
-                nds_p_local = fem.locate_dofs_topological(
-                    self.pbs.V_u,
-                    self.pbs.io.mesh.topology.dim,
-                    self.pbs.io.mt_d.indices[np.isin(self.pbs.io.mt_d.values, self.surface_lm_ids[n])],
-                )
-            nds_p = np.array(
-                self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)),
-                dtype=np.int32,
-            )
-            self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.pbs.V_u.dofmap.index_map_bs, nds_p, comm=self.comm)
+                self.dofs_coupling_p[n] = meshutils.get_index_set_id_global(self.pbs.io, self.pbs.V_u, self.surface_lm_ids[n], self.pbs.io.mesh.topology.dim, self.comm)
 
             self.k_us_subvec.append(self.k_us_vec[n].getSubVector(self.dofs_coupling_p[n]))
 

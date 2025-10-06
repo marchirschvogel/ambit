@@ -279,17 +279,6 @@ class IO:
             if filetype=='cheart': # CHeart .D files: skip first row
                 data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2,skiprows=1)
 
-            # index map and input indices
-            im = np.asarray(
-                f.function_space.dofmap.index_map.local_to_global(
-                    np.arange(
-                        f.function_space.dofmap.index_map.size_local + f.function_space.dofmap.index_map.num_ghosts,
-                        dtype=np.int32,
-                    )
-                ),
-                dtype=PETSc.IntType,
-            )
-
             # for discontinuous cell-wise functions, we need the original cell, otherwise the node index
             if f.function_space._ufl_element.is_cellwise_constant():
                 mapping_indices = f.function_space.mesh.topology.original_cell_index
