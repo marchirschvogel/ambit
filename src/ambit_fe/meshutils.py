@@ -50,7 +50,7 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set_id_global(io, Vspace, idlist, codim, comm, remove_ghosts=False, mapper=None):
+def get_index_set_id(io, Vspace, idlist, codim, comm, local_indices=False, mapper=None, mask_local_vec_or=None):
     if codim == io.mesh.topology.dim:
         mdata = io.mt_d
     if codim == io.mesh.topology.dim - 1:
@@ -63,29 +63,32 @@ def get_index_set_id_global(io, Vspace, idlist, codim, comm, remove_ghosts=False
     nodes_loc = fem.locate_dofs_topological(
         Vspace,
         codim,
-        io.mt_b1.indices[np.isin(mdata.values, idlist)],
+        mdata.indices[np.isin(mdata.values, idlist)],
     )
 
-    nodes_glb = np.array(
-        Vspace.dofmap.index_map.local_to_global(np.asarray(nodes_loc, dtype=np.int32)),
-        dtype=np.int32,
-    )
+    if not local_indices:
+        nodes_g = np.array(
+            Vspace.dofmap.index_map.local_to_global(np.asarray(nodes_loc, dtype=np.int32)),
+            dtype=np.int32,
+        )
+    else:
+        nodes_g = nodes_loc
 
     if mapper is not None:
-        sorter = np.argsort(mapper[nodes_glb])
-        nodes_glb = nodes_glb[sorter]
+        nodes_g = nodes_g[mapper]
 
     iset = PETSc.IS().createBlock(
         Vspace.dofmap.index_map_bs,
-        nodes_glb,
+        nodes_g,
         comm=comm,
     )
 
-    if remove_ghosts: # Is there any application where we want to do this?
-        idxs_g = set(Vspace.dofmap.index_map.ghosts)
+    if mask_local_vec_or is not None:
         idxs_i = iset.getIndices()
-        diff = [i for i in idxs_i if i not in idxs_g]
-        iset = PETSc.IS().createGeneral(diff, comm=comm)
+        Istart, Iend = mask_local_vec_or.getOwnershipRange()
+        mask_local = np.logical_and(idxs_i >= Istart, idxs_i < Iend)
+        idxs_i_new = idxs_i[mask_local]
+        iset = PETSc.IS().createGeneral(idxs_i_new, comm=comm)
 
     return iset
 

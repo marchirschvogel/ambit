@@ -3,7 +3,6 @@
 """
 FSI simulation of a 2D tank with flexible, forced lid
 Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier)
-TODO: Only works in serial so far!!!
 """
 
 import ambit_fe

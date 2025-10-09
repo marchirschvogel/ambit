@@ -9,7 +9,7 @@
 import time
 import sys, math
 import numpy as np
-from dolfinx import fem, mesh
+from dolfinx import fem, mesh, io
 import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
@@ -103,9 +103,6 @@ class FSIProblem(problem_base):
         self.fsi_governing_type = coupling_params.get("fsi_governing_type", "solid_governed")
 
         self.fsi_system = coupling_params.get("fsi_system", "neumann_neumann") # neumann_neumann, neumann_dirichlet
-        if self.fsi_system=="neumann_dirichlet":
-            if self.comm.size>1:
-                raise RuntimeError("Monolithic Neumann-Dirichlet scheme only works in serial so far! To be fixed!")
 
         self.remove_mutual_solid_fluid_bcs = coupling_params.get("remove_mutual_solid_fluid_bcs", False)
 
@@ -282,9 +279,9 @@ class FSIProblem(problem_base):
         if self.fsi_system=="neumann_dirichlet":
             self.submesh_to_mainmesh_mappings()
             # solid
-            self.fdofs_solid_global_sub = meshutils.get_index_set_id_global(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_solid)
+            self.fdofs_solid_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_s)
             # fluid
-            self.fdofs_fluid_global_sub = meshutils.get_index_set_id_global(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_fluid)
+            self.fdofs_fluid_global_sub = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_f2s)
 
         if self.fsi_system == "neumann_neumann":
             self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
@@ -350,7 +347,7 @@ class FSIProblem(problem_base):
                 for k in range(len(self.pbs.bc.dbcs_nofluid)):
                     dbcs_id_list_solid.append(self.pbs.bc_dict["dirichlet"][k]["id"])
                 dbcs_id_list_solid_flat = [item for sublist in dbcs_id_list_solid for item in sublist]
-                dbc_dofs_solid_global = meshutils.get_index_set_id_global(self.pbs.io, self.pbs.V_u, dbcs_id_list_solid_flat, self.pbs.io.mesh.topology.dim-1, self.comm)
+                dbc_dofs_solid_global = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, dbcs_id_list_solid_flat, self.pbs.io.mesh.topology.dim-1, self.comm)
 
                 dbcs_dofs_solid_all = self.comm.allgather(dbc_dofs_solid_global.array)
 
@@ -373,7 +370,7 @@ class FSIProblem(problem_base):
                 for k in range(len(self.pbf.bc.dbcs)):
                     dbcs_id_list_fluid.append(self.pbf.bc_dict["dirichlet"][k]["id"])
                 dbcs_id_list_fluid_flat = [item for sublist in dbcs_id_list_fluid for item in sublist]
-                dbc_dofs_fluid_global = meshutils.get_index_set_id_global(self.pbf.io, self.pbf.V_v, dbcs_id_list_fluid_flat, self.pbf.io.mesh.topology.dim-1, self.comm)
+                dbc_dofs_fluid_global = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, dbcs_id_list_fluid_flat, self.pbf.io.mesh.topology.dim-1, self.comm)
 
                 dbcs_dofs_fluid_all = self.comm.allgather(dbc_dofs_fluid_global.array)
 
@@ -393,8 +390,42 @@ class FSIProblem(problem_base):
 
             # NOTE: If a solid dof of the interface is subject to a DBC, the respective fluid dof necessarily needs that DBC set, too (and vice versa)
             assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
+            assert(self.fdofs_solid_global_sub.getLocalSize()==self.fdofs_fluid_global_sub.getLocalSize())
 
-            self.interface_is_loc = PETSc.IS().createStride(self.fdofs_fluid_global_sub.getLocalSize(), first=0, step=1, comm=self.comm)
+            # consistency check (should go eventually...)
+            dofs_s = self.pbs.V_u.tabulate_dof_coordinates()[:,:self.pbf.io.mesh.topology.dim].flatten()
+            dofs_f = self.pbf.V_v.tabulate_dof_coordinates()[:,:self.pbf.io.mesh.topology.dim].flatten()
+            tmp_s = self.pbs.u.x.petsc_vec.copy()
+            tmp_f = self.pbf.v.x.petsc_vec.copy()
+            tmp_s.zeroEntries()
+            tmp_f.zeroEntries()
+            ls, le = tmp_s.getOwnershipRange()
+            tmp_s[ls:le] = dofs_s[:tmp_s.getLocalSize()]
+            ls, le = tmp_f.getOwnershipRange()
+            tmp_f[ls:le] = dofs_f[:tmp_f.getLocalSize()]
+            tmp_s.assemble()
+            tmp_f.assemble()
+
+            tmp_s_new = tmp_s.copy()
+            tmp_f_new = tmp_f.copy()
+            tmp_s_new.zeroEntries()
+            tmp_f_new.zeroEntries()
+
+            sub_s = tmp_s.getSubVector(self.fdofs_solid_global_sub)
+            sub_f = tmp_f.getSubVector(self.fdofs_fluid_global_sub)
+            tmp_s.zeroEntries()
+            tmp_f.zeroEntries()
+
+            # own setting
+            tmp_s.setValues(self.fdofs_solid_global_sub, sub_s.array, addv=PETSc.InsertMode.INSERT)
+            tmp_f.setValues(self.fdofs_fluid_global_sub, sub_f.array, addv=PETSc.InsertMode.INSERT)
+
+            # cross setting
+            tmp_s_new.setValues(self.fdofs_solid_global_sub, sub_f.array, addv=PETSc.InsertMode.INSERT)
+            tmp_f_new.setValues(self.fdofs_fluid_global_sub, sub_s.array, addv=PETSc.InsertMode.INSERT)
+
+            assert(np.isclose(tmp_s_new.array, tmp_s.array).all())
+            assert(np.isclose(tmp_f_new.array, tmp_f.array).all())
 
             self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
 
@@ -439,6 +470,8 @@ class FSIProblem(problem_base):
 
             # solid reaction forces
             self.r_reac_sol = fem.petsc.create_vector(self.pbs.res_u)
+            # reaction forces on fluid side
+            self.r_reac_on_fluid = fem.petsc.create_vector(self.pbf.res_v)
 
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
@@ -460,7 +493,6 @@ class FSIProblem(problem_base):
             # now only set the 1's at surface dofs
             self.Diag_sol.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
             self.Diag_sol.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, self.I_loc, addv=PETSc.InsertMode.INSERT)
-
             self.Diag_sol.assemble()
 
             # create from solid matrix and only keep the necessary columns
@@ -588,6 +620,7 @@ class FSIProblem(problem_base):
             self.K_uv.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, -self.I_loc, addv=PETSc.InsertMode.INSERT)
 
             self.K_uv.assemble()
+
             self.K_uv.scale(fac)
 
             self.K_list[0][1 + off] = self.K_uv
@@ -612,9 +645,6 @@ class FSIProblem(problem_base):
 
     def evaluate_residual_dbc_coupling(self):
 
-        # frist set ufs to u everywhere
-        self.ufs.x.petsc_vec.axpby(1.0, 0.0, self.pbs.u.x.petsc_vec) # NEEDED??!
-
         # we need a vector representation of ufluid to apply in solid DBCs
         self.pbf.ti.update_varint(
             self.pbf.v.x.petsc_vec,
@@ -631,10 +661,11 @@ class FSIProblem(problem_base):
         self.pbf.uf.x.petsc_vec.restoreSubVector(self.fdofs_fluid_global_sub, subvec=self.ufs_subvec)
         self.ufs.x.petsc_vec.assemble()
 
+        self.ufs.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
     def evaluate_residual_forces_interface(self):
         with self.r_reac_sol.localForm() as r_local: r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_reac_sol, self.pbs.res_u)
-
         fem.apply_lifting(
             self.r_reac_sol,
             [self.pbs.jac_uu],
@@ -642,13 +673,19 @@ class FSIProblem(problem_base):
             x0=[self.pbs.u.x.petsc_vec],
             alpha=-1.0,
         )
+        self.r_reac_sol.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
         # get solid reaction forces on interface
         self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub, subvec=self.r_u_interface)
-        # add solid residual to fluid
-        self.pbf.r_v.setValues(self.fdofs_fluid_global_sub, self.r_u_interface.array, addv=PETSc.InsertMode.ADD)
+        self.r_reac_on_fluid.setValues(self.fdofs_fluid_global_sub, self.r_u_interface.array, addv=PETSc.InsertMode.INSERT)
         self.r_reac_sol.restoreSubVector(self.fdofs_solid_global_sub, subvec=self.r_u_interface)
-        self.pbf.r_v.assemble()
+        self.r_reac_on_fluid.assemble()
+
+        self.r_reac_on_fluid.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD) # needed?!
+
+        # add solid residual to fluid
+        self.pbf.r_v.axpy(1.0, self.r_reac_on_fluid)
+
 
     def submesh_to_mainmesh_mappings(self):
         ts = time.time()
@@ -661,68 +698,30 @@ class FSIProblem(problem_base):
         from scipy.spatial import cKDTree
 
         V_G = fem.functionspace(self.io.mesh, ("Lagrange", self.pbs.order_disp, (self.io.mesh.geometry.dim,)))
+        G = fem.Function(V_G)
 
         dofs_G = V_G.tabulate_dof_coordinates()
         dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
         dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
 
-        self.map_solid = np.empty(dofs_s.shape[0], dtype=np.int32)
-        self.map_fluid = np.empty(dofs_f.shape[0], dtype=np.int32)
+        fnodes_G_loc = fem.locate_dofs_topological(V_G, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.io.surf_interf)])
+        fnodes_G_glb = np.array(V_G.dofmap.index_map.local_to_global(np.asarray(fnodes_G_loc, dtype=np.int32)), dtype=np.int32)
 
-        # create index mapping according to distance tree
-        tree = cKDTree(dofs_G)
-        _, self.map_solid[:] = tree.query(dofs_s, distance_upper_bound=1e-6)
-        _, self.map_fluid[:] = tree.query(dofs_f, distance_upper_bound=1e-6)
+        fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)])
+        fnodes_s_glb = np.array(self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnodes_s_loc, dtype=np.int32)), dtype=np.int32)
 
-        nodes_solid_all = np.asarray(
-            self.pbs.V_u.dofmap.index_map.local_to_global(
-                np.arange(
-                    self.pbs.V_u.dofmap.index_map.size_local + self.pbs.V_u.dofmap.index_map.num_ghosts,
-                    dtype=np.int32,
-                )
-            ),
-            dtype=PETSc.IntType,
-        )
+        fnodes_f_loc = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.io.surf_interf)])
+        fnodes_f_glb = np.array(self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(fnodes_f_loc, dtype=np.int32)), dtype=np.int32)
 
-        # sorter_solid = np.argsort(self.map_solid[nodes_solid_all])
-        # nodes_solid_all = nodes_solid_all[sorter_solid]
+        # tree = cKDTree(dofs_G[fnodes_G_loc])
+        tree = cKDTree(dofs_s[fnodes_s_loc])
+        _, self.map_s = tree.query(dofs_s[fnodes_s_loc], distance_upper_bound=1e-6) # identity map!
+        _, self.map_f2s = tree.query(dofs_f[fnodes_f_loc], distance_upper_bound=1e-6)
 
-        self.indices_solid_all = PETSc.IS().createBlock(
-            self.pbs.V_u.dofmap.index_map_bs,
-            nodes_solid_all,
-            comm=self.comm,
-        )
-
-        nodes_fluid_all = np.asarray(
-            self.pbf.V_v.dofmap.index_map.local_to_global(
-                np.arange(
-                    self.pbf.V_v.dofmap.index_map.size_local + self.pbf.V_v.dofmap.index_map.num_ghosts,
-                    dtype=np.int32,
-                )
-            ),
-            dtype=PETSc.IntType,
-        )
-
-        # sorter_fluid = np.argsort(self.map_fluid[nodes_fluid_all])
-        # nodes_fluid_all = nodes_fluid_all[sorter_fluid]
-
-        self.indices_fluid_all = PETSc.IS().createBlock(
-            self.pbf.V_v.dofmap.index_map_bs,
-            nodes_fluid_all,
-            comm=self.comm,
-        )
-
-        self.dofs_solid_main = PETSc.IS().createBlock(
-            self.pbs.V_u.dofmap.index_map_bs,
-            self.map_solid,
-            comm=self.comm,
-        )
-
-        self.dofs_fluid_main = PETSc.IS().createBlock(
-            self.pbf.V_v.dofmap.index_map_bs,
-            self.map_fluid,
-            comm=self.comm,
-        )
+        # fluid to solid mapping - TODO: Check this again!!!
+        len_s, len_f2s = len(self.map_s), len(self.map_f2s)
+        self.map_s = np.argsort(self.map_s[:len_f2s])
+        self.map_f2s = np.argsort(self.map_f2s[:len_s])
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)

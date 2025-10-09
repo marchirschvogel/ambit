@@ -287,8 +287,10 @@ class IO:
 
         # order data
         data_mapped = data[mapping_indices[: int(sz_loc / bs)]]
-        # flatten mapped data
-        data_mapped_flat = data_mapped.flatten()
+
+        # flatten mapped data - TODO: Check again in case of 2D meshes!
+        # data_mapped_flat = data_mapped[:,:f.function_space.mesh.topology.dim].flatten()
+        data_mapped_flat = data_mapped[:].flatten()
 
         # now set values
         f.x.petsc_vec.array[:] = data_mapped_flat[:]
