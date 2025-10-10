@@ -33,7 +33,6 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-tet-lin_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-tet-lin_boundary.xdmf",
-        "mesh_edge": basepath + "/input/artseg-fsi-tet-lin_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet"
         "results_to_write": [
             ["displacement", "velocity"],
             [
@@ -125,7 +124,6 @@ def test_main():
         "dirichlet": [
             {"id": [7], "dir": "y", "val": 0.0},
             {"id": [9], "dir": "x", "val": 0.0},
-            {"id": [1,2], "dir": "z", "val": 0.0, "codimension": 1}, # DBC on edge: needed if "fsi_system" is set to "neumann_dirichlet"!
         ],
     }
 

@@ -14,7 +14,6 @@ import pytest
 
 @pytest.mark.fsi
 @pytest.mark.fluid_solid
-@pytest.mark.skip(reason="Not yet ready for testing.")
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 

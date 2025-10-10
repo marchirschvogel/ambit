@@ -289,6 +289,9 @@ if category == "fsi" or category == "all":
             str(4),
         ]
     )
+    errs["test_fsi_p1p1_stab_artseg_neumann_dirichlet 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stab_artseg_neumann_dirichlet.py"]
+    )
     errs["test_fsi_tank2d_p1p1_neumann_neumann 1"] = subprocess.call(
         ["mpiexec", "-n", "1", "python3", "test_fsi_tank2d_p1p1_neumann_neumann.py"]
     )

@@ -343,13 +343,15 @@ class FSIProblem(problem_base):
                 # Here, we remove any DBC indices from the interface
                 # NOTE: Do not use PETSc's index set "difference" method as it will not preserve the specific ordering needed!
 
-                dbcs_id_list_solid = []
+                dbc_dofs_solid_global = []
                 for k in range(len(self.pbs.bc.dbcs_nofluid)):
-                    dbcs_id_list_solid.append(self.pbs.bc_dict["dirichlet"][k]["id"])
-                dbcs_id_list_solid_flat = [item for sublist in dbcs_id_list_solid for item in sublist]
-                dbc_dofs_solid_global = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, dbcs_id_list_solid_flat, self.pbs.io.mesh.topology.dim-1, self.comm)
+                    if self.pbs.bc_dict["dirichlet"][k]["dir"]=="all": sub=None
+                    if self.pbs.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
+                    if self.pbs.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
+                    if self.pbs.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
+                    dbc_dofs_solid_global.append( meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.pbs.bc_dict["dirichlet"][k]["id"], self.pbs.bc_dict["dirichlet"][k].get("codimension", self.pbs.io.mesh.topology.dim-1), self.comm, sub=sub).array )
 
-                dbcs_dofs_solid_all = self.comm.allgather(dbc_dofs_solid_global.array)
+                dbcs_dofs_solid_all = self.comm.allgather(dbc_dofs_solid_global)
 
                 # number of present partitions (number of cores we're running on)
                 npart = len(dbcs_dofs_solid_all)
@@ -358,21 +360,23 @@ class FSIProblem(problem_base):
                 for n in range(npart):
                     for i in range(len(dbcs_dofs_solid_all[n])):
                         dbcs_dofs_solid_all_flat.append(dbcs_dofs_solid_all[n][i])
+                dbcs_dofs_solid_all_flat_flat = [item for sublist in dbcs_dofs_solid_all_flat for item in sublist]
 
-                # idxs_d = set(self.dbcs_solid_is.getIndices())
-                idxs_d = set(dbcs_dofs_solid_all_flat)
+                idxs_d = set(dbcs_dofs_solid_all_flat_flat)
                 idxs_i = self.fdofs_solid_global_sub.getIndices()
                 diff = [i for i in idxs_i if i not in idxs_d]
 
                 self.fdofs_solid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
-                dbcs_id_list_fluid = []
+                dbc_dofs_fluid_global = []
                 for k in range(len(self.pbf.bc.dbcs)):
-                    dbcs_id_list_fluid.append(self.pbf.bc_dict["dirichlet"][k]["id"])
-                dbcs_id_list_fluid_flat = [item for sublist in dbcs_id_list_fluid for item in sublist]
-                dbc_dofs_fluid_global = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, dbcs_id_list_fluid_flat, self.pbf.io.mesh.topology.dim-1, self.comm)
+                    if self.pbf.bc_dict["dirichlet"][k]["dir"]=="all": sub=None
+                    if self.pbf.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
+                    if self.pbf.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
+                    if self.pbf.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
+                    dbc_dofs_fluid_global.append( meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.pbf.bc_dict["dirichlet"][k]["id"], self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.io.mesh.topology.dim-1), self.comm, sub=sub).array )
 
-                dbcs_dofs_fluid_all = self.comm.allgather(dbc_dofs_fluid_global.array)
+                dbcs_dofs_fluid_all = self.comm.allgather(dbc_dofs_fluid_global)
 
                 # number of present partitions (number of cores we're running on)
                 npart = len(dbcs_dofs_fluid_all)
@@ -381,12 +385,15 @@ class FSIProblem(problem_base):
                 for n in range(npart):
                     for i in range(len(dbcs_dofs_fluid_all[n])):
                         dbcs_dofs_fluid_all_flat.append(dbcs_dofs_fluid_all[n][i])
+                dbcs_dofs_fluid_all_flat_flat = [item for sublist in dbcs_dofs_fluid_all_flat for item in sublist]
 
-                idxs_d = set(dbcs_dofs_fluid_all_flat)
+                idxs_d = set(dbcs_dofs_fluid_all_flat_flat)
                 idxs_i = self.fdofs_fluid_global_sub.getIndices()
                 diff = [i for i in idxs_i if i not in idxs_d]
 
                 self.fdofs_fluid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
+
+                dbcs_dofs_fluid_all_flat_flat = list(set(dbcs_dofs_fluid_all_flat_flat))
 
             # NOTE: If a solid dof of the interface is subject to a DBC, the respective fluid dof necessarily needs that DBC set, too (and vice versa)
             assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())

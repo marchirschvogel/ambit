@@ -50,7 +50,7 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set_id(io, Vspace, idlist, codim, comm, local_indices=False, mapper=None, mask_local_vec_or=None):
+def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=False, mapper=None, mask_local_vec_or=None):
     if codim == io.mesh.topology.dim:
         mdata = io.mt_d
     if codim == io.mesh.topology.dim - 1:
@@ -82,6 +82,12 @@ def get_index_set_id(io, Vspace, idlist, codim, comm, local_indices=False, mappe
         nodes_g,
         comm=comm,
     )
+
+    # only extract dofs associated to a direction - x(0), y(1), z(2) - if given
+    if sub is not None:
+        idxs_i = iset.getIndices()
+        idxs_i_new = idxs_i[sub::io.mesh.topology.dim]
+        iset = PETSc.IS().createGeneral(idxs_i_new, comm=comm)
 
     if mask_local_vec_or is not None:
         idxs_i = iset.getIndices()
