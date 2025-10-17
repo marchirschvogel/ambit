@@ -36,7 +36,7 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "schur3x3simple",  # can as well use schur3x3 version - interestingly, the SIMPLE version yields fewer linear iterations!
+        "block_precond": "s3x3",  # can as well use s3x3full version - interestingly, the SIMPLE version yields fewer linear iterations!
         "precond_fields": [
             {"prec": "amg"},
             {"prec": "amg"},

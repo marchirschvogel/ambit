@@ -34,7 +34,7 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "iterative",
         "iterative_solver": "fgmres",
-        "block_precond": "schur2x2",
+        "block_precond": "s2x2full",
         "precond_fields": [{"prec": "amg"}, {"prec": "amg"}],  # v, p
         "tol_lin_rel": 1.0e-5,
         "tol_lin_abs": 1.0e-30,

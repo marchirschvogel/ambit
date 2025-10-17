@@ -2,7 +2,8 @@
 
 """
 FSI simulation of a 2D tank with flexible, forced lid
-Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier)
+Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier) - Taylor-Hood fluid, quadratic solid
+BGS3x3(S2x2) preconditioner
 """
 
 import ambit_fe
@@ -35,7 +36,7 @@ def test_main():
         "domain_ids_fluid": [2],
         "surface_ids_interface": [3],
         "write_submeshes":True,
-        "simname": "tankout_neumanndirichlet",
+        "simname": "tank2d_taylorhood_neumanndirichlet",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -44,8 +45,18 @@ def test_main():
                       }
 
     SOLVER_PARAMS = {
-        "solve_type": "direct",
-        "direct_solver": "mumps",
+        "solve_type": "iterative",
+        "iterative_solver": "gmres",
+        "block_precond": "bgs3x3-s2x2",
+        "precond_fields": [
+            {"prec": "amg"},  # solid-u
+            {"prec": "amg"},  # fluid-v
+            {"prec": "amg"},  # fluid-p
+            {"prec": "amg"},  # ale-d
+        ],
+        "tol_lin_rel": 1e-7,
+        "lin_norm_type": "unpreconditioned",
+        "print_liniter_every": 50,
         "tol_res": [1e-8, 1e-8, 1e-8, 1e-8],
         "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8],
     }
@@ -54,23 +65,17 @@ def test_main():
     TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
 
     FEM_PARAMS_SOLID = {
-        "order_disp": 1,
+        "order_disp": 2,
         "order_pres": 1,
         "quad_degree": 5,
         "incompressibility": "no",
     }
 
-    FEM_PARAMS_FLUID = {"order_vel": 1,
+    FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
-                        "quad_degree": 5,
-                        'stabilization'  : {'scheme'         : 'supg_pspg',
-                                            'vscale'         : 1.0e1,
-                                            'dscales'        : [1.,1.,1.],
-                                            'symmetric'      : True,
-                                            'reduced_scheme' : True,
-                                            'vscale_vel_dep' : False}}
+                        "quad_degree": 5}
 
-    FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
+    FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
     COUPLING_PARAMS = {
         "coupling_fluid_ale": [{"surface_ids": [3], "type": "strong_dirichlet"}],
@@ -139,10 +144,10 @@ def test_main():
     )
 
     # correct results
-    v_corr[0] = 5.1486298166103154E+01  # x
-    v_corr[1] = -2.5581846922962019E+00  # y
+    v_corr[0] = 7.2336786861288459E+01  # x
+    v_corr[1] = -1.2289727298740589E+01  # y
 
-    p_corr[0] = -1.4217666576649382E-03
+    p_corr[0] = -1.5160240658598420E-04
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

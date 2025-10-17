@@ -226,13 +226,13 @@ if category == "fluid" or category == "all":
         ["mpiexec", "-n", "3", "python3", "test_fluid_p1p1_stab_cylinder.py"]
     )
 
-    errs["test_fluid_p1p1_stab_cylinder_schur2x2 4"] = subprocess.call(
+    errs["test_fluid_p1p1_stab_cylinder_s2x2 4"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "4",
             "python3",
-            "test_fluid_p1p1_stab_cylinder_schur2x2.py",
+            "test_fluid_p1p1_stab_cylinder_s2x2.py",
         ]
     )
 
@@ -292,17 +292,20 @@ if category == "fsi" or category == "all":
     errs["test_fsi_p1p1_stab_artseg_neumann_dirichlet 2"] = subprocess.call(
         ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stab_artseg_neumann_dirichlet.py"]
     )
-    errs["test_fsi_tank2d_p1p1_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_tank2d_p1p1_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stab_tank2d_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stab_tank2d_neumann_neumann.py"]
     )
-    errs["test_fsi_tank2d_p1p1_neumann_neumann 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_tank2d_p1p1_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stab_tank2d_neumann_neumann 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stab_tank2d_neumann_neumann.py"]
     )
-    errs["test_fsi_tank2d_p1p1_neumann_dirichlet 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_tank2d_p1p1_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stab_tank2d_neumann_dirichlet 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stab_tank2d_neumann_dirichlet.py"]
     )
-    errs["test_fsi_tank2d_p1p1_neumann_dirichlet 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_tank2d_p1p1_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stab_tank2d_neumann_dirichlet 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stab_tank2d_neumann_dirichlet.py"]
+    )
+    errs["test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3-s2x2 4"] = subprocess.call(
+        ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3-s2x2.py"]
     )
 
 if category == "fsi_flow0d" or category == "all":
@@ -543,23 +546,23 @@ if category == "solid_flow0d" or category == "all":
         ]
     )  # tests restart from step 3
 
-    errs["test_solid_flow0d_monodir_flux_syspulcap_3Dheart_schur2x2 2"] = subprocess.call(
+    errs["test_solid_flow0d_monodir_flux_syspulcap_3Dheart_s2x2 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_solid_flow0d_monodir_flux_syspulcap_3Dheart_schur2x2.py",
+            "test_solid_flow0d_monodir_flux_syspulcap_3Dheart_s2x2.py",
         ]
     )
 
-    errs["test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3 4"] = subprocess.call(
+    errs["test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_s3x3 4"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "4",
             "python3",
-            "test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_schur3x3.py",
+            "test_solid_flow0d_monodir2field_flux_syspulcap_3Dheart_s3x3.py",
         ]
     )
 
@@ -613,13 +616,13 @@ if category == "frsi" or category == "fluid_ale" or category == "all":
     errs["test_frsi_artseg_prestress 3"] = subprocess.call(
         ["mpiexec", "-n", "3", "python3", "test_frsi_artseg_prestress.py"]
     )
-    errs["test_frsi_artseg_prefile_partitioned_schur3x3 4"] = subprocess.call(
+    errs["test_frsi_artseg_prefile_partitioned_s3x3 4"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "4",
             "python3",
-            "test_frsi_artseg_prefile_partitioned_schur3x3.py",
+            "test_frsi_artseg_prefile_partitioned_s3x3.py",
         ]
     )
 
@@ -652,13 +655,13 @@ if category == "frsi" or category == "fluid_ale" or category == "all":
         ]
     )
 
-    errs["test_frsi_artseg_prefile_bgsschur4x4 3"] = subprocess.call(
+    errs["test_frsi_artseg_prefile_bgs-s3x3 3"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "3",
             "python3",
-            "test_frsi_artseg_prefile_bgsschur4x4.py",
+            "test_frsi_artseg_prefile_bgs-s3x3.py",
         ]
     )
 

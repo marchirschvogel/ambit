@@ -194,6 +194,7 @@ class FSIProblem(problem_base):
 
         self.localsolve = False
         self.sub_solve = False
+        self.print_subiter = False
 
         # number of fields involved
         if self.fsi_system == "neumann_neumann":
@@ -651,7 +652,6 @@ class FSIProblem(problem_base):
             self.K_list[3 + off][1 + off] = self.pbfa.K_list[2][0]
 
     def evaluate_residual_dbc_coupling(self):
-
         # we need a vector representation of ufluid to apply in solid DBCs
         self.pbf.ti.update_varint(
             self.pbf.v.x.petsc_vec,
@@ -693,6 +693,65 @@ class FSIProblem(problem_base):
         # add solid residual to fluid
         self.pbf.r_v.axpy(1.0, self.r_reac_on_fluid)
 
+    def get_index_sets(self, isoptions={}):
+        # iterative solvers here are only implemented for neumann_dirichlet system!
+        assert(self.fsi_system == "neumann_dirichlet")
+
+        if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
+            uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
+            uvec_ls = self.rom.V.getLocalSize()[1]
+        else:
+            uvec_or0 = self.pbs.u.x.petsc_vec.getOwnershipRange()[0]
+            uvec_ls = self.pbs.u.x.petsc_vec.getLocalSize()
+
+        offset_u = uvec_or0 + self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
+        if self.pbs.incompressible_2field:
+            offset_u += self.pbs.p.x.petsc_vec.getOwnershipRange()[0]
+        iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
+
+        if self.pbs.incompressible_2field:
+            offset_ps = offset_u + uvec_ls
+            iset_ps = PETSc.IS().createStride(
+                self.pbs.p.x.petsc_vec.getLocalSize(),
+                first=offset_ps,
+                step=1,
+                comm=self.comm,
+            )
+
+        if self.pbs.incompressible_2field:
+            offset_v = offset_ps + self.pbs.p.x.petsc_vec.getLocalSize()
+        else:
+            offset_v = offset_u + uvec_ls
+
+        iset_v = PETSc.IS().createStride(
+            self.pba.d.x.petsc_vec.getLocalSize(),
+            first=offset_v,
+            step=1,
+            comm=self.comm)
+
+        offset_p = offset_v + self.pbf.v.x.petsc_vec.getLocalSize()
+        iset_p = PETSc.IS().createStride(
+            self.pbf.p.x.petsc_vec.getLocalSize(),
+            first=offset_p,
+            step=1,
+            comm=self.comm,
+       )
+
+        offset_d = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+        iset_d = PETSc.IS().createStride(
+            self.pba.d.x.petsc_vec.getLocalSize(),
+            first=offset_d,
+            step=1,
+            comm=self.comm,
+       )
+
+
+        if self.pbs.incompressible_2field:
+            ilist = [iset_u, iset_ps, iset_v, iset_p, iset_d]
+        else:
+            ilist = [iset_u, iset_v, iset_p, iset_d]
+
+        return ilist
 
     def submesh_to_mainmesh_mappings(self):
         ts = time.time()

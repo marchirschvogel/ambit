@@ -36,7 +36,7 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "schur2x2simple",  # can as well use schur2x2 version - interestingly, the SIMPLE version yields fewer linear iterations!
+        "block_precond": "s2x2",  # can as well use schur2x2 version - interestingly, the SIMPLE version yields fewer linear iterations!
         "precond_fields": [{"prec": "amg"}, {"prec": "direct"}],
         "tol_res": [1.0e-8, 1.0e-6],  # u,0d
         "tol_inc": [1.0e-8, 1.0e-6],  # u,0d

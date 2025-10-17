@@ -37,7 +37,7 @@ def test_main():
             ["fluiddisplacement", "velocity", "pressure"],
             ["aledisplacement", "alevelocity"],
         ],  # first fluid, then ale results
-        "simname": "frsi_artseg_prefile_partitioned",
+        "simname": "frsi_artseg_prefile_partitioned_s3x3",
         "print_enhanced_info": True,
     }
 
@@ -56,7 +56,7 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": ["iterative", "direct"],
         "iterative_solver": "gmres",
-        "block_precond": ["schur3x3", None],
+        "block_precond": ["s3x3full", None],
         "precond_fields": [
             [{"prec": "amg"}, {"prec": "amg"}, {"prec": "direct"}],
             [{}],

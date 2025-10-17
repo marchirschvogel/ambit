@@ -29,7 +29,7 @@ def test_main():
             ["aledisplacement", "alevelocity"],
             "counters",
         ],  # first fluid, then ale results
-        "simname": "frsi_artseg_prefile_bgsschur4x4",
+        "simname": "frsi_artseg_prefile_bgs-s3x3",
     }
 
     CONTROL_PARAMS = {"maxtime": 3.0, "numstep": 150, "numstep_stop": 3}
@@ -47,7 +47,7 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "bgsschur4x4simple",  # can as well use bgsschur4x4 version - interestingly, the SIMPLE version yields fewer linear iterations!
+        "block_precond": "bgs-s3x3",  # can as well use bgsschur3x3 version - interestingly, the SIMPLE version yields fewer linear iterations!
         "precond_fields": [
             {"prec": "amg"},  # fluid-v
             {"prec": "amg"},  # fluid-p (Schur)
