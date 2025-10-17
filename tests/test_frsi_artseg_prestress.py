@@ -55,14 +55,14 @@ def test_main():
         "solve_type": "iterative",
         "solve_type_prestr": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "bgsschur4x4simple",  # can as well use bgsschur4x4 version - interestingly, the SIMPLE version yields fewer linear iterations!
+        "block_precond": "bgs-s3x3",  # can as well use bgs-s3x3full version - interestingly, the SIMPLE version yields fewer linear iterations!
         "precond_fields": [
             {"prec": "direct"},  # fluid-v
             {"prec": "direct"},  # fluid-p (Schur)
             {"prec": "direct"},  # fluid-red.v
             {"prec": "direct"},
         ],  # ale-d
-        "block_precond_prestr": "schur3x3simple",
+        "block_precond_prestr": "s3x3",
         "precond_fields_prestr": [
             {"prec": "direct"},  # fluid-v
             {"prec": "direct"},  # fluid-p (Schur)

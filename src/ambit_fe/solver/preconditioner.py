@@ -221,7 +221,7 @@ class schur2x2full(block_precond):
 
         self.Bt.mult(self.y_[1], self.Bty)
 
-        # compute z1 = x1 - self.Bty2
+        # compute z1 = x1 - self.Bty
         self.z_[0].axpby(1.0, 0.0, self.x_[0])
         self.z_[0].axpy(-1.0, self.Bty)
 
@@ -470,7 +470,7 @@ class schur3x3full(block_precond):
         # 3) solve Wmod * y_3 = z_3
         self.ksp_fields[self.sids[2]].solve(self.z3, self.y3)
 
-        self.Tmod.mult(self.y3, self.Tmody3)
+        self.Tmod.mult(self.y3, self.Tmody)
 
         # compute z2 = x2 - self.By - self.Tmody
         self.z2.axpy(-1.0, self.Tmody)
@@ -478,13 +478,13 @@ class schur3x3full(block_precond):
         # 4) solve Smod * y_2 = z_2
         self.ksp_fields[self.sids[1]].solve(self.z2, self.y2)
 
-        self.Bt.mult(self.y2, self.Bty2)
-        self.Dt.mult(self.y3, self.Dty3)
+        self.Bt.mult(self.y2, self.Bty)
+        self.Dt.mult(self.y3, self.Dty)
 
-        # compute z1 = x1 - self.Bty2 - self.Dty3
+        # compute z1 = x1 - self.Bty - self.Dty
         self.z1.axpby(1.0, 0.0, self.x1)
-        self.z1.axpy(-1.0, self.Bty2)
-        self.z1.axpy(-1.0, self.Dty3)
+        self.z1.axpy(-1.0, self.Bty)
+        self.z1.axpy(-1.0, self.Dty)
 
         # 5) solve A * y_1 = z_1
         self.ksp_fields[self.sids[0]].solve(self.z1, self.y1)
@@ -798,7 +798,7 @@ class schur2x2(schur2x2full):
 
         # 3) update y_1
         self.Adinv_Bt.mult(self.y_[1], self.Bty)
-        # compute y1 -= self.Bty2
+        # compute y1 -= self.Bty
         self.y_[0].axpy(-1.0, self.Bty)
 
         # restore/clean up
@@ -1014,7 +1014,7 @@ class bgssym2x2(bgs2x2):
         # 2) solve C * y_2 = z_2
         self.ksp_fields[1].solve(self.z2, self.y2)
 
-        self.Bt.mult(self.y2, self.Bty2)
+        self.Bt.mult(self.y2, self.Bty)
 
         # compute z1 = x1 - self.Bty1
         self.z1.axpby(1.0, 0.0, self.x1)
@@ -1202,8 +1202,8 @@ class bgssym3x3(bgs3x3):
 
         # compute z1 = x1 - self.Bty - self.Dty
         self.z1.axpby(1.0, 0.0, self.x1)
-        self.z1.axpy(-1.0, self.Bty2)
-        self.z1.axpy(-1.0, self.Dty3)
+        self.z1.axpy(-1.0, self.Bty)
+        self.z1.axpy(-1.0, self.Dty)
 
         # 5) solve A * y_1 = z_1
         self.ksp_fields[0].solve(self.z1, self.y1)
