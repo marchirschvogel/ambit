@@ -280,9 +280,9 @@ class FSIProblem(problem_base):
         if self.fsi_system=="neumann_dirichlet":
             self.submesh_to_mainmesh_mappings()
             # solid
-            self.fdofs_solid_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_s)
+            self.fdofs_solid_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_s, mask_local_vec_or=self.pbs.u.x.petsc_vec)
             # fluid
-            self.fdofs_fluid_global_sub = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_f2s)
+            self.fdofs_fluid_global_sub = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_f2s, mask_local_vec_or=self.pbf.v.x.petsc_vec)
 
         if self.fsi_system == "neumann_neumann":
             self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
@@ -394,8 +394,6 @@ class FSIProblem(problem_base):
 
                 self.fdofs_fluid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
-                dbcs_dofs_fluid_all_flat_flat = list(set(dbcs_dofs_fluid_all_flat_flat))
-
             # NOTE: If a solid dof of the interface is subject to a DBC, the respective fluid dof necessarily needs that DBC set, too (and vice versa)
             assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
             assert(self.fdofs_solid_global_sub.getLocalSize()==self.fdofs_fluid_global_sub.getLocalSize())
@@ -436,6 +434,8 @@ class FSIProblem(problem_base):
             assert(np.isclose(tmp_f_new.array, tmp_f.array).all())
 
             self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
+
+            self.interface_is_loc = PETSc.IS().createStride(self.fdofs_fluid_global_sub.getLocalSize(), first=0, step=1, comm=self.comm)
 
         else:
             raise ValueError("Unknown value for 'fsi_system'. Choose 'neumann_neumann' or 'neumann_dirichlet'.")
@@ -487,7 +487,6 @@ class FSIProblem(problem_base):
             # identity and zero numpy arrays
             self.I_loc = np.zeros((self.fdofs_solid_global_sub.getLocalSize(),self.fdofs_fluid_global_sub.getLocalSize()))
             np.fill_diagonal(self.I_loc, 1.0)
-            self.Z_loc = np.zeros((self.fdofs_solid_global_sub.getLocalSize(),self.fdofs_fluid_global_sub.getLocalSize()))
 
             self.Diag_sol = PETSc.Mat().createAIJ(
                 (self.pbs.K_uu.getSizes()[0],self.pbf.K_vv.getSizes()[0]),
@@ -515,6 +514,15 @@ class FSIProblem(problem_base):
 
             self.K_uv.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
 
+            # create unity vector with 1's everywhere but on surface dofs
+            self.Ifo = self.K_vu.createVecRight()
+            self.Ifo.array[:] = 1.0
+            self.Ifo.setValues(
+                self.fdofs_solid_global_sub,
+                np.zeros(self.fdofs_solid_global_sub.getLocalSize()),
+                addv=PETSc.InsertMode.INSERT,
+            )
+            self.Ifo.assemble()
 
     def assemble_residual(self, t, subsolver=None):
         if self.fsi_system == "neumann_dirichlet":
@@ -637,7 +645,7 @@ class FSIProblem(problem_base):
             self.Diag_sol.transposeMatMult(self.K_uu_work, result=self.K_vu)
 
             # eliminate interface!
-            self.K_vu.setValues(self.fdofs_fluid_global_sub, self.fdofs_solid_global_sub, self.Z_loc, addv=PETSc.InsertMode.INSERT)
+            self.K_vu.diagonalScale(R=self.Ifo)
             self.K_vu.assemble()
 
             self.K_list[1 + off][0] = self.K_vu
@@ -772,22 +780,35 @@ class FSIProblem(problem_base):
 
         fnodes_G_loc = fem.locate_dofs_topological(V_G, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.io.surf_interf)])
         fnodes_G_glb = np.array(V_G.dofmap.index_map.local_to_global(np.asarray(fnodes_G_loc, dtype=np.int32)), dtype=np.int32)
+        # Istart, Iend = G.x.petsc_vec.getOwnershipRange()
+        # mask_local_G = np.logical_and(fnodes_G_glb >= int(Istart/self.io.mesh.topology.dim), fnodes_G_glb < int(Iend/self.io.mesh.topology.dim))
+        # fnodes_G_glb_new = fnodes_G_glb[mask_local_G]
+        # fnodes_G_loc_new = np.array(V_G.dofmap.index_map.global_to_local(np.asarray(fnodes_G_glb_new, dtype=np.int32)), dtype=np.int32)
 
         fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)])
         fnodes_s_glb = np.array(self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnodes_s_loc, dtype=np.int32)), dtype=np.int32)
+        # Istart, Iend = self.pbs.u.x.petsc_vec.getOwnershipRange()
+        # mask_local_s = np.logical_and(fnodes_s_glb >= int(Istart/self.pbs.io.mesh.topology.dim), fnodes_s_glb < int(Iend/self.pbs.io.mesh.topology.dim))
+        # fnodes_s_glb_new = fnodes_s_glb[mask_local_s]
+        # fnodes_s_loc_new = np.array(self.pbs.V_u.dofmap.index_map.global_to_local(np.asarray(fnodes_s_glb_new, dtype=np.int32)), dtype=np.int32)
 
         fnodes_f_loc = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.io.surf_interf)])
         fnodes_f_glb = np.array(self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(fnodes_f_loc, dtype=np.int32)), dtype=np.int32)
+        # Istart, Iend = self.pbf.v.x.petsc_vec.getOwnershipRange()
+        # mask_local_f = np.logical_and(fnodes_f_glb >= int(Istart/self.pbf.io.mesh.topology.dim), fnodes_f_glb < int(Iend/self.pbf.io.mesh.topology.dim))
+        # fnodes_f_glb_new = fnodes_f_glb[mask_local_f]
+        # fnodes_f_loc_new = np.array(self.pbf.V_v.dofmap.index_map.global_to_local(np.asarray(fnodes_f_glb_new, dtype=np.int32)), dtype=np.int32)
 
         # tree = cKDTree(dofs_G[fnodes_G_loc])
         tree = cKDTree(dofs_s[fnodes_s_loc])
         _, self.map_s = tree.query(dofs_s[fnodes_s_loc], distance_upper_bound=1e-6) # identity map!
         _, self.map_f2s = tree.query(dofs_f[fnodes_f_loc], distance_upper_bound=1e-6)
-
+        self.map_s = np.argsort(self.map_s)
+        self.map_f2s = np.argsort(self.map_f2s)
         # fluid to solid mapping - TODO: Check this again!!!
         len_s, len_f2s = len(self.map_s), len(self.map_f2s)
-        self.map_s = np.argsort(self.map_s[:len_f2s])
-        self.map_f2s = np.argsort(self.map_f2s[:len_s])
+        self.map_s = self.map_s[:len_f2s]
+        self.map_f2s = self.map_f2s[:len_s]
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
