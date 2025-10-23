@@ -50,7 +50,7 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=False, mapper=None, mask_local=False):
+def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=False, mapper=None, mask_owned=False):
     if codim == io.mesh.topology.dim:
         mdata = io.mt_d
     if codim == io.mesh.topology.dim - 1:
@@ -77,11 +77,11 @@ def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=Fa
     if mapper is not None:
         nodes_g = nodes_g[mapper]
 
-    if mask_local:
+    if mask_owned:
         if not local_indices:
             Istart, Iend = Vspace.dofmap.index_map.local_range
-            mask_local = np.logical_and(nodes_g >= Istart, nodes_g < Iend)
-            nodes_g = nodes_g[mask_local]
+            mask = np.logical_and(nodes_g >= Istart, nodes_g < Iend)
+            nodes_g = nodes_g[mask]
 
     iset = PETSc.IS().createBlock(
         Vspace.dofmap.index_map_bs,

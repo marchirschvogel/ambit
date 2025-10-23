@@ -280,9 +280,12 @@ class FSIProblem(problem_base):
         if self.fsi_system=="neumann_dirichlet":
             self.submesh_to_mainmesh_mappings()
             # solid
-            self.fdofs_solid_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_s, mask_local=True)
+            self.fdofs_solid_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_s, mask_owned=True)
             # fluid
-            self.fdofs_fluid_global_sub = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_f2s, mask_local=True)
+            self.fdofs_fluid_global_sub = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_f2s, mask_owned=True)
+            # check consistency of local size - TODO: There can be partitions where the number of owned dofs per core differes for solid and fluid! Weird, but currently, we have to exclude these cases...
+            assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
+            assert(self.fdofs_solid_global_sub.getLocalSize()==self.fdofs_fluid_global_sub.getLocalSize())
 
         if self.fsi_system == "neumann_neumann":
             self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
@@ -350,7 +353,7 @@ class FSIProblem(problem_base):
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
-                    dbc_dofs_solid_global.append( meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.pbs.bc_dict["dirichlet"][k]["id"], self.pbs.bc_dict["dirichlet"][k].get("codimension", self.pbs.io.mesh.topology.dim-1), self.comm, sub=sub).array )
+                    dbc_dofs_solid_global.append( meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.pbs.bc_dict["dirichlet"][k]["id"], self.pbs.bc_dict["dirichlet"][k].get("codimension", self.pbs.io.mesh.topology.dim-1), self.comm, sub=sub, mask_owned=True).array )
 
                 dbcs_dofs_solid_all = self.comm.allgather(dbc_dofs_solid_global)
 
@@ -375,7 +378,7 @@ class FSIProblem(problem_base):
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
-                    dbc_dofs_fluid_global.append( meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.pbf.bc_dict["dirichlet"][k]["id"], self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.io.mesh.topology.dim-1), self.comm, sub=sub).array )
+                    dbc_dofs_fluid_global.append( meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.pbf.bc_dict["dirichlet"][k]["id"], self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.io.mesh.topology.dim-1), self.comm, sub=sub, mask_owned=True).array )
 
                 dbcs_dofs_fluid_all = self.comm.allgather(dbc_dofs_fluid_global)
 
@@ -395,10 +398,11 @@ class FSIProblem(problem_base):
                 self.fdofs_fluid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
             # NOTE: If a solid dof of the interface is subject to a DBC, the respective fluid dof necessarily needs that DBC set, too (and vice versa)
+            # again check consistency of local size - TODO: There can be partitions where the number of owned dofs per core differes for solid and fluid! Weird, but currently, we have to exclude these cases...
             assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
             assert(self.fdofs_solid_global_sub.getLocalSize()==self.fdofs_fluid_global_sub.getLocalSize())
 
-            # consistency check (should go eventually...)
+            # further consistency checks (should go eventually...)
             dofs_s = self.pbs.V_u.tabulate_dof_coordinates()[:,:self.pbf.io.mesh.topology.dim].flatten()
             dofs_f = self.pbf.V_v.tabulate_dof_coordinates()[:,:self.pbf.io.mesh.topology.dim].flatten()
             tmp_s = self.pbs.u.x.petsc_vec.copy()
@@ -632,7 +636,6 @@ class FSIProblem(problem_base):
             # zero rows where DBC is applied and set interface entries to -1
             self.K_uv.zeroRows(self.fdofs_solid_global_sub, diag=0.0)
             self.K_uv.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, -self.I_loc, addv=PETSc.InsertMode.INSERT)
-
             self.K_uv.assemble()
 
             self.K_uv.scale(fac)
@@ -769,15 +772,8 @@ class FSIProblem(problem_base):
 
         from scipy.spatial import cKDTree
 
-        V_G = fem.functionspace(self.io.mesh, ("Lagrange", self.pbs.order_disp, (self.io.mesh.geometry.dim,)))
-        G = fem.Function(V_G)
-
-        dofs_G = V_G.tabulate_dof_coordinates()
         dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
         dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
-
-        fnodes_G_loc = fem.locate_dofs_topological(V_G, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.io.surf_interf)])
-        fnodes_G_glb = np.array(V_G.dofmap.index_map.local_to_global(np.asarray(fnodes_G_loc, dtype=np.int32)), dtype=np.int32)
 
         fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)])
         fnodes_s_glb = np.array(self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnodes_s_loc, dtype=np.int32)), dtype=np.int32)

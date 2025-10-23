@@ -132,11 +132,10 @@ def main():
     }  # trapezoidal, midpoint
 
     """
-    Finite element parameters for solid: Taylor-Hood space
+    Finite element parameters for solid: Q2 elements
     """
     FEM_PARAMS_SOLID = {
         "order_disp": 2,
-        "order_pres": 1,
         "quad_degree": 5,
         "incompressibility": "no",
     }
