@@ -50,7 +50,7 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=False, mapper=None, mask_local_vec_or=None):
+def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=False, mapper=None, mask_local=False):
     if codim == io.mesh.topology.dim:
         mdata = io.mt_d
     if codim == io.mesh.topology.dim - 1:
@@ -77,6 +77,12 @@ def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=Fa
     if mapper is not None:
         nodes_g = nodes_g[mapper]
 
+    if mask_local:
+        if not local_indices:
+            Istart, Iend = Vspace.dofmap.index_map.local_range
+            mask_local = np.logical_and(nodes_g >= Istart, nodes_g < Iend)
+            nodes_g = nodes_g[mask_local]
+
     iset = PETSc.IS().createBlock(
         Vspace.dofmap.index_map_bs,
         nodes_g,
@@ -87,13 +93,6 @@ def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=Fa
     if sub is not None:
         idxs_i = iset.getIndices()
         idxs_i_new = idxs_i[sub::io.mesh.topology.dim]
-        iset = PETSc.IS().createGeneral(idxs_i_new, comm=comm)
-
-    if mask_local_vec_or is not None:
-        idxs_i = iset.getIndices()
-        Istart, Iend = mask_local_vec_or.getOwnershipRange()
-        mask_local = np.logical_and(idxs_i >= Istart, idxs_i < Iend)
-        idxs_i_new = idxs_i[mask_local]
         iset = PETSc.IS().createGeneral(idxs_i_new, comm=comm)
 
     return iset
