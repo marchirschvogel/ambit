@@ -39,16 +39,79 @@ class FluidmechanicsFlow0DProblem(problem_base):
         io,
         mor_params={},
         alevar={},
+        pbf=None,
+        pb0=None,
     ):
         self.pbase = pbase
+        self.pbf = pbf
+        self.pb0 = pb0
 
         # pointer to communicator
         self.comm = self.pbase.comm
 
         self.problem_physics = "fluid_flow0d"
 
-        self.coupling_params = coupling_params
+        # instantiate problem classes (also sets the variational forms for the fluid problem)
+        if pbf is None:
+            self.pbf = FluidmechanicsProblem(
+                pbase,
+                io_params,
+                time_params_fluid,
+                fem_params,
+                constitutive_models,
+                bc_dict,
+                time_curves,
+                io,
+                mor_params=mor_params,
+                alevar=alevar,
+            )
+        if pb0 is None:
+            self.pb0 = Flow0DProblem(
+                pbase,
+                io_params,
+                time_params_flow0d,
+                model_params_flow0d,
+                time_curves,
+                coupling_params,
+            )
 
+        self.coupling_params = coupling_params
+        self.set_coupling_parameters()
+
+        self.pbrom = self.pbf  # ROM problem can only be fluid
+        self.pbrom_host = self
+
+        # indicator for no periodic reference state estimation
+        self.noperiodicref = 1
+
+        self.set_variational_forms()
+
+        self.numdof = self.pbf.numdof + self.LM.getSize()
+
+        self.localsolve = self.pbf.localsolve
+
+        self.sub_solve = True
+        self.io = self.pbf.io
+
+
+
+        # number of fields involved
+        if not self.condense_0d:
+            self.nfields = 3
+        else:
+            self.nfields = 2
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = (
+            [None] * self.nfields,
+            [None] * self.nfields,
+        )
+        self.K_list, self.K_list_rom = (
+            [[None] * self.nfields for _ in range(self.nfields)],
+            [[None] * self.nfields for _ in range(self.nfields)],
+        )
+
+    def set_coupling_parameters(self):
         self.surface_vq_ids = self.coupling_params["surface_ids"]
         self.surface_p_ids = self.coupling_params.get("surface_p_ids", self.surface_vq_ids)
 
@@ -80,81 +143,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # only option in fluid mechanics!
         self.coupling_type = "monolithic_lagrange"
 
-        # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pbf = FluidmechanicsProblem(
-            pbase,
-            io_params,
-            time_params_fluid,
-            fem_params,
-            constitutive_models,
-            bc_dict,
-            time_curves,
-            io,
-            mor_params=mor_params,
-            alevar=alevar,
-        )
-        self.pb0 = Flow0DProblem(
-            pbase,
-            io_params,
-            time_params_flow0d,
-            model_params_flow0d,
-            time_curves,
-            coupling_params,
-        )
-
-        self.pbrom = self.pbf  # ROM problem can only be fluid
-        self.pbrom_host = self
-
-        # indicator for no periodic reference state estimation
-        self.noperiodicref = 1
-
-        self.set_variational_forms()
-
-        self.numdof = self.pbf.numdof + self.LM.getSize()
-
-        self.localsolve = self.pbf.localsolve
-
-        self.sub_solve = True
-        self.io = self.pbf.io
-
-        # 3D fluxes
-        self.constr, self.constr_old = (
-            [[]] * self.num_coupling_surf,
-            [[]] * self.num_coupling_surf,
-        )
-
-        # set 3D-0D coupling array
-        self.offc = 0
-        if bool(self.pb0.chamber_models):
-            if (
-                self.pb0.chamber_models["lv"]["type"] == "3D_fluid"
-                and self.pb0.chamber_models["lv"]["num_outflows"] == 0
-                and self.pb0.cardvasc0D.cormodel
-            ):
-                self.pb0.auxdata["p"], self.pb0.auxdata_old["p"] = (
-                    {-1: 0},
-                    {-1: 0},
-                )  # dummy entries
-                self.offc = 1
-
-        # re-define coupling array
-        self.pb0.c = [[]] * (self.num_coupling_surf + self.offc)
-
-        # number of fields involved
-        if not self.condense_0d:
-            self.nfields = 3
-        else:
-            self.nfields = 2
-
-        # residual and matrix lists
-        self.r_list, self.r_list_rom = (
-            [None] * self.nfields,
-            [None] * self.nfields,
-        )
-        self.K_list, self.K_list_rom = (
-            [[None] * self.nfields for _ in range(self.nfields)],
-            [[None] * self.nfields for _ in range(self.nfields)],
-        )
 
     def get_problem_var_list(self):
         if not self.condense_0d:
@@ -281,6 +269,29 @@ class FluidmechanicsFlow0DProblem(problem_base):
         if self.pbase.restart_step == 0:
             self.pb0.cardvasc0D.initialize_lm(self.LM, self.pb0.initialconditions)
             self.pb0.cardvasc0D.initialize_lm(self.LM_old, self.pb0.initialconditions)
+
+        # 3D fluxes
+        self.constr, self.constr_old = (
+            [[]] * self.num_coupling_surf,
+            [[]] * self.num_coupling_surf,
+        )
+
+        # set 3D-0D coupling array
+        self.offc = 0
+        if bool(self.pb0.chamber_models):
+            if (
+                self.pb0.chamber_models["lv"]["type"] == "3D_fluid"
+                and self.pb0.chamber_models["lv"]["num_outflows"] == 0
+                and self.pb0.cardvasc0D.cormodel
+            ):
+                self.pb0.auxdata["p"], self.pb0.auxdata_old["p"] = (
+                    {-1: 0},
+                    {-1: 0},
+                )  # dummy entries
+                self.offc = 1
+
+        # re-define coupling array
+        self.pb0.c = [[]] * (self.num_coupling_surf + self.offc)
 
     def set_problem_residual_jacobian_forms(self, pre=False):
         self.pbf.set_problem_residual_jacobian_forms(pre=pre)
@@ -475,6 +486,18 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.r_lm_kcondens = self.K_lm.createVecLeft()
 
     def assemble_residual(self, t, subsolver=None):
+        # first the coupling, then the main res
+        self.assemble_residual_coupling(t, subsolver=subsolver)
+        # fluid main blocks
+        self.pbf.assemble_residual(t)
+
+        if self.condense_0d:
+            self.pbf.r_v.axpy(-1.0, self.r_v_kcondens)
+
+        self.r_list[0] = self.pbf.r_list[0]
+        self.r_list[1] = self.pbf.r_list[1]
+
+    def assemble_residual_coupling(self, t, subsolver=None):
         for i in range(self.num_coupling_surf):
             cq = fem.assemble_scalar(self.cq_form[i])
             cq = self.comm.allgather(cq)
@@ -517,18 +540,13 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.pb0.aux[:] = self.comm.bcast(self.pb0.aux, root=0)
 
         # add to fluid momentum equation
-        self.pb0.cardvasc0D.set_pressure_fem(
+        expression.set_pressure_function(
             self.LM,
             list(range(self.num_coupling_surf)),
             self.pr0D,
             self.coupfuncs,
+            self.comm,
         )
-
-        # fluid main blocks
-        self.pbf.assemble_residual(t)
-
-        self.r_list[0] = self.pbf.r_list[0]
-        self.r_list[1] = self.pbf.r_list[1]
 
         ls, le = self.LM.getOwnershipRange()
 
@@ -542,13 +560,29 @@ class FluidmechanicsFlow0DProblem(problem_base):
             # call those parts of assemble_stiffness_3d0d that are needed for forming the residual
             self.assemble_stiffness_3d0d(t, LM_sq, subsolver=subsolver, condensed_res_action=True)
             self.Kvs_Klminv.mult(self.r_lm, self.r_v_kcondens)
-            self.r_list[0].axpy(-1.0, self.r_v_kcondens)
         else:
             self.r_list[2] = self.r_lm
 
         del LM_sq
 
     def assemble_stiffness(self, t, subsolver=None):
+        self.assemble_stiffness_coupling(t, subsolver=subsolver)
+
+        # fluid main blocks
+        self.pbf.assemble_stiffness(t)
+
+        self.K_list[0][0] = self.pbf.K_list[0][0]
+        self.K_list[0][1] = self.pbf.K_list[0][1]
+        self.K_list[1][0] = self.pbf.K_list[1][0]
+        self.K_list[1][1] = self.pbf.K_list[1][1]  # should be only non-zero if we have stabilization...
+
+        if self.condense_0d:
+            if self.condense_0d_model == "full":
+                self.pbf.K_vv.axpy(-1.0, self.Kvs_Klminv_Ksv)
+            if self.condense_0d_model == "diag":
+                self.pbf.K_vv.axpy(-1.0, self.Kvs_Klminvmat_Ksv)
+
+    def assemble_stiffness_coupling(self, t, subsolver=None):
         # Lagrange multipliers (pressures) to be passed to 0D model
         LM_sq = allgather_vec(self.LM, self.comm)
 
@@ -570,14 +604,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
             ):
                 dp_id = self.pb0.chamber_models["lv"]["dp_monitor_id"]
                 self.pb0.c[0] = self.pb0.auxdata["p"][dp_id]
-
-        # fluid main blocks
-        self.pbf.assemble_stiffness(t)
-
-        self.K_list[0][0] = self.pbf.K_list[0][0]
-        self.K_list[0][1] = self.pbf.K_list[0][1]
-        self.K_list[1][0] = self.pbf.K_list[1][0]
-        self.K_list[1][1] = self.pbf.K_list[1][1]  # should be only non-zero if we have stabilization...
 
         self.assemble_stiffness_3d0d(t, LM_sq, subsolver=subsolver)
 
@@ -722,11 +748,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
             if not condensed_res_action:
                 if self.condense_0d_model == "full":
                     self.Kvs_Klminv.matMult(self.K_sv, result=self.Kvs_Klminv_Ksv)
-                    self.K_list[0][0].axpy(-1.0, self.Kvs_Klminv_Ksv)
                 elif self.condense_0d_model == "diag":
                     self.K_vs.matMult(self.K_lm_invmat, result=self.Kvs_Klminvmat)
                     self.Kvs_Klminvmat.matMult(self.K_sv, result=self.Kvs_Klminvmat_Ksv)
-                    self.K_list[0][0].axpy(-1.0, self.Kvs_Klminvmat_Ksv)
                 else:
                     raise RuntimeError("You should not be here!")
 
@@ -800,12 +824,15 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     def evaluate_initial(self):
         self.pbf.evaluate_initial()
+        self.evaluate_initial_coupling()
 
-        self.pb0.cardvasc0D.set_pressure_fem(
+    def evaluate_initial_coupling(self):
+        expression.set_pressure_function(
             self.LM_old,
             list(range(self.num_coupling_surf)),
             self.pr0D,
             self.coupfuncs_old,
+            self.comm,
         )
 
         # special case: append upstream pressure to coupling array in case we don't have an LM, but a monitored pressure value
@@ -928,14 +955,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # update time step - fluid and 0D model
         self.pbf.update()
         self.pb0.update()
+        self.update_coupling()
 
+    def update_coupling(self):
         # update old LMs
         self.LM_old.axpby(1.0, 0.0, self.LM)
-        self.pb0.cardvasc0D.set_pressure_fem(
+        expression.set_pressure_function(
             self.LM_old,
             list(range(self.num_coupling_surf)),
             self.pr0D,
             self.coupfuncs_old,
+            self.comm,
         )
         # update old 3D fluxes
         self.constr_old[:] = self.constr[:]
@@ -943,7 +973,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
     def print_to_screen(self):
         self.pbf.print_to_screen()
         self.pb0.print_to_screen()
+        self.print_to_screen_coupling()
 
+    def print_to_screen_coupling(self):
         LM_sq = allgather_vec(self.LM, self.comm)
         for i in range(self.num_coupling_surf):
             utilities.print_status("LM" + str(i + 1) + " = %.4e" % (LM_sq[i]), self.comm)
@@ -975,7 +1007,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
     def destroy(self):
         self.pbf.destroy()
         self.pb0.destroy()
+        self.destroy_coupling()
 
+    def destroy_coupling(self):
         for i in range(len(self.col_ids)):
             self.k_vs_vec[i].destroy()
         for i in range(len(self.row_ids)):

@@ -93,13 +93,6 @@ class cardiovascular0Dbase(ode):
         self.setup_arrays(), self.set_compartment_interfaces()
         self.equation_map(), self.set_stiffness(), self.lambdify_expressions()
 
-    # set pressure function for 3D FEM model
-    def set_pressure_fem(self, var, ids, pr0D, p0Da):
-        # set pressure functions
-        for i in range(len(ids)):
-            pr0D.val = -allgather_vec_entry(var, ids[i], self.comm)
-            p0Da[i].interpolate(pr0D.evaluate)
-
     # set valve q(p) relationship
     def valvelaw(self, p, popen, Rmin, Rmax, vparams, topen, tclose):
         if vparams[0] == "pwlin_pres":  # piecewise linear with resistance depending on pressure difference

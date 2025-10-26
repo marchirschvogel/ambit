@@ -8,7 +8,14 @@
 
 import numpy as np
 from petsc4py import PETSc
+from .mpiroutines import allgather_vec_entry
 
+# set pressure function for 3D FEM model
+def set_pressure_function(var, ids, pr0D, p0Da, comm):
+    # set pressure functions
+    for i in range(len(ids)):
+        pr0D.val = -allgather_vec_entry(var, ids[i], comm)
+        p0Da[i].interpolate(pr0D.evaluate)
 
 # template expression class
 class template:

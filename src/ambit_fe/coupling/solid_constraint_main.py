@@ -408,6 +408,9 @@ class SolidmechanicsConstraintProblem(problem_base):
                 self.kp_reg[n] = self.coupling_params["regularization"][n]["kp"]
 
     def assemble_residual(self, t, subsolver=None):
+        self.assemble_residual_coupling(t)
+
+    def assemble_residual_coupling(self, t, subsolver=None):
         if self.pbs.incompressible_2field:
             off = 1
         else:
@@ -582,7 +585,9 @@ class SolidmechanicsConstraintProblem(problem_base):
 
     def evaluate_initial(self):
         self.pbs.evaluate_initial()
+        self.evaluate_initial_coupling()
 
+    def evaluate_initial_coupling(self):
         self.set_multiplier(self.LM_old, self.coupfuncs_old)
 
         for i in range(self.num_coupling_surf):
@@ -637,7 +642,9 @@ class SolidmechanicsConstraintProblem(problem_base):
     def update(self):
         # update time step
         self.pbs.update()
+        self.update_coupling()
 
+    def update_coupling(self):
         # update old pressures on solid
         self.LM_old.axpby(1.0, 0.0, self.LM)
         self.set_multiplier(self.LM_old, self.coupfuncs_old)
@@ -646,7 +653,9 @@ class SolidmechanicsConstraintProblem(problem_base):
 
     def print_to_screen(self):
         self.pbs.print_to_screen()
+        self.print_to_screen_coupling()
 
+    def print_to_screen_coupling(self):
         LM_sq = allgather_vec(self.LM, self.comm)
         for i in range(self.num_coupling_surf):
             utilities.print_status("LM" + str(i + 1) + " = %.4e" % (LM_sq[i]), self.comm)
@@ -675,7 +684,9 @@ class SolidmechanicsConstraintProblem(problem_base):
 
     def destroy(self):
         self.pbs.destroy()
+        self.destroy_coupling()
 
+    def destroy_coupling(self):
         for i in range(len(self.col_ids)):
             self.k_us_vec[i].destroy()
         for i in range(len(self.row_ids)):

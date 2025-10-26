@@ -272,7 +272,6 @@ class FSIProblem(problem_base):
 
     # defines the monolithic coupling forms for FSI
     def set_variational_forms(self):
-
         # fluid displacement, but defined on solid domain
         self.ufs = fem.Function(self.pbs.V_u)
 
@@ -281,6 +280,8 @@ class FSIProblem(problem_base):
             self.submesh_to_mainmesh_mappings()
             # solid
             self.fdofs_solid_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_s, mask_owned=True)
+            if self.pbs.incompressible_2field:
+                self.fdofs_solidp_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_p, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mask_owned=True)
             # fluid
             self.fdofs_fluid_global_sub = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_f2s, mask_owned=True)
             # check consistency of local size - TODO: There can be partitions where the number of owned dofs per core differes for solid and fluid! Weird, but currently, we have to exclude these cases...
@@ -504,6 +505,24 @@ class FSIProblem(problem_base):
             self.Diag_sol.setValues(self.fdofs_solid_global_sub, self.fdofs_fluid_global_sub, self.I_loc, addv=PETSc.InsertMode.INSERT)
             self.Diag_sol.assemble()
 
+            if self.pbs.incompressible_2field:
+                self.I_locp = np.zeros((self.fdofs_solidp_global_sub.getLocalSize(),self.fdofs_fluid_global_sub.getLocalSize()))
+                np.fill_diagonal(self.I_locp, 1.0)
+
+                self.Diag_solp = PETSc.Mat().createAIJ(
+                    (self.pbs.K_up.getSizes()[0],self.pbf.K_vv.getSizes()[0]),
+                    bsize=None,
+                    nnz=(1, 1),
+                    csr=None,
+                    comm=self.comm,
+                )
+                self.Diag_solp.setUp()
+
+                # now only set the 1's at surface dofs
+                self.Diag_solp.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+                self.Diag_solp.setValues(self.fdofs_solidp_global_sub, self.fdofs_fluid_global_sub, self.I_locp, addv=PETSc.InsertMode.INSERT)
+                self.Diag_solp.assemble()
+
             # create from solid matrix and only keep the necessary columns
             # need to assemble here to get correct sparsity pattern when doing the column product
             self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)
@@ -511,6 +530,8 @@ class FSIProblem(problem_base):
             # now multiply to grep out the correct columns / rows
             self.K_uv = self.K_uu_work.matMult(self.Diag_sol)
             self.K_vu = self.Diag_sol.transposeMatMult(self.K_uu_work)
+            if self.pbs.incompressible_2field:
+                self.K_vps = self.Diag_solp.transposeMatMult(self.pbs.K_up)
             # contributions to fluid main block on interface
             self.K_vv_i = self.Diag_sol.transposeMatMult(self.K_uv)
 
@@ -525,6 +546,16 @@ class FSIProblem(problem_base):
                 addv=PETSc.InsertMode.INSERT,
             )
             self.Ifo.assemble()
+
+            if self.pbs.incompressible_2field:
+                self.Ifop = self.K_vps.createVecRight()
+                self.Ifop.array[:] = 1.0
+                self.Ifop.setValues(
+                    self.fdofs_solidp_global_sub,
+                    np.zeros(self.fdofs_solidp_global_sub.getLocalSize()),
+                    addv=PETSc.InsertMode.INSERT,
+                )
+                self.Ifop.assemble()
 
     def assemble_residual(self, t, subsolver=None):
         if self.fsi_system == "neumann_dirichlet":
@@ -648,6 +679,11 @@ class FSIProblem(problem_base):
             # eliminate interface!
             self.K_vu.diagonalScale(R=self.Ifo)
             self.K_vu.assemble()
+
+            if self.pbs.incompressible_2field:
+                self.Diag_solp.transposeMatMult(self.pbs.K_up, result=self.K_vps)
+                self.K_vps.assemble()
+                self.K_list[1 + off][1] = self.K_vps
 
             self.K_list[1 + off][0] = self.K_vu
 

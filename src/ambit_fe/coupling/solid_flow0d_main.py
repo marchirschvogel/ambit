@@ -50,25 +50,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         self.problem_physics = "solid_flow0d"
 
-        self.coupling_params = coupling_params
-
-        self.surface_vq_ids = self.coupling_params["surface_ids"]
-        self.surface_p_ids = self.coupling_params.get("surface_p_ids", self.surface_vq_ids)
-
-        self.num_coupling_surf = len(self.surface_vq_ids)
-
-        self.cq_factor = self.coupling_params.get("cq_factor", [1.0] * self.num_coupling_surf)
-
-        self.coupling_type = self.coupling_params.get("coupling_type", "monolithic_direct")
-
-        self.eps_fd = self.coupling_params.get("eps_fd", 1e-5)
-
-        self.print_subiter = self.coupling_params.get("print_subiter", False)
-
-        self.write_checkpoints_periodicref = self.coupling_params.get("write_checkpoints_periodicref", False)
-        self.restart_periodicref = self.coupling_params.get("restart_periodicref", 0)
-        self.Nmax_periodicref = self.coupling_params.get("Nmax_periodicref", 10)
-
         self.have_condensed_variables = False
 
         # initialize problem instances (also sets the variational forms for the solid problem)
@@ -91,6 +72,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
             time_curves,
             coupling_params,
         )
+
+        self.set_coupling_parameters(coupling_params)
 
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self
@@ -152,6 +135,26 @@ class SolidmechanicsFlow0DProblem(problem_base):
             [[None] * self.nfields for _ in range(self.nfields)],
             [[None] * self.nfields for _ in range(self.nfields)],
         )
+
+    def set_coupling_parameters(self, cpars):
+        self.coupling_params = cpars
+
+        self.surface_vq_ids = self.coupling_params["surface_ids"]
+        self.surface_p_ids = self.coupling_params.get("surface_p_ids", self.surface_vq_ids)
+
+        self.num_coupling_surf = len(self.surface_vq_ids)
+
+        self.cq_factor = self.coupling_params.get("cq_factor", [1.0] * self.num_coupling_surf)
+
+        self.coupling_type = self.coupling_params.get("coupling_type", "monolithic_direct")
+
+        self.eps_fd = self.coupling_params.get("eps_fd", 1e-5)
+
+        self.print_subiter = self.coupling_params.get("print_subiter", False)
+
+        self.write_checkpoints_periodicref = self.coupling_params.get("write_checkpoints_periodicref", False)
+        self.restart_periodicref = self.coupling_params.get("restart_periodicref", 0)
+        self.Nmax_periodicref = self.coupling_params.get("Nmax_periodicref", 10)
 
     def get_problem_var_list(self):
         if self.coupling_type == "monolithic_lagrange":
@@ -525,6 +528,25 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.K_su.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
 
     def assemble_residual(self, t, subsolver=None):
+        # first the coupling, then the main res
+        self.assemble_residual_coupling(t, subsolver=subsolver)
+        # solid main blocks
+        self.pbs.assemble_residual(t)
+
+        self.r_list[0] = self.pbs.r_list[0]
+        if self.pbs.incompressible_2field:
+            self.r_list[1] = self.pbs.r_list[1]
+
+        if self.coupling_type == "monolithic_direct":
+            if self.pbs.incompressible_2field:
+                off = 1
+            else:
+                off = 0
+            # 0D rhs vector
+            self.pb0.assemble_residual(t)
+            self.r_list[1 + off] = self.pb0.r_list[0]
+
+    def assemble_residual_coupling(self, t, subsolver=None):
         if self.pbs.incompressible_2field:
             off = 1
         else:
@@ -558,20 +580,22 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 self.pb0.aux[:] = self.comm.bcast(self.pb0.aux, root=0)
 
             # add to solid momentum equation
-            self.pb0.cardvasc0D.set_pressure_fem(
+            expression.set_pressure_function(
                 self.LM,
                 list(range(self.num_coupling_surf)),
                 self.pr0D,
                 self.coupfuncs,
+                self.comm,
             )
 
         if self.coupling_type == "monolithic_direct":
             # add to solid momentum equation
-            self.pb0.cardvasc0D.set_pressure_fem(
+            expression.set_pressure_function(
                 self.pb0.s,
                 self.pb0.cardvasc0D.v_ids,
                 self.pr0D,
                 self.coupfuncs,
+                self.comm,
             )
 
             # volumes/fluxes to be passed to 0D model
@@ -579,18 +603,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 cq = fem.assemble_scalar(self.cq_form[i])
                 cq = self.comm.allgather(cq)
                 self.pb0.c[i] = sum(cq) * self.cq_factor[i]
-
-            # 0D rhs vector
-            self.pb0.assemble_residual(t)
-
-            self.r_list[1 + off] = self.pb0.r_list[0]
-
-        # solid main blocks
-        self.pbs.assemble_residual(t)
-
-        self.r_list[0] = self.pbs.r_list[0]
-        if self.pbs.incompressible_2field:
-            self.r_list[1] = self.pbs.r_list[1]
 
         if self.coupling_type == "monolithic_lagrange":
             ls, le = self.LM.getOwnershipRange()
@@ -629,15 +641,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.pb0.assemble_stiffness(t)
 
             self.K_list[1 + off][1 + off] = self.pb0.K_list[0][0]
-
-        # solid main blocks
-        self.pbs.assemble_stiffness(t)
-
-        self.K_list[0][0] = self.pbs.K_list[0][0]
-        if self.pbs.incompressible_2field:
-            self.K_list[0][1] = self.pbs.K_list[0][1]
-            self.K_list[1][0] = self.pbs.K_list[1][0]
-            self.K_list[1][1] = self.pbs.K_list[1][1]  # should be only non-zero if we have stress-mediated growth...
 
         if self.coupling_type == "monolithic_lagrange":
             # assemble 0D rhs contributions
@@ -749,6 +752,18 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.K_list[0][1 + off] = self.K_us
         self.K_list[1 + off][0] = self.K_su
 
+
+        # solid main blocks
+        self.pbs.assemble_stiffness(t)
+
+        self.K_list[0][0] = self.pbs.K_list[0][0]
+        if self.pbs.incompressible_2field:
+            self.K_list[0][1] = self.pbs.K_list[0][1]
+            self.K_list[1][0] = self.pbs.K_list[1][0]
+            self.K_list[1][1] = self.pbs.K_list[1][1]  # should be only non-zero if we have stress-mediated growth...
+
+
+
     def get_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
@@ -811,22 +826,26 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
     def evaluate_initial(self):
         self.pbs.evaluate_initial()
+        self.evaluate_initial_coupling()
 
+    def evaluate_initial_coupling(self):
         # set pressure functions for old state - s_old already initialized by 0D flow problem
         if self.coupling_type == "monolithic_direct":
-            self.pb0.cardvasc0D.set_pressure_fem(
+            expression.set_pressure_function(
                 self.pb0.s_old,
                 self.pb0.cardvasc0D.v_ids,
                 self.pr0D,
                 self.coupfuncs_old,
+                self.comm,
             )
 
         if self.coupling_type == "monolithic_lagrange":
-            self.pb0.cardvasc0D.set_pressure_fem(
+            expression.set_pressure_function(
                 self.LM_old,
                 list(range(self.num_coupling_surf)),
                 self.pr0D,
                 self.coupfuncs_old,
+                self.comm,
             )
 
         if self.coupling_type == "monolithic_direct":
@@ -943,22 +962,26 @@ class SolidmechanicsFlow0DProblem(problem_base):
         # update time step - solid and 0D model
         self.pbs.update()
         self.pb0.update()
+        self.update_coupling()
 
+    def update_coupling(self):
         # update old pressures on solid
         if self.coupling_type == "monolithic_direct":
-            self.pb0.cardvasc0D.set_pressure_fem(
+            expression.set_pressure_function(
                 self.pb0.s_old,
                 self.pb0.cardvasc0D.v_ids,
                 self.pr0D,
                 self.coupfuncs_old,
+                self.comm,
             )
         if self.coupling_type == "monolithic_lagrange":
             self.LM_old.axpby(1.0, 0.0, self.LM)
-            self.pb0.cardvasc0D.set_pressure_fem(
+            expression.set_pressure_function(
                 self.LM_old,
                 list(range(self.num_coupling_surf)),
                 self.pr0D,
                 self.coupfuncs_old,
+                self.comm,
             )
             # update old 3D fluxes
             self.constr_old[:] = self.constr[:]
@@ -966,7 +989,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
     def print_to_screen(self):
         self.pbs.print_to_screen()
         self.pb0.print_to_screen()
+        self.print_to_screen_coupling()
 
+    def print_to_screen_coupling(self):
         if self.coupling_type == "monolithic_lagrange":
             LM_sq = allgather_vec(self.LM, self.comm)
             for i in range(self.num_coupling_surf):
@@ -1000,7 +1025,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
     def destroy(self):
         self.pbs.destroy()
         self.pb0.destroy()
+        self.destroy_coupling()
 
+    def destroy_coupling(self):
         for i in range(len(self.col_ids)):
             self.k_us_vec[i].destroy()
         for i in range(len(self.row_ids)):

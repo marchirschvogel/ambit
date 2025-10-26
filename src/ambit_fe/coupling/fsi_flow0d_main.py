@@ -242,7 +242,7 @@ class FSIFlow0DProblem(FSIProblem, problem_base):
         else:
             off = 0
 
-        self.pbfa0.evaluate_residual_dbc_coupling()
+        self.pbfa0.pbfa.evaluate_residual_dbc_coupling()
 
         self.pbs.assemble_residual(t)
         self.pbfa0.assemble_residual(t, subsolver=subsolver)

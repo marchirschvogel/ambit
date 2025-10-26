@@ -41,8 +41,12 @@ class FluidmechanicsAleProblem(problem_base):
         coupling_params,
         io,
         mor_params={},
+        pbf=None,
+        pba=None,
     ):
         self.pbase = pbase
+        self.pbf = pbf
+        self.pba = pba
 
         # pointer to communicator
         self.comm = self.pbase.comm
@@ -51,12 +55,6 @@ class FluidmechanicsAleProblem(problem_base):
 
         self.problem_physics = "fluid_ale"
 
-        self.coupling_params = coupling_params
-
-        self.coupling_fluid_ale = self.coupling_params.get("coupling_fluid_ale", {})
-        self.coupling_ale_fluid = self.coupling_params.get("coupling_ale_fluid", {})
-        self.coupling_strategy = self.coupling_params.get("coupling_strategy", "monolithic")
-
         (
             self.have_dbc_fluid_ale,
             self.have_weak_dirichlet_fluid_ale,
@@ -64,37 +62,42 @@ class FluidmechanicsAleProblem(problem_base):
             self.have_robin_ale_fluid,
         ) = False, False, False, False
 
-        # initialize problem instances (also sets the variational forms for the fluid and ALE problem)
-        self.pba = AleProblem(
-            pbase,
-            io_params,
-            time_params,
-            fem_params_ale,
-            constitutive_models_ale,
-            bc_dict_ale,
-            time_curves,
-            io,
-            mor_params=mor_params,
-        )
-        # ALE variables that are handed to fluid problem
-        alevariables = {
-            "Fale": self.pba.ki.F(self.pba.d),
-            "Fale_old": self.pba.ki.F(self.pba.d_old),
-            "w": self.pba.wel,
-            "w_old": self.pba.w_old,
-        }
-        self.pbf = FluidmechanicsProblem(
-            pbase,
-            io_params,
-            time_params,
-            fem_params_fluid,
-            constitutive_models_fluid,
-            bc_dict_fluid,
-            time_curves,
-            io,
-            mor_params=mor_params,
-            alevar=alevariables,
-        )
+        # instantiate problem classes
+        if pba is None:
+            self.pba = AleProblem(
+                pbase,
+                io_params,
+                time_params,
+                fem_params_ale,
+                constitutive_models_ale,
+                bc_dict_ale,
+                time_curves,
+                io,
+                mor_params=mor_params,
+            )
+            # ALE variables that are handed to fluid problem
+            alevariables = {
+                "Fale": self.pba.ki.F(self.pba.d),
+                "Fale_old": self.pba.ki.F(self.pba.d_old),
+                "w": self.pba.wel,
+                "w_old": self.pba.w_old,
+            }
+        if pbf is None:
+            self.pbf = FluidmechanicsProblem(
+                pbase,
+                io_params,
+                time_params,
+                fem_params_fluid,
+                constitutive_models_fluid,
+                bc_dict_fluid,
+                time_curves,
+                io,
+                mor_params=mor_params,
+                alevar=alevariables,
+            )
+
+        self.coupling_params = coupling_params
+        self.set_coupling_parameters()
 
         self.pbrom = self.pbf  # ROM problem can only be fluid
         self.pbrom_host = self
@@ -144,6 +147,11 @@ class FluidmechanicsAleProblem(problem_base):
             [[None] * self.nfields for _ in range(self.nfields)],
             [[None] * self.nfields for _ in range(self.nfields)],
         )
+
+    def set_coupling_parameters(self):
+        self.coupling_fluid_ale = self.coupling_params.get("coupling_fluid_ale", {})
+        self.coupling_ale_fluid = self.coupling_params.get("coupling_ale_fluid", {})
+        self.coupling_strategy = self.coupling_params.get("coupling_strategy", "monolithic")
 
     def get_problem_var_list(self):
         if self.pbf.num_dupl > 1:
@@ -335,7 +343,9 @@ class FluidmechanicsAleProblem(problem_base):
         # fluid + ALE
         self.pbf.set_problem_residual_jacobian_forms(pre=pre)
         self.pba.set_problem_residual_jacobian_forms()
+        self.set_problem_residual_jacobian_forms_coupling()
 
+    def set_problem_residual_jacobian_forms_coupling(self):
         if self.coupling_strategy == "monolithic":
             ts = time.time()
             utilities.print_status(
@@ -363,7 +373,9 @@ class FluidmechanicsAleProblem(problem_base):
     def set_problem_vector_matrix_structures(self):
         self.pbf.set_problem_vector_matrix_structures()
         self.pba.set_problem_vector_matrix_structures()
+        self.set_problem_vector_matrix_structures_coupling()
 
+    def set_problem_vector_matrix_structures_coupling(self):
         if self.coupling_strategy == "monolithic":
             self.K_vd = fem.petsc.create_matrix(self.jac_vd)
             if self.have_weak_dirichlet_fluid_ale:
@@ -410,7 +422,8 @@ class FluidmechanicsAleProblem(problem_base):
                 self.K_pd = fem.petsc.create_matrix(self.jac_pd)
 
     def assemble_residual(self, t, subsolver=None):
-        self.evaluate_residual_dbc_coupling() # prior to ALE residual assemble!
+        # prior to ALE residual assemble!
+        self.assemble_residual_coupling(t)
 
         self.pbf.assemble_residual(t)
         self.pba.assemble_residual(t)
@@ -419,7 +432,23 @@ class FluidmechanicsAleProblem(problem_base):
         self.r_list[1] = self.pbf.r_list[1]
         self.r_list[2] = self.pba.r_list[0]
 
+    def assemble_residual_coupling(self, t, subsolver=None):
+        self.evaluate_residual_dbc_coupling()
+
     def assemble_stiffness(self, t, subsolver=None):
+        self.assemble_stiffness_coupling(t)
+
+        self.pbf.assemble_stiffness(t)
+        self.pba.assemble_stiffness(t)
+
+        self.K_list[0][0] = self.pbf.K_list[0][0]
+        self.K_list[0][1] = self.pbf.K_list[0][1]
+        self.K_list[1][0] = self.pbf.K_list[1][0]
+        self.K_list[1][1] = self.pbf.K_list[1][1]
+
+        self.K_list[2][2] = self.pba.K_list[0][0]
+
+    def assemble_stiffness_coupling(self, t):
         if self.have_weak_dirichlet_fluid_ale:
             self.K_dv.zeroEntries()
             fem.petsc.assemble_matrix(self.K_dv, self.jac_dv, self.pba.bc.dbcs)
@@ -438,20 +467,11 @@ class FluidmechanicsAleProblem(problem_base):
 
         self.K_list[2][0] = self.K_dv
 
-        self.pbf.assemble_stiffness(t)
-        self.pba.assemble_stiffness(t)
-
-        self.K_list[0][0] = self.pbf.K_list[0][0]
-        self.K_list[0][1] = self.pbf.K_list[0][1]
-
         # derivative of fluid momentum w.r.t. ALE displacement
         self.K_vd.zeroEntries()
         fem.petsc.assemble_matrix(self.K_vd, self.jac_vd, self.pbf.bc.dbcs)
         self.K_vd.assemble()
         self.K_list[0][2] = self.K_vd
-
-        self.K_list[1][0] = self.pbf.K_list[1][0]
-        self.K_list[1][1] = self.pbf.K_list[1][1]
 
         # derivative of fluid continuity w.r.t. ALE displacement
         self.K_pd.zeroEntries()
@@ -461,8 +481,6 @@ class FluidmechanicsAleProblem(problem_base):
             fem.petsc.assemble_matrix(self.K_pd, self.jac_pd, [])
         self.K_pd.assemble()
         self.K_list[1][2] = self.K_pd
-
-        self.K_list[2][2] = self.pba.K_list[0][0]
 
     def evaluate_residual_dbc_coupling(self):
         if self.have_dbc_fluid_ale:

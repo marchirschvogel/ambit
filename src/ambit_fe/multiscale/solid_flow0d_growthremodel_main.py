@@ -21,7 +21,7 @@ from ..coupling.solid_flow0d_main import (
 from ..base import problem_base, solver_base
 
 
-class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem(problem_base):
+class SolidmechanicsFlow0DMultiscaleGrowthRemodelingProblem():
     def __init__(
         self,
         io_params,

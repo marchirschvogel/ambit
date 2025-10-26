@@ -35,16 +35,63 @@ class FluidmechanicsConstraintProblem(problem_base):
         io,
         mor_params={},
         alevar={},
+        pbf=None,
     ):
         self.pbase = pbase
+        self.pbf = pbf
 
         # pointer to communicator
         self.comm = self.pbase.comm
 
         self.problem_physics = "fluid_constraint"
 
-        self.coupling_params = coupling_params
+        # instantiate problem class
+        if pbf is None:
+            self.pbf = FluidmechanicsProblem(
+                pbase,
+                io_params,
+                time_params_fluid,
+                fem_params,
+                constitutive_models,
+                bc_dict,
+                time_curves,
+                io,
+                mor_params=mor_params,
+                alevar=alevar,
+            )
 
+        self.coupling_params = coupling_params
+        self.set_coupling_parameters()
+
+        self.pbrom = self.pbf  # ROM problem can only be fluid
+        self.pbrom_host = self
+
+        self.set_variational_forms()
+
+        self.numdof = self.pbf.numdof + self.LM.getSize()
+
+        self.localsolve = self.pbf.localsolve
+
+        self.sub_solve = False
+        self.print_subiter = False
+        self.have_condensed_variables = False
+
+        self.io = self.pbf.io
+
+        # number of fields involved
+        self.nfields = 3
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = (
+            [None] * self.nfields,
+            [None] * self.nfields,
+        )
+        self.K_list, self.K_list_rom = (
+            [[None] * self.nfields for _ in range(self.nfields)],
+            [[None] * self.nfields for _ in range(self.nfields)],
+        )
+
+    def set_coupling_parameters(self):
         self.num_coupling_surf = len(self.coupling_params["constraint_physics"])
         assert len(self.coupling_params["constraint_physics"]) == len(self.coupling_params["multiplier_physics"])
 
@@ -77,58 +124,10 @@ class FluidmechanicsConstraintProblem(problem_base):
             else:
                 self.on_subdomain.append(False)
 
-        # initialize problem instances (also sets the variational forms for the fluid problem)
-        self.pbf = FluidmechanicsProblem(
-            pbase,
-            io_params,
-            time_params_fluid,
-            fem_params,
-            constitutive_models,
-            bc_dict,
-            time_curves,
-            io,
-            mor_params=mor_params,
-            alevar=alevar,
-        )
-
-        self.pbrom = self.pbf  # ROM problem can only be fluid
-        self.pbrom_host = self
-
-        self.set_variational_forms()
-
-        self.numdof = self.pbf.numdof + self.LM.getSize()
-
-        self.localsolve = self.pbf.localsolve
-
-        self.sub_solve = False
-        self.print_subiter = False
-        self.have_condensed_variables = False
-
         if "regularization" in self.coupling_params:
             self.have_regularization = True
         else:
             self.have_regularization = False
-
-        self.io = self.pbf.io
-
-        # 3D fluxes
-        self.constr, self.constr_old = (
-            [[]] * self.num_coupling_surf,
-            [[]] * self.num_coupling_surf,
-        )
-
-        # number of fields involved
-        self.nfields = 3
-
-        # residual and matrix lists
-        self.r_list, self.r_list_rom = (
-            [None] * self.nfields,
-            [None] * self.nfields,
-        )
-        self.K_list, self.K_list_rom = (
-            [[None] * self.nfields for _ in range(self.nfields)],
-            [[None] * self.nfields for _ in range(self.nfields)],
-        )
 
     def get_problem_var_list(self):
         if self.pbf.num_dupl > 1:
@@ -443,6 +442,12 @@ class FluidmechanicsConstraintProblem(problem_base):
             # add to fluid Jacobian
             self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
 
+        # 3D fluxes
+        self.constr, self.constr_old = (
+            [[]] * self.num_coupling_surf,
+            [[]] * self.num_coupling_surf,
+        )
+
     def set_multiplier(self, var, p0Da):
         # set pressure functions
         for i in range(self.num_coupling_surf):
@@ -572,6 +577,9 @@ class FluidmechanicsConstraintProblem(problem_base):
                 self.kp_reg[n] = self.coupling_params["regularization"][n]["kp"]
 
     def assemble_residual(self, t, subsolver=None):
+        self.assemble_residual_coupling(t)
+
+    def assemble_residual_coupling(self, t, subsolver=None):
         # interpolate LM into function
         self.set_multiplier(self.LM, self.coupfuncs)
 
@@ -611,6 +619,9 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.K_list[1][0] = self.pbf.K_list[1][0]
         self.K_list[1][1] = self.pbf.K_list[1][1]  # non-zero if we have stabilization
 
+        self.assemble_stiffness_coupling(t)
+
+    def assemble_stiffness_coupling(self, t, subsolver=None):
         # offdiagonal s-v rows
         for i in range(len(self.row_ids)):
             with self.k_sv_vec[i].localForm() as r_local:
@@ -732,7 +743,9 @@ class FluidmechanicsConstraintProblem(problem_base):
 
     def evaluate_initial(self):
         self.pbf.evaluate_initial()
+        self.evaluate_initial_coupling()
 
+    def evaluate_initial_coupling(self):
         self.set_multiplier(self.LM_old, self.coupfuncs_old)
 
         for i in range(self.num_coupling_surf):
@@ -749,7 +762,9 @@ class FluidmechanicsConstraintProblem(problem_base):
 
     def evaluate_pre_solve(self, t, N, dt):
         self.pbf.evaluate_pre_solve(t, N, dt)
+        self.evaluate_pre_solve_coupling(t, N, dt)
 
+    def evaluate_pre_solve_coupling(self, t, N, dt):
         for n in range(self.num_coupling_surf):
             self.constr_val[n] = self.pbf.ti.timecurves(
                 self.coupling_params["constraint_physics"][n]["prescribed_curve"]
@@ -787,7 +802,9 @@ class FluidmechanicsConstraintProblem(problem_base):
     def update(self):
         # update time step
         self.pbf.update()
+        self.update_coupling()
 
+    def update_coupling(self):
         # update old pressures on solid
         self.LM_old.axpby(1.0, 0.0, self.LM)
         self.set_multiplier(self.LM_old, self.coupfuncs_old)
@@ -796,7 +813,9 @@ class FluidmechanicsConstraintProblem(problem_base):
 
     def print_to_screen(self):
         self.pbf.print_to_screen()
+        self.print_to_screen_coupling()
 
+    def print_to_screen_coupling(self):
         LM_sq = allgather_vec(self.LM, self.comm)
         for i in range(self.num_coupling_surf):
             utilities.print_status("LM" + str(i + 1) + " = %.4e" % (LM_sq[i]), self.comm)
@@ -825,7 +844,9 @@ class FluidmechanicsConstraintProblem(problem_base):
 
     def destroy(self):
         self.pbf.destroy()
+        self.destroy_coupling()
 
+    def destroy_coupling(self):
         for i in range(len(self.col_ids)):
             self.k_vs_vec[i].destroy()
         for i in range(len(self.row_ids)):

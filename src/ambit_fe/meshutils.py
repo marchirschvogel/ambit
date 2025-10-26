@@ -73,7 +73,7 @@ def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=Fa
         )
     else:
         nodes_g = nodes_loc
-
+    #print(Vspace.dofmap.index_map_bs,nodes_g)
     if mapper is not None:
         nodes_g = nodes_g[mapper]
 
