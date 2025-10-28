@@ -429,9 +429,9 @@ class schur3x3full(block_precond):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors (references!)
-        x.getSubVector(self.iset[self.sids[0]], subvec=self.x1)
-        x.getSubVector(self.iset[self.sids[1]], subvec=self.x2)
-        x.getSubVector(self.iset[self.sids[2]], subvec=self.x3)
+        x.getSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
+        x.getSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
+        x.getSubVector(self.iset[self.sids[2]], subvec=self.x_[2])
 
         tss = time.time()
 
@@ -478,14 +478,14 @@ class schur3x3full(block_precond):
         self.ksp_fields[self.sids[0]].solve(self.z_[0], self.y_[0])
 
         # restore/clean up
-        x.restoreSubVector(self.iset[0], subvec=self.x_[0])
-        x.restoreSubVector(self.iset[1], subvec=self.x_[1])
-        x.restoreSubVector(self.iset[2], subvec=self.x_[2])
+        x.restoreSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
+        x.restoreSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
+        x.restoreSubVector(self.iset[self.sids[2]], subvec=self.x_[2])
 
         # set into y vector
-        y.setValues(self.iset[0], self.y_[0].array)
-        y.setValues(self.iset[1], self.y_[1].array)
-        y.setValues(self.iset[2], self.y_[2].array)
+        y.setValues(self.iset[self.sids[0]], self.y_[0].array)
+        y.setValues(self.iset[self.sids[1]], self.y_[1].array)
+        y.setValues(self.iset[self.sids[2]], self.y_[2].array)
 
         y.assemble()
 
