@@ -318,6 +318,15 @@ if category == "fsi_flow0d" or category == "all":
             "test_fsi_flow0d_p1p1_stab_artseg_neumann_neumann.py",
         ]
     )
+    errs["test_fsi_flow0d_p1p1_stab_tank2d_neumann_dirichlet_bgs3x3-s3x3 2"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "2",
+            "python3",
+            "test_fsi_flow0d_p1p1_stab_tank2d_neumann_dirichlet_bgs3x3-s3x3.py",
+        ]
+    )
 
 if category == "fluid_flow0d" or category == "all":
     errs["test_fluid_flow0d_monolagr_taylorhood_cylinder 1"] = subprocess.call(

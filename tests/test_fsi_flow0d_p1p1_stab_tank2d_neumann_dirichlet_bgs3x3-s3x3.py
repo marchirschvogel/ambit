@@ -45,8 +45,19 @@ def test_main():
                       }
 
     SOLVER_PARAMS = {
-        "solve_type": "direct",
-        "direct_solver": "mumps",
+        "solve_type": "iterative",
+        "iterative_solver": "gmres",
+        "block_precond": "bgs3x3-s3x3",
+        "precond_fields": [
+            {"prec": "amg"},  # solid-u
+            {"prec": "amg"},  # fluid-v
+            {"prec": "amg"},  # fluid-p
+            {"prec": "direct"},  # LM 3D-0D
+            {"prec": "amg"},  # ale-d
+        ],
+        "tol_lin_rel": 1e-7,
+        "lin_norm_type": "unpreconditioned",
+        "print_liniter_every": 50,
         "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
         "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
         "subsolver_params": {"tol_res": 1.0e-8, "tol_inc": 1.0e-8},

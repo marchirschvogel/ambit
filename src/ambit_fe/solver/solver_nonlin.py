@@ -497,31 +497,20 @@ class solver_nonlinear:
                         )
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == "bgssym-s3x3":
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgssym_schur3x3(
-                            self.iset[npr],
-                            self.precond_fields[npr],
-                            self.pb[npr].io,
-                            self.solver_params,
-                            self.comm,
-                        )
-                        self.ksp[npr].getPC().setPythonContext(bj)
-
-                    elif self.block_precond[npr] == "bgssym-s3x3full":
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgssym_schur3x3full(
-                            self.iset[npr],
-                            self.precond_fields[npr],
-                            self.pb[npr].io,
-                            self.solver_params,
-                            self.comm,
-                        )
-                        self.ksp[npr].getPC().setPythonContext(bj)
-
                     elif self.block_precond[npr] == "bgs3x3-s2x2":
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.bgs3x3_schur2x2(
+                            self.iset[npr],
+                            self.precond_fields[npr],
+                            self.pb[npr].io,
+                            self.solver_params,
+                            self.comm,
+                        )
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond[npr] == "bgs3x3-s3x3":
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.bgs3x3_schur3x3(
                             self.iset[npr],
                             self.precond_fields[npr],
                             self.pb[npr].io,
