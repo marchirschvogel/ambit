@@ -255,44 +255,80 @@ class sol_utils:
                     v1, v2, v3, v4 = "u", "v", "p", "d"
                     numres = 4
         elif ptype == "fsi_flow0d":
-            if self.solver.pb[0].incompressible_2field:
-                eq1, eq2, eq3, eq4, eq5, eq6, eq7 = (
-                    "solid momentum",
-                    "solid incompressibility",
-                    "fluid momentum",
-                    "fluid continuity",
-                    "FSI coup constraint",
-                    "3D0D coup constraint",
-                    "ALE momentum",
-                )
-                v1, v2, v3, v4, v5, v6, v7 = (
-                    "u",
-                    "p",
-                    "v",
-                    "p",
-                    "lm",
-                    "LM",
-                    "d",
-                )  # using greek symbol print (λ, Λ) is not supported everywhere...
-                numres = 7
+            if self.solver.pb[0].fsi_system == "neumann_neumann":
+                if self.solver.pb[0].incompressible_2field:
+                    eq1, eq2, eq3, eq4, eq5, eq6, eq7 = (
+                        "solid momentum",
+                        "solid incompressibility",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "FSI coup constraint",
+                        "3D0D coup constraint",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5, v6, v7 = (
+                        "u",
+                        "p",
+                        "v",
+                        "p",
+                        "lm",
+                        "LM",
+                        "d",
+                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
+                    numres = 7
+                else:
+                    eq1, eq2, eq3, eq4, eq5, eq6 = (
+                        "solid momentum",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "FSI coup constraint",
+                        "3D0D coup constraint",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5, v6 = (
+                        "u",
+                        "v",
+                        "p",
+                        "lm",
+                        "LM",
+                        "d",
+                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
+                    numres = 6
             else:
-                eq1, eq2, eq3, eq4, eq5, eq6 = (
-                    "solid momentum",
-                    "fluid momentum",
-                    "fluid continuity",
-                    "FSI coup constraint",
-                    "3D0D coup constraint",
-                    "ALE momentum",
-                )
-                v1, v2, v3, v4, v5, v6 = (
-                    "u",
-                    "v",
-                    "p",
-                    "lm",
-                    "LM",
-                    "d",
-                )  # using greek symbol print (λ, Λ) is not supported everywhere...
-                numres = 6
+                if self.solver.pb[0].incompressible_2field:
+                    eq1, eq2, eq3, eq4, eq5, eq6 = (
+                        "solid momentum",
+                        "solid incompressibility",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "3D0D coup constraint",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5, v6 = (
+                        "u",
+                        "p",
+                        "v",
+                        "p",
+                        "LM",
+                        "d",
+                    )  # using greek symbol print (Λ) is not supported everywhere...
+                    numres = 6
+                else:
+                    eq1, eq2, eq3, eq4, eq5 = (
+                        "solid momentum",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "3D0D coup constraint",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5 = (
+                        "u",
+                        "v",
+                        "p",
+                        "LM",
+                        "d",
+                    )  # using greek symbol print (Λ) is not supported everywhere...
+                    numres = 5
         else:
             raise NameError("Unknown problem type!")
 

@@ -63,6 +63,7 @@ class FluidmechanicsAleProblem(problem_base):
         ) = False, False, False, False
 
         # instantiate problem classes
+        # ALE
         if pba is None:
             self.pba = AleProblem(
                 pbase,
@@ -82,6 +83,7 @@ class FluidmechanicsAleProblem(problem_base):
                 "w": self.pba.wel,
                 "w_old": self.pba.w_old,
             }
+        # fluid
         if pbf is None:
             self.pbf = FluidmechanicsProblem(
                 pbase,

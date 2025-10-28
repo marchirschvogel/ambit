@@ -621,6 +621,11 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         self.assemble_stiffness_coupling(t)
 
+        self.K_list[0][2] = self.K_vs
+        self.K_list[2][0] = self.K_sv
+        if self.have_regularization:
+            self.K_list[2][2] = self.K_lm
+
     def assemble_stiffness_coupling(self, t, subsolver=None):
         # offdiagonal s-v rows
         for i in range(len(self.row_ids)):
@@ -675,17 +680,12 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         self.K_sv.assemble()
 
-        self.K_list[0][2] = self.K_vs
-        self.K_list[2][0] = self.K_sv
-
         if self.have_regularization:
             ls, le = self.K_lm.getOwnershipRange()
             for i in range(ls, le):
                 self.K_lm[i, i] = (1.0 - self.alpha_reg[i]) * self.kp_reg[i]
 
             self.K_lm.assemble()
-
-            self.K_list[2][2] = self.K_lm
 
     def get_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable

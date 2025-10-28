@@ -93,8 +93,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.sub_solve = True
         self.io = self.pbf.io
 
-
-
         # number of fields involved
         if not self.condense_0d:
             self.nfields = 3
@@ -581,6 +579,10 @@ class FluidmechanicsFlow0DProblem(problem_base):
                 self.pbf.K_vv.axpy(-1.0, self.Kvs_Klminv_Ksv)
             if self.condense_0d_model == "diag":
                 self.pbf.K_vv.axpy(-1.0, self.Kvs_Klminvmat_Ksv)
+        else:
+            self.K_list[2][2] = self.K_lm
+            self.K_list[0][2] = self.K_vs
+            self.K_list[2][0] = self.K_sv
 
     def assemble_stiffness_coupling(self, t, subsolver=None):
         # Lagrange multipliers (pressures) to be passed to 0D model
@@ -648,9 +650,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pb0.s.axpby(1.0, 0.0, self.pb0.s_tmp)
 
         self.K_lm.assemble()
-
-        if not self.condense_0d:
-            self.K_list[2][2] = self.K_lm
 
         del LM_sq
 
@@ -753,10 +752,6 @@ class FluidmechanicsFlow0DProblem(problem_base):
                     self.Kvs_Klminvmat.matMult(self.K_sv, result=self.Kvs_Klminvmat_Ksv)
                 else:
                     raise RuntimeError("You should not be here!")
-
-        else:
-            self.K_list[0][2] = self.K_vs
-            self.K_list[2][0] = self.K_sv
 
     def get_index_sets(self, isoptions={}):
         if self.condense_0d:
@@ -934,7 +929,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
     def write_output(self, N, t, mesh=False):
         self.pbf.write_output(N, t)
         self.pb0.write_output(N, t)
+        self.write_output_coupling(N, t)
 
+    def write_output_coupling(self, N, t):
         if self.pbf.io.write_results_every > 0 and N % self.pbf.io.write_results_every == 0:
             if np.isclose(t, self.pbase.dt):
                 mode = "wt"

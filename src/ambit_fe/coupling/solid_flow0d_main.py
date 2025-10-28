@@ -940,7 +940,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
     def write_output(self, N, t, mesh=False):
         self.pbs.write_output(N, t)
         self.pb0.write_output(N, t)
+        self.write_output_coupling(N, t)
 
+    def write_output_coupling(self, N, t):
         if self.coupling_type == "monolithic_lagrange":
             if self.pbs.io.write_results_every > 0 and N % self.pbs.io.write_results_every == 0:
                 if np.isclose(t, self.pbase.dt):

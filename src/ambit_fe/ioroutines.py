@@ -1577,8 +1577,9 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         IO_ale.readcheckpoint(self, pb.pba, N_rest)
 
         vecs_to_read = {}
-        vecs_to_read[pb.lm] = "LM"
-        vecs_to_read[pb.lm_old] = "LM_old"
+        if pb.fsi_system == "neumann_neumann":
+            vecs_to_read[pb.lm] = "LM"
+            vecs_to_read[pb.lm_old] = "LM_old"
 
         for key in vecs_to_read:
             if self.restart_io_type == "petscvector":
@@ -1631,8 +1632,9 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             IO_ale.writecheckpoint(self, pb.pba, N)
 
             vecs_to_write = {}
-            vecs_to_write[pb.lm] = "LM"
-            vecs_to_write[pb.lm_old] = "LM_old"
+            if pb.fsi_system == "neumann_neumann":
+                vecs_to_write[pb.lm] = "LM"
+                vecs_to_write[pb.lm_old] = "LM_old"
 
             for key in vecs_to_write:
                 if self.restart_io_type == "petscvector":

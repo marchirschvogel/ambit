@@ -47,8 +47,9 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",
-        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8],
-        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
+        "subsolver_params": {"tol_res": 1.0e-8, "tol_inc": 1.0e-8},
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
@@ -62,7 +63,7 @@ def test_main():
 
     MODEL_PARAMS_FLOW0D = {
         "modeltype": "2elwindkessel",
-        "parameters": {"C": 0.0, "R": 1e6, "p_ref": 0.0},
+        "parameters": {"C": 0.5, "R": 0.1, "p_ref": 0.3},
     }  # resistive blockage
 
     FEM_PARAMS_SOLID = {
@@ -163,10 +164,10 @@ def test_main():
     )
 
     # correct results
-    v_corr[0] = 5.1486298166103154E+01  # x
-    v_corr[1] = -2.5581846922962019E+00  # y
+    v_corr[0] = 4.1839135102549456E+01  # x
+    v_corr[1] = -6.6026593068959327E-01  # y
 
-    p_corr[0] = -1.4217666576649382E-03
+    p_corr[0] = 8.4040223479527665E-02
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,
