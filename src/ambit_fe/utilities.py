@@ -130,6 +130,12 @@ def print_problem(ptype, sname, comm, numdof):
             comm,
         )
 
+    elif ptype == "cahnhilliard":
+        print_status(
+            "############################## Welcome to Cahn-Hilliard ###############################",
+            comm,
+        )
+
     else:
         raise NameError("Unknown problem type!")
 

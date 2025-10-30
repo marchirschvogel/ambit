@@ -10,8 +10,10 @@ import ambit_fe
 import sys
 import numpy as np
 from pathlib import Path
+import pytest
 
 
+@pytest.mark.ale
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
@@ -70,7 +72,7 @@ def test_main():
         time_curves=time_curves(),
     )
 
-    # solve time-dependent problem
+    # solve problem
     problem.solve_problem()
 
     # --- results check
@@ -97,7 +99,8 @@ def test_main():
     )
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
-    return success
+    if not success:
+        raise RuntimeError("Test failed!")
 
 
 if __name__ == "__main__":

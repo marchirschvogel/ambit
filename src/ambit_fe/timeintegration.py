@@ -881,6 +881,71 @@ class timeintegration_ale(timeintegration_fluid):
         d_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
+class timeintegration_cahnhilliard(timeintegration_fluid):
+    def __init__(
+        self,
+        time_params,
+        dt,
+        Nmax,
+        time_curves=None,
+        t_init=0.0,
+        dim=3,
+        comm=None,
+    ):
+        timeintegration.__init__(
+            self,
+            time_params,
+            dt,
+            Nmax,
+            time_curves=time_curves,
+            t_init=t_init,
+            dim=dim,
+            comm=comm,
+        )
+
+        assert self.timint == "ost"
+        self.theta_ost = time_params["theta_ost"]
+
+    def update_timestep(self, phi, phi_old, phidot, phidot_old, mu, mu_old):
+        # update old fields with new quantities
+        self.update_fields(phi, phi_old, phidot, phidot_old, mu, mu_old)
+        # update old time-dependent load curves
+        self.update_time_funcs_old()
+
+    def set_phidot(self, phi, phi_old, phidot_old):
+        return self.update_dvar(phi, phi_old, phidot_old, self.dt, uflform=True)
+
+    def update_fields(self, phi, phi_old, phidot, phidot_old, mu, mu_old):
+        # use update functions using vector arguments
+        self.update_dvar(
+            phi.x.petsc_vec,
+            phi_old.x.petsc_vec,
+            phidot_old.x.petsc_vec,
+            self.dt,
+            dvarout=phidot.x.petsc_vec,
+            uflform=False,
+        )
+
+        self.update_phidot_phi_mu_old(phidot_old, phi_old, mu_old, phidot, phi, mu)
+
+    def update_phidot_phi_mu_old(self, phidot_old, phi_old, mu_old, phidot, phi, mu):
+        # update time derivative of phase field: phidot_old <- phidot
+        phidot_old.x.petsc_vec.axpby(1.0, 0.0, phidot.x.petsc_vec)
+        phidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # update phase field: phi_old <- phi
+        phi_old.x.petsc_vec.axpby(1.0, 0.0, phi.x.petsc_vec)
+        phi_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # update potential: mu_old <- mu
+        mu_old.x.petsc_vec.axpby(1.0, 0.0, mu.x.petsc_vec)
+        mu_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+    def timefactors(self):
+        timefac_m, timefac = self.theta_ost, self.theta_ost
+
+        return timefac_m, timefac
+
 # Electrophysiology time integration class
 class timeintegration_electrophysiology(timeintegration_fluid):
     def __init__(
@@ -930,7 +995,7 @@ class timeintegration_electrophysiology(timeintegration_fluid):
 
         self.update_phidot_phi_old(phidot_old, phi_old, phidot, phi)
 
-    def update_phidot_phi_old(self, w_old, d_old, w, d):
+    def update_phidot_phi_old(self, phidot_old, phi_old, phidot, phi):
         # update time derivative of potential: phidot_old <- phidot
         phidot_old.x.petsc_vec.axpby(1.0, 0.0, phidot.x.petsc_vec)
         phidot_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)

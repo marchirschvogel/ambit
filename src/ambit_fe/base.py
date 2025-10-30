@@ -134,7 +134,7 @@ class solver_base:
         else:
             self.pb.rom = None
 
-        # read restart information if requested
+        # read restart information if requested - TODO: Maybe move to evaluate_system_initial, but needs thorough checking!
         self.pb.read_restart(self.pb.pbase.simname, self.pb.pbase.restart_step)
         # update simname
         if self.pb.pbase.restart_step > 0:

@@ -504,6 +504,28 @@ class Ambit:
             )
             self.ms = fluid_ale_constraint_main.FluidmechanicsAleConstraintSolver(self.mp, solver_params)
 
+        elif problem_type == "cahnhilliard":
+            from .cahnhilliard import cahnhilliard_main
+
+            io = ioroutines.IO_cahnhilliard(io_params, fem_params, self.entity_maps, self.comm)
+            io.readin_mesh()
+            io.set_mesh_fields(io.mesh)
+
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
+
+            self.mp = cahnhilliard_main.CahnHilliardProblem(
+                pbase,
+                io_params,
+                time_params,
+                fem_params,
+                constitutive_params,
+                boundary_conditions,
+                time_curves,
+                io,
+                mor_params=mor_params,
+            )
+            self.ms = cahnhilliard_main.CahnHilliardSolver(self.mp, solver_params)
+
         elif problem_type == "electrophysiology":
             raise RuntimeError("Electrophysiology not yet fully implemented!")
 

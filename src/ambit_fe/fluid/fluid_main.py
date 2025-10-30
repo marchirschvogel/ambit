@@ -372,7 +372,7 @@ class FluidmechanicsProblem(problem_base):
                 self.p_old_[0],
             )  # pointer to first p's...
 
-        # if we want to initialize the pressure (domain wise) with a scalar value
+        # if we want to initialize the pressure (domain wise) with a scalar value - TODO: Move to evaluate initial!!!
         if self.pbase.restart_step == 0:
             if bool(self.initial_fluid_pressure):
                 for m in range(self.num_dupl):

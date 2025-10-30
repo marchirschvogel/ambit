@@ -23,7 +23,7 @@ def test_main():
         "mesh_domain": basepath + "/input/ushape_2d.msh",
         "mesh_boundary": None,
         "mesh_dim": 2,  # apparently needed for gmsh read-in...
-        "meshfile_format": "gmsh",
+        "mesh_format": "gmsh",
         "write_results_every": 1,
         "output_path": basepath + "/tmp/",
         "results_to_write": ["displacement"],

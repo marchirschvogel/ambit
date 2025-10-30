@@ -71,7 +71,7 @@ def main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/channel-flag_domain.xdmf",
         "mesh_boundary": basepath + "/input/channel-flag_boundary.xdmf",
-        "meshfile_type": "HDF5",
+        "mesh_encoding": "HDF5",
         "results_to_write": [
             ["displacement", "velocity"],
             [

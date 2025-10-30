@@ -29,7 +29,7 @@ class IO:
         self.output_path = io_params["output_path"]
         self.output_path_pre = io_params.get("output_path_pre", self.output_path)
 
-        self.mesh_domain = io_params["mesh_domain"]
+        self.mesh_domain = io_params.get("mesh_domain", {"type":"unit_square", "celltype":"triangle", "meshsize":[10,10,10]}) # unit_square, unit_cube, rectangle
         self.mesh_boundary = io_params.get("mesh_boundary", None)
         self.mesh_edge = io_params.get("mesh_edge", None)
         self.mesh_point = io_params.get("mesh_point", None)
@@ -38,8 +38,8 @@ class IO:
 
         self.fiber_data = io_params.get("fiber_data", [])
 
-        self.meshfile_format = io_params.get("meshfile_format", "XDMF")
-        self.meshfile_type = io_params.get("meshfile_type", "ASCII")
+        self.mesh_format = io_params.get("mesh_format", "XDMF")
+        self.mesh_encoding = io_params.get("mesh_encoding", "ASCII")
         self.mesh_dim = io_params.get("mesh_dim", 3)  # actually only needed/used for gmsh read-in
         self.gridname_domain = io_params.get("gridname_domain", "Grid")
         self.gridname_boundary = io_params.get("gridname_boundary", "Grid")
@@ -62,33 +62,59 @@ class IO:
         self.comm = comm
 
     def readin_mesh(self):
-        if self.meshfile_type == "ASCII":
+        if self.mesh_encoding == "ASCII":
             encoding = io.XDMFFile.Encoding.ASCII
-        elif self.meshfile_type == "HDF5":
+        elif self.mesh_encoding == "HDF5":
             encoding = io.XDMFFile.Encoding.HDF5
         else:
-            raise NameError("Choose either ASCII or HDF5 as meshfile_type, or add a different encoding!")
+            raise NameError("Choose either ASCII or HDF5 as mesh_encoding, or add a different encoding!")
 
         self.mt_d, self.mt_b1, self.mt_b2, self.mt_b3 = None, None, None, None
 
-        if self.meshfile_format == "XDMF":
-            # read in xdmf mesh - domain
-            with io.XDMFFile(self.comm, self.mesh_domain, "r", encoding=encoding) as infile:
-                self.mesh = infile.read_mesh(name=self.gridname_domain)
-                try:
-                    self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
-                except:
-                    self.mt_d = None
+        if type(self.mesh_domain) is not dict:
+            if self.mesh_format == "XDMF":
+                # read in xdmf mesh - domain
+                with io.XDMFFile(self.comm, self.mesh_domain, "r", encoding=encoding) as infile:
+                    self.mesh = infile.read_mesh(name=self.gridname_domain)
+                    try:
+                        self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
+                    except:
+                        self.mt_d = None
 
-        elif self.meshfile_format == "gmsh":
-            # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
-            self.mesh, self.mt_d, self.mt_b1 = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)[
-                0:3
-            ]
-            assert self.mesh.geometry.dim == self.mesh_dim  # would be weird if this wasn't true...
+            elif self.mesh_format == "gmsh":
+                # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
+                self.mesh, self.mt_d, self.mt_b1 = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)[
+                    0:3
+                ]
+                assert self.mesh.geometry.dim == self.mesh_dim  # would be weird if this wasn't true...
 
+            else:
+                raise NameError("Choose either XDMF or gmsh as mesh_format!")
         else:
-            raise NameError("Choose either XDMF or gmsh as meshfile_format!")
+            celltp = self.mesh_domain.get("celltype", "triangle")
+            # 'hexahedron', 'prism', 'pyramid', 'quadrilateral', 'tetrahedron', 'triangle', 'interval', 'point'
+            if celltp=="hexahedron":
+                ctp = mesh.CellType.hexahedron
+            elif celltp=="quadrilateral":
+                ctp = mesh.CellType.quadrilateral
+            elif celltp=="tetrahedron":
+                ctp = mesh.CellType.tetrahedron
+            elif celltp=="triangle":
+                ctp = mesh.CellType.triangle
+            elif celltp=="pyramid":
+                ctp = mesh.CellType.pyramid
+            elif celltp=="prism":
+                ctp = mesh.CellType.prism
+            else:
+                raise ValueError("Unknown celltype!")
+            msze = self.mesh_domain.get("meshsize", [10,10,10])
+            # dolfinx internal mesh generation - only allow unit_square and unit_cube (rectangle and box could be made available, too...)
+            if self.mesh_domain["type"]=="unit_square":
+                self.mesh = mesh.create_unit_square(self.comm, msze[0], msze[1], ctp)
+            elif self.mesh_domain["type"]=="unit_cube":
+                self.mesh = mesh.create_unit_cube(self.comm, msze[0], msze[1], msze[2], ctp)
+            else:
+                raise ValueError("Unknown type for mesh.")
 
         # seems that we need this (at least when locating dofs for DBCs on volume portions)
         self.mesh.topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim)
@@ -243,8 +269,8 @@ class IO:
             xroot = xtree.getroot()
 
             # typically, at third entry 0 we have the nodes, at 1 the cells, and at 2 the (first) field
-            name_geo = "".join(xroot[0][0][0][0].text.rsplit("/", 1)[-1].split())
-            name_fld = "".join(xroot[0][0][2][0].text.rsplit("/", 1)[-1].split())
+            name_geo = "".join(xroot[0][0][0][0].text.rsplit(":/", 1)[-1].split())
+            name_fld = "".join(xroot[0][0][2][0].text.rsplit(":/", 1)[-1].split())
 
             datafile_h5 = datafile.replace(".xdmf", ".h5")
 
@@ -266,7 +292,8 @@ class IO:
                 data.resize((len(data_), 1))
 
             # the reordered and local nodes on a rank
-            nodes_reordered = f.function_space.tabulate_dof_coordinates()
+            nodes_reordered = f.function_space.tabulate_dof_coordinates()[:,:f.function_space.mesh.geometry.dim]
+
             # create index mapping according to distance tree
             tree = cKDTree(nodes0)
             _, mapping_indices = tree.query(nodes_reordered, distance_upper_bound=tol)
@@ -288,9 +315,8 @@ class IO:
         # order data
         data_mapped = data[mapping_indices[: int(sz_loc / bs)]]
 
-        # flatten mapped data - TODO: Check again in case of 2D meshes!
-        # data_mapped_flat = data_mapped[:,:f.function_space.mesh.topology.dim].flatten()
-        data_mapped_flat = data_mapped[:].flatten()
+        # flatten mapped data
+        data_mapped_flat = data_mapped[:,:f.function_space.mesh.geometry.dim].flatten()
 
         # now set values
         f.x.petsc_vec.array[:] = data_mapped_flat[:]
@@ -1391,7 +1417,7 @@ class IO_fluid(IO):
 
 class IO_ale(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        self.results_pre = ["fibers", "counters"]
+        self.results_pre = ["counters"]
 
         if self.indicate_results_by == "time":
             indicator = t
@@ -1509,6 +1535,161 @@ class IO_ale(IO):
         vecs_to_write[pb.d] = "d"
         vecs_to_write[pb.d_old] = "d_old"
         vecs_to_write[pb.w_old] = "w_old"
+
+        for key in vecs_to_write:
+            if self.restart_io_type == "petscvector":
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_write[key]
+                    + "_"
+                    + str(N)
+                    + "_"
+                    + str(self.comm.size)
+                    + "proc.dat",
+                    "w",
+                    self.comm,
+                )
+                key.x.petsc_vec.view(viewer)
+                viewer.destroy()
+            elif self.restart_io_type == "plaintext":  # only working for nodal fields!
+                self.writefunction(
+                    key,
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_write[key]
+                    + "_"
+                    + str(N),
+                    filetype='plaintext',
+                )
+            else:
+                raise ValueError("Unknown restart_io_type!")
+
+class IO_cahnhilliard(IO):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
+        self.results_pre = ["counters"]
+
+        if self.indicate_results_by == "time":
+            indicator = t
+        elif self.indicate_results_by == "step":
+            indicator = N
+        elif self.indicate_results_by == "step0":
+            if self.write_results_every > 0:
+                indicator = int(N / self.write_results_every) - 1
+            else:
+                indicator = 0
+        else:
+            raise ValueError("Unknown indicate_results_by optin. Choose 'time' or 'step'.")
+
+        if writemesh:
+            if self.write_results_every > 0:
+                for res in pb.results_to_write:
+                    if res not in self.results_pre:
+                        outfile = io.XDMFFile(
+                            self.comm,
+                            self.output_path
+                            + "/results_"
+                            + pb.pbase.simname
+                            + "_"
+                            + pb.problem_physics
+                            + "_"
+                            + res
+                            + ".xdmf",
+                            "w",
+                        )
+                        outfile.write_mesh(self.mesh)
+                        self.resultsfiles[res] = outfile
+
+            return
+
+        else:
+            # write results every write_results_every steps
+            if self.write_results_every > 0 and N % self.write_results_every == 0:
+                # save solution to XDMF format
+                for res in pb.results_to_write:
+                    if res == "phasefield":
+                        phi_out = fem.Function(pb.V_out_scalar, name=pb.phi.name)
+                        phi_out.interpolate(pb.phi)
+                        self.resultsfiles[res].write_function(phi_out, indicator)
+                    elif res == "potential":
+                        mu_out = fem.Function(pb.V_out_scalar, name=pb.mu.name)
+                        mu_out.interpolate(pb.mu)
+                        self.resultsfiles[res].write_function(mu_out, indicator)
+                    elif res == "counters":
+                        # iteration counters, written by base class
+                        pass
+                    else:
+                        raise NameError("Unknown output to write for ALE mechanics!")
+
+    def readcheckpoint(self, pb, N_rest):
+        vecs_to_read = {}
+        vecs_to_read[pb.phi] = "phi"
+        vecs_to_read[pb.phi_old] = "phi_old"
+        vecs_to_read[pb.phidot_old] = "phidot_old"
+        vecs_to_read[pb.mu] = "mu"
+        vecs_to_read[pb.mu_old] = "mu_old"
+
+        for key in vecs_to_read:
+            if self.restart_io_type == "petscvector":
+                # It seems that a vector written by n processors is loaded wrongly by m != n processors! So, we have to restart with the same number of cores,
+                # and for safety reasons, include the number of cores in the dat file name
+                viewer = PETSc.Viewer().createMPIIO(
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_read[key]
+                    + "_"
+                    + str(N_rest)
+                    + "_"
+                    + str(self.comm.size)
+                    + "proc.dat",
+                    "r",
+                    self.comm,
+                )
+                key.x.petsc_vec.load(viewer)
+                key.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
+                viewer.destroy()
+            elif self.restart_io_type == "plaintext":  # only working for nodal fields!
+                self.readfunction(
+                    key,
+                    self.output_path
+                    + "/checkpoint_"
+                    + pb.pbase.simname
+                    + "_"
+                    + pb.problem_physics
+                    + "_"
+                    + vecs_to_read[key]
+                    + "_"
+                    + str(N_rest)
+                    + ".txt",
+                    filetype='plaintext',
+                )
+            else:
+                raise ValueError("Unknown restart_io_type!")
+
+    def writecheckpoint(self, pb, N):
+        vecs_to_write = {}
+        vecs_to_write[pb.phi] = "phi"
+        vecs_to_write[pb.phi_old] = "phi_old"
+        vecs_to_write[pb.phidot_old] = "phidot_old"
+        vecs_to_write[pb.mu] = "mu"
+        vecs_to_write[pb.mu_old] = "mu_old"
 
         for key in vecs_to_write:
             if self.restart_io_type == "petscvector":

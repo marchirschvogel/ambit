@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="https://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="mesh" GridType="Uniform">
+      <Geometry GeometryType="XY">
+        <DataItem Dimensions="9409 2" Format="HDF">phi_init.h5:/Mesh/mesh/geometry</DataItem>
+      </Geometry>
+      <Topology TopologyType="Triangle" NumberOfElements="18432" NodesPerElement="3">
+        <DataItem Dimensions="18432 3" NumberType="Int" Format="HDF">phi_init.h5:/Mesh/mesh/topology</DataItem>
+      </Topology>
+      <Attribute Name="f" AttributeType="Scalar" Center="Node">
+        <DataItem Dimensions="9409 1" Format="HDF">phi_init.h5:/Function/f/0</DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

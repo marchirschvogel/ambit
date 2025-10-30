@@ -25,7 +25,7 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/tank2d_domain.xdmf",
         "mesh_boundary": basepath + "/input/tank2d_boundary.xdmf",
-        "meshfile_type": "ASCII",  # HDF5, ASCII
+        "mesh_encoding": "ASCII",  # HDF5, ASCII
         "results_to_write": [
             ["displacement"],
             [["velocity", "pressure"],

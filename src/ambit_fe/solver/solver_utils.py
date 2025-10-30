@@ -329,6 +329,13 @@ class sol_utils:
                         "d",
                     )  # using greek symbol print (Λ) is not supported everywhere...
                     numres = 5
+        elif ptype == "cahnhilliard":
+            eq1, eq2 = (
+                "phase field",
+                "potential",
+            )
+            v1, v2 = "phi", "mu"
+            numres = 2
         else:
             raise NameError("Unknown problem type!")
 

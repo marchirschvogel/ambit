@@ -16,13 +16,14 @@ def check_params_io(params):
         "gridname_domain",
         "gridname_boundary",
         "indicate_results_by",
+        "initial_fields",
         "mesh_dim",
         "mesh_domain",
         "mesh_boundary",
         "mesh_edge",
         "mesh_point",
-        "meshfile_format",
-        "meshfile_type",
+        "mesh_encoding",
+        "mesh_format",
         "ode_parallel",
         "order_fib_input",
         "output_midpoint_0D",
@@ -153,6 +154,14 @@ def check_params_fem_ale(params):
             raise RuntimeError("Unknown parameter found in ALE FEM params: " + k)
 
 
+def check_params_fem_cahnhilliard(params):
+    valid_params = ["order_phi", "order_mu", "quad_degree"]
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in Cahn-Hilliard FEM params: " + k)
+
+
 def check_params_fem_electrophysiology(params):
     valid_params = ["order_phi", "quad_degree"]
 
@@ -193,6 +202,18 @@ def check_params_time_fluid(params):
     for k in params.keys():
         if k not in valid_params:
             raise RuntimeError("Unknown parameter found in fluid time params: " + k)
+
+
+def check_params_time_cahnhilliard(params):
+    valid_params = [
+        "eval_nonlin_terms",
+        "timint",
+        "theta_ost",
+    ]
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in Cahn-Hilliard time params: " + k)
 
 
 def check_params_time_electrophysiology(params):

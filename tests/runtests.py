@@ -684,6 +684,11 @@ if category == "ale" or category == "all":
     errs["test_ale_linelast 1"] = subprocess.call(["mpiexec", "-n", "1", "python3", "test_ale_linelast.py"])
     errs["test_ale_linelast 2"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_ale_linelast.py"])
 
+if category == "cahnhilliard" or category == "all":
+    errs["test_cahnhilliard_square 1"] = subprocess.call(["mpiexec", "-n", "1", "python3", "test_cahnhilliard_square.py"])
+    errs["test_cahnhilliard_square 2"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_cahnhilliard_square.py"])
+    errs["test_cahnhilliard_square 2 restart"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_cahnhilliard_square.py", str(3)])
+
 
 err = 0
 for e in range(len(errs)):
