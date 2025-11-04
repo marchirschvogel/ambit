@@ -881,7 +881,7 @@ class timeintegration_ale(timeintegration_fluid):
         d_old.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-class timeintegration_cahnhilliard(timeintegration_fluid):
+class timeintegration_phasefield(timeintegration_fluid):
     def __init__(
         self,
         time_params,

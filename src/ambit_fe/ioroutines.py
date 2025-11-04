@@ -1575,7 +1575,7 @@ class IO_ale(IO):
             else:
                 raise ValueError("Unknown restart_io_type!")
 
-class IO_cahnhilliard(IO):
+class IO_phasefield(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
         self.results_pre = ["counters"]
 
@@ -1617,7 +1617,7 @@ class IO_cahnhilliard(IO):
             if self.write_results_every > 0 and N % self.write_results_every == 0:
                 # save solution to XDMF format
                 for res in pb.results_to_write:
-                    if res == "phasefield":
+                    if res == "phase":
                         phi_out = fem.Function(pb.V_out_scalar, name=pb.phi.name)
                         phi_out.interpolate(pb.phi)
                         self.resultsfiles[res].write_function(phi_out, indicator)

@@ -9,10 +9,10 @@
 import ufl
 from petsc4py import PETSc
 
-from .cahnhilliard_material import materiallaw
+from .phasefield_material import materiallaw
 
 """
-Cahn-Hilliard constitutive class
+Phase field/Cahn-Hilliard constitutive class
 """
 
 

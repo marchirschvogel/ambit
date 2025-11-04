@@ -130,9 +130,9 @@ def print_problem(ptype, sname, comm, numdof):
             comm,
         )
 
-    elif ptype == "cahnhilliard":
+    elif ptype == "phasefield":
         print_status(
-            "############################## Welcome to Cahn-Hilliard ###############################",
+            "####################### Welcome to phase field / Cahn-Hilliard ########################",
             comm,
         )
 

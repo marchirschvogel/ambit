@@ -154,12 +154,12 @@ def check_params_fem_ale(params):
             raise RuntimeError("Unknown parameter found in ALE FEM params: " + k)
 
 
-def check_params_fem_cahnhilliard(params):
+def check_params_fem_phasefield(params):
     valid_params = ["order_phi", "order_mu", "quad_degree"]
 
     for k in params.keys():
         if k not in valid_params:
-            raise RuntimeError("Unknown parameter found in Cahn-Hilliard FEM params: " + k)
+            raise RuntimeError("Unknown parameter found in phase field / Cahn-Hilliard FEM params: " + k)
 
 
 def check_params_fem_electrophysiology(params):
@@ -204,7 +204,7 @@ def check_params_time_fluid(params):
             raise RuntimeError("Unknown parameter found in fluid time params: " + k)
 
 
-def check_params_time_cahnhilliard(params):
+def check_params_time_phasefield(params):
     valid_params = [
         "eval_nonlin_terms",
         "timint",
@@ -213,7 +213,7 @@ def check_params_time_cahnhilliard(params):
 
     for k in params.keys():
         if k not in valid_params:
-            raise RuntimeError("Unknown parameter found in Cahn-Hilliard time params: " + k)
+            raise RuntimeError("Unknown parameter found in phase field / Cahn-Hilliard time params: " + k)
 
 
 def check_params_time_electrophysiology(params):

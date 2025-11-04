@@ -329,7 +329,7 @@ class sol_utils:
                         "d",
                     )  # using greek symbol print (Λ) is not supported everywhere...
                     numres = 5
-        elif ptype == "cahnhilliard":
+        elif ptype == "phasefield":
             eq1, eq2 = (
                 "phase field",
                 "potential",

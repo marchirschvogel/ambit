@@ -13,8 +13,8 @@ import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
 
-from . import cahnhilliard_constitutive
-from . import cahnhilliard_variationalform
+from . import phasefield_constitutive
+from . import phasefield_variationalform
 from .. import timeintegration
 from .. import utilities
 from ..solver import solver_nonlin
@@ -24,10 +24,10 @@ from .. import ioparams
 from ..base import problem_base, solver_base
 
 """
-Cahn-Hilliard problem
+Phase field problem class: Cahn-Hilliard
 """
 
-class CahnHilliardProblem(problem_base):
+class PhasefieldProblem(problem_base):
     def __init__(
         self,
         pbase,
@@ -45,10 +45,10 @@ class CahnHilliardProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_fem_cahnhilliard(fem_params)
-        ioparams.check_params_time_cahnhilliard(time_params)
+        ioparams.check_params_fem_phasefield(fem_params)
+        ioparams.check_params_time_phasefield(time_params)
 
-        self.problem_physics = "cahnhilliard"
+        self.problem_physics = "phasefield"
 
         self.results_to_write = io_params["results_to_write"]
 
@@ -131,8 +131,8 @@ class CahnHilliardProblem(problem_base):
 
         self.numdof = self.phi.x.petsc_vec.getSize() + self.mu.x.petsc_vec.getSize()
 
-        # initialize Cahn-Hilliard time-integration class
-        self.ti = timeintegration.timeintegration_cahnhilliard(
+        # initialize phase field time-integration class
+        self.ti = timeintegration.timeintegration_phasefield(
             time_params,
             self.pbase.dt,
             self.pbase.numstep,
@@ -148,11 +148,11 @@ class CahnHilliardProblem(problem_base):
         self.ma = []
         for n in range(self.num_domains):
             self.ma.append(
-                cahnhilliard_constitutive.constitutive(self.constitutive_models["MAT" + str(n + 1)])
+                phasefield_constitutive.constitutive(self.constitutive_models["MAT" + str(n + 1)])
             )
 
-        # initialize Cahn-Hilliard variational form class
-        self.vf = cahnhilliard_variationalform.variationalform(self.var_phi, self.var_mu)
+        # initialize pahse field (Cahn-Hilliard) variational form class
+        self.vf = phasefield_variationalform.variationalform(self.var_phi, self.var_mu)
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
@@ -199,9 +199,9 @@ class CahnHilliardProblem(problem_base):
         self.phase_field_old = ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
-            self.phase_field += self.vf.phase_field(self.phidot_expr, self.mu, self.m[n], self.dx(M))
-            self.phase_field_old += self.vf.phase_field(self.phidot_old, self.mu_old, self.m[n], self.dx(M))
-            self.potential += self.vf.potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.lam[n], self.dx(M))
+            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.mu, self.m[n], self.dx(M))
+            self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.mu_old, self.m[n], self.dx(M))
+            self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.lam[n], self.dx(M))
 
         self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old # at n+\theta
         self.weakform_mu = self.potential # always at n+1
@@ -212,7 +212,7 @@ class CahnHilliardProblem(problem_base):
 
     def set_problem_residual_jacobian_forms(self):
         ts = time.time()
-        utilities.print_status("FEM form compilation for Cahn-Hilliard...", self.comm, e=" ")
+        utilities.print_status("FEM form compilation for phase field (Cahn-Hilliard)...", self.comm, e=" ")
 
         self.res_phi = fem.form(self.weakform_phi, entity_maps=self.io.entity_maps)
         self.res_mu = fem.form(self.weakform_mu, entity_maps=self.io.entity_maps)
@@ -348,7 +348,7 @@ class CahnHilliardProblem(problem_base):
         self.io.close_output_files(self)
 
 
-class CahnHilliardSolver(solver_base):
+class PhasefieldSolver(solver_base):
     def initialize_nonlinear_solver(self):
         self.pb.set_problem_residual_jacobian_forms()
         self.pb.set_problem_vector_matrix_structures()

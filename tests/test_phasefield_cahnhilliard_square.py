@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.cahnhilliard
+@pytest.mark.phasefield
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
@@ -23,14 +23,14 @@ def test_main():
         restart_step = 0
 
     IO_PARAMS = {
-        "problem_type": "cahnhilliard",
+        "problem_type": "phasefield",
         "mesh_domain": {"type":"unit_square", "celltype":"triangle", "meshsize":[96,96]},
         "write_results_every": 1,
         "write_restart_every": 3,
         "restart_step": restart_step,
         "restart_io_type": "petscvector",
         "output_path": basepath + "/tmp/",
-        "results_to_write": ["phasefield", "potential"],
+        "results_to_write": ["phase", "potential"],
         "simname": "cahnhilliard_square",
         "initial_fields":[basepath + "/input/phi_init.xdmf",None], # phi is initialized with random field from dolfinx testcase
     }

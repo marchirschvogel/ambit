@@ -23,8 +23,8 @@ class variationalform():
         self.var_phi = var_phi  # phase field test functions
         self.var_mu = var_mu  # potential test functions
 
-    def phase_field(self, phidot, mu, M, ddomain):
+    def cahnhilliard_phase(self, phidot, mu, M, ddomain):
         return ( ufl.inner(phidot, self.var_phi) + M*ufl.inner(ufl.grad(mu), ufl.grad(self.var_phi)) ) * ddomain
 
-    def potential(self, phi, mu, driv_force, lmbda, ddomain):
+    def cahnhilliard_potential(self, phi, mu, driv_force, lmbda, ddomain):
         return ( ufl.inner(mu, self.var_mu) - ufl.inner(driv_force, self.var_mu) - lmbda*ufl.inner(ufl.grad(phi), ufl.grad(self.var_mu)) ) * ddomain
