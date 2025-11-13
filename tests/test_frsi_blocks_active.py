@@ -79,7 +79,7 @@ def test_main():
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
-    COUPLING_PARAMS = {"coupling_fluid_ale": [{"surface_ids": [2, 8, 14], "type": "strong_dirichlet"}]}
+    COUPLING_PARAMS = {"coupling_fluid_ale": [{"surface_ids": [2, 8, 14]}]}
 
     MATERIALS_FLUID = {
         "MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},

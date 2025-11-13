@@ -30,9 +30,9 @@ class IO:
         self.output_path_pre = io_params.get("output_path_pre", self.output_path)
 
         self.mesh_domain = io_params.get("mesh_domain", {"type":"unit_square", "celltype":"triangle", "meshsize":[10,10,10]}) # unit_square, unit_cube, rectangle
-        self.mesh_boundary = io_params.get("mesh_boundary", None)
-        self.mesh_edge = io_params.get("mesh_edge", None)
-        self.mesh_point = io_params.get("mesh_point", None)
+        self.mesh_boundary = io_params.get("mesh_boundary", None) # in 3D: surfaces, in 2D: edges
+        self.mesh_subboundary = io_params.get("mesh_subboundary", None) # in 3D: edges, in 2D: points
+        self.mesh_subsubboundary = io_params.get("mesh_subsubboundary", None) # in 3D: points, in 2D: -
 
         self.quad_degree = fem_params["quad_degree"]
 
@@ -69,7 +69,7 @@ class IO:
         else:
             raise NameError("Choose either ASCII or HDF5 as mesh_encoding, or add a different encoding!")
 
-        self.mt_d, self.mt_b1, self.mt_b2, self.mt_b3 = None, None, None, None
+        self.mt_d, self.mt_b, self.mt_sb, self.mt_ssb = None, None, None, None
 
         if type(self.mesh_domain) is not dict:
             if self.mesh_format == "XDMF":
@@ -83,7 +83,7 @@ class IO:
 
             elif self.mesh_format == "gmsh":
                 # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
-                self.mesh, self.mt_d, self.mt_b1 = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)[
+                self.mesh, self.mt_d, self.mt_b = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)[
                     0:3
                 ]
                 assert self.mesh.geometry.dim == self.mesh_dim  # would be weird if this wasn't true...
@@ -121,38 +121,38 @@ class IO:
 
         # read in xdmf mesh - boundary
 
-        # here, we define b1 BCs as BCs associated to a topology one dimension less than the problem (most common),
-        # b2 BCs two dimensions less, and b3 BCs three dimensions less
-        # for a 3D problem - b1: surface BCs, b2: edge BCs, b3: point BCs
-        # for a 2D problem - b1: edge BCs, b2: point BCs
+        # here, mt_b refers to BCs as BCs associated to a topology one dimension less than the problem (most common),
+        # mt_sb BCs two dimensions less, and mt_ssb BCs three dimensions less
+        # for a 3D problem - b: surface BCs, sb: edge BCs, ssb: point BCs
+        # for a 2D problem - b: edge BCs, sb: point BCs
         # 1D problems not supported (currently...)
 
         if self.mesh.topology.dim == 3:
             if self.mesh_boundary is not None:
                 self.mesh.topology.create_connectivity(2, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, "r", encoding=encoding) as infile:
-                    self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+                    self.mt_b = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
 
-            if self.mesh_edge is not None:
+            if self.mesh_subboundary is not None:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
-                with io.XDMFFile(self.comm, self.mesh_edge, "r", encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+                with io.XDMFFile(self.comm, self.mesh_subboundary, "r", encoding=encoding) as infile:
+                    self.mt_sb = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
 
-            if self.mesh_point is not None:
+            if self.mesh_subsubboundary is not None:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
-                with io.XDMFFile(self.comm, self.mesh_point, "r", encoding=encoding) as infile:
-                    self.mt_b3 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+                with io.XDMFFile(self.comm, self.mesh_subsubboundary, "r", encoding=encoding) as infile:
+                    self.mt_ssb = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
 
         elif self.mesh.topology.dim == 2:
             if self.mesh_boundary is not None:
                 self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
                 with io.XDMFFile(self.comm, self.mesh_boundary, "r", encoding=encoding) as infile:
-                    self.mt_b1 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+                    self.mt_b = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
 
-            if self.mesh_point is not None:
+            if self.mesh_subboundary is not None:
                 self.mesh.topology.create_connectivity(0, self.mesh.topology.dim)
-                with io.XDMFFile(self.comm, self.mesh_point, "r", encoding=encoding) as infile:
-                    self.mt_b2 = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
+                with io.XDMFFile(self.comm, self.mesh_subboundary, "r", encoding=encoding) as infile:
+                    self.mt_sb = infile.read_meshtags(self.mesh, name=self.gridname_boundary)
 
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
@@ -1898,43 +1898,43 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             "domain",
         )
 
-        self.mt_b1_solid = meshutils.meshtags_parent_to_child(
-            self.mt_b1,
+        self.mt_b_solid = meshutils.meshtags_parent_to_child(
+            self.mt_b,
             self.msh_emap_solid[0],
             self.msh_emap_solid[1],
             self.mesh,
             "boundary",
         )
-        self.mt_b1_fluid = meshutils.meshtags_parent_to_child(
-            self.mt_b1,
+        self.mt_b_fluid = meshutils.meshtags_parent_to_child(
+            self.mt_b,
             self.msh_emap_fluid[0],
             self.msh_emap_fluid[1],
             self.mesh,
             "boundary",
         )
 
-        if self.mt_b2 is not None:
-            self.mt_b2_solid = meshutils.meshtags_parent_to_child(
-                self.mt_b2,
+        if self.mt_sb is not None:
+            self.mt_sb_solid = meshutils.meshtags_parent_to_child(
+                self.mt_sb,
                 self.msh_emap_solid[0],
                 self.msh_emap_solid[1],
                 self.mesh,
                 "boundary_2",
             )
-            self.mt_b2_fluid = meshutils.meshtags_parent_to_child(
-                self.mt_b2,
+            self.mt_sb_fluid = meshutils.meshtags_parent_to_child(
+                self.mt_sb,
                 self.msh_emap_fluid[0],
                 self.msh_emap_fluid[1],
                 self.mesh,
                 "boundary_2",
             )
         else:
-            self.mt_b2_solid, self.mt_b2_fluid = None, None
+            self.mt_sb_solid, self.mt_sb_fluid = None, None
 
         self.msh_emap_lm = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim - 1,
-            self.mt_b1.indices[np.isin(self.mt_b1.values, self.surf_interf)],
+            self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)],
         )[0:2]
 
         self.msh_emap_lm[0].topology.create_connectivity(self.mesh.topology.dim - 1, self.mesh.topology.dim - 1)
@@ -1980,7 +1980,7 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             self.dx = lambda a: self.dx_  # so that we can call dx(1) even without domain meshtags
 
         # now the boundary ones
-        interface_facets = self.mt_b1.indices[np.isin(self.mt_b1.values, self.surf_interf)]
+        interface_facets = self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)]
         solid_cells = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
 
         integration_entities = []
@@ -1989,11 +1989,11 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         # using the format (cell, local_facet_index)
 
         # first, get all mesh tags
-        meshtags = list(set(self.mt_b1.values))
+        meshtags = list(set(self.mt_b.values))
         # loop over mesh tags
         for mt in meshtags:
             other_integration_entities = []
-            other_indices = self.mt_b1.indices[self.mt_b1.values == mt]
+            other_indices = self.mt_b.indices[self.mt_b.values == mt]
             meshutils.get_integration_entities(
                 msh,
                 other_indices,

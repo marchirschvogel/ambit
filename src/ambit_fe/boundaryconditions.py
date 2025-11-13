@@ -61,11 +61,11 @@ class boundary_cond:
             codim = d.get("codimension", self.dim - 1)
 
             if codim == self.dim - 1:
-                mdata = self.io.mt_b1
+                mdata = self.io.mt_b
             if codim == self.dim - 2:
-                mdata = self.io.mt_b2
+                mdata = self.io.mt_sb
             if codim == self.dim - 3:
-                mdata = self.io.mt_b3
+                mdata = self.io.mt_ssb
 
             func = fem.Function(self.V_field)
 
@@ -967,21 +967,21 @@ class boundary_cond_fluid(boundary_cond):
                     if not on_subdomain:
                         db_ = ufl.ds(
                             domain=self.io.mesh_master,
-                            subdomain_data=self.io.mt_b1_master,
+                            subdomain_data=self.io.mt_b_master,
                             subdomain_id=r["id"][i],
                             metadata={"quadrature_degree": self.quad_degree},
                         )
                     else:
                         db_ = ufl.ds(
                             domain=self.io.submshes_emap[dom_u][0],
-                            subdomain_data=self.io.sub_mt_b1[dom_u],
+                            subdomain_data=self.io.sub_mt_b[dom_u],
                             subdomain_id=r["id"][i],
                             metadata={"quadrature_degree": self.quad_degree},
                         )
                 else:
                     db_ = ufl.dS(
                         domain=self.io.mesh_master,
-                        subdomain_data=self.io.mt_b1_master,
+                        subdomain_data=self.io.mt_b_master,
                         subdomain_id=r["id"][i],
                         metadata={"quadrature_degree": self.quad_degree},
                     )
@@ -1028,13 +1028,13 @@ class boundary_cond_fluid(boundary_cond):
             for i in range(len(r["id"])):
                 db_u_ = ufl.ds(
                     domain=self.io.submshes_emap[dom_u][0],
-                    subdomain_data=self.io.sub_mt_b1[dom_u],
+                    subdomain_data=self.io.sub_mt_b[dom_u],
                     subdomain_id=r["id"][i],
                     metadata={"quadrature_degree": self.quad_degree},
                 )
                 db_d_ = ufl.ds(
                     domain=self.io.submshes_emap[dom_d][0],
-                    subdomain_data=self.io.sub_mt_b1[dom_d],
+                    subdomain_data=self.io.sub_mt_b[dom_d],
                     subdomain_id=r["id"][i],
                     metadata={"quadrature_degree": self.quad_degree},
                 )

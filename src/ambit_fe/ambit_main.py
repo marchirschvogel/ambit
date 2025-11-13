@@ -326,10 +326,10 @@ class Ambit:
             ios = ioroutines.IO_solid(io_params, fem_params[0], self.entity_maps, self.comm)
             ios.mesh = io.msh_emap_solid[0]
 
-            ios.mt_d, ios.mt_b1, ios.mt_b2 = (
+            ios.mt_d, ios.mt_b, ios.mt_sb = (
                 io.mt_d_solid,
-                io.mt_b1_solid,
-                io.mt_b2_solid,
+                io.mt_b_solid,
+                io.mt_sb_solid,
             )  # for DBCs, we need to access the tags on the submesh
             ios.dx, ios.bmeasures = io.dx, io.bmeasures
 
@@ -339,10 +339,10 @@ class Ambit:
             iof = ioroutines.IO_fluid_ale(io_params, fem_params[0], self.entity_maps, self.comm)
             iof.mesh = io.msh_emap_fluid[0]
 
-            iof.mt_d, iof.mt_b1, iof.mt_b2 = (
+            iof.mt_d, iof.mt_b, iof.mt_sb = (
                 io.mt_d_fluid,
-                io.mt_b1_fluid,
-                io.mt_b2_fluid,
+                io.mt_b_fluid,
+                io.mt_sb_fluid,
             )  # for DBCs, we need to access the tags on the submesh
             iof.dx, iof.bmeasures = io.dx, io.bmeasures
 
@@ -383,10 +383,10 @@ class Ambit:
             ios = ioroutines.IO_solid(io_params, fem_params[0], self.entity_maps, self.comm)
             ios.mesh = io.msh_emap_solid[0]
 
-            ios.mt_d, ios.mt_b1, ios.mt_b2 = (
+            ios.mt_d, ios.mt_b, ios.mt_sb = (
                 io.mt_d_solid,
-                io.mt_b1_solid,
-                io.mt_b2_solid,
+                io.mt_b_solid,
+                io.mt_sb_solid,
             )  # for DBCs, we need to access the tags on the submesh
             ios.dx, ios.bmeasures = io.dx, io.bmeasures
 
@@ -396,10 +396,10 @@ class Ambit:
             iof = ioroutines.IO_fluid_ale(io_params, fem_params[0], self.entity_maps, self.comm)
             iof.mesh = io.msh_emap_fluid[0]
 
-            iof.mt_d, iof.mt_b1, iof.mt_b2 = (
+            iof.mt_d, iof.mt_b, iof.mt_sb = (
                 io.mt_d_fluid,
-                io.mt_b1_fluid,
-                io.mt_b2_fluid,
+                io.mt_b_fluid,
+                io.mt_sb_fluid,
             )  # for DBCs, we need to access the tags on the submesh
             iof.dx, iof.bmeasures = io.dx, io.bmeasures
 

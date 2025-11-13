@@ -33,7 +33,7 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-tet-lin_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-tet-lin_boundary.xdmf",
-        "mesh_edge": basepath + "/input/artseg-fsi-tet-lin_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet"
+        "mesh_subboundary": basepath + "/input/artseg-fsi-tet-lin_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet"
         "results_to_write": [
             ["displacement", "velocity"],
             [
@@ -84,7 +84,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": [{"surface_ids": [1], "type": "strong_dirichlet"}],
+        "coupling_fluid_ale": [{"surface_ids": [1]}],
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
         "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!

@@ -65,7 +65,7 @@ class AleProblem(problem_base):
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
         else:
             self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b1, self.io.mt_b2]
+                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb]
             )
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)

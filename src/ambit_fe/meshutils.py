@@ -19,7 +19,7 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
         fnode_indices_local = fem.locate_dofs_topological(
             Vspace,
             io.mesh.topology.dim - 1,
-            io.mt_b1.indices[io.mt_b1.values == surflist[i]],
+            io.mt_b.indices[io.mt_b.values == surflist[i]],
         )
 
         # get global indices
@@ -54,11 +54,11 @@ def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=Fa
     if codim == io.mesh.topology.dim:
         mdata = io.mt_d
     if codim == io.mesh.topology.dim - 1:
-        mdata = io.mt_b1
+        mdata = io.mt_b
     if codim == io.mesh.topology.dim - 2:
-        mdata = io.mt_b2
+        mdata = io.mt_sb
     if codim == io.mesh.topology.dim - 3:
-        mdata = io.mt_b3
+        mdata = io.mt_ssb
 
     nodes_loc = fem.locate_dofs_topological(
         Vspace,
@@ -73,7 +73,7 @@ def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=Fa
         )
     else:
         nodes_g = nodes_loc
-    #print(Vspace.dofmap.index_map_bs,nodes_g)
+
     if mapper is not None:
         nodes_g = nodes_g[mapper]
 

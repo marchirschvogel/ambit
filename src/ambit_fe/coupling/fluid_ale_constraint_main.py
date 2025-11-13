@@ -392,7 +392,6 @@ class FluidmechanicsAleConstraintProblem(problem_base):
 
     def write_output_pre(self):
         self.pbfa.write_output_pre()
-        self.pbfc.write_output_pre()
 
     def evaluate_pre_solve(self, t, N, dt):
         self.pbfa.evaluate_pre_solve(t, N, dt)
@@ -400,11 +399,9 @@ class FluidmechanicsAleConstraintProblem(problem_base):
 
     def evaluate_post_solve(self, t, N):
         self.pbfa.evaluate_post_solve(t, N)
-        self.pbfc.evaluate_post_solve(t, N)
 
     def set_output_state(self, N):
         self.pbfa.set_output_state(N)
-        self.pbfc.set_output_state(N)
 
     def write_output(self, N, t, mesh=False):
         self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine

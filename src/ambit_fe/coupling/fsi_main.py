@@ -342,7 +342,7 @@ class FSIProblem(problem_base):
                     fem.locate_dofs_topological(
                         self.pbs.V_u,
                         self.pbs.io.mesh.topology.dim - 1,
-                        self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)],
+                        self.pbs.io.mt_b.indices[np.isin(self.pbs.io.mt_b.values, self.io.surf_interf)],
                     ),
                 )
             )
@@ -818,10 +818,10 @@ class FSIProblem(problem_base):
         dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
         dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
 
-        fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b1.indices[np.isin(self.pbs.io.mt_b1.values, self.io.surf_interf)])
+        fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b.indices[np.isin(self.pbs.io.mt_b.values, self.io.surf_interf)])
         fnodes_s_glb = np.array(self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnodes_s_loc, dtype=np.int32)), dtype=np.int32)
 
-        fnodes_f_loc = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b1.indices[np.isin(self.pbf.io.mt_b1.values, self.io.surf_interf)])
+        fnodes_f_loc = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b.indices[np.isin(self.pbf.io.mt_b.values, self.io.surf_interf)])
         fnodes_f_glb = np.array(self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(fnodes_f_loc, dtype=np.int32)), dtype=np.int32)
 
         # fluid to solid mapping

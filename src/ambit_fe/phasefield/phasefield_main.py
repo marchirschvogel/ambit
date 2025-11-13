@@ -39,6 +39,7 @@ class PhasefieldProblem(problem_base):
         time_curves,
         io,
         mor_params={},
+        alevar={},
     ):
         self.pbase = pbase
 
@@ -66,7 +67,7 @@ class PhasefieldProblem(problem_base):
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
         else:
             self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b1, self.io.mt_b2]
+                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb]
             )
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
@@ -81,14 +82,13 @@ class PhasefieldProblem(problem_base):
             self.lam.append(self.constitutive_models["MAT" + str(n + 1)]["params_cahnhilliard"]["lambda"])
             self.m.append(self.constitutive_models["MAT" + str(n + 1)]["params_cahnhilliard"]["M"])
 
+        # TODO: Move to base class...
         self.localsolve = False  # no idea what might have to be solved locally...
         self.prestress_initial = False  # guess prestressing in ALE is somehow senseless...
         self.incompressible_2field = False  # always False here...
         self.have_condensed_variables = False  # always False here...
-
         self.sub_solve = False
         self.print_subiter = False
-
         self.dim = self.io.mesh.geometry.dim
 
         # model order reduction
@@ -99,6 +99,9 @@ class PhasefieldProblem(problem_base):
             self.have_rom = False
         # will be set by solver base class
         self.rom = None
+
+        # ALE problem variables
+        self.alevar = alevar
 
         # function spaces for phi and mu
         self.V_phi = fem.functionspace(
@@ -152,7 +155,17 @@ class PhasefieldProblem(problem_base):
             )
 
         # initialize pahse field (Cahn-Hilliard) variational form class
-        self.vf = phasefield_variationalform.variationalform(self.var_phi, self.var_mu)
+        if not bool(self.alevar):
+            self.vf = phasefield_variationalform.variationalform(self.var_phi, self.var_mu)
+        else:
+            # mid-point representation of ALE velocity
+            self.alevar["w_mid"] = self.timefac * self.alevar["w"] + (1.0 - self.timefac) * self.alevar["w_old"]
+            # mid-point representation of ALE deformation gradient - linear in ALE displacement, hence we can combine it like this
+            self.alevar["Fale_mid"] = (
+                self.timefac * self.alevar["Fale"] + (1.0 - self.timefac) * self.alevar["Fale_old"]
+            )
+
+            self.vf = phasefield_variationalform.variationalform_ale(self.var_phi, self.var_mu)
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(

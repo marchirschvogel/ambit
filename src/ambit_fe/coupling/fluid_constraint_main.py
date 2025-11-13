@@ -193,7 +193,7 @@ class FluidmechanicsConstraintProblem(problem_base):
                     dom_u = self.coupling_params["constraint_physics"][n]["domain"]
                     ds_vq = ufl.ds(
                         domain=self.pbf.io.submshes_emap[dom_u][0],
-                        subdomain_data=self.pbf.io.sub_mt_b1[dom_u],
+                        subdomain_data=self.pbf.io.sub_mt_b[dom_u],
                         subdomain_id=self.surface_vq_ids[n][i],
                         metadata={"quadrature_degree": self.pbf.io.quad_degree},
                     )

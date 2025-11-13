@@ -86,7 +86,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 6}
 
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": [{"surface_ids": [1, 6], "type": "strong_dirichlet"}],
+        "coupling_fluid_ale": [{"surface_ids": [1, 6]}],
         "coupling_strategy": "partitioned",
     }
 

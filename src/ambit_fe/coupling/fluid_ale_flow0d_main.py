@@ -404,19 +404,19 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
 
     def write_output_pre(self):
         self.pbfa.write_output_pre()
-        self.pba.write_output_pre()
+        self.pbf0.write_output_pre()
 
     def evaluate_pre_solve(self, t, N, dt):
         self.pbfa.evaluate_pre_solve(t, N, dt)
-        self.pba.evaluate_pre_solve(t, N, dt)
+        self.pbf0.evaluate_pre_solve(t, N, dt)
 
     def evaluate_post_solve(self, t, N):
         self.pbfa.evaluate_post_solve(t, N)
-        self.pba.evaluate_post_solve(t, N)
+        self.pb0.evaluate_post_solve(t, N)
 
     def set_output_state(self, N):
         self.pbfa.set_output_state(N)
-        self.pba.set_output_state(N)
+        self.pb0.set_output_state(N)
 
     def write_output(self, N, t, mesh=False):
         self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine

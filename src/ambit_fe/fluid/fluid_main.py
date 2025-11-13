@@ -49,7 +49,6 @@ class FluidmechanicsProblem(problem_base):
         time_curves,
         iof,
         mor_params={},
-        comm=None,
         alevar={},
     ):
         self.pbase = pbase
@@ -76,7 +75,7 @@ class FluidmechanicsProblem(problem_base):
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
         else:
             self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b1, self.io.mt_b2]
+                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb]
             )
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
@@ -110,10 +109,12 @@ class FluidmechanicsProblem(problem_base):
         if self.prestress_from_file:
             self.prestress_initial, self.prestress_initial_only = False, False
 
+        # TODO: Move to base class?!
         self.localsolve = False  # no idea what might have to be solved locally...
-
         self.sub_solve = False
         self.print_subiter = False
+        self.have_condensed_variables = False
+        self.dim = self.io.mesh.geometry.dim
 
         (
             self.have_flux_monitor,
@@ -121,9 +122,6 @@ class FluidmechanicsProblem(problem_base):
             self.have_robin_valve,
             self.have_robin_valve_implicit,
         ) = False, False, False, False
-        self.have_condensed_variables = False
-
-        self.dim = self.io.mesh.geometry.dim
 
         # dicts for evaluations of surface integrals (fluxes, pressures), to be queried by other models
         self.qv_, self.pu_, self.pd_, self.dp_ = {}, {}, {}, {}
@@ -188,7 +186,7 @@ class FluidmechanicsProblem(problem_base):
                 self.io.submshes_emap,
                 inv_emap,
                 self.io.sub_mt_d,
-                self.io.sub_mt_b1,
+                self.io.sub_mt_b,
             ) = (
                 {},
                 {},
@@ -229,8 +227,8 @@ class FluidmechanicsProblem(problem_base):
                     self.io.mesh,
                     "domain",
                 )
-                self.io.sub_mt_b1[m + 1] = meshutils.meshtags_parent_to_child(
-                    self.io.mt_b1,
+                self.io.sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
+                    self.io.mt_b,
                     self.io.submshes_emap[m + 1][0],
                     self.io.submshes_emap[m + 1][1],
                     self.io.mesh,
@@ -239,7 +237,7 @@ class FluidmechanicsProblem(problem_base):
 
                 dxp, bmeasuresp = self.io.create_integration_measures(
                     self.io.submshes_emap[m + 1][0],
-                    [self.io.sub_mt_d[m + 1], self.io.sub_mt_b1[m + 1], None],
+                    [self.io.sub_mt_d[m + 1], self.io.sub_mt_b[m + 1], None],
                 )
                 # self.dx_p.append(dxp)
                 # self.bmeasures_p.append(bmeasuresp)
@@ -2137,7 +2135,7 @@ class FluidmechanicsProblem(problem_base):
             self.k_vz_subvec, self.k_zp_subvec, sze_vz, sze_zp = [], [], [], []
 
             for n in range(self.num_valve_coupling_surf):
-                # nds_p_local = fem.locate_dofs_topological(self.V_p, self.io.mesh.topology.dim-1, self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.surface_vlv_ids[n])])
+                # nds_p_local = fem.locate_dofs_topological(self.V_p, self.io.mesh.topology.dim-1, self.io.mt_b.indices[np.isin(self.io.mt_b.values, self.surface_vlv_ids[n])])
                 # nds_p = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)), dtype=np.int32 )
                 # self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.V_p.dofmap.index_map_bs, nds_p, comm=self.comm)
                 #
@@ -2148,7 +2146,7 @@ class FluidmechanicsProblem(problem_base):
                 nds_v_local = fem.locate_dofs_topological(
                     self.V_v,
                     self.io.mesh.topology.dim - 1,
-                    self.io.mt_b1.indices[np.isin(self.io.mt_b1.values, self.surface_vlv_ids[n])],
+                    self.io.mt_b.indices[np.isin(self.io.mt_b.values, self.surface_vlv_ids[n])],
                 )
                 nds_v = np.array(
                     self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_v_local, dtype=np.int32)),
@@ -2273,7 +2271,7 @@ class FluidmechanicsProblem(problem_base):
                 )  # already multiplied by time-integration factor
                 self.k_vz_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 # set zeros at DBC entries
-                fem.set_bc(self.k_vz_vec[i], self.bc.dbcs, x0=self.v.x.petsc_vec)  # , scale=0.0)
+                fem.set_bc(self.k_vz_vec[i], self.bc.dbcs, x0=self.v.x.petsc_vec, alpha=0.0)
 
             # set columns
             for i in range(len(self.col_ids)):

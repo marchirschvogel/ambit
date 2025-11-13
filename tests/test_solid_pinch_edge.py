@@ -29,7 +29,7 @@ def test_main():
         "problem_type": "solid",
         "mesh_domain": basepath + "/input/block_domain.xdmf",
         "mesh_boundary": basepath + "/input/block_boundary.xdmf",
-        "mesh_edge": basepath + "/input/block_edge.xdmf",
+        "mesh_subboundary": basepath + "/input/block_edge.xdmf",
         "write_results_every": 1,
         "write_restart_every": -1,
         "indicate_results_by": "step",
