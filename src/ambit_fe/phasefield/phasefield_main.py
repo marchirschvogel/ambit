@@ -238,12 +238,16 @@ class PhasefieldProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def set_problem_vector_matrix_structures(self):
-        self.r_phi = fem.petsc.create_vector(self.res_phi)
-        self.r_mu = fem.petsc.create_vector(self.res_mu)
-        self.K_phiphi = fem.petsc.create_matrix(self.jac_phiphi)
-        self.K_phimu = fem.petsc.create_matrix(self.jac_phimu)
-        self.K_mumu = fem.petsc.create_matrix(self.jac_mumu)
-        self.K_muphi = fem.petsc.create_matrix(self.jac_muphi)
+        self.r_phi = fem.petsc.assemble_vector(self.res_phi)
+        self.r_mu = fem.petsc.assemble_vector(self.res_mu)
+        self.K_phiphi = fem.petsc.assemble_matrix(self.jac_phiphi)
+        self.K_phiphi.assemble()
+        self.K_phimu = fem.petsc.assemble_matrix(self.jac_phimu)
+        self.K_phimu.assemble()
+        self.K_mumu = fem.petsc.assemble_matrix(self.jac_mumu)
+        self.K_mumu.assemble()
+        self.K_muphi = fem.petsc.assemble_matrix(self.jac_muphi)
+        self.K_muphi.assemble()
 
         self.r_list[0] = self.r_phi
         self.r_list[1] = self.r_mu

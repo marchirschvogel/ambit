@@ -232,7 +232,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
 
             self.k_sd_vec = []
             for i in range(len(self.pbf0.row_ids)):
-                self.k_sd_vec.append(fem.petsc.create_vector(self.dcqd_form[i]))
+                self.k_sd_vec.append(fem.petsc.assemble_vector(self.dcqd_form[i]))
 
             self.dofs_coupling_vq = [[]] * self.pbf0.num_coupling_surf
 

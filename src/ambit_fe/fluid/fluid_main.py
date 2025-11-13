@@ -2077,25 +2077,32 @@ class FluidmechanicsProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def set_problem_vector_matrix_structures(self, rom=None):
-        self.r_v = fem.petsc.create_vector(self.res_v)
+        self.r_v = fem.petsc.assemble_vector(self.res_v)
         if self.num_dupl > 1:
-            self.r_p = fem.petsc.create_vector(self.res_p, kind=PETSc.Vec.Type.MPI)
+            self.r_p = fem.petsc.assemble_vector(self.res_p, kind=PETSc.Vec.Type.MPI)
         else:
-            self.r_p = fem.petsc.create_vector(self.res_p)
+            self.r_p = fem.petsc.assemble_vector(self.res_p)
 
-        self.K_vv = fem.petsc.create_matrix(self.jac_vv)
+        self.K_vv = fem.petsc.assemble_matrix(self.jac_vv)
+        self.K_vv.assemble()
         if self.num_dupl > 1:
-            self.K_vp = fem.petsc.create_matrix(self.jac_vp_)
-            self.K_pv = fem.petsc.create_matrix(self.jac_pv_)
+            self.K_vp = fem.petsc.assemble_matrix(self.jac_vp_)
+            self.K_vp.assemble()
+            self.K_pv = fem.petsc.assemble_matrix(self.jac_pv_)
+            self.K_pv.assemble()
         else:
-            self.K_vp = fem.petsc.create_matrix(self.jac_vp)
-            self.K_pv = fem.petsc.create_matrix(self.jac_pv)
+            self.K_vp = fem.petsc.assemble_matrix(self.jac_vp)
+            self.K_vp.assemble()
+            self.K_pv = fem.petsc.assemble_matrix(self.jac_pv)
+            self.K_pv.assemble()
 
         if self.stabilization is not None:
             if self.num_dupl > 1:
-                self.K_pp = fem.petsc.create_matrix(self.jac_pp_)
+                self.K_pp = fem.petsc.assemble_matrix(self.jac_pp_)
+                self.K_pp.assemble()
             else:
-                self.K_pp = fem.petsc.create_matrix(self.jac_pp)
+                self.K_pp = fem.petsc.assemble_matrix(self.jac_pp)
+                self.K_pp.assemble()
         else:
             self.K_pp = None
 
@@ -2124,11 +2131,11 @@ class FluidmechanicsProblem(problem_base):
 
             self.k_vz_vec = []
             for i in range(len(self.col_ids)):
-                self.k_vz_vec.append(fem.petsc.create_vector(self.dw_robin_valve_dz_form[i]))
+                self.k_vz_vec.append(fem.petsc.assemble_vector(self.dw_robin_valve_dz_form[i]))
 
             # self.k_zp_vec = []
             # for i in range(len(self.row_ids)):
-            #     self.k_sp_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
+            #     self.k_sp_vec.append(fem.petsc.assemble_vector(self.dcq_form[i]))
 
             self.dofs_coupling_v = [[]] * self.num_valve_coupling_surf
 

@@ -343,11 +343,11 @@ class SolidmechanicsConstraintProblem(problem_base):
 
         self.k_us_vec = []
         for i in range(len(self.col_ids)):
-            self.k_us_vec.append(fem.petsc.create_vector(self.dforce_form[i]))
+            self.k_us_vec.append(fem.petsc.assemble_vector(self.dforce_form[i]))
 
         self.k_su_vec = []
         for i in range(len(self.row_ids)):
-            self.k_su_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
+            self.k_su_vec.append(fem.petsc.assemble_vector(self.dcq_form[i]))
 
         self.dofs_coupling_vq, self.dofs_coupling_p = (
             [[]] * self.num_coupling_surf,

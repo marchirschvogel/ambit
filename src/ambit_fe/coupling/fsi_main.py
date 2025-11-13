@@ -474,19 +474,23 @@ class FSIProblem(problem_base):
 
     def set_problem_vector_matrix_structures_coupling(self):
         if self.fsi_system == "neumann_neumann":
-            self.r_l = fem.petsc.create_vector(self.res_l)
+            self.r_l = fem.petsc.assemble_vector(self.res_l)
 
-            self.K_ul = fem.petsc.create_matrix(self.jac_ul)
-            self.K_vl = fem.petsc.create_matrix(self.jac_vl)
+            self.K_ul = fem.petsc.assemble_matrix(self.jac_ul)
+            self.K_ul.assemble()
+            self.K_vl = fem.petsc.assemble_matrix(self.jac_vl)
+            self.K_vl.assemble()
 
-            self.K_lu = fem.petsc.create_matrix(self.jac_lu)
-            self.K_lv = fem.petsc.create_matrix(self.jac_lv)
+            self.K_lu = fem.petsc.assemble_matrix(self.jac_lu)
+            self.K_lu.assemble()
+            self.K_lv = fem.petsc.assemble_matrix(self.jac_lv)
+            self.K_lv.assemble()
 
         if self.fsi_system == "neumann_dirichlet":
             # solid reaction forces
-            self.r_reac_sol = fem.petsc.create_vector(self.pbs.res_u)
+            self.r_reac_sol = fem.petsc.assemble_vector(self.pbs.res_u)
             # reaction forces on fluid side
-            self.r_reac_on_fluid = fem.petsc.create_vector(self.pbf.res_v)
+            self.r_reac_on_fluid = fem.petsc.assemble_vector(self.pbf.res_v)
 
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)

@@ -515,11 +515,11 @@ class FluidmechanicsConstraintProblem(problem_base):
 
         self.k_vs_vec = []
         for i in range(len(self.col_ids)):
-            self.k_vs_vec.append(fem.petsc.create_vector(self.dforce_form[i]))
+            self.k_vs_vec.append(fem.petsc.assemble_vector(self.dforce_form[i]))
 
         self.k_sv_vec = []
         for i in range(len(self.row_ids)):
-            self.k_sv_vec.append(fem.petsc.create_vector(self.dcq_form[i]))
+            self.k_sv_vec.append(fem.petsc.assemble_vector(self.dcq_form[i]))
 
         self.dofs_coupling_vq, self.dofs_coupling_p = (
             [[]] * self.num_coupling_surf,

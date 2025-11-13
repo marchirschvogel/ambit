@@ -272,7 +272,8 @@ class FluidmechanicsAleProblem(problem_base):
 
     def set_problem_vector_matrix_structures_coupling(self):
         if self.coupling_strategy == "monolithic":
-            self.K_vd = fem.petsc.create_matrix(self.jac_vd)
+            self.K_vd = fem.petsc.assemble_matrix(self.jac_vd)
+            self.K_vd.assemble()
             if self.have_dbc_fluid_ale:
                 # create unity vector with 1's on surface dofs and zeros elsewhere
                 self.Iale = self.pba.K_dd.createVecLeft()
@@ -377,9 +378,10 @@ class FluidmechanicsAleProblem(problem_base):
                 # )  # needed so that zeroRows does not change it!
 
             if self.pbf.num_dupl > 1:
-                self.K_pd = fem.petsc.create_matrix(self.jac_pd_)
+                self.K_pd = fem.petsc.assemble_matrix(self.jac_pd_)
             else:
-                self.K_pd = fem.petsc.create_matrix(self.jac_pd)
+                self.K_pd = fem.petsc.assemble_matrix(self.jac_pd)
+            self.K_pd.assemble()
 
     def assemble_residual(self, t, subsolver=None):
         # prior to ALE residual assemble!

@@ -1586,17 +1586,20 @@ class SolidmechanicsProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
     def set_problem_vector_matrix_structures(self):
-        self.r_u = fem.petsc.create_vector(self.res_u)
-        self.K_uu = fem.petsc.create_matrix(self.jac_uu)
+        self.r_u = fem.petsc.assemble_vector(self.res_u)
+        self.K_uu = fem.petsc.assemble_matrix(self.jac_uu)
+        self.K_uu.assemble()
 
         if self.incompressible_2field:
-            self.r_p = fem.petsc.create_vector(self.res_p)
+            self.r_p = fem.petsc.assemble_vector(self.res_p)
 
-            self.K_up = fem.petsc.create_matrix(self.jac_up)
-            self.K_pu = fem.petsc.create_matrix(self.jac_pu)
+            self.K_up = fem.petsc.assemble_matrix(self.jac_up)
+            self.K_up.assemble()
+            self.K_pu = fem.petsc.assemble_matrix(self.jac_pu)
+            self.K_pu.assemble()
 
             if self.jac_pp is not None:
-                self.K_pp = fem.petsc.create_matrix(self.jac_pp)
+                self.K_pp = fem.petsc.assemble_matrix(self.jac_pp)
             else:
                 self.K_pp = None
 

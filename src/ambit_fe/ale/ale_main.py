@@ -295,8 +295,9 @@ class AleProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def set_problem_vector_matrix_structures(self):
-        self.r_d = fem.petsc.create_vector(self.res_d)
-        self.K_dd = fem.petsc.create_matrix(self.jac_dd)
+        self.r_d = fem.petsc.assemble_vector(self.res_d)
+        self.K_dd = fem.petsc.assemble_matrix(self.jac_dd)
+        self.K_dd.assemble()
 
         self.r_list[0] = self.r_d
         self.K_list[0][0] = self.K_dd
