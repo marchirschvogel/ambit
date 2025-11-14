@@ -615,6 +615,11 @@ if category == "solid_flow0d" or category == "all":
         ]
     )  # TODO: Fix outer loop restart
 
+if category == "fluid_ale" or category == "all":
+    errs["test_fluid_ale_nozzle_rot 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_ale_nozzle_rot.py"]
+    )
+
 if category == "frsi" or category == "fluid_ale" or category == "all":
     errs["test_frsi_artseg_prefile 1"] = subprocess.call(
         ["mpiexec", "-n", "1", "python3", "test_frsi_artseg_prefile.py"]

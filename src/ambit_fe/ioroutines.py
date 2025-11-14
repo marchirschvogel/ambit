@@ -1474,6 +1474,22 @@ class IO_ale(IO):
                         w_out = fem.Function(pb.V_out_vector, name=w_proj.name)
                         w_out.interpolate(w_proj)
                         self.resultsfiles[res].write_function(w_out, indicator)
+                    elif res == "alestress": # might be needed for some debugging purposes...
+                        stressfuncs = []
+                        for n in range(pb.num_domains):
+                            stressfuncs.append(pb.ma[n].stress(pb.d, pb.wel))
+                        stress = project(
+                            stressfuncs,
+                            pb.Vd_tensor,
+                            pb.dx,
+                            domids=pb.domain_ids,
+                            nm="AleStress",
+                            comm=self.comm,
+                            entity_maps=self.entity_maps,
+                        )
+                        stress_out = fem.Function(pb.V_out_tensor, name=stress.name)
+                        stress_out.interpolate(stress)
+                        self.resultsfiles[res].write_function(stress_out, indicator)
                     elif res == "counters":
                         # iteration counters, written by base class
                         pass

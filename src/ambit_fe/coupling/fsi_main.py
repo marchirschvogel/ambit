@@ -657,8 +657,7 @@ class FSIProblem(problem_base):
             self.K_vl.zeroEntries()
             fem.petsc.assemble_matrix(self.K_vl, self.jac_vl, self.pbf.bc.dbcs)
             self.K_vl.assemble()
-        # LM
-        if self.fsi_system == "neumann_neumann":
+            # LM
             self.K_lu.zeroEntries()
             fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, [])
             self.K_lu.assemble()

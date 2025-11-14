@@ -213,7 +213,6 @@ class FluidmechanicsAleProblem(problem_base):
                 )
                 # get surface dofs for dr_fluid/dd matrix entry
                 self.fdofs_ale_fluid = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, ids_ale_fluid, self.pbf.io.mesh.topology.dim-1, self.comm)
-                #self.fdofs_ale_fluidp = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_p, ids_ale_fluid, self.pbf.io.mesh.topology.dim-1, self.comm)
 
             # now add the DBCs: pay attention to order... first v=w, then the others... hence re-set!
             if bool(dbcs_coup_ale_fluid):
@@ -344,39 +343,6 @@ class FluidmechanicsAleProblem(problem_base):
                     PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True
                 )  # needed so that zeroRows does not change it!
 
-                # # create unity vector with 1's on surface dofs and zeros elsewhere
-                # self.Ifldp = self.pbf.K_pp.createVecLeft()
-                # self.Ifldp.setValues(
-                #     self.fdofs_ale_fluidp,
-                #     np.ones(self.fdofs_ale_fluidp.getLocalSize()),
-                #     addv=PETSc.InsertMode.INSERT,
-                # )
-                # self.Ifldp.assemble()
-                # # create diagonal matrix
-                # self.Diag_fldp = PETSc.Mat().createAIJ(
-                #     self.pbf.K_pp.getSizes(),
-                #     bsize=None,
-                #     nnz=(1, 1),
-                #     csr=None,
-                #     comm=self.comm,
-                # )
-                # self.Diag_fldp.setUp()
-                # self.Diag_fldp.assemble()
-                # # set 1's to get correct allocation pattern
-                # self.Diag_fldp.shift(1.0)
-                # # now only set the 1's at surface dofs
-                # self.Diag_fldp.setDiagonal(self.Ifldp, addv=PETSc.InsertMode.INSERT)
-                # self.Diag_fldp.assemble()
-                # # create from fluid matrix and only keep the necessary columns
-                # # need to assemble here to get correct sparsity pattern when doing the column product
-                # self.K_pd_ = fem.petsc.assemble_matrix(self.pbf.jac_pp, [])
-                # self.K_pd_.assemble()
-                # # now multiply to grep out the correct columns
-                # self.K_pd_add = self.K_pd_.matMult(self.Diag_fldp)
-                # self.K_pd_add.setOption(
-                #     PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True
-                # )  # needed so that zeroRows does not change it!
-
             if self.pbf.num_dupl > 1:
                 self.K_pd = fem.petsc.assemble_matrix(self.jac_pd_)
             else:
@@ -434,17 +400,6 @@ class FluidmechanicsAleProblem(problem_base):
             fac = self.pba.ti.get_factor_deriv_dvar(self.pbase.dt)
             self.K_vd_add.scale(fac)
 
-            # self.K_pd_.zeroEntries()
-            # fem.petsc.assemble_matrix(self.K_pd_, self.pbf.jac_pp, [])
-            # self.K_pd_.assemble()
-            # # multiply to get the relevant columns only
-            # self.K_pd_.matMult(self.Diag_fldp, result=self.K_pd_add)
-            # # zero rows where DBC is applied and set diagonal entry to -1
-            # self.K_pd_add.zeroRows(self.fdofs_ale_fluidp, diag=-1.0)
-            # # we apply w_ALE to fluid, hence get dw_ALE/dd
-            # fac = self.pba.ti.get_factor_deriv_dvar(self.pbase.dt)
-            # self.K_pd_add.scale(fac)
-
         self.K_list[2][0] = self.K_dv
 
         # derivative of fluid momentum w.r.t. ALE displacement
@@ -465,7 +420,6 @@ class FluidmechanicsAleProblem(problem_base):
 
         if self.have_dbc_ale_fluid:
             self.K_vd.axpy(1., self.K_vd_add)
-            #self.K_pd.axpy(1., self.K_pd_add)
 
     def evaluate_residual_dbc_coupling(self):
         if self.have_dbc_fluid_ale:
