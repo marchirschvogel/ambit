@@ -170,6 +170,16 @@ class sol_utils:
             )
             v1, v2, v3 = "v", "p", "d"
             numres = 3
+            numres = 2
+        elif ptype == "fluid_phasefield":
+            eq1, eq2, eq3, eq4 = (
+                "fluid momentum",
+                "fluid continuity",
+                "phase field",
+                "potential",
+            )
+            v1, v2, v3, v4 = "v", "p", "phi", "mu"
+            numres = 4
         elif ptype == "fluid_ale_flow0d":
             eq1, eq2, eq3, eq4 = (
                 "fluid momentum",

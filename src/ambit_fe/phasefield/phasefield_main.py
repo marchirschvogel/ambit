@@ -39,7 +39,8 @@ class PhasefieldProblem(problem_base):
         time_curves,
         io,
         mor_params={},
-        alevar={},
+        is_advected=False,
+        is_ale=False,
     ):
         self.pbase = pbase
 
@@ -56,6 +57,9 @@ class PhasefieldProblem(problem_base):
         self.initial_fields = io_params.get("initial_fields", None)
 
         self.io = io
+
+        self.is_ale = is_ale
+        self.is_advected = is_advected
 
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
@@ -82,7 +86,6 @@ class PhasefieldProblem(problem_base):
             self.lam.append(self.constitutive_models["MAT" + str(n + 1)]["params_cahnhilliard"]["lambda"])
             self.m.append(self.constitutive_models["MAT" + str(n + 1)]["params_cahnhilliard"]["M"])
 
-        # TODO: Move to base class...
         self.localsolve = False  # no idea what might have to be solved locally...
         self.prestress_initial = False  # guess prestressing in ALE is somehow senseless...
         self.incompressible_2field = False  # always False here...
@@ -101,7 +104,9 @@ class PhasefieldProblem(problem_base):
         self.rom = None
 
         # ALE problem variables
-        self.alevar = alevar
+        self.alevar = {}
+        # fluid variables
+        self.fluidvar = {}
 
         # function spaces for phi and mu
         self.V_phi = fem.functionspace(
@@ -184,8 +189,6 @@ class PhasefieldProblem(problem_base):
         if "dirichlet_vol" in self.bc_dict.keys():
             self.bc.dirichlet_vol(self.bc_dict["dirichlet_vol"])
 
-        self.set_variational_forms()
-
         # number of fields involved
         self.nfields = 2
 
@@ -212,8 +215,8 @@ class PhasefieldProblem(problem_base):
         self.phase_field_old = ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
-            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.mu, self.m[n], self.dx(M))
-            self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.mu_old, self.m[n], self.dx(M))
+            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.m[n], self.dx(M))
+            self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.m[n], self.dx(M))
             self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.lam[n], self.dx(M))
 
         self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old # at n+\theta

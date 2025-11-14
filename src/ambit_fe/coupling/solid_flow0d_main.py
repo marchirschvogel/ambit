@@ -75,6 +75,13 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
         self.set_coupling_parameters(coupling_params)
 
+        if self.coupling_type == "monolithic_lagrange":
+            # Lagrange multipliers
+            self.LM, self.LM_old = (
+                PETSc.Vec().createMPI(size=self.num_coupling_surf),
+                PETSc.Vec().createMPI(size=self.num_coupling_surf),
+            )
+
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self
 
@@ -92,8 +99,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.have_multiscale_gandr = True
         else:
             self.have_multiscale_gandr = False
-
-        self.set_variational_forms()
 
         if self.coupling_type == "monolithic_direct":
             self.numdof = self.pbs.numdof + self.pb0.numdof
@@ -183,6 +188,10 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
     # defines the monolithic coupling forms for 0D flow and solid mechanics
     def set_variational_forms(self):
+        self.pbs.set_variational_forms()
+        self.set_variational_forms_coupling()
+
+    def set_variational_forms_coupling(self):
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         (
             self.coupfuncs,
@@ -195,13 +204,6 @@ class SolidmechanicsFlow0DProblem(problem_base):
             [],
             [],
         )
-
-        if self.coupling_type == "monolithic_lagrange":
-            # Lagrange multipliers
-            self.LM, self.LM_old = (
-                PETSc.Vec().createMPI(size=self.num_coupling_surf),
-                PETSc.Vec().createMPI(size=self.num_coupling_surf),
-            )
 
         self.work_coupling, self.work_coupling_old, self.work_coupling_mid = (
             ufl.as_ufl(0),

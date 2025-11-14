@@ -121,7 +121,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
                 coupling_params_fluid_flow0d,
                 io,
                 mor_params=mor_params,
-                alevar=alevariables,
+                is_ale=True,
                 pbf=self.pbfa.pbf,
                 pb0=self.pb0,
             )
@@ -145,7 +145,6 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         #self.print_subiter = self.pbf0.print_subiter
 
         self.set_coupling_parameters()
-        self.set_variational_forms()
 
         if self.pbfa.coupling_strategy == "monolithic":
             self.numdof = self.pbf.numdof + self.pbf0.LM.getSize() + self.pba.numdof
@@ -188,6 +187,11 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         ], is_ghosted
 
     def set_variational_forms(self):
+        self.pbfa.set_variational_forms()
+        self.pbf0.set_variational_forms_coupling()
+        self.set_variational_forms_coupling()
+
+    def set_variational_forms_coupling(self):
         self.dcqd = []
         for n in range(self.pbf0.num_coupling_surf):
             self.dcqd.append(ufl.derivative(self.pbf0.cq[n], self.pba.d, self.pba.dd))

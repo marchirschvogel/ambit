@@ -204,6 +204,9 @@ class AleProblem(problem_base):
         # initialize ALE variational form class
         self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0, ro0=self.io.ro0)
 
+        # set form for domain velocity
+        self.wel = self.ti.set_wel(self.d, self.d_old, self.w_old)
+
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
             self.io,
@@ -221,8 +224,6 @@ class AleProblem(problem_base):
 
         if "dirichlet_vol" in self.bc_dict.keys():
             self.bc.dirichlet_vol(self.bc_dict["dirichlet_vol"])
-
-        self.set_variational_forms()
 
         # number of fields involved
         self.nfields = 1
@@ -243,9 +244,6 @@ class AleProblem(problem_base):
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
-        # set form for domain velocity
-        self.wel = self.ti.set_wel(self.d, self.d_old, self.w_old)
-
         # internal virtual work
         self.deltaW_int = ufl.as_ufl(0)
 

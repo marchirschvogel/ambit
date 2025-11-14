@@ -38,7 +38,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         coupling_params,
         io,
         mor_params={},
-        alevar={},
+        is_ale=False,
         pbf=None,
         pb0=None,
     ):
@@ -63,7 +63,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
                 time_curves,
                 io,
                 mor_params=mor_params,
-                alevar=alevar,
+                is_ale=is_ale,
             )
         if pb0 is None:
             self.pb0 = Flow0DProblem(
@@ -78,13 +78,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.coupling_params = coupling_params
         self.set_coupling_parameters()
 
+        # Lagrange multipliers
+        self.LM, self.LM_old = (
+            PETSc.Vec().createMPI(size=self.num_coupling_surf),
+            PETSc.Vec().createMPI(size=self.num_coupling_surf),
+        )
+
         self.pbrom = self.pbf  # ROM problem can only be fluid
         self.pbrom_host = self
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
-
-        self.set_variational_forms()
 
         self.numdof = self.pbf.numdof + self.LM.getSize()
 
@@ -160,14 +164,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms(self):
+        self.pbf.set_variational_forms()
+        self.set_variational_forms_coupling()
+
+    def set_variational_forms_coupling(self):
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
-
-        # Lagrange multipliers
-        self.LM, self.LM_old = (
-            PETSc.Vec().createMPI(size=self.num_coupling_surf),
-            PETSc.Vec().createMPI(size=self.num_coupling_surf),
-        )
 
         (
             self.power_coupling,

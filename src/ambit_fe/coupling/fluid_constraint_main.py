@@ -34,7 +34,7 @@ class FluidmechanicsConstraintProblem(problem_base):
         coupling_params,
         io,
         mor_params={},
-        alevar={},
+        is_ale=False,
         pbf=None,
     ):
         self.pbase = pbase
@@ -57,16 +57,20 @@ class FluidmechanicsConstraintProblem(problem_base):
                 time_curves,
                 io,
                 mor_params=mor_params,
-                alevar=alevar,
+                is_ale=is_ale,
             )
 
         self.coupling_params = coupling_params
         self.set_coupling_parameters()
 
+        # Lagrange multipliers
+        self.LM, self.LM_old = (
+            PETSc.Vec().createMPI(size=self.num_coupling_surf),
+            PETSc.Vec().createMPI(size=self.num_coupling_surf),
+        )
+
         self.pbrom = self.pbf  # ROM problem can only be fluid
         self.pbrom_host = self
-
-        self.set_variational_forms()
 
         self.numdof = self.pbf.numdof + self.LM.getSize()
 
@@ -140,14 +144,12 @@ class FluidmechanicsConstraintProblem(problem_base):
 
     # defines the monolithic coupling forms for constraints and fluid mechanics
     def set_variational_forms(self):
+        self.pbf.set_variational_forms()
+        self.set_variational_forms_coupling()
+
+    def set_variational_forms_coupling(self):
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
-
-        # Lagrange multipliers
-        self.LM, self.LM_old = (
-            PETSc.Vec().createMPI(size=self.num_coupling_surf),
-            PETSc.Vec().createMPI(size=self.num_coupling_surf),
-        )
 
         (
             self.power_coupling,

@@ -99,6 +99,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = solid_main.SolidmechanicsSolver(self.mp, solver_params)
 
         elif problem_type == "fluid":
@@ -121,6 +122,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fluid_main.FluidmechanicsSolver(self.mp, solver_params)
 
         elif problem_type == "ale":
@@ -143,6 +145,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = ale_main.AleSolver(self.mp, solver_params)
 
         elif problem_type == "fluid_ale":
@@ -169,6 +172,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fluid_ale_main.FluidmechanicsAleSolver(self.mp, solver_params)
 
         elif problem_type == "fluid_ale_flow0d":
@@ -198,7 +202,36 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fluid_ale_flow0d_main.FluidmechanicsAleFlow0DSolver(self.mp, solver_params)
+
+        elif problem_type == "fluid_phasefield":
+            from .coupling import fluid_phasefield_main
+
+            io = ioroutines.IO_fluid_phasefield(io_params, fem_params[0], self.entity_maps, self.comm)
+            io.readin_mesh()
+            io.set_mesh_fields(io.mesh)
+
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
+
+            self.mp = fluid_phasefield_main.FluidmechanicsPhasefieldProblem(
+                pbase,
+                io_params,
+                time_params[0],
+                time_params[1],
+                fem_params[0],
+                fem_params[1],
+                constitutive_params[0],
+                constitutive_params[1],
+                boundary_conditions[0],
+                boundary_conditions[1],
+                time_curves,
+                coupling_params,
+                io,
+                mor_params=mor_params,
+            )
+            self.mp.set_variational_forms()
+            self.ms = fluid_phasefield_main.FluidmechanicsPhasefieldSolver(self.mp, solver_params)
 
         elif problem_type == "flow0d":
             from .flow0d import flow0d_main
@@ -231,6 +264,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = solid_flow0d_main.SolidmechanicsFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == "solid_flow0d_periodicref":
@@ -257,6 +291,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = solid_flow0d_periodicref_main.SolidmechanicsFlow0DPeriodicRefSolver(self.mp, solver_params)
 
         elif problem_type == "fluid_flow0d":
@@ -282,6 +317,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fluid_flow0d_main.FluidmechanicsFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == "solid_flow0d_multiscale_gandr":
@@ -310,6 +346,7 @@ class Ambit:
                 multiscale_params,
                 io,
             )
+            self.mp.set_variational_forms()
             self.ms = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(
                 self.mp, solver_params
             )
@@ -369,6 +406,7 @@ class Ambit:
                 iof,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fsi_main.FSISolver(self.mp, solver_params)
 
         elif problem_type == "fsi_flow0d":
@@ -429,6 +467,7 @@ class Ambit:
                 iof,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fsi_flow0d_main.FSIFlow0DSolver(self.mp, solver_params)
 
         elif problem_type == "solid_constraint":
@@ -452,6 +491,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = solid_constraint_main.SolidmechanicsConstraintSolver(self.mp, solver_params)
 
         elif problem_type == "fluid_constraint":
@@ -475,6 +515,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fluid_constraint_main.FluidmechanicsConstraintSolver(self.mp, solver_params)
 
         elif problem_type == "fluid_ale_constraint":
@@ -502,6 +543,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = fluid_ale_constraint_main.FluidmechanicsAleConstraintSolver(self.mp, solver_params)
 
         elif problem_type == "phasefield":
@@ -524,6 +566,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = phasefield_main.PhasefieldSolver(self.mp, solver_params)
 
         elif problem_type == "electrophysiology":
@@ -548,6 +591,7 @@ class Ambit:
                 io,
                 mor_params=mor_params,
             )
+            self.mp.set_variational_forms()
             self.ms = electrophysiology_main.ElectrophysiologySolver(self.mp, solver_params)
 
         elif problem_type == "signet":

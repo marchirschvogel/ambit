@@ -255,6 +255,15 @@ def check_params_coupling_fluid_ale(params):
             raise RuntimeError("Unknown parameter found in fluid-ALE coupling params: " + k)
 
 
+def check_params_coupling_fluid_phasefield(params):
+    valid_params = [
+    ]
+
+    for k in params.keys():
+        if k not in valid_params:
+            raise RuntimeError("Unknown parameter found in fluid-phasefield coupling params: " + k)
+
+
 def check_params_rom(params):
     valid_params = [
         "eigenvalue_cutoff",

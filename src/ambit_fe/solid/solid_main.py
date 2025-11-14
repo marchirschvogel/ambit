@@ -647,7 +647,7 @@ class SolidmechanicsProblem(problem_base):
         if "dirichlet_vol" in self.bc_dict.keys():
             self.bc.dirichlet_vol(self.bc_dict["dirichlet_vol"])
 
-        self.set_variational_forms()
+        # self.set_variational_forms()
 
         self.pbrom = self  # self-pointer needed for ROM solver access
         self.pbrom_host = self

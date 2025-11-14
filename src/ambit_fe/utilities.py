@@ -51,6 +51,12 @@ def print_problem(ptype, sname, comm, numdof):
             comm,
         )
 
+    elif ptype == "fluid_phasefield":
+        print_status(
+            "################ Welcome to Cahn-Hilliard Navier-Stokes fluid mechanics ###############",
+            comm,
+        )
+
     elif ptype == "fsi":
         print_status(
             "################# Welcome to monolithic Fluid-Solid Interaction (FSI) #################",

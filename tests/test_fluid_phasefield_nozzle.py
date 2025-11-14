@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Rotating nozzle with pressure boundary condition
-- ALE domain receives fixed and moving point DBCs at corners such that a rigid body rotation is induced
-- Fluid receives ALE velocities as DBCs on no-slip boundaries
+Two-phase flow in nozzle with pressure boundary condition
 """
 
 import ambit_fe
@@ -13,12 +11,13 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.fluid_ale
+@pytest.mark.fluid_phasefield
+@pytest.mark.skip(reason="Not yet ready for testing.")
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS = {
-        "problem_type": "fluid_ale",
+        "problem_type": "fluid_phasefield",
         "write_results_every": 1,
         "indicate_results_by": "step",
         "output_path": basepath + "/tmp/",
@@ -26,25 +25,27 @@ def test_main():
         "mesh_boundary": basepath + "/input/nozzle_boundary.xdmf",
         "mesh_subboundary": basepath + "/input/nozzle_point.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
-        "results_to_write": [["velocity", "pressure", "cauchystress"],["aledisplacement", "alevelocity", "alestress"]],
+        "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
         "simname": "fluid_ale_nozzle_rot",
     }
 
     CONTROL_PARAMS = {"maxtime": 100.0,
                       "numstep": 100,
-                      "numstep_stop": 10,
+                      # "numstep_stop": 10,
                       }
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",
         "maxiter":10,
-        "tol_res": [1e-10, 1e-10, 1e-10],
-        "tol_inc": [1e-10, 1e-10, 1e-10],
+        "tol_res": [1e-6, 1e-6, 1e-6, 1e-6],
+        "tol_inc": [1e-6, 1e-6, 1e-6, 1e-6],
     }
 
-    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 1.0,
-                         "fluid_governing_type": "stokes_steady"}
+    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5,
+                         "fluid_governing_type": "navierstokes_transient"}
+
+    TIME_PARAMS_PF = {"timint": "ost", "theta_ost": 0.5}
 
 
     FEM_PARAMS_FLUID = {"order_vel": 1,
@@ -57,18 +58,16 @@ def test_main():
                                             'reduced_scheme' : True,
                                             'vscale_vel_dep' : False}}
 
-    FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
+    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
 
-    COUPLING_PARAMS = {
-        "coupling_ale_fluid": [{"surface_ids": [2,3,5,6]}], # no-slip at moving ALE boundary
-    }
+    COUPLING_PARAMS = {}
 
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 1.0e-6},
-                                "inertia": {"rho": 1.0e-6}}}
+                                "inertia": {"rho1": 1.0e-6, "rho2": 1.0e-3}}}
 
-    # We need a finite strain capable nonlinear ALE that can undergo a large rotation without straining/shape changing
-    MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": 100.},
+                          "params_cahnhilliard": {"M": 1.0, "lambda": 0.01}}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
@@ -76,36 +75,23 @@ def test_main():
             pmax = 0.001
             t_ramp = CONTROL_PARAMS["maxtime"]
             return 0.5 * (-(pmax)) * (1.0 - np.cos(np.pi * t / t_ramp))
-        def tc2(self, t):
-            l_i = 100.
-            l_o = 150.
-            h_i = 100.
-            h_o = 50.
-            val = -(l_i+l_o + h_i/2. + h_o/2.)
-            return val*t/CONTROL_PARAMS["maxtime"]
-
 
     BC_DICT_FLUID = {
         "neumann" : [{"id" : [1], "dir":"normal_cur", "curve":1}], # inlet
     }
 
+    BC_DICT_PF = { }
 
-    BC_DICT_ALE = { # point DBCs
-        "dirichlet": [
-            {"id": [1], "dir": "all", "val": 0., "codimension":0},
-            {"id": [2], "dir": "y", "curve": 2, "codimension":0},
-        ]
-    }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        TIME_PARAMS_FLUID,
+        [TIME_PARAMS_FLUID, TIME_PARAMS_PF],
         SOLVER_PARAMS,
-        [FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
-        [MATERIALS_FLUID, MATERIALS_ALE],
-        [BC_DICT_FLUID, BC_DICT_ALE],
+        [FEM_PARAMS_FLUID, FEM_PARAMS_PF],
+        [MATERIALS_FLUID, MATERIALS_PF],
+        [BC_DICT_FLUID, BC_DICT_PF],
         time_curves=time_curves(),
         coupling_params=COUPLING_PARAMS
     )

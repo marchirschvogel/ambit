@@ -144,8 +144,6 @@ class FSIFlow0DProblem(problem_base):
         self.localsolve = False
         self.print_subiter = self.pbf0.print_subiter
 
-        self.set_variational_forms()
-
         self.numdof = self.pbs.numdof + self.pbf.numdof + self.pba.numdof + self.pbf0.LM.getSize()
         if self.pbfas.fsi_system == "neumann_neumann":
             self.numdof += self.pbfas.lm.x.petsc_vec.getSize()
@@ -231,7 +229,11 @@ class FSIFlow0DProblem(problem_base):
                 ], is_ghosted
 
     def set_variational_forms(self):
-        pass
+        # FSI - fluid, solid, ALE, + FSI coup
+        self.pbfas.set_variational_forms()
+        # fluid-0D, ALE-0D coup
+        self.pbf0.set_variational_forms_coupling()
+        self.pbfa0.set_variational_forms_coupling()
 
     def set_problem_residual_jacobian_forms(self):
         # FSI - fluid, solid, ALE, + FSI coup

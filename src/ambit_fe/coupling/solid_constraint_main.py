@@ -74,12 +74,16 @@ class SolidmechanicsConstraintProblem(problem_base):
             mor_params=mor_params,
         )
 
+        # Lagrange multipliers
+        self.LM, self.LM_old = (
+            PETSc.Vec().createMPI(size=self.num_coupling_surf),
+            PETSc.Vec().createMPI(size=self.num_coupling_surf),
+        )
+
         self.pbrom = self.pbs
         self.pbrom_host = self
 
         self.incompressible_2field = self.pbs.incompressible_2field
-
-        self.set_variational_forms()
 
         self.numdof = self.pbs.numdof + self.LM.getSize()
 
@@ -132,14 +136,12 @@ class SolidmechanicsConstraintProblem(problem_base):
 
     # defines the monolithic coupling forms for constraints and solid mechanics
     def set_variational_forms(self):
+        self.pbs.set_variational_forms()
+        self.set_variational_forms_coupling()
+
+    def set_variational_forms_coupling(self):
         self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
         self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
-
-        # Lagrange multipliers
-        self.LM, self.LM_old = (
-            PETSc.Vec().createMPI(size=self.num_coupling_surf),
-            PETSc.Vec().createMPI(size=self.num_coupling_surf),
-        )
 
         self.work_coupling, self.work_coupling_old, self.work_coupling_mid = (
             ufl.as_ufl(0),

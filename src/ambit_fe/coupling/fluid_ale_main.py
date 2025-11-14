@@ -57,6 +57,20 @@ class FluidmechanicsAleProblem(problem_base):
         self.have_dbc_fluid_ale, self.have_dbc_ale_fluid = False, False
 
         # instantiate problem classes
+        # fluid
+        if pbf is None:
+            self.pbf = FluidmechanicsProblem(
+                pbase,
+                io_params,
+                time_params,
+                fem_params_fluid,
+                constitutive_models_fluid,
+                bc_dict_fluid,
+                time_curves,
+                io,
+                mor_params=mor_params,
+                is_ale=True,
+            )
         # ALE
         if pba is None:
             self.pba = AleProblem(
@@ -70,27 +84,11 @@ class FluidmechanicsAleProblem(problem_base):
                 io,
                 mor_params=mor_params,
             )
-            # ALE variables that are handed to fluid problem
-            alevariables = {
-                "Fale": self.pba.ki.F(self.pba.d),
-                "Fale_old": self.pba.ki.F(self.pba.d_old),
-                "w": self.pba.wel,
-                "w_old": self.pba.w_old,
-            }
-        # fluid
-        if pbf is None:
-            self.pbf = FluidmechanicsProblem(
-                pbase,
-                io_params,
-                time_params,
-                fem_params_fluid,
-                constitutive_models_fluid,
-                bc_dict_fluid,
-                time_curves,
-                io,
-                mor_params=mor_params,
-                alevar=alevariables,
-            )
+        # set ALE variables
+        self.pbf.alevar["Fale"] = self.pba.ki.F(self.pba.d)
+        self.pbf.alevar["Fale_old"] = self.pba.ki.F(self.pba.d_old)
+        self.pbf.alevar["w"] = self.pba.wel
+        self.pbf.alevar["w_old"] = self.pba.w_old
 
         self.coupling_params = coupling_params
         self.set_coupling_parameters()
@@ -107,7 +105,6 @@ class FluidmechanicsAleProblem(problem_base):
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
 
-        # TODO: Base class!!
         self.localsolve = False
         self.sub_solve = False
         self.print_subiter = False
@@ -121,8 +118,6 @@ class FluidmechanicsAleProblem(problem_base):
         self.ufa = fem.Function(self.pba.V_d)
         # ALE velocity, but defined within fluid function space
         self.wf = fem.Function(self.pbf.V_v)
-
-        self.set_variational_forms()
 
         if self.coupling_strategy == "monolithic":
             self.numdof = self.pbf.numdof + self.pba.numdof
@@ -162,6 +157,11 @@ class FluidmechanicsAleProblem(problem_base):
 
     # defines the monolithic coupling forms for fluid mechanics in ALE reference frame
     def set_variational_forms(self):
+        self.pbf.set_variational_forms()
+        self.pba.set_variational_forms()
+        self.set_variational_forms_coupling()
+
+    def set_variational_forms_coupling(self):
         # any DBC conditions that we want to set from fluid to ALE (mandatory for FSI or FrSI)
         if bool(self.coupling_fluid_ale):
             dbcs_coup_fluid_ale = []
@@ -406,6 +406,9 @@ class FluidmechanicsAleProblem(problem_base):
         self.K_vd.zeroEntries()
         fem.petsc.assemble_matrix(self.K_vd, self.jac_vd, self.pbf.bc.dbcs)
         self.K_vd.assemble()
+        # add stiffness from ALE DBCs
+        if self.have_dbc_ale_fluid:
+            self.K_vd.axpy(1.0, self.K_vd_add)
 
         self.K_list[0][2] = self.K_vd
 
@@ -417,9 +420,6 @@ class FluidmechanicsAleProblem(problem_base):
             fem.petsc.assemble_matrix(self.K_pd, self.jac_pd, [])
         self.K_pd.assemble()
         self.K_list[1][2] = self.K_pd
-
-        if self.have_dbc_ale_fluid:
-            self.K_vd.axpy(1., self.K_vd_add)
 
     def evaluate_residual_dbc_coupling(self):
         if self.have_dbc_fluid_ale:

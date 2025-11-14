@@ -195,8 +195,6 @@ class FSIProblem(problem_base):
 
                 raise RuntimeError("Under development!")
 
-        self.set_variational_forms()
-
         self.numdof = self.pbs.numdof + self.pbfa.numdof
         if self.fsi_system == "neumann_neumann":
             self.numdof += self.lm.x.petsc_vec.getSize()
@@ -286,6 +284,12 @@ class FSIProblem(problem_base):
 
     # defines the monolithic coupling forms for FSI
     def set_variational_forms(self):
+        # solid + ALE-fluid
+        self.pbs.set_variational_forms()
+        self.pbfa.set_variational_forms()
+        self.set_variational_forms_coupling()
+
+    def set_variational_forms_coupling(self):
         # fluid displacement, but defined on solid domain
         self.ufs = fem.Function(self.pbs.V_u)
 

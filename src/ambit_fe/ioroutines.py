@@ -1762,6 +1762,21 @@ class IO_fluid_ale(IO_fluid, IO_ale):
             IO_ale.writecheckpoint(self, pb.pba, N)
 
 
+class IO_fluid_phasefield(IO_fluid, IO_phasefield):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
+        IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)
+        IO_phasefield.write_output(self, pb.pbp, writemesh=writemesh, N=N, t=t)
+
+    def readcheckpoint(self, pb, N_rest):
+        IO_fluid.readcheckpoint(self, pb.pbf, N_rest)
+        IO_phasefield.readcheckpoint(self, pb.pbp, N_rest)
+
+    def write_restart(self, pb, N, force=False):
+        if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
+            IO_fluid.writecheckpoint(self, pb.pbf, N)
+            IO_phasefield.writecheckpoint(self, pb.pbp, N)
+
+
 class IO_fsi(IO_solid, IO_fluid, IO_ale):
     def write_output(self, pb, writemesh=False, N=1, t=0):
         IO_solid.write_output(self, pb.pbs, writemesh=writemesh, N=N, t=t)
