@@ -32,10 +32,15 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "results_to_write": ["phase", "potential"],
         "simname": "cahnhilliard_square",
-        "initial_fields":[basepath + "/input/phi_init.xdmf",None], # phi is initialized with random field from dolfinx testcase
     }
 
-    CONTROL_PARAMS = {"dt": 5.0e-06, "maxtime": 50*5.0e-06, "numstep_stop":5}
+
+    CONTROL_PARAMS = {
+        "dt": 5.0e-06,
+        "maxtime": 50*5.0e-06,
+        "numstep_stop": 5,
+        "initial_fields": [basepath + "/input/phi_init.xdmf", None], # phi is initialized with random field from dolfinx testcase
+    }
 
     SOLVER_PARAMS = {
         "solve_type": "direct",

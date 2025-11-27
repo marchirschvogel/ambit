@@ -54,8 +54,6 @@ class PhasefieldProblem(problem_base):
 
         self.results_to_write = io_params["results_to_write"]
 
-        self.initial_fields = io_params.get("initial_fields", None)
-
         self.io = io
 
         self.is_ale = is_ale
@@ -315,10 +313,19 @@ class PhasefieldProblem(problem_base):
     def evaluate_initial(self):
         # read initial conditions from file
         if self.pbase.restart_step == 0: # TODO: Not so nice, find better solution...
-            if self.initial_fields is not None:
+            if self.pbase.initial_fields is not None:
                 for n, fld in enumerate([self.phi_old, self.mu_old]):
-                    if self.initial_fields[n] is not None:
-                        self.io.readfunction(fld, self.initial_fields[n])
+                    if self.pbase.initial_fields[n] is not None:
+                        # can only be a path to a file (str) or an expression
+                        if isinstance(self.pbase.initial_fields[n], str):
+                            self.io.readfunction(fld, self.pbase.initial_fields[n])
+                        else:
+                            expr = self.pbase.initial_fields[n]()
+                            fld.interpolate(expr.evaluate)
+                            fld.x.petsc_vec.ghostUpdate(
+                                addv=PETSc.InsertMode.INSERT,
+                                mode=PETSc.ScatterMode.FORWARD,
+                            )
 
     def write_output_ini(self):
         self.io.write_output(self, writemesh=True)

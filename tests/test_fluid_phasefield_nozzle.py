@@ -29,9 +29,20 @@ def test_main():
         "simname": "fluid_ale_nozzle_rot",
     }
 
+    class expr1:
+        def __init__(self):
+            self.t = 0
+
+        def evaluate(self, x):
+            val = 0.0
+            return (
+                np.full(x.shape[1], val),
+            )
+
     CONTROL_PARAMS = {"maxtime": 100.0,
                       "numstep": 100,
                       # "numstep_stop": 10,
+                      "initial_fields": [expr1, None],
                       }
 
     SOLVER_PARAMS = {

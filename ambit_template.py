@@ -40,7 +40,8 @@ def main():
                             "prestress_numstep"     : 100, # OPTIONAL: number of load steps for prestress (default: 1)
                             "prestress_maxtime"     : 3.0, # OPTIONAL: prestress pseudo time (default: 1.0)
                             "prestress_dt"          : 0.1, # OPTIONAL: prestress pseudo time step size (can specify either "prestress_numstep" or "prestress_dt"!)
-                            "residual_scale"        : [0.001,0.001,0.001]} # OPTIONAL: if residuals should be scaled or not (e.g. for better comparisons to solvers where this is done...) (list needs to have the length of residuals involved) (default: [])
+                            "residual_scale"        : [0.001,0.001,0.001], # OPTIONAL: if residuals should be scaled or not (e.g. for better comparisons to solvers where this is done...) (list needs to have the length of residuals involved) (default: [])
+                            "initial_fields"        : [expr, "/path/to/file.xdmf", None]} # OPTIONAL: Initialize field variables; either with a file, an expression, or not at all (default: None - so all field variables get initialized with zero)
 
     # for all problem types
     SOLVER_PARAMS        = {"solve_type"            : "direct", # direct, iterative

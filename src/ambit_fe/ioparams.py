@@ -16,7 +16,6 @@ def check_params_io(params):
         "gridname_domain",
         "gridname_boundary",
         "indicate_results_by",
-        "initial_fields",
         "mesh_dim",
         "mesh_domain",
         "mesh_boundary",
@@ -52,6 +51,7 @@ def check_params_io(params):
 def check_params_ctrl(params):
     valid_params = [
         "dt",
+        "initial_fields",
         "maxtime",
         "numstep",
         "numstep_stop",

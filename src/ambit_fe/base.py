@@ -49,6 +49,8 @@ class problem_base:
 
         self.residual_scale = ctrl_params.get("residual_scale", [])
 
+        self.initial_fields = ctrl_params.get("initial_fields", None)
+
         self.t_init = self.restart_step * self.dt
 
         self.have_rom = False
