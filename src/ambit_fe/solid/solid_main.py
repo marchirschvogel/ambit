@@ -1871,7 +1871,7 @@ class SolidmechanicsSolver(solver_base):
 
         # write prestress displacement (given that we want to write the displacement)
         if "displacement" in self.pb.results_to_write and self.pb.io.write_results_every > 0:
-            self.pb.io.write_output_pre(self.pb, self.pb.u_pre, 0, "displacement_pre")
+            self.pb.io.write_output_pre(self.pb, self.pb.u_pre, self.pb.V_out_vector, 0.0, "displacement_pre")
 
         if self.pb.prestress_initial_only:
             # it may be convenient to write the prestress displacement field to a file for later read-in
