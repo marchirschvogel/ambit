@@ -190,6 +190,8 @@ class PhasefieldProblem(problem_base):
         # number of fields involved
         self.nfields = 2
 
+        self.var_names = ["phi", "mu"]
+
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
             [None] * self.nfields,
@@ -331,7 +333,9 @@ class PhasefieldProblem(problem_base):
         self.io.write_output(self, writemesh=True)
 
     def write_output_pre(self):
-        pass
+        if self.pbase.write_initial_fields:
+            for n, fld in enumerate([self.phi_old, self.mu_old]):
+                self.io.write_output_pre(self, fld, self.V_out_scalar, 0.0, self.var_names[n]+"_initial")
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions

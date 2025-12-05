@@ -221,14 +221,14 @@ class IO:
         # jacobian determinant
         self.detj0 = ufl.JacobianDeterminant(msh)
 
-    def write_output_pre(self, pb, func, t, name):
+    def write_output_pre(self, pb, func, V_out, t, name):
         outfile = io.XDMFFile(
             self.comm,
             self.output_path_pre + "/results_" + pb.pbase.simname + "_" + pb.problem_physics + "_" + name + ".xdmf",
             "w",
         )
         outfile.write_mesh(self.mesh)
-        func_out = fem.Function(pb.V_out_vector, name=func.name)
+        func_out = fem.Function(V_out, name=func.name)
         func_out.interpolate(func)
         outfile.write_function(func_out, t)
         outfile.close()

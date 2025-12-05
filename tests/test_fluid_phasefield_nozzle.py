@@ -26,15 +26,23 @@ def test_main():
         "mesh_subboundary": basepath + "/input/nozzle_point.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_ale_nozzle_rot",
+        "simname": "fluid_phasefield_nozzle",
+        "write_initial_fields": True,
     }
 
     class expr1:
         def __init__(self):
             self.t = 0
+            self.eps = 1e0
+            self.R_0 = 5.0
+
+            self.x_c = np.asarray([83.3937, -0.084307, 0.0])
 
         def evaluate(self, x):
-            val = 0.0
+
+            d = np.sqrt( (x[0]-self.x_c[0])**2.0 + (x[1]-self.x_c[1])**2.0 + (x[2]-self.x_c[2])**2.0 )
+
+            val = 0.5*(1.0 + np.tanh((self.R_0 - d)/np.sqrt(2.0)*self.eps))
             return (
                 np.full(x.shape[1], val),
             )
@@ -75,7 +83,7 @@ def test_main():
 
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 1.0e-6},
-                                "inertia": {"rho1": 1.0e-6, "rho2": 1.0e-3}}}
+                                "inertia": {"rho1": 1.0e-6, "rho2": 1.0e-6}}}
 
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": 100.},
                           "params_cahnhilliard": {"M": 1.0, "lambda": 0.01}}}

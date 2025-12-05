@@ -228,6 +228,8 @@ class AleProblem(problem_base):
         # number of fields involved
         self.nfields = 1
 
+        self.var_names = ["d"]
+
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
             [None] * self.nfields,

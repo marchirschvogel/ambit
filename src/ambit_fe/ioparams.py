@@ -37,6 +37,7 @@ def check_params_io(params):
         "simname",
         "surface_ids_interface",
         "volume_laplace",
+        "write_initial_fields",
         "write_results_every",
         "write_results_every_0D",
         "write_restart_every",

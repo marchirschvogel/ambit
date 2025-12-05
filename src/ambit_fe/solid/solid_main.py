@@ -647,7 +647,24 @@ class SolidmechanicsProblem(problem_base):
         if "dirichlet_vol" in self.bc_dict.keys():
             self.bc.dirichlet_vol(self.bc_dict["dirichlet_vol"])
 
-        # self.set_variational_forms()
+        # number of fields involved
+        self.nfields = 1
+        if self.incompressible_2field:
+            self.nfields += 1
+
+        self.var_names = ["u"]
+        if self.incompressible_2field:
+            self.var_names.append("p")
+
+        # residual and matrix lists
+        self.r_list, self.r_list_rom = (
+            [None] * self.nfields,
+            [None] * self.nfields,
+        )
+        self.K_list, self.K_list_rom = (
+            [[None] * self.nfields for _ in range(self.nfields)],
+            [[None] * self.nfields for _ in range(self.nfields)],
+        )
 
         self.pbrom = self  # self-pointer needed for ROM solver access
         self.pbrom_host = self
@@ -1337,22 +1354,6 @@ class SolidmechanicsProblem(problem_base):
                 self.weakform_lin_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
                 self.weakform_lin_prestress_pp = ufl.derivative(self.weakform_prestress_p, self.p, self.dp)
 
-        # number of fields involved
-        if self.incompressible_2field:
-            self.nfields = 2
-        else:
-            self.nfields = 1
-
-        # residual and matrix lists
-        self.r_list, self.r_list_rom = (
-            [None] * self.nfields,
-            [None] * self.nfields,
-        )
-        self.K_list, self.K_list_rom = (
-            [[None] * self.nfields for _ in range(self.nfields)],
-            [[None] * self.nfields for _ in range(self.nfields)],
-        )
-
     # active stress projection
     def evaluate_active_stress(self):
         if self.have_frank_starling:
@@ -1711,7 +1712,7 @@ class SolidmechanicsProblem(problem_base):
                     comm=self.pbase.comm,
                     entity_maps=self.io.entity_maps,
                 )
-                self.io.write_output_pre(self, fib_proj, 0.0, "fib_" + self.fibarray[i])
+                self.io.write_output_pre(self, fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions

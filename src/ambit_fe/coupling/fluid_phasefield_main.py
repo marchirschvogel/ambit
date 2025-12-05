@@ -286,6 +286,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
 
     def evaluate_initial(self):
         self.pbf.evaluate_initial()
+        self.pbp.evaluate_initial()
 
     def write_output_ini(self):
         self.io.write_output(self, writemesh=True)

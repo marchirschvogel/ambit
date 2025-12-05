@@ -47,6 +47,8 @@ class problem_base:
 
         self.results_to_write = io_params.get("results_to_write", [])
 
+        self.write_initial_fields = io_params.get("write_initial_fields", False)
+
         self.residual_scale = ctrl_params.get("residual_scale", [])
 
         self.initial_fields = ctrl_params.get("initial_fields", None)

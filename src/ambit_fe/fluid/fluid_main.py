@@ -518,6 +518,8 @@ class FluidmechanicsProblem(problem_base):
         if self.have_robin_valve_implicit:
             self.nfields += 1
 
+        self.var_names = ["v", "p"]
+
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
             [None] * self.nfields,
@@ -2526,7 +2528,7 @@ class FluidmechanicsProblem(problem_base):
                     comm=self.comm,
                     entity_maps=self.io.entity_maps,
                 )
-                self.io.write_output_pre(self, fib_proj, 0.0, "fib_" + self.fibarray[i])
+                self.io.write_output_pre(self, fib_proj, self.V_out_vector, 0.0, "fib_" + self.fibarray[i])
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
