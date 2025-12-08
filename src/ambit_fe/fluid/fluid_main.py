@@ -1300,10 +1300,9 @@ class FluidmechanicsProblem(problem_base):
                     rho_, rho_old_, rho_mid_ = self.rho[n], self.rho[n], self.rho[n]
 
                 self.deltaW_prestr_int += self.vf.deltaW_int(
-                    self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"]),
+                    self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"], phi=self.phasevar["phi"]),
                     self.dx(M),
                     F=self.alevar["Fale"],
-                    phi=self.phasevar["phi"],
                 )
                 self.deltaW_p_prestr.append(
                     self.vf.deltaW_int_pres(
