@@ -208,6 +208,29 @@ class PhasefieldProblem(problem_base):
 
     # the main function that defines the Cahn-Hilliard problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
+        if self.is_ale:
+            # mid-point representation of ALE velocity
+            self.alevar["w_mid"] = self.timefac * self.alevar["w"] + (1.0 - self.timefac) * self.alevar["w_old"]
+            # mid-point representation of ALE deformation gradient - linear in ALE displacement, hence we can combine it like this
+            self.alevar["Fale_mid"] = (
+                self.timefac * self.alevar["Fale"] + (1.0 - self.timefac) * self.alevar["Fale_old"]
+            )
+        else:
+            # standard Eulerian fluid
+            self.alevar["Fale"] = None
+            self.alevar["Fale_old"] = None
+            self.alevar["Fale_mid"] = None
+            self.alevar["w"] = None
+            self.alevar["w_old"] = None
+            self.alevar["w_mid"] = None
+
+        if self.is_advected:
+            # mid-point representation of fluid velocity
+            self.fluidvar["v_mid"] = self.timefac * self.fluidvar["v"] + (1.0 - self.timefac) * self.fluidvar["v_old"]
+        else:
+            self.fluidvar["v"] = None
+            self.fluidvar["v_old"] = None
+
         # set form for phidot
         self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phidot_old)
 
@@ -215,9 +238,9 @@ class PhasefieldProblem(problem_base):
         self.phase_field_old = ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
-            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.m[n], self.dx(M))
-            self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.m[n], self.dx(M))
-            self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.lam[n], self.dx(M))
+            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.m[n], self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
+            self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.m[n], self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+            self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.lam[n], self.dx(M), F=self.alevar["Fale"])
 
         self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old # at n+\theta
         self.weakform_mu = self.potential # always at n+1

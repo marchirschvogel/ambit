@@ -17,12 +17,13 @@ def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS = {
-        "problem_type": "fluid_phasefield",
+        "problem_type": "fluid_ale_phasefield",
         "write_results_every": 1,
         "indicate_results_by": "step",
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/nozzle_domain.xdmf",
         "mesh_boundary": basepath + "/input/nozzle_boundary.xdmf",
+        "mesh_subboundary": basepath + "/input/nozzle_point.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
         "simname": "fluid_phasefield_nozzle",
@@ -78,7 +79,11 @@ def test_main():
 
     FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5}
 
-    COUPLING_PARAMS = {}
+    FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
+
+    COUPLING_PARAMS_FLUID_ALE = {
+        "coupling_ale_fluid": [{"surface_ids": [2,3,5,6]}], # no-slip at moving ALE boundary
+    }
 
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": 1.0e-7, "mu2": 4.0e-6},
@@ -93,14 +98,27 @@ def test_main():
             pmax = 5.0
             t_ramp = CONTROL_PARAMS["maxtime"]
             return 0.5 * (-(pmax)) * (1.0 - np.cos(np.pi * t / t_ramp))
+        def tc2(self, t):
+            l_i = 100.
+            l_o = 150.
+            h_i = 100.
+            h_o = 50.
+            val = -(l_i+l_o + h_i/2. + h_o/2.)
+            return val*t/CONTROL_PARAMS["maxtime"]
 
     BC_DICT_FLUID = {
-        "dirichlet" : [{"id": [2,3,5,6], "dir":"all", "val":0.0}], # no-slip
+        # "dirichlet" : [{"id": [2,3,5,6], "dir":"all", "val":0.0}], # no-slip
         "neumann" : [{"id" : [1], "dir":"normal_cur", "curve":1}], # inlet
     }
 
     BC_DICT_PF = { }
 
+    BC_DICT_ALE = { # point DBCs
+        "dirichlet": [
+            {"id": [1], "dir": "all", "val": 0., "codimension":0},
+            {"id": [2], "dir": "y", "curve": 2, "codimension":0},
+        ]
+    }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
@@ -112,7 +130,7 @@ def test_main():
         [MATERIALS_FLUID, MATERIALS_PF],
         [BC_DICT_FLUID, BC_DICT_PF],
         time_curves=time_curves(),
-        coupling_params=COUPLING_PARAMS
+        coupling_params=[{},COUPLING_PARAMS_FLUID_ALE],
     )
 
     # problem solve

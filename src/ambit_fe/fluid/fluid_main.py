@@ -561,6 +561,14 @@ class FluidmechanicsProblem(problem_base):
             self.alevar["w_old"] = None
             self.alevar["w_mid"] = None
 
+        if self.is_multiphase:
+            # mid-point representation of phase field
+            self.phasevar["phi_mid"] = self.timefac * self.phasevar["phi"] + (1.0 - self.timefac) * self.phasevar["phi_old"]
+        else:
+            self.phasevar["phi"] = None
+            self.phasevar["phi_old"] = None
+            self.phasevar["phi_mid"] = None
+
         # set form for acceleration
         self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
         # set form for fluid displacement (needed for FrSI)
@@ -612,8 +620,10 @@ class FluidmechanicsProblem(problem_base):
 
             if self.is_multiphase:
                 rho_ = self.phasevar["phi"] * self.rho1[n] + (1.0 - self.phasevar["phi"]) * self.rho2[n]
+                rho_old_ = self.phasevar["phi_old"] * self.rho1[n] + (1.0 - self.phasevar["phi_old"]) * self.rho2[n]
+                rho_mid_ = self.phasevar["phi_mid"] * self.rho1[n] + (1.0 - self.phasevar["phi_mid"]) * self.rho2[n]
             else:
-                rho_ = self.rho[n]
+                rho_, rho_old_, rho_mid_ = self.rho[n], self.rho[n], self.rho[n]
 
             # kinetic virtual power
             if self.fluid_governing_type == "navierstokes_transient":
@@ -628,7 +638,7 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_transient(
                     self.a_old,
                     self.v_old,
-                    rho_,
+                    rho_old_,
                     self.dx(M),
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
@@ -636,7 +646,7 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_transient(
                     self.acc_mid,
                     self.vel_mid,
-                    rho_,
+                    rho_mid_,
                     self.dx(M),
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
@@ -651,14 +661,14 @@ class FluidmechanicsProblem(problem_base):
                 )
                 self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_steady(
                     self.v_old,
-                    rho_,
+                    rho_old_,
                     self.dx(M),
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
                 )
                 self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_steady(
                     self.vel_mid,
-                    rho_,
+                    rho_mid_,
                     self.dx(M),
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
@@ -675,7 +685,7 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_kin_old += self.vf.deltaW_kin_stokes_transient(
                     self.a_old,
                     self.v_old,
-                    rho_,
+                    rho_old_,
                     self.dx(M),
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
@@ -683,7 +693,7 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_kin_mid += self.vf.deltaW_kin_stokes_transient(
                     self.acc_mid,
                     self.vel_mid,
-                    rho_,
+                    rho_mid_,
                     self.dx(M),
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
@@ -695,17 +705,17 @@ class FluidmechanicsProblem(problem_base):
 
             # internal virtual power
             self.deltaW_int += self.vf.deltaW_int(
-                self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"]),
+                self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"], phi=self.phasevar["phi"]),
                 self.dx(M),
                 F=self.alevar["Fale"],
             )
             self.deltaW_int_old += self.vf.deltaW_int(
-                self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar["Fale_old"]),
+                self.ma[n].sigma(self.v_old, self.p_old_[j], F=self.alevar["Fale_old"], phi=self.phasevar["phi_old"]),
                 self.dx(M),
                 F=self.alevar["Fale_old"],
             )
             self.deltaW_int_mid += self.vf.deltaW_int(
-                self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar["Fale_mid"]),
+                self.ma[n].sigma(self.vel_mid, self.pf_mid_[j], F=self.alevar["Fale_mid"], phi=self.phasevar["phi_mid"]),
                 self.dx(M),
                 F=self.alevar["Fale_mid"],
             )
@@ -745,14 +755,14 @@ class FluidmechanicsProblem(problem_base):
                 F=self.alevar["Fale"],
             )
             self.Re_c_old += self.vf.re_c(
-                rho_,
+                rho_old_,
                 self.v_old,
                 self.dx(M),
                 w=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
             )
             self.Re_c_mid += self.vf.re_c(
-                rho_,
+                rho_mid_,
                 self.vel_mid,
                 self.dx(M),
                 w=self.alevar["w_mid"],
@@ -767,14 +777,14 @@ class FluidmechanicsProblem(problem_base):
                 F=self.alevar["Fale"],
             )
             self.Re_ktilde_old += self.vf.re_ktilde(
-                rho_,
+                rho_old_,
                 self.v_old,
                 self.dx(M),
                 w=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
             )
             self.Re_ktilde_mid += self.vf.re_ktilde(
-                rho_,
+                rho_mid_,
                 self.vel_mid,
                 self.dx(M),
                 w=self.alevar["w_mid"],
@@ -1284,13 +1294,16 @@ class FluidmechanicsProblem(problem_base):
 
                 if self.is_multiphase:
                     rho_ = self.phasevar["phi"] * self.rho1[n] + (1.0 - self.phasevar["phi"]) * self.rho2[n]
+                    rho_old_ = self.phasevar["phi_old"] * self.rho1[n] + (1.0 - self.phasevar["phi_old"]) * self.rho2[n]
+                    rho_mid_ = self.phasevar["phi_mid"] * self.rho1[n] + (1.0 - self.phasevar["phi_mid"]) * self.rho2[n]
                 else:
-                    rho_ = self.rho[n]
+                    rho_, rho_old_, rho_mid_ = self.rho[n], self.rho[n], self.rho[n]
 
                 self.deltaW_prestr_int += self.vf.deltaW_int(
                     self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"]),
                     self.dx(M),
                     F=self.alevar["Fale"],
+                    phi=self.phasevar["phi"],
                 )
                 self.deltaW_p_prestr.append(
                     self.vf.deltaW_int_pres(
@@ -1421,8 +1434,10 @@ class FluidmechanicsProblem(problem_base):
 
                     if self.is_multiphase:
                         rho_ = self.phasevar["phi"] * self.rho1[n] + (1.0 - self.phasevar["phi"]) * self.rho2[n]
+                        rho_old_ = self.phasevar["phi_old"] * self.rho1[n] + (1.0 - self.phasevar["phi_old"]) * self.rho2[n]
+                        rho_mid_ = self.phasevar["phi_mid"] * self.rho1[n] + (1.0 - self.phasevar["phi_mid"]) * self.rho2[n]
                     else:
-                        rho_ = self.rho[n]
+                        rho_, rho_old_, rho_mid_ = self.rho[n], self.rho[n], self.rho[n]
 
                     dscales = self.stabilization["dscales"]
 
@@ -1441,6 +1456,7 @@ class FluidmechanicsProblem(problem_base):
                                     self.v,
                                     self.p_[j],
                                     F=self.alevar["Fale"],
+                                    phi=self.phasevar["phi"],
                                 ),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
@@ -1448,11 +1464,12 @@ class FluidmechanicsProblem(problem_base):
                             residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(
                                 self.a_old,
                                 self.v_old,
-                                rho_,
+                                rho_old_,
                                 self.ma[n].sigma(
                                     self.v_old,
                                     self.p_old_[j],
                                     F=self.alevar["Fale_old"],
+                                    phi=self.phasevar["phi_old"],
                                 ),
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
@@ -1460,11 +1477,12 @@ class FluidmechanicsProblem(problem_base):
                             residual_v_strong_mid = self.vf.res_v_strong_navierstokes_transient(
                                 self.acc_mid,
                                 self.vel_mid,
-                                rho_,
+                                rho_mid_,
                                 self.ma[n].sigma(
                                     self.vel_mid,
                                     self.pf_mid_[j],
                                     F=self.alevar["Fale_mid"],
+                                    phi=self.phasevar["phi_mid"],
                                 ),
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
@@ -1478,13 +1496,13 @@ class FluidmechanicsProblem(problem_base):
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                             residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
-                                rho_,
+                                rho_old_,
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
                             residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
-                                rho_,
+                                rho_mid_,
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
@@ -1497,28 +1515,31 @@ class FluidmechanicsProblem(problem_base):
                                     self.v,
                                     self.p_[j],
                                     F=self.alevar["Fale"],
+                                    phi=self.phasevar["phi"],
                                 ),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(
                                 self.v_old,
-                                rho_,
+                                rho_old_,
                                 self.ma[n].sigma(
                                     self.v_old,
                                     self.p_old_[j],
                                     F=self.alevar["Fale_old"],
+                                    phi=self.phasevar["phi_old"],
                                 ),
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_navierstokes_steady(
                                 self.vel_mid,
-                                rho_,
+                                rho_mid_,
                                 self.ma[n].sigma(
                                     self.vel_mid,
                                     self.pf_mid_[j],
                                     F=self.alevar["Fale_mid"],
+                                    phi=self.phasevar["phi_mid"],
                                 ),
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
@@ -1532,13 +1553,13 @@ class FluidmechanicsProblem(problem_base):
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                             residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
-                                rho_,
+                                rho_old_,
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
                             residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
-                                rho_,
+                                rho_mid_,
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
@@ -1552,6 +1573,7 @@ class FluidmechanicsProblem(problem_base):
                                     self.v,
                                     self.p_[j],
                                     F=self.alevar["Fale"],
+                                    phi=self.phasevar["phi"],
                                 ),
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
@@ -1559,11 +1581,12 @@ class FluidmechanicsProblem(problem_base):
                             residual_v_strong_old = self.vf.res_v_strong_stokes_transient(
                                 self.a_old,
                                 self.v_old,
-                                rho_,
+                                rho_old_,
                                 self.ma[n].sigma(
                                     self.v_old,
                                     self.p_old_[j],
                                     F=self.alevar["Fale_old"],
+                                    phi=self.phasevar["phi_old"],
                                 ),
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
@@ -1571,11 +1594,12 @@ class FluidmechanicsProblem(problem_base):
                             residual_v_strong_mid = self.vf.res_v_strong_stokes_transient(
                                 self.acc_mid,
                                 self.vel_mid,
-                                rho_,
+                                rho_mid_,
                                 self.ma[n].sigma(
                                     self.vel_mid,
                                     self.pf_mid_[j],
                                     F=self.alevar["Fale_mid"],
+                                    phi=self.phasevar["phi_mid"],
                                 ),
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
@@ -1591,14 +1615,14 @@ class FluidmechanicsProblem(problem_base):
                             residual_v_strong_old = self.vf.f_inert_strong_stokes_transient(
                                 self.a_old,
                                 self.v_old,
-                                rho_,
+                                rho_old_,
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
                             residual_v_strong_mid = self.vf.f_inert_strong_stokes_transient(
                                 self.acc_mid,
                                 self.vel_mid,
-                                rho_,
+                                rho_mid_,
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
@@ -1610,24 +1634,27 @@ class FluidmechanicsProblem(problem_base):
                                     self.v,
                                     self.p_[j],
                                     F=self.alevar["Fale"],
+                                    phi=self.phasevar["phi"],
                                 ),
                                 F=self.alevar["Fale"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_stokes_steady(
-                                rho_,
+                                rho_old_,
                                 self.ma[n].sigma(
                                     self.v_old,
                                     self.p_old_[j],
                                     F=self.alevar["Fale_old"],
+                                    phi=self.phasevar["phi_old"],
                                 ),
                                 F=self.alevar["Fale_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(
-                                rho_,
+                                rho_mid_,
                                 self.ma[n].sigma(
                                     self.vel_mid,
                                     self.pf_mid_[j],
                                     F=self.alevar["Fale_mid"],
+                                    phi=self.phasevar["phi_mid"],
                                 ),
                                 F=self.alevar["Fale_mid"],
                             )
@@ -1657,7 +1684,7 @@ class FluidmechanicsProblem(problem_base):
                             self.v_old,
                             residual_v_strong_old,
                             tau_supg,
-                            rho_,
+                            rho_old_,
                             self.dx(M),
                             w=self.alevar["w_old"],
                             F=self.alevar["Fale_old"],
@@ -1667,7 +1694,7 @@ class FluidmechanicsProblem(problem_base):
                             self.vel_mid,
                             residual_v_strong_mid,
                             tau_supg,
-                            rho_,
+                            rho_mid_,
                             self.dx(M),
                             w=self.alevar["w_mid"],
                             F=self.alevar["Fale_mid"],
@@ -1684,14 +1711,14 @@ class FluidmechanicsProblem(problem_base):
                     self.deltaW_int_old += self.vf.stab_lsic(
                         self.v_old,
                         tau_lsic,
-                        rho_,
+                        rho_old_,
                         self.dx(M),
                         F=self.alevar["Fale_old"],
                     )
                     self.deltaW_int_mid += self.vf.stab_lsic(
                         self.vel_mid,
                         tau_lsic,
-                        rho_,
+                        rho_mid_,
                         self.dx(M),
                         F=self.alevar["Fale_mid"],
                     )
@@ -1708,7 +1735,7 @@ class FluidmechanicsProblem(problem_base):
                         self.var_p_[j],
                         residual_v_strong_old,
                         tau_pspg,
-                        rho_,
+                        rho_old_,
                         self.dx_p[j](M),
                         F=self.alevar["Fale_old"],
                     )
@@ -1716,7 +1743,7 @@ class FluidmechanicsProblem(problem_base):
                         self.var_p_[j],
                         residual_v_strong_mid,
                         tau_pspg,
-                        rho_,
+                        rho_mid_,
                         self.dx_p[j](M),
                         F=self.alevar["Fale_mid"],
                     )
@@ -1742,6 +1769,7 @@ class FluidmechanicsProblem(problem_base):
                                         self.v,
                                         self.p_[j],
                                         F=self.alevar["Fale"],
+                                        phi=self.phasevar["phi"],
                                     ),
                                     w=self.alevar["w"],
                                     F=self.alevar["Fale"],
@@ -1762,6 +1790,7 @@ class FluidmechanicsProblem(problem_base):
                                         self.v,
                                         self.p_[j],
                                         F=self.alevar["Fale"],
+                                        phi=self.phasevar["phi"],
                                     ),
                                     w=self.alevar["w"],
                                     F=self.alevar["Fale"],
@@ -1783,6 +1812,7 @@ class FluidmechanicsProblem(problem_base):
                                         self.v,
                                         self.p_[j],
                                         F=self.alevar["Fale"],
+                                        phi=self.phasevar["phi"],
                                     ),
                                     w=self.alevar["w"],
                                     F=self.alevar["Fale"],
@@ -1803,6 +1833,7 @@ class FluidmechanicsProblem(problem_base):
                                         self.v,
                                         self.p_[j],
                                         F=self.alevar["Fale"],
+                                        phi=self.phasevar["phi"],
                                     ),
                                     F=self.alevar["Fale"],
                                 )
@@ -1949,7 +1980,7 @@ class FluidmechanicsProblem(problem_base):
             else:
                 j = n
             ip_all += ufl.inner(
-                self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"]),
+                self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"], phi=self.phasevar["phi"]),
                 self.ki.gamma(self.v, F=self.alevar["Fale"]),
             ) * self.dx(M)
 

@@ -152,6 +152,10 @@ class FluidmechanicsPhasefieldProblem(problem_base):
     def set_variational_forms_coupling(self):
         # derivative of fluid momentum w.r.t. phase field
         self.weakform_lin_vphi = ufl.derivative(self.pbf.weakform_v, self.pbp.phi, self.pbp.dphi)
+        # derivative of fluid continuity w.r.t. phase field (in case of stabilization terms!)
+        self.weakform_lin_pphi = []
+        for n in range(self.pbf.num_domains):
+            self.weakform_lin_pphi.append(ufl.derivative(self.pbf.weakform_p[n], self.pbp.phi, self.pbp.dphi))
         # derivative of phase field w.r.t. fluid velocity
         self.weakform_lin_phiv = ufl.derivative(self.pbp.weakform_phi, self.pbf.v, self.pbf.dv)
 
@@ -172,6 +176,15 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.jac_vphi = fem.form(self.weakform_lin_vphi, entity_maps=self.io.entity_maps)
         self.jac_phiv = fem.form(self.weakform_lin_phiv, entity_maps=self.io.entity_maps)
 
+        if not bool(self.pbf.io.duplicate_mesh_domains):
+            self.weakform_lin_pphi = sum(self.weakform_lin_pphi)
+
+        self.jac_pphi = fem.form(self.weakform_lin_pphi, entity_maps=self.io.entity_maps)
+        if self.pbf.num_dupl > 1:
+            self.jac_pphi_ = []
+            for j in range(self.pbf.num_dupl):
+                self.jac_pphi_.append([self.jac_pphi[j]])
+
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
@@ -185,6 +198,11 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.K_vphi.assemble()
         self.K_phiv = fem.petsc.assemble_matrix(self.jac_phiv)
         self.K_phiv.assemble()
+        if self.pbf.num_dupl > 1:
+            self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi_)
+        else:
+            self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi)
+        self.K_pphi.assemble()
 
     def assemble_residual(self, t, subsolver=None):
         self.pbf.assemble_residual(t)
@@ -223,6 +241,13 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.K_vphi.assemble()
 
         self.K_list[0][2] = self.K_vphi
+
+        # derivative of fluid continuity w.r.t. pahse field (in case of stabilization terms!)
+        self.K_pphi.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_pphi, self.jac_pphi, [])
+        self.K_pphi.assemble()
+
+        self.K_list[1][2] = self.K_pphi
 
         # derivative of phase field w.r.t. fluid velocity
         self.K_phiv.zeroEntries()

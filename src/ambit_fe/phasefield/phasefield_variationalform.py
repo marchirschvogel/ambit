@@ -31,7 +31,7 @@ class variationalform():
             advec = ufl.as_ufl(0)
         return ( ufl.inner(phidot, self.var_phi) + ufl.inner(advec, self.var_phi) + M*ufl.inner(ufl.grad(mu), ufl.grad(self.var_phi)) ) * ddomain
 
-    def cahnhilliard_potential(self, phi, mu, driv_force, lmbda, ddomain):
+    def cahnhilliard_potential(self, phi, mu, driv_force, lmbda, ddomain, F=None):
         return ( ufl.inner(mu, self.var_mu) - ufl.inner(driv_force, self.var_mu) - lmbda*ufl.inner(ufl.grad(phi), ufl.grad(self.var_mu)) ) * ddomain
 
 

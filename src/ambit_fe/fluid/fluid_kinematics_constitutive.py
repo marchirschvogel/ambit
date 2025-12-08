@@ -32,7 +32,7 @@ class constitutive:
         self.I = ufl.Identity(self.kin.dim)
 
     # Cauchy stress core routine
-    def sigma(self, v_, p_, F=None):
+    def sigma(self, v_, p_, F=None, phi=None):
         gamma_ = self.kin.gamma(v_, F=F)
 
         stress = ufl.constantvalue.zero((self.kin.dim, self.kin.dim))
@@ -45,7 +45,7 @@ class constitutive:
             matparams_m = self.matparams[m]
 
             if matlaw == "newtonian":
-                stress += mat.newtonian(matparams_m)
+                stress += mat.newtonian(matparams_m, phi=phi)
 
             elif matlaw == "inertia":
                 # density is added to kinetic virtual power
