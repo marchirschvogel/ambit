@@ -17,35 +17,39 @@ Principle of Virtual Power
 
 
 class variationalform(variationalform_base):
-    ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
-
-    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None):
+    # Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
+    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         # standard Eulerian fluid
         if self.formulation == "nonconservative":
+            assert(phi is None)
             # non-conservative form for Navier-Stokes:
             # TeX: \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
-            return rho * ufl.dot(a + ufl.grad(v) * v, self.var_v) * ddomain
+            return rho_ * ufl.dot(a + ufl.grad(v) * v, self.var_v) * ddomain
 
         elif self.formulation == "conservative":
             # conservative form for Navier-Stokes
             # TeX: \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + \boldsymbol{\nabla}\cdot(\boldsymbol{v}\otimes\boldsymbol{v})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
 
             # note that we have div(v o v) = (grad v) v + v (div v), where the latter term is the divergence condition (Holzapfel eq. (1.292))
-            return rho * ufl.dot(a + ufl.div(ufl.outer(v, v)), self.var_v) * ddomain
+            return ufl.dot(rho_*a + ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
 
         else:
             raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
-    def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, F=None):
+    def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         if self.formulation == "nonconservative":
-            return rho * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
+            assert(phi is None)
+            return rho_ * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
         elif self.formulation == "conservative":
-            return rho * ufl.dot(ufl.div(ufl.outer(v, v)), self.var_v) * ddomain
+            return ufl.dot(ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, F=None):
-        return rho * ufl.dot(a, self.var_v) * ddomain
+    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
+        return rho_ * ufl.dot(a, self.var_v) * ddomain
 
     ### Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
 
@@ -57,36 +61,41 @@ class variationalform(variationalform_base):
     def deltaW_int_pres(self, v, var_p, ddomain, w=None, F=None):
         return ufl.div(v) * var_p * ddomain
 
-    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None):
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None, phi=None):
+        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi) - self.f_stress_strong(sig, F=F)
 
-    def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, F=None):
-        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_steady(self, v, rho, sig, F=None, phi=None):
+        return self.f_inert_strong_navierstokes_steady(v, rho, F=F, phi=phi) - self.f_stress_strong(sig, F=F)
 
-    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None):
-        return self.f_inert_strong_stokes_transient(a, rho) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None, phi=None):
+        return self.f_inert_strong_stokes_transient(a, rho, phi=phi) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_stokes_steady(self, rho, sig, F=None):
         return -self.f_stress_strong(sig, F=F)
 
-    def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None):
+    def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         if self.formulation == "nonconservative":
-            return rho * (a + ufl.grad(v) * v)
+            assert(phi is None)
+            return rho_ * (a + ufl.grad(v) * v)
         elif self.formulation == "conservative":
-            return rho * (a + ufl.div(ufl.outer(v, v)))
+            return rho_*a + ufl.div(rho_*ufl.outer(v, v))
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_strong_navierstokes_steady(self, v, rho, w=None, F=None):
+    def f_inert_strong_navierstokes_steady(self, v, rho, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         if self.formulation == "nonconservative":
-            return rho * (ufl.grad(v) * v)
+            assert(phi is None)
+            return rho_ * (ufl.grad(v) * v)
         elif self.formulation == "conservative":
-            return rho * (ufl.div(ufl.outer(v, v)))
+            return ufl.div(rho_*ufl.outer(v, v))
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_strong_stokes_transient(self, a, rho):
-        return rho * a
+    def f_inert_strong_stokes_transient(self, a, rho, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
+        return rho_ * a
 
     def f_stress_strong(self, sig, F=None):
         return ufl.div(sig)
@@ -126,36 +135,32 @@ class variationalform(variationalform_base):
         v,
         res_v_strong,
         tau_supg,
-        rho,
         ddomain,
         w=None,
         F=None,
         symmetric=False,
     ):
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return (
-                (1.0 / rho)
-                * ufl.dot(
-                    tau_supg * rho * ufl.sym(ufl.grad(self.var_v)) * v,
-                    res_v_strong,
-                )
-                * ddomain
-            )
+            return ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v)) * v, res_v_strong) * ddomain
         else:
-            return (1.0 / rho) * ufl.dot(tau_supg * rho * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
+            return ufl.dot(tau_supg * ufl.grad(self.var_v) * v, res_v_strong) * ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None):
-        return (1.0 / rho) * ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
+    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
+        return (1.0 / rho_) * ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
 
-    def stab_lsic(self, v, tau_lsic, rho, ddomain, F=None):
-        return tau_lsic * ufl.div(self.var_v) * rho * self.res_p_strong(v, F=F) * ddomain
+    def stab_lsic(self, v, tau_lsic, rho, ddomain, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
+        return tau_lsic * ufl.div(self.var_v) * rho_ * self.res_p_strong(v, F=F) * ddomain
 
     # components of element-level Reynolds number - cf. Tezduyar and Osawa (2000)
-    def re_c(self, rho, v, ddomain, w=None, F=None):
-        return rho * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
+    def re_c(self, rho, v, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
+        return rho_ * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
 
-    def re_ktilde(self, rho, v, ddomain, w=None, F=None):
-        return rho * ufl.dot(ufl.grad(v) * v, ufl.grad(self.var_v) * v) * ddomain
+    def re_ktilde(self, rho, v, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
+        return rho_ * ufl.dot(ufl.grad(v) * v, ufl.grad(self.var_v) * v) * ddomain
 
     ### Flux coupling conditions
 
@@ -166,6 +171,13 @@ class variationalform(variationalform_base):
             return ufl.dot(self.n0, v) * dboundary
         else:
             return (ufl.dot(self.n0, v))(fcts) * dboundary
+
+    # get the density expression - constant or multi-phase-like
+    def get_density(self, rho, phi=None):
+        if phi is not None:
+            return phi * rho[0] + (1.0 - phi) * rho[1]
+        else:
+            return rho[0]
 
 
 # ALE fluid mechanics variational forms class (cf. https://w3.onera.fr/erc-aeroflex/project/strategies-for-coupling-the-fluid-and-solid-dynamics)
@@ -189,15 +201,15 @@ class variationalform(variationalform_base):
 class variationalform_ale(variationalform):
     ### Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
 
-    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None):
+    def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)
-
         if self.formulation == "nonconservative":
             # non-conservative form for ALE Navier-Stokes:
             # TeX:
             # \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}\boldsymbol{v})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v =
             # \int\limits_{\Omega_0} J\rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\boldsymbol{\nabla}_{0}\boldsymbol{v}\,\boldsymbol{F}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
-            return rho * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * J * ddomain
+            return rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * J * ddomain
 
         elif self.formulation == "conservative":
             # conservative form for ALE Navier-Stokes
@@ -208,63 +220,32 @@ class variationalform_ale(variationalform):
             # note that we have div(v o (v-w)) = (grad v) (v-w) + v (div (v-w)) (Holzapfel eq. (1.292))
             # then use Holzapfel eq. (2.56)
             i, j, k = ufl.indices(3)
-            return (
-                rho
-                * ufl.dot(
-                    a
-                    + ufl.as_vector(
-                        ufl.grad(ufl.outer(v, v - w))[i, j, k] * ufl.inv(F).T[j, k],
-                        i,
-                    ),
-                    self.var_v,
-                )
-                * J
-                * ddomain
-            )
+            return ufl.dot(rho_*a + ufl.as_vector(ufl.grad(rho_*ufl.outer(v, v - w))[i, j, k] * ufl.inv(F).T[j, k],i), self.var_v)*J*ddomain
 
         else:
             raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
-    def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, F=None):
+    def deltaW_kin_navierstokes_steady(self, v, rho, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)
         if self.formulation == "nonconservative":
-            return rho * ufl.dot(ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * J * ddomain
+            assert(phi is None)
+            return rho_ * ufl.dot(ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * J * ddomain
         elif self.formulation == "conservative":
             i, j, k = ufl.indices(3)
-            return (
-                rho
-                * ufl.dot(
-                    ufl.as_vector(
-                        ufl.grad(ufl.outer(v, v - w))[i, j, k] * ufl.inv(F).T[j, k],
-                        i,
-                    ),
-                    self.var_v,
-                )
-                * J
-                * ddomain
-            )
+            return ufl.dot(ufl.as_vector(ufl.grad(rho_*ufl.outer(v, v - w))[i, j, k] * ufl.inv(F).T[j, k],i), self.var_v)*J*ddomain
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, F=None):
+    def deltaW_kin_stokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)
         if self.formulation == "nonconservative":
-            return rho * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (-w), self.var_v) * J * ddomain
+            assert(phi is None)
+            return rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (-w), self.var_v) * J * ddomain
         elif self.formulation == "conservative":
             i, j, k = ufl.indices(3)
-            return (
-                rho
-                * ufl.dot(
-                    a
-                    + ufl.as_vector(
-                        ufl.grad(ufl.outer(v, -w))[i, j, k] * ufl.inv(F).T[j, k],
-                        i,
-                    ),
-                    self.var_v,
-                )
-                * J
-                * ddomain
-            )
+            return ufl.dot(rho_*a + ufl.as_vector(ufl.grad(rho_*ufl.outer(v, -w))[i, j, k] * ufl.inv(F).T[j, k],i), self.var_v)*J*ddomain
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -285,50 +266,48 @@ class variationalform_ale(variationalform):
         J = ufl.det(F)
         return ufl.inner(ufl.grad(v), ufl.inv(F).T) * var_p * J * ddomain
 
-    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None):
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None, phi=None):
+        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi) - self.f_stress_strong(sig, F=F)
 
-    def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, F=None):
-        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_steady(self, v, rho, sig, F=None, phi=None):
+        return self.f_inert_strong_navierstokes_steady(v, rho, F=F, phi=phi) - self.f_stress_strong(sig, F=F)
 
-    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None):
-        return self.f_inert_strong_stokes_transient(a, v, rho, w=w, F=F) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None, phi=None):
+        return self.f_inert_strong_stokes_transient(a, v, rho, w=w, F=F, phi=phi) - self.f_stress_strong(sig, F=F)
 
     def res_v_strong_stokes_steady(self, rho, sig, F=None):
         return -self.f_stress_strong(sig, F=F)
 
-    def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None):
+    def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         if self.formulation == "nonconservative":
-            return rho * (a + ufl.grad(v) * ufl.inv(F) * (v - w))
+            assert(phi is None)
+            return rho_ * (a + ufl.grad(v) * ufl.inv(F) * (v - w))
         elif self.formulation == "conservative":
             i, j, k = ufl.indices(3)
-            return rho * (
-                a
-                + ufl.as_vector(
-                    ufl.grad(ufl.outer(v, v - w))[i, j, k] * ufl.inv(F).T[j, k],
-                    i,
-                )
-            )
+            return rho_*a + ufl.as_vector(ufl.grad(rho_*ufl.outer(v, v - w))[i, j, k] * ufl.inv(F).T[j, k],i)
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_strong_navierstokes_steady(self, v, rho, w=None, F=None):
+    def f_inert_strong_navierstokes_steady(self, v, rho, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         if self.formulation == "nonconservative":
-            return rho * (ufl.grad(v) * ufl.inv(F) * v)  # NOTE: No domain velocity here!
+            assert(phi is None)
+            return rho_ * (ufl.grad(v) * ufl.inv(F) * v)  # NOTE: No domain velocity here!
         elif self.formulation == "conservative":
             i, j, k = ufl.indices(3)
-            return rho * (
-                ufl.as_vector(ufl.grad(ufl.outer(v, v))[i, j, k] * ufl.inv(F).T[j, k], i)
-            )  # NOTE: No domain velocity here!
+            return ufl.as_vector(ufl.grad(rho_*ufl.outer(v, v))[i, j, k] * ufl.inv(F).T[j, k], i)  # NOTE: No domain velocity here!
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def f_inert_strong_stokes_transient(self, a, v, rho, w=None, F=None):
+    def f_inert_strong_stokes_transient(self, a, v, rho, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         if self.formulation == "nonconservative":
-            return rho * (a + ufl.grad(v) * ufl.inv(F) * (-w))
+            assert(phi is None)
+            return rho_ * (a + ufl.grad(v) * ufl.inv(F) * (-w))
         elif self.formulation == "conservative":
             i, j, k = ufl.indices(3)
-            return rho * (a + ufl.as_vector(ufl.grad(ufl.outer(v, -w))[i, j, k] * ufl.inv(F).T[j, k], i))
+            return rho_*a + ufl.as_vector(ufl.grad(rho_*ufl.outer(v, -w))[i, j, k] * ufl.inv(F).T[j, k], i)
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -373,7 +352,6 @@ class variationalform_ale(variationalform):
         v,
         res_v_strong,
         tau_supg,
-        rho,
         ddomain,
         w=None,
         F=None,
@@ -381,43 +359,31 @@ class variationalform_ale(variationalform):
     ):
         J = ufl.det(F)
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return (
-                (1.0 / rho)
-                * ufl.dot(
-                    tau_supg * rho * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * v,
-                    res_v_strong,
-                )
-                * J
-                * ddomain
-            )
+            return ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * v, res_v_strong)*J*ddomain
         else:
-            return (
-                (1.0 / rho)
-                * ufl.dot(
-                    tau_supg * rho * ufl.grad(self.var_v) * ufl.inv(F) * v,
-                    res_v_strong,
-                )
-                * J
-                * ddomain
-            )
+            return ufl.dot(tau_supg * ufl.grad(self.var_v) * ufl.inv(F) * v, res_v_strong)* J* ddomain
 
-    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None):
+    def stab_pspg(self, var_p, res_v_strong, tau_pspg, rho, ddomain, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)
-        return (1.0 / rho) * ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * J * ddomain
+        return (1.0 / rho_) * ufl.dot(tau_pspg * ufl.inv(F).T * ufl.grad(var_p), res_v_strong) * J * ddomain
 
-    def stab_lsic(self, v, tau_lsic, rho, ddomain, F=None):
+    def stab_lsic(self, v, tau_lsic, rho, ddomain, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)
-        return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho * self.res_p_strong(v, F=F) * J * ddomain
+        return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * self.res_p_strong(v, F=F) * J * ddomain
 
     # components of element-level Reynolds number
-    def re_c(self, rho, v, ddomain, w=None, F=None):
+    def re_c(self, rho, v, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)
-        return rho * ufl.dot(ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * J * ddomain
+        return rho_ * ufl.dot(ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * J * ddomain
 
-    def re_ktilde(self, rho, v, ddomain, w=None, F=None):
+    def re_ktilde(self, rho, v, ddomain, w=None, F=None, phi=None):
+        rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)
         return (
-            rho
+            rho_
             * ufl.dot(
                 ufl.grad(v) * ufl.inv(F) * (v - w),
                 ufl.grad(self.var_v) * ufl.inv(F) * v,

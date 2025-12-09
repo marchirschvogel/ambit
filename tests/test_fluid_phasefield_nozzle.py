@@ -48,7 +48,7 @@ def test_main():
 
     CONTROL_PARAMS = {"maxtime": 1.0,
                       "numstep": 100,
-                      "numstep_stop": 25,
+                      "numstep_stop": 10,
                       "initial_fields": [expr1, None],
                       }
 
@@ -74,7 +74,8 @@ def test_main():
                                             'dscales'        : [1.,1.,1.],
                                             'symmetric'      : True,
                                             'reduced_scheme' : True,
-                                            'vscale_vel_dep' : False}}
+                                            'vscale_vel_dep' : False},
+                        "fluid_formulation": "conservative"}
 
     FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5}
 
@@ -82,7 +83,7 @@ def test_main():
 
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": 1.0e-7, "mu2": 4.0e-6},
-                                "inertia": {"rho1": 1.0e-6, "rho2": 1.0e-6}}}
+                                "inertia": {"rho1": 1.0e-7, "rho2": 1.0e-6}}}
 
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": 0.1},
                           "params_cahnhilliard": {"M": 1.0, "lambda": 0.01}}}
@@ -127,10 +128,10 @@ def test_main():
     v_corr, p_corr = np.zeros(2 * len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 8.5378522799288383E+00  # x
-    v_corr[1] = -4.4531337037709484E+00  # y
+    v_corr[0] = 1.1063238988081582E+02  # x
+    v_corr[1] = 9.3819538258327029E-01  # y
 
-    p_corr[0] = -1.4697266781934673E-07
+    p_corr[0] = 5.5081239777031218E-03
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,
