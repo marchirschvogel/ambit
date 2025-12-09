@@ -9,6 +9,7 @@ tests:
 - stress-symmetric version of reduced stabilization scheme in ALE form
 - duplicate pressure nodes (discontinuity) at mitral valve plane
 - dt scaling of residual
+- conservative fluid formulation
 """
 
 import ambit_fe
@@ -102,6 +103,7 @@ def test_main():
             "symmetric": True,
             "reduced_scheme": True,
         },
+        "fluid_formulation": "conservative",
     }
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
@@ -195,27 +197,27 @@ def test_main():
     s_corr = np.zeros(problem.mp.pb0.cardvasc0D.numdof)
 
     # correct 0D results
-    s_corr[0] = 3.8883019640814389e04
-    s_corr[1] = 5.5563581045760104e04
-    s_corr[2] = -5.5564532959684962e04
-    s_corr[3] = -9.5191392485760040e-01
-    s_corr[4] = 1.0924979624569223e01
-    s_corr[5] = -9.5191392485760040e-01
-    s_corr[6] = 1.0924985336052774e01
-    s_corr[7] = 2.1047096618496736e04
-    s_corr[8] = 2.2871777634299062e00
-    s_corr[9] = 9.5236185798506907e04
-    s_corr[10] = 1.4906158530701109e03
-    s_corr[11] = 1.5093042657425306e-03
-    s_corr[12] = -2.2265151472645600e-01
-    s_corr[13] = 1.8688412672419695e-05
-    s_corr[14] = 2.2265338356772326e00
-    s_corr[15] = 3.5951841419822158e04
-    s_corr[16] = 1.6872562143799006e00
-    s_corr[17] = 3.2937100947105318e03
-    s_corr[18] = 3.7051771765377343e03
-    s_corr[19] = 2.5877030182803683e03
-    s_corr[20] = 7.0939711154170864e03
+    s_corr[0] = 3.8887095241040748E+04
+    s_corr[1] = 5.5567656679477215E+04
+    s_corr[2] = -5.5568608559911343E+04
+    s_corr[3] = -9.5188043412580936E-01
+    s_corr[4] = 1.0924979624774453E+01
+    s_corr[5] = -9.5188043412580936E-01
+    s_corr[6] = 1.0924985336057059E+01
+    s_corr[7] = 2.1047096618503267E+04
+    s_corr[8] = 2.2871777634299062E+00
+    s_corr[9] = 9.5236185798506893E+04
+    s_corr[10] = 1.4906158530701109E+03
+    s_corr[11] = 1.5093042657425306E-03
+    s_corr[12] = -2.2265151472645558E-01
+    s_corr[13] = 1.8688412672419699E-05
+    s_corr[14] = 2.2265338356772282E+00
+    s_corr[15] = 3.5951841419900476E+04
+    s_corr[16] = 1.6872562143787218E+00
+    s_corr[17] = 3.2971407764732335E+03
+    s_corr[18] = 3.7040465903597883E+03
+    s_corr[19] = 2.5918034461317634E+03
+    s_corr[20] = 7.0875706254716824E+03
 
     check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
     success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)

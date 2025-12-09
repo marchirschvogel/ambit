@@ -1498,6 +1498,7 @@ class FluidmechanicsProblem(problem_base):
                             residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
                                 self.rho[n],
+                                w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
@@ -1512,6 +1513,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     phi=self.phasevar["phi"],
                                 ),
+                                w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
                             )
@@ -1524,6 +1526,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_old"],
                                     phi=self.phasevar["phi_old"],
                                 ),
+                                w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
                             )
@@ -1536,6 +1539,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_mid"],
                                     phi=self.phasevar["phi_mid"],
                                 ),
+                                w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
                             )
@@ -1543,18 +1547,21 @@ class FluidmechanicsProblem(problem_base):
                             residual_v_strong = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v,
                                 self.rho[n],
+                                w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                             residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
                                 self.rho[n],
+                                w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
                             residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
                                 self.rho[n],
+                                w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
@@ -1801,6 +1808,7 @@ class FluidmechanicsProblem(problem_base):
                                         F=self.alevar["Fale"],
                                         phi=self.phasevar["phi"],
                                     ),
+                                    w=self.alevar["w"],
                                     F=self.alevar["Fale"],
                                     phi=self.phasevar["phi"],
                                 )
