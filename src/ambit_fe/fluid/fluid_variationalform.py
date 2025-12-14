@@ -78,9 +78,9 @@ class variationalform(variationalform_base):
             rhodot_ = ufl.as_ufl(0)
         if self.formulation == "nonconservative":
             """ TeX:
-            \int\limits_{\Omega}\left(\frac{\partial\rho}{\partial t} + \nabla\rho\cdot\boldsymbol{v}+\rho\nabla\cdot\boldsymbol{v}\right)\delta p\,\mathrm{d}v
+            \int\limits_{\Omega}\left(\frac{\partial\rho}{\partial t} + \nabla\rho\cdot\boldsymbol{v} + \rho\nabla\cdot\boldsymbol{v}\right)\delta p\,\mathrm{d}v
             """
-            return (rhodot_ + ufl.dot(ufl.grad(rho_), v) + ufl.dot(rho_, ufl.div(v))) * var_p * ddomain
+            return (rhodot_ + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)) * var_p * ddomain
         elif self.formulation == "conservative":
             """ TeX:
             \int\limits_{\Omega}\left(\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v})\right)\delta p \,\mathrm{d}v = 0
@@ -242,7 +242,7 @@ class variationalform_ale(variationalform):
             """ TeX:
             \int\limits_{\Omega_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return J * rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain
+            return J*rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain
         elif self.formulation == "conservative":
             if phi is not None:
                 rhodot_ = ufl.diff(rho_,phi) * phidot
@@ -263,7 +263,7 @@ class variationalform_ale(variationalform):
             """ TeX:
             \int\limits_{\Omega_0}\widehat{J}\rho(\nabla_0\boldsymbol{v}\boldsymbol{F}^{-1})\boldsymbol{v}\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return rho_ * ufl.dot(ufl.grad(v) * ufl.inv(F) * v, self.var_v) * J * ddomain  # NOTE: No domain velocity here! ... Really?!
+            return J*rho_ * ufl.dot(ufl.grad(v) * ufl.inv(F) * v, self.var_v) * ddomain  # NOTE: No domain velocity here! ... Really?!
         elif self.formulation == "conservative":
             """ TeX:
             \int\limits_{\Omega_0}\nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
