@@ -87,6 +87,8 @@ class FluidmechanicsPhasefieldProblem(problem_base):
             )
         self.pbf.phasevar["phi"] = self.pbp.phi
         self.pbf.phasevar["phi_old"] = self.pbp.phi_old
+        self.pbf.phasevar["phidot"] = self.pbp.phidot_expr
+        self.pbf.phasevar["phidot_old"] = self.pbp.phidot_old
 
         self.pbp.fluidvar["v"] = self.pbf.v
         self.pbp.fluidvar["v_old"] = self.pbf.v_old

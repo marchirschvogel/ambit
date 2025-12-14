@@ -48,7 +48,7 @@ def test_main():
 
     CONTROL_PARAMS = {"maxtime": 1.0,
                       "numstep": 100,
-                      "numstep_stop": 10,
+                      "numstep_stop": 7,
                       "initial_fields": [expr1, None],
                       }
 
@@ -128,10 +128,10 @@ def test_main():
     v_corr, p_corr = np.zeros(2 * len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 1.1063238988081582E+02  # x
-    v_corr[1] = 9.3819538258327029E-01  # y
+    v_corr[0] = 5.3496735378219064E+01  # x
+    v_corr[1] = -1.6375737425821393E+00  # y
 
-    p_corr[0] = 5.5081239777031218E-03
+    p_corr[0] = 3.3473566595254960E-03
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

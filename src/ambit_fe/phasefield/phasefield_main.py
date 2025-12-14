@@ -170,6 +170,9 @@ class PhasefieldProblem(problem_base):
 
             self.vf = phasefield_variationalform.variationalform_ale(self.var_phi, self.var_mu)
 
+        # set form for phidot
+        self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phidot_old)
+
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
             self.io,
@@ -230,9 +233,6 @@ class PhasefieldProblem(problem_base):
         else:
             self.fluidvar["v"] = None
             self.fluidvar["v_old"] = None
-
-        # set form for phidot
-        self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phidot_old)
 
         self.phase_field, self.potential = ufl.as_ufl(0), ufl.as_ufl(0)
         self.phase_field_old = ufl.as_ufl(0)

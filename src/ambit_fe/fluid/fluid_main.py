@@ -562,12 +562,18 @@ class FluidmechanicsProblem(problem_base):
             self.alevar["w_mid"] = None
 
         if self.is_multiphase:
-            # mid-point representation of phase field
+            # mid-point representation of phase field and its time derivative
             self.phasevar["phi_mid"] = self.timefac * self.phasevar["phi"] + (1.0 - self.timefac) * self.phasevar["phi_old"]
+            self.phasevar["phidot_mid"] = self.timefac * self.phasevar["phidot"] + (1.0 - self.timefac) * self.phasevar["phidot_old"]
+            # make variable for calculating density time derivative
+            self.phasevar["phi_mid"] = ufl.variable(self.phasevar["phi_mid"])
         else:
             self.phasevar["phi"] = None
             self.phasevar["phi_old"] = None
             self.phasevar["phi_mid"] = None
+            self.phasevar["phidot"] = None
+            self.phasevar["phidot_old"] = None
+            self.phasevar["phidot_mid"] = None
 
         # set form for acceleration
         self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
@@ -628,6 +634,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w"],
                     F=self.alevar["Fale"],
                     phi=self.phasevar["phi"],
+                    phidot=self.phasevar["phidot"],
                 )
                 self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_transient(
                     self.a_old,
@@ -637,6 +644,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
                     phi=self.phasevar["phi_old"],
+                    phidot=self.phasevar["phidot_old"],
                 )
                 self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_transient(
                     self.acc_mid,
@@ -646,6 +654,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
                     phi=self.phasevar["phi_mid"],
+                    phidot=self.phasevar["phidot_mid"],
                 )
             elif self.fluid_governing_type == "navierstokes_steady":
                 self.deltaW_kin += self.vf.deltaW_kin_navierstokes_steady(
@@ -654,6 +663,7 @@ class FluidmechanicsProblem(problem_base):
                     self.dx(M),
                     F=self.alevar["Fale"],
                     phi=self.phasevar["phi"],
+                    phidot=self.phasevar["phidot"],
                 )
                 self.deltaW_kin_old += self.vf.deltaW_kin_navierstokes_steady(
                     self.v_old,
@@ -661,6 +671,7 @@ class FluidmechanicsProblem(problem_base):
                     self.dx(M),
                     F=self.alevar["Fale_old"],
                     phi=self.phasevar["phi_old"],
+                    phidot=self.phasevar["phidot_old"],
                 )
                 self.deltaW_kin_mid += self.vf.deltaW_kin_navierstokes_steady(
                     self.vel_mid,
@@ -668,6 +679,7 @@ class FluidmechanicsProblem(problem_base):
                     self.dx(M),
                     F=self.alevar["Fale_mid"],
                     phi=self.phasevar["phi_mid"],
+                    phidot=self.phasevar["phidot_mid"],
                 )
             elif self.fluid_governing_type == "stokes_transient":
                 self.deltaW_kin += self.vf.deltaW_kin_stokes_transient(
@@ -678,6 +690,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w"],
                     F=self.alevar["Fale"],
                     phi=self.phasevar["phi"],
+                    phidot=self.phasevar["phidot"],
                 )
                 self.deltaW_kin_old += self.vf.deltaW_kin_stokes_transient(
                     self.a_old,
@@ -687,6 +700,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
                     phi=self.phasevar["phi_old"],
+                    phidot=self.phasevar["phidot_old"],
                 )
                 self.deltaW_kin_mid += self.vf.deltaW_kin_stokes_transient(
                     self.acc_mid,
@@ -696,6 +710,7 @@ class FluidmechanicsProblem(problem_base):
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
                     phi=self.phasevar["phi_mid"],
+                    phidot=self.phasevar["phidot_mid"],
                 )
             elif self.fluid_governing_type == "stokes_steady":
                 pass  # no kinetic term to add for steady Stokes flow
@@ -723,25 +738,37 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_p.append(
                 self.vf.deltaW_int_pres(
                     self.v,
+                    self.rho[n],
                     self.var_p_[j],
                     self.dx_p[j](M),
+                    w=self.alevar["w"],
                     F=self.alevar["Fale"],
+                    phi=self.phasevar["phi"],
+                    phidot=self.phasevar["phidot"],
                 )
             )
             self.deltaW_p_old.append(
                 self.vf.deltaW_int_pres(
                     self.v_old,
+                    self.rho[n],
                     self.var_p_[j],
                     self.dx_p[j](M),
+                    w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
+                    phi=self.phasevar["phi_old"],
+                    phidot=self.phasevar["phidot_old"],
                 )
             )
             self.deltaW_p_mid.append(
                 self.vf.deltaW_int_pres(
                     self.vel_mid,
+                    self.rho[n],
                     self.var_p_[j],
                     self.dx_p[j](M),
+                    w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
+                    phi=self.phasevar["phi_mid"],
+                    phidot=self.phasevar["phidot_mid"],
                 )
             )
 
@@ -753,6 +780,7 @@ class FluidmechanicsProblem(problem_base):
                 w=self.alevar["w"],
                 F=self.alevar["Fale"],
                 phi=self.phasevar["phi"],
+                phidot=self.phasevar["phidot"],
             )
             self.Re_c_old += self.vf.re_c(
                 self.rho[n],
@@ -761,6 +789,7 @@ class FluidmechanicsProblem(problem_base):
                 w=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
                 phi=self.phasevar["phi_old"],
+                phidot=self.phasevar["phidot_old"],
             )
             self.Re_c_mid += self.vf.re_c(
                 self.rho[n],
@@ -769,6 +798,7 @@ class FluidmechanicsProblem(problem_base):
                 w=self.alevar["w_mid"],
                 F=self.alevar["Fale_mid"],
                 phi=self.phasevar["phi_mid"],
+                phidot=self.phasevar["phidot_mid"],
             )
 
             self.Re_ktilde += self.vf.re_ktilde(
@@ -778,6 +808,7 @@ class FluidmechanicsProblem(problem_base):
                 w=self.alevar["w"],
                 F=self.alevar["Fale"],
                 phi=self.phasevar["phi"],
+                phidot=self.phasevar["phidot"],
             )
             self.Re_ktilde_old += self.vf.re_ktilde(
                 self.rho[n],
@@ -786,6 +817,7 @@ class FluidmechanicsProblem(problem_base):
                 w=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
                 phi=self.phasevar["phi_old"],
+                phidot=self.phasevar["phidot_old"],
             )
             self.Re_ktilde_mid += self.vf.re_ktilde(
                 self.rho[n],
@@ -794,6 +826,7 @@ class FluidmechanicsProblem(problem_base):
                 w=self.alevar["w_mid"],
                 F=self.alevar["Fale_mid"],
                 phi=self.phasevar["phi_mid"],
+                phidot=self.phasevar["phidot_mid"],
             )
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
@@ -1305,9 +1338,13 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_p_prestr.append(
                     self.vf.deltaW_int_pres(
                         self.v,
+                        self.rho[n],
                         self.var_p_[j],
                         self.dx(M),
+                        w=self.alevar["w"],
                         F=self.alevar["Fale"],
+                        phi=self.phasevar["phi"],
+                        phidot=self.phasevar["phidot"],
                     )
                 )
                 # it seems that we need some slight inertia for this to work smoothly, so let's use transient Stokes here (instead of steady Navier-Stokes or steady Stokes...)
@@ -1320,6 +1357,7 @@ class FluidmechanicsProblem(problem_base):
                         w=self.alevar["w"],
                         F=self.alevar["Fale"],
                         phi=self.phasevar["phi"],
+                        phidot=self.phasevar["phidot"],
                     )
                 elif self.prestress_kinetic == "navierstokes_steady":
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_navierstokes_steady(
@@ -1328,6 +1366,7 @@ class FluidmechanicsProblem(problem_base):
                         self.dx(M),
                         F=self.alevar["Fale"],
                         phi=self.phasevar["phi"],
+                        phidot=self.phasevar["phidot"],
                     )
                 elif self.prestress_kinetic == "stokes_transient":
                     self.deltaW_prestr_kin += self.vf.deltaW_kin_stokes_transient(
@@ -1338,6 +1377,7 @@ class FluidmechanicsProblem(problem_base):
                         w=self.alevar["w"],
                         F=self.alevar["Fale"],
                         phi=self.phasevar["phi"],
+                        phidot=self.phasevar["phidot"],
                     )
                 elif self.prestress_kinetic == "none":
                     pass
@@ -1453,6 +1493,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
+                                phidot=self.phasevar["phidot"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_navierstokes_transient(
                                 self.a_old,
@@ -1467,6 +1508,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
+                                phidot=self.phasevar["phidot_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_navierstokes_transient(
                                 self.acc_mid,
@@ -1481,6 +1523,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
+                                phidot=self.phasevar["phidot_mid"]
                             )
                         else:  # no viscous stress term and no dv/dt term
                             residual_v_strong = self.vf.f_inert_strong_navierstokes_steady(
@@ -1488,12 +1531,14 @@ class FluidmechanicsProblem(problem_base):
                                 self.rho[n],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
+                                phidot=self.phasevar["phidot"],
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                             residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
                                 self.rho[n],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
+                                phidot=self.phasevar["phidot_old"],
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
                             residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
@@ -1501,6 +1546,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
+                                phidot=self.phasevar["phidot_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
                     elif self.fluid_governing_type == "navierstokes_steady":
                         if not red_scheme:
@@ -1516,6 +1562,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
+                                phidot=self.phasevar["phidot"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_navierstokes_steady(
                                 self.v_old,
@@ -1529,6 +1576,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
+                                phidot=self.phasevar["phidot_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_navierstokes_steady(
                                 self.vel_mid,
@@ -1542,6 +1590,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
+                                phidot=self.phasevar["phidot_mid"],
                             )
                         else:  # no viscous stress term
                             residual_v_strong = self.vf.f_inert_strong_navierstokes_steady(
@@ -1550,6 +1599,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
+                                phidot=self.phasevar["phidot"],
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                             residual_v_strong_old = self.vf.f_inert_strong_navierstokes_steady(
                                 self.v_old,
@@ -1557,6 +1607,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
+                                phidot=self.phasevar["phidot_old"],
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
                             residual_v_strong_mid = self.vf.f_inert_strong_navierstokes_steady(
                                 self.vel_mid,
@@ -1564,6 +1615,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
+                                phidot=self.phasevar["phidot_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
                     elif self.fluid_governing_type == "stokes_transient":
                         if not red_scheme:
@@ -1580,6 +1632,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
+                                phidot=self.phasevar["phidot"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_stokes_transient(
                                 self.a_old,
@@ -1594,6 +1647,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
+                                phidot=self.phasevar["phidot_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_stokes_transient(
                                 self.acc_mid,
@@ -1608,6 +1662,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
+                                phidot=self.phasevar["phidot_mid"],
                             )
                         else:  # no viscous stress term
                             residual_v_strong = self.vf.f_inert_strong_stokes_transient(
@@ -1617,6 +1672,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
+                                phidot=self.phasevar["phidot"],
                             ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                             residual_v_strong_old = self.vf.f_inert_strong_stokes_transient(
                                 self.a_old,
@@ -1625,6 +1681,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
+                                phidot=self.phasevar["phidot_old"],
                             ) + self.vf.f_gradp_strong(self.p_old_[j], F=self.alevar["Fale_old"])
                             residual_v_strong_mid = self.vf.f_inert_strong_stokes_transient(
                                 self.acc_mid,
@@ -1633,6 +1690,7 @@ class FluidmechanicsProblem(problem_base):
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
+                                phidot=self.phasevar["phidot_mid"],
                             ) + self.vf.f_gradp_strong(self.pf_mid_[j], F=self.alevar["Fale_mid"])
                     elif self.fluid_governing_type == "stokes_steady":
                         if not red_scheme:
@@ -1646,6 +1704,7 @@ class FluidmechanicsProblem(problem_base):
                                 ),
                                 F=self.alevar["Fale"],
                                 phi=self.phasevar["phi"],
+                                phidot=self.phasevar["phidot"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
@@ -1657,6 +1716,7 @@ class FluidmechanicsProblem(problem_base):
                                 ),
                                 F=self.alevar["Fale_old"],
                                 phi=self.phasevar["phi_old"],
+                                phidot=self.phasevar["phidot_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
@@ -1668,6 +1728,7 @@ class FluidmechanicsProblem(problem_base):
                                 ),
                                 F=self.alevar["Fale_mid"],
                                 phi=self.phasevar["phi_mid"],
+                                phidot=self.phasevar["phidot_mid"],
                             )
                         else:  # no viscous stress term
                             residual_v_strong = self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
@@ -1738,28 +1799,22 @@ class FluidmechanicsProblem(problem_base):
                         self.var_p_[j],
                         residual_v_strong,
                         tau_pspg,
-                        self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale"],
-                        phi=self.phasevar["phi"],
                     )
                     self.deltaW_p_old[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_old,
                         tau_pspg,
-                        self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_old"],
-                        phi=self.phasevar["phi_old"],
                     )
                     self.deltaW_p_mid[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_mid,
                         tau_pspg,
-                        self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_mid"],
-                        phi=self.phasevar["phi_mid"],
                     )
 
                     # now take care of stabilization for the prestress problem (only FrSI)
@@ -1789,6 +1844,7 @@ class FluidmechanicsProblem(problem_base):
                                     w=self.alevar["w"],
                                     F=self.alevar["Fale"],
                                     phi=self.phasevar["phi"],
+                                    phidot=self.phasevar["phidot"],
                                 )
                             else:  # no viscous stress term and no dv/dt term
                                 residual_v_strong_prestr = self.vf.f_inert_strong_navierstokes_steady(
@@ -1796,6 +1852,7 @@ class FluidmechanicsProblem(problem_base):
                                     self.rho[n],
                                     F=self.alevar["Fale"],
                                     phi=self.phasevar["phi"],
+                                    phidot=self.phasevar["phidot"],
                                 ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                         elif self.prestress_kinetic == "navierstokes_steady":
                             if not red_scheme:
@@ -1811,6 +1868,7 @@ class FluidmechanicsProblem(problem_base):
                                     w=self.alevar["w"],
                                     F=self.alevar["Fale"],
                                     phi=self.phasevar["phi"],
+                                    phidot=self.phasevar["phidot"],
                                 )
                             else:  # no viscous stress term
                                 residual_v_strong_prestr = self.vf.f_inert_strong_navierstokes_steady(
@@ -1834,6 +1892,7 @@ class FluidmechanicsProblem(problem_base):
                                     w=self.alevar["w"],
                                     F=self.alevar["Fale"],
                                     phi=self.phasevar["phi"],
+                                    phidot=self.phasevar["phidot"],
                                 )
                             else:  # no viscous stress term
                                 residual_v_strong_prestr = self.vf.f_inert_strong_stokes_transient(
@@ -1843,6 +1902,7 @@ class FluidmechanicsProblem(problem_base):
                                     w=self.alevar["w"],
                                     F=self.alevar["Fale"],
                                     phi=self.phasevar["phi"],
+                                    phidot=self.phasevar["phidot"],
                                 ) + self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
                         elif self.prestress_kinetic == "none":
                             if not red_scheme:
@@ -1865,10 +1925,8 @@ class FluidmechanicsProblem(problem_base):
                             self.var_p_[j],
                             residual_v_strong_prestr,
                             tau_pspg,
-                            self.rho[n],
                             self.dx(M),
                             F=self.alevar["Fale"],
-                            phi=self.phasevar["phi"],
                         )
                         # SUPG term only for kinetic prestress...
                         if (
