@@ -128,7 +128,7 @@ def test_main():
                 return 0.0
 
     BC_DICT = {
-        "dirichlet": [{"dir": "2dimZ", "val": 0.0}],
+        "dirichlet": [{"dir": "z", "val": 0.0}],
         "robin": [
             {"type": "spring", "id": [3], "dir": "normal_ref", "stiff": 0.075},
             {"type": "dashpot", "id": [3], "dir": "normal_ref", "visc": 0.005},

@@ -39,6 +39,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         io,
         mor_params={},
         is_ale=False,
+        is_multiphase=False,
         pbf=None,
         pb0=None,
     ):

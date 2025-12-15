@@ -21,12 +21,9 @@ def test_main():
         "write_results_every": 1,
         "indicate_results_by": "step",
         "output_path": basepath + "/tmp/",
-        "mesh_domain": basepath + "/input/nozzle_domain.xdmf",
-        "mesh_boundary": basepath + "/input/nozzle_boundary.xdmf",
-        "mesh_subboundary": basepath + "/input/nozzle_point.xdmf",
-        "mesh_encoding": "ASCII",  # HDF5, ASCII
+        "mesh_domain": {"type":"unit_square", "celltype":"triangle", "meshsize":[10,10]},
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_nozzle",
+        "simname": "fluid_ale_phasefield_cons_taylorhood_sloshingdroplet",
         "write_initial_fields": True,
     }
 
@@ -36,7 +33,7 @@ def test_main():
             self.eps = 1e0
             self.R_0 = 7.5
 
-            self.x_c = np.asarray([83.3937, -0.084307, 0.0])
+            self.x_c = np.asarray([0.5, 0.5, 0.0])
 
         def evaluate(self, x):
 
@@ -49,7 +46,7 @@ def test_main():
 
     CONTROL_PARAMS = {"maxtime": 1.0,
                       "numstep": 100,
-                      "numstep_stop": 25,
+                      # "numstep_stop": 25,
                       "initial_fields": [expr1, None],
                       }
 
@@ -67,22 +64,23 @@ def test_main():
     TIME_PARAMS_PF = {"timint": "ost", "theta_ost": 0.5}
 
 
-    FEM_PARAMS_FLUID = {"order_vel": 1,
+    FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "stabilization"  : {"scheme"         : "supg_pspg",
-                                            "vscale"         : 1.0e1,
-                                            "dscales"        : [1.,1.,1.],
-                                            "symmetric"      : False,
-                                            "reduced_scheme" : False,
-                                            "vscale_vel_dep" : False}}
+                        "fluid_formulation": "conservative"}
 
     FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5}
 
-    FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
+    FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
+
+    class locate:
+        def __init__(self):
+            pass
+        def evaluate(self, x):
+            return np.isclose(x[2], 0.0)
 
     COUPLING_PARAMS_FLUID_ALE = {
-        "coupling_ale_fluid": [{"surface_ids": [2,3,5,6]}], # no-slip at moving ALE boundary
+        "coupling_ale_fluid": [{"locator": locate()}], # no-slip at moving ALE boundary
     }
 
 
@@ -91,6 +89,8 @@ def test_main():
 
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": 0.1},
                           "params_cahnhilliard": {"M": 1.0, "lambda": 0.01}}}
+
+    MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
@@ -106,19 +106,31 @@ def test_main():
             val = -(l_i+l_o + h_i/2. + h_o/2.)
             return val*t/CONTROL_PARAMS["maxtime"]
 
-    BC_DICT_FLUID = {
-        # "dirichlet" : [{"id": [2,3,5,6], "dir":"all", "val":0.0}], # no-slip
-        "neumann" : [{"id" : [1], "dir":"normal_cur", "curve":1}], # inlet
+
+    class expr2:
+        def __init__(self):
+            self.t = 0.0
+            self.L = 1.0
+            self.A = 0.3
+
+            T=0.25
+            self.omega=2.*np.pi/T
+
+        def evaluate(self, x):
+            val_t = self.A*np.sin(self.omega*self.t)*x[1]/self.L
+
+            return (np.full(x.shape[1], val_t),
+                    np.full(x.shape[1], 0.0))
+
+    BC_DICT_FLUID = { }
+
+    BC_DICT_ALE = {
+        "dirichlet": [{"dir": "all", "expression": expr2, "codimension": 2}]
     }
+
 
     BC_DICT_PF = { }
 
-    BC_DICT_ALE = { # point DBCs
-        "dirichlet": [
-            {"id": [1], "dir": "all", "val": 0., "codimension":0},
-            {"id": [2], "dir": "y", "curve": 2, "codimension":0},
-        ]
-    }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
@@ -126,11 +138,11 @@ def test_main():
         CONTROL_PARAMS,
         [TIME_PARAMS_FLUID, TIME_PARAMS_PF],
         SOLVER_PARAMS,
-        [FEM_PARAMS_FLUID, FEM_PARAMS_PF],
-        [MATERIALS_FLUID, MATERIALS_PF],
-        [BC_DICT_FLUID, BC_DICT_PF],
+        [FEM_PARAMS_FLUID, FEM_PARAMS_PF, FEM_PARAMS_ALE],
+        [MATERIALS_FLUID, MATERIALS_PF, MATERIALS_ALE],
+        [BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE],
         time_curves=time_curves(),
-        coupling_params=[{},COUPLING_PARAMS_FLUID_ALE],
+        coupling_params=COUPLING_PARAMS_FLUID_ALE,
     )
 
     # problem solve

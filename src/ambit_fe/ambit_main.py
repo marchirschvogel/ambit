@@ -226,12 +226,42 @@ class Ambit:
                 boundary_conditions[0],
                 boundary_conditions[1],
                 time_curves,
-                coupling_params,
                 io,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
             self.ms = fluid_phasefield_main.FluidmechanicsPhasefieldSolver(self.mp, solver_params)
+
+        elif problem_type == "fluid_ale_phasefield":
+            from .coupling import fluid_ale_phasefield_main
+
+            io = ioroutines.IO_fluid_phasefield(io_params, fem_params[0], self.entity_maps, self.comm)
+            io.readin_mesh()
+            io.set_mesh_fields(io.mesh)
+
+            pbase = problem_base(io_params, ctrl_params, comm=self.comm)
+
+            self.mp = fluid_ale_phasefield_main.FluidmechanicsAlePhasefieldProblem(
+                pbase,
+                io_params,
+                time_params[0],
+                time_params[1],
+                fem_params[0],
+                fem_params[1],
+                fem_params[2],
+                constitutive_params[0],
+                constitutive_params[1],
+                constitutive_params[2],
+                boundary_conditions[0],
+                boundary_conditions[1],
+                boundary_conditions[2],
+                time_curves,
+                coupling_params,
+                io,
+                mor_params=mor_params,
+            )
+            self.mp.set_variational_forms()
+            self.ms = fluid_ale_phasefield_main.FluidmechanicsAlePhasefieldSolver(self.mp, solver_params)
 
         elif problem_type == "flow0d":
             from .flow0d import flow0d_main

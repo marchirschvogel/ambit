@@ -148,10 +148,12 @@ def test_main():
             return 0.5 * (1.0 - np.cos(2.0 * np.pi * (t - 0.0) / (0.2))) * (t >= 0.1) * (t <= 0.1 + 0.3)
 
     BC_DICT_ALE = {
-        "dirichlet_vol": [
+        "dirichlet": [
             {
                 "id": [1, 2],
-                "file": basepath + "/input/aledisp_lalv_prescr-*.xdmf",
+                "fileseries": basepath + "/input/aledisp_lalv_prescr-*.xdmf",
+                "dir": "all",
+                "codimension": 3, # on volume
             }
         ]
     }

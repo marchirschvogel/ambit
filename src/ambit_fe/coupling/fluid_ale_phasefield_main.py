@@ -20,31 +20,33 @@ from .. import utilities, meshutils
 from ..mpiroutines import allgather_vec
 
 from .fluid_ale_main import FluidmechanicsAleProblem
-from .fluid_constraint_main import FluidmechanicsConstraintProblem
+from .fluid_phasefield_main import FluidmechanicsPhasefieldProblem
 from ..fluid.fluid_main import FluidmechanicsProblem
 from ..fluid.fluid_main import FluidmechanicsSolverPrestr
 from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
 
 
-class FluidmechanicsAleConstraintProblem(problem_base):
+class FluidmechanicsAlePhasefieldProblem(problem_base):
     def __init__(
         self,
         pbase,
         io_params,
-        time_params,
+        time_params_fluid,
+        time_params_phasefield,
         fem_params_fluid,
+        fem_params_phasefield,
         fem_params_ale,
         constitutive_models_fluid,
+        constitutive_models_phasefield,
         constitutive_models_ale,
         bc_dict_fluid,
+        bc_dict_phasefield,
         bc_dict_ale,
         time_curves,
         coupling_params_fluid_ale,
-        coupling_params_fluid_constr,
         io,
         mor_params={},
-        is_multiphase=False,
     ):
         self.pbase = pbase
 
@@ -53,14 +55,14 @@ class FluidmechanicsAleConstraintProblem(problem_base):
 
         ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
 
-        self.problem_physics = "fluid_ale_constraint"
+        self.problem_physics = "fluid_ale_phasefield"
 
         # instantiate problem classes
         # fluid-ALE
         self.pbfa = FluidmechanicsAleProblem(
             pbase,
             io_params,
-            time_params,
+            time_params_fluid,
             fem_params_fluid,
             fem_params_ale,
             constitutive_models_fluid,
@@ -71,19 +73,22 @@ class FluidmechanicsAleConstraintProblem(problem_base):
             coupling_params_fluid_ale,
             io,
             mor_params=mor_params,
-            is_multiphase=is_multiphase,
+            is_multiphase=True,
         )
 
-        # fluid-constraint
-        self.pbfc = FluidmechanicsConstraintProblem(
+        # fluid-phasefield
+        self.pbfp = FluidmechanicsPhasefieldProblem(
             pbase,
             io_params,
-            time_params,
+            time_params_fluid,
+            time_params_phasefield,
             fem_params_fluid,
+            fem_params_phasefield,
             constitutive_models_fluid,
+            constitutive_models_phasefield,
             bc_dict_fluid,
+            bc_dict_phasefield,
             time_curves,
-            coupling_params_fluid_constr,
             io,
             mor_params=mor_params,
             is_ale=True,
@@ -92,6 +97,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
 
         self.pbf = self.pbfa.pbf
         self.pba = self.pbfa.pba
+        self.pbp = self.pbfp.pbp
 
         self.pbrom = self.pbf  # ROM problem can only be fluid
         self.pbrom_host = self
@@ -108,13 +114,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
 
         self.set_coupling_parameters()
 
-        if self.pbfa.coupling_strategy == "monolithic":
-            self.numdof = self.pbf.numdof + self.pbfc.LM.getSize() + self.pba.numdof
-        else:
-            self.numdof = [
-                self.pbf.numdof + self.pbfc.LM.getSize(),
-                self.pba.numdof,
-            ]
+        self.numdof = self.pbf.numdof + self.pba.numdof + self.pbp.numdof
 
         self.localsolve = False
 
@@ -154,9 +154,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.set_variational_forms_coupling()
 
     def set_variational_forms_coupling(self):
-        self.dcqd = []
-        for n in range(self.pbfc.num_coupling_surf):
-            self.dcqd.append(ufl.derivative(self.pbfc.cq[n], self.pba.d, self.pba.dd))
+        pass
 
     def set_problem_residual_jacobian_forms(self, pre=False):
         # fluid + ALE
@@ -167,30 +165,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.set_problem_residual_jacobian_forms_coupling()
 
     def set_problem_residual_jacobian_forms_coupling(self):
-        if self.pbfa.coupling_strategy == "monolithic":
-            ts = time.time()
-            utilities.print_status(
-                "FEM form compilation for ALE-constraint coupling...",
-                self.comm,
-                e=" ",
-            )
-
-            self.dcqd_form = []
-
-            for i in range(self.pbfc.num_coupling_surf):
-                if self.pbfc.on_subdomain[i]:
-                    # entity map child to parent
-                    em_u = {
-                        self.io.mesh: self.pbf.io.submshes_emap[
-                            self.coupling_params["constraint_physics"][i]["domain"]
-                        ][1]
-                    }
-                else:
-                    em_u = self.pbf.io.entity_maps
-                self.dcqd_form.append(fem.form(self.dcqd[i], entity_maps=em_u))
-
-            te = time.time() - ts
-            utilities.print_status("t = %.4f s" % (te), self.comm)
+        pass
 
     def set_problem_vector_matrix_structures(self):
         self.pbfa.set_problem_vector_matrix_structures()
@@ -258,41 +233,12 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.K_list[1][0] = self.pbfa.K_list[1][0]
         self.K_list[1][1] = self.pbfa.K_list[1][1]
         self.K_list[1][3] = self.pbfa.K_list[1][2]
-        # constraints
-        self.K_list[2][0] = self.pbfc.K_sv
-        self.K_list[2][1] = self.pbfc.K_list[2][1]
-        self.K_list[2][2] = self.pbfc.K_lm
-        self.K_list[2][3] = self.K_sd
-        # ALE
-        self.K_list[3][3] = self.pbfa.K_list[2][2]
-        self.K_list[3][0] = self.pbfa.K_list[2][0]
-        self.K_list[3][1] = self.pbfa.K_list[2][1]
+        # ...
 
         self.assemble_stiffness_coupling(t)
 
     def assemble_stiffness_coupling(self, t):
-        # offdiagonal s-d rows: derivative of flux constraint w.r.t. ALE displacement (in case of moving coupling boundaries)
-        for i in range(len(self.pbfc.row_ids)):
-            with self.k_sd_vec[i].localForm() as r_local:
-                r_local.set(0.0)
-            fem.petsc.assemble_vector(self.k_sd_vec[i], self.dcqd_form[i])
-            self.k_sd_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-            if self.pbfc.have_regularization:
-                self.k_sd_vec[i].scale(self.pbfc.alpha_reg[i])
-
-        # set rows
-        for i in range(len(self.pbfc.row_ids)):
-            # NOTE: only set the surface-subset of the k_sd vector entries to avoid placing unnecessary zeros!
-            self.k_sd_vec[i].getSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
-            self.K_sd.setValues(
-                self.pbfc.row_ids[i],
-                self.dofs_coupling_vq[i],
-                self.k_sd_subvec[i].array,
-                addv=PETSc.InsertMode.INSERT,
-            )
-            self.k_sd_vec[i].restoreSubVector(self.dofs_coupling_vq[i], subvec=self.k_sd_subvec[i])
-
-        self.K_sd.assemble()
+        pass
 
     def get_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
@@ -365,17 +311,6 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         if N > 0:
             self.io.readcheckpoint(self, N)
 
-        # LM data
-        if N > 0:
-            restart_data = np.loadtxt(
-                self.pbf.io.output_path + "/checkpoint_" + sname + "_lm_" + str(N) + ".txt",
-                ndmin=1,
-            )
-            self.pbfc.LM[:], self.pbfc.LM_old[:] = (
-                restart_data[:],
-                restart_data[:],
-            )
-
     def evaluate_initial(self):
         self.pbfa.evaluate_initial()
         self.pbfc.evaluate_initial_coupling()
@@ -399,22 +334,6 @@ class FluidmechanicsAleConstraintProblem(problem_base):
     def write_output(self, N, t, mesh=False):
         self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine
 
-        if self.pbf.io.write_results_every > 0 and N % self.pbf.io.write_results_every == 0:
-            if np.isclose(t, self.pbase.dt):
-                mode = "wt"
-            else:
-                mode = "a"
-            LM_sq = allgather_vec(self.pbfc.LM, self.comm)
-            if self.comm.rank == 0:
-                for i in range(len(LM_sq)):
-                    f = open(
-                        self.pbase.output_path + "/results_" + self.pbase.simname + "_LM" + str(i + 1) + ".txt",
-                        mode,
-                    )
-                    f.write("%.16E %.16E\n" % (t, LM_sq[i]))
-                    f.close()
-            del LM_sq
-
     def update(self):
         # update time step - fluid+flow0d and ALE
         self.pbfa.update()
@@ -430,18 +349,6 @@ class FluidmechanicsAleConstraintProblem(problem_base):
     def write_restart(self, sname, N, force=False):
         self.io.write_restart(self, N, force=force)
 
-        if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:
-            LM_sq = allgather_vec(self.pbfc.LM, self.comm)
-            if self.comm.rank == 0:
-                f = open(
-                    self.pbf.io.output_path + "/checkpoint_" + sname + "_lm_" + str(N) + ".txt",
-                    "wt",
-                )
-                for i in range(len(LM_sq)):
-                    f.write("%.16E\n" % (LM_sq[i]))
-                f.close()
-            del LM_sq
-
     def check_abort(self, t):
         return self.pbfc.check_abort(t)
 
@@ -451,12 +358,10 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.destroy_coupling()
 
     def destroy_coupling(self):
-        if self.pbfa.coupling_strategy == "monolithic":
-            for i in range(len(self.pbfc.row_ids)):
-                self.k_sd_vec[i].destroy()
+        pass
 
 
-class FluidmechanicsAleConstraintSolver(solver_base):
+class FluidmechanicsAlePhasefieldSolver(solver_base):
     def initialize_nonlinear_solver(self):
         self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbf.pre)
         self.pb.set_problem_vector_matrix_structures()
@@ -464,12 +369,7 @@ class FluidmechanicsAleConstraintSolver(solver_base):
         self.evaluate_assemble_system_initial()
 
         # initialize nonlinear solver class
-        if self.pb.pbfa.coupling_strategy == "monolithic":
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
-        elif self.pb.pbfa.coupling_strategy == "partitioned":
-            self.solnln = solver_nonlin.solver_nonlinear([self.pb.pbfc, self.pb.pba], self.solver_params, cp=self.pb)
-        else:
-            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
+        self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
         if self.pb.pbf.prestress_initial or self.pb.pbf.prestress_initial_only:
             solver_params_prestr = copy.deepcopy(self.solver_params)
@@ -512,7 +412,6 @@ class FluidmechanicsAleConstraintSolver(solver_base):
                 self.pb.pbf.deltaW_kin_old
                 + self.pb.pbf.deltaW_int_old
                 - self.pb.pbf.deltaW_ext_old
-                - self.pb.pbfc.power_coupling_old
             )
 
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.pbf.a_old, self.pb.pbf.dv)  # actually linear in a_old
@@ -526,53 +425,6 @@ class FluidmechanicsAleConstraintSolver(solver_base):
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
-
-    # we overload this function here in order to take care of the partitioned solve,
-    # where the ROM needs to be an object of the fluid, not the coupled problem
-    def evaluate_assemble_system_initial(self, subsolver=None):
-        # evaluate old initial state of model
-        self.evaluate_system_initial()
-
-        if self.pb.pbfa.coupling_strategy == "monolithic":
-            self.pb.assemble_residual(self.pb.pbase.t_init)
-            self.pb.assemble_stiffness(self.pb.pbase.t_init)
-
-            # create ROM matrix structures
-            if self.pb.rom:
-                self.pb.rom.set_reduced_data_structures_residual(self.pb.r_list, self.pb.r_list_rom)
-                self.pb.K_list_tmp = [[None]]
-                self.pb.rom.set_reduced_data_structures_matrix(self.pb.K_list, self.pb.K_list_rom, self.pb.K_list_tmp)
-
-                if self.pb.pbf.pre:
-                    self.pb.pbf.rom = self.pb.rom
-                    self.pb.pbf.rom.set_reduced_data_structures_residual(self.pb.pbf.r_list, self.pb.pbf.r_list_rom)
-                    self.pb.pbf.K_list_tmp = [[None]]
-                    self.pb.pbf.rom.set_reduced_data_structures_matrix(
-                        self.pb.pbf.K_list,
-                        self.pb.pbf.K_list_rom,
-                        self.pb.pbf.K_list_tmp,
-                    )
-
-        elif self.pb.pbfa.coupling_strategy == "partitioned":
-            self.pb.pbfc.rom = self.pb.rom
-            self.pb.pbrom_host = self.pb.pbfc  # overridden
-
-            self.pb.assemble_residual(self.pb.pbase.t_init)
-            self.pb.pbfc.assemble_stiffness(self.pb.pbase.t_init)
-            self.pb.pba.assemble_stiffness(self.pb.pbase.t_init)
-
-            # create ROM matrix structures
-            if self.pb.pbfc.rom:
-                self.pb.pbfc.rom.set_reduced_data_structures_residual(self.pb.pbfc.r_list, self.pb.pbfc.r_list_rom)
-                self.pb.pbfc.K_list_tmp = [[None]]
-                self.pb.pbfc.rom.set_reduced_data_structures_matrix(
-                    self.pb.pbfc.K_list,
-                    self.pb.pbfc.K_list_rom,
-                    self.pb.pbfc.K_list_tmp,
-                )
-
-        else:
-            raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
     def solve_nonlinear_problem(self, t):
         self.solnln.newton(t)

@@ -52,6 +52,7 @@ class FSIFlow0DProblem(problem_base):
         ios,
         iof,
         mor_params={},
+        is_multiphase=False,
     ):
         # problem_base.__init__(self, io_params, time_params_solid, comm=comm, comm_sq=comm_sq)
 
@@ -68,13 +69,6 @@ class FSIFlow0DProblem(problem_base):
         self.ios, self.iof = ios, iof
 
         self.have_condensed_variables = False
-
-        (
-            self.have_dbc_fluid_ale,
-            self.have_weak_dirichlet_fluid_ale,
-            self.have_dbc_ale_fluid,
-            self.have_robin_ale_fluid,
-        ) = False, False, False, False
 
         # instantiate problem classes
         # FSI - fluid-ALE-solid
@@ -96,6 +90,7 @@ class FSIFlow0DProblem(problem_base):
             ios,
             iof,
             mor_params=mor_params,
+            is_multiphase=is_multiphase,
         )
         # fluid-ALE-0D
         self.pbfa0 = FluidmechanicsAleFlow0DProblem(
@@ -115,6 +110,7 @@ class FSIFlow0DProblem(problem_base):
             coupling_params_fluid_flow0d,
             iof,
             mor_params=mor_params,
+            is_multiphase=is_multiphase,
             pbfa=self.pbfas.pbfa,
         )
 

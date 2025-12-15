@@ -506,9 +506,6 @@ class FluidmechanicsProblem(problem_base):
         if "dirichlet" in self.bc_dict.keys():
             self.bc.dirichlet_bcs(self.bc_dict["dirichlet"])
 
-        if "dirichlet_vol" in self.bc_dict.keys():
-            self.bc.dirichlet_vol(self.bc_dict["dirichlet_vol"])
-
         self.pbrom = self  # self-pointer needed for ROM solver access
         self.pbrom_host = self
         self.V_rom = self.V_v
@@ -2648,7 +2645,7 @@ class FluidmechanicsProblem(problem_base):
         self.evaluate_rate_equations(t)
 
         # DBC from files
-        if self.bc.have_dirichlet_file:
+        if self.bc.have_dirichlet_fileseries:
             for m in self.ti.funcs_data:
                 file = list(m.values())[0].replace("*", str(N))
                 func = list(m.keys())[0]

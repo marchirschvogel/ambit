@@ -697,6 +697,7 @@ if category == "frsi" or category == "fluid_ale" or category == "all":
 if category == "ale" or category == "all":
     errs["test_ale_linelast 1"] = subprocess.call(["mpiexec", "-n", "1", "python3", "test_ale_linelast.py"])
     errs["test_ale_linelast 2"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_ale_linelast.py"])
+    errs["test_ale_oscillating_box_prescribed 2"] = subprocess.call(["mpiexec", "-n", "2", "python3", "test_ale_oscillating_box_prescribed.py"])
 
 if category == "phasefield" or category == "all":
     errs["test_phasefield_cahnhilliard_square 1"] = subprocess.call(["mpiexec", "-n", "1", "python3", "test_phasefield_cahnhilliard_square.py"])

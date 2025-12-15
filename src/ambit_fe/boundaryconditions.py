@@ -53,13 +53,15 @@ class boundary_cond:
 
         self.dbcs = []
 
-        self.have_dirichlet_file = False
+        self.have_dirichlet_fileseries = False
 
     # set Dirichlet BCs (should probably be overloaded for problems that do not have vector variables...)
     def dirichlet_bcs(self, bcdict):
         for d in bcdict:
             codim = d.get("codimension", self.dim - 1)
 
+            if codim == self.dim:
+                mdata = self.io.mt_d
             if codim == self.dim - 1:
                 mdata = self.io.mt_b
             if codim == self.dim - 2:
@@ -70,7 +72,7 @@ class boundary_cond:
             func = fem.Function(self.V_field)
 
             if "curve" in d.keys():
-                assert "val" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys()
+                assert "val" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 load = expression.template_vector(dim=self.dim)
                 if d["dir"] == "all":
                     curve_x, curve_y, curve_z = (
@@ -105,10 +107,10 @@ class boundary_cond:
                 )
                 self.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
             elif "val" in d.keys():
-                assert "curve" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys()
+                assert "curve" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 func.x.petsc_vec.set(d["val"])
             elif "expression" in d.keys():
-                assert "curve" not in d.keys() and "val" not in d.keys() and "file" not in d.keys()
+                assert "curve" not in d.keys() and "val" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 expr = d["expression"]()
                 expr.t = self.ti.t_init
                 func.interpolate(expr.evaluate)
@@ -119,7 +121,7 @@ class boundary_cond:
                 self.ti.funcsexpr_to_update_vec[func] = expr
                 self.ti.funcsexpr_to_update_vec_old[func] = None  # DBCs don't need an old state
             elif "file" in d.keys():
-                assert "curve" not in d.keys() and "val" not in d.keys() and "expression" not in d.keys()
+                assert "curve" not in d.keys() and "val" not in d.keys() and "expression" not in d.keys() and "fileseries" not in d.keys()
                 fle = d["file"]  # a single file
                 ftype = d.get("ftype", "id_val")
                 # to ramp the file by a time curve
@@ -163,68 +165,61 @@ class boundary_cond:
                 else:
                     # read file into function
                     self.io.readfunction(func, fle)
+            elif "fileseries" in d.keys():  # file series, where we'd have one file per time step
+                assert "curve" not in d.keys() and "val" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys()
+                scale = d.get("scale", 1.0)
+                self.ti.funcs_data.append({func: d["fileseries"], "scale": scale})
+                self.have_dirichlet_fileseries = True
             else:
-                raise RuntimeError("Need to have 'curve', 'val', 'expression', or 'file' specified!")
+                raise RuntimeError("Need to have 'curve', 'val', 'expression', 'file', or 'fileseries' specified!")
 
             if d["dir"] == "all":
-                self.dbcs.append(
-                    fem.dirichletbc(
-                        func,
-                        fem.locate_dofs_topological(
-                            self.V_field,
-                            codim,
-                            mdata.indices[np.isin(mdata.values, d["id"])],
-                        ),
-                    )
-                )
+                if "id" in d.keys():
+                    nodes_bc = fem.locate_dofs_topological(self.V_field, codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                elif "locator" in d.keys():
+                    locator = d["locator"]
+                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
+                    nodes_bc = fem.locate_dofs_topological(self.V_field, codim, cells)
+                else:
+                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    nodes_bc = fem.locate_dofs_topological(self.V_field, codim, cells)
+                self.dbcs.append(fem.dirichletbc(func, nodes_bc))
 
             elif d["dir"] == "x":
-                dofs_x = fem.locate_dofs_topological(
-                    self.V_field.sub(0),
-                    codim,
-                    mdata.indices[np.isin(mdata.values, d["id"])],
-                )
-                self.dbcs.append(fem.dirichletbc(func.sub(0), dofs_x))
+                if "id" in d.keys():
+                    nodes_bc_x = fem.locate_dofs_topological(self.V_field.sub(0),codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                elif "locator" in d.keys():
+                    locator = d["locator"]
+                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
+                    nodes_bc_x = fem.locate_dofs_topological(self.V_field.sub(0), codim, cells)
+                else:
+                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    nodes_bc_x = fem.locate_dofs_topological(self.V_field.sub(0), codim, cells)
+                self.dbcs.append(fem.dirichletbc(func.sub(0), nodes_bc_x))
 
             elif d["dir"] == "y":
-                dofs_y = fem.locate_dofs_topological(
-                    self.V_field.sub(1),
-                    codim,
-                    mdata.indices[np.isin(mdata.values, d["id"])],
-                )
-                self.dbcs.append(fem.dirichletbc(func.sub(1), dofs_y))
+                if "id" in d.keys():
+                    nodes_bc_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                elif "locator" in d.keys():
+                    locator = d["locator"]
+                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
+                    nodes_bc_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, cells)
+                else:
+                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    nodes_bc_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, cells)
+                self.dbcs.append(fem.dirichletbc(func.sub(1), nodes_bc_y))
 
             elif d["dir"] == "z":
-                dofs_z = fem.locate_dofs_topological(
-                    self.V_field.sub(2),
-                    codim,
-                    mdata.indices[np.isin(mdata.values, d["id"])],
-                )
-                self.dbcs.append(fem.dirichletbc(func.sub(2), dofs_z))
-
-            elif d["dir"] == "2dimX":
-                dofs_x = fem.locate_dofs_topological(
-                    self.V_field.sub(0),
-                    codim,
-                    mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimX),
-                )
-                self.dbcs.append(fem.dirichletbc(func.sub(0), dofs_x))
-
-            elif d["dir"] == "2dimY":
-                dofs_y = fem.locate_dofs_topological(
-                    self.V_field.sub(1),
-                    codim,
-                    mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimY),
-                )
-                self.dbcs.append(fem.dirichletbc(func.sub(1), dofs_y))
-
-            elif d["dir"] == "2dimZ":
-                dofs_z = fem.locate_dofs_topological(
-                    self.V_field.sub(2),
-                    codim,
-                    mesh.locate_entities_boundary(self.io.mesh, codim, self.twodimZ),
-                )
-                self.dbcs.append(fem.dirichletbc(func.sub(2), dofs_z))
+                if "id" in d.keys():
+                    nodes_bc_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                elif "locator" in d.keys():
+                    locator = d["locator"]
+                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
+                    nodes_bc_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, cells)
+                else:
+                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    nodes_bc_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, cells)
+                self.dbcs.append(fem.dirichletbc(func.sub(2), nodes_bc_z))
 
             elif d["dir"] == "all_by_dofs":
                 self.dbcs.append(fem.dirichletbc(func, d["dofs"]))
@@ -241,78 +236,9 @@ class boundary_cond:
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")
 
-    def dirichlet_vol(self, bcdict):
-        for d in bcdict:
-            func = fem.Function(self.V_field)
-
-            if "curve" in d.keys():
-                assert "val" not in d.keys() and "file" not in d.keys()
-                load = expression.template_vector(dim=self.dim)
-                if d["dir"] == "all":
-                    curve_x, curve_y, curve_z = (
-                        d["curve"][0],
-                        d["curve"][1],
-                        d["curve"][2],
-                    )
-                else:
-                    curve_x, curve_y, curve_z = (
-                        d["curve"],
-                        d["curve"],
-                        d["curve"],
-                    )
-                load.val_x, load.val_y, load.val_z = (
-                    self.ti.timecurves(curve_x)(self.ti.t_init),
-                    self.ti.timecurves(curve_y)(self.ti.t_init),
-                    self.ti.timecurves(curve_z)(self.ti.t_init),
-                )
-                func.interpolate(load.evaluate)
-                func.x.petsc_vec.ghostUpdate(
-                    addv=PETSc.InsertMode.INSERT,
-                    mode=PETSc.ScatterMode.FORWARD,
-                )
-                self.ti.funcs_to_update_vec.append(
-                    {
-                        func: [
-                            self.ti.timecurves(curve_x),
-                            self.ti.timecurves(curve_y),
-                            self.ti.timecurves(curve_z),
-                        ]
-                    }
-                )
-                self.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
-            elif "val" in d.keys():
-                assert "curve" not in d.keys() and "file" not in d.keys()
-                func.x.petsc_vec.set(d["val"])
-            elif "file" in d.keys():  # file series, where we'd have one file per time step
-                assert "val" not in d.keys() and "curve" not in d.keys()
-                scale = d.get("scale", 1.0)
-                self.ti.funcs_data.append({func: d["file"], "scale": scale})
-                self.have_dirichlet_file = True
-            else:
-                raise RuntimeError("Need to have 'curve', 'val', or 'file' specified!")
-
-            self.dbcs.append(
-                fem.dirichletbc(
-                    func,
-                    fem.locate_dofs_topological(
-                        self.V_field,
-                        self.dim,
-                        self.io.mt_d.indices[np.isin(self.io.mt_d.values, d["id"])],
-                    ),
-                )
-            )
-
-    # function to mark x=0
-    def twodimX(self, x):
-        return np.isclose(x[0], 0.0)
-
-    # function to mark y=0
-    def twodimY(self, x):
-        return np.isclose(x[1], 0.0)
-
-    # function to mark z=0
-    def twodimZ(self, x):
-        return np.isclose(x[2], 0.0)
+    # function that marks all dofs
+    def all(self, x):
+        return np.full(x.shape[1], True, dtype=bool)
 
     # set Neumann BCs
     def neumann_bcs(

@@ -47,6 +47,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         coupling_params_fluid_flow0d,
         io,
         mor_params={},
+        is_multiphase=False,
         pbfa=None,
         pb0=None,
         pbf0=None,
@@ -63,12 +64,6 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
 
         self.problem_physics = "fluid_ale_flow0d"
 
-        (
-            self.have_dbc_fluid_ale,
-            self.have_weak_dirichlet_fluid_ale,
-            self.have_dbc_ale_fluid,
-            self.have_robin_ale_fluid,
-        ) = False, False, False, False
         self.have_condensed_variables = False
 
         # instantiate problem classes
@@ -88,14 +83,9 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
                 coupling_params_fluid_ale,
                 io,
                 mor_params=mor_params,
+                is_multiphase=is_multiphase,
             )
-        # ALE variables that are handed to fluid problem
-        alevariables = {
-            "Fale": self.pbfa.pba.ki.F(self.pbfa.pba.d),
-            "Fale_old": self.pbfa.pba.ki.F(self.pbfa.pba.d_old),
-            "w": self.pbfa.pba.wel,
-            "w_old": self.pbfa.pba.w_old,
-        }
+
         # 0D model
         if pb0 is None:
             self.pb0 = Flow0DProblem(
@@ -121,6 +111,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
                 coupling_params_fluid_flow0d,
                 io,
                 mor_params=mor_params,
+                is_multiphase=is_multiphase,
                 is_ale=True,
                 pbf=self.pbfa.pbf,
                 pb0=self.pb0,

@@ -50,6 +50,7 @@ class FSIProblem(problem_base):
         ios,
         iof,
         mor_params={},
+        is_multiphase=False,
         pbs=None,
         pbf=None,
         pba=None,
@@ -99,6 +100,7 @@ class FSIProblem(problem_base):
                 coupling_params,
                 iof,
                 mor_params=mor_params,
+                is_multiphase=is_multiphase,
             )
 
         self.pbf = self.pbfa.pbf

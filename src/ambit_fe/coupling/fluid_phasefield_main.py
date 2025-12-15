@@ -39,11 +39,11 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         bc_dict_fluid,
         bc_dict_phasefield,
         time_curves,
-        coupling_params,
         io,
         mor_params={},
         pbf=None,
         pbp=None,
+        is_ale=False,
     ):
         self.pbase = pbase
         self.pbf = pbf
@@ -51,8 +51,6 @@ class FluidmechanicsPhasefieldProblem(problem_base):
 
         # pointer to communicator
         self.comm = self.pbase.comm
-
-        ioparams.check_params_coupling_fluid_phasefield(coupling_params)
 
         self.problem_physics = "fluid_phasefield"
 
@@ -69,6 +67,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
                 time_curves,
                 io,
                 mor_params=mor_params,
+                is_ale=is_ale,
                 is_multiphase=True,
             )
         # phase field
@@ -83,6 +82,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
                 time_curves,
                 io,
                 mor_params=mor_params,
+                is_ale=is_ale,
                 is_advected=True,
             )
         self.pbf.phasevar["phi"] = self.pbp.phi
@@ -93,7 +93,6 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.pbp.fluidvar["v"] = self.pbf.v
         self.pbp.fluidvar["v_old"] = self.pbf.v_old
 
-        self.coupling_params = coupling_params
         self.set_coupling_parameters()
 
         self.pbrom = self.pbf  # ROM problem can only be fluid
@@ -131,7 +130,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         )
 
     def set_coupling_parameters(self):
-        pass
+        pass # up to now, nothing to be set...
 
     def get_problem_var_list(self):
         if self.pbf.num_dupl > 1:

@@ -117,7 +117,7 @@ def test_main():
             )
 
     BC_DICT = {
-        "dirichlet": [{"dir": "2dimZ", "val": 0.0}],
+        "dirichlet": [{"dir": "z", "val": 0.0}],
         "neumann": [
             {"id": [1], "dir": "normal_cur", "curve": 1},
             {"id": [2], "dir": "normal_cur", "curve": 2},

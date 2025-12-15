@@ -79,8 +79,6 @@ def test_main():
 
     FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5}
 
-    COUPLING_PARAMS = {}
-
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": 1.0e-7, "mu2": 4.0e-6},
                                 "inertia": {"rho1": 1.0e-7, "rho2": 1.0e-6}}}
@@ -113,7 +111,6 @@ def test_main():
         [MATERIALS_FLUID, MATERIALS_PF],
         [BC_DICT_FLUID, BC_DICT_PF],
         time_curves=time_curves(),
-        coupling_params=COUPLING_PARAMS
     )
 
     # problem solve

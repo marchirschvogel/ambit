@@ -9,7 +9,7 @@
 import time
 import copy
 import numpy as np
-from dolfinx import fem
+from dolfinx import fem, mesh
 import dolfinx.fem.petsc
 import ufl
 from petsc4py import PETSc
@@ -41,6 +41,7 @@ class FluidmechanicsAleProblem(problem_base):
         coupling_params,
         io,
         mor_params={},
+        is_multiphase=False,
         pbf=None,
         pba=None,
     ):
@@ -70,6 +71,7 @@ class FluidmechanicsAleProblem(problem_base):
                 io,
                 mor_params=mor_params,
                 is_ale=True,
+                is_multiphase=is_multiphase,
             )
         # ALE
         if pba is None:
@@ -167,18 +169,20 @@ class FluidmechanicsAleProblem(problem_base):
             dbcs_coup_fluid_ale = []
 
             for j in range(len(self.coupling_fluid_ale)):
-                ids_fluid_ale = self.coupling_fluid_ale[j]["surface_ids"]
-
-                dbcs_coup_fluid_ale.append(
-                    fem.dirichletbc(
-                        self.ufa,
-                        fem.locate_dofs_topological(
-                            self.pba.V_d,
-                            self.io.mesh.topology.dim - 1,
-                            self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_fluid_ale)],
-                        ),
+                if "surface_ids" in self.coupling_fluid_ale[j].keys():
+                    ids_fluid_ale = self.coupling_fluid_ale[j]["surface_ids"]
+                    nodes_fluid_ale = fem.locate_dofs_topological(
+                        self.pba.V_d,
+                        self.io.mesh.topology.dim - 1,
+                        self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_fluid_ale)],
                     )
-                )
+                elif "locator" in self.coupling_fluid_ale[j].keys():
+                    locator = self.coupling_fluid_ale[j]["locator"]
+                    cells = mesh.locate_entities_boundary(self.io.mesh, 1, locator.evaluate)
+                    nodes_fluid_ale = fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim - 1, cells)
+                else:
+                    raise RuntimeError("Unknown specification in coupling_fluid_ale! Set either 'surface_ids' or 'locator'!")
+                dbcs_coup_fluid_ale.append(fem.dirichletbc(self.ufa, nodes_fluid_ale))
                 # get surface dofs for dr_ALE/dv matrix entry
                 self.fdofs_fluid_ale = meshutils.get_index_set_id(self.pba.io, self.pba.V_d, ids_fluid_ale, self.pba.io.mesh.topology.dim-1, self.comm)
 
@@ -198,19 +202,21 @@ class FluidmechanicsAleProblem(problem_base):
         # any DBC conditions that we want to set from ALE to fluid
         if bool(self.coupling_ale_fluid):
             dbcs_coup_ale_fluid = []
-
             for j in range(len(self.coupling_ale_fluid)):
-                ids_ale_fluid = self.coupling_ale_fluid[j]["surface_ids"]
-                dbcs_coup_ale_fluid.append(
-                    fem.dirichletbc(
-                        self.wf,
-                        fem.locate_dofs_topological(
-                            self.pbf.V_v,
-                            self.io.mesh.topology.dim - 1,
-                            self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_ale_fluid)],
-                        ),
+                if "surface_ids" in self.coupling_ale_fluid[j].keys():
+                    ids_ale_fluid = self.coupling_ale_fluid[j]["surface_ids"]
+                    nodes_ale_fluid = fem.locate_dofs_topological(
+                        self.pbf.V_v,
+                        self.io.mesh.topology.dim - 1,
+                        self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_ale_fluid)],
                     )
-                )
+                elif "locator" in self.coupling_ale_fluid[j].keys():
+                    locator = self.coupling_ale_fluid[j]["locator"]
+                    cells = mesh.locate_entities_boundary(self.io.mesh, 1, locator.evaluate)
+                    nodes_ale_fluid = fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim - 1, cells)
+                else:
+                    raise RuntimeError("Unknown specification in coupling_ale_fluid! Set either 'surface_ids' or 'locator'!")
+                dbcs_coup_ale_fluid.append(fem.dirichletbc(self.wf, nodes_ale_fluid))
                 # get surface dofs for dr_fluid/dd matrix entry
                 self.fdofs_ale_fluid = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, ids_ale_fluid, self.pbf.io.mesh.topology.dim-1, self.comm)
 

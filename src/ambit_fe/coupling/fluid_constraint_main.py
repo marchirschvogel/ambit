@@ -35,6 +35,7 @@ class FluidmechanicsConstraintProblem(problem_base):
         io,
         mor_params={},
         is_ale=False,
+        is_multiphase=False,
         pbf=None,
     ):
         self.pbase = pbase
@@ -58,6 +59,7 @@ class FluidmechanicsConstraintProblem(problem_base):
                 io,
                 mor_params=mor_params,
                 is_ale=is_ale,
+                is_multiphase=is_multiphase,
             )
 
         self.coupling_params = coupling_params
