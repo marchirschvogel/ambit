@@ -2432,7 +2432,7 @@ class FluidmechanicsProblem(problem_base):
             # K_zp needed...
             # self.K_list[2][1] =
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]

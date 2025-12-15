@@ -94,7 +94,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
     COUPLING_PARAMS_ALE_FLUID = {
-        "coupling_fluid_ale": [{"surface_ids": [1]}],
+        "coupling_fluid_ale": {"surface_ids": [1]},
         "fsi_governing_type": "fluid_governed",  # solid_governed, fluid_governed
         "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
     }

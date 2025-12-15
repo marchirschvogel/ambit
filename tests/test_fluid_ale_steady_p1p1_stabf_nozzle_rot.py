@@ -57,7 +57,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
     COUPLING_PARAMS = {
-        "coupling_ale_fluid": [{"surface_ids": [2,3,5,6]}], # no-slip at moving ALE boundary
+        "coupling_ale_fluid": {"surface_ids": [2,3,5,6]}, # no-slip at moving ALE boundary
     }
 
 

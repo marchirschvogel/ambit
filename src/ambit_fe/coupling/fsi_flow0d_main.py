@@ -331,7 +331,7 @@ class FSIFlow0DProblem(problem_base):
         self.K_list[4 + ofc + ofs][1 + ofs] = self.pbfas.K_list[3 + ofc + ofs][1 + ofs]
 
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         # iterative solvers here are only implemented for neumann_dirichlet system!
         assert(self.pbfas.fsi_system == "neumann_dirichlet")
 

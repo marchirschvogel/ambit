@@ -80,7 +80,7 @@ def test_main():
             return np.isclose(x[2], 0.0)
 
     COUPLING_PARAMS_FLUID_ALE = {
-        "coupling_ale_fluid": [{"locator": locate()}], # no-slip at moving ALE boundary
+        "coupling_ale_fluid": {"locator": locate()}, # no-slip at moving ALE boundary
     }
 
 

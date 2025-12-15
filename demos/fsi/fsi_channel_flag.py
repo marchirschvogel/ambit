@@ -154,7 +154,7 @@ def main():
     FSI coupling parameters
     """
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": [{"surface_ids": [1], "type": "strong_dirichlet"}],
+        "coupling_fluid_ale": {"surface_ids": [1]},
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
         "fsi_system": "neumann_neumann",
         "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!

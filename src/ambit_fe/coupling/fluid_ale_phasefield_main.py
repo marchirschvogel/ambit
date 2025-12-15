@@ -174,39 +174,7 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
-        if self.pbfa.coupling_strategy == "monolithic":
-            # setup offdiagonal matrix
-            locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
-            matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
-
-            self.k_sd_vec = []
-            for i in range(len(self.pbfc.row_ids)):
-                self.k_sd_vec.append(fem.petsc.assemble_vector(self.dcqd_form[i]))
-
-            self.dofs_coupling_vq = [[]] * self.pbfc.num_coupling_surf
-
-            self.k_sd_subvec, sze_sd = [], []
-
-            for n in range(self.pbfc.num_coupling_surf):
-                self.dofs_coupling_vq[n] = meshutils.get_index_set_id(self.pba.io, self.pba.V_d, self.pbfc.surface_vq_ids[n], self.pba.io.mesh.topology.dim-1, self.comm)
-
-                self.k_sd_subvec.append(self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]))
-
-                sze_sd.append(self.k_sd_subvec[-1].getSize())
-
-            # derivative of multiplier constraint w.r.t. fluid velocities
-            self.K_sd = PETSc.Mat().createAIJ(
-                size=(
-                    (PETSc.DECIDE, self.pbfc.num_coupling_surf),
-                    (locmatsize, matsize),
-                ),
-                bsize=None,
-                nnz=max(sze_sd),
-                csr=None,
-                comm=self.comm,
-            )
-            self.K_sd.setUp()
-            self.K_sd.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
+        pass
 
     def assemble_residual(self, t, subsolver=None):
         self.pbfc.assemble_residual_coupling(t)
@@ -240,7 +208,7 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
     def assemble_stiffness_coupling(self, t):
         pass
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]

@@ -359,16 +359,16 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.k_us_subvec, self.k_su_subvec, sze_us, sze_su = [], [], [], []
 
         for n in range(self.num_coupling_surf):
-            self.dofs_coupling_vq[n] = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.surface_vq_ids[n], self.pbs.io.mesh.topology.dim-1, self.comm)
+            self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.surface_vq_ids[n], codim=self.pbs.io.mesh.topology.dim-1)
 
             self.k_su_subvec.append(self.k_su_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
             sze_su.append(self.k_su_subvec[-1].getSize())
 
             if self.coupling_params["multiplier_physics"][n]["type"] == "pressure":
-                self.dofs_coupling_p[n] = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.surface_lm_ids[n], self.pbs.io.mesh.topology.dim-1, self.comm)
+                self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.surface_lm_ids[n], codim=self.pbs.io.mesh.topology.dim-1)
             if self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
-                self.dofs_coupling_p[n] = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.surface_lm_ids[n], self.pbs.io.mesh.topology.dim, self.comm)
+                self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.surface_lm_ids[n], codim=self.pbs.io.mesh.topology.dim)
 
             self.k_us_subvec.append(self.k_us_vec[n].getSubVector(self.dofs_coupling_p[n]))
 
@@ -529,7 +529,7 @@ class SolidmechanicsConstraintProblem(problem_base):
 
             self.K_list[1 + off][1 + off] = self.K_lm
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = self.rom.V.getLocalSize()[1]

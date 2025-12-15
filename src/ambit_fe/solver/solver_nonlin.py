@@ -354,7 +354,7 @@ class solver_nonlinear:
 
                 # block iterative method
                 if self.nfields[npr] > 1:
-                    self.iset[npr] = self.pb[npr].get_index_sets(isoptions=self.iset_options)
+                    self.iset[npr] = self.pb[npr].get_solver_index_sets(isoptions=self.iset_options)
 
                     if self.block_precond[npr] == "fieldsplit":
                         # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices

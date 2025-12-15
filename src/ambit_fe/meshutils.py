@@ -10,7 +10,7 @@ from dolfinx import fem, mesh
 from petsc4py import PETSc
 import numpy as np
 
-
+# TODO: Should be combined with get_index_set ...
 def gather_surface_dof_indices(io, Vspace, surflist, comm):
     # get boundary dofs into a list
     fn = []
@@ -50,21 +50,23 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set_id(io, Vspace, idlist, codim, comm, sub=None, local_indices=False, mapper=None, mask_owned=False):
-    if codim == io.mesh.topology.dim:
-        mdata = io.mt_d
-    if codim == io.mesh.topology.dim - 1:
-        mdata = io.mt_b
-    if codim == io.mesh.topology.dim - 2:
-        mdata = io.mt_sb
-    if codim == io.mesh.topology.dim - 3:
-        mdata = io.mt_ssb
+def get_index_set(Vspace, comm, nodes_loc=None, io=None, idlist=None, codim=None, sub=None, local_indices=False, mapper=None, mask_owned=False):
+    # get (local) nodes if not already provided
+    if nodes_loc is None:
+        if codim == io.mesh.topology.dim:
+            mdata = io.mt_d
+        if codim == io.mesh.topology.dim - 1:
+            mdata = io.mt_b
+        if codim == io.mesh.topology.dim - 2:
+            mdata = io.mt_sb
+        if codim == io.mesh.topology.dim - 3:
+            mdata = io.mt_ssb
 
-    nodes_loc = fem.locate_dofs_topological(
-        Vspace,
-        codim,
-        mdata.indices[np.isin(mdata.values, idlist)],
-    )
+        nodes_loc = fem.locate_dofs_topological(
+            Vspace,
+            codim,
+            mdata.indices[np.isin(mdata.values, idlist)],
+        )
 
     if not local_indices:
         nodes_g = np.array(

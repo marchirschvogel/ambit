@@ -299,11 +299,11 @@ class FSIProblem(problem_base):
         if self.fsi_system=="neumann_dirichlet":
             self.fluid_to_solid_mapping()
             # solid
-            self.fdofs_solid_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mapper=self.map_s, mask_owned=True)
+            self.fdofs_solid_global_sub = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.io.surf_interf, codim=self.pbs.io.mesh.topology.dim-1, mapper=self.map_s, mask_owned=True)
             if self.pbs.incompressible_2field:
-                self.fdofs_solidp_global_sub = meshutils.get_index_set_id(self.pbs.io, self.pbs.V_p, self.io.surf_interf, self.pbs.io.mesh.topology.dim-1, self.comm, mask_owned=True)
+                self.fdofs_solidp_global_sub = meshutils.get_index_set(self.pbs.V_p, self.comm, io=self.pbs.io, idlist=self.io.surf_interf, codim=self.pbs.io.mesh.topology.dim-1, mask_owned=True)
             # fluid
-            self.fdofs_fluid_global_sub = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.io.surf_interf, self.pbf.io.mesh.topology.dim-1, self.comm, mapper=self.map_f2s, mask_owned=True)
+            self.fdofs_fluid_global_sub = meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, idlist=self.io.surf_interf, codim=self.pbf.io.mesh.topology.dim-1, mapper=self.map_f2s, mask_owned=True)
             # check consistency of local size - TODO: There can be partitions where the number of owned dofs per core differes for solid and fluid! Weird, but currently, we have to exclude these cases...
             assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
             assert(self.fdofs_solid_global_sub.getLocalSize()==self.fdofs_fluid_global_sub.getLocalSize())
@@ -374,7 +374,7 @@ class FSIProblem(problem_base):
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
-                    self.dbc_dofs_solid_global.append( meshutils.get_index_set_id(self.pbs.io, self.pbs.V_u, self.pbs.bc_dict["dirichlet"][k]["id"], self.pbs.bc_dict["dirichlet"][k].get("codimension", self.pbs.io.mesh.topology.dim-1), self.comm, sub=sub, mask_owned=True) )
+                    self.dbc_dofs_solid_global.append( meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.pbs.bc_dict["dirichlet"][k]["id"], codim=self.pbs.bc_dict["dirichlet"][k].get("codimension", self.pbs.io.mesh.topology.dim-1), sub=sub, mask_owned=True) )
                 dbcs_dofs_solid_all = []
                 for k in range(len(self.dbc_dofs_solid_global)):
                     dbcs_dofs_solid_all.append( self.dbc_dofs_solid_global[k].allGather().array )
@@ -393,7 +393,7 @@ class FSIProblem(problem_base):
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
-                    self.dbc_dofs_fluid_global.append( meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.pbf.bc_dict["dirichlet"][k]["id"], self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.io.mesh.topology.dim-1), self.comm, sub=sub, mask_owned=True) )
+                    self.dbc_dofs_fluid_global.append( meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, idlist=self.pbf.bc_dict["dirichlet"][k]["id"], codim=self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.io.mesh.topology.dim-1), sub=sub, mask_owned=True) )
                 dbcs_dofs_fluid_all = []
                 for k in range(len(self.dbc_dofs_fluid_global)):
                     dbcs_dofs_fluid_all.append( self.dbc_dofs_fluid_global[k].allGather().array )
@@ -755,7 +755,7 @@ class FSIProblem(problem_base):
         # add solid residual to fluid
         self.pbf.r_v.axpy(1.0, self.r_reac_on_fluid)
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         # iterative solvers here are only implemented for neumann_dirichlet system!
         assert(self.fsi_system == "neumann_dirichlet")
 

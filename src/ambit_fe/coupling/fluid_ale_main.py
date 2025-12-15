@@ -166,72 +166,63 @@ class FluidmechanicsAleProblem(problem_base):
     def set_variational_forms_coupling(self):
         # any DBC conditions that we want to set from fluid to ALE (mandatory for FSI or FrSI)
         if bool(self.coupling_fluid_ale):
-            dbcs_coup_fluid_ale = []
-
-            for j in range(len(self.coupling_fluid_ale)):
-                if "surface_ids" in self.coupling_fluid_ale[j].keys():
-                    ids_fluid_ale = self.coupling_fluid_ale[j]["surface_ids"]
-                    nodes_fluid_ale = fem.locate_dofs_topological(
-                        self.pba.V_d,
-                        self.io.mesh.topology.dim - 1,
-                        self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_fluid_ale)],
-                    )
-                elif "locator" in self.coupling_fluid_ale[j].keys():
-                    locator = self.coupling_fluid_ale[j]["locator"]
-                    cells = mesh.locate_entities_boundary(self.io.mesh, 1, locator.evaluate)
-                    nodes_fluid_ale = fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim - 1, cells)
-                else:
-                    raise RuntimeError("Unknown specification in coupling_fluid_ale! Set either 'surface_ids' or 'locator'!")
-                dbcs_coup_fluid_ale.append(fem.dirichletbc(self.ufa, nodes_fluid_ale))
-                # get surface dofs for dr_ALE/dv matrix entry
-                self.fdofs_fluid_ale = meshutils.get_index_set_id(self.pba.io, self.pba.V_d, ids_fluid_ale, self.pba.io.mesh.topology.dim-1, self.comm)
-
-            # now add the DBCs: pay attention to order... first u=uf, then the others... hence re-set!
-            if bool(dbcs_coup_fluid_ale):
-                # store DBCs without those from fluid
-                self.pba.bc.dbcs_nofluid = []
-                for k in self.pba.bc.dbcs:
-                    self.pba.bc.dbcs_nofluid.append(k)
-                self.pba.bc.dbcs = []
-                self.pba.bc.dbcs += dbcs_coup_fluid_ale
-                # Dirichlet boundary conditions
-                if "dirichlet" in self.pba.bc_dict.keys():
-                    self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"])
-                self.have_dbc_fluid_ale = True
+            if "surface_ids" in self.coupling_fluid_ale.keys():
+                ids_fluid_ale = self.coupling_fluid_ale["surface_ids"]
+                nodes_fluid_ale = fem.locate_dofs_topological(
+                    self.pba.V_d,
+                    self.io.mesh.topology.dim - 1,
+                    self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_fluid_ale)],
+                )
+            elif "locator" in self.coupling_fluid_ale.keys():
+                locator = self.coupling_fluid_ale["locator"]
+                cells = mesh.locate_entities_boundary(self.io.mesh, 1, locator.evaluate)
+                nodes_fluid_ale = fem.locate_dofs_topological(self.pba.V_d, self.io.mesh.topology.dim - 1, cells)
+            else:
+                raise RuntimeError("Unknown specification in coupling_fluid_ale! Set either 'surface_ids' or 'locator'!")
+            dbcs_coup_fluid_ale = [fem.dirichletbc(self.ufa, nodes_fluid_ale)]
+            # get surface dofs for dr_ALE/dv matrix entry
+            self.fdofs_fluid_ale = meshutils.get_index_set(self.pba.V_d, self.comm, nodes_loc=nodes_fluid_ale)
+            # now add the DBCs: pay attention to order... first d=uf, then the others... hence re-set!
+            # store DBCs without those from fluid
+            self.pba.bc.dbcs_nofluid = []
+            for k in self.pba.bc.dbcs:
+                self.pba.bc.dbcs_nofluid.append(k)
+            self.pba.bc.dbcs = []
+            self.pba.bc.dbcs += dbcs_coup_fluid_ale
+            # Dirichlet boundary conditions
+            if "dirichlet" in self.pba.bc_dict.keys():
+                self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"])
+            self.have_dbc_fluid_ale = True
 
         # any DBC conditions that we want to set from ALE to fluid
         if bool(self.coupling_ale_fluid):
-            dbcs_coup_ale_fluid = []
-            for j in range(len(self.coupling_ale_fluid)):
-                if "surface_ids" in self.coupling_ale_fluid[j].keys():
-                    ids_ale_fluid = self.coupling_ale_fluid[j]["surface_ids"]
-                    nodes_ale_fluid = fem.locate_dofs_topological(
-                        self.pbf.V_v,
-                        self.io.mesh.topology.dim - 1,
-                        self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_ale_fluid)],
-                    )
-                elif "locator" in self.coupling_ale_fluid[j].keys():
-                    locator = self.coupling_ale_fluid[j]["locator"]
-                    cells = mesh.locate_entities_boundary(self.io.mesh, 1, locator.evaluate)
-                    nodes_ale_fluid = fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim - 1, cells)
-                else:
-                    raise RuntimeError("Unknown specification in coupling_ale_fluid! Set either 'surface_ids' or 'locator'!")
-                dbcs_coup_ale_fluid.append(fem.dirichletbc(self.wf, nodes_ale_fluid))
-                # get surface dofs for dr_fluid/dd matrix entry
-                self.fdofs_ale_fluid = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, ids_ale_fluid, self.pbf.io.mesh.topology.dim-1, self.comm)
-
+            if "surface_ids" in self.coupling_ale_fluid.keys():
+                ids_ale_fluid = self.coupling_ale_fluid["surface_ids"]
+                nodes_ale_fluid = fem.locate_dofs_topological(
+                    self.pbf.V_v,
+                    self.io.mesh.topology.dim - 1,
+                    self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_ale_fluid)],
+                )
+            elif "locator" in self.coupling_ale_fluid.keys():
+                locator = self.coupling_ale_fluid["locator"]
+                cells = mesh.locate_entities_boundary(self.io.mesh, 1, locator.evaluate)
+                nodes_ale_fluid = fem.locate_dofs_topological(self.pbf.V_v, self.io.mesh.topology.dim - 1, cells)
+            else:
+                raise RuntimeError("Unknown specification in coupling_ale_fluid! Set either 'surface_ids' or 'locator'!")
+            dbcs_coup_ale_fluid = [fem.dirichletbc(self.wf, nodes_ale_fluid)]
+            # get surface dofs for dr_fluid/dd matrix entry
+            self.fdofs_ale_fluid = meshutils.get_index_set(self.pbf.V_v, self.comm, nodes_loc=nodes_ale_fluid)
             # now add the DBCs: pay attention to order... first v=w, then the others... hence re-set!
-            if bool(dbcs_coup_ale_fluid):
-                # store DBCs without those from ALE
-                self.pbf.bc.dbcs_noale = []
-                for k in self.pbf.bc.dbcs:
-                    self.pbf.bc.dbcs_noale.append(k)
-                self.pbf.bc.dbcs = []
-                self.pbf.bc.dbcs += dbcs_coup_ale_fluid
-                # Dirichlet boundary conditions
-                if "dirichlet" in self.pbf.bc_dict.keys():
-                    self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict["dirichlet"])
-                self.have_dbc_ale_fluid = True
+            # store DBCs without those from ALE
+            self.pbf.bc.dbcs_noale = []
+            for k in self.pbf.bc.dbcs:
+                self.pbf.bc.dbcs_noale.append(k)
+            self.pbf.bc.dbcs = []
+            self.pbf.bc.dbcs += dbcs_coup_ale_fluid
+            # Dirichlet boundary conditions
+            if "dirichlet" in self.pbf.bc_dict.keys():
+                self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict["dirichlet"])
+            self.have_dbc_ale_fluid = True
 
         # derivative of fluid momentum w.r.t. ALE displacement
         self.weakform_lin_vd = ufl.derivative(self.pbf.weakform_v, self.pba.d, self.pba.dd)
@@ -454,7 +445,7 @@ class FluidmechanicsAleProblem(problem_base):
             self.wf.x.petsc_vec.axpby(1.0, 0.0, self.pba.w.x.petsc_vec)
             self.wf.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]

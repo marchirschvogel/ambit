@@ -197,7 +197,7 @@ class variationalform(variationalform_base):
     def stab_lsic(self, v, tau_lsic, rho, ddomain, w=None, F=None, phi=None, phidot=None):
         return tau_lsic * ufl.div(self.var_v) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
 
-    # components of element-level Reynolds number - cf. Tezduyar and Osawa (2000)
+    # components of element-level Reynolds number - cf. Tezduyar and Osawa (2000) - not used so far...
     def re_c(self, rho, v, ddomain, w=None, F=None, phi=None, phidot=None):
         rho_ = self.get_density(rho, phi=phi)
         return rho_ * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
@@ -461,7 +461,7 @@ class variationalform_ale(variationalform):
         # NOTE: J=det(F) already included in res_p_strong
         return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
 
-    # components of element-level Reynolds number
+    # components of element-level Reynolds number - not used so far...
     def re_c(self, rho, v, ddomain, w=None, F=None, phi=None, phidot=None):
         rho_ = self.get_density(rho, phi=phi)
         J = ufl.det(F)

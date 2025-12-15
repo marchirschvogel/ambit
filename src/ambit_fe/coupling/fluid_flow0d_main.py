@@ -363,13 +363,13 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.k_vs_subvec, self.k_sv_subvec, sze_vs, sze_sv = [], [], [], []
 
         for n in range(self.num_coupling_surf):
-            self.dofs_coupling_vq[n] = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.surface_vq_ids[n], self.pbf.io.mesh.topology.dim-1, self.comm)
+            self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, idlist=self.surface_vq_ids[n], codim=self.pbf.io.mesh.topology.dim-1)
 
             self.k_sv_subvec.append(self.k_sv_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
             sze_sv.append(self.k_sv_subvec[-1].getSize())
 
-            self.dofs_coupling_p[n] = meshutils.get_index_set_id(self.pbf.io, self.pbf.V_v, self.surface_p_ids[n], self.pbf.io.mesh.topology.dim-1, self.comm)
+            self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, idlist=self.surface_p_ids[n], codim=self.pbf.io.mesh.topology.dim-1)
 
             self.k_vs_subvec.append(self.k_vs_vec[n].getSubVector(self.dofs_coupling_p[n]))
 
@@ -756,9 +756,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
                 else:
                     raise RuntimeError("You should not be here!")
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         if self.condense_0d:
-            return self.pbf.get_index_sets(isoptions=isoptions)
+            return self.pbf.get_solver_index_sets(isoptions=isoptions)
 
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]

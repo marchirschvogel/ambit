@@ -1661,7 +1661,7 @@ class SolidmechanicsProblem(problem_base):
         else:
             self.K_list[0][0] = self.K_uu
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         assert self.incompressible_2field  # index sets only needed for 2-field problem
 
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable

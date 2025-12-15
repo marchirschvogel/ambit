@@ -213,7 +213,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
             self.k_sd_subvec, sze_sd = [], []
 
             for n in range(self.pbfc.num_coupling_surf):
-                self.dofs_coupling_vq[n] = meshutils.get_index_set_id(self.pba.io, self.pba.V_d, self.pbfc.surface_vq_ids[n], self.pba.io.mesh.topology.dim-1, self.comm)
+                self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pba.V_d, self.comm, io=self.pba.io, idlist=self.pbfc.surface_vq_ids[n], codim=self.pba.io.mesh.topology.dim-1)
 
                 self.k_sd_subvec.append(self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
@@ -294,7 +294,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
 
         self.K_sd.assemble()
 
-    def get_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
