@@ -33,7 +33,6 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-tet-lin_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-tet-lin_boundary.xdmf",
-        "mesh_subboundary": basepath + "/input/artseg-fsi-tet-lin_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet"
         "results_to_write": [
             ["displacement", "velocity"],
             [
@@ -44,7 +43,7 @@ def test_main():
         "domain_ids_solid": [1],
         "domain_ids_fluid": [2],
         "surface_ids_interface": [1],
-        "simname": "fsi_p1p1_stab_artseg",
+        "simname": "fsi_p1p1_stabr_artseg",
         "write_submeshes":True,
     }
 
@@ -86,7 +85,7 @@ def test_main():
     COUPLING_PARAMS = {
         "coupling_fluid_ale": [{"surface_ids": [1]}],
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
-        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
         "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
     }
 
@@ -125,7 +124,6 @@ def test_main():
         "dirichlet": [
             {"id": [7], "dir": "y", "val": 0.0},
             {"id": [9], "dir": "x", "val": 0.0},
-            {"id": [1,2], "dir": "z", "val": 0.0, "codimension": 1}, # DBC on edge: needed if "fsi_system" is set to "neumann_dirichlet"!
         ],
     }
 

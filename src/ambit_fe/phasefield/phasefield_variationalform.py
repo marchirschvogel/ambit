@@ -26,7 +26,8 @@ class variationalform():
     def cahnhilliard_phase(self, phidot, phi, mu, M, ddomain, v=None, w=None, F=None):
         # advection term if coupled to fluid flow
         if v is not None:
-            advec = ufl.dot(v, ufl.grad(phi))
+            # NOTE: We should use the conservative form, NOT "ufl.dot(v, ufl.grad(phi))"
+            advec = ufl.div(phi*v)
         else:
             advec = ufl.as_ufl(0)
         return ( ufl.inner(phidot, self.var_phi) + ufl.inner(advec, self.var_phi) + M*ufl.inner(ufl.grad(mu), ufl.grad(self.var_phi)) ) * ddomain
@@ -41,13 +42,15 @@ class variationalform():
 class variationalform_ale(variationalform):
     def cahnhilliard_phase(self, phidot, phi, mu, M, ddomain, v=None, w=None, F=None):
         J = ufl.det(F)
+        Jdot = ufl.div(J*ufl.inv(F)*w)
         # advection term if coupled to fluid flow
         if v is not None:
-            advec = ufl.dot(v-w, ufl.inv(F).T*ufl.grad(phi))
+            # NOTE: We should use the conservative form, NOT "ufl.dot(v-w, ufl.inv(F).T*ufl.grad(phi))"
+            advec = ufl.div(J*ufl.inv(F)*phi*(v-w))
         else:
             advec = ufl.as_ufl(0)
-        return ( ufl.inner(phidot, self.var_phi) + ufl.inner(advec, self.var_phi) + M*ufl.inner(ufl.inv(F).T*ufl.grad(mu), ufl.inv(F).T*ufl.grad(self.var_phi)) ) * J * ddomain
+        return ( ufl.inner(J*phidot + phi*Jdot, self.var_phi) + ufl.inner(advec, self.var_phi) + J*M*ufl.inner(ufl.inv(F).T*ufl.grad(mu), ufl.inv(F).T*ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, lmbda, ddomain, F=None):
         J = ufl.det(F)
-        return ( ufl.inner(mu, self.var_mu) - ufl.inner(driv_force, self.var_mu) - lmbda*ufl.inner(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(self.var_mu)) ) * J * ddomain
+        return ( J*ufl.inner(mu, self.var_mu) - J*ufl.inner(driv_force, self.var_mu) - J*lmbda*ufl.inner(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(self.var_mu)) ) * ddomain

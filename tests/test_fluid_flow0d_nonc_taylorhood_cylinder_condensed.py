@@ -32,7 +32,7 @@ def test_main():
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "results_to_write": [],
-        "simname": "fluid_flow0d_monolagr_taylorhood_cylinder_condensed",
+        "simname": "fluid_flow0d_nonc_taylorhood_cylinder_condensed",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10, "numstep_stop": 2}

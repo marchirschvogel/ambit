@@ -212,56 +212,56 @@ if category == "solid" or category == "all":
     )
 
 if category == "fluid" or category == "all":
-    errs["test_fluid_taylorhood_cylinder 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fluid_taylorhood_cylinder.py"]
+    errs["test_fluid_nonc_taylorhood_cylinder 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fluid_nonc_taylorhood_cylinder.py"]
     )
-    errs["test_fluid_taylorhood_cylinder 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fluid_taylorhood_cylinder.py"]
-    )
-
-    errs["test_fluid_p1p1_stab_cylinder 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fluid_p1p1_stab_cylinder.py"]
-    )
-    errs["test_fluid_p1p1_stab_cylinder 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fluid_p1p1_stab_cylinder.py"]
+    errs["test_fluid_nonc_taylorhood_cylinder 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_nonc_taylorhood_cylinder.py"]
     )
 
-    errs["test_fluid_p1p1_stab_cylinder_s2x2 4"] = subprocess.call(
+    errs["test_fluid_nonc_p1p1_stabr_cylinder 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fluid_nonc_p1p1_stabr_cylinder.py"]
+    )
+    errs["test_fluid_nonc_p1p1_stabr_cylinder 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fluid_nonc_p1p1_stabr_cylinder.py"]
+    )
+
+    errs["test_fluid_nonc_p1p1_stabf_cylinder_s2x2 4"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "4",
             "python3",
-            "test_fluid_p1p1_stab_cylinder_s2x2.py",
+            "test_fluid_nonc_p1p1_stabf_cylinder_s2x2.py",
         ]
     )
 
-    errs["test_fluid_constraint_flux_p1p1_stab_cylinder 3"] = subprocess.call(
+    errs["test_fluid_constraint_nonc_p1p1_stabr_cylinder 3"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "3",
             "python3",
-            "test_fluid_constraint_flux_p1p1_stab_cylinder.py",
+            "test_fluid_constraint_nonc_p1p1_stabr_cylinder.py",
         ]
     )
 
-    errs["test_fluid_p1p1_stab_cylinder_valve 1"] = subprocess.call(
+    errs["test_fluid_nonc_p1p1_stabf_cylinder_valve 1"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "1",
             "python3",
-            "test_fluid_p1p1_stab_cylinder_valve.py",
+            "test_fluid_nonc_p1p1_stabf_cylinder_valve.py",
         ]
     )
-    errs["test_fluid_p1p1_stab_cylinder_valve 2"] = subprocess.call(
+    errs["test_fluid_nonc_p1p1_stabf_cylinder_valve 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fluid_p1p1_stab_cylinder_valve.py",
+            "test_fluid_nonc_p1p1_stabf_cylinder_valve.py",
         ]
     )
 
@@ -273,99 +273,108 @@ if category == "fsi" or category == "all":
         ["mpiexec", "-n", "3", "python3", "test_fsi_taylorhood_artseg_neumann_neumann.py"]
     )
 
-    errs["test_fsi_p1p1_stab_artseg_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stab_artseg_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stabr_artseg_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_artseg_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stab_artseg_neumann_neumann 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stab_artseg_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stabr_artseg_neumann_neumann 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stab_artseg_neumann_neumann 2 restart"] = subprocess.call(
+    errs["test_fsi_p1p1_stabr_artseg_neumann_neumann 2 restart"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_p1p1_stab_artseg_neumann_neumann.py",
+            "test_fsi_p1p1_stabr_artseg_neumann_neumann.py",
             str(4),
         ]
     )
-    errs["test_fsi_p1p1_stab_artseg_neumann_dirichlet 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stab_artseg_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stabr_artseg_neumann_dirichlet 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_neumann_dirichlet.py"]
     )
-    errs["test_fsi_p1p1_stab_tank2d_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stab_tank2d_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stab_tank2d_neumann_neumann 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stab_tank2d_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_neumann_neumann 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stab_tank2d_neumann_dirichlet 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stab_tank2d_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_neumann_dirichlet 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_dirichlet.py"]
     )
-    errs["test_fsi_p1p1_stab_tank2d_neumann_dirichlet 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stab_tank2d_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_neumann_dirichlet 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_dirichlet.py"]
     )
     errs["test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3-s2x2 4"] = subprocess.call(
         ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3-s2x2.py"]
     )
 
 if category == "fsi_flow0d" or category == "all":
-    errs["test_fsi_flow0d_p1p1_stab_artseg_neumann_neumann 2"] = subprocess.call(
+    errs["test_fsi_flow0d_p1p1_stabr_artseg_neumann_neumann 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_flow0d_p1p1_stab_artseg_neumann_neumann.py",
+            "test_fsi_flow0d_p1p1_stabr_artseg_neumann_neumann.py",
         ]
     )
-    errs["test_fsi_flow0d_p1p1_stab_tank2d_neumann_dirichlet_bgs3x3-s3x3 2"] = subprocess.call(
+    errs["test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3-s3x3 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_flow0d_p1p1_stab_tank2d_neumann_dirichlet_bgs3x3-s3x3.py",
+            "test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3-s3x3.py",
         ]
     )
 
 if category == "fluid_flow0d" or category == "all":
-    errs["test_fluid_flow0d_monolagr_taylorhood_cylinder 1"] = subprocess.call(
+    errs["test_fluid_flow0d_nonc_taylorhood_cylinder 1"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "1",
             "python3",
-            "test_fluid_flow0d_monolagr_taylorhood_cylinder.py",
+            "test_fluid_flow0d_nonc_taylorhood_cylinder.py",
         ]
     )
-    errs["test_fluid_flow0d_monolagr_taylorhood_cylinder 3"] = subprocess.call(
+    errs["test_fluid_flow0d_nonc_taylorhood_cylinder 3"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "3",
             "python3",
-            "test_fluid_flow0d_monolagr_taylorhood_cylinder.py",
+            "test_fluid_flow0d_nonc_taylorhood_cylinder.py",
         ]
     )
 
-    errs["test_fluid_flow0d_monolagr_taylorhood_cylinder_condensed 2"] = subprocess.call(
+    errs["test_fluid_flow0d_nonc_taylorhood_cylinder_condensed 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fluid_flow0d_monolagr_taylorhood_cylinder_condensed.py",
+            "test_fluid_flow0d_nonc_taylorhood_cylinder_condensed.py",
         ]
     )
 
 if category == "fluid_ale_flow0d" or category == "all":
-    errs["test_fluid_ale_flow0d_lalv_syspul_prescribed 4"] = subprocess.call(
+    errs["test_fluid_ale_flow0d_nonc_p1p1_stabr_lalv_syspul_prescribed 4"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "4",
             "python3",
-            "test_fluid_ale_flow0d_lalv_syspul_prescribed.py",
+            "test_fluid_ale_flow0d_nonc_p1p1_stabr_lalv_syspul_prescribed.py",
+        ]
+    )
+    errs["test_fluid_ale_flow0d_cons_p1p1_stabf_lalv_syspul_prescribed 4"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "4",
+            "python3",
+            "test_fluid_ale_flow0d_cons_p1p1_stabf_lalv_syspul_prescribed.py",
         ]
     )
 
@@ -616,8 +625,8 @@ if category == "solid_flow0d" or category == "all":
     )  # TODO: Fix outer loop restart
 
 if category == "fluid_ale" or category == "all":
-    errs["test_fluid_ale_nozzle_rot 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fluid_ale_nozzle_rot.py"]
+    errs["test_fluid_ale_steady_p1p1_stabf_nozzle_rot 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_ale_steady_p1p1_stabf_nozzle_rot.py"]
     )
 
 if category == "frsi" or category == "fluid_ale" or category == "all":

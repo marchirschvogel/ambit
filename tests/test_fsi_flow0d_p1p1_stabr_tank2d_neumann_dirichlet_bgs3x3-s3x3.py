@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-FSI simulation of a 2D tank with flexible, forced lid
-Monolithic Neumann-Neumann formulation (with Lagrange multiplier) - p1p1
+FSI simulation of a 2D tank with flexible, forced lid - with reduced-dimensional 0D Windkessel model at outlet
+Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier) - p1p1
 """
 
 import ambit_fe
@@ -13,13 +13,13 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.fsi
-@pytest.mark.fluid_solid
+@pytest.mark.fsi_flow0d
+@pytest.mark.fluid_solid_flow0d
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
     IO_PARAMS = {
-        "problem_type": "fsi",
+        "problem_type": "fsi_flow0d",
         "write_results_every": 1,
         "indicate_results_by": "step",
         "output_path": basepath + "/tmp/",
@@ -35,7 +35,7 @@ def test_main():
         "domain_ids_fluid": [2],
         "surface_ids_interface": [3],
         "write_submeshes":True,
-        "simname": "tank2d_p1p1_neumannneumann",
+        "simname": "tank2d_flow0d_p1p1_stabr_neumanndirichlet",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -44,14 +44,37 @@ def test_main():
                       }
 
     SOLVER_PARAMS = {
-        "solve_type": "direct",
-        "direct_solver": "mumps",
+        "solve_type": "iterative",
+        "iterative_solver": "gmres",
+        "block_precond": "bgs3x3-s3x3",
+        "precond_fields": [
+            {"prec": "amg"},  # solid-u
+            {"prec": "amg"},  # fluid-v
+            {"prec": "amg"},  # fluid-p
+            {"prec": "direct"},  # LM 3D-0D
+            {"prec": "amg"},  # ale-d
+        ],
+        "tol_lin_rel": 1e-7,
+        "lin_norm_type": "unpreconditioned",
+        "print_liniter_every": 50,
         "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
-        "tol_inc": [1e-8, 1e-8, 1e-8, 1e5, 1e-8],
+        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
+        "subsolver_params": {"tol_res": 1.0e-8, "tol_inc": 1.0e-8},
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
     TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
+
+    TIME_PARAMS_FLOW0D = {
+        "timint": "ost",
+        "theta_ost": 1.0,
+        "initial_conditions": {"Q_0": 0.0, "p_0": 0.0},
+    }
+
+    MODEL_PARAMS_FLOW0D = {
+        "modeltype": "2elwindkessel",
+        "parameters": {"C": 0.5, "R": 0.1, "p_ref": 0.3},
+    }  # resistive blockage
 
     FEM_PARAMS_SOLID = {
         "order_disp": 1,
@@ -63,20 +86,26 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 1,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        'stabilization'  : {'scheme'         : 'supg_pspg',
-                                            'vscale'         : 1.0e1,
-                                            'dscales'        : [1.,1.,1.],
-                                            'symmetric'      : True,
-                                            'reduced_scheme' : True,
-                                            'vscale_vel_dep' : False}}
+                        "stabilization"  : {"scheme"         : "supg_pspg",
+                                            "vscale"         : 1.0e1,
+                                            "dscales"        : [1.,1.,1.],
+                                            "symmetric"      : True,
+                                            "reduced_scheme" : True,
+                                            "vscale_vel_dep" : False}}
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
-    COUPLING_PARAMS = {
+    COUPLING_PARAMS_ALE_FLUID = {
         "coupling_fluid_ale": [{"surface_ids": [3]}],
-        "fsi_governing_type": "solid_governed", # solid_governed, fluid_governed
-        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
-        "remove_mutual_solid_fluid_bcs":False, # TODO: Not working!
+        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+    }
+
+    COUPLING_PARAMS_FLUID_FLOW0D = {
+        "surface_ids": [[5]],
+        "coupling_quantity": ["pressure"],
+        "variable_quantity": ["flux"],
+        "coupling_type": "monolithic_lagrange",
+        "print_subiter": True,
     }
 
     E = 500. # kPa
@@ -96,6 +125,8 @@ def test_main():
             pmax = 3.0 # kPa
             return -pmax * np.sin(2.*np.pi*t/Tp)
 
+    # NOTE: For the neumann_dirichlet case, if a solid/fluid dof of the FSI interface gets a DBC, the respective fluid/solid one needs the same, too!!!
+
     BC_DICT_SOLID = {"neumann": [{"id": [1], "dir": "normal_cur", "curve": 1}],
         "dirichlet": [{"id": [2], "dir": "all", "val": 0.}],
         }
@@ -111,16 +142,20 @@ def test_main():
         ]
     }
 
+    # problem setup
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID],
+        [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D],
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
-        [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE],
+        [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D],
         [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE],
         time_curves=time_curves(),
-        coupling_params=COUPLING_PARAMS
+        coupling_params=[
+            COUPLING_PARAMS_ALE_FLUID,
+            COUPLING_PARAMS_FLUID_FLOW0D,
+        ],
     )
 
     # problem solve
@@ -139,10 +174,10 @@ def test_main():
     )
 
     # correct results
-    v_corr[0] = 5.1486298166103154E+01  # x
-    v_corr[1] = -2.5581846922962019E+00  # y
+    v_corr[0] = 4.1839135102549456E+01  # x
+    v_corr[1] = -6.6026593068959327E-01  # y
 
-    p_corr[0] = -1.4217666576649382E-03
+    p_corr[0] = 8.4040223479527665E-02
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

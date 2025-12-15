@@ -2,7 +2,7 @@
 
 """
 FSI simulation of a 2D tank with flexible, forced lid
-Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier) - p1p1
+Monolithic Neumann-Neumann formulation (with Lagrange multiplier) - p1p1
 """
 
 import ambit_fe
@@ -35,7 +35,7 @@ def test_main():
         "domain_ids_fluid": [2],
         "surface_ids_interface": [3],
         "write_submeshes":True,
-        "simname": "tank2d_p1p1_neumanndirichlet",
+        "simname": "tank2d_p1p1_stabr_neumannneumann",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -46,8 +46,8 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",
-        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8],
-        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_inc": [1e-8, 1e-8, 1e-8, 1e5, 1e-8],
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
@@ -63,18 +63,20 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 1,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        'stabilization'  : {'scheme'         : 'supg_pspg',
-                                            'vscale'         : 1.0e1,
-                                            'dscales'        : [1.,1.,1.],
-                                            'symmetric'      : True,
-                                            'reduced_scheme' : True,
-                                            'vscale_vel_dep' : False}}
+                        "stabilization"  : {"scheme"         : "supg_pspg",
+                                            "vscale"         : 1.0e1,
+                                            "dscales"        : [1.,1.,1.],
+                                            "symmetric"      : True,
+                                            "reduced_scheme" : True,
+                                            "vscale_vel_dep" : False}}
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
     COUPLING_PARAMS = {
         "coupling_fluid_ale": [{"surface_ids": [3]}],
-        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+        "fsi_governing_type": "solid_governed", # solid_governed, fluid_governed
+        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
+        "remove_mutual_solid_fluid_bcs":False, # TODO: Not working!
     }
 
     E = 500. # kPa
@@ -93,8 +95,6 @@ def test_main():
             Tp = 0.5
             pmax = 3.0 # kPa
             return -pmax * np.sin(2.*np.pi*t/Tp)
-
-    # NOTE: For the neumann_dirichlet case, if a solid/fluid dof of the FSI interface gets a DBC, the respective fluid/solid one needs the same, too!!!
 
     BC_DICT_SOLID = {"neumann": [{"id": [1], "dir": "normal_cur", "curve": 1}],
         "dirichlet": [{"id": [2], "dir": "all", "val": 0.}],

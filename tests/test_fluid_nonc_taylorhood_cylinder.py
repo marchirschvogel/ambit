@@ -32,7 +32,7 @@ def test_main():
             "fluiddisplacement",
             "internalpower",
         ],
-        "simname": "fluid_taylorhood_cylinder",
+        "simname": "fluid_nonc_taylorhood_cylinder",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10, "numstep_stop": 2}

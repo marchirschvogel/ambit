@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 """
-transient incompressible Navier-Stokes flow in a cylinder with in-flux constraint at one boundary
-- stabilized P1P1 elements for velocity and pressure
-- trapezoidal midpoint time stepping scheme
+transient incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
+- stabilized P1P1 elements for velocity and pressure (full SUPF/PSPG scheme)
+- Backward-Euler time stepping scheme
 - 2 material domains in fluid (w/ same parameters though)
+- internal valve, requiring duplicate pressure nodes at that internal surface
+- works currently only with mixed dolfinx branch (USE_MIXED_DOLFINX_BRANCH)
+- checkpoint writing of domain-wise discontinuous pressure field
+- DBC read-in from file
 """
 
 import ambit_fe
@@ -16,7 +20,6 @@ import pytest
 
 
 @pytest.mark.fluid
-@pytest.mark.fluid_constraint
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
@@ -27,18 +30,19 @@ def test_main():
         restart_step = 0
 
     IO_PARAMS = {
-        "problem_type": "fluid_constraint",
+        "problem_type": "fluid",
+        "duplicate_mesh_domains": [[1], [2]],
         "mesh_domain": basepath + "/input/cylinder_domain.xdmf",
         "mesh_boundary": basepath + "/input/cylinder_boundary.xdmf",
         "write_results_every": 1,
-        "write_restart_every": 1,
+        "write_restart_every": 9,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "results_to_write": ["velocity", "pressure"],
-        "simname": "fluid_constraint_flux_p1p1_stab_cylinder",
+        "simname": "fluid_nonc_p1p1_stabf_cylinder_valve",
     }
 
-    CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10, "numstep_stop": 2}
+    CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10}
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
@@ -49,8 +53,7 @@ def test_main():
 
     TIME_PARAMS_FLUID = {
         "timint": "ost",
-        "theta_ost": 0.5,
-        "eval_nonlin_terms": "trapezoidal",
+        "theta_ost": 1.0,
         "fluid_governing_type": "navierstokes_transient",
     }
 
@@ -63,13 +66,7 @@ def test_main():
             "scheme": "supg_pspg",
             "vscale": 1e3,
             "dscales": [1.0, 1.0, 1.0],
-            "reduced_scheme": True,
         },
-    }
-
-    CONSTRAINT_PARAMS = {
-        "constraint_physics": [{"id": [4], "type": "flux", "prescribed_curve": 1}],
-        "multiplier_physics": [{"id": [4], "type": "pressure"}],
     }
 
     MATERIALS = {
@@ -80,11 +77,33 @@ def test_main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
         def tc1(self, t):
-            qini = 0.0
-            qmax = -1e4
-            return (qmax - qini) * t / CONTROL_PARAMS["maxtime"] + qini
+            t_ramp = 1.0
+            pmax = 1.0
+            return 0.5 * (-(pmax)) * (1.0 - np.cos(np.pi * t / t_ramp))
 
-    BC_DICT = {"dirichlet": [{"id": [1], "dir": "all", "val": 0.0}]}  # lateral surf
+        def tc2(self, t):
+            pmax = 0.5
+            return -pmax
+
+    BC_DICT = {
+        "dirichlet": [{"id": [1], "dir": "all", "val": 0.0}],
+        "neumann": [
+            {"id": [2], "dir": "normal_ref", "curve": 1},
+            {"id": [4], "dir": "normal_ref", "curve": 2},
+        ],
+        "robin_valve": [
+            {
+                "id": [5],
+                "type": "dp_smooth",
+                "beta_max": 1e3,
+                "beta_min": 1e-3,
+                "epsilon": 1e-6,
+                "dp_monitor_id": 0,
+            }
+        ],  # 5 is internal surface (valve)
+        "dp_monitor": [{"id": [5], "upstream_domain": 2, "downstream_domain": 1}],
+        "flux_monitor": [{"id": [5], "on_subdomain": True, "internal": False, "domain": 2}],
+    }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
@@ -96,7 +115,6 @@ def test_main():
         MATERIALS,
         BC_DICT,
         time_curves=time_curves(),
-        coupling_params=CONSTRAINT_PARAMS,
     )
 
     # solve time-dependent problem
@@ -108,37 +126,25 @@ def test_main():
     check_node = []
     check_node.append(np.array([0.0170342, 2.99995, 13.4645]))
 
-    v_corr, p_corr = np.zeros(3 * len(check_node)), np.zeros(len(check_node))
+    v_corr = np.zeros(3 * len(check_node))
 
     # correct results
-    v_corr[0] = -5.7966875760150955e00  # x
-    v_corr[1] = 6.3978144245133038e01  # y
-    v_corr[2] = 7.1588985130116392e00  # z
-
-    p_corr[0] = 3.3288329107831207e-03
+    v_corr[0] = 2.8679355190833773e00  # x
+    v_corr[1] = 1.1644703461381966e03  # y
+    v_corr[2] = -9.9701079153832620e02  # z
 
     check1 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.pbf.v,
+        problem.mp.v,
         check_node,
         v_corr,
-        problem.mp.pbf.V_v,
+        problem.mp.V_v,
         problem.mp.comm,
         tol=tol,
         nm="v",
         readtol=1e-4,
     )
-    check2 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.pbf.p,
-        check_node,
-        p_corr,
-        problem.mp.pbf.V_p,
-        problem.mp.comm,
-        tol=tol,
-        nm="p",
-        readtol=1e-4,
-    )
 
-    success = ambit_fe.resultcheck.success_check([check1, check2], problem.mp.comm)
+    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
 
     if not success:
         raise RuntimeError("Test failed!")

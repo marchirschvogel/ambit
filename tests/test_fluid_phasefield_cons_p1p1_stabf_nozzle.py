@@ -25,7 +25,7 @@ def test_main():
         "mesh_boundary": basepath + "/input/nozzle_boundary.xdmf",
         "mesh_encoding": "ASCII",  # HDF5, ASCII
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_nozzle",
+        "simname": "fluid_phasefield_cons_p1p1_stabf_nozzle",
         "write_initial_fields": True,
     }
 
@@ -48,7 +48,7 @@ def test_main():
 
     CONTROL_PARAMS = {"maxtime": 1.0,
                       "numstep": 100,
-                      "numstep_stop": 7,
+                      "numstep_stop": 5,
                       "initial_fields": [expr1, None],
                       }
 
@@ -72,8 +72,8 @@ def test_main():
                         'stabilization'  : {'scheme'         : 'supg_pspg',
                                             'vscale'         : 1.0e1,
                                             'dscales'        : [1.,1.,1.],
-                                            'symmetric'      : True,
-                                            'reduced_scheme' : True,
+                                            'symmetric'      : False,
+                                            'reduced_scheme' : False,
                                             'vscale_vel_dep' : False},
                         "fluid_formulation": "conservative"}
 
@@ -128,10 +128,10 @@ def test_main():
     v_corr, p_corr = np.zeros(2 * len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 5.3496735378219064E+01  # x
-    v_corr[1] = -1.6375737425821393E+00  # y
+    v_corr[0] = 2.1786040945059719E+00  # x
+    v_corr[1] = -7.2292113543838623E-06  # y
 
-    p_corr[0] = 3.3473566595254960E-03
+    p_corr[0] = -1.9440344693873112E-07
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

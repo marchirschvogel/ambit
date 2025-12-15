@@ -1,76 +1,65 @@
 #!/usr/bin/env python3
 
 """
-monolithic 3D-0D coupling of incompressible Navier-Stokes with 2-element Windkessel model
+steady incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
+- stabilized P1P1 elements for velocity and pressure
+- Backward-Euler time stepping scheme
+- 2 material domains in fluid (w/ same parameters though)
 """
 
 import ambit_fe
 
-import sys
 import numpy as np
 from pathlib import Path
 import pytest
 
 
-@pytest.mark.fluid_flow0d
+@pytest.mark.fluid
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
-    # reads in restart step from the command line
-    try:
-        restart_step = int(sys.argv[1])
-    except:
-        restart_step = 0
-
     IO_PARAMS = {
-        "problem_type": "fluid_flow0d",
-        "mesh_domain": basepath + "/input/cylinder-quad_domain.xdmf",
-        "mesh_boundary": basepath + "/input/cylinder-quad_boundary.xdmf",
+        "problem_type": "fluid",
+        "mesh_domain": basepath + "/input/cylinder_domain.xdmf",
+        "mesh_boundary": basepath + "/input/cylinder_boundary.xdmf",
         "write_results_every": 1,
-        "write_restart_every": 1,
-        "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": [],
-        "simname": "fluid_flow0d_monolagr_taylorhood_cylinder",
+        "results_to_write": ["velocity", "pressure"],
+        "simname": "fluid_nonc_p1p1_stabr_cylinder",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10, "numstep_stop": 2}
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
-        "direct_solver": "superlu_dist",  # no idea why, but mumps does not seem to like this system in parallel...
+        "direct_solver": "mumps",
         "tol_res": 1.0e-8,
         "tol_inc": 1.0e-8,
-        "subsolver_params": {"tol_res": 1.0e-8, "tol_inc": 1.0e-8},
     }
 
     TIME_PARAMS_FLUID = {
         "timint": "ost",
-        "theta_ost": 0.5,
-        "eval_nonlin_terms": "midpoint",
-    }
-
-    TIME_PARAMS_FLOW0D = {
-        "timint": "ost",
         "theta_ost": 1.0,
-        "initial_conditions": {"Q_0": 0.0, "p_0": 0.0},
+        "fluid_governing_type": "navierstokes_steady",
     }
 
-    MODEL_PARAMS_FLOW0D = {
-        "modeltype": "2elwindkessel",
-        "parameters": {"C": 1.0e3, "R": 1.0e-2, "p_ref": 0.1},
+    FEM_PARAMS = {
+        "order_vel": 1,
+        "order_pres": 1,
+        "quad_degree": 5,
+        "fluid_formulation": "nonconservative",  # nonconservative (default), conservative
+        "stabilization": {
+            "scheme": "supg_pspg",
+            "vscale": 1e3,
+            "dscales": [1.0, 1.0, 1.0],
+            "reduced_scheme": True,
+        },
     }
 
-    FEM_PARAMS = {"order_vel": 2, "order_pres": 1, "quad_degree": 5}
-
-    COUPLING_PARAMS = {
-        "surface_ids": [[3]],
-        "coupling_quantity": ["pressure"],
-        "variable_quantity": ["flux"],
-        "print_subiter": True,
+    MATERIALS = {
+        "MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
+        "MAT2": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
     }
-
-    MATERIALS = {"MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
@@ -86,13 +75,12 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D],
+        TIME_PARAMS_FLUID,
         SOLVER_PARAMS,
         FEM_PARAMS,
-        [MATERIALS, MODEL_PARAMS_FLOW0D],
+        MATERIALS,
         BC_DICT,
         time_curves=time_curves(),
-        coupling_params=COUPLING_PARAMS,
     )
 
     # solve time-dependent problem
@@ -107,27 +95,27 @@ def test_main():
     v_corr, p_corr = np.zeros(3 * len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = -3.1360126179075958e-02  # x
-    v_corr[1] = -9.7807059298274868e-01  # y
-    v_corr[2] = -2.7900092617595016e00  # z
+    v_corr[0] = 3.0401864063179573e-01  # x
+    v_corr[1] = -3.7615292073863640e00  # y
+    v_corr[2] = -7.5782395441818418e-02  # z
 
-    p_corr[0] = -3.6308274476437244e-04
+    p_corr[0] = -2.1474832854517510e-04
 
     check1 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.pbf.v,
+        problem.mp.v,
         check_node,
         v_corr,
-        problem.mp.pbf.V_v,
+        problem.mp.V_v,
         problem.mp.comm,
         tol=tol,
         nm="v",
         readtol=1e-4,
     )
     check2 = ambit_fe.resultcheck.results_check_node(
-        problem.mp.pbf.p,
+        problem.mp.p,
         check_node,
         p_corr,
-        problem.mp.pbf.V_p,
+        problem.mp.V_p,
         problem.mp.comm,
         tol=tol,
         nm="p",

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-FSI of arterial segment: stabilized equal-order formulation, compressible solid
+FSI of arterial segment connected to resistive element: stabilized equal-order formulation, compressible solid
 """
 
 import ambit_fe
@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.fsi
-@pytest.mark.fluid_solid
+@pytest.mark.fsi_flow0d
+@pytest.mark.fluid_solid_flow0d
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
@@ -24,12 +24,12 @@ def test_main():
         restart_step = 0
 
     IO_PARAMS = {
-        "problem_type": "fsi",
+        "problem_type": "fsi_flow0d",
         "write_results_every": 1,
         "indicate_results_by": "step",
         "write_restart_every": 1,
         "restart_step": restart_step,
-        "restart_io_type": "petscvector",  # petscvector, plaintext
+        "restart_io_type": "petscvector",  # petscvector, rawtxt
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-tet-lin_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-tet-lin_boundary.xdmf",
@@ -43,8 +43,7 @@ def test_main():
         "domain_ids_solid": [1],
         "domain_ids_fluid": [2],
         "surface_ids_interface": [1],
-        "simname": "fsi_p1p1_stab_artseg",
-        "write_submeshes":True,
+        "simname": "fsi_flow0d_p1p1_stabr_artseg",
     }
 
     CONTROL_PARAMS = {"maxtime": 3.0, "numstep": 150, "numstep_stop": 5}
@@ -52,13 +51,25 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",
-        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-6],
-        "tol_inc": [1e-0, 1e-0, 1e-0, 1e-0, 1e-0],
+        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-6],
+        "tol_inc": [1e-0, 1e-0, 1e-0, 1e5, 1e-0, 1e-0],
+        "subsolver_params": {"tol_res": 1.0e-8, "tol_inc": 1.0e-8},
     }
 
-    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 1.0}
+    TIME_PARAMS_SOLID = {"timint": "ost", "theta_ost": 1.0}
 
-    TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 1.0}
+    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 1.0}
+
+    TIME_PARAMS_FLOW0D = {
+        "timint": "ost",
+        "theta_ost": 1.0,
+        "initial_conditions": {"Q_0": 0.0, "p_0": 0.0},
+    }
+
+    MODEL_PARAMS_FLOW0D = {
+        "modeltype": "2elwindkessel",
+        "parameters": {"C": 0.0, "R": 1e6, "p_ref": 0.0},
+    }  # resistive blockage
 
     FEM_PARAMS_SOLID = {
         "order_disp": 1,
@@ -82,11 +93,18 @@ def test_main():
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
-    COUPLING_PARAMS = {
+    COUPLING_PARAMS_ALE_FLUID = {
         "coupling_fluid_ale": [{"surface_ids": [1]}],
-        "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
-        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
+        "fsi_governing_type": "fluid_governed",  # solid_governed, fluid_governed
         "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
+    }
+
+    COUPLING_PARAMS_FLUID_FLOW0D = {
+        "surface_ids": [[5]],
+        "coupling_quantity": ["pressure"],
+        "variable_quantity": ["flux"],
+        "coupling_type": "monolithic_lagrange",
+        "print_subiter": True,
     }
 
     MATERIALS_SOLID = {
@@ -99,9 +117,10 @@ def test_main():
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
 
-    MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 2.0, "nu": 0.1}}}
+    MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
+    # some examples... up to 20 possible (tc1 until tc20 - feel free to implement more in timeintegration.py --> timecurves function if needed...)
     class time_curves:
         def tc1(self, t):
             t_ramp = 2.0
@@ -120,7 +139,7 @@ def test_main():
     }
 
     BC_DICT_FLUID = {
-        "neumann": [{"id": [3, 5], "dir": "normal_cur", "curve": 1}],
+        "neumann": [{"id": [3], "dir": "normal_cur", "curve": 1}],
         "dirichlet": [
             {"id": [7], "dir": "y", "val": 0.0},
             {"id": [9], "dir": "x", "val": 0.0},
@@ -139,13 +158,16 @@ def test_main():
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
-        [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID],
+        [TIME_PARAMS_SOLID, TIME_PARAMS_FLUID, TIME_PARAMS_FLOW0D],
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
-        [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE],
+        [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D],
         [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE],
         time_curves=time_curves(),
-        coupling_params=COUPLING_PARAMS,
+        coupling_params=[
+            COUPLING_PARAMS_ALE_FLUID,
+            COUPLING_PARAMS_FLUID_FLOW0D,
+        ],
     )
 
     # problem solve
@@ -164,15 +186,15 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = 1.4135667472799776e-04  # x
-    u_corr[1] = 1.4218659625759257e-04  # y
-    u_corr[2] = -1.7638258092165119e-07  # z
+    u_corr[0] = 1.4136408389112663e-04  # x
+    u_corr[1] = 1.4220281681457883e-04  # y
+    u_corr[2] = -1.7641010373962539e-07  # z
 
-    v_corr[0] = 2.8005565683996473e-03  # x
-    v_corr[1] = 2.8176524733115717e-03  # y
-    v_corr[2] = -3.4904136083075215e-06  # z
+    v_corr[0] = 2.5420821171800636e-03  # x
+    v_corr[1] = 2.5573646939347351e-03  # y
+    v_corr[2] = -3.1678103419619852e-06  # z
 
-    p_corr[0] = 6.1541709918483292e-04
+    p_corr[0] = 6.1543367992177012e-04
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,

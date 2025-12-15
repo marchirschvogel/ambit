@@ -1703,8 +1703,6 @@ class FluidmechanicsProblem(problem_base):
                                     phi=self.phasevar["phi"],
                                 ),
                                 F=self.alevar["Fale"],
-                                phi=self.phasevar["phi"],
-                                phidot=self.phasevar["phidot"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
@@ -1715,8 +1713,6 @@ class FluidmechanicsProblem(problem_base):
                                     phi=self.phasevar["phi_old"],
                                 ),
                                 F=self.alevar["Fale_old"],
-                                phi=self.phasevar["phi_old"],
-                                phidot=self.phasevar["phidot_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(
                                 self.rho[n],
@@ -1727,8 +1723,6 @@ class FluidmechanicsProblem(problem_base):
                                     phi=self.phasevar["phi_mid"],
                                 ),
                                 F=self.alevar["Fale_mid"],
-                                phi=self.phasevar["phi_mid"],
-                                phidot=self.phasevar["phidot_mid"],
                             )
                         else:  # no viscous stress term
                             residual_v_strong = self.vf.f_gradp_strong(self.p_[j], F=self.alevar["Fale"])
@@ -1775,24 +1769,30 @@ class FluidmechanicsProblem(problem_base):
                         tau_lsic,
                         self.rho[n],
                         self.dx(M),
+                        w=self.alevar["w"],
                         F=self.alevar["Fale"],
                         phi=self.phasevar["phi"],
+                        phidot=self.phasevar["phidot"],
                     )
                     self.deltaW_int_old += self.vf.stab_lsic(
                         self.v_old,
                         tau_lsic,
                         self.rho[n],
                         self.dx(M),
+                        w=self.alevar["w_old"],
                         F=self.alevar["Fale_old"],
                         phi=self.phasevar["phi_old"],
+                        phidot=self.phasevar["phidot_old"],
                     )
                     self.deltaW_int_mid += self.vf.stab_lsic(
                         self.vel_mid,
                         tau_lsic,
                         self.rho[n],
                         self.dx(M),
+                        w=self.alevar["w_mid"],
                         F=self.alevar["Fale_mid"],
                         phi=self.phasevar["phi_mid"],
+                        phidot=self.phasevar["phidot_mid"],
                     )
                     # PSPG (pressure-stabilizing Petrov-Galerkin) for Navier-Stokes and Stokes
                     self.deltaW_p[n] += self.vf.stab_pspg(
@@ -1825,8 +1825,10 @@ class FluidmechanicsProblem(problem_base):
                             tau_lsic,
                             self.rho[n],
                             self.dx(M),
+                            w=self.alevar["w"],
                             F=self.alevar["Fale"],
                             phi=self.phasevar["phi"],
+                            phidot=self.phasevar["phidot"],
                         )
                         # get the respective strong residual depending on the prestress kinetic type...
                         if self.prestress_kinetic == "navierstokes_transient":
