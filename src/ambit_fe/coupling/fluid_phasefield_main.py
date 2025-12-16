@@ -153,7 +153,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
     def set_variational_forms_coupling(self):
         # derivative of fluid momentum w.r.t. phase field
         self.weakform_lin_vphi = ufl.derivative(self.pbf.weakform_v, self.pbp.phi, self.pbp.dphi)
-        # derivative of fluid continuity w.r.t. phase field (in case of stabilization terms!)
+        # derivative of fluid continuity w.r.t. phase field
         self.weakform_lin_pphi = []
         for n in range(self.pbf.num_domains):
             self.weakform_lin_pphi.append(ufl.derivative(self.pbf.weakform_p[n], self.pbp.phi, self.pbp.dphi))
@@ -243,7 +243,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
 
         self.K_list[0][2] = self.K_vphi
 
-        # derivative of fluid continuity w.r.t. pahse field (in case of stabilization terms!)
+        # derivative of fluid continuity w.r.t. pahse field
         self.K_pphi.zeroEntries()
         fem.petsc.assemble_matrix(self.K_pphi, self.jac_pphi, [])
         self.K_pphi.assemble()

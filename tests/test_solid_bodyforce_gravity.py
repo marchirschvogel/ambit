@@ -58,9 +58,9 @@ def test_main():
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:
         def tc1(self, t):
-            return MATERIALS["MAT1"]["inertia"]["rho0"] * 9.81  # 9.81 m/s^2
+            return 9.81 # m/s^2
 
-    BC_DICT = {"bodyforce": [{"id": [1], "dir": [0.0, 0.0, -1.0], "curve": 1}]}
+    BC_DICT = {"bodyforce": [{"id": [1], "dir": [0.0, 0.0, -1.0], "curve": 1, "scale_density": True}]} # scaled by density, hence curve value is an acceleration
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(

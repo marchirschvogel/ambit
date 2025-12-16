@@ -390,7 +390,6 @@ class FluidmechanicsProblem(problem_base):
                         mode=PETSc.ScatterMode.FORWARD,
                     )
 
-        # own read function: requires plain txt format of type "node-id val-x val-y val-z" (or one value in case of a scalar)
         if bool(self.prestress_from_file):
             self.io.readfunction(self.uf_pre, self.prestress_from_file[0])
             # if available, we might want to read in the pressure field, too
@@ -846,21 +845,27 @@ class FluidmechanicsProblem(problem_base):
             w_body = self.bc.bodyforce(
                 self.bc_dict["bodyforce"],
                 self.dx,
+                self.rho,
                 F=self.alevar["Fale"],
+                phi=self.phasevar["phi"],
                 funcs_to_update=self.ti.funcs_to_update,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update,
             )
             w_body_old = self.bc.bodyforce(
                 self.bc_dict["bodyforce"],
                 self.dx,
+                self.rho,
                 F=self.alevar["Fale_old"],
+                phi=self.phasevar["phi_old"],
                 funcs_to_update=self.ti.funcs_to_update_old,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
             )
             w_body_mid = self.bc.bodyforce(
                 self.bc_dict["bodyforce"],
                 self.dx,
+                self.rho,
                 F=self.alevar["Fale_mid"],
+                phi=self.phasevar["phi_mid"],
                 funcs_to_update=self.ti.funcs_to_update_mid,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
             )

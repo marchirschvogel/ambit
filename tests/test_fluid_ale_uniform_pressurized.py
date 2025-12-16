@@ -66,7 +66,6 @@ def test_main():
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 0.001}, # Pa s
                                 "inertia": {"rho": 1000.0}}} # kg/m^3
 
-    # We need a finite strain capable nonlinear ALE that can undergo a large rotation without straining/shape changing
     MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)

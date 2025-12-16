@@ -216,13 +216,6 @@ class variationalform(variationalform_base):
         else:
             return (ufl.dot(self.n0, v))(fcts) * dboundary
 
-    # get the density expression - constant or multi-phase-like
-    def get_density(self, rho, phi=None):
-        if phi is not None:
-            return phi * rho[0] + (1.0 - phi) * rho[1]
-        else:
-            return rho[0]
-
 
 # ALE fluid mechanics variational forms class
 # Principle of Virtual Power

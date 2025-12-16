@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Two-phase flow in nozzle with pressure boundary condition
+Two-phase flow rising bubble example
 """
 
 import ambit_fe
@@ -21,26 +21,22 @@ def test_main():
         "write_results_every": 1,
         "indicate_results_by": "step",
         "output_path": basepath + "/tmp/",
-        "mesh_domain": basepath + "/input/nozzle_domain.xdmf",
-        "mesh_boundary": basepath + "/input/nozzle_boundary.xdmf",
-        "mesh_encoding": "ASCII",  # HDF5, ASCII
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[50,100]}, # 25,50
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_cons_p1p1_stabf_nozzle",
+        "simname": "fluid_phasefield_cons_rising_bubble",
         "write_initial_fields": True,
     }
 
     class expr1:
         def __init__(self):
             self.t = 0
-            self.eps = 1e0
-            self.R_0 = 7.5
+            self.eps = 100.
+            self.R_0 = 0.25
 
-            self.x_c = np.asarray([83.3937, -0.084307, 0.0])
+            self.x_c = np.asarray([0.5, 0.5, 0.0])
 
         def evaluate(self, x):
-
             d = np.sqrt( (x[0]-self.x_c[0])**2.0 + (x[1]-self.x_c[1])**2.0 + (x[2]-self.x_c[2])**2.0 )
-
             val = 0.5*(1.0 + np.tanh((self.R_0 - d)/np.sqrt(2.0)*self.eps))
             return (
                 np.full(x.shape[1], val),
@@ -48,7 +44,7 @@ def test_main():
 
     CONTROL_PARAMS = {"maxtime": 1.0,
                       "numstep": 100,
-                      "numstep_stop": 5,
+                      # "numstep_stop": 5,
                       "initial_fields": [expr1, None],
                       }
 
@@ -57,7 +53,7 @@ def test_main():
         "direct_solver": "mumps",
         "maxiter":10,
         "tol_res": [1e-6, 1e-6, 1e-6, 1e-6],
-        "tol_inc": [1e-6, 1e-6, 1e-6, 1e-6],
+        "tol_inc": [1e-6, 1e16, 1e-6, 1e-6],
     }
 
     TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5,
@@ -67,36 +63,40 @@ def test_main():
     TIME_PARAMS_PF = {"timint": "ost", "theta_ost": 0.5}
 
 
-    FEM_PARAMS_FLUID = {"order_vel": 1,
+    FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        'stabilization'  : {'scheme'         : 'supg_pspg',
-                                            'vscale'         : 1.0e1,
-                                            'dscales'        : [1.,1.,1.],
-                                            'symmetric'      : False,
-                                            'reduced_scheme' : False,
-                                            'vscale_vel_dep' : False},
                         "fluid_formulation": "conservative"}
 
     FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5}
 
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": 1.0e-7, "mu2": 4.0e-6},
-                                "inertia": {"rho1": 1.0e-7, "rho2": 1.0e-6}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": 0.001, "mu2": 0.001},
+                                "inertia": {"rho1": 100.0, "rho2": 1000.0}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": 0.1},
-                          "params_cahnhilliard": {"M": 1.0, "lambda": 0.01}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": 1e0},
+                          "params_cahnhilliard": {"M": 1e-5, "lambda": 1e-1}}}
 
-    # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    class time_curves:
-        def tc1(self, t):
-            pmax = 5.0
-            t_ramp = CONTROL_PARAMS["maxtime"]
-            return 0.5 * (-(pmax)) * (1.0 - np.cos(np.pi * t / t_ramp))
+    class locate_top_bottom:
+        def evaluate(self, x):
+            top_b = np.isclose(x[1], 2.0)
+            bottom_b = np.isclose(x[1], 0.0)
+            return np.logical_or(top_b, bottom_b)
+
+    class locate_left_right:
+        def evaluate(self, x):
+            left_b = np.isclose(x[0], 0.0)
+            right_b = np.isclose(x[0], 1.0)
+            return np.logical_or(left_b, right_b)
+
+    class locate_all:
+        def evaluate(self, x):
+            return np.full(x.shape[1], True, dtype=bool)
 
     BC_DICT_FLUID = {
-        "dirichlet" : [{"id": [2,3,5,6], "dir":"all", "val":0.0}], # no-slip
-        "neumann" : [{"id" : [1], "dir":"normal_cur", "curve":1}], # inlet
+        "dirichlet" : [{"locator": locate_top_bottom(), "dir": "all", "val": 0.0},
+                       {"locator": locate_left_right(), "dir": "x", "val": 0.0}],
+        "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 9.81, "scale_density": True}],
     }
 
     BC_DICT_PF = { }
@@ -111,7 +111,7 @@ def test_main():
         [FEM_PARAMS_FLUID, FEM_PARAMS_PF],
         [MATERIALS_FLUID, MATERIALS_PF],
         [BC_DICT_FLUID, BC_DICT_PF],
-        time_curves=time_curves(),
+        # time_curves=time_curves(),
     )
 
     # problem solve
@@ -121,7 +121,7 @@ def test_main():
     tol = 1.0e-6
 
     check_node = []
-    check_node.append(np.array([250.0, -1.31579, 0.0]))
+    check_node.append(np.array([0.5, 0.5, 0.0]))
 
     v_corr, p_corr = np.zeros(2 * len(check_node)), np.zeros(len(check_node))
 

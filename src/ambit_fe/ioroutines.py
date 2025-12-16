@@ -107,12 +107,18 @@ class IO:
                 ctp = mesh.CellType.prism
             else:
                 raise ValueError("Unknown celltype!")
-            msze = self.mesh_domain.get("meshsize", [10,10,10])
-            # dolfinx internal mesh generation - only allow unit_square and unit_cube (rectangle and box could be made available, too...)
+            msze = self.mesh_domain.get("meshsize", [10, 10, 10])
+            coords_a = self.mesh_domain.get("coords_a", [0.0, 0.0, 0.0])
+            coords_b = self.mesh_domain.get("coords_b", [1.0, 1.0, 1.0])
+            # dolfinx internal mesh generation
             if self.mesh_domain["type"]=="unit_square":
                 self.mesh = mesh.create_unit_square(self.comm, msze[0], msze[1], ctp)
             elif self.mesh_domain["type"]=="unit_cube":
                 self.mesh = mesh.create_unit_cube(self.comm, msze[0], msze[1], msze[2], ctp)
+            elif self.mesh_domain["type"]=="rectangle":
+                self.mesh = mesh.create_rectangle(self.comm, [np.array(coords_a),np.array(coords_b)], msze, ctp)
+            elif self.mesh_domain["type"]=="box":
+                self.mesh = mesh.create_box(self.comm, [np.array(coords_a),np.array(coords_b)], msze, ctp)
             else:
                 raise ValueError("Unknown type for mesh.")
 
@@ -201,11 +207,12 @@ class IO:
         if bcdict is not None:
             id_=0
             for k in bcdict.keys():
-                for i in range(len(bcdict[k])):
-                    if "locator" in bcdict[k][i]:
-                        id_+=1
-                        bcdict[k][i]["id"] = [id_] # add id
-                        boundaries_loc.append( (id_, bcdict[k][i]["locator"].evaluate) )
+                if k != "dirichlet": # treated differently (no integration measure needed)
+                    for i in range(len(bcdict[k])):
+                        if "locator" in bcdict[k][i]:
+                            id_+=1
+                            bcdict[k][i]["id"] = [id_] # add id
+                            boundaries_loc.append( (id_, bcdict[k][i]["locator"].evaluate) )
 
             if id_>0:
                 facet_indices, facet_markers = [], []
