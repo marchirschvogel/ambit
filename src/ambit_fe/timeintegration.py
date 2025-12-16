@@ -36,6 +36,7 @@ class timeintegration:
         self.t_init = t_init
 
         self.eval_nonlin_terms = time_params.get("eval_nonlin_terms", "trapezoidal")
+        self.continuity_at_midpoint = time_params.get("continuity_at_midpoint", False)
 
         self.dim = dim
 

@@ -192,6 +192,7 @@ def check_params_time_fluid(params):
     valid_params = [
         "alpha_m",
         "alpha_f",
+        "continuity_at_midpoint",
         "eval_nonlin_terms",
         "fluid_governing_type",
         "gamma",

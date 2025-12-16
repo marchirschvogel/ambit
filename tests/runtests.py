@@ -628,6 +628,9 @@ if category == "fluid_ale" or category == "all":
     errs["test_fluid_ale_steady_p1p1_stabf_nozzle_rot 2"] = subprocess.call(
         ["mpiexec", "-n", "2", "python3", "test_fluid_ale_steady_p1p1_stabf_nozzle_rot.py"]
     )
+    errs["test_fluid_ale_uniform_pressurized 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fluid_ale_uniform_pressurized.py"]
+    )
 
 if category == "frsi" or category == "fluid_ale" or category == "all":
     errs["test_frsi_artseg_prefile 1"] = subprocess.call(

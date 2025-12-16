@@ -61,7 +61,8 @@ def test_main():
     }
 
     TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5,
-                         "fluid_governing_type": "navierstokes_transient"}
+                         "fluid_governing_type": "navierstokes_transient",
+                         "continuity_at_midpoint": True}
 
     TIME_PARAMS_PF = {"timint": "ost", "theta_ost": 0.5}
 

@@ -432,6 +432,10 @@ class FluidmechanicsProblem(problem_base):
             comm=self.comm,
         )
 
+        # continuity should be at midpoint for consistent time-integration in multi-phase flow
+        if self.is_multiphase:
+            assert(self.ti.continuity_at_midpoint)
+
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
         if self.ti.eval_nonlin_terms == "midpoint":
@@ -603,17 +607,6 @@ class FluidmechanicsProblem(problem_base):
             ufl.as_ufl(0),
         )
         self.deltaW_p, self.deltaW_p_old, self.deltaW_p_mid = [], [], []
-        # element level Reynolds number components
-        self.Re_c, self.Re_c_old, self.Re_c_mid = (
-            ufl.as_ufl(0),
-            ufl.as_ufl(0),
-            ufl.as_ufl(0),
-        )
-        self.Re_ktilde, self.Re_ktilde_old, self.Re_ktilde_mid = (
-            ufl.as_ufl(0),
-            ufl.as_ufl(0),
-            ufl.as_ufl(0),
-        )
 
         for n, M in enumerate(self.domain_ids):
             if self.num_dupl == 1:
@@ -767,63 +760,6 @@ class FluidmechanicsProblem(problem_base):
                     phi=self.phasevar["phi_mid"],
                     phidot=self.phasevar["phidot_mid"],
                 )
-            )
-
-            # element level Reynolds number components - not used so far! Need to assemble a cell-based vector in order to evaluate these...
-            self.Re_c += self.vf.re_c(
-                self.rho[n],
-                self.v,
-                self.dx(M),
-                w=self.alevar["w"],
-                F=self.alevar["Fale"],
-                phi=self.phasevar["phi"],
-                phidot=self.phasevar["phidot"],
-            )
-            self.Re_c_old += self.vf.re_c(
-                self.rho[n],
-                self.v_old,
-                self.dx(M),
-                w=self.alevar["w_old"],
-                F=self.alevar["Fale_old"],
-                phi=self.phasevar["phi_old"],
-                phidot=self.phasevar["phidot_old"],
-            )
-            self.Re_c_mid += self.vf.re_c(
-                self.rho[n],
-                self.vel_mid,
-                self.dx(M),
-                w=self.alevar["w_mid"],
-                F=self.alevar["Fale_mid"],
-                phi=self.phasevar["phi_mid"],
-                phidot=self.phasevar["phidot_mid"],
-            )
-
-            self.Re_ktilde += self.vf.re_ktilde(
-                self.rho[n],
-                self.v,
-                self.dx(M),
-                w=self.alevar["w"],
-                F=self.alevar["Fale"],
-                phi=self.phasevar["phi"],
-                phidot=self.phasevar["phidot"],
-            )
-            self.Re_ktilde_old += self.vf.re_ktilde(
-                self.rho[n],
-                self.v_old,
-                self.dx(M),
-                w=self.alevar["w_old"],
-                F=self.alevar["Fale_old"],
-                phi=self.phasevar["phi_old"],
-                phidot=self.phasevar["phidot_old"],
-            )
-            self.Re_ktilde_mid += self.vf.re_ktilde(
-                self.rho[n],
-                self.vel_mid,
-                self.dx(M),
-                w=self.alevar["w_mid"],
-                F=self.alevar["Fale_mid"],
-                phi=self.phasevar["phi_mid"],
-                phidot=self.phasevar["phidot_mid"],
             )
 
         # external virtual power (from Neumann or Robin boundary conditions, body forces, ...)
@@ -1973,7 +1909,15 @@ class FluidmechanicsProblem(problem_base):
         ) = [], [], [], []
 
         for n in range(self.num_domains):
-            self.weakform_p.append(self.deltaW_p[n])
+            if not self.ti.continuity_at_midpoint:
+                self.weakform_p.append(self.deltaW_p[n])
+            else:
+                if self.ti.eval_nonlin_terms == "trapezoidal":
+                    self.weakform_p.append(self.timefac * self.deltaW_p[n] + (1.0 - self.timefac) * self.deltaW_p_old[n])
+                elif self.ti.eval_nonlin_terms == "midpoint":
+                    self.weakform_p.append(self.deltaW_p_mid[n])
+                else:
+                    raise ValueError("Unknown eval_nonlin_terms option. Choose 'trapezoidal' or 'midpoint'.")
 
         self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
         for j in range(self.num_dupl):

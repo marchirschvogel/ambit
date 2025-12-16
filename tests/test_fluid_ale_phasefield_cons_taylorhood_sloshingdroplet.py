@@ -74,8 +74,6 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
     class locate:
-        def __init__(self):
-            pass
         def evaluate(self, x):
             return np.isclose(x[2], 0.0)
 
