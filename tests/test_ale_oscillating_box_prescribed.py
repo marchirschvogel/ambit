@@ -61,7 +61,7 @@ def test_main():
                     np.full(x.shape[1], 0.0))
 
     BC_DICT = {
-        "dirichlet": [{"dir": "all", "expression": expr1, "codimension": 2}]
+        "dirichlet": [{"dir": "all", "expression": expr1, "codimension": 2}] # on full volume/domain!
     }
 
     # problem setup

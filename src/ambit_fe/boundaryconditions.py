@@ -255,13 +255,9 @@ class boundary_cond:
 
         for n in bcdict:
             codim = n.get("codimension", self.dim - 1)
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in n.keys(): dind=2
 
             if n["dir"] == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
@@ -438,13 +434,9 @@ class boundary_cond:
 
         for n in bcdict:
             codim = n.get("codimension", self.dim - 1)
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in n.keys(): dind=2
 
             if n["dir"] == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
@@ -542,13 +534,9 @@ class boundary_cond:
 
         for r in bcdict:
             codim = r.get("codimension", self.dim - 1)
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in r.keys(): dind=2
 
             if r["type"] == "spring":
                 # may be an expression
@@ -618,18 +606,14 @@ class boundary_cond:
         mi = 0
         for m in bcdict:
             codim = m.get("codimension", self.dim - 1)
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in m.keys(): dind=2
 
             internal = m.get("internal", False)
 
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
-
             if internal:
-                dind = 2
+                dind = 1
                 fcts = m.get("facet_side", "+")
             else:
                 fcts = None
@@ -742,13 +726,9 @@ class boundary_cond_fluid(boundary_cond):
 
         for sn in bcdict:
             codim = sn.get("codimension", self.dim - 1)
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in sn.keys(): dind=2
 
             for i in range(len(sn["id"])):
                 beta = sn["beta"]
@@ -763,13 +743,9 @@ class boundary_cond_fluid(boundary_cond):
 
         for sn in bcdict:
             codim = sn.get("codimension", self.dim - 1)
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in sn.keys(): dind=2
 
             for i in range(len(sn["id"])):
                 beta = sn["beta"]
@@ -792,15 +768,11 @@ class boundary_cond_fluid(boundary_cond):
             dwddp = ufl.as_ufl(0)
 
             codim = r.get("codimension", self.dim - 1)
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in r.keys(): dind=2
 
             direction = r.get("dir", "xyz_ref")
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
 
             beta_.append(fem.Function(self.Vdisc_scalar))
 
@@ -810,7 +782,7 @@ class boundary_cond_fluid(boundary_cond):
                         w += self.vf.deltaW_ext_robin_valve(
                             v,
                             beta_[-1],
-                            dS_[dind](r["id"][i]),
+                            dS_[0](r["id"][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
@@ -820,7 +792,7 @@ class boundary_cond_fluid(boundary_cond):
                         dwddp += self.vf.deltaW_ext_robin_valve(
                             v,
                             ufl.as_ufl(1.0),
-                            dS_[dind](r["id"][i]),
+                            dS_[0](r["id"][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
@@ -832,7 +804,7 @@ class boundary_cond_fluid(boundary_cond):
                         w += self.vf.deltaW_ext_robin_valve_normal_ref(
                             v,
                             beta_[-1],
-                            dS_[dind](r["id"][i]),
+                            dS_[0](r["id"][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
@@ -842,7 +814,7 @@ class boundary_cond_fluid(boundary_cond):
                         dwddp += self.vf.deltaW_ext_robin_valve_normal_ref(
                             v,
                             ufl.as_ufl(1.0),
-                            dS_[dind](r["id"][i]),
+                            dS_[0](r["id"][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
@@ -866,13 +838,9 @@ class boundary_cond_fluid(boundary_cond):
 
         for r in bcdict:
             codim = r.get("codimension", self.dim - 1)
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in r.keys(): dind=2
 
             q = ufl.as_ufl(0)
 
@@ -925,15 +893,11 @@ class boundary_cond_fluid(boundary_cond):
     def dp_monitor_bcs(self, bcdict, a_u_, a_d_, pint_u_, pint_d_, pdict, F=None):
         for r in bcdict:
             codim = r.get("codimension", self.dim - 1)
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            dind=0
+            if "locator" in r.keys(): dind=2
 
             spatial = r.get("spatial", False)
-
-            if codim == self.dim - 1:
-                dind = 0
-            elif codim == self.dim - 2:
-                dind = 1
-            else:
-                raise ValueError("Wrong codimension of boundary.")
 
             # area map for integration
             if spatial and F is not None:

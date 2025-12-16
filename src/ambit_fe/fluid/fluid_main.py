@@ -79,7 +79,7 @@ class FluidmechanicsProblem(problem_base):
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
         else:
             self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb]
+                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], bcdict=bc_dict
             )
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
@@ -1005,7 +1005,7 @@ class FluidmechanicsProblem(problem_base):
                 self.bc_dict["robin_valve"],
                 self.v,
                 self.beta_valve,
-                [self.bmeasures[2]],
+                [self.bmeasures[1]],
                 wel=self.alevar["w"],
                 F=self.alevar["Fale"],
             )
@@ -1013,7 +1013,7 @@ class FluidmechanicsProblem(problem_base):
                 self.bc_dict["robin_valve"],
                 self.v_old,
                 self.beta_valve_old,
-                [self.bmeasures[2]],
+                [self.bmeasures[1]],
                 wel=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
             )
@@ -1021,7 +1021,7 @@ class FluidmechanicsProblem(problem_base):
                 self.bc_dict["robin_valve"],
                 self.vel_mid,
                 self.beta_valve,
-                [self.bmeasures[2]],
+                [self.bmeasures[1]],
                 wel=self.alevar["w_mid"],
                 F=self.alevar["Fale_mid"],
             )
@@ -1053,7 +1053,7 @@ class FluidmechanicsProblem(problem_base):
                 self.bc_dict["robin_valve_implicit"],
                 self.v,
                 self.state_valve,
-                [self.bmeasures[2]],
+                [self.bmeasures[1]],
                 wel=self.alevar["w"],
                 F=self.alevar["Fale"],
             )
@@ -1061,7 +1061,7 @@ class FluidmechanicsProblem(problem_base):
                 self.bc_dict["robin_valve_implicit"],
                 self.v_old,
                 self.state_valve_old,
-                [self.bmeasures[2]],
+                [self.bmeasures[1]],
                 wel=self.alevar["w_old"],
                 F=self.alevar["Fale_old"],
             )
@@ -1069,7 +1069,7 @@ class FluidmechanicsProblem(problem_base):
                 self.bc_dict["robin_valve_implicit"],
                 self.vel_mid,
                 self.state_valve,
-                [self.bmeasures[2]],
+                [self.bmeasures[1]],
                 wel=self.alevar["w_mid"],
                 F=self.alevar["Fale_mid"],
             )
@@ -1080,7 +1080,7 @@ class FluidmechanicsProblem(problem_base):
                     self.bc_dict["robin_valve_implicit"],
                     self.v,
                     self.dbeta_dz_valve,
-                    [self.bmeasures[2]],
+                    [self.bmeasures[1]],
                     wel=self.alevar["w"],
                     F=self.alevar["Fale"],
                     dw=self.dw_robin_valve_dz,
@@ -2085,8 +2085,8 @@ class FluidmechanicsProblem(problem_base):
 
             if internal:
                 fcts = self.bc_dict["membrane"][nm].get("facet_side", "+")
-                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
-                ip_mem_all += (self.bintpower[nm])(fcts) * self.bmeasures[2](self.idmem[nm])
+                se_mem_all += (self.bstrainenergy[nm])(fcts) * self.bmeasures[1](self.idmem[nm])
+                ip_mem_all += (self.bintpower[nm])(fcts) * self.bmeasures[1](self.idmem[nm])
             else:
                 se_mem_all += self.bstrainenergy[nm] * self.bmeasures[0](self.idmem[nm])
                 ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])

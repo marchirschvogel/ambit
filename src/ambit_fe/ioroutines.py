@@ -158,8 +158,7 @@ class IO:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
 
     # create domain and boundary integration measures
-    def create_integration_measures(self, msh, mt_data):
-        # create domain and boundary integration measures
+    def create_integration_measures(self, msh, mt_data, bcdict=None):
         if mt_data[0] is not None:
             dx = ufl.Measure(
                 "dx",
@@ -184,15 +183,7 @@ class IO:
             )
         else:
             ds = None
-        if mt_data[2] is not None:
-            de = ufl.Measure(
-                "ds",
-                domain=msh,
-                subdomain_data=mt_data[2],
-                metadata={"quadrature_degree": self.quad_degree},
-            )
-        else:
-            de = None
+
         if mt_data[1] is not None:
             dS = ufl.Measure(
                 "dS",
@@ -202,8 +193,35 @@ class IO:
             )
         else:
             dS = None
-        # self.de = self.io.de
-        bmeasures = [ds, de, dS]
+
+        bmeasures = [ds, dS]
+
+        # if user-defined locators (instead of ids) are given, create a separate measure
+        boundaries_loc = []
+        if bcdict is not None:
+            id_=0
+            for k in bcdict.keys():
+                for i in range(len(bcdict[k])):
+                    if "locator" in bcdict[k][i]:
+                        id_+=1
+                        bcdict[k][i]["id"] = [id_] # add id
+                        boundaries_loc.append( (id_, bcdict[k][i]["locator"].evaluate) )
+
+            if id_>0:
+                facet_indices, facet_markers = [], []
+                fdim = msh.topology.dim - 1
+                for marker, locator in boundaries_loc:
+                    facets = mesh.locate_entities(msh, fdim, locator)
+                    facet_indices.append(facets)
+                    facet_markers.append(np.full_like(facets, marker))
+                facet_indices = np.hstack(facet_indices).astype(np.int32)
+                facet_markers = np.hstack(facet_markers).astype(np.int32)
+                sorted_facets = np.argsort(facet_indices)
+                facet_tag = mesh.meshtags(
+                    msh, fdim, facet_indices[sorted_facets], facet_markers[sorted_facets]
+                )
+                ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": self.quad_degree})
+                bmeasures.append(ds_loc)
 
         return dx, bmeasures
 
@@ -1994,7 +2012,6 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
 
     # create domain and boundary integration measures
     def create_integration_measures(self, msh):
-        # domain integration measure
         if self.mt_d is not None:
             self.dx = ufl.Measure(
                 "dx",
