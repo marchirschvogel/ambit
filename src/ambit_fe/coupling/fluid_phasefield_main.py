@@ -49,6 +49,8 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.pbf = pbf
         self.pbp = pbp
 
+        self.is_ale = is_ale
+
         # pointer to communicator
         self.comm = self.pbase.comm
 
@@ -151,8 +153,26 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.set_variational_forms_coupling()
 
     def set_variational_forms_coupling(self):
+        # add Korteweg force to fluid momentum
+        self.korteweg_force, self.korteweg_force_old, self.korteweg_force_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+
+        self.phi_mid = self.pbp.timefac * self.pbp.phi + (1.0 - self.pbp.timefac) * self.pbp.phi_old
+        self.mu_mid = self.pbp.timefac * self.pbp.mu + (1.0 - self.pbp.timefac) * self.pbp.mu_old
+        for n, M in enumerate(self.pbf.domain_ids):
+            self.korteweg_force += self.pbf.vf.korteweg_force1(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"])
+            self.korteweg_force_old += self.pbf.vf.korteweg_force1(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
+            self.korteweg_force_mid += self.pbf.vf.korteweg_force1(self.phi_mid, self.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
+
+        # add to fluid momentum
+        if self.pbf.ti.eval_nonlin_terms == "trapezoidal":
+            self.pbf.weakform_v += self.pbf.timefac * self.korteweg_force + (1.0 - self.pbf.timefac) * self.korteweg_force_old
+        if self.pbf.ti.eval_nonlin_terms == "midpoint":
+            self.pbf.weakform_v += self.korteweg_force_mid
+
         # derivative of fluid momentum w.r.t. phase field
         self.weakform_lin_vphi = ufl.derivative(self.pbf.weakform_v, self.pbp.phi, self.pbp.dphi)
+        # derivative of fluid momentum w.r.t. potential
+        self.weakform_lin_vmu = ufl.derivative(self.pbf.weakform_v, self.pbp.mu, self.pbp.dmu)
         # derivative of fluid continuity w.r.t. phase field
         self.weakform_lin_pphi = []
         for n in range(self.pbf.num_domains):
@@ -175,6 +195,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         )
 
         self.jac_vphi = fem.form(self.weakform_lin_vphi, entity_maps=self.io.entity_maps)
+        self.jac_vmu = fem.form(self.weakform_lin_vmu, entity_maps=self.io.entity_maps)
         self.jac_phiv = fem.form(self.weakform_lin_phiv, entity_maps=self.io.entity_maps)
 
         if not bool(self.pbf.io.duplicate_mesh_domains):
@@ -197,6 +218,8 @@ class FluidmechanicsPhasefieldProblem(problem_base):
     def set_problem_vector_matrix_structures_coupling(self):
         self.K_vphi = fem.petsc.assemble_matrix(self.jac_vphi)
         self.K_vphi.assemble()
+        self.K_vmu = fem.petsc.assemble_matrix(self.jac_vmu)
+        self.K_vmu.assemble()
         self.K_phiv = fem.petsc.assemble_matrix(self.jac_phiv)
         self.K_phiv.assemble()
         if self.pbf.num_dupl > 1:
@@ -236,14 +259,21 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.K_list[3][3] = self.pbp.K_list[1][1]
 
     def assemble_stiffness_coupling(self, t):
-        # derivative of fluid momentum w.r.t. pahse field
+        # derivative of fluid momentum w.r.t. phase field
         self.K_vphi.zeroEntries()
         fem.petsc.assemble_matrix(self.K_vphi, self.jac_vphi, self.pbf.bc.dbcs)
         self.K_vphi.assemble()
 
         self.K_list[0][2] = self.K_vphi
 
-        # derivative of fluid continuity w.r.t. pahse field
+        # derivative of fluid momentum w.r.t. potential
+        self.K_vmu.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_vmu, self.jac_vmu, self.pbf.bc.dbcs)
+        self.K_vmu.assemble()
+
+        self.K_list[0][3] = self.K_vmu
+
+        # derivative of fluid continuity w.r.t. phase field
         self.K_pphi.zeroEntries()
         fem.petsc.assemble_matrix(self.K_pphi, self.jac_pphi, [])
         self.K_pphi.assemble()

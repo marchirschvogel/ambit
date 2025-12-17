@@ -152,7 +152,7 @@ class timeintegration:
 
         if midp:
             _, timefac = self.timefactors()
-            tmid = timefac * t + (1.0 - timefac) * (t - dt)
+            tmid = timefac * t + (1.0 - timefac) * (t - dt) # TODO: For time-controlled DBCs (enforced at t_{n+1}) maybe not reasonable?!
 
             for m in self.funcs_to_update_vec_mid:
                 load = expression.template_vector(dim=self.dim)

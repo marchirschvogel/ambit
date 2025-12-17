@@ -216,6 +216,13 @@ class variationalform(variationalform_base):
         else:
             return (ufl.dot(self.n0, v))(fcts) * dboundary
 
+    # Korteweg force in multiphase flow
+    def korteweg_force1(self, phi, mu, ddomain, F=None):
+        return ufl.dot(phi * ufl.grad(mu), self.var_v) * ddomain
+
+    def korteweg_force2(self, phi, mu, ddomain, F=None):
+        return ufl.dot(mu * ufl.grad(phi), self.var_v) * ddomain
+
 
 # ALE fluid mechanics variational forms class
 # Principle of Virtual Power
@@ -484,3 +491,12 @@ class variationalform_ale(variationalform):
             return J * ufl.dot(ufl.inv(F).T * self.n0, (v - w)) * dboundary
         else:
             return (J * ufl.dot(ufl.inv(F).T * self.n0, (v - w)))(fcts) * dboundary
+
+    # Korteweg force in multiphase flow
+    def korteweg_force1(self, phi, mu, ddomain, F=None):
+        J = ufl.det(F)
+        return J * ufl.dot(phi * ufl.inv(F).T*ufl.grad(mu), self.var_v) * ddomain
+
+    def korteweg_force2(self, phi, mu, ddomain, F=None):
+        J = ufl.det(F)
+        return J * ufl.dot(mu * ufl.inv(F).T*ufl.grad(phi), self.var_v) * ddomain
