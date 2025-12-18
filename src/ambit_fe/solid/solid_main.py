@@ -344,10 +344,6 @@ class SolidmechanicsProblem(problem_base):
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
-        if self.ti.eval_nonlin_terms == "midpoint":
-            self.midp = True
-        else:
-            self.midp = False
 
         # check for materials that need extra treatment (anisotropic, active stress, growth, ...)
         self.have_frank_starling, self.have_growth, self.have_plasticity = (
@@ -1715,7 +1711,7 @@ class SolidmechanicsProblem(problem_base):
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
-        self.ti.set_time_funcs(t, dt, midp=self.midp)
+        self.ti.set_time_funcs(t, dt)
 
         # evaluate rate equations
         self.evaluate_rate_equations(t)

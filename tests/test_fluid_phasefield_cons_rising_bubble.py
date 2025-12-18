@@ -16,34 +16,39 @@ import pytest
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
+    # cases (1,2) from Eikelder et al. (2024)
+    case = 2
+
     IO_PARAMS = {
         "problem_type": "fluid_phasefield",
         "write_results_every": 1,
-        "indicate_results_by": "step",
+        "indicate_results_by": "time",
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[50,100]}, # 25,50
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[32,64]}, # 32,64
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_cons_rising_bubble",
+        "simname": "fluid_phasefield_cons_rising_bubble"+str(case),
         "write_initial_fields": True,
+        "report_conservation_properties": True,
     }
+
+    h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0]
+    eps = 1.28*h
 
     class expr1:
         def __init__(self):
             self.t = 0
-            self.eps = 100.
             self.R_0 = 0.25
-
             self.x_c = np.asarray([0.5, 0.5, 0.0])
 
         def evaluate(self, x):
             d = np.sqrt( (x[0]-self.x_c[0])**2.0 + (x[1]-self.x_c[1])**2.0 + (x[2]-self.x_c[2])**2.0 )
-            val = 0.5*(1.0 + np.tanh((self.R_0 - d)/np.sqrt(2.0)*self.eps))
+            val = 0.5*(1.0 + np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps)))
             return (
                 np.full(x.shape[1], val),
             )
 
-    CONTROL_PARAMS = {"maxtime": 1.0,
-                      "numstep": 100,
+    CONTROL_PARAMS = {"maxtime": 3.0,
+                      "dt": 0.128*h, # from Eikelder et al. (2024)
                       # "numstep_stop": 5,
                       "initial_fields": [expr1, None],
                       }
@@ -52,16 +57,18 @@ def test_main():
         "solve_type": "direct",
         "direct_solver": "mumps",
         "maxiter":10,
-        "tol_res": [1e-6, 1e-6, 1e-6, 1e-6],
-        "tol_inc": [1e-6, 1e16, 1e-6, 1e-6],
+        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_inc": [1e-8, 1e16, 1e-8, 1e-8],
     }
 
     TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5,
                          "fluid_governing_type": "navierstokes_transient",
-                         "continuity_at_midpoint": True,
-                         "eval_nonlin_terms": "midpoint"}
-
-    TIME_PARAMS_PF = {"timint": "ost", "theta_ost": 0.5}
+                         "eval_nonlin_terms": "trapezoidal", # midpoint, trapezoidal
+                         "continuity_at_midpoint": True} # Should use midpoint if time derivative (drho/dt) is involved...
+    TIME_PARAMS_PF = {"timint": "ost",
+                      "theta_ost": 0.5,
+                      "eval_nonlin_terms": "trapezoidal", # midpoint, trapezoidal
+                      "potential_at_midpoint": False}
 
 
     FEM_PARAMS_FLUID = {"order_vel": 2,
@@ -71,12 +78,31 @@ def test_main():
 
     FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5}
 
+    # fluid1 is bubble, fluid2 is surrounding
+    # TODO: How is M chosen in paper?
+    if case==1:
+        rho1 = 100.0
+        rho2 = 1000.0
+        eta1 = 1.0
+        eta2 = 10.0
+        sig = 24.5
+        M = 1e-3
+    elif case==2:
+        rho1 = 1.0
+        rho2 = 1000.0
+        eta1 = 0.1
+        eta2 = 1.0
+        sig = 1.96
+        M = 1e-3
+    else:
+        raise ValueError("Unknown case.")
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": 0.001, "mu2": 0.001},
-                                "inertia": {"rho1": 100.0, "rho2": 1000.0}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": eta1, "mu2": eta2},
+                                "inertia": {"rho1": rho1, "rho2": rho2}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": 1e0},
-                          "params_cahnhilliard": {"M": 1e-5, "lambda": 1e-1}}}
+
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": sig/eps},
+                          "params_cahnhilliard": {"M": M, "lambda": sig*eps}}}
 
     class locate_top_bottom:
         def evaluate(self, x):
@@ -97,7 +123,7 @@ def test_main():
     BC_DICT_FLUID = {
         "dirichlet" : [{"locator": locate_top_bottom(), "dir": "all", "val": 0.0},
                        {"locator": locate_left_right(), "dir": "x", "val": 0.0}],
-        "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 9.81, "scale_density": True}],
+        "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
     }
 
     BC_DICT_PF = { }

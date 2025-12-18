@@ -50,6 +50,7 @@ class IO:
         self.indicate_results_by = io_params.get("indicate_results_by", "time")
 
         self.print_enhanced_info = io_params.get("print_enhanced_info", False)
+        self.report_conservation_properties = io_params.get("report_conservation_properties", False)
 
         self.write_submeshes = io_params.get("write_submeshes", False)
 

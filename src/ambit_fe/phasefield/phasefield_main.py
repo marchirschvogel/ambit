@@ -173,6 +173,11 @@ class PhasefieldProblem(problem_base):
         # set form for phidot
         self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phidot_old)
 
+        # set mid-point representations
+        self.phi_mid = self.timefac * self.phi + (1.0 - self.timefac) * self.phi_old
+        self.phidot_mid = self.timefac * self.phidot_expr + (1.0 - self.timefac) * self.phidot_old
+        self.mu_mid = self.timefac * self.mu + (1.0 - self.timefac) * self.mu_old
+
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
             self.io,
@@ -230,21 +235,54 @@ class PhasefieldProblem(problem_base):
         else:
             self.fluidvar["v"] = None
             self.fluidvar["v_old"] = None
+            self.fluidvar["v_mid"] = None
 
         self.phase_field, self.potential = ufl.as_ufl(0), ufl.as_ufl(0)
-        self.phase_field_old = ufl.as_ufl(0)
+        self.phase_field_old, self.potential_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        self.phase_field_mid, self.potential_mid = ufl.as_ufl(0), ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
             self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.m[n], self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
             self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.m[n], self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+            self.phase_field_mid += self.vf.cahnhilliard_phase(self.phidot_mid, self.phi_mid, self.mu_mid, self.m[n], self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
             self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.lam[n], self.dx(M), F=self.alevar["Fale"])
+            self.potential_old += self.vf.cahnhilliard_potential(self.phi_old, self.mu_old, self.ma[n].driv_force(self.phi_old), self.lam[n], self.dx(M), F=self.alevar["Fale_old"])
+            self.potential_mid += self.vf.cahnhilliard_potential(self.phi_mid, self.mu_mid, self.ma[n].driv_force(self.phi_mid), self.lam[n], self.dx(M), F=self.alevar["Fale_mid"])
 
-        self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old # at n+\theta
-        self.weakform_mu = self.potential # always at n+1
+        if self.ti.eval_nonlin_terms == "trapezoidal":
+            self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old
+            if not self.ti.potential_at_midpoint:
+                self.weakform_mu = self.potential
+            else:
+                self.weakform_mu = self.timefac * self.potential + (1.-self.timefac) * self.potential_old
+        elif self.ti.eval_nonlin_terms == "midpoint":
+            self.weakform_phi = self.phase_field_mid
+            if not self.ti.potential_at_midpoint:
+                self.weakform_mu = self.potential
+            else:
+                self.weakform_mu = self.potential_mid
+        else:
+            raise ValueError("Unknown eval_nonlin_terms option. Choose 'trapezoidal' or 'midpoint'.")
+
         self.weakform_lin_phiphi = ufl.derivative(self.weakform_phi, self.phi, self.dphi)
         self.weakform_lin_phimu = ufl.derivative(self.weakform_phi, self.mu, self.dmu)
         self.weakform_lin_mumu = ufl.derivative(self.weakform_mu, self.mu, self.dmu)
         self.weakform_lin_muphi = ufl.derivative(self.weakform_mu, self.phi, self.dphi)
+
+    def compute_phasefield_conservation(self, N, t):
+        phase_form = ufl.as_ufl(0)
+        if self.is_ale:
+            J, J_old = ufl.det(self.alevar["F_ale"]), ufl.det(self.alevar["F_ale_old"])
+        else:
+            J, J_old = 1.0, 1.0
+        for n, M in enumerate(self.domain_ids):
+            phase_form += (J * self.phi - J_old * self.phi_old) / (self.pbase.dt) * self.dx(M)
+
+        pst = fem.assemble_scalar(fem.form(phase_form))
+        pst = self.comm.allgather(pst)
+        self.phase_total = abs(sum(pst))
+
+        utilities.print_status("Total phasefield change: %.4e" % (self.phase_total), self.comm)
 
     def set_problem_residual_jacobian_forms(self):
         ts = time.time()
@@ -372,7 +410,8 @@ class PhasefieldProblem(problem_base):
                     func.x.petsc_vec.scale(sc)
 
     def evaluate_post_solve(self, t, N):
-        pass
+        if self.io.report_conservation_properties:
+            self.compute_phasefield_conservation(N, t)
 
     def set_output_state(self, N):
         pass

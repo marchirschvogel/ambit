@@ -49,8 +49,6 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.pbf = pbf
         self.pbp = pbp
 
-        self.is_ale = is_ale
-
         # pointer to communicator
         self.comm = self.pbase.comm
 
@@ -156,12 +154,10 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         # add Korteweg force to fluid momentum
         self.korteweg_force, self.korteweg_force_old, self.korteweg_force_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
-        self.phi_mid = self.pbp.timefac * self.pbp.phi + (1.0 - self.pbp.timefac) * self.pbp.phi_old
-        self.mu_mid = self.pbp.timefac * self.pbp.mu + (1.0 - self.pbp.timefac) * self.pbp.mu_old
         for n, M in enumerate(self.pbf.domain_ids):
             self.korteweg_force += self.pbf.vf.korteweg_force1(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"])
             self.korteweg_force_old += self.pbf.vf.korteweg_force1(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
-            self.korteweg_force_mid += self.pbf.vf.korteweg_force1(self.phi_mid, self.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
+            self.korteweg_force_mid += self.pbf.vf.korteweg_force1(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
 
         # add to fluid momentum
         if self.pbf.ti.eval_nonlin_terms == "trapezoidal":

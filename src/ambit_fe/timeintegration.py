@@ -36,7 +36,10 @@ class timeintegration:
         self.t_init = t_init
 
         self.eval_nonlin_terms = time_params.get("eval_nonlin_terms", "trapezoidal")
-        self.continuity_at_midpoint = time_params.get("continuity_at_midpoint", False)
+        if self.eval_nonlin_terms == "midpoint":
+            self.midp = True
+        else:
+            self.midp = False
 
         self.dim = dim
 
@@ -111,7 +114,7 @@ class timeintegration:
             lensep = len(msg)
         utilities.print_status("-" * lensep, self.comm)
 
-    def set_time_funcs(self, t, dt, midp=False):
+    def set_time_funcs(self, t, dt):
         for m in self.funcs_to_update_vec:
             load = expression.template_vector(dim=self.dim)
             load.val_x, load.val_y, load.val_z = (
@@ -150,9 +153,9 @@ class timeintegration:
             m.interpolate(self.funcsexpr_to_update[m].evaluate)
             m.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-        if midp:
+        if self.midp: # NOTE: Not used for DBCs, which are always enforced at t_{n+1} (so we're safe here...)
             _, timefac = self.timefactors()
-            tmid = timefac * t + (1.0 - timefac) * (t - dt) # TODO: For time-controlled DBCs (enforced at t_{n+1}) maybe not reasonable?!
+            tmid = timefac * t + (1.0 - timefac) * (t - dt)
 
             for m in self.funcs_to_update_vec_mid:
                 load = expression.template_vector(dim=self.dim)
@@ -687,6 +690,8 @@ class timeintegration_fluid(timeintegration):
                 self.alpha_f = time_params["alpha_f"]
                 self.gamma = time_params["gamma"]
 
+        self.continuity_at_midpoint = time_params.get("continuity_at_midpoint", False)
+
     def set_acc(self, v, v_old, a_old):
         # set form for acceleration
         acc = self.update_dvar(v, v_old, a_old, self.dt, uflform=True)
@@ -906,6 +911,8 @@ class timeintegration_phasefield(timeintegration_fluid):
 
         assert self.timint == "ost"
         self.theta_ost = time_params["theta_ost"]
+
+        self.potential_at_midpoint = time_params.get("potential_at_midpoint", False)
 
     def update_timestep(self, phi, phi_old, phidot, phidot_old, mu, mu_old):
         # update old fields with new quantities

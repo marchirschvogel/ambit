@@ -437,10 +437,6 @@ class FluidmechanicsProblem(problem_base):
 
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
-        if self.ti.eval_nonlin_terms == "midpoint":
-            self.midp = True
-        else:
-            self.midp = False
 
         # initialize kinematics_constitutive class
         self.ki = fluid_kinematics_constitutive.kinematics(self.dim, uf_pre=self.uf_pre)
@@ -2069,6 +2065,23 @@ class FluidmechanicsProblem(problem_base):
                     fp.write("%.16E %.16E\n" % (t, internal_power_mem))
                     fp.close()
 
+    def compute_mass_conservation(self, N, t):
+        mass_form = ufl.as_ufl(0)
+        if self.is_ale:
+            J, J_old = ufl.det(self.alevar["F_ale"]), ufl.det(self.alevar["F_ale_old"])
+        else:
+            J, J_old = 1.0, 1.0
+        for n, M in enumerate(self.domain_ids):
+            rho_ = self.vf.get_density(self.rho[n], phi=self.phasevar["phi"])
+            rho_old_ = self.vf.get_density(self.rho[n], phi=self.phasevar["phi_old"])
+            mass_form += (J * rho_ - J_old * rho_old_) / (self.pbase.dt) * self.dx(M)
+
+        mst = fem.assemble_scalar(fem.form(mass_form))
+        mst = self.comm.allgather(mst)
+        self.mass_total = abs(sum(mst))
+
+        utilities.print_status("Total fluid mass change: %.4e" % (self.mass_total), self.comm)
+
     # rate equations
     def evaluate_rate_equations(self, t_abs):
         # take care of active stress
@@ -2588,7 +2601,7 @@ class FluidmechanicsProblem(problem_base):
 
     def evaluate_pre_solve(self, t, N, dt):
         # set time-dependent functions
-        self.ti.set_time_funcs(t, dt, midp=self.midp)
+        self.ti.set_time_funcs(t, dt)
 
         # evaluate rate equations
         self.evaluate_rate_equations(t)
@@ -2624,6 +2637,9 @@ class FluidmechanicsProblem(problem_base):
             "strainenergy_membrane" in self.results_to_write or "internalpower_membrane" in self.results_to_write
         ):
             self.compute_strain_energy_power_membrane(N, t)
+        # report mass conservation if requested
+        if self.io.report_conservation_properties:
+            self.compute_mass_conservation(N, t)
 
     def set_output_state(self, t):
         pass

@@ -31,6 +31,7 @@ def check_params_io(params):
         "output_path_pre",
         "print_enhanced_info",
         "problem_type",
+        "report_conservation_properties",
         "restart_io_type",
         "restart_step",
         "results_to_write",
@@ -209,6 +210,7 @@ def check_params_time_fluid(params):
 def check_params_time_phasefield(params):
     valid_params = [
         "eval_nonlin_terms",
+        "potential_at_midpoint",
         "timint",
         "theta_ost",
     ]
