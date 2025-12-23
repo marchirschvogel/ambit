@@ -99,12 +99,19 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
         self.pba = self.pbfa.pba
         self.pbp = self.pbfp.pbp
 
+        # set ALE variables for phase field
+        self.pbp.alevar["Fale"] = self.pba.ki.F(self.pba.d)
+        self.pbp.alevar["Fale_old"] = self.pba.ki.F(self.pba.d_old)
+        self.pbp.alevar["w"] = self.pba.wel
+        self.pbp.alevar["w_old"] = self.pba.w_old
+
         self.pbrom = self.pbf  # ROM problem can only be fluid
         self.pbrom_host = self
 
         # modify results to write...
         self.pbf.results_to_write = io_params["results_to_write"][0]
-        self.pba.results_to_write = io_params["results_to_write"][1]
+        self.pbp.results_to_write = io_params["results_to_write"][1]
+        self.pba.results_to_write = io_params["results_to_write"][2]
 
         self.sub_solve = False
         self.print_subiter = False
@@ -121,7 +128,7 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
         self.io = self.pbf.io
 
         # number of fields involved
-        self.nfields = 4
+        self.nfields = 5
 
         # residual and matrix lists
         self.r_list, self.r_list_rom = (
@@ -138,75 +145,132 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
 
     def get_problem_var_list(self):
         if self.pbf.num_dupl > 1:
-            is_ghosted = [1, 2, 0, 1]
+            is_ghosted = [1, 2, 1, 1, 1]
         else:
-            is_ghosted = [1, 1, 0, 1]
+            is_ghosted = [1, 1, 1, 1, 1]
         return [
             self.pbf.v.x.petsc_vec,
             self.pbf.p.x.petsc_vec,
-            self.pbfc.LM,
+            self.pbp.phi.x.petsc_vec,
+            self.pbp.mu.x.petsc_vec,
             self.pba.d.x.petsc_vec,
         ], is_ghosted
 
     def set_variational_forms(self):
+        # fluid, ALE, fluid-ALE coupling
         self.pbfa.set_variational_forms()
-        self.pbfc.set_variational_forms_coupling()
+        # phasefield
+        self.pbp.set_variational_forms()
+        # fluid-phasefield coupling
+        self.pbfp.set_variational_forms_coupling()
+        # ALE-phasefield coupling
         self.set_variational_forms_coupling()
 
     def set_variational_forms_coupling(self):
-        pass
+        # derivative of phasefield and potential w.r.t. ALE displacement
+        self.weakform_lin_phid = ufl.derivative(self.pbp.weakform_phi, self.pba.d, self.pba.dd)
+        self.weakform_lin_mud = ufl.derivative(self.pbp.weakform_mu, self.pba.d, self.pba.dd)
 
     def set_problem_residual_jacobian_forms(self, pre=False):
-        # fluid + ALE
+        # fluid, ALE, fluid-ALE coupling
         self.pbfa.set_problem_residual_jacobian_forms(pre=pre)
-        # fluid + constraint
-        self.pbfc.set_problem_residual_jacobian_forms_coupling()
-        # now the additional ALE-0D coupling terms (in case of moving in-/outflow boundaries from/to 0D model)
+        # phasefield
+        self.pbp.set_problem_residual_jacobian_forms()
+        # fluid-phasefield coupling
+        self.pbfp.set_problem_residual_jacobian_forms_coupling()
+        # ALE-phasefield coupling
         self.set_problem_residual_jacobian_forms_coupling()
 
     def set_problem_residual_jacobian_forms_coupling(self):
-        pass
+        ts = time.time()
+        utilities.print_status(
+            "FEM form compilation for phasefield-ALE coupling...",
+            self.comm,
+            e=" ",
+        )
+        self.jac_phid = fem.form(self.weakform_lin_phid, entity_maps=self.io.entity_maps)
+        self.jac_mud = fem.form(self.weakform_lin_mud, entity_maps=self.io.entity_maps)
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def set_problem_vector_matrix_structures(self):
+        # fluid, ALE, fluid-ALE coupling
         self.pbfa.set_problem_vector_matrix_structures()
-        self.pbfc.set_problem_vector_matrix_structures_coupling()
-
+        # phasefield
+        self.pbp.set_problem_vector_matrix_structures()
+        # fluid-phasefield coupling
+        self.pbfp.set_problem_vector_matrix_structures_coupling()
+        # ALE-phasefield coupling
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
-        pass
+        self.K_phid = fem.petsc.assemble_matrix(self.jac_phid)
+        self.K_phid.assemble()
+        self.K_mud = fem.petsc.assemble_matrix(self.jac_mud)
+        self.K_mud.assemble()
 
     def assemble_residual(self, t, subsolver=None):
-        self.pbfc.assemble_residual_coupling(t)
         self.pbfa.assemble_residual(t)
+        self.pbp.assemble_residual(t)
+        self.pbfp.assemble_residual_coupling(t)
 
-        # fluid
-        self.r_list[0] = self.pbfa.r_list[0]
-        self.r_list[1] = self.pbfa.r_list[1]
-        # constraints
-        self.r_list[2] = self.pbfc.r_list[2]
-        # ALE
-        self.r_list[3] = self.pbfa.r_list[2]
+        self.r_list[0] = self.pbf.r_list[0]
+        self.r_list[1] = self.pbf.r_list[1]
+        self.r_list[2] = self.pbp.r_list[0]
+        self.r_list[3] = self.pbp.r_list[1]
+        self.r_list[4] = self.pba.r_list[0]
+
+    def assemble_residual_coupling(self, t, subsolver=None):
+        pass # no additional residual coupling contributions
 
     def assemble_stiffness(self, t, subsolver=None):
-        self.pbfc.assemble_stiffness_coupling(t)
         self.pbfa.assemble_stiffness(t)
+        self.pbp.assemble_stiffness(t)
+        self.pbfp.assemble_stiffness_coupling(t)
 
-        # fluid - momentum
-        self.K_list[0][0] = self.pbfa.K_list[0][0]
-        self.K_list[0][1] = self.pbfa.K_list[0][1]
-        self.K_list[0][2] = self.pbfc.K_vs
-        self.K_list[0][3] = self.pbfa.K_list[0][2]
-        # fluid - continuity
-        self.K_list[1][0] = self.pbfa.K_list[1][0]
-        self.K_list[1][1] = self.pbfa.K_list[1][1]
-        self.K_list[1][3] = self.pbfa.K_list[1][2]
-        # ...
+        # fluid momentum
+        self.K_list[0][0] = self.pbf.K_list[0][0]   # w.r.t. velocity
+        self.K_list[0][1] = self.pbf.K_list[0][1]   # w.r.t. pressure
+        self.K_list[0][2] = self.pbfp.K_list[0][2]  # w.r.t. phase
+        self.K_list[0][3] = self.pbfp.K_list[0][3]  # w.r.t. potential
+        self.K_list[0][4] = self.pbfa.K_list[0][2]  # w.r.t. ALE disp
 
+        # fluid continuity
+        self.K_list[1][0] = self.pbf.K_list[1][0]   # w.r.t. velocity
+        self.K_list[1][1] = self.pbf.K_list[1][1]   # w.r.t. pressure
+        self.K_list[1][2] = self.pbfp.K_list[1][2]  # w.r.t. phase
+        self.K_list[1][4] = self.pbfa.K_list[1][2]  # w.r.t. ALE disp
+
+        # phasefield phase
+        self.K_list[2][0] = self.pbfp.K_list[2][0] # w.r.t. velocity
+        self.K_list[2][2] = self.pbp.K_list[0][0]  # w.r.t. phase
+        self.K_list[2][3] = self.pbp.K_list[0][1]  # w.r.t. potential
+        # phasefield potential
+        self.K_list[3][2] = self.pbp.K_list[1][0]  # w.r.t. phase
+        self.K_list[3][3] = self.pbp.K_list[1][1]  # w.r.t. potential
+
+        # ALE
+        self.K_list[4][0] = self.pbfa.K_list[2][0]  # w.r.t. velocity
+        self.K_list[4][4] = self.pba.K_list[0][0]   # w.r.t. ALE disp
+
+        # phasefield w.r.t. ALE
         self.assemble_stiffness_coupling(t)
 
     def assemble_stiffness_coupling(self, t):
-        pass
+        # derivative of phasefield w.r.t. ALE displacement
+        self.K_phid.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_phid, self.jac_phid, self.pbp.bc.dbcs)
+        self.K_phid.assemble()
+
+        self.K_list[2][4] = self.K_phid
+
+        # derivative of potential w.r.t. ALE displacement
+        self.K_mud.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_mud, self.jac_mud, [])
+        self.K_mud.assemble()
+
+        self.K_list[3][4] = self.K_mud
 
     def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
@@ -281,23 +345,26 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
 
     def evaluate_initial(self):
         self.pbfa.evaluate_initial()
-        self.pbfc.evaluate_initial_coupling()
+        self.pbp.evaluate_initial()
 
     def write_output_ini(self):
         self.io.write_output(self, writemesh=True)
 
     def write_output_pre(self):
         self.pbfa.write_output_pre()
+        self.pbp.write_output_pre()
 
     def evaluate_pre_solve(self, t, N, dt):
         self.pbfa.evaluate_pre_solve(t, N, dt)
-        self.pbfc.evaluate_pre_solve_coupling(t, N, dt)
+        self.pbp.evaluate_pre_solve(t, N, dt)
 
     def evaluate_post_solve(self, t, N):
         self.pbfa.evaluate_post_solve(t, N)
+        self.pbp.evaluate_post_solve(t, N)
 
     def set_output_state(self, N):
         self.pbfa.set_output_state(N)
+        self.pbp.set_output_state(N)
 
     def write_output(self, N, t, mesh=False):
         self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine
@@ -305,28 +372,25 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
     def update(self):
         # update time step - fluid+flow0d and ALE
         self.pbfa.update()
-        self.pbfc.update_coupling()
+        self.pbp.update()
 
     def print_to_screen(self):
         self.pbfa.print_to_screen()
-        self.pbfc.print_to_screen_coupling()
+        self.pbp.print_to_screen()
 
     def induce_state_change(self):
         self.pbfa.induce_state_change()
+        self.pbp.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
         self.io.write_restart(self, N, force=force)
 
     def check_abort(self, t):
-        return self.pbfc.check_abort(t)
+        return False
 
     def destroy(self):
         self.pbfa.destroy()
-        self.pbfc.destroy_coupling()
-        self.destroy_coupling()
-
-    def destroy_coupling(self):
-        pass
+        self.pbp.destroy()
 
 
 class FluidmechanicsAlePhasefieldSolver(solver_base):

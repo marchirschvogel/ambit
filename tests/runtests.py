@@ -265,6 +265,29 @@ if category == "fluid" or category == "all":
         ]
     )
 
+if category == "fluid_ale" or category == "fluid" or category == "all":
+    errs["test_fluid_ale_steady_p1p1_stabf_nozzle_rot 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_ale_steady_p1p1_stabf_nozzle_rot.py"]
+    )
+    errs["test_fluid_ale_uniform_pressurized 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fluid_ale_uniform_pressurized.py"]
+    )
+
+if category == "fluid_phasefield" or category == "fluid" or category == "all":
+    errs["test_fluid_phasefield_rising_bubble 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_phasefield_rising_bubble.py"]
+    )
+    errs["test_fluid_phasefield_rising_bubble 2 restart"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_phasefield_rising_bubble.py", str(4)]
+    )
+if category == "fluid_ale_phasefield" or category == "fluid_phasefield" or category == "fluid" or category == "all":
+    errs["test_fluid_ale_phasefield_sloshing 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fluid_ale_phasefield_sloshing.py"]
+    )
+    errs["test_fluid_ale_phasefield_sloshing 3 restart"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fluid_ale_phasefield_sloshing.py", str(4)]
+    )
+
 if category == "fsi" or category == "all":
     errs["test_fsi_taylorhood_artseg_neumann_neumann 1"] = subprocess.call(
         ["mpiexec", "-n", "1", "python3", "test_fsi_taylorhood_artseg_neumann_neumann.py"]
@@ -624,15 +647,8 @@ if category == "solid_flow0d" or category == "all":
         ]
     )  # TODO: Fix outer loop restart
 
-if category == "fluid_ale" or category == "all":
-    errs["test_fluid_ale_steady_p1p1_stabf_nozzle_rot 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fluid_ale_steady_p1p1_stabf_nozzle_rot.py"]
-    )
-    errs["test_fluid_ale_uniform_pressurized 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fluid_ale_uniform_pressurized.py"]
-    )
 
-if category == "frsi" or category == "fluid_ale" or category == "all":
+if category == "frsi" or category == "all":
     errs["test_frsi_artseg_prefile 1"] = subprocess.call(
         ["mpiexec", "-n", "1", "python3", "test_frsi_artseg_prefile.py"]
     )

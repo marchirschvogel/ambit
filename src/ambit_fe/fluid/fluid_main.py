@@ -2068,7 +2068,7 @@ class FluidmechanicsProblem(problem_base):
     def compute_mass_conservation(self, N, t):
         mass_form = ufl.as_ufl(0)
         if self.is_ale:
-            J, J_old = ufl.det(self.alevar["F_ale"]), ufl.det(self.alevar["F_ale_old"])
+            J, J_old = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"])
         else:
             J, J_old = 1.0, 1.0
         for n, M in enumerate(self.domain_ids):

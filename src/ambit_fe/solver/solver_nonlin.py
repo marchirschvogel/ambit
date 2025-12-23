@@ -173,6 +173,7 @@ class solver_nonlinear:
         self.k_PTC_initial = solver_params.get("k_ptc_initial", 0.1)
         self.PTC_randadapt_range = solver_params.get("ptc_randadapt_range", [0.85, 1.35])
         self.maxresval = solver_params.get("catch_max_res_value", 1e16)
+        self.maxincval = solver_params.get("catch_max_inc_value", 1e16)
         self.direct_solver = solver_params.get("direct_solver", "mumps")
         self.iterative_solver = solver_params.get("iterative_solver", "gmres")
 
@@ -912,13 +913,13 @@ class solver_nonlinear:
                 # adaptive PTC (for 3D block K_00 only!)
                 if self.divcont == "PTC":
                     self.maxiter = 100  # should be enough...
-
                     # collect errors
                     err.append(
                         self.solutils.catch_solver_errors(
-                            self.resnorms[npr]["res1"],
-                            incnorm=self.incnorms[npr]["inc1"],
-                            maxval=self.maxresval,
+                            resnorm=max(self.resnorms[npr].values()),
+                            incnorm=max(self.incnorms[npr].values()),
+                            maxresval=self.maxresval,
+                            maxincval=self.maxincval,
                             linconv=linconv,
                         )
                     )

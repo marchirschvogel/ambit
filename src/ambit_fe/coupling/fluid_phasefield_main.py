@@ -243,16 +243,19 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.pbf.assemble_stiffness(t)
         self.pbp.assemble_stiffness(t)
 
-        self.K_list[0][0] = self.pbf.K_list[0][0]
-        self.K_list[0][1] = self.pbf.K_list[0][1]
-        self.K_list[1][0] = self.pbf.K_list[1][0]
-        self.K_list[1][1] = self.pbf.K_list[1][1]
+        # fluid momentum
+        self.K_list[0][0] = self.pbf.K_list[0][0]  # w.r.t. velocity
+        self.K_list[0][1] = self.pbf.K_list[0][1]  # w.r.t. pressure
+        # fluid continuity
+        self.K_list[1][0] = self.pbf.K_list[1][0]  # w.r.t. velocity
+        self.K_list[1][1] = self.pbf.K_list[1][1]  # w.r.t. pressure
 
-        self.K_list[2][2] = self.pbp.K_list[0][0]
-        self.K_list[2][3] = self.pbp.K_list[0][1]
-
-        self.K_list[3][2] = self.pbp.K_list[1][0]
-        self.K_list[3][3] = self.pbp.K_list[1][1]
+        # phasefield phase
+        self.K_list[2][2] = self.pbp.K_list[0][0]  # w.r.t. phase
+        self.K_list[2][3] = self.pbp.K_list[0][1]  # w.r.t. potential
+        # phasefield potential
+        self.K_list[3][2] = self.pbp.K_list[1][0]  # w.r.t. phase
+        self.K_list[3][3] = self.pbp.K_list[1][1]  # w.r.t. potential
 
     def assemble_stiffness_coupling(self, t):
         # derivative of fluid momentum w.r.t. phase field

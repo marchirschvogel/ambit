@@ -72,6 +72,7 @@ def check_params_solver(params):
     valid_params = [
         "block_precond",
         "block_precond_prestr",
+        "catch_max_inc_value",
         "catch_max_res_value",
         "direct_solver",
         "divergence_continue",

@@ -231,6 +231,9 @@ class FSIFlow0DProblem(problem_base):
         self.pbf0.set_variational_forms_coupling()
         self.pbfa0.set_variational_forms_coupling()
 
+    def set_variational_forms_coupling(self):
+        pass # no additional coupling forms needed
+
     def set_problem_residual_jacobian_forms(self):
         # FSI - fluid, solid, ALE, + FSI coup
         self.pbfas.set_problem_residual_jacobian_forms()
@@ -238,12 +241,18 @@ class FSIFlow0DProblem(problem_base):
         self.pbf0.set_problem_residual_jacobian_forms_coupling()
         self.pbfa0.set_problem_residual_jacobian_forms_coupling()
 
+    def set_problem_residual_jacobian_forms_coupling(self):
+        pass
+
     def set_problem_vector_matrix_structures(self):
         # FSI - fluid, solid, ALE, + FSI coup
         self.pbfas.set_problem_vector_matrix_structures()
         # fluid-0D, ALE-0D coup
         self.pbf0.set_problem_vector_matrix_structures_coupling()
         self.pbfa0.set_problem_vector_matrix_structures_coupling()
+
+    def set_problem_vector_matrix_structures_coupling(self):
+        pass
 
     def assemble_residual(self, t, subsolver=None):
         if self.pbs.incompressible_2field:

@@ -235,7 +235,7 @@ class Ambit:
         elif problem_type == "fluid_ale_phasefield":
             from .coupling import fluid_ale_phasefield_main
 
-            io = ioroutines.IO_fluid_phasefield(io_params, fem_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale_phasefield(io_params, fem_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 

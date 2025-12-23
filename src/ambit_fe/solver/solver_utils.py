@@ -15,7 +15,7 @@ class sol_utils:
     def __init__(self, solver):
         self.solver = solver
 
-    def catch_solver_errors(self, resnorm, incnorm=0, maxval=1e16, linconv=1):
+    def catch_solver_errors(self, resnorm=0, incnorm=0, maxresval=1e16, maxincval=1e16, linconv=1):
         err = 0
 
         if np.isnan(resnorm):
@@ -26,9 +26,17 @@ class sol_utils:
 
             err = 1
 
-        if resnorm >= maxval:
+        if resnorm >= maxresval:
             utilities.print_status(
-                "Large residual > max val %.1E encountered. Reset Newton and perform PTC adaption." % (maxval),
+                "Large residual > max val %.1E encountered. Reset Newton and perform PTC adaption." % (maxresval),
+                self.solver.comm,
+            )
+
+            err = 1
+
+        if incnorm >= maxincval:
+            utilities.print_status(
+                "Large increment > max val %.1E encountered. Reset Newton and perform PTC adaption." % (maxincval),
                 self.solver.comm,
             )
 

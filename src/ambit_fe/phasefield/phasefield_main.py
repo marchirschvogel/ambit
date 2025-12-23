@@ -158,16 +158,9 @@ class PhasefieldProblem(problem_base):
             )
 
         # initialize pahse field (Cahn-Hilliard) variational form class
-        if not bool(self.alevar):
+        if not self.is_ale:
             self.vf = phasefield_variationalform.variationalform(self.var_phi, self.var_mu)
         else:
-            # mid-point representation of ALE velocity
-            self.alevar["w_mid"] = self.timefac * self.alevar["w"] + (1.0 - self.timefac) * self.alevar["w_old"]
-            # mid-point representation of ALE deformation gradient - linear in ALE displacement, hence we can combine it like this
-            self.alevar["Fale_mid"] = (
-                self.timefac * self.alevar["Fale"] + (1.0 - self.timefac) * self.alevar["Fale_old"]
-            )
-
             self.vf = phasefield_variationalform.variationalform_ale(self.var_phi, self.var_mu)
 
         # set form for phidot
@@ -272,7 +265,7 @@ class PhasefieldProblem(problem_base):
     def compute_phasefield_conservation(self, N, t):
         phase_form = ufl.as_ufl(0)
         if self.is_ale:
-            J, J_old = ufl.det(self.alevar["F_ale"]), ufl.det(self.alevar["F_ale_old"])
+            J, J_old = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"])
         else:
             J, J_old = 1.0, 1.0
         for n, M in enumerate(self.domain_ids):
@@ -286,7 +279,7 @@ class PhasefieldProblem(problem_base):
 
     def set_problem_residual_jacobian_forms(self):
         ts = time.time()
-        utilities.print_status("FEM form compilation for phase field (Cahn-Hilliard)...", self.comm, e=" ")
+        utilities.print_status("FEM form compilation for phasefield (Cahn-Hilliard)...", self.comm, e=" ")
 
         self.res_phi = fem.form(self.weakform_phi, entity_maps=self.io.entity_maps)
         self.res_mu = fem.form(self.weakform_mu, entity_maps=self.io.entity_maps)
