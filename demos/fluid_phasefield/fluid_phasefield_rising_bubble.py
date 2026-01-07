@@ -54,7 +54,7 @@ def main():
         "solve_type": "direct",
         "direct_solver": "mumps",
         "maxiter":25,
-        "tol_res": [1e-6, 1e-6, 1e-6, 1e-6],
+        "tol_res": [1e-5, 1e-5, 1e-5, 1e-5],
         "tol_inc": [1e-3, 1e16, 1e-3, 1e-3],
         "divergence_continue": "PTC",
         "k_ptc_initial": 10.0,
@@ -101,8 +101,8 @@ def main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": sig/eps},
-                          "params_cahnhilliard": {"M": M, "lambda": sig*eps}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M": M, "D": sig/eps},
+                          "params_cahnhilliard": {"lambda": sig*eps}}}
 
     class locate_top_bottom:
         def evaluate(self, x):

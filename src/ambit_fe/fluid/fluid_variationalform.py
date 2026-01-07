@@ -248,7 +248,7 @@ class variationalform_ale(variationalform):
         if self.formulation == "nonconservative":
             assert(phi is None)
             """ TeX:
-            \int\limits_{\Omega_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(\boldsymbol{v}-\boldsymbol{w})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
+            \int\limits_{\Omega_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return J*rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (v - w), self.var_v) * ddomain
         elif self.formulation == "conservative":
@@ -258,7 +258,7 @@ class variationalform_ale(variationalform):
             else:
                 rhodot_ = ufl.as_ufl(0)
             """ TeX:
-            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho((\boldsymbol{v}-\boldsymbol{w})\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
+            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho((\boldsymbol{v}-\widehat{\boldsymbol{w}})\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v - w, v)*ufl.inv(F).T), self.var_v) * ddomain
         else:
@@ -287,7 +287,7 @@ class variationalform_ale(variationalform):
         if self.formulation == "nonconservative":
             assert(phi is None)
             """ TeX:
-            \int\limits_{\Omega_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(-\boldsymbol{w})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
+            \int\limits_{\Omega_0}\widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_0} + (\nabla_0\boldsymbol{v}\widehat{\boldsymbol{F}}^{-1})(-\widehat{\boldsymbol{w}})\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return J*rho_ * ufl.dot(a + ufl.grad(v) * ufl.inv(F) * (-w), self.var_v) * ddomain
         elif self.formulation == "conservative":
@@ -297,7 +297,7 @@ class variationalform_ale(variationalform):
             else:
                 rhodot_ = ufl.as_ufl(0)
             """ TeX:
-            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho((-\boldsymbol{w})\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
+            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho((-\widehat{\boldsymbol{w}})\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
             return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(-w, v)*ufl.inv(F).T), self.var_v) * ddomain
         else:
@@ -322,12 +322,12 @@ class variationalform_ale(variationalform):
             rhodot_ = ufl.as_ufl(0)
         if self.formulation == "nonconservative":
             """ TeX:
-            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \widehat{J}\widehat{\boldsymbol{F}}^{-1}\nabla_0\rho\cdot(\boldsymbol{v}-\boldsymbol{w}) + \rho\nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}(\boldsymbol{v}-\boldsymbol{w})\right)\right)\delta p\,\mathrm{d}V
+            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \widehat{J}\widehat{\boldsymbol{F}}^{-1}\nabla_0\rho\cdot(\boldsymbol{v}-\widehat{\boldsymbol{w}}) + \rho\nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\right)\delta p\,\mathrm{d}V
             """
             return (J*rhodot_ + rho_*Jdot + J*ufl.dot(ufl.inv(F).T*ufl.grad(rho_), v-w) + rho_*ufl.div(J*ufl.inv(F)*(v-w))) * var_p * ddomain
         elif self.formulation == "conservative":
             """ TeX:
-            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\rho(\boldsymbol{v}-\boldsymbol{w})\right)\right)\delta p\,\mathrm{d}V
+            \int\limits_{\Omega_0}\left(\left.\frac{\partial(\widehat{J}\rho)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\rho(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right)\right)\delta p\,\mathrm{d}V
             """
             return (J*rhodot_ + rho_*Jdot + ufl.div(J*ufl.inv(F)*rho_*(v-w))) * var_p * ddomain
         else:
@@ -483,8 +483,8 @@ class variationalform_ale(variationalform):
     ### Flux coupling conditions
 
     # flux
-    # TeX: \int\limits_{\Gamma} (\boldsymbol{v}-\boldsymbol{w})\cdot\boldsymbol{n}\,\mathrm{d}a =
-    #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\boldsymbol{w})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
+    # TeX: \int\limits_{\Gamma} (\boldsymbol{v}-\widehat{\boldsymbol{w}})\cdot\boldsymbol{n}\,\mathrm{d}a =
+    #      \int\limits_{\Gamma_0} (\boldsymbol{v}-\widehat{\boldsymbol{w}})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
     def flux(self, v, dboundary, w=None, F=None, fcts=None):
         J = ufl.det(F)
         if fcts is None:

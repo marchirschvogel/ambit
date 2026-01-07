@@ -99,8 +99,8 @@ def test_main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"D": sig/eps},
-                          "params_cahnhilliard": {"M": M, "lambda": sig*eps}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M": M, "D": sig/eps},
+                          "params_cahnhilliard": {"lambda": sig*eps}}}
 
     class locate_top_bottom:
         def evaluate(self, x):

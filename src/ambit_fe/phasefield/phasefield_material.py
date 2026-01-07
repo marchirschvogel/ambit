@@ -18,3 +18,15 @@ class materiallaw:
         psi = D * self.phi**2. * (1. - self.phi) ** 2.
 
         return ufl.diff(psi,self.phi)
+
+
+class materiallaw_flux:
+    def __init__(self, mu):
+        self.mu = mu
+
+    def mat_cahnhilliard_flux(self, params, F=None):
+        M = params["M"]
+        if F is not None:
+            return M*ufl.inv(F).T*ufl.grad(self.mu)
+        else:
+            return M*ufl.grad(self.mu)

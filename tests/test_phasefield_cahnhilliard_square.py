@@ -52,8 +52,8 @@ def test_main():
 
     FEM_PARAMS = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
 
-    MATERIALS = {"MAT1": {"mat_cahnhilliard": {"D": 100.},
-                          "params_cahnhilliard": {"M": 1.0, "lambda": 0.01}}}
+    MATERIALS = {"MAT1": {"mat_cahnhilliard": {"M": 1.0, "D": 100.},
+                          "params_cahnhilliard": {"lambda": 0.01}}}
 
     BC_DICT = { }
 

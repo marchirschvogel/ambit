@@ -79,10 +79,9 @@ class PhasefieldProblem(problem_base):
         self.quad_degree = fem_params["quad_degree"]
 
         # collect domain data
-        self.lam, self.m = [], []
+        self.lam = []
         for n, M in enumerate(self.domain_ids):
             self.lam.append(self.constitutive_models["MAT" + str(n + 1)]["params_cahnhilliard"]["lambda"])
-            self.m.append(self.constitutive_models["MAT" + str(n + 1)]["params_cahnhilliard"]["M"])
 
         self.localsolve = False  # no idea what might have to be solved locally...
         self.prestress_initial = False  # guess prestressing in ALE is somehow senseless...
@@ -235,9 +234,9 @@ class PhasefieldProblem(problem_base):
         self.phase_field_mid, self.potential_mid = ufl.as_ufl(0), ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
-            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.m[n], self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
-            self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.m[n], self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
-            self.phase_field_mid += self.vf.cahnhilliard_phase(self.phidot_mid, self.phi_mid, self.mu_mid, self.m[n], self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
+            self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.ma[n].diffusive_flux(self.mu, F=self.alevar["Fale"]), self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
+            self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.ma[n].diffusive_flux(self.mu_old, F=self.alevar["Fale_old"]), self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
+            self.phase_field_mid += self.vf.cahnhilliard_phase(self.phidot_mid, self.phi_mid, self.mu_mid, self.ma[n].diffusive_flux(self.mu_mid, F=self.alevar["Fale_mid"]), self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
             self.potential += self.vf.cahnhilliard_potential(self.phi, self.mu, self.ma[n].driv_force(self.phi), self.lam[n], self.dx(M), F=self.alevar["Fale"])
             self.potential_old += self.vf.cahnhilliard_potential(self.phi_old, self.mu_old, self.ma[n].driv_force(self.phi_old), self.lam[n], self.dx(M), F=self.alevar["Fale_old"])
             self.potential_mid += self.vf.cahnhilliard_potential(self.phi_mid, self.mu_mid, self.ma[n].driv_force(self.phi_mid), self.lam[n], self.dx(M), F=self.alevar["Fale_mid"])
