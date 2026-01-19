@@ -80,7 +80,7 @@ def test_main():
         "multiplier_physics": [{"id": [2, 3], "type": "pressure"}],
     }
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
 
     MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 15.0, "nu": 0.4}}}
 

@@ -82,9 +82,9 @@ def test_main():
     COUPLING_PARAMS = {"coupling_fluid_ale": {"surface_ids": [2, 8, 14]}}
 
     MATERIALS_FLUID = {
-        "MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
-        "MAT2": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
-        "MAT3": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
+        "MAT1": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
+        "MAT2": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
+        "MAT3": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
     }
 
     MATERIALS_ALE = {
