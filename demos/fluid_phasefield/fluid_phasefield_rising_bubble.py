@@ -19,11 +19,11 @@ def main():
     IO_PARAMS = {
         "problem_type": "fluid_phasefield",
         "write_results_every": 1,
-        "indicate_results_by": "time",
+        "indicate_results_by": "step0",
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[128,256]},
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 128,256
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_rising_bubble"+str(case),
+        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_degM",
         "write_initial_fields": True,
         "report_conservation_properties": True,
     }
@@ -56,7 +56,7 @@ def main():
         "maxiter":25,
         "tol_res": [1e-5, 1e-5, 1e-5, 1e-5],
         "tol_inc": [1e-3, 1e16, 1e-3, 1e-3],
-        "divergence_continue": "PTC",
+        # "divergence_continue": "PTC",
         "k_ptc_initial": 10.0,
         "catch_max_inc_value": 1e12,
     }
@@ -86,22 +86,22 @@ def main():
         eta1 = 1.0
         eta2 = 10.0
         sig = 24.5
-        M = 0.5e-3
+        M0 = 0.5e-3
     elif case==2:
         rho1 = 1.0
         rho2 = 1000.0
         eta1 = 0.1
         eta2 = 1.0
         sig = 1.96
-        M = 1e-3
+        M0 = 1e-3
     else:
         raise ValueError("Unknown case.")
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": eta1, "mu2": eta2},
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M": M, "D": sig/eps},
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate", "M0": M0*eps, "D": sig/eps},
                           "params_cahnhilliard": {"lambda": sig*eps}}}
 
     class locate_top_bottom:

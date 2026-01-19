@@ -11,17 +11,34 @@
 
 
 class materiallaw:
-    def __init__(self, gamma, I):
-        self.gamma = gamma
-        self.I = I
+    def __init__(self, shearrate, volstrainrate, use_gen_strainrate, I):
+        self.shearrate = shearrate
+        self.volstrainrate = volstrainrate
+
+        self.use_gen_strainrate = use_gen_strainrate
+
+        self.dim = I.ufl_shape[0]
 
     def newtonian(self, params, phi=None):
         if phi is None:
-            mu = params["mu"]  # dynamic viscosity
+            eta = params["eta"]  # dynamic viscosity
         else:
-            mu = phi * params["mu1"] + (1.0 - phi) * params["mu2"]
+            eta1, eta2 = params["eta1"], params["eta2"]
+            eta = phi * eta1 + (1.0 - phi) * eta2
 
         # classical Newtonian fluid
-        sigma = 2.0 * mu * self.gamma
+        sigma = 2.0 * eta * self.shearrate
+
+        # in case we should add volumetric strain rate (div v not zero!)
+        if self.use_gen_strainrate:
+            if phi is None:
+                zeta = params.get("zeta", 0.0)  # bulk viscosity (default is zero: Stokes' hypothesis)
+            else:
+                zeta1, zeta2 = params.get("zeta1", 0.0), params.get("zeta2", 0.0)
+                zeta = phi * zeta1 + (1.0 - phi) * zeta2
+
+            # volumetric stress contribution
+            lambd = zeta - (2.0/self.dim) * eta
+            sigma += lambd * self.volstrainrate
 
         return sigma

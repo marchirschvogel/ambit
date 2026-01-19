@@ -84,7 +84,7 @@ def test_main():
     MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},
                                 "inertia": {"rho0": 1.070e-6}}}
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 1.0e-6}, # kPas
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 1.0e-6}, # kPas
                                 "inertia": {"rho": 1.0e-6}}} # kg/mm^3
 
     MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}}}

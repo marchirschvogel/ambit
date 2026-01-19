@@ -61,7 +61,7 @@ def test_main():
     }
 
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 1.0e-6},
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 1.0e-6},
                                 "inertia": {"rho": 1.0e-6}}}
 
     # We need a finite strain capable nonlinear ALE that can undergo a large rotation without straining/shape changing

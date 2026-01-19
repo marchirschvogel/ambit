@@ -63,7 +63,7 @@ def test_main():
         "coupling_fluid_ale": {"locator": locate()},
     }
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 0.001}, # Pa s
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 0.001}, # Pa s
                                 "inertia": {"rho": 1000.0}}} # kg/m^3
 
     MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}}}

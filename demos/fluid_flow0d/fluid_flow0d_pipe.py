@@ -141,11 +141,11 @@ def main():
     """
     MATERIALS_FLUID = {  # newtonian fluids with parameters for blood - kg-mm-s system
         "MAT1": {
-            "newtonian": {"mu": 4.0e-6},  # kPa s
+            "newtonian": {"eta": 4.0e-6},  # kPa s
             "inertia": {"rho": 1.025e-6},
         },  # kg/mm^3
         "MAT2": {
-            "newtonian": {"mu": 4.0e-6},  # kPa s
+            "newtonian": {"eta": 4.0e-6},  # kPa s
             "inertia": {"rho": 1.025e-6},
         },
     }  # kg/mm^3

@@ -63,8 +63,8 @@ def test_main():
     }
 
     MATERIALS = {
-        "MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
-        "MAT2": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
+        "MAT1": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
+        "MAT2": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}},
     }
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)

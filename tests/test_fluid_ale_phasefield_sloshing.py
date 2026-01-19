@@ -113,12 +113,12 @@ def test_main():
     eta1 = 0.001
     eta2 = 0.1
     sig = 100.0
-    M = 1e-3
+    M0 = 1e-3
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": eta1, "mu2": eta2},
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M": M, "D": sig/eps},
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps},
                           "params_cahnhilliard": {"lambda": sig*eps}}}
 
     MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}}}
@@ -177,13 +177,13 @@ def test_main():
     phi_corr, mu_corr = np.zeros(len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 1.3422839982101427E+00  # x
-    v_corr[1] = 7.7276125791703653E-04  # y
+    v_corr[0] = 1.3422876769067809E+00  # x
+    v_corr[1] = 7.7342515736798442E-04  # y
 
     p_corr[0] = 1.8156696641083278E+07
 
-    phi_corr[0] = 3.9113503400413357E-01
-    mu_corr[0] = -1.4614646852772104E-01
+    phi_corr[0] = 3.9113503367268654E-01
+    mu_corr[0] = -1.4614520536619657E-01
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

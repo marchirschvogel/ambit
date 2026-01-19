@@ -52,7 +52,7 @@ def test_main():
 
     FEM_PARAMS = {"order_vel": 2, "order_pres": 1, "quad_degree": 5}
 
-    MATERIALS = {"MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
+    MATERIALS = {"MAT1": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:

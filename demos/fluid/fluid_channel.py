@@ -65,7 +65,7 @@ def main():
     """
     MATERIALS = {
         "MAT1": {
-            "newtonian": {"mu": 1420.0e-6},  # kPa s
+            "newtonian": {"eta": 1420.0e-6},  # kPa s
             "inertia": {"rho": 1.26e-6},
         }
     }  # kg/mm^3

@@ -27,12 +27,12 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
 
     # diffusive flux
-    def diffusive_flux(self, mu_, F=None):
+    def diffusive_flux(self, mu_, phi_, F=None):
         dim = len(ufl.grad(mu_)) # dimension of space
 
         Jflux = ufl.constantvalue.zero(dim)
 
-        mat_flux = materiallaw_flux(mu_)
+        mat_flux = materiallaw_flux(mu_, phi_)
 
         m = 0
         for matlaw in self.matmodels:

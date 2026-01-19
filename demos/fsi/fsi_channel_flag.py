@@ -28,7 +28,7 @@ def main():
         nu_s = 0.4
         rho0_s = 10.0e-6  # kg/mm^3
         # fluid
-        mu_f = 1.0e-3  # kPa
+        eta_f = 1.0e-3  # kPa
         rho_f = 1.0e-6  # kg/mm^3
         # inflow vel
         Ubar = 1e3  # mm/s
@@ -42,7 +42,7 @@ def main():
         nu_s = 0.4
         rho0_s = 1.0e-6  # kg/mm^3
         # fluid
-        mu_f = 1.0e-3  # kPa
+        eta_f = 1.0e-3  # kPa
         rho_f = 1.0e-6  # kg/mm^3
         # inflow vel
         Ubar = 2e3  # mm/s
@@ -172,7 +172,7 @@ def main():
     }
 
     # fluid material: standard Newtonian fluid
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": mu_f}, "inertia": {"rho": rho_f}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": eta_f}, "inertia": {"rho": rho_f}}}
 
     # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
     MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}}}

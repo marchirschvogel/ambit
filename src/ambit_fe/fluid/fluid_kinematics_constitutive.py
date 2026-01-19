@@ -31,13 +31,17 @@ class constitutive:
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
 
-    # Cauchy stress core routine
+    # Cauchy stress core routine: most general form
+    """ TeX:
+    \boldsymbol{\sigma} = -p \boldsymbol{I} + 2\eta\,\frac{1}{2}(\nabla\boldsymbol{v} + \left(\nabla\boldsymbol{v})^{\mathrm{T}}\right) + \left(\zeta-\frac{2}{d}\eta\right)(\nabla\cdot\boldsymbol{v})\boldsymbol{I}
+    """
     def sigma(self, v_, p_, F=None, phi=None):
-        gamma_ = self.kin.gamma(v_, F=F)
+        shearrate_ = self.kin.shearrate(v_, F=F)
+        volstrainrate_ = self.kin.volstrainrate(v_, F=F)
 
         stress = ufl.constantvalue.zero((self.kin.dim, self.kin.dim))
 
-        mat = materiallaw(gamma_, self.I)
+        mat = materiallaw(shearrate_, volstrainrate_, self.kin.use_gen_strainrate, self.I)
 
         m = 0
         for matlaw in self.matmodels:
@@ -63,8 +67,9 @@ class constitutive:
 
 
 class kinematics:
-    def __init__(self, dim, uf_pre=None):
+    def __init__(self, dim, use_gen_strainrate, uf_pre=None):
         self.dim = dim
+        self.use_gen_strainrate = use_gen_strainrate
 
         # prestress displacement
         self.uf_pre = uf_pre
@@ -72,12 +77,19 @@ class kinematics:
         # identity tensor
         self.I = ufl.Identity(self.dim)
 
-    # velocity gradient: gamma = 0.5(dv/dx + (dv/dx)^T)
-    def gamma(self, v_, F=None):
+    # shear rate: symmetric part of velocity gradient
+    def shearrate(self, v_, F=None):
         if F is not None:
             return 0.5 * (ufl.grad(v_) * ufl.inv(F) + ufl.inv(F).T * ufl.grad(v_).T)
         else:
             return 0.5 * (ufl.grad(v_) + ufl.grad(v_).T)
+
+    # volumetric strain rare
+    def volstrainrate(self, v_, F=None):
+        if F is not None:
+            return ufl.inner(ufl.grad(v_),ufl.inv(F).T) * self.I
+        else:
+            return ufl.div(v_) * self.I
 
     # fluid deformation gradient (relevant on boundary for FrSI): F = I + duf/dx0
     def F(self, uf_):

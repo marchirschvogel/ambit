@@ -1289,7 +1289,7 @@ class IO_fluid(IO):
                             pwfuncs.append(
                                 ufl.inner(
                                     pb.ma[n].sigma(pb.v, pb.p, F=pb.alevar["Fale"], phi=pb.phasevar["phi"]),
-                                    pb.ki.gamma(pb.v, F=pb.alevar["Fale"]),
+                                    pb.ki.shearrate(pb.v, F=pb.alevar["Fale"]),
                                 )
                             )
                         pw = project(

@@ -21,9 +21,9 @@ class variationalform():
         else:
             advec = ufl.as_ufl(0)
         """ TeX:
-        \int\limits_{\Omega} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}v + \int\limits_{\Omega} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}v = 0
+        \int\limits_{\Omega} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}v - \int\limits_{\Omega} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}v = 0
         """
-        return ( ufl.inner(phidot, self.var_phi) + ufl.inner(advec, self.var_phi) + ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
+        return ( ufl.inner(phidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, lmbda, ddomain, F=None):
         """ TeX:
@@ -46,9 +46,9 @@ class variationalform_ale(variationalform):
         else:
             advec = ufl.as_ufl(0)
         """ TeX:
-        \int\limits_{\Omega_0} \left(\left.\frac{\partial (\widehat{J}\phi)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot(\widehat{J}\boldsymbol{F}^{-1}\phi\,(\boldsymbol{v}-\widehat{\boldsymbol{w}}))\right) \delta \phi \, \mathrm{d}V + \int\limits_{\Omega_0} \boldsymbol{J} \cdot \boldsymbol{F}^{-\mathrm{T}}\nabla_0 \delta \phi \, \mathrm{d}V = 0
+        \int\limits_{\Omega_0} \left(\left.\frac{\partial (\widehat{J}\phi)}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot(\widehat{J}\boldsymbol{F}^{-1}\phi\,(\boldsymbol{v}-\widehat{\boldsymbol{w}}))\right) \delta \phi \, \mathrm{d}V - \int\limits_{\Omega_0} \boldsymbol{J} \cdot \boldsymbol{F}^{-\mathrm{T}}\nabla_0 \delta \phi \, \mathrm{d}V = 0
         """
-        return ( ufl.inner(J*phidot + phi*Jdot, self.var_phi) + ufl.inner(advec, self.var_phi) + J*ufl.inner(Jflux, ufl.inv(F).T*ufl.grad(self.var_phi)) ) * ddomain
+        return ( ufl.inner(J*phidot + phi*Jdot, self.var_phi) + ufl.inner(advec, self.var_phi) - J*ufl.inner(Jflux, ufl.inv(F).T*ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, lmbda, ddomain, F=None):
         J = ufl.det(F)

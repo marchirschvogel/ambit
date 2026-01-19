@@ -435,11 +435,16 @@ class FluidmechanicsProblem(problem_base):
         if self.is_multiphase:
             assert(self.ti.continuity_at_midpoint)
 
+        # if shear + volumetric strain rate should be used in constitutive model - required for multiphase and/or compressible flows
+        use_generalized_strainrate = False
+        if self.is_multiphase:
+            use_generalized_strainrate = True
+
         # get time factors
         self.timefac_m, self.timefac = self.ti.timefactors()
 
         # initialize kinematics_constitutive class
-        self.ki = fluid_kinematics_constitutive.kinematics(self.dim, uf_pre=self.uf_pre)
+        self.ki = fluid_kinematics_constitutive.kinematics(self.dim, use_generalized_strainrate, uf_pre=self.uf_pre)
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
@@ -2002,7 +2007,7 @@ class FluidmechanicsProblem(problem_base):
                 j = n
             ip_all += ufl.inner(
                 self.ma[n].sigma(self.v, self.p_[j], F=self.alevar["Fale"], phi=self.phasevar["phi"]),
-                self.ki.gamma(self.v, F=self.alevar["Fale"]),
+                self.ki.shearrate(self.v, F=self.alevar["Fale"]),
             ) * self.dx(M)
 
         ip = fem.assemble_scalar(fem.form(ip_all))

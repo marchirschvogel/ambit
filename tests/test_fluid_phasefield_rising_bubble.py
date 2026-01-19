@@ -93,13 +93,13 @@ def test_main():
     eta1 = 1.0
     eta2 = 10.0
     sig = 24.5
-    M = 1e-3
+    M0 = 1e-3
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu1": eta1, "mu2": eta2},
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M": M, "D": sig/eps},
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps},
                           "params_cahnhilliard": {"lambda": sig*eps}}}
 
     class locate_top_bottom:
@@ -153,12 +153,12 @@ def test_main():
 
     # correct results
     v_corr[0] = 0.0  # x
-    v_corr[1] = 1.6639922519332575E-02  # y
+    v_corr[1] = 1.6615697216087362E-02 # y
 
     p_corr[0] = -8.6222904206797044E+04
 
-    phi_corr[0] = 1.0020175259322237E+00
-    mu_corr[0] = -9.8554853420529970E-02
+    phi_corr[0] = 1.0020173309634144E+00
+    mu_corr[0] = -1.0057964239960134E-01
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

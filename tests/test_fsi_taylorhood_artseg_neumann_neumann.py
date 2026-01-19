@@ -68,7 +68,7 @@ def test_main():
 
     MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": 100.0}, "inertia": {"rho0": 1.0e-6}}}
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"mu": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
 
     MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 2.0, "nu": 0.1}}}
 
