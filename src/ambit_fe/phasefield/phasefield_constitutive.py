@@ -27,7 +27,7 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
 
     # diffusive flux
-    def diffusive_flux(self, mu_, phi_, F=None):
+    def diffusive_flux(self, mu_, phi_, p=None, F=None):
         dim = len(ufl.grad(mu_)) # dimension of space
 
         Jflux = ufl.constantvalue.zero(dim)
@@ -40,9 +40,7 @@ class constitutive:
             matparams_m = self.matparams[m]
 
             if matlaw == "mat_cahnhilliard":
-                Jflux += mat_flux.mat_cahnhilliard_flux(matparams_m, F=F)
-            elif matlaw == "params_cahnhilliard": # other params not in constitutive relation
-                pass
+                Jflux += mat_flux.mat_cahnhilliard_flux(matparams_m, p=p, F=F)
             else:
                 raise NameError("Unknown Cahn-Hilliard material law!")
 
@@ -65,8 +63,6 @@ class constitutive:
 
             if matlaw == "mat_cahnhilliard":
                 dpsi_dphi += mat.mat_cahnhilliard(matparams_m)
-            elif matlaw == "params_cahnhilliard": # other params not in constitutive relation
-                pass
             else:
                 raise NameError("Unknown Cahn-Hilliard material law!")
 

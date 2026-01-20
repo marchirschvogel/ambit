@@ -25,18 +25,27 @@ class materiallaw_flux:
         self.mu = mu
         self.phi = phi
 
-    def mat_cahnhilliard_flux(self, params, F=None):
+    def mat_cahnhilliard_flux(self, params, p=None, F=None):
         mobility = params.get("mobility", "constant")
         M0 = params["M0"]
         if mobility=="constant":
             M = M0
         elif mobility=="degenerate":
+            eps = params.get("epsilon", 0.0)
+            exp = params.get("exponent", 1.0)
             # degenerate mobility, vanishing in the single-fluid regime (phi=0 or phi=1)
-            M = M0 * self.phi * (1.0 - self.phi)
+            M = M0 * (self.phi**exp * (1.0 - self.phi)**exp + eps)
         else:
             raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")
 
-        if F is not None:
-            return -M*ufl.inv(F).T*ufl.grad(self.mu)
+        # fluid pressure proportional term (if alpha given)
+        alpha = params.get("alpha", None)
+        if alpha is not None:
+            ap = alpha * p
         else:
-            return -M*ufl.grad(self.mu)
+            ap = ufl.as_ufl(0)
+
+        if F is not None:
+            return -M*ufl.inv(F).T*ufl.grad(self.mu + ap)
+        else:
+            return -M*ufl.grad(self.mu + ap)

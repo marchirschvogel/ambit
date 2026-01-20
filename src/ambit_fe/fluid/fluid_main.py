@@ -2118,9 +2118,6 @@ class FluidmechanicsProblem(problem_base):
             self.jac_vp = fem.form(self.weakform_lin_vp, entity_maps=self.io.entity_maps)
             self.jac_pv = fem.form(self.weakform_lin_pv, entity_maps=self.io.entity_maps)
             if self.num_dupl > 1:
-                self.dummat = [
-                    [None] * self.num_dupl for _ in range(self.num_dupl)
-                ]  # needed for block vector assembly...
                 # make lists for offdiagonal block mat assembly
                 self.jac_vp_ = [self.jac_vp]
                 self.jac_pv_ = []
@@ -2139,9 +2136,6 @@ class FluidmechanicsProblem(problem_base):
             self.jac_vp = fem.form(self.weakform_lin_prestress_vp, entity_maps=self.io.entity_maps)
             self.jac_pv = fem.form(self.weakform_lin_prestress_pv, entity_maps=self.io.entity_maps)
             if self.num_dupl > 1:
-                self.dummat = [
-                    [None] * self.num_dupl for _ in range(self.num_dupl)
-                ]  # needed for block vector assembly...
                 # make lists for offdiagonal block mat assembly
                 self.jac_vp_ = [self.jac_vp]
                 self.jac_pv_ = []
@@ -2181,22 +2175,19 @@ class FluidmechanicsProblem(problem_base):
         self.K_vv.assemble()
         if self.num_dupl > 1:
             self.K_vp = fem.petsc.assemble_matrix(self.jac_vp_)
-            self.K_vp.assemble()
             self.K_pv = fem.petsc.assemble_matrix(self.jac_pv_)
-            self.K_pv.assemble()
         else:
             self.K_vp = fem.petsc.assemble_matrix(self.jac_vp)
-            self.K_vp.assemble()
             self.K_pv = fem.petsc.assemble_matrix(self.jac_pv)
-            self.K_pv.assemble()
+        self.K_vp.assemble()
+        self.K_pv.assemble()
 
         if self.stabilization is not None:
             if self.num_dupl > 1:
                 self.K_pp = fem.petsc.assemble_matrix(self.jac_pp_)
-                self.K_pp.assemble()
             else:
                 self.K_pp = fem.petsc.assemble_matrix(self.jac_pp)
-                self.K_pp.assemble()
+            self.K_pp.assemble()
         else:
             self.K_pp = None
 

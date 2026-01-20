@@ -23,7 +23,7 @@ def main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 128,256
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_degM",
+        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_NEW64alpha",
         "write_initial_fields": True,
         "report_conservation_properties": True,
     }
@@ -78,31 +78,36 @@ def main():
 
     FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
 
-    # fluid1 is bubble, fluid2 is surrounding
-    # TODO: How is M chosen in paper?
+    # fluid1 is bubble, fluid2 is surrounding (in contrast to paper!)
     if case==1:
         rho1 = 100.0
         rho2 = 1000.0
         eta1 = 1.0
         eta2 = 10.0
-        sig = 24.5
-        M0 = 0.5e-3
+        sig = 24.5 # surface energy density coefficient
+        gamma = 1e-3
     elif case==2:
         rho1 = 1.0
         rho2 = 1000.0
         eta1 = 0.1
         eta2 = 1.0
-        sig = 1.96
-        M0 = 1e-3
+        sig = 1.96 # surface energy density coefficient
+        gamma = 1e-3
     else:
         raise ValueError("Unknown case.")
+
+    alpha = (rho1-rho2)/(rho1+rho2)
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
-
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate", "M0": M0*eps, "D": sig/eps},
-                          "params_cahnhilliard": {"lambda": sig*eps}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
+                                                  "epsilon": 0.0,
+                                                  "exponent": 2.0,
+                                                  "M0": gamma*eps,      # Mobility [m^5/(Pa s)]
+                                                  "D": sig/eps,         # Bulk free-energy parameter [Pa/m^3]
+                                                  "kappa": sig*eps,     # Gradient energy coefficient [Pa/m]
+                                                  "alpha": alpha}}}
 
     class locate_top_bottom:
         def evaluate(self, x):

@@ -92,6 +92,8 @@ class FluidmechanicsPhasefieldProblem(problem_base):
 
         self.pbp.fluidvar["v"] = self.pbf.v
         self.pbp.fluidvar["v_old"] = self.pbf.v_old
+        self.pbp.fluidvar["p"] = self.pbf.p
+        self.pbp.fluidvar["p_old"] = self.pbf.p_old
 
         self.set_coupling_parameters()
 
@@ -175,6 +177,10 @@ class FluidmechanicsPhasefieldProblem(problem_base):
             self.weakform_lin_pphi.append(ufl.derivative(self.pbf.weakform_p[n], self.pbp.phi, self.pbp.dphi))
         # derivative of phase field w.r.t. fluid velocity
         self.weakform_lin_phiv = ufl.derivative(self.pbp.weakform_phi, self.pbf.v, self.pbf.dv)
+        # derivative of phase field w.r.t. fluid pressure (present in some formulations...)
+        self.weakform_lin_phip = []
+        for j in range(self.pbf.num_dupl):
+            self.weakform_lin_phip.append(ufl.derivative(self.pbp.weakform_phi, self.pbf.p_[j], self.pbf.dp_[j]))
 
     def set_problem_residual_jacobian_forms(self, pre=False):
         # fluid + pahsefield
@@ -196,9 +202,12 @@ class FluidmechanicsPhasefieldProblem(problem_base):
 
         if not bool(self.pbf.io.duplicate_mesh_domains):
             self.weakform_lin_pphi = sum(self.weakform_lin_pphi)
+            self.weakform_lin_phip = sum(self.weakform_lin_phip)
 
         self.jac_pphi = fem.form(self.weakform_lin_pphi, entity_maps=self.io.entity_maps)
+        self.jac_phip = fem.form(self.weakform_lin_phip, entity_maps=self.io.entity_maps)
         if self.pbf.num_dupl > 1:
+            self.jac_phip_ = [self.jac_phip]
             self.jac_pphi_ = []
             for j in range(self.pbf.num_dupl):
                 self.jac_pphi_.append([self.jac_pphi[j]])
@@ -220,9 +229,12 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.K_phiv.assemble()
         if self.pbf.num_dupl > 1:
             self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi_)
+            self.K_phip = fem.petsc.assemble_matrix(self.jac_phip_)
         else:
             self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi)
+            self.K_phip = fem.petsc.assemble_matrix(self.jac_phip)
         self.K_pphi.assemble()
+        self.K_phip.assemble()
 
     def assemble_residual(self, t, subsolver=None):
         self.pbf.assemble_residual(t)
@@ -285,6 +297,16 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.K_phiv.assemble()
 
         self.K_list[2][0] = self.K_phiv
+
+        # derivative of phase field w.r.t. fluid pressure (for some formulations...)
+        self.K_phip.zeroEntries()
+        if self.pbf.num_dupl > 1:
+            fem.petsc.assemble_matrix(self.K_phip, self.jac_phip_, [])
+        else:
+            fem.petsc.assemble_matrix(self.K_phip, self.jac_phip, [])
+        self.K_phip.assemble()
+
+        self.K_list[2][1] = self.K_phip
 
     def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable

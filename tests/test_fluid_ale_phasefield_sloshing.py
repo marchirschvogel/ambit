@@ -118,8 +118,7 @@ def test_main():
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps},
-                          "params_cahnhilliard": {"lambda": sig*eps}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps, "kappa": sig*eps}}}
 
     MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}}}
 
