@@ -35,7 +35,7 @@ class constitutive:
     """ TeX:
     \boldsymbol{\sigma} = -p \boldsymbol{I} + 2\eta\,\frac{1}{2}(\nabla\boldsymbol{v} + \left(\nabla\boldsymbol{v})^{\mathrm{T}}\right) + \left(\zeta-\frac{2}{d}\eta\right)(\nabla\cdot\boldsymbol{v})\boldsymbol{I}
     """
-    def sigma(self, v_, p_, F=None, phi=None):
+    def sigma(self, v_, p_, F=None, chi=None):
         shearrate_ = self.kin.shearrate(v_, F=F)
         volstrainrate_ = self.kin.volstrainrate(v_, F=F)
 
@@ -49,7 +49,7 @@ class constitutive:
             matparams_m = self.matparams[m]
 
             if matlaw == "newtonian":
-                stress += mat.newtonian(matparams_m, phi=phi)
+                stress += mat.newtonian(matparams_m, chi=chi)
 
             elif matlaw == "inertia":
                 # density is added to kinetic virtual power

@@ -89,6 +89,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.pbf.phasevar["phi_old"] = self.pbp.phi_old
         self.pbf.phasevar["phidot"] = self.pbp.phidot_expr
         self.pbf.phasevar["phidot_old"] = self.pbp.phidot_old
+        self.pbf.phasevar["phi_range"] = self.pbp.phi_range
 
         self.pbp.fluidvar["v"] = self.pbf.v
         self.pbp.fluidvar["v_old"] = self.pbf.v_old
@@ -309,49 +310,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.K_list[2][1] = self.K_phip
 
     def get_solver_index_sets(self, isoptions={}):
-        if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
-            vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
-            vvec_ls = self.rom.V.getLocalSize()[1]
-        else:
-            vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
-            vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
-
-        offset_v = (
-            vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
-        )
-        iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
-
-        if isoptions["rom_to_new"]:
-            iset_r = PETSc.IS().createGeneral(self.rom.im_rom_r, comm=self.comm)
-            iset_v = iset_v.difference(iset_r)  # subtract
-
-        offset_p = offset_v + vvec_ls
-        iset_p = PETSc.IS().createStride(
-            self.pbf.p.x.petsc_vec.getLocalSize(),
-            first=offset_p,
-            step=1,
-            comm=self.comm,
-        )
-
-        offset_d = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
-        iset_d = PETSc.IS().createStride(
-            self.pba.d.x.petsc_vec.getLocalSize(),
-            first=offset_d,
-            step=1,
-            comm=self.comm,
-        )
-
-        if isoptions["ale_to_v"]:
-            iset_v = iset_v.expand(iset_d)  # add ALE to velocity block
-
-        if isoptions["rom_to_new"]:
-            ilist = [iset_v, iset_p, iset_r, iset_d]
-        else:
-            ilist = [iset_v, iset_p, iset_d]
-
-        if isoptions["ale_to_v"]:
-            ilist.pop(-1)
-
+        raise RuntimeError("Index set retrieval not yet implemented!")
         return ilist
 
     ### now the base routines for this problem
@@ -449,10 +408,29 @@ class FluidmechanicsPhasefieldSolver(solver_base):
                 fem.form(weakform_a, entity_maps=self.pb.io.entity_maps),
                 fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps),
             )
-            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
+            self.solnln.solve_consistent_init(res_a, jac_aa, self.pb.pbf.a_old)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
+
+        # TODO: Check if reasonable!
+        # if self.pb.pbase.restart_step == 0:
+        #     # solve initial CH state mu_0
+        #     ts = time.time()
+        #     utilities.print_status(
+        #         "Setting forms and solving for consistent initial potential...",
+        #         self.pb.pbase.comm,
+        #         e=" ",
+        #     )
+        #     # weak jacobian form at initial state for consistent initial potential solve
+        #     weakform_lin_mumu = ufl.derivative(self.pb.pbp.potential_old, self.pb.pbp.mu_old, self.pb.pbp.dmu)  # actually linear in mu_old
+
+        #     # solve for consistent initial potential mu_old
+        #     res_mu, jac_mumu = fem.form(self.pb.pbp.potential_old), fem.form(weakform_lin_mumu)
+        #     self.solnln.solve_consistent_init(res_mu, jac_mumu, self.pb.pbp.mu_old)
+
+        #     te = time.time() - ts
+        #     utilities.print_status("t = %.4f s" % (te), self.pb.pbase.comm)
 
     def solve_nonlinear_problem(self, t):
         self.solnln.newton(t)

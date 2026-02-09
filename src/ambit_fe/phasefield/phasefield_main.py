@@ -59,6 +59,8 @@ class PhasefieldProblem(problem_base):
         self.is_ale = is_ale
         self.is_advected = is_advected
 
+        self.phi_range = fem_params.get("phi_range", [0.0, 1.0])
+
         # number of distinct domains (each one has to be assigned a own material model)
         self.num_domains = len(constitutive_models)
         # # for FSI, we want to specify the subdomains
@@ -153,7 +155,7 @@ class PhasefieldProblem(problem_base):
         self.ma = []
         for n in range(self.num_domains):
             self.ma.append(
-                phasefield_constitutive.constitutive(self.constitutive_models["MAT" + str(n + 1)])
+                phasefield_constitutive.constitutive(self.constitutive_models["MAT" + str(n + 1)], phi_range=self.phi_range)
             )
 
         # initialize pahse field (Cahn-Hilliard) variational form class
@@ -443,6 +445,24 @@ class PhasefieldSolver(solver_base):
 
     def solve_initial_state(self):
         pass
+        # TODO: Check if reasonable!
+        # # solve initial mu state
+        # if self.pb.pbase.restart_step == 0:
+        #     ts = time.time()
+        #     utilities.print_status(
+        #         "Setting forms and solving for consistent initial potential...",
+        #         self.pb.pbase.comm,
+        #         e=" ",
+        #     )
+        #     # weak jacobian form at initial state for consistent initial potential solve
+        #     weakform_lin_mumu = ufl.derivative(self.pb.potential_old, self.pb.mu_old, self.pb.dmu)  # actually linear in mu_old
+
+        #     # solve for consistent initial potential mu_old
+        #     res_mu, jac_mumu = fem.form(self.pb.potential_old), fem.form(weakform_lin_mumu)
+        #     self.solnln.solve_consistent_init(res_mu, jac_mumu, self.pb.mu_old)
+
+        #     te = time.time() - ts
+        #     utilities.print_status("t = %.4f s" % (te), self.pb.pbase.comm)
 
     def solve_nonlinear_problem(self, t):
         self.solnln.newton(t)

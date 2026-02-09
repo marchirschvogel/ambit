@@ -158,7 +158,7 @@ def check_params_fem_ale(params):
 
 
 def check_params_fem_phasefield(params):
-    valid_params = ["order_phi", "order_mu", "quad_degree"]
+    valid_params = ["order_phi", "order_mu", "quad_degree", "phi_range"]
 
     for k in params.keys():
         if k not in valid_params:

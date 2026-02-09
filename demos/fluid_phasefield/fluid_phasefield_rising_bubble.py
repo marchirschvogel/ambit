@@ -13,7 +13,7 @@ from pathlib import Path
 def main():
     basepath = str(Path(__file__).parent.absolute())
 
-    # cases (1,2) from Eikelder et al. (2024)
+    # cases (1,2) from Eikelder et al. (2024), Brunk and Eikelder (2026)
     case = 1
 
     IO_PARAMS = {
@@ -23,13 +23,13 @@ def main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 128,256
         "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_NEW64alpha",
+        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_V5_fac8_theta1.0",
         "write_initial_fields": True,
         "report_conservation_properties": True,
     }
 
     h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0]
-    eps = 1.28*h
+    eps = 0.64*h ## 1.28*h, 0.64*h
 
     class expr1:
         def __init__(self):
@@ -61,52 +61,53 @@ def main():
         "catch_max_inc_value": 1e12,
     }
 
-    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5,
+    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 1.,
                          "fluid_governing_type": "navierstokes_transient",
                          "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
                          "continuity_at_midpoint": True} # Should use midpoint if time derivative (drho/dt) is involved...
+
     TIME_PARAMS_PF = {"timint": "ost",
-                      "theta_ost": 0.5,
+                      "theta_ost": 1.,
                       "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
                       "potential_at_midpoint": False}
 
 
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
-                        "quad_degree": 5,
+                        "quad_degree": 9,
                         "fluid_formulation": "conservative"}
 
-    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
+    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 9, "phi_range" : [-1.0, 1.0]}
 
-    # fluid1 is bubble, fluid2 is surrounding (in contrast to paper!)
+    # fluid1 is surrounding, fluid2 is bubble
     if case==1:
-        rho1 = 100.0
-        rho2 = 1000.0
-        eta1 = 1.0
-        eta2 = 10.0
-        sig = 24.5 # surface energy density coefficient
-        gamma = 1e-3
-    elif case==2:
-        rho1 = 1.0
-        rho2 = 1000.0
-        eta1 = 0.1
+        rho1 = 1000.0
+        rho2 = 100.0
+        eta1 = 10.0
         eta2 = 1.0
+        sig = 24.5 # surface energy density coefficient
+    elif case==2:
+        rho1 = 1000.0
+        rho2 = 1.0
+        eta1 = 1.0
+        eta2 = 0.1
         sig = 1.96 # surface energy density coefficient
-        gamma = 1e-3
     else:
         raise ValueError("Unknown case.")
 
     alpha = (rho1-rho2)/(rho1+rho2)
+    sigtilde = 3.*sig/(2.*np.sqrt(2.))
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
                                                   "epsilon": 0.0,
+                                                  "a": -1.,"b": 1.,
                                                   "exponent": 2.0,
-                                                  "M0": gamma*eps,      # Mobility [m^5/(Pa s)]
-                                                  "D": sig/eps,         # Bulk free-energy parameter [Pa/m^3]
-                                                  "kappa": sig*eps,     # Gradient energy coefficient [Pa/m]
+                                                  "M0": 8. * 0.1*eps**2.0,   # Mobility [m^5/(Pa s)]
+                                                  "D": 8. * sigtilde/(4.*eps),         # Bulk free-energy parameter [Pa/m^3]
+                                                  "kappa": sigtilde*eps,     # Gradient energy coefficient [Pa/m]
                                                   "alpha": alpha}}}
 
     class locate_top_bottom:

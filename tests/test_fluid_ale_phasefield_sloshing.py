@@ -107,11 +107,11 @@ def test_main():
         "coupling_ale_fluid": {"locator": locate()}, # no-slip at moving ALE boundary
     }
 
-    # fluid1 water, fluid2 oil
-    rho1 = 1000.0
-    rho2 = 700.0
-    eta1 = 0.001
-    eta2 = 0.1
+    # fluid1 oil, fluid2 water
+    rho1 = 700.0
+    rho2 = 1000.0
+    eta1 = 0.1
+    eta2 = 0.001
     sig = 100.0
     M0 = 1e-3
 

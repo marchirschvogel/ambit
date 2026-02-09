@@ -17,7 +17,7 @@ Phase field/Cahn-Hilliard constitutive class
 
 
 class constitutive:
-    def __init__(self, materials):
+    def __init__(self, materials, phi_range=[0.0, 1.0]):
         self.matmodels = []
         for i in range(len(materials.keys())):
             self.matmodels.append(list(materials.keys())[i])
@@ -26,13 +26,15 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
+        self.phi_range = phi_range
+
     # diffusive flux
     def diffusive_flux(self, mu_, phi_, p=None, F=None):
         dim = len(ufl.grad(mu_)) # dimension of space
 
         Jflux = ufl.constantvalue.zero(dim)
 
-        mat_flux = materiallaw_flux(mu_, phi_)
+        mat_flux = materiallaw_flux(mu_, phi_, a=self.phi_range[0], b=self.phi_range[1])
 
         m = 0
         for matlaw in self.matmodels:
@@ -54,7 +56,7 @@ class constitutive:
 
         dpsi_dphi = ufl.as_ufl(0)
 
-        mat = materiallaw(phi_)
+        mat = materiallaw(phi_, a=self.phi_range[0], b=self.phi_range[1])
 
         m = 0
         for matlaw in self.matmodels:

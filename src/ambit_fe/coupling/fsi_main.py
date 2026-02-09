@@ -957,7 +957,7 @@ class FSISolver(solver_base):
                 fem.form(weakform_a_solid, entity_maps=self.pb.io.entity_maps),
                 fem.form(weakform_lin_aa_solid, entity_maps=self.pb.io.entity_maps),
             )
-            self.solnln.solve_consistent_ini_acc(res_a_solid, jac_aa_solid, self.pb.pbs.a_old)
+            self.solnln.solve_consistent_init(res_a_solid, jac_aa_solid, self.pb.pbs.a_old)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
@@ -998,7 +998,7 @@ class FSISolver(solver_base):
                 fem.form(weakform_a_fluid, entity_maps=self.pb.io.entity_maps),
                 fem.form(weakform_lin_aa_fluid, entity_maps=self.pb.io.entity_maps),
             )
-            self.solnln.solve_consistent_ini_acc(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
+            self.solnln.solve_consistent_init(res_a_fluid, jac_aa_fluid, self.pb.pbf.a_old)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)

@@ -1206,7 +1206,7 @@ class IO_fluid(IO):
                     elif res == "cauchystress":
                         stressfuncs = []
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.v, pb.p, F=pb.alevar["Fale"], phi=pb.phasevar["phi"]))
+                            stressfuncs.append(pb.ma[n].sigma(pb.v, pb.p, F=pb.alevar["Fale"], chi=pb.phasevar["chi"]))
                         cauchystress = project(
                             stressfuncs,
                             pb.Vd_tensor,
@@ -1288,7 +1288,7 @@ class IO_fluid(IO):
                         for n in range(pb.num_domains):
                             pwfuncs.append(
                                 ufl.inner(
-                                    pb.ma[n].sigma(pb.v, pb.p, F=pb.alevar["Fale"], phi=pb.phasevar["phi"]),
+                                    pb.ma[n].sigma(pb.v, pb.p, F=pb.alevar["Fale"], chi=pb.phasevar["chi"]),
                                     pb.ki.shearrate(pb.v, F=pb.alevar["Fale"]),
                                 )
                             )

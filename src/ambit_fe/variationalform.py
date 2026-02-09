@@ -76,9 +76,9 @@ class variationalform_base:
 
     # body force external virtual work
     # TeX: \int\limits_{\Omega_{0}} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{u}\,\mathrm{d}V
-    def deltaW_ext_bodyforce(self, func, funcdir, rho, ddomain, F=None, phi=None, scale_dens=False):
+    def deltaW_ext_bodyforce(self, func, funcdir, rho, ddomain, F=None, chi=None, scale_dens=False):
         if scale_dens:
-            fac = self.get_density(rho, phi=phi)
+            fac = self.get_density(rho, chi=chi)
         else:
             fac = ufl.as_ufl(1.)
         if F is not None:
@@ -331,8 +331,11 @@ class variationalform_base:
 
 
     # get the density expression - constant or multi-phase-like
-    def get_density(self, rho, phi=None):
-        if phi is not None:
-            return phi * rho[0] + (1.0 - phi) * rho[1]
+    def get_density(self, rho, chi=None):
+        if chi is not None:
+            """ TeX:
+            \chi(\phi) = \frac{\phi-a}{b-a}
+            """
+            return rho[0] * (1.0 - chi) + rho[1] * chi
         else:
             return rho[0]

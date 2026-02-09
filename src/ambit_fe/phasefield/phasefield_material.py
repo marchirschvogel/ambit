@@ -10,20 +10,26 @@ import ufl
 
 
 class materiallaw:
-    def __init__(self, phi):
+    def __init__(self, phi, a=0.0, b=1.0):
         self.phi = phi
+        self.a = a
+        self.b = b
 
     def mat_cahnhilliard(self, params):
         D = params["D"]
-        psi = D * self.phi**2.0 * (1.0 - self.phi)**2.0
+
+        # generalized double-well potential with minima at a and b
+        psi = D * (self.a-self.phi)**2.0 * (self.b-self.phi)**2.0
 
         return ufl.diff(psi,self.phi)
 
 
 class materiallaw_flux:
-    def __init__(self, mu, phi):
+    def __init__(self, mu, phi, a=0.0, b=1.0):
         self.mu = mu
         self.phi = phi
+        self.a = a
+        self.b = b
 
     def mat_cahnhilliard_flux(self, params, p=None, F=None):
         mobility = params.get("mobility", "constant")
@@ -33,8 +39,8 @@ class materiallaw_flux:
         elif mobility=="degenerate":
             eps = params.get("epsilon", 0.0)
             exp = params.get("exponent", 1.0)
-            # degenerate mobility, vanishing in the single-fluid regime (phi=0 or phi=1)
-            M = M0 * (self.phi**exp * (1.0 - self.phi)**exp + eps)
+            # degenerate mobility, vanishing in the single-fluid regime (phi=a or phi=b)
+            M = M0 * ((-1.0)**exp * (self.a-self.phi)**exp * (self.b-self.phi)**exp + eps)
         else:
             raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")
 

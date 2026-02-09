@@ -667,7 +667,7 @@ class boundary_cond:
         return w, idmem, bstress, bstrainenergy, bintpower
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def bodyforce(self, bcdict, dx_, rho, F=None, phi=None, funcs_to_update=None, funcsexpr_to_update=None):
+    def bodyforce(self, bcdict, dx_, rho, F=None, chi=None, funcs_to_update=None, funcsexpr_to_update=None):
         w = ufl.as_ufl(0)
 
         for b in bcdict:
@@ -717,7 +717,7 @@ class boundary_cond:
             scale_dens = b.get("scale_density", False)
 
             for i in range(len(b["id"])):
-                w += self.vf.deltaW_ext_bodyforce(func, func_dir, rho[b["id"][i]-1], dx_(b["id"][i]), F=F, phi=phi, scale_dens=scale_dens)
+                w += self.vf.deltaW_ext_bodyforce(func, func_dir, rho[b["id"][i]-1], dx_(b["id"][i]), F=F, chi=chi, scale_dens=scale_dens)
 
         return w
 

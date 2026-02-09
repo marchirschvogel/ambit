@@ -85,13 +85,13 @@ def test_main():
                         "quad_degree": 5,
                         "fluid_formulation": "conservative"}
 
-    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
+    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [0.0, 1.0]}
 
-    # fluid1 is bubble, fluid2 is surrounding
-    rho1 = 100.0
-    rho2 = 1000.0
-    eta1 = 1.0
-    eta2 = 10.0
+    # fluid1 is surrounding, fluid2 is bubble
+    rho1 = 1000.0
+    rho2 = 100.0
+    eta1 = 10.0
+    eta2 = 1.0
     sig = 24.5
     M0 = 1e-3
 
@@ -99,7 +99,9 @@ def test_main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps, "kappa": sig*eps}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps,
+                                                  "kappa": sig*eps,
+                                                  "mobility": "degenerate"}}}
 
     class locate_top_bottom:
         def evaluate(self, x):
@@ -147,17 +149,15 @@ def test_main():
     check_node = []
     check_node.append(np.array([0.5, 0.5, 0.0]))
 
-    v_corr, p_corr = np.zeros(2 * len(check_node)), np.zeros(len(check_node))
+    v_corr = np.zeros(2 * len(check_node))
     phi_corr, mu_corr = np.zeros(len(check_node)), np.zeros(len(check_node))
 
     # correct results
     v_corr[0] = 0.0  # x
-    v_corr[1] = 1.6615697216087362E-02 # y
+    v_corr[1] = 1.7471072197792956E-02 # y
 
-    p_corr[0] = -8.6222904206797044E+04
-
-    phi_corr[0] = 1.0020173309634144E+00
-    mu_corr[0] = -1.0057964239960134E-01
+    phi_corr[0] = 9.9986135095123807E-01
+    mu_corr[0] = 1.2920101313335828E+00
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,
@@ -169,17 +169,7 @@ def test_main():
         nm="v",
         readtol=1e-4,
     )
-    # check2 = ambit_fe.resultcheck.results_check_node(
-    #     problem.mp.pbf.p,
-    #     check_node,
-    #     p_corr,
-    #     problem.mp.pbf.V_p,
-    #     problem.mp.comm,
-    #     tol=tol,
-    #     nm="p",
-    #     readtol=1e-4,
-    # )
-    check3 = ambit_fe.resultcheck.results_check_node(
+    check2 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbp.phi,
         check_node,
         phi_corr,
@@ -189,7 +179,7 @@ def test_main():
         nm="phi",
         readtol=1e-4,
     )
-    check4 = ambit_fe.resultcheck.results_check_node(
+    check3 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbp.mu,
         check_node,
         mu_corr,
@@ -200,7 +190,7 @@ def test_main():
         readtol=1e-4,
     )
 
-    success = ambit_fe.resultcheck.success_check([check1, check3, check4], problem.mp.comm)
+    success = ambit_fe.resultcheck.success_check([check1, check2, check3], problem.mp.comm)
 
     if not success:
         raise RuntimeError("Test failed!")

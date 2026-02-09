@@ -453,7 +453,7 @@ class FluidmechanicsAlePhasefieldSolver(solver_base):
                 fem.form(weakform_a, entity_maps=self.pb.io.entity_maps),
                 fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps),
             )
-            self.solnln.solve_consistent_ini_acc(res_a, jac_aa, self.pb.pbf.a_old)
+            self.solnln.solve_consistent_init(res_a, jac_aa, self.pb.pbf.a_old)
 
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
