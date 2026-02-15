@@ -675,7 +675,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             # set zeros at DBC entries
             fem.set_bc(
                 self.k_vs_vec[i],
-                self.pbf.bc.dbcs,
+                self.pbf.dbcs,
                 x0=self.pbf.v.x.petsc_vec,
                 alpha=0.0,
             )

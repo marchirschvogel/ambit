@@ -140,13 +140,13 @@ class FSIProblem(problem_base):
 
             if self.remove_mutual_solid_fluid_bcs:  # TODO: Seems to not work properly - investigate!
 
-                ndbc_solid, ndbc_fluid = len(self.pbs.bc.dbcs), len(self.pbf.bc.dbcs)
+                ndbc_solid, ndbc_fluid = len(self.pbs.dbcs), len(self.pbf.dbcs)
 
                 dbcs_dofs_solid_all, dbcs_dofs_fluid_all = [], []
                 for k in range(ndbc_solid):
-                    dbcs_dofs_solid_all.append(self.pbs.bc.dbcs[k].dof_indices()[0])
+                    dbcs_dofs_solid_all.append(self.pbs.dbcs[k].dof_indices()[0])
                 for k in range(ndbc_fluid):
-                    dbcs_dofs_fluid_all.append(self.pbf.bc.dbcs[k].dof_indices()[0])
+                    dbcs_dofs_fluid_all.append(self.pbf.dbcs[k].dof_indices()[0])
 
                 dbcs_dofs_solid_all_glob, dbcs_dofs_fluid_all_glob = [], []
                 for k in range(ndbc_solid):
@@ -188,12 +188,12 @@ class FSIProblem(problem_base):
                     for i in range(len(dbcs_verts_solid_all_new[k])):
                         dbcs_verts_solid_all_new[k][i] = int(dbcs_dofs_solid_all_new_tmp[k][bs*i] / bs)
 
-                self.pbs.bc.dbcs = []
+                self.pbs.dbcs = []
                 for k in range(ndbc_solid):
                     # if common_dbcs_glob[k].size > 0: # ...
                     self.pbs.bc_dict["dirichlet"][k]['dir'] += '_by_dofs'
                     self.pbs.bc_dict["dirichlet"][k]['dofs'] = dbcs_verts_solid_all_new[k] # vertices!
-                self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"])
+                self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"], self.pbs.dbcs)
 
                 raise RuntimeError("Under development!")
 
@@ -356,20 +356,20 @@ class FSIProblem(problem_base):
             # now add the DBCs: pay attention to order... first u=uf, then the others... hence re-set!
             if bool(self.dbcs_coup_fluid_solid):
                 # store DBCs without those from fluid
-                self.pbs.bc.dbcs_nofluid = []
-                for k in self.pbs.bc.dbcs:
-                    self.pbs.bc.dbcs_nofluid.append(k)
-                self.pbs.bc.dbcs = []
-                self.pbs.bc.dbcs += self.dbcs_coup_fluid_solid
+                self.pbs.dbcs_nofluid = []
+                for k in self.pbs.dbcs:
+                    self.pbs.dbcs_nofluid.append(k)
+                self.pbs.dbcs = []
+                self.pbs.dbcs += self.dbcs_coup_fluid_solid
                 # Dirichlet boundary conditions
                 if "dirichlet" in self.pbs.bc_dict.keys():
-                    self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"])
+                    self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"], self.pbs.dbcs)
 
                 # Here, we remove any DBC indices from the interface
                 # NOTE: Do not use PETSc's index set "difference" method as it will not preserve the specific ordering needed!
 
                 self.dbc_dofs_solid_global = []
-                for k in range(len(self.pbs.bc.dbcs_nofluid)):
+                for k in range(len(self.pbs.dbcs_nofluid)):
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="all": sub=None
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
@@ -388,7 +388,7 @@ class FSIProblem(problem_base):
                 self.fdofs_solid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
                 self.dbc_dofs_fluid_global = []
-                for k in range(len(self.pbf.bc.dbcs)):
+                for k in range(len(self.pbf.dbcs)):
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="all": sub=None
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
@@ -539,14 +539,14 @@ class FSIProblem(problem_base):
 
             # create from solid matrix and only keep the necessary columns
             # need to assemble here to get correct sparsity pattern when doing the column product
-            self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)
+            self.K_uu_work = fem.petsc.assemble_matrix(self.pbs.jac_uu, self.pbs.dbcs_nofluid)
             self.K_uu_work.assemble()
             # now multiply to grep out the correct columns / rows
             self.K_uv = self.K_uu_work.matMult(self.Diag_sol)
             self.K_vu = self.Diag_sol.transposeMatMult(self.K_uu_work)
 
             if self.pbs.incompressible_2field:
-                self.K_up_work = fem.petsc.assemble_matrix(self.pbs.jac_up, self.pbs.bc.dbcs_nofluid)
+                self.K_up_work = fem.petsc.assemble_matrix(self.pbs.jac_up, self.pbs.dbcs_nofluid)
                 self.K_up_work.assemble()
                 self.K_vps = self.Diag_solp.transposeMatMult(self.K_up_work)
                 # self.K_vps.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)
@@ -658,10 +658,10 @@ class FSIProblem(problem_base):
     def assemble_stiffness_coupling(self, t, subsolver=None):
         if self.fsi_system == "neumann_neumann":
             self.K_ul.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_ul, self.jac_ul, self.pbs.bc.dbcs)
+            fem.petsc.assemble_matrix(self.K_ul, self.jac_ul, self.pbs.dbcs)
             self.K_ul.assemble()
             self.K_vl.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_vl, self.jac_vl, self.pbf.bc.dbcs)
+            fem.petsc.assemble_matrix(self.K_vl, self.jac_vl, self.pbf.dbcs)
             self.K_vl.assemble()
             # LM
             self.K_lu.zeroEntries()
@@ -674,7 +674,7 @@ class FSIProblem(problem_base):
         if self.fsi_system == "neumann_dirichlet":
             # first do stiffness from Dirichlet conditions fluid-to-solid
             self.K_uu_work.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_uu_work, self.pbs.jac_uu, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
+            fem.petsc.assemble_matrix(self.K_uu_work, self.pbs.jac_uu, self.pbs.dbcs_nofluid)  # need DBCs w/o fluid here
             self.K_uu_work.assemble()
 
             # we apply u_fluid to solid, hence get du_fluid/dv
@@ -704,7 +704,7 @@ class FSIProblem(problem_base):
 
             if self.pbs.incompressible_2field:
                 self.K_up_work.zeroEntries()
-                fem.petsc.assemble_matrix(self.K_up_work, self.pbs.jac_up, self.pbs.bc.dbcs_nofluid)  # need DBCs w/o fluid here
+                fem.petsc.assemble_matrix(self.K_up_work, self.pbs.jac_up, self.pbs.dbcs_nofluid)  # need DBCs w/o fluid here
                 self.K_up_work.assemble()
 
                 self.Diag_solp.transposeMatMult(self.K_up_work, result=self.K_vps)

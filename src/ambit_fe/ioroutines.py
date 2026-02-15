@@ -208,7 +208,7 @@ class IO:
         if bcdict is not None:
             id_=0
             for k in bcdict.keys():
-                if k != "dirichlet": # treated differently (no integration measure needed)
+                if "dirichlet" not in k: # treated differently (no integration measure needed)
                     for i in range(len(bcdict[k])):
                         if "locator" in bcdict[k][i]:
                             id_+=1
@@ -1267,6 +1267,22 @@ class IO_fluid(IO):
                         strainenergy_membrane_out = fem.Function(pb.V_out_scalar, name=strainenergy_membrane.name)
                         strainenergy_membrane_out.interpolate(strainenergy_membrane)
                         self.resultsfiles[res].write_function(strainenergy_membrane_out, indicator)
+                    elif res == "density":
+                        densfuncs = []
+                        for n in range(pb.num_domains):
+                            densfuncs.append(pb.vf.get_density(pb.rho[n], chi=pb.phasevar["chi"]))
+                        dens_proj = project(
+                            densfuncs,
+                            pb.V_scalar,
+                            pb.dx,
+                            domids=pb.domain_ids,
+                            nm="Density",
+                            comm=self.comm,
+                            entity_maps=self.entity_maps,
+                        )
+                        dens_out = fem.Function(pb.V_out_scalar, name=dens_proj.name)
+                        dens_out.interpolate(dens_proj)
+                        self.resultsfiles[res].write_function(dens_out, indicator)
                     elif res == "internalpower_membrane":
                         pwfuncs = []
                         for n in range(len(pb.bintpower)):

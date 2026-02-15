@@ -51,12 +51,14 @@ class boundary_cond:
         # discontinuous scalar function space
         self.Vdisc_scalar = Vdisc_scalar
 
-        self.dbcs = []
-
         self.have_dirichlet_fileseries = False
 
     # set Dirichlet BCs (should probably be overloaded for problems that do not have vector variables...)
-    def dirichlet_bcs(self, bcdict):
+    def dirichlet_bcs(self, bcdict, dbcs, V_dbc=None):
+        # use V_field if no extra function space is given
+        if V_dbc is None:
+            V_dbc = self.V_field
+
         for d in bcdict:
             codim = d.get("codimension", self.dim - 1)
 
@@ -69,7 +71,7 @@ class boundary_cond:
             if codim == self.dim - 3:
                 mdata = self.io.mt_ssb
 
-            func = fem.Function(self.V_field)
+            func = fem.Function(V_dbc)
 
             if "curve" in d.keys():
                 assert "val" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
@@ -128,8 +130,8 @@ class boundary_cond:
                 ramp_curve = d.get("ramp_curve", None)
                 if ramp_curve is not None:
                     func_ramp, func_file = (
-                        fem.Function(self.V_field),
-                        fem.Function(self.V_field),
+                        fem.Function(V_dbc),
+                        fem.Function(V_dbc),
                     )
                     # first read file into function
                     self.io.readfunction(func_file, fle)
@@ -175,63 +177,63 @@ class boundary_cond:
 
             if d["dir"] == "all":
                 if "id" in d.keys():
-                    nodes_bc = fem.locate_dofs_topological(self.V_field, codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    nodes_bc = fem.locate_dofs_topological(V_dbc, codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
                     cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc = fem.locate_dofs_topological(self.V_field, codim, cells)
+                    nodes_bc = fem.locate_dofs_topological(V_dbc, codim, cells)
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
-                    nodes_bc = fem.locate_dofs_topological(self.V_field, codim, cells)
-                self.dbcs.append(fem.dirichletbc(func, nodes_bc))
+                    nodes_bc = fem.locate_dofs_topological(V_dbc, codim, cells)
+                dbcs.append(fem.dirichletbc(func, nodes_bc))
 
             elif d["dir"] == "x":
                 if "id" in d.keys():
-                    nodes_bc_x = fem.locate_dofs_topological(self.V_field.sub(0),codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0),codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
                     cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc_x = fem.locate_dofs_topological(self.V_field.sub(0), codim, cells)
+                    nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0), codim, cells)
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
-                    nodes_bc_x = fem.locate_dofs_topological(self.V_field.sub(0), codim, cells)
-                self.dbcs.append(fem.dirichletbc(func.sub(0), nodes_bc_x))
+                    nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0), codim, cells)
+                dbcs.append(fem.dirichletbc(func.sub(0), nodes_bc_x))
 
             elif d["dir"] == "y":
                 if "id" in d.keys():
-                    nodes_bc_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
                     cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, cells)
+                    nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, cells)
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
-                    nodes_bc_y = fem.locate_dofs_topological(self.V_field.sub(1), codim, cells)
-                self.dbcs.append(fem.dirichletbc(func.sub(1), nodes_bc_y))
+                    nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, cells)
+                dbcs.append(fem.dirichletbc(func.sub(1), nodes_bc_y))
 
             elif d["dir"] == "z":
                 if "id" in d.keys():
-                    nodes_bc_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
                     cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, cells)
+                    nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, cells)
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
-                    nodes_bc_z = fem.locate_dofs_topological(self.V_field.sub(2), codim, cells)
-                self.dbcs.append(fem.dirichletbc(func.sub(2), nodes_bc_z))
+                    nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, cells)
+                dbcs.append(fem.dirichletbc(func.sub(2), nodes_bc_z))
 
             elif d["dir"] == "all_by_dofs":
-                self.dbcs.append(fem.dirichletbc(func, d["dofs"]))
+                dbcs.append(fem.dirichletbc(func, d["dofs"]))
 
             elif d["dir"] == "x_by_dofs":
-                self.dbcs.append(fem.dirichletbc(func.sub(0), d["dofs"]))
+                dbcs.append(fem.dirichletbc(func.sub(0), d["dofs"]))
 
             elif d["dir"] == "y_by_dofs":
-                self.dbcs.append(fem.dirichletbc(func.sub(1), d["dofs"]))
+                dbcs.append(fem.dirichletbc(func.sub(1), d["dofs"]))
 
             elif d["dir"] == "z_by_dofs":
-                self.dbcs.append(fem.dirichletbc(func.sub(2), d["dofs"]))
+                dbcs.append(fem.dirichletbc(func.sub(2), d["dofs"]))
 
             else:
                 raise NameError("Unknown dir option for Dirichlet BC!")

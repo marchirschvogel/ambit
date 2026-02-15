@@ -68,7 +68,7 @@ def test_main():
         "maxiter":10,
         "tol_res": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
         "tol_inc": [1e-4, 1e16, 1e-4, 1e-4, 1e-4],
-        "divergence_continue": "PTC",
+        # "divergence_continue": "PTC",
         "k_ptc_initial": 100.0,
         "catch_max_inc_value": 1e12,
     }

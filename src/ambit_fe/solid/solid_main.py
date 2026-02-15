@@ -634,10 +634,11 @@ class SolidmechanicsProblem(problem_base):
             Vdisc_scalar=self.Vd_scalar,
         )
         self.bc_dict = bc_dict
+        self.dbcs = []
 
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"])
+            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
 
         # number of fields involved
         self.nfields = 1
@@ -1607,12 +1608,12 @@ class SolidmechanicsProblem(problem_base):
         fem.apply_lifting(
             self.r_u,
             [self.jac_uu],
-            [self.bc.dbcs],
+            [self.dbcs],
             x0=[self.u.x.petsc_vec],
             alpha=-1.0,
         )
         self.r_u.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_u, self.bc.dbcs, x0=self.u.x.petsc_vec, alpha=-1.0)
+        fem.set_bc(self.r_u, self.dbcs, x0=self.u.x.petsc_vec, alpha=-1.0)
 
         if self.incompressible_2field:
             # assemble pressure rhs vector
@@ -1630,13 +1631,13 @@ class SolidmechanicsProblem(problem_base):
     def assemble_stiffness(self, t, subsolver=None):
         # assemble system matrix
         self.K_uu.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_uu, self.jac_uu, self.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_uu, self.jac_uu, self.dbcs)
         self.K_uu.assemble()
 
         if self.incompressible_2field:
             # assemble system matrices
             self.K_up.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_up, self.jac_up, self.bc.dbcs)
+            fem.petsc.assemble_matrix(self.K_up, self.jac_up, self.dbcs)
             self.K_up.assemble()
 
             self.K_pu.zeroEntries()

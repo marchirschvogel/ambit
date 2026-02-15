@@ -184,14 +184,14 @@ class FluidmechanicsAleProblem(problem_base):
             self.fdofs_fluid_ale = meshutils.get_index_set(self.pba.V_d, self.comm, nodes_loc=nodes_fluid_ale)
             # now add the DBCs: pay attention to order... first d=uf, then the others... hence re-set!
             # store DBCs without those from fluid
-            self.pba.bc.dbcs_nofluid = []
-            for k in self.pba.bc.dbcs:
-                self.pba.bc.dbcs_nofluid.append(k)
-            self.pba.bc.dbcs = []
-            self.pba.bc.dbcs += dbcs_coup_fluid_ale
+            self.pba.dbcs_nofluid = []
+            for k in self.pba.dbcs:
+                self.pba.dbcs_nofluid.append(k)
+            self.pba.dbcs = []
+            self.pba.dbcs += dbcs_coup_fluid_ale
             # Dirichlet boundary conditions
             if "dirichlet" in self.pba.bc_dict.keys():
-                self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"])
+                self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"], self.pba.dbcs)
             self.have_dbc_fluid_ale = True
 
         # any DBC conditions that we want to set from ALE to fluid
@@ -214,14 +214,14 @@ class FluidmechanicsAleProblem(problem_base):
             self.fdofs_ale_fluid = meshutils.get_index_set(self.pbf.V_v, self.comm, nodes_loc=nodes_ale_fluid)
             # now add the DBCs: pay attention to order... first v=w, then the others... hence re-set!
             # store DBCs without those from ALE
-            self.pbf.bc.dbcs_noale = []
-            for k in self.pbf.bc.dbcs:
-                self.pbf.bc.dbcs_noale.append(k)
-            self.pbf.bc.dbcs = []
-            self.pbf.bc.dbcs += dbcs_coup_ale_fluid
+            self.pbf.dbcs_noale = []
+            for k in self.pbf.dbcs:
+                self.pbf.dbcs_noale.append(k)
+            self.pbf.dbcs = []
+            self.pbf.dbcs += dbcs_coup_ale_fluid
             # Dirichlet boundary conditions
             if "dirichlet" in self.pbf.bc_dict.keys():
-                self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict["dirichlet"])
+                self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict["dirichlet"], self.pbf.dbcs)
             self.have_dbc_ale_fluid = True
 
         # derivative of fluid momentum w.r.t. ALE displacement
@@ -376,7 +376,7 @@ class FluidmechanicsAleProblem(problem_base):
     def assemble_stiffness_coupling(self, t):
         if self.have_dbc_fluid_ale:
             self.K_dv_.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_dv_, self.pba.jac_dd, self.pba.bc.dbcs_nofluid)  # need DBCs w/o fluid here
+            fem.petsc.assemble_matrix(self.K_dv_, self.pba.jac_dd, self.pba.dbcs_nofluid)  # need DBCs w/o fluid here
             self.K_dv_.assemble()
             # multiply to get the relevant columns only
             self.K_dv_.matMult(self.Diag_ale, result=self.K_dv)
@@ -387,7 +387,7 @@ class FluidmechanicsAleProblem(problem_base):
             self.K_dv.scale(fac)
         if self.have_dbc_ale_fluid:
             self.K_vd_.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_vd_, self.pbf.jac_vv, self.pbf.bc.dbcs_noale)  # need DBCs w/o ALE here
+            fem.petsc.assemble_matrix(self.K_vd_, self.pbf.jac_vv, self.pbf.dbcs_noale)  # need DBCs w/o ALE here
             self.K_vd_.assemble()
             # multiply to get the relevant columns only
             self.K_vd_.matMult(self.Diag_fld, result=self.K_vd_add)
@@ -401,7 +401,7 @@ class FluidmechanicsAleProblem(problem_base):
 
         # derivative of fluid momentum w.r.t. ALE displacement
         self.K_vd.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_vd, self.jac_vd, self.pbf.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_vd, self.jac_vd, self.pbf.dbcs)
         self.K_vd.assemble()
         # add stiffness from ALE DBCs
         if self.have_dbc_ale_fluid:
@@ -412,9 +412,9 @@ class FluidmechanicsAleProblem(problem_base):
         # derivative of fluid continuity w.r.t. ALE displacement
         self.K_pd.zeroEntries()
         if self.pbf.num_dupl > 1:
-            fem.petsc.assemble_matrix(self.K_pd, self.jac_pd_, [])
+            fem.petsc.assemble_matrix(self.K_pd, self.jac_pd_, self.pbf.dbcs_pres)
         else:
-            fem.petsc.assemble_matrix(self.K_pd, self.jac_pd, [])
+            fem.petsc.assemble_matrix(self.K_pd, self.jac_pd, self.pbf.dbcs_pres)
         self.K_pd.assemble()
         self.K_list[1][2] = self.K_pd
 

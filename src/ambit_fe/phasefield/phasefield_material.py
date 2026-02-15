@@ -40,7 +40,7 @@ class materiallaw_flux:
             eps = params.get("epsilon", 0.0)
             exp = params.get("exponent", 1.0)
             # degenerate mobility, vanishing in the single-fluid regime (phi=a or phi=b)
-            M = M0 * ((-1.0)**exp * (self.a-self.phi)**exp * (self.b-self.phi)**exp + eps)
+            M = M0 * abs((self.a-self.phi)**exp * (self.b-self.phi)**exp + eps)
         else:
             raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")
 

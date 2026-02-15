@@ -329,13 +329,15 @@ class variationalform_base:
         else:
             raise ValueError("Unknown return type.")
 
-
     # get the density expression - constant or multi-phase-like
-    def get_density(self, rho, chi=None):
+    def get_density(self, rho, chi=None, cond=True):
         if chi is not None:
             """ TeX:
             \chi(\phi) = \frac{\phi-a}{b-a}
             """
-            return rho[0] * (1.0 - chi) + rho[1] * chi
+            if cond:
+                return ufl.conditional(ufl.gt(chi, 1.0), rho[1], ufl.conditional(ufl.lt(chi, 0.0), rho[0], rho[0] * (1.0 - chi) + rho[1] * chi))
+            else:
+                return rho[0] * (1.0 - chi) + rho[1] * chi
         else:
             return rho[0]

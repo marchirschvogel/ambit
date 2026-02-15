@@ -19,17 +19,22 @@ def main():
     IO_PARAMS = {
         "problem_type": "fluid_phasefield",
         "write_results_every": 1,
+        "write_restart_every": -1,
+        "restart_step": 0,
         "indicate_results_by": "step0",
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 128,256
-        "results_to_write": [["velocity", "pressure", "cauchystress"],["phase", "potential"]],
-        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_V5_fac8_theta1.0",
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 32,64   64,128   128,256
+        "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"]],
+        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_exp1.0_theta1.0_eps0.64",
         "write_initial_fields": True,
         "report_conservation_properties": True,
     }
 
+    # add elements in x direction to output name
+    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0])
+
     h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0]
-    eps = 0.64*h ## 1.28*h, 0.64*h
+    eps = 0.64*h # 1.28*h (Eikelder et al. (2024)), 0.64*h (Brunk and Eikelder (2026))
 
     class expr1:
         def __init__(self):
@@ -39,7 +44,8 @@ def main():
 
         def evaluate(self, x):
             d = np.sqrt( (x[0]-self.x_c[0])**2.0 + (x[1]-self.x_c[1])**2.0 + (x[2]-self.x_c[2])**2.0 )
-            val = 0.5*(1.0 + np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps)))
+            # val = 0.5*(1.0 + np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps)))  # if phi in [0,1]
+            val = np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps))  # if phi in [-1,1]
             return (
                 np.full(x.shape[1], val),
             )
@@ -57,17 +63,17 @@ def main():
         "tol_res": [1e-5, 1e-5, 1e-5, 1e-5],
         "tol_inc": [1e-3, 1e16, 1e-3, 1e-3],
         # "divergence_continue": "PTC",
-        "k_ptc_initial": 10.0,
+        "k_ptc_initial": 1.0,
         "catch_max_inc_value": 1e12,
     }
 
-    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 1.,
+    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 1.0,
                          "fluid_governing_type": "navierstokes_transient",
                          "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
                          "continuity_at_midpoint": True} # Should use midpoint if time derivative (drho/dt) is involved...
 
     TIME_PARAMS_PF = {"timint": "ost",
-                      "theta_ost": 1.,
+                      "theta_ost": 1.0,
                       "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
                       "potential_at_midpoint": False}
 
@@ -77,7 +83,8 @@ def main():
                         "quad_degree": 9,
                         "fluid_formulation": "conservative"}
 
-    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 9, "phi_range" : [-1.0, 1.0]}
+    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 9,
+                     "phi_range" : [-1.0, 1.0]}   # [-1.0, 1.0], [0.0, 1.0]
 
     # fluid1 is surrounding, fluid2 is bubble
     if case==1:
@@ -89,26 +96,26 @@ def main():
     elif case==2:
         rho1 = 1000.0
         rho2 = 1.0
-        eta1 = 1.0
+        eta1 = 1.0   # 10.0, 1.0 TODO: Ambiguity code (10.0) vs. papers (1.0)
         eta2 = 0.1
         sig = 1.96 # surface energy density coefficient
     else:
         raise ValueError("Unknown case.")
+    zeta = 0.0
 
-    alpha = (rho1-rho2)/(rho1+rho2)
+    alpha = (rho1-rho2)/(rho1+rho2) # TODO: Negative in Eikelder et al. (2024), Brunk and Eikelder (2026), but then not working!
     sigtilde = 3.*sig/(2.*np.sqrt(2.))
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2, "zeta1": zeta, "zeta2": zeta},
                                 "inertia": {"rho1": rho1, "rho2": rho2}}}
 
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
                                                   "epsilon": 0.0,
-                                                  "a": -1.,"b": 1.,
-                                                  "exponent": 2.0,
-                                                  "M0": 8. * 0.1*eps**2.0,   # Mobility [m^5/(Pa s)]
-                                                  "D": 8. * sigtilde/(4.*eps),         # Bulk free-energy parameter [Pa/m^3]
+                                                  "exponent": 1.0,
+                                                  "M0": 0.1*eps**2.0,   # Mobility [m^5/(Pa s)]
+                                                  "D": sigtilde/(4.*eps),         # Bulk free-energy parameter [Pa/m^3]
                                                   "kappa": sigtilde*eps,     # Gradient energy coefficient [Pa/m]
-                                                  "alpha": alpha}}}
+                                                  "alpha": alpha}}}   # Pressure factor in diffusive flux
 
     class locate_top_bottom:
         def evaluate(self, x):
@@ -126,9 +133,16 @@ def main():
         def evaluate(self, x):
             return np.full(x.shape[1], True, dtype=bool)
 
+    class locate_center:
+        def evaluate(self, x):
+            ctr_x = np.isclose(x[0], 0.5)
+            ctr_y = np.isclose(x[1], 1.0)
+            return np.logical_and(ctr_x, ctr_y)
+
     BC_DICT_FLUID = {
         "dirichlet" : [{"locator": locate_top_bottom(), "dir": "all", "val": 0.0},
                        {"locator": locate_left_right(), "dir": "x", "val": 0.0}],
+        "dirichlet_pres" : [{"locator": locate_center(), "dir": "all", "val": 0.0}],
         "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
     }
 

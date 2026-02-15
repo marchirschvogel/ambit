@@ -260,7 +260,7 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
     def assemble_stiffness_coupling(self, t):
         # derivative of phasefield w.r.t. ALE displacement
         self.K_phid.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_phid, self.jac_phid, self.pbp.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_phid, self.jac_phid, self.pbp.dbcs)
         self.K_phid.assemble()
 
         self.K_list[2][4] = self.K_phid

@@ -484,7 +484,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             # set zeros at DBC entries
             fem.set_bc(
                 self.k_us_vec[i],
-                self.pbs.bc.dbcs,
+                self.pbs.dbcs,
                 x0=self.pbs.u.x.petsc_vec,
                 alpha=0.0,
             )

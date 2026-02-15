@@ -181,10 +181,11 @@ class PhasefieldProblem(problem_base):
             V_field=self.V_phi,
         )
         self.bc_dict = bc_dict
+        self.dbcs = []
 
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"])
+            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
 
         # number of fields involved
         self.nfields = 2
@@ -320,12 +321,12 @@ class PhasefieldProblem(problem_base):
         fem.apply_lifting(
             self.r_phi,
             [self.jac_phiphi],
-            [self.bc.dbcs],
+            [self.dbcs],
             x0=[self.phi.x.petsc_vec],
             alpha=-1.0,
         )
         self.r_phi.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_phi, self.bc.dbcs, x0=self.phi.x.petsc_vec, alpha=-1.0)
+        fem.set_bc(self.r_phi, self.dbcs, x0=self.phi.x.petsc_vec, alpha=-1.0)
 
         with self.r_mu.localForm() as r_local:
             r_local.set(0.0)
@@ -338,11 +339,11 @@ class PhasefieldProblem(problem_base):
     def assemble_stiffness(self, t, subsolver=None):
         # assemble system matrix
         self.K_phiphi.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_phiphi, self.jac_phiphi, self.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_phiphi, self.jac_phiphi, self.dbcs)
         self.K_phiphi.assemble()
 
         self.K_phimu.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_phimu, self.jac_phimu, self.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_phimu, self.jac_phimu, self.dbcs)
         self.K_phimu.assemble()
 
         self.K_mumu.zeroEntries()

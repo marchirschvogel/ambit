@@ -7,8 +7,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
-# returns the Cauchy stress sigma for different material laws
+import ufl
 
+# returns the Cauchy stress sigma for different material laws
 
 class materiallaw:
     def __init__(self, shearrate, volstrainrate, use_gen_strainrate, I):
@@ -24,7 +25,7 @@ class materiallaw:
             eta = params["eta"]  # dynamic viscosity
         else:
             eta1, eta2 = params["eta1"], params["eta2"]
-            eta = eta1 * (1.0 - chi) + eta2 * chi
+            eta = ufl.conditional(ufl.gt(chi, 1.0), eta2, ufl.conditional(ufl.lt(chi, 0.0), eta1, eta1 * (1.0 - chi) + eta2 * chi))
 
         # classical Newtonian fluid
         sigma = 2.0 * eta * self.shearrate
@@ -35,7 +36,7 @@ class materiallaw:
                 zeta = params.get("zeta", 0.0)  # bulk viscosity (default is zero: Stokes' hypothesis)
             else:
                 zeta1, zeta2 = params.get("zeta1", 0.0), params.get("zeta2", 0.0)
-                zeta = zeta1 * (1.0 - chi) + zeta2 * chi
+                zeta = ufl.conditional(ufl.gt(chi, 1.0), zeta2, ufl.conditional(ufl.lt(chi, 0.0), zeta1, zeta1 * (1.0 - chi) + zeta2 * chi))
 
             # volumetric stress contribution
             lambd = zeta - (2.0/self.dim) * eta

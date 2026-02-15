@@ -71,7 +71,7 @@ class variationalform(variationalform_base):
 
     # conservation of mass
     def deltaW_int_pres(self, v, rho, var_p, ddomain, w=None, F=None, phi=[None,None], phidot=None):
-        rho_ = self.get_density(rho, chi=phi[1])
+        rho_ = self.get_density(rho, chi=phi[1], cond=False)
         if phi[0] is not None:
             rhodot_ = ufl.diff(rho_,phi[0]) * phidot
         else:
@@ -314,7 +314,7 @@ class variationalform_ale(variationalform):
     # conservation of mass in ALE form
     def deltaW_int_pres(self, v, rho, var_p, ddomain, w=None, F=None, phi=[None,None], phidot=None):
         J = ufl.det(F)
-        rho_ = self.get_density(rho, chi=phi[1])
+        rho_ = self.get_density(rho, chi=phi[1], cond=False)
         Jdot = ufl.div(J*ufl.inv(F)*w)
         if phi[0] is not None:
             rhodot_ = ufl.diff(rho_,phi[0]) * phidot

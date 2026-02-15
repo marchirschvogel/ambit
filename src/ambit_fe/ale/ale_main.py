@@ -217,10 +217,11 @@ class AleProblem(problem_base):
             Vdisc_scalar=self.Vd_scalar,
         )
         self.bc_dict = bc_dict
+        self.dbcs = []
 
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"])
+            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
 
         # number of fields involved
         self.nfields = 1
@@ -307,19 +308,19 @@ class AleProblem(problem_base):
         fem.apply_lifting(
             self.r_d,
             [self.jac_dd],
-            [self.bc.dbcs],
+            [self.dbcs],
             x0=[self.d.x.petsc_vec],
             alpha=-1.0,
         )
         self.r_d.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_d, self.bc.dbcs, x0=self.d.x.petsc_vec, alpha=-1.0)
+        fem.set_bc(self.r_d, self.dbcs, x0=self.d.x.petsc_vec, alpha=-1.0)
 
         self.r_list[0] = self.r_d
 
     def assemble_stiffness(self, t, subsolver=None):
         # assemble system matrix
         self.K_dd.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_dd, self.jac_dd, self.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_dd, self.jac_dd, self.dbcs)
         self.K_dd.assemble()
 
         self.K_list[0][0] = self.K_dd

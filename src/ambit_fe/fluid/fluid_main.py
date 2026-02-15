@@ -505,10 +505,15 @@ class FluidmechanicsProblem(problem_base):
         )
 
         self.bc_dict = bc_dict
+        self.dbcs = []
+        self.dbcs_pres = []
 
         # Dirichlet boundary conditions
         if "dirichlet" in self.bc_dict.keys():
-            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"])
+            self.bc.dirichlet_bcs(self.bc_dict["dirichlet"], self.dbcs)
+        if "dirichlet_pres" in self.bc_dict.keys(): # for pressure
+            for j in range(len(self.V_p_)):
+                self.bc.dirichlet_bcs(self.bc_dict["dirichlet_pres"], self.dbcs_pres, V_dbc=self.V_p_[j])
 
         self.pbrom = self  # self-pointer needed for ROM solver access
         self.pbrom_host = self
@@ -1937,13 +1942,11 @@ class FluidmechanicsProblem(problem_base):
             self.weakform_lin_vp.append(ufl.derivative(self.weakform_v, self.p_[j], self.dp_[j]))
         for n in range(self.num_domains):
             self.weakform_lin_pv.append(ufl.derivative(self.weakform_p[n], self.v, self.dv))
-        if self.stabilization is not None:
-            for n in range(self.num_domains):
-                if self.num_dupl == 1:
-                    j = 0
-                else:
-                    j = n
-                self.weakform_lin_pp.append(ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]))
+            if self.num_dupl == 1:
+                j = 0
+            else:
+                j = n
+            self.weakform_lin_pp.append(ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]))
 
         if any(self.mem_active_stress):
             # active stress for reduced solid (FrSI)
@@ -1976,19 +1979,17 @@ class FluidmechanicsProblem(problem_base):
                 )
             for n in range(self.num_domains):
                 self.weakform_lin_prestress_pv.append(ufl.derivative(self.weakform_prestress_p[n], self.v, self.dv))
-            if self.stabilization is not None:
-                for n in range(self.num_domains):
-                    if self.num_dupl == 1:
-                        j = 0
-                    else:
-                        j = n
-                    self.weakform_lin_prestress_pp.append(
-                        ufl.derivative(
-                            self.weakform_prestress_p[n],
-                            self.p_[j],
-                            self.dp_[j],
-                        )
+                if self.num_dupl == 1:
+                    j = 0
+                else:
+                    j = n
+                self.weakform_lin_prestress_pp.append(
+                    ufl.derivative(
+                        self.weakform_prestress_p[n],
+                        self.p_[j],
+                        self.dp_[j],
                     )
+                )
 
     # active stress projection - for reduced solid model
     def evaluate_active_stress(self):
@@ -2109,14 +2110,12 @@ class FluidmechanicsProblem(problem_base):
                 self.weakform_p = sum(self.weakform_p)
                 self.weakform_lin_vp = sum(self.weakform_lin_vp)
                 self.weakform_lin_pv = sum(self.weakform_lin_pv)
-                if self.stabilization is not None:
-                    self.weakform_lin_pp = sum(self.weakform_lin_pp)
+                self.weakform_lin_pp = sum(self.weakform_lin_pp)
             else:
                 self.weakform_prestress_p = sum(self.weakform_prestress_p)
                 self.weakform_lin_prestress_vp = sum(self.weakform_lin_prestress_vp)
                 self.weakform_lin_prestress_pv = sum(self.weakform_lin_prestress_pv)
-                if self.stabilization is not None:
-                    self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
+                self.weakform_lin_prestress_pp = sum(self.weakform_lin_prestress_pp)
 
         if not pre:
             self.res_v = fem.form(self.weakform_v, entity_maps=self.io.entity_maps)
@@ -2130,12 +2129,11 @@ class FluidmechanicsProblem(problem_base):
                 self.jac_pv_ = []
                 for j in range(self.num_dupl):
                     self.jac_pv_.append([self.jac_pv[j]])
-            if self.stabilization is not None:
-                self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
-                if self.num_dupl > 1:
-                    self.jac_pp_ = [[None] * self.num_dupl for _ in range(self.num_dupl)]
-                    for j in range(self.num_dupl):
-                        self.jac_pp_[j][j] = self.jac_pp[j]
+            self.jac_pp = fem.form(self.weakform_lin_pp, entity_maps=self.io.entity_maps)
+            if self.num_dupl > 1:
+                self.jac_pp_ = [[None] * self.num_dupl for _ in range(self.num_dupl)]
+                for j in range(self.num_dupl):
+                    self.jac_pp_[j][j] = self.jac_pp[j]
         else:
             self.res_v = fem.form(self.weakform_prestress_v, entity_maps=self.io.entity_maps)
             self.res_p = fem.form(self.weakform_prestress_p, entity_maps=self.io.entity_maps)
@@ -2148,15 +2146,14 @@ class FluidmechanicsProblem(problem_base):
                 self.jac_pv_ = []
                 for j in range(self.num_dupl):
                     self.jac_pv_.append([self.jac_pv[j]])
-            if self.stabilization is not None:
-                self.jac_pp = fem.form(
-                    self.weakform_lin_prestress_pp,
-                    entity_maps=self.io.entity_maps,
-                )
-                if self.num_dupl > 1:
-                    self.jac_pp_ = [[None] * self.num_dupl for _ in range(self.num_dupl)]
-                    for j in range(self.num_dupl):
-                        self.jac_pp_[j][j] = self.jac_pp[j]
+            self.jac_pp = fem.form(
+                self.weakform_lin_prestress_pp,
+                entity_maps=self.io.entity_maps,
+            )
+            if self.num_dupl > 1:
+                self.jac_pp_ = [[None] * self.num_dupl for _ in range(self.num_dupl)]
+                for j in range(self.num_dupl):
+                    self.jac_pp_[j][j] = self.jac_pp[j]
 
         if self.have_robin_valve_implicit:
             self.dw_robin_valve_dz_form, self.drz_dp = [], []
@@ -2189,14 +2186,11 @@ class FluidmechanicsProblem(problem_base):
         self.K_vp.assemble()
         self.K_pv.assemble()
 
-        if self.stabilization is not None:
-            if self.num_dupl > 1:
-                self.K_pp = fem.petsc.assemble_matrix(self.jac_pp_)
-            else:
-                self.K_pp = fem.petsc.assemble_matrix(self.jac_pp)
-            self.K_pp.assemble()
+        if self.num_dupl > 1:
+            self.K_pp = fem.petsc.assemble_matrix(self.jac_pp_)
         else:
-            self.K_pp = None
+            self.K_pp = fem.petsc.assemble_matrix(self.jac_pp)
+        self.K_pp.assemble()
 
         if self.have_robin_valve_implicit:
             self.r_z = PETSc.Vec().createMPI(size=self.num_valve_coupling_surf)
@@ -2290,18 +2284,40 @@ class FluidmechanicsProblem(problem_base):
         fem.apply_lifting(
             self.r_v,
             [self.jac_vv],
-            [self.bc.dbcs],
+            [self.dbcs],
             x0=[self.v.x.petsc_vec],
             alpha=-1.0,
         )
         self.r_v.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
-        fem.set_bc(self.r_v, self.bc.dbcs, x0=self.v.x.petsc_vec, alpha=-1.0)
+        fem.set_bc(self.r_v, self.dbcs, x0=self.v.x.petsc_vec, alpha=-1.0)
 
         # assemble pressure rhs vector
         with self.r_p.localForm() as r_local:
             r_local.set(0.0)
         fem.petsc.assemble_vector(self.r_p, self.res_p)
+        if self.num_dupl > 1:
+            for j in range(self.num_dupl):
+                fem.apply_lifting(
+                    self.r_p,
+                    [self.jac_pp[j]],
+                    [self.dbcs_pres],
+                    x0=[self.p_[j].x.petsc_vec],
+                    alpha=-1.0,
+                )
+        else:
+            fem.apply_lifting(
+                self.r_p,
+                [self.jac_pp],
+                [self.dbcs_pres],
+                x0=[self.p.x.petsc_vec],
+                alpha=-1.0,
+            )
         self.r_p.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        if self.num_dupl > 1:
+            for j in range(self.num_dupl):
+                fem.set_bc(self.r_p, self.dbcs_pres, x0=self.p_[j].x.petsc_vec, alpha=-1.0)
+        else:
+            fem.set_bc(self.r_p, self.dbcs_pres, x0=self.p.x.petsc_vec, alpha=-1.0)
 
         self.r_list[0] = self.r_v
         self.r_list[1] = self.r_p
@@ -2327,33 +2343,30 @@ class FluidmechanicsProblem(problem_base):
     def assemble_stiffness(self, t, subsolver=None):
         # assemble system matrix
         self.K_vv.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_vv, self.jac_vv, self.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_vv, self.jac_vv, self.dbcs)
         self.K_vv.assemble()
 
         # assemble system matrices
         self.K_vp.zeroEntries()
         if self.num_dupl > 1:
-            fem.petsc.assemble_matrix(self.K_vp, self.jac_vp_, self.bc.dbcs)
+            fem.petsc.assemble_matrix(self.K_vp, self.jac_vp_, self.dbcs)
         else:
-            fem.petsc.assemble_matrix(self.K_vp, self.jac_vp, self.bc.dbcs)
+            fem.petsc.assemble_matrix(self.K_vp, self.jac_vp, self.dbcs)
         self.K_vp.assemble()
 
         self.K_pv.zeroEntries()
         if self.num_dupl > 1:
-            fem.petsc.assemble_matrix(self.K_pv, self.jac_pv_, [])  # currently, we do not consider pressure DBCs
+            fem.petsc.assemble_matrix(self.K_pv, self.jac_pv_, self.dbcs_pres)
         else:
-            fem.petsc.assemble_matrix(self.K_pv, self.jac_pv, [])  # currently, we do not consider pressure DBCs
+            fem.petsc.assemble_matrix(self.K_pv, self.jac_pv, self.dbcs_pres)
         self.K_pv.assemble()
 
-        if self.stabilization is not None:
-            self.K_pp.zeroEntries()
-            if self.num_dupl > 1:
-                fem.petsc.assemble_matrix(self.K_pp, self.jac_pp_, [])  # currently, we do not consider pressure DBCs
-            else:
-                fem.petsc.assemble_matrix(self.K_pp, self.jac_pp, [])  # currently, we do not consider pressure DBCs
-            self.K_pp.assemble()
+        self.K_pp.zeroEntries()
+        if self.num_dupl > 1:
+            fem.petsc.assemble_matrix(self.K_pp, self.jac_pp_, self.dbcs_pres)
         else:
-            self.K_pp = None
+            fem.petsc.assemble_matrix(self.K_pp, self.jac_pp, self.dbcs_pres)
+        self.K_pp.assemble()
 
         self.K_list[0][0] = self.K_vv
         self.K_list[0][1] = self.K_vp
@@ -2370,7 +2383,7 @@ class FluidmechanicsProblem(problem_base):
                 )  # already multiplied by time-integration factor
                 self.k_vz_vec[i].ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
                 # set zeros at DBC entries
-                fem.set_bc(self.k_vz_vec[i], self.bc.dbcs, x0=self.v.x.petsc_vec, alpha=0.0)
+                fem.set_bc(self.k_vz_vec[i], self.dbcs, x0=self.v.x.petsc_vec, alpha=0.0)
 
             # set columns
             for i in range(len(self.col_ids)):

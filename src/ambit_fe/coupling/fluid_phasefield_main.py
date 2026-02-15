@@ -273,28 +273,28 @@ class FluidmechanicsPhasefieldProblem(problem_base):
     def assemble_stiffness_coupling(self, t):
         # derivative of fluid momentum w.r.t. phase field
         self.K_vphi.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_vphi, self.jac_vphi, self.pbf.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_vphi, self.jac_vphi, self.pbf.dbcs)
         self.K_vphi.assemble()
 
         self.K_list[0][2] = self.K_vphi
 
         # derivative of fluid momentum w.r.t. potential
         self.K_vmu.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_vmu, self.jac_vmu, self.pbf.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_vmu, self.jac_vmu, self.pbf.dbcs)
         self.K_vmu.assemble()
 
         self.K_list[0][3] = self.K_vmu
 
         # derivative of fluid continuity w.r.t. phase field
         self.K_pphi.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_pphi, self.jac_pphi, [])
+        fem.petsc.assemble_matrix(self.K_pphi, self.jac_pphi, self.pbf.dbcs_pres)
         self.K_pphi.assemble()
 
         self.K_list[1][2] = self.K_pphi
 
         # derivative of phase field w.r.t. fluid velocity
         self.K_phiv.zeroEntries()
-        fem.petsc.assemble_matrix(self.K_phiv, self.jac_phiv, self.pbp.bc.dbcs)
+        fem.petsc.assemble_matrix(self.K_phiv, self.jac_phiv, self.pbp.dbcs)
         self.K_phiv.assemble()
 
         self.K_list[2][0] = self.K_phiv
