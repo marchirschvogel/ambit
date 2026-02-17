@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Two-phase flow rising bubble in gravitational flield
+Two-phase flow rising bubble in gravitational field
 """
 
 import ambit_fe
@@ -25,7 +25,7 @@ def main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 32,64   64,128   128,256
         "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"]],
-        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_exp1.0_theta1.0_eps0.64",
+        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_exp1.0_BDF2_eps1.28_-11",
         "write_initial_fields": True,
         "report_conservation_properties": True,
     }
@@ -59,24 +59,22 @@ def main():
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",
-        "maxiter":25,
+        "maxiter": 10,
         "tol_res": [1e-5, 1e-5, 1e-5, 1e-5],
-        "tol_inc": [1e-3, 1e16, 1e-3, 1e-3],
-        # "divergence_continue": "PTC",
-        "k_ptc_initial": 1.0,
-        "catch_max_inc_value": 1e12,
+        "tol_inc": [1e-3, 1e-3, 1e-3, 1e-3],
+        "ignore_unconverged": True, # badass, but we might have some time steps that stagnate... :-/
     }
 
-    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 1.0,
+    TIME_PARAMS_FLUID = {"timint": "bdf2",
+                         "theta_ost": 0.5, # not used (only for OST timint)
                          "fluid_governing_type": "navierstokes_transient",
-                         "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
-                         "continuity_at_midpoint": True} # Should use midpoint if time derivative (drho/dt) is involved...
+                         "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal - irrelevant for BDF2 scheme
+                         "continuity_at_midpoint": True} # Should use midpoint if time derivative (drho/dt) is involved... irrelevant for BDF2 scheme
 
-    TIME_PARAMS_PF = {"timint": "ost",
-                      "theta_ost": 1.0,
-                      "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
-                      "potential_at_midpoint": False}
-
+    TIME_PARAMS_PF = {"timint": "bdf2",
+                      "theta_ost": 0.5, # not used (only for OST timint)
+                      "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal - irrelevant for BDF2 scheme
+                      "potential_at_midpoint": False} # irrelevant for BDF2 scheme
 
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
@@ -96,7 +94,7 @@ def main():
     elif case==2:
         rho1 = 1000.0
         rho2 = 1.0
-        eta1 = 1.0   # 10.0, 1.0 TODO: Ambiguity code (10.0) vs. papers (1.0)
+        eta1 = 10.0   # 10.0, 1.0 TODO: Ambiguity code (10.0) vs. papers (1.0)
         eta2 = 0.1
         sig = 1.96 # surface energy density coefficient
     else:
@@ -142,7 +140,7 @@ def main():
     BC_DICT_FLUID = {
         "dirichlet" : [{"locator": locate_top_bottom(), "dir": "all", "val": 0.0},
                        {"locator": locate_left_right(), "dir": "x", "val": 0.0}],
-        "dirichlet_pres" : [{"locator": locate_center(), "dir": "all", "val": 0.0}],
+        "dirichlet_pres" : [{"locator": locate_center(), "dir": "all", "val": 0.0}], # fix pressure in middle of domain to have a well-defined pressure level
         "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
     }
 

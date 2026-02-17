@@ -180,8 +180,7 @@ class boundary_cond:
                     nodes_bc = fem.locate_dofs_topological(V_dbc, codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
-                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc = fem.locate_dofs_topological(V_dbc, codim, cells)
+                    nodes_bc = fem.locate_dofs_geometrical(V_dbc, locator.evaluate)
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc = fem.locate_dofs_topological(V_dbc, codim, cells)
@@ -192,8 +191,7 @@ class boundary_cond:
                     nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0),codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
-                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0), codim, cells)
+                    nodes_bc_x = fem.locate_dofs_geometrical((V_dbc.sub(0), V_dbc.sub(0).collapse()[0]), locator.evaluate)[0]
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0), codim, cells)
@@ -204,8 +202,7 @@ class boundary_cond:
                     nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
-                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, cells)
+                    nodes_bc_y = fem.locate_dofs_geometrical((V_dbc.sub(1), V_dbc.sub(1).collapse()[0]), locator.evaluate)[0]
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, cells)
@@ -216,8 +213,7 @@ class boundary_cond:
                     nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, mdata.indices[np.isin(mdata.values, d["id"])])
                 elif "locator" in d.keys():
                     locator = d["locator"]
-                    cells = mesh.locate_entities_boundary(self.io.mesh, codim, locator.evaluate)
-                    nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, cells)
+                    nodes_bc_z = fem.locate_dofs_geometrical((V_dbc.sub(2), V_dbc.sub(2).collapse()[0]), locator.evaluate)[0]
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, cells)

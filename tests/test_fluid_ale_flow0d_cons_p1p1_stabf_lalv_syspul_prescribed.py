@@ -42,10 +42,11 @@ def test_main():
         "mesh_boundary": basepath + "/input/lalv_boundary.xdmf",
         "mesh_encoding": "HDF5",
         "results_to_write": [
-            ["velocity", "pressure"],
+            ["velocity", "pressure", "cauchystress"],
             ["aledisplacement"],
         ],  # first fluid, then ale results
-        "simname": "fluid_ale_flow0d_lalv_syspul_prescribed",
+        "output_midpoint": True,
+        "simname": "fluid_ale_flow0d_cons_lalv_syspul_prescribed",
     }
 
     CONTROL_PARAMS = {

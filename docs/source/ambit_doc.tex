@@ -7,7 +7,7 @@
 \usepackage{amsmath}
 \usepackage{stmaryrd}
 %\usepackage{sfmath}
-\usepackage{mathtools}
+%\usepackage{mathtools}
 \usepackage{ifthen}
 \usepackage{mathrsfs}
 \usepackage{bm}
@@ -573,7 +573,7 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 \begin{equation}
 \label{equation-fluid-strong-form}
 \begin{aligned}
-\nabla \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &= \rho\left(\frac{\partial\bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
+\rho\left(\frac{\partial\bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) &= \nabla \cdot \bs{\sigma}(\bs{v},p) + \hat{\bs{b}} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
 \nabla\cdot \bs{v} &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
 \bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T],\\
 \bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T],\\
@@ -583,8 +583,9 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 
 with a Newtonian fluid constitutive law
 \begin{align}
-\bs{\sigma} = -p \bs{I} + 2 \mu\,\bs{\gamma} = -p \bs{I} + \mu \left(\nabla \bs{v} + (\nabla \bs{v})^{\mathrm{T}}\right)
+\bs{\sigma} = -p \bs{I} + 2 \eta\,\bs{\gamma} = -p \bs{I} + \eta \left(\nabla \bs{v} + (\nabla \bs{v})^{\mathrm{T}}\right)
 \end{align}
+where $\eta$ is the dynamic viscosity
 
 \textbf{Weak Form}\\
 
@@ -603,7 +604,7 @@ r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \q
 \begin{equation}
 \label{equation-deltap-kin}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) = \int\limits_{\Om_t} \rho\left[\frac{\partial\bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right] \cdot \delta\bs{v} \,\mathrm{d}v
+\delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) = \int\limits_{\Om_t} \rho\left(\frac{\partial\bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) \cdot \delta\bs{v} \,\mathrm{d}v
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
@@ -748,8 +749,8 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 \begin{equation}
 \label{equation-fluid-ale-strong-form}
 \begin{aligned}
-\nabla_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widehat{\bs{F}}^{-\mathrm{T}} + \hat{\bs{b}} &= \rho\left[\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right] &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
-\nabla_{0}\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\widehat{J}\rho\left(\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) &= \nabla_{0} \cdot\left(\widehat{J}\bs{\sigma} \widehat{\bs{F}}^{-\mathrm{T}}\right) + \widehat{J}\hat{\bs{b}} &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
+\nabla_{0}\cdot\left(\widehat{J}\widehat{\bs{F}}^{-1}\bs{v}\right) &= 0 &&\text{in} \; \mathit{\Om}_0 \times [0, T],\\
 \bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{D}} \times [0, T], \\
 \bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_0^{\mathrm{N}} \times [0, T], \\
 \bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_0,
@@ -777,14 +778,14 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 -- Kinetic virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widehat{J} \rho\left[\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_{0}\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right] \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widehat{J} \rho\left(\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_{0}\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right)s \cdot \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
 \begin{equation}
 \begin{aligned}
 \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) = 
-\int\limits_{\Om_0} \widehat{J}\bs{\sigma}(\bs{v},p,\bs{d}) : \nabla_{0} \delta\bs{v}\,\widehat{\bs{F}}^{-1} \,\mathrm{d}V
+\int\limits_{\Om_0} \widehat{J}\bs{\sigma}\widehat{\bs{F}}^{-\mathrm{T}} : \nabla_{0} \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -792,7 +793,7 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \begin{equation}
 \begin{aligned}
 \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p) = 
-\int\limits_{\Om_0} \widehat{J}\,\nabla_{0}\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
+\int\limits_{\Om_0} \nabla_{0}\cdot\left(\widehat{J}\widehat{\bs{F}}^{-1}\bs{v}\right) \delta p\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -825,7 +826,7 @@ r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d}
 \begin{equation}
 \begin{aligned}
 r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\nabla_0\delta\bs{v}\,\widehat{\bs{F}}^{-1})\,\bs{v}\;\cdot \\
-& \qquad\quad \cdot\left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \nabla_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widehat{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
+& \qquad\quad \cdot\left(\widehat{J}\rho\left(\left.\frac{\partial \bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\bs{\sigma}\widehat{\bs{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V \\
 & + \int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\nabla_{0}\delta\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}})(\nabla_{0}\bs{v} : \widehat{\bs{F}}^{-\mathrm{T}})\,\mathrm{d}V
 \end{aligned}
 \end{equation}
@@ -833,7 +834,7 @@ r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\math
 \begin{equation}
 \begin{aligned}
 r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\bs{F}}^{-\mathrm{T}}\nabla_{0}\delta p) \;\cdot \\
-& \qquad\quad \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \nabla_{0} \bs{\sigma}(\bs{v},\bs{d},p) : \widehat{\bs{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
+& \qquad\quad \cdot \left(\widehat{J}\rho\left(\left.\frac{\partial \bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_0\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\bs{\sigma}\widehat{\bs{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V
 \end{aligned}
 \end{equation}
 
@@ -1423,7 +1424,6 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 
 \subsubsection{Fluid-reduced-Solid Interaction (FrSI)}\label{fluid-reduced-solid-interaction-frsi}
 
-
 -- Boundary term:
 
 \begin{align}
@@ -1447,6 +1447,20 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \end{aligned}
 \end{equation}
 
+\subsubsection{Multiphase Fluid}\label{fluid-multiphase}
+-- Primary variables: velocity $\bs{v}$, pressure $p$, phase $\phi$, and (chem.) potential $\mu$\\
+
+-- conservative form of Navier-Stokes, with capillary force term
+\begin{equation}
+\label{equation-fluid-strong-form}
+\begin{aligned}
+\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) &= \nabla \cdot \bs{\sigma} -\phi\nabla\mu + \hat{\bs{b}} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
+\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v}) &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
+\bs{v} &= \hat{\bs{v}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{D}} \times [0, T],\\
+\bs{t} = \bs{\sigma}\bs{n} &= \hat{\bs{t}} &&\text{on} \; \mathit{\Gm}_t^{\mathrm{N}} \times [0, T],\\
+\bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t,
+\end{aligned}
+\end{equation}
 
 \section{Demos}\label{demos}
 
@@ -1745,6 +1759,12 @@ Figure \ref{fig:channel_flag_results} depicts the velocity at three instances in
 \label{fig:channel_flag_results_verif}
 \end{figure}
 
+
+\subsection{Demo: Multiphase fluid}\label{demo-multiphase}
+
+-- Physics description given in sec. \ref{fluid-phasefield}\\
+
+-- Input files: \verb"demos/fluid_phasefield"\\
 
 \clearpage
 

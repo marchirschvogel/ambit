@@ -950,13 +950,10 @@ class SolidmechanicsProblem(problem_base):
         if self.timint == "static":
             self.weakform_u = self.deltaW_int - self.deltaW_ext
 
-            if self.incompressible_2field:
-                self.weakform_p = self.deltaW_p
-
         # full dynamic weak form: kinetic plus internal minus external virtual work
         else:
             # evaluate nonlinear terms trapezoidal-like: a * f(u_{n+1}) + (1-a) * f(u_{n})
-            if self.ti.eval_nonlin_terms == "trapezoidal":
+            if self.ti.res_eval == "trap":
                 self.weakform_u = (
                     self.timefac_m * self.deltaW_kin
                     + (1.0 - self.timefac_m) * self.deltaW_kin_old
@@ -965,16 +962,17 @@ class SolidmechanicsProblem(problem_base):
                     - self.timefac * self.deltaW_ext
                     - (1.0 - self.timefac) * self.deltaW_ext_old
                 )
-
             # evaluate nonlinear terms midpoint-like: f(a*u_{n+1} + (1-a)*u_{n})
-            elif self.ti.eval_nonlin_terms == "midpoint":
+            if self.ti.res_eval == "midp":
                 self.weakform_u = self.deltaW_kin_mid + self.deltaW_int_mid - self.deltaW_ext_mid
 
-            else:
-                raise ValueError("Unknown eval_nonlin_terms option. Choose 'trapezoidal' or 'midpoint'.")
+            # backward scheme (e.g. Backward-Euler)
+            if self.ti.res_eval == "back":
+                self.weakform_u = self.deltaW_kin + self.deltaW_int - self.deltaW_ext
 
-            if self.incompressible_2field:
-                self.weakform_p = self.deltaW_p
+        # incompressibility constraint always at t_{n+1}
+        if self.incompressible_2field:
+            self.weakform_p = self.deltaW_p
 
         ### local weak forms at Gauss points for inelastic materials
         self.localdata = {}
@@ -1026,10 +1024,12 @@ class SolidmechanicsProblem(problem_base):
 
         # kinetic virtual work linearization (deltaW_kin already has contributions from all domains)
         # since this is actually linear in the acceleration (and hence the displacement), 'trapezoidal' and 'midpoint' yield the same
-        if self.ti.eval_nonlin_terms == "trapezoidal":
+        if self.ti.res_eval == "trap":
             self.weakform_lin_uu = self.timefac_m * ufl.derivative(self.deltaW_kin, self.u, self.du)
-        if self.ti.eval_nonlin_terms == "midpoint":
+        if self.ti.res_eval == "midp":
             self.weakform_lin_uu = ufl.derivative(self.deltaW_kin_mid, self.u, self.du)
+        if self.ti.res_eval == "back":
+            self.weakform_lin_uu = ufl.derivative(self.deltaW_kin, self.u, self.du)
 
         # internal virtual work linearization treated differently: since we want to be able to account for nonlinear materials at Gauss
         # point level with deformation-dependent internal variables (i.e. growth or plasticity), we make use of a more explicit formulation
@@ -1040,7 +1040,7 @@ class SolidmechanicsProblem(problem_base):
             if not self.inverse_mechanics:
 
                 # elastic and viscous material tangent operator
-                if self.ti.eval_nonlin_terms == "trapezoidal":
+                if self.ti.res_eval == "trap" or self.ti.res_eval == "back":
                     Cmat, Cmat_v = self.ma[n].S(
                         self.u,
                         self.p,
@@ -1048,7 +1048,7 @@ class SolidmechanicsProblem(problem_base):
                         ivar=self.internalvars,
                         returnquantity="tangent",
                     )
-                if self.ti.eval_nonlin_terms == "midpoint":
+                if self.ti.res_eval == "midp":
                     Cmat, Cmat_v = self.ma[n].S(
                         self.us_mid,
                         self.ps_mid,
@@ -1089,7 +1089,7 @@ class SolidmechanicsProblem(problem_base):
                 else:
                     Ctang = Cmat
 
-                if self.ti.eval_nonlin_terms == "trapezoidal":
+                if self.ti.res_eval == "trap":
                     self.weakform_lin_uu += self.timefac * self.vf.Lin_deltaW_int_du(
                         self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
                         self.ki.F(self.u),
@@ -1099,7 +1099,7 @@ class SolidmechanicsProblem(problem_base):
                         Cmat_v,
                         self.dx(M),
                     )
-                if self.ti.eval_nonlin_terms == "midpoint":
+                if self.ti.res_eval == "midp":
                     self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(
                         self.ma[n].S(
                             self.us_mid,
@@ -1114,6 +1114,16 @@ class SolidmechanicsProblem(problem_base):
                         Cmat_v,
                         self.dx(M),
                     )
+                if self.ti.res_eval == "back":
+                    self.weakform_lin_uu += self.vf.Lin_deltaW_int_du(
+                        self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
+                        self.ki.F(self.u),
+                        self.ki.Fdot(self.vel),
+                        self.u,
+                        Ctang,
+                        Cmat_v,
+                        self.dx(M),
+                    )
 
             else:
                 # No support for any growth/plasticity/fancy stuff when doing inverse mechanics...
@@ -1121,10 +1131,12 @@ class SolidmechanicsProblem(problem_base):
 
         # external virtual work contribution to stiffness (from nonlinear follower loads or Robin boundary tractions)
         # since external tractions might be nonlinear w.r.t. displacement, there's a difference between 'trapezoidal' and 'midpoint'
-        if self.ti.eval_nonlin_terms == "trapezoidal":
+        if self.ti.res_eval == "trap":
             self.weakform_lin_uu += -self.timefac * ufl.derivative(self.deltaW_ext, self.u, self.du)
-        if self.ti.eval_nonlin_terms == "midpoint":
+        if self.ti.res_eval == "midp":
             self.weakform_lin_uu += -ufl.derivative(self.deltaW_ext_mid, self.u, self.du)
+        if self.ti.res_eval == "back":
+            self.weakform_lin_uu += -ufl.derivative(self.deltaW_ext, self.u, self.du)
 
         # pressure contributions
         if self.incompressible_2field:
@@ -1150,12 +1162,12 @@ class SolidmechanicsProblem(problem_base):
                         J = self.ki.J(self.u)
                         Jmat = self.ki.dJdC(self.u)
 
-                    if self.ti.eval_nonlin_terms == "trapezoidal":
+                    if self.ti.res_eval == "trap" or self.ti.res_eval == "back":
                         Cmat_p = ufl.diff(
                             self.ma[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
                             self.p,
                         )
-                    if self.ti.eval_nonlin_terms == "midpoint":
+                    if self.ti.res_eval == "midp":
                         Cmat_p = ufl.diff(
                             self.ma[n].S(
                                 self.us_mid,
@@ -1234,12 +1246,12 @@ class SolidmechanicsProblem(problem_base):
                         Ctang_p = Cmat_p
                         Jtang = Jmat
 
-                    if self.ti.eval_nonlin_terms == "trapezoidal":
-                        self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(
-                            self.ki.F(self.u), Ctang_p, self.dx(M)
-                        )
-                    if self.ti.eval_nonlin_terms == "midpoint":
+                    if self.ti.res_eval == "trap":
+                        self.weakform_lin_up += self.timefac * self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx(M))
+                    if self.ti.res_eval == "midp":
                         self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.us_mid), Ctang_p, self.dx(M))
+                    if self.ti.res_eval == "back":
+                        self.weakform_lin_up += self.vf.Lin_deltaW_int_dp(self.ki.F(self.u), Ctang_p, self.dx(M))
 
                     self.weakform_lin_pu += self.vf.Lin_deltaW_int_pres_du(self.ki.F(self.u), Jtang, self.u, self.dx(M))
                     if self.incompressibility == "nearly":
@@ -1584,19 +1596,19 @@ class SolidmechanicsProblem(problem_base):
 
     def set_problem_vector_matrix_structures(self):
         self.r_u = fem.petsc.assemble_vector(self.res_u)
-        self.K_uu = fem.petsc.assemble_matrix(self.jac_uu)
+        self.K_uu = fem.petsc.assemble_matrix(self.jac_uu, self.dbcs)
         self.K_uu.assemble()
 
         if self.incompressible_2field:
             self.r_p = fem.petsc.assemble_vector(self.res_p)
 
-            self.K_up = fem.petsc.assemble_matrix(self.jac_up)
+            self.K_up = fem.petsc.assemble_matrix(self.jac_up, [])
             self.K_up.assemble()
-            self.K_pu = fem.petsc.assemble_matrix(self.jac_pu)
+            self.K_pu = fem.petsc.assemble_matrix(self.jac_pu, [])
             self.K_pu.assemble()
 
             if self.jac_pp is not None:
-                self.K_pp = fem.petsc.assemble_matrix(self.jac_pp)
+                self.K_pp = fem.petsc.assemble_matrix(self.jac_pp, [])
             else:
                 self.K_pp = None
 

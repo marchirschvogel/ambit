@@ -131,8 +131,9 @@ class PhasefieldProblem(problem_base):
         self.dmu = ufl.TrialFunction(self.V_mu)  # Incremental potential
         self.var_mu = ufl.TestFunction(self.V_mu)  # Test function
         self.mu = fem.Function(self.V_mu, name="Potential")
-        # values of previous time step
+        # values of previous time step(s)
         self.phi_old = fem.Function(self.V_phi)
+        self.phi_veryold = fem.Function(self.V_phi)
         self.phidot_old = fem.Function(self.V_phi)
         self.mu_old = fem.Function(self.V_mu)
 
@@ -165,7 +166,7 @@ class PhasefieldProblem(problem_base):
             self.vf = phasefield_variationalform.variationalform_ale(self.var_phi, self.var_mu)
 
         # set form for phidot
-        self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phidot_old)
+        self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)
 
         # set mid-point representations
         self.phi_mid = self.timefac * self.phi + (1.0 - self.timefac) * self.phi_old
@@ -245,20 +246,21 @@ class PhasefieldProblem(problem_base):
             self.potential_old += self.vf.cahnhilliard_potential(self.phi_old, self.mu_old, self.ma[n].driv_force(self.phi_old), self.kappa[n], self.dx(M), F=self.alevar["Fale_old"])
             self.potential_mid += self.vf.cahnhilliard_potential(self.phi_mid, self.mu_mid, self.ma[n].driv_force(self.phi_mid), self.kappa[n], self.dx(M), F=self.alevar["Fale_mid"])
 
-        if self.ti.eval_nonlin_terms == "trapezoidal":
+        if self.ti.res_eval == "trap":
             self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
             else:
                 self.weakform_mu = self.timefac * self.potential + (1.-self.timefac) * self.potential_old
-        elif self.ti.eval_nonlin_terms == "midpoint":
+        if self.ti.res_eval == "midp":
             self.weakform_phi = self.phase_field_mid
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
             else:
                 self.weakform_mu = self.potential_mid
-        else:
-            raise ValueError("Unknown eval_nonlin_terms option. Choose 'trapezoidal' or 'midpoint'.")
+        if self.ti.res_eval == "back":
+            self.weakform_phi = self.phase_field
+            self.weakform_mu = self.potential
 
         self.weakform_lin_phiphi = ufl.derivative(self.weakform_phi, self.phi, self.dphi)
         self.weakform_lin_phimu = ufl.derivative(self.weakform_phi, self.mu, self.dmu)
@@ -297,13 +299,13 @@ class PhasefieldProblem(problem_base):
     def set_problem_vector_matrix_structures(self):
         self.r_phi = fem.petsc.assemble_vector(self.res_phi)
         self.r_mu = fem.petsc.assemble_vector(self.res_mu)
-        self.K_phiphi = fem.petsc.assemble_matrix(self.jac_phiphi)
+        self.K_phiphi = fem.petsc.assemble_matrix(self.jac_phiphi, self.dbcs)
         self.K_phiphi.assemble()
-        self.K_phimu = fem.petsc.assemble_matrix(self.jac_phimu)
+        self.K_phimu = fem.petsc.assemble_matrix(self.jac_phimu, self.dbcs)
         self.K_phimu.assemble()
-        self.K_mumu = fem.petsc.assemble_matrix(self.jac_mumu)
+        self.K_mumu = fem.petsc.assemble_matrix(self.jac_mumu, [])
         self.K_mumu.assemble()
-        self.K_muphi = fem.petsc.assemble_matrix(self.jac_muphi)
+        self.K_muphi = fem.petsc.assemble_matrix(self.jac_muphi, [])
         self.K_muphi.assemble()
 
         self.r_list[0] = self.r_phi
@@ -382,6 +384,9 @@ class PhasefieldProblem(problem_base):
                                 addv=PETSc.InsertMode.INSERT,
                                 mode=PETSc.ScatterMode.FORWARD,
                             )
+                if self.ti.timint=="bdf2":
+                    self.phi_veryold.x.petsc_vec.axpby(1.0, 0.0, self.phi_old.x.petsc_vec)
+                    self.phi_veryold.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     def write_output_ini(self):
         self.io.write_output(self, writemesh=True)
@@ -416,7 +421,7 @@ class PhasefieldProblem(problem_base):
         self.io.write_output(self, N=N, t=t)
 
     def update(self):
-        self.ti.update_timestep(self.phi, self.phi_old, self.phidot, self.phidot_old, self.mu, self.mu_old)
+        self.ti.update_timestep(self.phi, self.phi_old, self.phi_veryold, self.phidot, self.phidot_old, self.mu, self.mu_old)
 
     def print_to_screen(self):
         pass

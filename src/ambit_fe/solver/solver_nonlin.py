@@ -162,6 +162,7 @@ class solver_nonlinear:
         self.initialize_petsc_solver()
 
         self.li_s = []  # linear iterations over all solves
+        self.unc_stp = []  # steps that did not converge but where continuation was requested
         self.ni_all = 0  # all nonlinear iterations over all solves (to determine prec updates for instance)
 
         self.cp = cp
@@ -176,6 +177,7 @@ class solver_nonlinear:
         self.maxincval = solver_params.get("catch_max_inc_value", 1e16)
         self.direct_solver = solver_params.get("direct_solver", "mumps")
         self.iterative_solver = solver_params.get("iterative_solver", "gmres")
+        self.ignore_unconverged = solver_params.get("ignore_unconverged", False)
 
         precond_fields = solver_params.get("precond_fields", [[]])
 
@@ -969,8 +971,12 @@ class solver_nonlinear:
                 break
 
         else:
-            self.pb[npr].destroy()
-            raise RuntimeError("Newton did not converge after %i iterations!" % (it))
+            if not self.ignore_unconverged:
+                self.pb[npr].destroy()
+                raise RuntimeError("Newton did not converge after %i iterations!" % (it))
+            else: # use with care...
+                self.unc_stp.append(t)
+                utilities.print_status("*** WARNING: Newton did not converge, but continuation is requested! ***", self.comm)
 
     def residual_problem_actions(self, t, npr, localdata):
         # any local solve that is needed

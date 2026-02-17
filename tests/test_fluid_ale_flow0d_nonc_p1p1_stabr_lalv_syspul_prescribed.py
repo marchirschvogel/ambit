@@ -45,7 +45,8 @@ def test_main():
             ["velocity", "pressure"],
             ["aledisplacement"],
         ],  # first fluid, then ale results
-        "simname": "fluid_ale_flow0d_lalv_syspul_prescribed",
+        "output_midpoint": True,
+        "simname": "fluid_ale_flow0d_nonc_lalv_syspul_prescribed",
     }
 
     CONTROL_PARAMS = {

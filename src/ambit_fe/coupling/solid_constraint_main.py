@@ -198,7 +198,7 @@ class SolidmechanicsConstraintProblem(problem_base):
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
 
-            df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_lm_ids[n])):
                 if self.coupling_params["multiplier_physics"][n]["type"] == "pressure":
                     ds_p = self.pbs.bmeasures[0](self.surface_lm_ids[n][i])
@@ -230,6 +230,11 @@ class SolidmechanicsConstraintProblem(problem_base):
                         self.pbs.var_u,
                         ds_p,
                         F=self.pbs.ki.F(self.pbs.us_mid, ext=True),
+                    )
+                    df_back_ += self.pbs.vf.flux(
+                        self.pbs.var_u,
+                        ds_p,
+                        F=self.pbs.ki.F(self.pbs.u, ext=True),
                     )
 
                 elif self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
@@ -267,23 +272,30 @@ class SolidmechanicsConstraintProblem(problem_base):
                 else:
                     raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")
 
-            if self.pbs.ti.eval_nonlin_terms == "trapezoidal":
+            if self.pbs.ti.res_eval == "trap":
                 self.dforce.append(df_)
-            if self.pbs.ti.eval_nonlin_terms == "midpoint":
+            if self.pbs.ti.res_eval == "midp":
                 self.dforce.append(df_mid_)
+            if self.pbs.ti.res_eval == "back":
+                self.dforce.append(df_back_)
 
-        if self.pbs.ti.eval_nonlin_terms == "trapezoidal":
+        if self.pbs.ti.res_eval == "trap":
             # add to solid rhs
             self.pbs.weakform_u += (
                 self.pbs.timefac * self.work_coupling + (1.0 - self.pbs.timefac) * self.work_coupling_old
             )
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
-        if self.pbs.ti.eval_nonlin_terms == "midpoint":
+        if self.pbs.ti.res_eval == "midp":
             # add to solid rhs
             self.pbs.weakform_u += self.work_coupling_mid
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += ufl.derivative(self.work_coupling_mid, self.pbs.u, self.pbs.du)
+        if self.pbs.ti.res_eval == "back":
+            # add to solid rhs
+            self.pbs.weakform_u += self.work_coupling
+            # add to solid Jacobian
+            self.pbs.weakform_lin_uu += ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
     def set_multiplier(self, var, p0Da):
         # set pressure functions

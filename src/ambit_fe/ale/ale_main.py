@@ -171,9 +171,10 @@ class AleProblem(problem_base):
         self.d = fem.Function(self.V_d, name="AleDisplacement")
         # auxiliary domain velocity vector
         self.w = fem.Function(self.V_d, name="AleVelocity")
-        # values of previous time step
+        # values of previous time step(s)
         self.d_old = fem.Function(self.V_d)
         self.w_old = fem.Function(self.V_d)
+        self.d_veryold = fem.Function(self.V_d) # for FSI: if BDF2 is used in fluid, we want a BDF2-like wel
 
         # reference coordinates
         self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
@@ -205,7 +206,7 @@ class AleProblem(problem_base):
         self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0, ro0=self.io.ro0)
 
         # set form for domain velocity
-        self.wel = self.ti.set_wel(self.d, self.d_old, self.w_old)
+        self.wel = self.ti.set_wel(self.d, self.d_old, self.d_veryold, self.w_old)
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
@@ -294,7 +295,7 @@ class AleProblem(problem_base):
 
     def set_problem_vector_matrix_structures(self):
         self.r_d = fem.petsc.assemble_vector(self.res_d)
-        self.K_dd = fem.petsc.assemble_matrix(self.jac_dd)
+        self.K_dd = fem.petsc.assemble_matrix(self.jac_dd, self.dbcs)
         self.K_dd.assemble()
 
         self.r_list[0] = self.r_d
@@ -365,7 +366,7 @@ class AleProblem(problem_base):
         self.io.write_output(self, N=N, t=t)
 
     def update(self):
-        self.ti.update_timestep(self.d, self.d_old, self.w, self.w_old)
+        self.ti.update_timestep(self.d, self.d_old, self.d_veryold, self.w, self.w_old)
 
     def print_to_screen(self):
         pass

@@ -328,14 +328,16 @@ class FluidmechanicsProblem(problem_base):
             # values of previous time step
             self.p_old_ = [fem.Function(self.V_p_[0])]
 
-        # values of previous time step
+        # values of previous time step(s)
         self.v_old = fem.Function(self.V_v)
         self.a_old = fem.Function(self.V_v)
+        self.v_veryold = fem.Function(self.V_v)
         # auxiliary acceleration vector
         self.a = fem.Function(self.V_v, name="Acceleration")
-        # a fluid displacement
+        # fluid displacement (needed in ALE)
         self.uf = fem.Function(self.V_v, name="FluidDisplacement")
         self.uf_old = fem.Function(self.V_v)
+        self.uf_veryold = fem.Function(self.V_v)
         # active stress for reduced solid
         self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
         self.tau_a_old = fem.Function(self.Vd_scalar)
@@ -432,7 +434,7 @@ class FluidmechanicsProblem(problem_base):
         )
 
         # continuity should be at midpoint for consistent time-integration in multi-phase flow
-        if self.is_multiphase:
+        if self.is_multiphase and self.ti.timint != "bdf2":
             assert(self.ti.continuity_at_midpoint)
 
         # if shear + volumetric strain rate should be used in constitutive model - required for multiphase and/or compressible flows
@@ -589,9 +591,9 @@ class FluidmechanicsProblem(problem_base):
             self.phasevar["chi_mid"] = None
 
         # set form for acceleration
-        self.acc = self.ti.set_acc(self.v, self.v_old, self.a_old)
+        self.acc = self.ti.set_acc(self.v, self.v_old, self.v_veryold, self.a_old)
         # set form for fluid displacement (needed for FrSI)
-        self.ufluid = self.ti.set_uf(self.v, self.v_old, self.uf_old)
+        self.ufluid = self.ti.set_uf(self.v, self.v_old, self.uf_old, self.uf_veryold)
 
         # set mid-point representations
         self.acc_mid = self.timefac_m * self.acc + (1.0 - self.timefac_m) * self.a_old
@@ -1903,7 +1905,7 @@ class FluidmechanicsProblem(problem_base):
 
         # kinetic plus internal minus external virtual power
         # evaluate nonlinear terms trapezoidal-like: a * f(u_{n+1}) + (1-a) * f(u_{n})
-        if self.ti.eval_nonlin_terms == "trapezoidal":
+        if self.ti.res_eval == "trap":
             self.weakform_v = (
                 self.timefac_m * self.deltaW_kin
                 + (1.0 - self.timefac_m) * self.deltaW_kin_old
@@ -1913,11 +1915,11 @@ class FluidmechanicsProblem(problem_base):
                 - (1.0 - self.timefac) * self.deltaW_ext_old
             )
         # evaluate nonlinear terms midpoint-like: f(a*u_{n+1} + (1-a)*u_{n})
-        elif self.ti.eval_nonlin_terms == "midpoint":
+        if self.ti.res_eval == "midp":
             self.weakform_v = self.deltaW_kin_mid + self.deltaW_int_mid - self.deltaW_ext_mid
-
-        else:
-            raise ValueError("Unknown eval_nonlin_terms option. Choose 'trapezoidal' or 'midpoint'.")
+        # backward scheme (e.g. BDF2 or OST with theta=1)
+        if self.ti.res_eval == "back":
+            self.weakform_v = self.deltaW_kin + self.deltaW_int - self.deltaW_ext
 
         (
             self.weakform_p,
@@ -1930,12 +1932,12 @@ class FluidmechanicsProblem(problem_base):
             if not self.ti.continuity_at_midpoint:
                 self.weakform_p.append(self.deltaW_p[n])
             else:
-                if self.ti.eval_nonlin_terms == "trapezoidal":
+                if self.ti.res_eval == "trap":
                     self.weakform_p.append(self.timefac * self.deltaW_p[n] + (1.0 - self.timefac) * self.deltaW_p_old[n])
-                elif self.ti.eval_nonlin_terms == "midpoint":
+                if self.ti.res_eval == "midp":
                     self.weakform_p.append(self.deltaW_p_mid[n])
-                else:
-                    raise ValueError("Unknown eval_nonlin_terms option. Choose 'trapezoidal' or 'midpoint'.")
+                if self.ti.res_eval == "back":
+                    elf.weakform_p.append(self.deltaW_p[n])
 
         self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
         for j in range(self.num_dupl):
@@ -2175,22 +2177,26 @@ class FluidmechanicsProblem(problem_base):
         else:
             self.r_p = fem.petsc.assemble_vector(self.res_p)
 
-        self.K_vv = fem.petsc.assemble_matrix(self.jac_vv)
+        self.K_vv = fem.petsc.assemble_matrix(self.jac_vv, self.dbcs)
         self.K_vv.assemble()
         if self.num_dupl > 1:
-            self.K_vp = fem.petsc.assemble_matrix(self.jac_vp_)
+            self.K_vp = fem.petsc.assemble_matrix(self.jac_vp_, self.dbcs)
             self.K_pv = fem.petsc.assemble_matrix(self.jac_pv_)
         else:
-            self.K_vp = fem.petsc.assemble_matrix(self.jac_vp)
-            self.K_pv = fem.petsc.assemble_matrix(self.jac_pv)
+            self.K_vp = fem.petsc.assemble_matrix(self.jac_vp, self.dbcs)
+            self.K_pv = fem.petsc.assemble_matrix(self.jac_pv, self.dbcs_pres)
         self.K_vp.assemble()
         self.K_pv.assemble()
 
         if self.num_dupl > 1:
-            self.K_pp = fem.petsc.assemble_matrix(self.jac_pp_)
+            self.K_pp = fem.petsc.assemble_matrix(self.jac_pp_, self.dbcs_pres)
         else:
-            self.K_pp = fem.petsc.assemble_matrix(self.jac_pp)
+            self.K_pp = fem.petsc.assemble_matrix(self.jac_pp, self.dbcs_pres)
         self.K_pp.assemble()
+        # we need to set this to apply pressure DBCs, at least in cases where this block is zero,
+        # e.g. for Taylor-Hood approximations of incompressible flow without stabilization
+        if bool(self.dbcs_pres):
+            self.K_pp.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
 
         if self.have_robin_valve_implicit:
             self.r_z = PETSc.Vec().createMPI(size=self.num_valve_coupling_surf)
@@ -2668,6 +2674,7 @@ class FluidmechanicsProblem(problem_base):
         self.ti.update_timestep(
             self.v,
             self.v_old,
+            self.v_veryold,
             self.a,
             self.a_old,
             self.p,
@@ -2676,7 +2683,9 @@ class FluidmechanicsProblem(problem_base):
             self.internalvars_old,
             uf=self.uf,
             uf_old=self.uf_old,
+            uf_veryold=self.uf_veryold,
         )
+
         # update monitor dicts
         if self.have_flux_monitor:
             for k in self.qv_:

@@ -297,7 +297,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
 
-            df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
                 ds_p = self.pbs.bmeasures[0](self.surface_p_ids[n][i])
                 df_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
@@ -306,6 +306,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
                     ds_p,
                     F=self.pbs.ki.F(self.pbs.us_mid, ext=True),
                 )
+                df_back_ += self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
 
                 # add to solid rhs contributions
                 self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(
@@ -324,23 +325,30 @@ class SolidmechanicsFlow0DProblem(problem_base):
                     F=self.pbs.ki.F(self.pbs.us_mid, ext=True),
                 )
 
-            if self.pbs.ti.eval_nonlin_terms == "trapezoidal":
+            if self.pbs.ti.res_eval == "trap":
                 self.dforce.append(df_)
-            if self.pbs.ti.eval_nonlin_terms == "midpoint":
+            if self.pbs.ti.res_eval == "midp":
                 self.dforce.append(df_mid_)
+            if self.pbs.ti.res_eval == "back":
+                self.dforce.append(df_back_)
 
-        if self.pbs.ti.eval_nonlin_terms == "trapezoidal":
+        if self.pbs.ti.res_eval == "trap":
             # minus sign, since contribution to external work!
             self.pbs.weakform_u += (
                 -self.pbs.timefac * self.work_coupling - (1.0 - self.pbs.timefac) * self.work_coupling_old
             )
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
-        if self.pbs.ti.eval_nonlin_terms == "midpoint":
+        if self.pbs.ti.res_eval == "midp":
             # minus sign, since contribution to external work!
             self.pbs.weakform_u += -self.work_coupling_mid
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += -ufl.derivative(self.work_coupling_mid, self.pbs.u, self.pbs.du)
+        if self.pbs.ti.res_eval == "back":
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += -self.work_coupling
+            # add to solid Jacobian
+            self.pbs.weakform_lin_uu += -ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 
         if self.coupling_type == "monolithic_lagrange" and self.pbase.restart_step == 0:
             # old Lagrange multipliers - initialize with initial pressures

@@ -482,14 +482,14 @@ class FSIProblem(problem_base):
         if self.fsi_system == "neumann_neumann":
             self.r_l = fem.petsc.assemble_vector(self.res_l)
 
-            self.K_ul = fem.petsc.assemble_matrix(self.jac_ul)
+            self.K_ul = fem.petsc.assemble_matrix(self.jac_ul, self.pbs.dbcs)
             self.K_ul.assemble()
-            self.K_vl = fem.petsc.assemble_matrix(self.jac_vl)
+            self.K_vl = fem.petsc.assemble_matrix(self.jac_vl, self.pbf.dbcs)
             self.K_vl.assemble()
 
-            self.K_lu = fem.petsc.assemble_matrix(self.jac_lu)
+            self.K_lu = fem.petsc.assemble_matrix(self.jac_lu, [])
             self.K_lu.assemble()
-            self.K_lv = fem.petsc.assemble_matrix(self.jac_lv)
+            self.K_lv = fem.petsc.assemble_matrix(self.jac_lv, [])
             self.K_lv.assemble()
 
         if self.fsi_system == "neumann_dirichlet":
@@ -883,7 +883,7 @@ class FSIProblem(problem_base):
         # self.pba.write_output(N, t)
 
     def update(self):
-        # update time step - solid and 0D model
+        # update time step - solid and ALE fluid
         self.pbs.update()
         self.pbfa.update()
         self.update_coupling()

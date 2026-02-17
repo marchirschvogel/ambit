@@ -67,10 +67,7 @@ def test_main():
         "direct_solver": "mumps",
         "maxiter":10,
         "tol_res": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
-        "tol_inc": [1e-4, 1e16, 1e-4, 1e-4, 1e-4],
-        # "divergence_continue": "PTC",
-        "k_ptc_initial": 100.0,
-        "catch_max_inc_value": 1e12,
+        "tol_inc": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
     }
 
     TIME_PARAMS_FLUID = {"timint": "ost",
@@ -102,6 +99,12 @@ def test_main():
             top_b = np.isclose(x[1], 1.0)
             bottom_b = np.isclose(x[1], 0.0)
             return np.logical_or(np.logical_or(left_b, right_b), np.logical_or(top_b, bottom_b))
+
+    class locate_center:
+        def evaluate(self, x):
+            ctr_x = np.isclose(x[0], 1.0)
+            ctr_y = np.isclose(x[1], 0.5)
+            return np.logical_and(ctr_x, ctr_y)
 
     COUPLING_PARAMS_FLUID_ALE = {
         "coupling_ale_fluid": {"locator": locate()}, # no-slip at moving ALE boundary
@@ -141,7 +144,8 @@ def test_main():
         def evaluate(self, x):
             return np.full(x.shape[1], True, dtype=bool)
 
-    BC_DICT_FLUID = { "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}] }
+    BC_DICT_FLUID = { "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
+                     "dirichlet_pres" : [{"locator": locate_center(), "dir": "all", "val": 0.0}] } # fix pressure in middle of domain to have a well-defined pressure level
 
     BC_DICT_ALE = {
         "dirichlet": [{"dir": "all", "expression": expr2, "codimension": 2}]

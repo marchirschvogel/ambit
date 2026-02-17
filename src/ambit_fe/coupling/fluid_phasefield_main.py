@@ -163,10 +163,12 @@ class FluidmechanicsPhasefieldProblem(problem_base):
             self.korteweg_force_mid += self.pbf.vf.korteweg_force1(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
 
         # add to fluid momentum
-        if self.pbf.ti.eval_nonlin_terms == "trapezoidal":
+        if self.pbf.ti.res_eval == "trap":
             self.pbf.weakform_v += self.pbf.timefac * self.korteweg_force + (1.0 - self.pbf.timefac) * self.korteweg_force_old
-        if self.pbf.ti.eval_nonlin_terms == "midpoint":
+        if self.pbf.ti.res_eval == "midp":
             self.pbf.weakform_v += self.korteweg_force_mid
+        if self.pbf.ti.res_eval == "back":
+            self.pbf.weakform_v += self.korteweg_force
 
         # derivative of fluid momentum w.r.t. phase field
         self.weakform_lin_vphi = ufl.derivative(self.pbf.weakform_v, self.pbp.phi, self.pbp.dphi)
@@ -222,18 +224,18 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
-        self.K_vphi = fem.petsc.assemble_matrix(self.jac_vphi)
+        self.K_vphi = fem.petsc.assemble_matrix(self.jac_vphi, self.pbf.dbcs)
         self.K_vphi.assemble()
-        self.K_vmu = fem.petsc.assemble_matrix(self.jac_vmu)
+        self.K_vmu = fem.petsc.assemble_matrix(self.jac_vmu, self.pbf.dbcs)
         self.K_vmu.assemble()
-        self.K_phiv = fem.petsc.assemble_matrix(self.jac_phiv)
+        self.K_phiv = fem.petsc.assemble_matrix(self.jac_phiv, self.pbp.dbcs)
         self.K_phiv.assemble()
         if self.pbf.num_dupl > 1:
-            self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi_)
-            self.K_phip = fem.petsc.assemble_matrix(self.jac_phip_)
+            self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi_, self.pbf.dbcs_pres)
+            self.K_phip = fem.petsc.assemble_matrix(self.jac_phip_, self.pbp.dbcs)
         else:
-            self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi)
-            self.K_phip = fem.petsc.assemble_matrix(self.jac_phip)
+            self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi, self.pbf.dbcs_pres)
+            self.K_phip = fem.petsc.assemble_matrix(self.jac_phip, self.pbp.dbcs)
         self.K_pphi.assemble()
         self.K_phip.assemble()
 

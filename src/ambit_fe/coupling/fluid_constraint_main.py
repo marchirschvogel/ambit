@@ -221,7 +221,7 @@ class FluidmechanicsConstraintProblem(problem_base):
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
 
-            df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_lm_ids[n])):
                 if self.btype_lm[n][i] == "ext":
                     fct_side = None
@@ -264,6 +264,12 @@ class FluidmechanicsConstraintProblem(problem_base):
                         ds_p,
                         w=ufl.constantvalue.zero(self.pbf.ki.dim),
                         F=self.pbf.alevar["Fale_mid"],
+                    )
+                    df_back_ += self.pbf.vf.flux(
+                        self.pbf.var_v,
+                        ds_p,
+                        w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                        F=self.pbf.alevar["Fale"],
                     )
 
                 elif self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
@@ -381,6 +387,18 @@ class FluidmechanicsConstraintProblem(problem_base):
                         actweight=self.pbf.actweights[-1],
                         returnquantity="active_stress_power_deriv",
                     )
+                    df_back_ += self.pbf.vf.deltaW_ext_membrane(
+                        self.pbf.ki.F(self.pbf.ufluid),
+                        self.pbf.ki.Fdot(self.pbf.v),
+                        None,
+                        params_,
+                        ds_p,
+                        ivar=ivar_,
+                        fibfnc=self.pbf.fib_func,
+                        wallfield=self.pbf.wallfields[n],
+                        actweight=self.pbf.actweights[-1],
+                        returnquantity="active_stress_power_deriv",
+                    )
 
                 elif self.coupling_params["multiplier_physics"][n]["type"] == "valve_viscosity":
                     # add to fluid rhs contributions - external power; should be positive, hence minus sign
@@ -417,34 +435,48 @@ class FluidmechanicsConstraintProblem(problem_base):
                         w=self.pbf.alevar["w"],
                         F=self.pbf.alevar["Fale"],
                     )
-                    df_mid_ += -self.pbf.timefac * self.pbf.vf.deltaW_ext_robin_valve_deriv_visc(
+                    df_mid_ += -self.pbf.vf.deltaW_ext_robin_valve_deriv_visc(
                         self.pbf.vel_mid,
                         ds_p,
                         fcts=fct_side,
                         w=self.pbf.alevar["w_mid"],
                         F=self.pbf.alevar["Fale_mid"],
                     )
+                    df_back_ += -self.pbf.vf.deltaW_ext_robin_valve_deriv_visc(
+                        self.pbf.v,
+                        ds_p,
+                        fcts=fct_side,
+                        w=self.pbf.alevar["w"],
+                        F=self.pbf.alevar["Fale"],
+                    )
 
                 else:
                     raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")
 
-            if self.pbf.ti.eval_nonlin_terms == "trapezoidal":
+            if self.pbf.ti.res_eval == "trap":
                 self.dforce.append(df_)
-            if self.pbf.ti.eval_nonlin_terms == "midpoint":
+            if self.pbf.ti.res_eval == "midp":
                 self.dforce.append(df_mid_)
+            if self.pbf.ti.res_eval == "back":
+                self.dforce.append(df_back_)
 
-        if self.pbf.ti.eval_nonlin_terms == "trapezoidal":
+        if self.pbf.ti.res_eval == "trap":
             # add to fluid rhs
             self.pbf.weakform_v += (
                 self.pbf.timefac * self.power_coupling + (1.0 - self.pbf.timefac) * self.power_coupling_old
             )
             # add to fluid Jacobian
             self.pbf.weakform_lin_vv += self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
-        if self.pbf.ti.eval_nonlin_terms == "midpoint":
+        if self.pbf.ti.res_eval == "midp":
             # add to fluid rhs
             self.pbf.weakform_v += self.power_coupling_mid
             # add to fluid Jacobian
             self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
+        if self.pbf.ti.res_eval == "back":
+            # add to fluid rhs
+            self.pbf.weakform_v += self.power_coupling
+            # add to fluid Jacobian
+            self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
         # 3D fluxes
         self.constr, self.constr_old = (

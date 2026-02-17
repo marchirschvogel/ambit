@@ -217,7 +217,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
             self.cq.append(cq_), self.cq_old.append(cq_old_)
             self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
 
-            df_, df_mid_ = ufl.as_ufl(0), ufl.as_ufl(0)
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
                 ds_p = self.pbf.bmeasures[0](self.surface_p_ids[n][i])
                 df_ += self.pbf.timefac * self.pbf.vf.flux(
@@ -231,6 +231,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
                     ds_p,
                     w=ufl.constantvalue.zero(self.pbf.ki.dim),
                     F=self.pbf.alevar["Fale_mid"],
+                )
+                df_back_ += self.pbf.vf.flux(
+                    self.pbf.var_v,
+                    ds_p,
+                    w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                    F=self.pbf.alevar["Fale"],
                 )
 
                 # add to fluid rhs contributions
@@ -248,23 +254,30 @@ class FluidmechanicsFlow0DProblem(problem_base):
                     F=self.pbf.alevar["Fale_mid"],
                 )
 
-            if self.pbf.ti.eval_nonlin_terms == "trapezoidal":
+            if self.pbf.ti.res_eval == "trap":
                 self.dforce.append(df_)
-            if self.pbf.ti.eval_nonlin_terms == "midpoint":
+            if self.pbf.ti.res_eval == "midp":
                 self.dforce.append(df_mid_)
+            if self.pbf.ti.res_eval == "back":
+                self.dforce.append(df_back_)
 
-        if self.pbf.ti.eval_nonlin_terms == "trapezoidal":
+        if self.pbf.ti.res_eval == "trap":
             # minus sign, since contribution to external power!
             self.pbf.weakform_v += (
                 -self.pbf.timefac * self.power_coupling - (1.0 - self.pbf.timefac) * self.power_coupling_old
             )
             # add to fluid Jacobian
             self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
-        if self.pbf.ti.eval_nonlin_terms == "midpoint":
+        if self.pbf.ti.res_eval == "midp":
             # minus sign, since contribution to external power!
             self.pbf.weakform_v += -self.power_coupling_mid
             # add to fluid Jacobian
             self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
+        if self.pbf.ti.res_eval == "back":
+            # minus sign, since contribution to external power!
+            self.pbf.weakform_v += -self.power_coupling
+            # add to fluid Jacobian
+            self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
         # old Lagrange multipliers - initialize with initial pressures
         if self.pbase.restart_step == 0:

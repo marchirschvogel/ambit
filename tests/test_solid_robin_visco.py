@@ -3,6 +3,7 @@
 """
 - solid mechanics
 - basic rate-dependent solid material
+- solid midpoint output
 """
 
 import ambit_fe
@@ -27,12 +28,13 @@ def test_main():
         "problem_type": "solid",
         "mesh_domain": basepath + "/input/blockhex_domain.xdmf",
         "mesh_boundary": basepath + "/input/blockhex_boundary.xdmf",
-        "write_results_every": -999,
+        "write_results_every": 5,
         "write_restart_every": 1,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "results_to_write": ["displacement"],
+        "results_to_write": ["displacement","velocity","acceleration","cauchystress"],
         "simname": "solid_robin_visc",
+        "output_midpoint": True,
     }
 
     CONTROL_PARAMS = {"maxtime": 0.5, "dt": 0.1}
@@ -42,7 +44,6 @@ def test_main():
         "tol_res": 1.0e-8,
         "tol_inc": 1.0e-5,
         "maxiter": 25,
-        "divergence_continue": None,
     }
 
     TIME_PARAMS = {"timint": "genalpha", "rho_inf_genalpha": 1.0}

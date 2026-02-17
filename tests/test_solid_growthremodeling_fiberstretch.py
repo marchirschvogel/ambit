@@ -25,7 +25,7 @@ def test_main():
         "mesh_domain": basepath + "/input/blockhex_domain.xdmf",
         "mesh_boundary": basepath + "/input/blockhex_boundary.xdmf",
         "fiber_data": [np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])],
-        "write_results_every": -999,
+        "write_results_every": 20,
         "output_path": basepath + "/tmp/",
         "results_to_write": [
             "displacement",

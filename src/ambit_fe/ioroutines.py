@@ -54,6 +54,8 @@ class IO:
 
         self.write_submeshes = io_params.get("write_submeshes", False)
 
+        self.output_midpoint = io_params.get("output_midpoint", False)
+
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
 
@@ -526,12 +528,29 @@ class IO_solid(IO):
                 # save solution to XDMF format
                 for res in pb.results_to_write:
                     if res == "displacement":
-                        u_out = fem.Function(pb.V_out_vector, name=pb.u.name)
-                        u_out.interpolate(pb.u)
+                        if self.output_midpoint:
+                            u_proj = project(
+                                pb.us_mid,
+                                pb.V_u,
+                                pb.dx,
+                                domids=pb.domain_ids,
+                                nm="Displacement",
+                                comm=self.comm,
+                                entity_maps=self.entity_maps,
+                            )
+                            u_out = fem.Function(pb.V_out_vector, name=u_proj.name)
+                            u_out.interpolate(u_proj)
+                        else:
+                            u_out = fem.Function(pb.V_out_vector, name=pb.u.name)
+                            u_out.interpolate(pb.u)
                         self.resultsfiles[res].write_function(u_out, indicator)
-                    elif res == "velocity":  # passed in v is not a function but form, so we have to project
+                    elif res == "velocity":  # passed in vel is not a function but form, so we have to project
+                        if self.output_midpoint:
+                            vel = pb.vel_mid
+                        else:
+                            vel = pb.vel
                         self.v_proj = project(
-                            pb.vel,
+                            vel,
                             pb.V_u,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -542,9 +561,13 @@ class IO_solid(IO):
                         v_out = fem.Function(pb.V_out_vector, name=self.v_proj.name)
                         v_out.interpolate(self.v_proj)
                         self.resultsfiles[res].write_function(v_out, indicator)
-                    elif res == "acceleration":  # passed in a is not a function but form, so we have to project
+                    elif res == "acceleration":  # passed in acc is not a function but form, so we have to project
+                        if self.output_midpoint:
+                            acc = pb.acc_mid
+                        else:
+                            acc = pb.acc
                         self.a_proj = project(
-                            pb.acc,
+                            acc,
                             pb.V_u,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -556,13 +579,30 @@ class IO_solid(IO):
                         a_out.interpolate(self.a_proj)
                         self.resultsfiles[res].write_function(a_out, indicator)
                     elif res == "pressure":
-                        p_out = fem.Function(pb.V_out_scalar, name=pb.p.name)
-                        p_out.interpolate(pb.p)
+                        if self.output_midpoint:
+                            p_proj = project(
+                                pb.ps_mid,
+                                pb.V_p,
+                                pb.dx,
+                                domids=pb.domain_ids,
+                                nm="Pressure",
+                                comm=self.comm,
+                                entity_maps=self.entity_maps,
+                            )
+                            p_out = fem.Function(pb.V_out_scalar, name=p_proj.name)
+                            p_out.interpolate(p_proj)
+                        else:
+                            p_out = fem.Function(pb.V_out_scalar, name=pb.p.name)
+                            p_out.interpolate(pb.p)
                         self.resultsfiles[res].write_function(p_out, indicator)
                     elif res == "cauchystress":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.u, pb.p, pb.vel, ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].sigma(u, p, v, ivar=ivars))
                         cauchystress = project(
                             stressfuncs,
                             pb.Vd_tensor,
@@ -576,9 +616,13 @@ class IO_solid(IO):
                         cauchystress_out.interpolate(cauchystress)
                         self.resultsfiles[res].write_function(cauchystress_out, indicator)
                     elif res == "cauchystress_nodal":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.u, pb.p, pb.vel, ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].sigma(u, p, v, ivar=ivars))
                         cauchystress_nodal = project(
                             stressfuncs,
                             pb.V_tensor,
@@ -592,10 +636,14 @@ class IO_solid(IO):
                         cauchystress_nodal_out.interpolate(cauchystress_nodal)
                         self.resultsfiles[res].write_function(cauchystress_nodal_out, indicator)
                     elif res == "cauchystress_principal":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs_eval = []
                         for n in range(pb.num_domains):
                             evals, _, _ = spectral_decomposition_3x3(
-                                pb.ma[n].sigma(pb.u, pb.p, pb.vel, ivar=pb.internalvars)
+                                pb.ma[n].sigma(u, p, v, ivar=ivars)
                             )
                             stressfuncs_eval.append(ufl.as_vector(evals))  # written as vector
                         cauchystress_principal = project(
@@ -679,15 +727,19 @@ class IO_solid(IO):
                         internalpower_membrane_out.interpolate(internalpower_membrane)
                         self.resultsfiles[res].write_function(internalpower_membrane_out, indicator)
                     elif res == "trmandelstress":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
                         for n in range(pb.num_domains):
                             stressfuncs.append(
-                                tr(
+                                ufl.tr(
                                     pb.ma[n].M(
-                                        pb.u,
-                                        pb.p,
-                                        pb.vel,
-                                        ivar=pb.internalvars,
+                                        u,
+                                        p,
+                                        v,
+                                        ivar=ivars,
                                     )
                                 )
                             )
@@ -704,17 +756,21 @@ class IO_solid(IO):
                         trmandelstress_out.interpolate(trmandelstress)
                         self.resultsfiles[res].write_function(trmandelstress_out, indicator)
                     elif res == "trmandelstress_e":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
                         for n in range(pb.num_domains):
                             if pb.mat_growth[n]:
                                 stressfuncs.append(
-                                    tr(
+                                    ufl.tr(
                                         pb.ma[n].M_e(
-                                            pb.u,
-                                            pb.p,
-                                            pb.vel,
-                                            pb.ki.C(pb.u),
-                                            ivar=pb.internalvars,
+                                            u,
+                                            p,
+                                            v,
+                                            pb.ki.C(u),
+                                            ivar=ivars,
                                         )
                                     )
                                 )
@@ -733,9 +789,13 @@ class IO_solid(IO):
                         trmandelstress_e_out.interpolate(trmandelstress_e)
                         self.resultsfiles[res].write_function(trmandelstress_e_out, indicator)
                     elif res == "vonmises_cauchystress":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma_vonmises(pb.u, pb.p, pb.vel, ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].sigma_vonmises(u, p, v, ivar=ivars))
                         vonmises_cauchystress = project(
                             stressfuncs,
                             pb.Vd_scalar,
@@ -749,9 +809,13 @@ class IO_solid(IO):
                         vonmises_cauchystress_out.interpolate(vonmises_cauchystress)
                         self.resultsfiles[res].write_function(vonmises_cauchystress_out, indicator)
                     elif res == "pk1stress":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].P(pb.u, pb.p, pb.vel, ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].P(u, p, v, ivar=ivars))
                         pk1stress = project(
                             stressfuncs,
                             pb.Vd_tensor,
@@ -765,9 +829,13 @@ class IO_solid(IO):
                         pk1stress_out.interpolate(pk1stress)
                         self.resultsfiles[res].write_function(pk1stress_out, indicator)
                     elif res == "pk2stress":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].S(pb.u, pb.p, pb.vel, ivar=pb.internalvars))
+                            stressfuncs.append(pb.ma[n].S(u, p, v, ivar=ivars))
                         pk2stress = project(
                             stressfuncs,
                             pb.Vd_tensor,
@@ -781,8 +849,12 @@ class IO_solid(IO):
                         pk2stress_out.interpolate(pk2stress)
                         self.resultsfiles[res].write_function(pk2stress_out, indicator)
                     elif res == "jacobian":
+                        if self.output_midpoint:
+                            u = pb.us_mid
+                        else:
+                            u = pb.u
                         jacobian = project(
-                            pb.ki.J(pb.u),
+                            pb.ki.J(u),
                             pb.Vd_scalar,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -794,8 +866,12 @@ class IO_solid(IO):
                         jacobian_out.interpolate(jacobian)
                         self.resultsfiles[res].write_function(jacobian_out, indicator)
                     elif res == "glstrain":
+                        if self.output_midpoint:
+                            u = pb.us_mid
+                        else:
+                            u = pb.u
                         glstrain = project(
-                            pb.ki.E(pb.u),
+                            pb.ki.E(u),
                             pb.Vd_tensor,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -807,7 +883,11 @@ class IO_solid(IO):
                         glstrain_out.interpolate(glstrain)
                         self.resultsfiles[res].write_function(glstrain_out, indicator)
                     elif res == "glstrain_principal":
-                        evals, _, _ = spectral_decomposition_3x3(pb.ki.E(pb.u))
+                        if self.output_midpoint:
+                            u = pb.us_mid
+                        else:
+                            u = pb.u
+                        evals, _, _ = spectral_decomposition_3x3(pb.ki.E(u))
                         evals_gl = ufl.as_vector(evals)  # written as vector
                         glstrain_principal = project(
                             evals_gl,
@@ -822,8 +902,12 @@ class IO_solid(IO):
                         glstrain_principal_out.interpolate(glstrain_principal)
                         self.resultsfiles[res].write_function(glstrain_principal_out, indicator)
                     elif res == "eastrain":
+                        if self.output_midpoint:
+                            u = pb.us_mid
+                        else:
+                            u = pb.u
                         eastrain = project(
-                            pb.ki.e(pb.u),
+                            pb.ki.e(u),
                             pb.Vd_tensor,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -835,7 +919,11 @@ class IO_solid(IO):
                         eastrain_out.interpolate(eastrain)
                         self.resultsfiles[res].write_function(eastrain_out, indicator)
                     elif res == "eastrain_principal":
-                        evals, _, _ = spectral_decomposition_3x3(pb.ki.e(pb.u))
+                        if self.output_midpoint:
+                            u = pb.us_mid
+                        else:
+                            u = pb.u
+                        evals, _, _ = spectral_decomposition_3x3(pb.ki.e(u))
                         evals_ea = ufl.as_vector(evals)  # written as vector
                         eastrain_principal = project(
                             evals_gl,
@@ -850,14 +938,18 @@ class IO_solid(IO):
                         eastrain_principal_out.interpolate(eastrain_principal)
                         self.resultsfiles[res].write_function(eastrain_principal_out, indicator)
                     elif res == "strainenergy":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         sefuncs = []
                         for n in range(pb.num_domains):
                             sefuncs.append(
                                 pb.ma[n].S(
-                                    pb.u,
-                                    pb.p,
-                                    pb.vel,
-                                    ivar=pb.internalvars,
+                                    u,
+                                    p,
+                                    v,
+                                    ivar=ivars,
                                     returnquantity="strainenergy",
                                 )
                             )
@@ -874,17 +966,21 @@ class IO_solid(IO):
                         se_out.interpolate(se)
                         self.resultsfiles[res].write_function(se_out, indicator)
                     elif res == "internalpower":
+                        if self.output_midpoint:
+                            u, p, v, ivars = pb.us_mid, pb.ps_mid, pb.vel_mid, pb.internalvars_mid
+                        else:
+                            u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         pwfuncs = []
                         for n in range(pb.num_domains):
                             pwfuncs.append(
                                 ufl.inner(
                                     pb.ma[n].S(
-                                        pb.u,
-                                        pb.p,
-                                        pb.vel,
-                                        ivar=pb.internalvars,
+                                        u,
+                                        p,
+                                        v,
+                                        ivar=ivars,
                                     ),
-                                    pb.ki.Edot(pb.u, pb.vel),
+                                    pb.ki.Edot(u, v),
                                 )
                             )
                         pw = project(
@@ -900,8 +996,12 @@ class IO_solid(IO):
                         pw_out.interpolate(pw)
                         self.resultsfiles[res].write_function(pw_out, indicator)
                     elif res == "fiberstretch":
+                        if self.output_midpoint:
+                            u = pb.us_mid
+                        else:
+                            u = pb.u
                         fiberstretch = project(
-                            pb.ki.fibstretch(pb.u, pb.fib_func[0]),
+                            pb.ki.fibstretch(u, pb.fib_func[0]),
                             pb.Vd_scalar,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -913,10 +1013,14 @@ class IO_solid(IO):
                         fiberstretch_out.interpolate(fiberstretch)
                         self.resultsfiles[res].write_function(fiberstretch_out, indicator)
                     elif res == "fiberstretch_e":
+                        if self.output_midpoint:
+                            u, theta = pb.us_mid, pb.internalvars_mid["theta"]
+                        else:
+                            u, theta = pb.u, pb.internalvars["theta"]
                         stretchfuncs = []
                         for n in range(pb.num_domains):
                             if pb.mat_growth[n]:
-                                stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(pb.u), pb.theta, pb.fib_func[0]))
+                                stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(u), theta, pb.fib_func[0]))
                             else:
                                 stretchfuncs.append(ufl.as_ufl(0))
                         fiberstretch_e = project(
@@ -932,14 +1036,31 @@ class IO_solid(IO):
                         fiberstretch_e_out.interpolate(fiberstretch_e)
                         self.resultsfiles[res].write_function(fiberstretch_e_out, indicator)
                     elif res == "theta":
-                        theta_out = fem.Function(pb.V_out_scalar, name=pb.theta.name)
-                        theta_out.interpolate(pb.theta)
+                        if self.output_midpoint:
+                            theta_proj = project(
+                                pb.internalvars_mid["theta"],
+                                pb.Vd_scalar,
+                                pb.dx,
+                                domids=pb.domain_ids,
+                                nm="theta",
+                                comm=self.comm,
+                                entity_maps=self.entity_maps,
+                            )
+                            theta_out = fem.Function(pb.V_out_scalar, name=theta_proj.name)
+                            theta_out.interpolate(theta_proj)
+                        else:
+                            theta_out = fem.Function(pb.V_out_scalar, name=pb.theta.name)
+                            theta_out.interpolate(pb.theta)
                         self.resultsfiles[res].write_function(theta_out, indicator)
                     elif res == "phi_remod":
+                        if self.output_midpoint:
+                            theta = pb.internalvars_mid["theta"]
+                        else:
+                            theta = pb.internalvars["theta"]
                         phifuncs = []
                         for n in range(pb.num_domains):
                             if pb.mat_remodel[n]:
-                                phifuncs.append(pb.ma[n].phi_remod(pb.theta))
+                                phifuncs.append(pb.ma[n].phi_remod(theta))
                             else:
                                 phifuncs.append(ufl.as_ufl(0))
                         phiremod = project(
@@ -955,8 +1076,21 @@ class IO_solid(IO):
                         phiremod_out.interpolate(phiremod)
                         self.resultsfiles[res].write_function(phiremod_out, indicator)
                     elif res == "tau_a":
-                        tau_out = fem.Function(pb.V_out_scalar, name=pb.tau_a.name)
-                        tau_out.interpolate(pb.tau_a)
+                        if self.output_midpoint:
+                            tau_proj = project(
+                                pb.internalvars_mid["tau_a"],
+                                pb.Vd_scalar,
+                                pb.dx,
+                                domids=pb.domain_ids,
+                                nm="tau_a",
+                                comm=self.comm,
+                                entity_maps=self.entity_maps,
+                            )
+                            tau_out = fem.Function(pb.V_out_scalar, name=tau_proj.name)
+                            tau_out.interpolate(tau_proj)
+                        else:
+                            tau_out = fem.Function(pb.V_out_scalar, name=pb.tau_a.name)
+                            tau_out.interpolate(pb.tau_a)
                         self.resultsfiles[res].write_function(tau_out, indicator)
                     elif res == "fibers":
                         # written only once at the beginning, not after each time step (since constant in time)
@@ -1173,12 +1307,29 @@ class IO_fluid(IO):
                 # save solution to XDMF format
                 for res in pb.results_to_write:
                     if res == "velocity":
-                        v_out = fem.Function(pb.V_out_vector, name=pb.v.name)
-                        v_out.interpolate(pb.v)
+                        if self.output_midpoint:
+                            v_proj = project(
+                                pb.vel_mid,
+                                pb.V_v,
+                                pb.dx,
+                                domids=pb.domain_ids,
+                                nm="Velocity",
+                                comm=self.comm,
+                                entity_maps=self.entity_maps,
+                            )
+                            v_out = fem.Function(pb.V_out_vector, name=v_proj.name)
+                            v_out.interpolate(v_proj)
+                        else:
+                            v_out = fem.Function(pb.V_out_vector, name=pb.v.name)
+                            v_out.interpolate(pb.v)
                         self.resultsfiles[res].write_function(v_out, indicator)
                     elif res == "acceleration":  # passed in a is not a function but form, so we have to project
+                        if self.output_midpoint:
+                            acc = pb.acc_mid
+                        else:
+                            acc = pb.acc
                         a_proj = project(
-                            pb.acc,
+                            acc,
                             pb.V_v,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -1196,17 +1347,47 @@ class IO_fluid(IO):
                                     self.submshes_emap[m + 1][0],
                                     ("Lagrange", pb.mesh_degree),
                                 )
-                                p_out = fem.Function(V_out_scalar_sub, name=pb.p_[m].name)
-                                p_out.interpolate(pb.p_[m])
+                                if self.output_midpoint:
+                                    p_proj = project(
+                                        pb.pf_mid_[m],
+                                        pb.V_p_[m],
+                                        pb.dx_p[m],
+                                        domids=[pb.domain_ids[m]],
+                                        nm=pb.p_[m].name,
+                                        comm=self.comm,
+                                        entity_maps=[self.submshes_emap[m + 1][1]],
+                                    )
+                                    p_out = fem.Function(V_out_scalar_sub, name=p_proj.name)
+                                    p_out.interpolate(p_proj)
+                                else:
+                                    p_out = fem.Function(V_out_scalar_sub, name=pb.p_[m].name)
+                                    p_out.interpolate(pb.p_[m])
                                 self.resultsfiles[res + str(m + 1)].write_function(p_out, indicator)
                         else:
-                            p_out = fem.Function(pb.V_out_scalar, name=pb.p_[0].name)
-                            p_out.interpolate(pb.p_[0])
+                            if self.output_midpoint:
+                                p_proj = project(
+                                    pb.pf_mid_[0],
+                                    pb.V_p_[0],
+                                    pb.dx,
+                                    domids=pb.domain_ids,
+                                    nm=pb.p_[0].name,
+                                    comm=self.comm,
+                                    entity_maps=self.entity_maps,
+                                )
+                                p_out = fem.Function(pb.V_out_scalar, name=p_proj.name)
+                                p_out.interpolate(p_proj)
+                            else:
+                                p_out = fem.Function(pb.V_out_scalar, name=pb.p_[0].name)
+                                p_out.interpolate(pb.p_[0])
                             self.resultsfiles[res].write_function(p_out, indicator)
                     elif res == "cauchystress":
                         stressfuncs = []
                         for n in range(pb.num_domains):
-                            stressfuncs.append(pb.ma[n].sigma(pb.v, pb.p, F=pb.alevar["Fale"], chi=pb.phasevar["chi"]))
+                            if self.output_midpoint:
+                                v, p, F, chi = pb.vel_mid, pb.pf_mid_[n], pb.alevar["Fale_mid"], pb.phasevar["chi_mid"]
+                            else:
+                                v, p, F, chi = pb.v, pb.p_[n], pb.alevar["Fale"], pb.phasevar["chi"]
+                            stressfuncs.append(pb.ma[n].sigma(v, p, F=F, chi=chi))
                         cauchystress = project(
                             stressfuncs,
                             pb.Vd_tensor,
@@ -1220,8 +1401,12 @@ class IO_fluid(IO):
                         cauchystress_out.interpolate(cauchystress)
                         self.resultsfiles[res].write_function(cauchystress_out, indicator)
                     elif res == "fluiddisplacement":  # passed in uf is not a function but form, so we have to project
+                        if self.output_midpoint:
+                            uf = pb.ufluid_mid
+                        else:
+                            uf = pb.ufluid
                         uf_proj = project(
-                            pb.ufluid,
+                            uf,
                             pb.V_v,
                             pb.dx,
                             domids=pb.domain_ids,
@@ -1268,9 +1453,13 @@ class IO_fluid(IO):
                         strainenergy_membrane_out.interpolate(strainenergy_membrane)
                         self.resultsfiles[res].write_function(strainenergy_membrane_out, indicator)
                     elif res == "density":
+                        if self.output_midpoint:
+                            chi = pb.phasevar["chi_mid"]
+                        else:
+                            chi = pb.phasevar["chi"]
                         densfuncs = []
                         for n in range(pb.num_domains):
-                            densfuncs.append(pb.vf.get_density(pb.rho[n], chi=pb.phasevar["chi"]))
+                            densfuncs.append(pb.vf.get_density(pb.rho[n], chi=chi))
                         dens_proj = project(
                             densfuncs,
                             pb.V_scalar,
@@ -1330,8 +1519,10 @@ class IO_fluid(IO):
         vecs_to_read = {}
         vecs_to_read[pb.v] = "v"
         vecs_to_read[pb.v_old] = "v_old"
+        vecs_to_read[pb.v_veryold] = "v_veryold" # for BDF2 scheme
         vecs_to_read[pb.a_old] = "a_old"
         vecs_to_read[pb.uf_old] = "uf_old"  # needed for ALE fluid / FSI / FrSI
+        vecs_to_read[pb.uf_veryold] = "uf_veryold"  # for BDF2 scheme
         if any(pb.mem_active_stress):  # for active membrane model (FrSI)
             vecs_to_read[pb.tau_a] = "tau_a"
             vecs_to_read[pb.tau_a_old] = "tau_a"
@@ -1393,8 +1584,10 @@ class IO_fluid(IO):
         vecs_to_write = {}
         vecs_to_write[pb.v] = "v"
         vecs_to_write[pb.v_old] = "v_old"
+        vecs_to_write[pb.v_veryold] = "v_veryold" # for BDF2 scheme
         vecs_to_write[pb.a_old] = "a_old"
         vecs_to_write[pb.uf_old] = "uf_old"  # needed for ALE fluid / FSI / FrSI
+        vecs_to_write[pb.uf_veryold] = "uf_veryold" # for BDF2 scheme
         if any(pb.mem_active_stress):
             vecs_to_write[pb.tau_a] = "tau_a"
 
@@ -1676,12 +1869,38 @@ class IO_phasefield(IO):
                 # save solution to XDMF format
                 for res in pb.results_to_write:
                     if res == "phase":
-                        phi_out = fem.Function(pb.V_out_scalar, name=pb.phi.name)
-                        phi_out.interpolate(pb.phi)
+                        if self.output_midpoint:
+                            phi_proj = project(
+                                pb.phi,
+                                pb.V_phi,
+                                pb.dx,
+                                domids=pb.domain_ids,
+                                nm="PhaseField",
+                                comm=self.comm,
+                                entity_maps=self.entity_maps,
+                            )
+                            phi_out = fem.Function(pb.V_out_scalar, name=phi_proj.name)
+                            phi_out.interpolate(phi_proj)
+                        else:
+                            phi_out = fem.Function(pb.V_out_scalar, name=pb.phi.name)
+                            phi_out.interpolate(pb.phi)
                         self.resultsfiles[res].write_function(phi_out, indicator)
                     elif res == "potential":
-                        mu_out = fem.Function(pb.V_out_scalar, name=pb.mu.name)
-                        mu_out.interpolate(pb.mu)
+                        if self.output_midpoint:
+                            mu_proj = project(
+                                pb.mu,
+                                pb.V_mu,
+                                pb.dx,
+                                domids=pb.domain_ids,
+                                nm="Potential",
+                                comm=self.comm,
+                                entity_maps=self.entity_maps,
+                            )
+                            mu_out = fem.Function(pb.V_out_scalar, name=mu_proj.name)
+                            mu_out.interpolate(mu_proj)
+                        else:
+                            mu_out = fem.Function(pb.V_out_scalar, name=pb.mu.name)
+                            mu_out.interpolate(pb.mu)
                         self.resultsfiles[res].write_function(mu_out, indicator)
                     elif res == "counters":
                         # iteration counters, written by base class
@@ -1693,6 +1912,7 @@ class IO_phasefield(IO):
         vecs_to_read = {}
         vecs_to_read[pb.phi] = "phi"
         vecs_to_read[pb.phi_old] = "phi_old"
+        vecs_to_read[pb.phi_veryold] = "phi_veryold" # for BDF2 scheme
         vecs_to_read[pb.phidot_old] = "phidot_old"
         vecs_to_read[pb.mu] = "mu"
         vecs_to_read[pb.mu_old] = "mu_old"
@@ -1745,6 +1965,7 @@ class IO_phasefield(IO):
         vecs_to_write = {}
         vecs_to_write[pb.phi] = "phi"
         vecs_to_write[pb.phi_old] = "phi_old"
+        vecs_to_write[pb.phi_veryold] = "phi_veryold"
         vecs_to_write[pb.phidot_old] = "phidot_old"
         vecs_to_write[pb.mu] = "mu"
         vecs_to_write[pb.mu_old] = "mu_old"

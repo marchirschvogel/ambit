@@ -332,6 +332,16 @@ class solver_base:
                 self.pb.comm,
             )
 
+        if bool(self.solnln.unc_stp):
+            times_unconv = " ".join(str(int(x/self.pb.pbase.dt)) for x in self.solnln.unc_stp)
+            utilities.print_status(
+                "{:<55s}{:<1s}".format(
+                    "Steps which did not converge but where continuation was requested: ",
+                    times_unconv,
+                ),
+                self.pb.comm,
+            )
+
         utilities.print_status("-" * 63, self.pb.comm)
         self.reset_counters()
 

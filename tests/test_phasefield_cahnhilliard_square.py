@@ -32,6 +32,7 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "results_to_write": ["phase", "potential"],
         "simname": "cahnhilliard_square",
+        "report_conservation_properties": True,
     }
 
 

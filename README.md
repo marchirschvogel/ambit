@@ -26,7 +26,8 @@ The following is supported:
 * Fluid dynamics
   - Incompressible Navier-Stokes/Stokes equations, either in nonconservative or conservative formulation
   - Navier-Stokes/Stokes flow in an Arbitrary Lagrangian Eulerian (ALE) reference frame
-  - One-step theta, or generalized-alpha time integration
+  - Cahn-Hilliard Navier-Stokes equations (Eulerian or ALE) for multiphase flow
+  - BDF2, one-step theta, or generalized-alpha time integration
   - SUPG/PSPG stabilization for equal-order approximations of velocity and pressure
 * Lumped (0D) models
   - Systemic and pulmonary circulation flow models

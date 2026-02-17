@@ -205,9 +205,9 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
-        self.K_phid = fem.petsc.assemble_matrix(self.jac_phid)
+        self.K_phid = fem.petsc.assemble_matrix(self.jac_phid, self.pbp.dbcs)
         self.K_phid.assemble()
-        self.K_mud = fem.petsc.assemble_matrix(self.jac_mud)
+        self.K_mud = fem.petsc.assemble_matrix(self.jac_mud, [])
         self.K_mud.assemble()
 
     def assemble_residual(self, t, subsolver=None):
