@@ -1191,6 +1191,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         self.lsp = self.solutils.timestep_separator_len()
 
         self.indlen = 1
+        self.unc_stp = []
 
         self.initialize_petsc_solver()
 
