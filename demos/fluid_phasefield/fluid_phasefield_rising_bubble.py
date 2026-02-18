@@ -25,7 +25,7 @@ def main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 32,64   64,128   128,256
         "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"]],
-        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_exp1.0_BDF2_eps1.28_-11",
+        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_exp1.0_BDF2_eps0.64_-11",
         "write_initial_fields": True,
         "report_conservation_properties": True,
     }

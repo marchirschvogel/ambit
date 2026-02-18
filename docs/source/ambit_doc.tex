@@ -1450,7 +1450,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \subsubsection{Multiphase Fluid}\label{fluid-multiphase}
 -- Primary variables: velocity $\bs{v}$, pressure $p$, phase $\phi$, and (chem.) potential $\mu$\\
 
--- conservative form of Navier-Stokes, with capillary force term
+-- conservative form of Navier-Stokes, with capillary force term:
 \begin{equation}
 \label{equation-fluid-strong-form}
 \begin{aligned}
@@ -1461,6 +1461,23 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \bs{v}(\bs{x},0) &= \hat{\bs{v}}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t,
 \end{aligned}
 \end{equation}
+
+with the constitutive equation for the Cauchy stress tensor given by
+\begin{align}
+\bs{\sigma} = -p \bs{I} + \eta \left(\nabla \bs{v} + (\nabla \bs{v})^{\mathrm{T}}\right) + \left(\zeta - \frac{2}{d}\eta\right)\nabla\cdot\bs{v}
+\end{align}
+
+-- conservative form of the Cahn-Hilliard equations:
+
+\begin{equation}
+\label{equation-cahnhilliard-strong-form}
+\begin{aligned}
+\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v}) &= - \nabla\cdot\boldsymbol{J} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
+\mu - \frac{\mathrm{d}f}{\mathrm{d}\phi} &= -\nabla\cdot(\kappa \nabla \phi) &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
+\phi(\bs{x},0) &= \hat{\phi}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t,
+\end{aligned}
+\end{equation}
+
 
 \section{Demos}\label{demos}
 
@@ -1765,6 +1782,16 @@ Figure \ref{fig:channel_flag_results} depicts the velocity at three instances in
 -- Physics description given in sec. \ref{fluid-phasefield}\\
 
 -- Input files: \verb"demos/fluid_phasefield"\\
+
+
+\begin{figure}
+\centering
+\includegraphics[width=1.0\textwidth]{fig/rising_bubble_results_verif.png}
+\caption{...}
+\label{fig:rising_bubble_results_verif}
+\end{figure}
+
+
 
 \clearpage
 
