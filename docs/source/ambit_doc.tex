@@ -147,7 +147,7 @@ Ambit \cite{hirschvogel2024-ambit} is an open-source multi-physics finite elemen
 
 Ambit provides general nonlinear (compressible or incompressible) finite strain solid dynamics \cite{holzapfel2000}, implementing a range of hyperelastic, viscous, and active material models. Specifically, the well-known anisotropic Holzapfel-Ogden \cite{holzapfel2009} and Guccione models \cite{guccione1995} for structural description of the myocardium are provided, along with a bunch of other models. It further implements strain- and stress-mediated volumetric growth models \cite{goektepe2010} that allow to model (maladaptive) ventricular shape and size changes. Inverse mechanics approaches to imprint loads into a reference state are implemented using the so-called prestressing method \cite{gee2010} in displacement formulation \cite{schein2021}.\\
 
-Furthermore, fluid dynamics in terms of incompressible Navier-Stokes/Stokes equations -- either in Eulerian or Arbitrary Lagrangian-Eulerian (ALE) reference frames -- are implemented. Taylor-Hood elements or equal-order approximations with SUPG/PSPG stabilization \cite{tezduyar2000} can be used.\\
+Furthermore, fluid dynamics in terms of incompressible Navier-Stokes/Stokes equations -- either in Eulerian or Arbitrary Lagrangian-Eulerian (ALE) reference frames -- are implemented. Taylor-Hood elements or equal-order approximations with SUPG/PSPG stabilization \cite{tezduyar2000} can be used. Multiphase fluid systems governed by the coupled Navier-Stokes Cahn-Hilliard equations in mass-averaged velocity formulation are also supported \cite{brunk2026},\cite{ten-eikelder2024}, with straightforward extension to ALE formulations.\\
 
 A variety of reduced 0D lumped models targeted at blood circulation modeling are implemented, including 3- and 4-element Windkessel models \cite{westerhof2009} as well as closed-loop full circulation \cite{hirschvogel2017} and coronary flow models \cite{arthurs2016}.\\
 
@@ -173,7 +173,7 @@ This documentation is structured as follows. In sec. \ref{installation}, instruc
 
 \section{Installation}\label{installation}
 
-In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible dolfinx development version dates to 6 Aug 2025).\\
+In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible tested dolfinx release version: v0.10.0.post2).\\
 
 Ambit can then be installed using pip, either the current release
 \begin{verbatim}
@@ -312,15 +312,14 @@ J(\bs{u})-1 &= 0 &&\text{in} \; \mathit{\Omega}_{0} \times [0, T], \\
 \subsubsection{Weak form}
 
 \textbf{Displacement-based}\\
-
--- Primary variable: displacement $\bs{u}$\\
-
--- Principal of Virtual Work:
+Find $\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h,D}$ such that
 \begin{equation}
 \label{equation-solid-weak-form}
 \begin{aligned}
-r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
+r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u};\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \end{aligned}
 \end{equation}
+for all $\delta\bs{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}$\\
+
 -- Kinetic virtual work:
 \begin{equation}
 \label{equation-deltaw-kin}
@@ -388,14 +387,15 @@ r(\bs{u};\delta\bs{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u})
 
 \textbf{Incompressible mechanics: 2-field displacement and pressure variables}\\
 
--- Primary variables: displacement $\bs{u}$ and pressure $p$
+Find $(\bs{u},p) \in \boldsymbol{\mathcal{V}}_{u}^{h,D} \times \mathcal{V}_{p}^{h,D}$ such that
 \begin{equation}
 \label{equation-solid-weak-form-inc}
 \begin{aligned}
-r_u(\bs{u},p;\delta\bs{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u} \\
-r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0, \quad \forall \; \delta p
+r_u(\bs{u},p;\delta\bs{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\bs{u};\delta\bs{u}) + \delta \mathcal{W}_{\mathrm{int}}(\bs{u},p;\delta\bs{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\bs{u};\delta\bs{u}) = 0, \\
+r_p(\bs{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\bs{u};\delta p) = 0,
 \end{aligned}
 \end{equation}
+for all $(\delta\bs{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \mathcal{V}_{p}^{h}$\\
 
 -- Kinetic virtual work: (\ref{equation-deltaw-kin})\\
 -- Internal virtual work:
@@ -583,22 +583,20 @@ and the pressure in $\delta \mathcal{W}_{\mathrm{int}}$ is set according to (\re
 
 with a Newtonian fluid constitutive law
 \begin{align}
-\bs{\sigma} = -p \bs{I} + 2 \eta\,\bs{\gamma} = -p \bs{I} + \eta \left(\nabla \bs{v} + (\nabla \bs{v})^{\mathrm{T}}\right)
+\bs{\sigma} = -p \bs{I} + \eta \left(\nabla \bs{v} + (\nabla \bs{v})^{\mathrm{T}}\right)
 \end{align}
 where $\eta$ is the dynamic viscosity
 
 \textbf{Weak Form}\\
-
--- Primary variables: velocity $\bs{v}$ and pressure $p$\\
-
--- Principle of Virtual Power
+Find $(\bs{v},p) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D}$ such that
 \begin{equation}
 \label{equation-fluid-weak-form}
 \begin{aligned}
-r_v(\bs{v},p;\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p;\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v};\delta\bs{v}) = 0, \quad \forall \; \delta\bs{v} \\
-r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p), \quad \forall \; \delta p
+r_v(\bs{v},p;\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p;\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v};\delta\bs{v}) = 0, \quad \\
+r_p(\bs{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v};\delta p) = 0,
 \end{aligned}
 \end{equation}
+for all $(\delta\bs{v},\delta p) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h}$
 
 -- Kinetic virtual power:
 \begin{equation}
@@ -759,26 +757,25 @@ r_{d}(\bs{d};\delta\bs{d}) := \int\limits_{\Om_0}\bs{\sigma}^{\mathrm{G}}(\bs{d}
 
 with a Newtonian fluid constitutive law
 \begin{align}
-\bs{\sigma} = -p \bs{I} + 2 \mu \bs{\gamma} = -p \bs{I} + \mu \left(\nabla_0 \bs{v}\,\widehat{\bs{F}}^{-1} + \widehat{\bs{F}}^{-\mathrm{T}}(\nabla_0 \bs{v})^{\mathrm{T}}\right)
+\bs{\sigma} = -p \bs{I} + \mu \left(\nabla_0 \bs{v}\,\widehat{\bs{F}}^{-1} + \widehat{\bs{F}}^{-\mathrm{T}}(\nabla_0 \bs{v})^{\mathrm{T}}\right)
 \end{align}
 
 \textbf{Weak form (ALE)}\\
-
--- Primary variables: velocity $\bs{v}$, pressure $p$, and domain displacement $\bs{d}$\\
-
--- Principle of Virtual Power
+Find $(\bs{v},p,\bs{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \boldsymbol{\mathcal{V}}_{d}^{h,D}$ such that
 \begin{equation}
 \label{equation-fluid-ale-weak-form}
 \begin{aligned}
-r_v(\bs{v},p,\bs{d};\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v},\bs{d};\delta\bs{v}) = 0, \quad \forall \; \delta\bs{v} \\
-r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p), \quad \forall \; \delta p
+r_v(\bs{v},p,\bs{d};\delta\bs{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) + \delta \mathcal{P}_{\mathrm{int}}(\bs{v},p,\bs{d};\delta\bs{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\bs{v},\bs{d};\delta\bs{v}) = 0, \\
+r_p(\bs{v},\bs{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\bs{v},\bs{d};\delta p) = 0, \\
+r_{d}(\bs{d};\delta\bs{d}) &= 0,
 \end{aligned}
 \end{equation}
+for all $(\delta\bs{v},\delta p,\delta\bs{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \boldsymbol{\mathcal{V}}_{d}^{h}$
 
 -- Kinetic virtual power:
 \begin{equation}
 \begin{aligned}
-\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widehat{J} \rho\left(\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_{0}\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right)s \cdot \delta\bs{v} \,\mathrm{d}V
+\delta \mathcal{P}_{\mathrm{kin}}(\bs{v},\bs{d};\delta\bs{v}) = \int\limits_{\Om_0} \widehat{J} \rho\left(\left.\frac{\partial\bs{v}}{\partial t}\right|_{\bs{x}_{0}} + (\nabla_{0}\bs{v}\,\widehat{\bs{F}}^{-1})\,(\bs{v}-\widehat{\bs{w}})\right) \cdot \delta\bs{v} \,\mathrm{d}V
 \end{aligned}
 \end{equation}
 -- Internal virtual power:
@@ -1447,7 +1444,8 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \end{aligned}
 \end{equation}
 
-\subsubsection{Multiphase Fluid}\label{fluid-multiphase}
+\clearpage
+\subsubsection{Multiphase Fluid}\label{fluid-phasefield}
 -- Primary variables: velocity $\bs{v}$, pressure $p$, phase $\phi$, and (chem.) potential $\mu$\\
 
 -- conservative form of Navier-Stokes, with capillary force term:
@@ -1473,10 +1471,54 @@ with the constitutive equation for the Cauchy stress tensor given by
 \label{equation-cahnhilliard-strong-form}
 \begin{aligned}
 \frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v}) &= - \nabla\cdot\boldsymbol{J} &&\text{in} \; \mathit{\Om}_t \times [0, T], \\
-\mu - \frac{\mathrm{d}f}{\mathrm{d}\phi} &= -\nabla\cdot(\kappa \nabla \phi) &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
+\mu - \frac{\mathrm{d}\psi}{\mathrm{d}\phi} + \nabla\cdot(\kappa \nabla \phi) &= 0 &&\text{in} \; \mathit{\Om}_t \times [0, T],\\
 \phi(\bs{x},0) &= \hat{\phi}_{0}(\bs{x}) &&\text{in} \; \mathit{\Om}_t,
 \end{aligned}
 \end{equation}
+with the constitutive equation for the diffusive flux
+\begin{align}
+\bs{J} = -M(\phi)\nabla(\mu + \alpha p)
+\end{align}
+where $\alpha=\frac{\rho_1-\rho_2}{\rho_1+\rho_2}$\\
+
+We assume $\phi \in [a, b]$ and define the normalized phase field variable
+\begin{align}
+\chi(\phi) = \frac{\phi-a}{b-a}
+\end{align}
+and fluid desity as well as dynamic and bulk viscosity read
+\begin{align}
+\rho(\chi(\phi)) &= \rho_1 (1 - \chi) + \rho_2 \chi, \\
+\eta(\chi(\phi)) &= \eta_1 (1 - \chi) + \eta_2 \chi, \\
+\zeta(\chi(\phi)) &= \zeta_1 (1 - \chi) + \zeta_2 \chi
+\end{align}
+
+Chemical potential:
+\begin{align}
+\psi(\phi) = D_0 (a-\phi)^2 (b-\phi)^2
+\end{align}
+with $D_0$ a bulk free-energy parameter\\
+
+Mobility:
+\begin{align}
+M(\phi) = M_0 |(a-\phi)^{\gamma} (b-\phi)^{\gamma}|
+\end{align}
+
+Variational form:\\
+
+Find $(\bs{v},p,\phi,\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \mathcal{V}_{\phi}^{h,D} \times \mathcal{V}_{\mu}^{h,D}$ such that
+\begin{equation}
+\begin{aligned}
+&\int\limits_{\Om} \left(\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v + \int\limits_{\Omega}\boldsymbol{\sigma} : \nabla\delta\boldsymbol{v}\,\mathrm{d}v + \int\limits_{\Omega}\phi \nabla\mu\cdot\delta\boldsymbol{v}\,\mathrm{d}v - \delta\mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \\
+&\int\limits_{\Om}\left(\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v})\right)\delta p \,\mathrm{d}v = 0, \\
+&\int\limits_{\Om} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}v - \int\limits_{\Omega} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}v \quad + \text{(Neumann BCs)} = 0, \\
+&\int\limits_{\Om} \mu \,\delta\mu \, \mathrm{d}v - \int\limits_{\Omega} \frac{\mathrm{d}\psi}{\mathrm{d}\phi} \delta\mu \,\mathrm{d}v - \int\limits_{\Omega} \kappa \nabla \phi \cdot \nabla \delta\mu \, \mathrm{d}v \quad + \text{(Neumann BCs)} = 0,
+\end{aligned}
+\end{equation}
+
+for all $(\delta\bs{v},\delta p,\delta\phi,\delta\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \mathcal{V}_{\phi}^{h} \times \mathcal{V}_{\mu}^{h}$, with
+\begin{align}
+\frac{\partial\rho}{\partial t} = \rho^{\prime}(\phi)\frac{\partial\phi}{\partial t}
+\end{align}
 
 
 \section{Demos}\label{demos}
@@ -1748,7 +1790,7 @@ Geometrical parameters, given in $[\mathrm{mm}]$, are:
 \end{center}
 \end{table}
 
-Both solid and fluid are discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor-Hood finite elements, hence no stabilization for the fluid problem is needed. Temporal discretization for both the solid and the fluid are carried out with a Generalized-$\alpha$ scheme with no numerical damping ($\rho_{\mathrm{inf}}=1$).\\
+The fluid is discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor-Hood finite elements, hence no stabilization is needed. The solid is discretized with displacement-based quadrilateral $\mathbb{Q}^2$ elements. Temporal discretization for both the solid and the fluid are carried out with a Generalized-$\alpha$ scheme with no numerical damping ($\rho_{\mathrm{inf}}=1$).\\
 
 Study the setup shown in fig. \ref{fig:channel_flag_setup} together with the parameters in the table and the comments in the input file \verb"fsi_channel_flag.py". Run the simulation for FSI2 and FSI3 cases, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 \begin{verbatim}
@@ -1777,17 +1819,76 @@ Figure \ref{fig:channel_flag_results} depicts the velocity at three instances in
 \end{figure}
 
 
-\subsection{Demo: Multiphase fluid}\label{demo-multiphase}
+\clearpage
+\subsection{Demo: Multiphase fluid}\label{demo-multiphase-fluid}
 
 -- Physics description given in sec. \ref{fluid-phasefield}\\
 
--- Input files: \verb"demos/fluid_phasefield"\\
+-- Input files: \verb"demos/fluid_phasefield"
 
+\subsubsection*{Rising bubble under gravity}
+
+We study a 2D multiphase flow benchmark, where two incompressible fluids of different densities and different viscosities interact: a fluid of lower density (and viscosity) is immersed into a surrounding fluid of higher density (and viscosity), and a gravitational force acts in vertical direction, cf. the setup in Fig.~\ref{fig:rising_bubble_setup}. This setup corresponds to the benchmark case described in \cite{brunk2026},\cite{ten-eikelder2024}. The following Dirichlet boundary conditions apply:
+\begin{equation}
+\begin{aligned}
+    \boldsymbol{v} = \boldsymbol{0}
+    \quad &  
+    \text{on}\; \Gm_{\mathrm{b}}^{D}\cup\Gm_{\mathrm{t}}^{D} \times [0,T], \\
+    \boldsymbol{v}\cdot\boldsymbol{n} = 0
+    \quad &  
+    \text{on}\; \Gm_{\mathrm{r}}^{D}\cup\Gm_{\mathrm{l}}^{D} \times [0,T].
+    \label{eq:rising_dbc}
+\end{aligned}
+\end{equation}
+The body force term takes the form $\hat{\boldsymbol{b}}=-\rho\boldsymbol{g}$, with $\boldsymbol{g}\cdot\boldsymbol{e}_{y}=0.98$. Our phase field variable is bounded between $a=-1$ and $b=1$. Further, Cahn-Hilliard parameters are chosen as
+\begin{align}
+	D_0 = \frac{\tilde{\sigma}}{4\epsilon}, \qquad
+	M_0 = 0.1\epsilon^2, \qquad
+	\kappa = \tilde{\sigma}\epsilon,
+\end{align}
+with $\tilde{\sigma}=\frac{3\sigma}{2\sqrt{2}}$ (surface energy density coefficient) and $\epsilon=0.64\,h_{\mathrm{e}}$, where $h_{\mathrm{e}}$ is the finite element edge length. Parameters for the two cases are shown in the following table. Bulk viscosities are assumed zero ($\zeta=0$).
+
+\begin{table}[!h]
+\begin{center}
+%\caption{Parameters}\label{tab:params_rising_bubble}
+\begin{tabular}{cccccc}
+ & $\rho_1$ & $\rho_2$   & $\eta_1$  & $\eta_2$ & $\sigma$ \\\hline
+Case 1 & 1000 & 100 & 10 & 1 & 24.5 \\
+Case 2 & 1000 & 1 & 10 & 0.1 & 1.96 
+\end{tabular}
+\end{center}
+\end{table}
+
+The fluid is discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor-Hood finite elements, while a quadrilateral $\mathbb{Q}^1$-$\mathbb{Q}^1$ discretization is chosen for the Cahn-Hilliard equations. A BDF2 time-integration scheme is chosen for both fluid and Cahn-Hilliard.\\
+
+\begin{figure}
+\centering
+\includegraphics[width=0.5\textwidth]{fig/rising_bubble_setup.png}
+\caption{Rising bubble benchmark \cite{brunk2026},\cite{ten-eikelder2024}: A fluid with lower density (fluid 2) is surrounded by a fluid of higher density (fluid 1). Bottom and top velocities are constrained, as well as the normal velocity on the left and right walls. A gravitational force acts in vertical direction.}
+\label{fig:rising_bubble_setup}
+\end{figure}
+
+Study the setup shown in Fig.~\ref{fig:rising_bubble_setup} together with the parameters in the table and the comments in the input file \verb"fluid_phasefield_rising_bubble.py". Run the simulation for both cases 1 and 2, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+\begin{verbatim}
+mpiexec -n 1 python3 fluid_phasefield_rising_bubble.py
+\end{verbatim}
+Try different settings for the mesh, e.g. vary \verb"meshsize" inside \verb"mesh_domain" (increase from \verb"[32,64]" to \verb"[64,128]" to \verb"[128,256]"; the first value is the number of elements used in horizontal, the second the number in vertical direction). If your system allows, use more than one core, especially for finer mesh sizes (hence run with \verb"mpiexec -n 4 ..." or more). A good rule of thumb is to have 10000--20000 degrees of freedom per process. The time step and the interface thickness parameter $\epsilon$ will be changed automatically depending on the chosen mesh size. Compare the results for the two cases and the different mesh sizes.\\
+
+Figure~\ref{fig:rising_bubble_results} shows the results of phase field and magnitude of fluid velocity for a mesh size of $128 \times 256$ for both cases at the end of the simulation time $t=3$.\\
+
+\begin{figure}
+\centering
+\includegraphics[width=0.7\textwidth]{fig/rising_bubble_results.png}
+\caption{Phase field $\phi$ (left part) and magnitude of velocity $||\boldsymbol{v}||$ (right part) solutions for both cases at the final time $t=3.0$.}
+\label{fig:rising_bubble_results}
+\end{figure}
+
+Figure~\ref{fig:rising_bubble_results_verif} plots the center of mass as well as the rise velocity of the lower-density fluid bubble over time (mesh size $128 \times 256$) and compares the solution with two different reference solutions (one a mass-, the other a volume-averaged velocity formulation) from Brunk and ten Eikelder \cite{brunk2026} as well as ten Eikelder and Schillinger \cite{ten-eikelder2024}. We observe good agreements between our (mass-averaged velocity) solution and the volume-averaged velocity reference solutions. Slight deviations to the mass-averaged reference solutions are observed. 
 
 \begin{figure}
 \centering
 \includegraphics[width=1.0\textwidth]{fig/rising_bubble_results_verif.png}
-\caption{...}
+\caption{Center of mass (left column) and rise velocity (right column) for both cases over time, comparison to reference solutions from Brunk and ten Eikelder \cite{brunk2026}.}
 \label{fig:rising_bubble_results_verif}
 \end{figure}
 

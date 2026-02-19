@@ -46,7 +46,11 @@ Preface
   Navier-Stokes/Stokes equations – either in Eulerian or Arbitrary
   Lagrangian-Eulerian (ALE) reference frames – are implemented.
   Taylor-Hood elements or equal-order approximations with SUPG/PSPG
-  stabilization :cite:p:`tezduyar2000` can be used.
+  stabilization :cite:p:`tezduyar2000` can be used. Multiphase
+  fluid systems governed by the coupled Navier-Stokes Cahn-Hilliard
+  equations in mass-averaged velocity formulation are also supported
+  :cite:p:`brunk2026`,:cite:p:`ten-eikelder2024`,
+  with straightforward extension to ALE formulations.
 | A variety of reduced 0D lumped models targeted at blood circulation
   modeling are implemented, including 3- and 4-element Windkessel models
   :cite:p:`westerhof2009` as well as closed-loop full
@@ -89,7 +93,7 @@ Installation
 
 | In order to use Ambit, you need to install FEniCSx
   (https://github.com/FEniCS/dolfinx#installation) (latest
-  Ambit-compatible dolfinx development version dates to 6 Aug 2025).
+  Ambit-compatible tested dolfinx release version: v0.10.0.post2).
 | Ambit can then be installed using pip, either the current release
 
 ::
@@ -242,16 +246,18 @@ Weak form
 ~~~~~~~~~
 
 | **Displacement-based**
-| – Primary variable: displacement :math:`\boldsymbol{u}`
-| – Principal of Virtual Work:
+| Find :math:`\boldsymbol{u}\in\boldsymbol{\mathcal{V}}_{u}^{h,D}` such
+  that
 
   .. math::
      :label: solid-weak-form
 
      \begin{aligned}
-     r(\boldsymbol{u};\delta\boldsymbol{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
+     r(\boldsymbol{u};\delta\boldsymbol{u}) := \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \end{aligned}
 
-  – Kinetic virtual work:
+  for all
+  :math:`\delta\boldsymbol{u}\in\boldsymbol{\mathcal{V}}_{u}^{h}`
+| – Kinetic virtual work:
 
   .. math::
      :label: deltaw-kin
@@ -326,17 +332,20 @@ Weak form
 
 | **Incompressible mechanics: 2-field displacement and pressure
   variables**
-| – Primary variables: displacement :math:`\boldsymbol{u}` and pressure
-  :math:`p`
+| Find
+  :math:`(\boldsymbol{u},p) \in \boldsymbol{\mathcal{V}}_{u}^{h,D} \times \mathcal{V}_{p}^{h,D}`
+  such that
 
   .. math::
      :label: solid-weak-form-inc
 
      \begin{aligned}
-     r_u(\boldsymbol{u},p;\delta\boldsymbol{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u} \\
-     r_p(\boldsymbol{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) = 0, \quad \forall \; \delta p
+     r_u(\boldsymbol{u},p;\delta\boldsymbol{u}) &:= \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{u};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u},p;\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u};\delta\boldsymbol{u}) = 0, \\
+     r_p(\boldsymbol{u};\delta p) &:= \delta \mathcal{W}_{\mathrm{pres}}(\boldsymbol{u};\delta p) = 0,
      \end{aligned}
 
+  for all
+  :math:`(\delta\boldsymbol{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \mathcal{V}_{p}^{h}`
 | – Kinetic virtual work:
   (`[equation-deltaw-kin] <#equation-deltaw-kin>`__)
 | – Internal virtual work:
@@ -536,7 +545,7 @@ Eulerian reference frame
      :label: fluid-strong-form
 
      \begin{aligned}
-     \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &= \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
+     \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) &= \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p) + \hat{\boldsymbol{b}} &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
      \nabla\cdot \boldsymbol{v} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\\
      \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{D}} \times [0, T],\\
      \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{N}} \times [0, T],\\
@@ -547,21 +556,26 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu\,\boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\nabla \boldsymbol{v} + (\nabla \boldsymbol{v})^{\mathrm{T}}\right)
+   \boldsymbol{\sigma} = -p \boldsymbol{I} + \eta \left(\nabla \boldsymbol{v} + (\nabla \boldsymbol{v})^{\mathrm{T}}\right)
    \end{aligned}
 
+where :math:`\eta` is the dynamic viscosity
+
 | **Weak Form**
-| – Primary variables: velocity :math:`\boldsymbol{v}` and pressure
-  :math:`p`
-| – Principle of Virtual Power
+| Find
+  :math:`(\boldsymbol{v},p) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D}`
+  such that
 
   .. math::
      :label: fluid-weak-form
 
      \begin{aligned}
-     r_v(\boldsymbol{v},p;\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p;\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \quad \forall \; \delta\boldsymbol{v} \\
-     r_p(\boldsymbol{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v};\delta p), \quad \forall \; \delta p
+     r_v(\boldsymbol{v},p;\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p;\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \quad \\
+     r_p(\boldsymbol{v};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v};\delta p) = 0,
      \end{aligned}
+
+  for all
+  :math:`(\delta\boldsymbol{v},\delta p) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h}`
 
 – Kinetic virtual power:
 
@@ -569,7 +583,7 @@ with a Newtonian fluid constitutive law
    :label: deltap-kin
 
    \begin{aligned}
-   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_t} \rho\left[\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right] \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_t} \rho\left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
    \end{aligned}
 
 – Internal virtual power:
@@ -738,8 +752,8 @@ ALE reference frame
      :label: fluid-ale-strong-form
 
      \begin{aligned}
-     \nabla_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}} + \hat{\boldsymbol{b}} &= \rho\left[\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right] &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
-     \nabla_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}} &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \widehat{J}\rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) &= \nabla_{0} \cdot\left(\widehat{J}\boldsymbol{\sigma} \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right) + \widehat{J}\hat{\boldsymbol{b}} &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
+     \nabla_{0}\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{v}\right) &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_0 \times [0, T],\\
      \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{D}} \times [0, T], \\
      \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_0^{\mathrm{N}} \times [0, T], \\
      \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_0,
@@ -749,27 +763,31 @@ with a Newtonian fluid constitutive law
 
 .. math::
    \begin{aligned}
-   \boldsymbol{\sigma} = -p \boldsymbol{I} + 2 \mu \boldsymbol{\gamma} = -p \boldsymbol{I} + \mu \left(\nabla_0 \boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} + \widehat{\boldsymbol{F}}^{-\mathrm{T}}(\nabla_0 \boldsymbol{v})^{\mathrm{T}}\right)
+   \boldsymbol{\sigma} = -p \boldsymbol{I} + \mu \left(\nabla_0 \boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} + \widehat{\boldsymbol{F}}^{-\mathrm{T}}(\nabla_0 \boldsymbol{v})^{\mathrm{T}}\right)
    \end{aligned}
 
 | **Weak form (ALE)**
-| – Primary variables: velocity :math:`\boldsymbol{v}`, pressure
-  :math:`p`, and domain displacement :math:`\boldsymbol{d}`
-| – Principle of Virtual Power
+| Find
+  :math:`(\boldsymbol{v},p,\boldsymbol{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \boldsymbol{\mathcal{V}}_{d}^{h,D}`
+  such that
 
   .. math::
      :label: fluid-ale-weak-form
 
      \begin{aligned}
-     r_v(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = 0, \quad \forall \; \delta\boldsymbol{v} \\
-     r_p(\boldsymbol{v},\boldsymbol{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p), \quad \forall \; \delta p
+     r_v(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) &:= \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) + \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) - \delta \mathcal{P}_{\mathrm{ext}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = 0, \\
+     r_p(\boldsymbol{v},\boldsymbol{d};\delta p) &:= \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p) = 0, \\
+     r_{d}(\boldsymbol{d};\delta\boldsymbol{d}) &= 0,
      \end{aligned}
+
+  for all
+  :math:`(\delta\boldsymbol{v},\delta p,\delta\boldsymbol{d}) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \boldsymbol{\mathcal{V}}_{d}^{h}`
 
 – Kinetic virtual power:
 
 .. math::
    \begin{aligned}
-   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widehat{J} \rho\left[\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_{0}\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right] \cdot \delta\boldsymbol{v} \,\mathrm{d}V
+   \delta \mathcal{P}_{\mathrm{kin}}(\boldsymbol{v},\boldsymbol{d};\delta\boldsymbol{v}) = \int\limits_{\mathit{\Omega}_0} \widehat{J} \rho\left(\left.\frac{\partial\boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_{0}\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
    \end{aligned}
 
 – Internal virtual power:
@@ -777,7 +795,7 @@ with a Newtonian fluid constitutive law
 .. math::
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{int}}(\boldsymbol{v},p,\boldsymbol{d};\delta\boldsymbol{v}) = 
-   \int\limits_{\mathit{\Omega}_0} \widehat{J}\boldsymbol{\sigma}(\boldsymbol{v},p,\boldsymbol{d}) : \nabla_{0} \delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1} \,\mathrm{d}V
+   \int\limits_{\mathit{\Omega}_0} \widehat{J}\boldsymbol{\sigma}\widehat{\boldsymbol{F}}^{-\mathrm{T}} : \nabla_{0} \delta\boldsymbol{v} \,\mathrm{d}V
    \end{aligned}
 
 – Pressure virtual power:
@@ -785,7 +803,7 @@ with a Newtonian fluid constitutive law
 .. math::
    \begin{aligned}
    \delta \mathcal{P}_{\mathrm{pres}}(\boldsymbol{v},\boldsymbol{d};\delta p) = 
-   \int\limits_{\mathit{\Omega}_0} \widehat{J}\,\nabla_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\delta p\,\mathrm{d}V
+   \int\limits_{\mathit{\Omega}_0} \nabla_{0}\cdot\left(\widehat{J}\widehat{\boldsymbol{F}}^{-1}\boldsymbol{v}\right) \delta p\,\mathrm{d}V
    \end{aligned}
 
 | – External virtual power:
@@ -820,7 +838,7 @@ with a Newtonian fluid constitutive law
   .. math::
      \begin{aligned}
      r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{SUPG}}\,(\nabla_0\delta\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,\boldsymbol{v}\;\cdot \\
-     & \qquad\quad \cdot\left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V \\
+     & \qquad\quad \cdot\left(\widehat{J}\rho\left(\left.\frac{\partial \boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\boldsymbol{\sigma}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V \\
      & + \int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{LSIC}}\,\rho\,(\nabla_{0}\delta\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})(\nabla_{0}\boldsymbol{v} : \widehat{\boldsymbol{F}}^{-\mathrm{T}})\,\mathrm{d}V
      \end{aligned}
 
@@ -831,7 +849,7 @@ with a Newtonian fluid constitutive law
   .. math::
      \begin{aligned}
      r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_0}\widehat{J}\, \tau_{\mathrm{PSPG}}\,(\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_{0}\delta p) \;\cdot \\
-     & \qquad\quad \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0} \boldsymbol{\sigma}(\boldsymbol{v},\boldsymbol{d},p) : \widehat{\boldsymbol{F}}^{-\mathrm{T}}\right]\,\mathrm{d}V
+     & \qquad\quad \cdot \left(\widehat{J}\rho\left(\left.\frac{\partial \boldsymbol{v}}{\partial t}\right|_{\boldsymbol{x}_{0}} + (\nabla_0\boldsymbol{v}\,\widehat{\boldsymbol{F}}^{-1})\,(\boldsymbol{v}-\widehat{\boldsymbol{w}})\right) - \nabla_{0}\cdot\left(\widehat{J}\boldsymbol{\sigma}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\,\mathrm{d}V
      \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
@@ -1500,6 +1518,108 @@ Fluid-reduced-Solid Interaction (FrSI)
    \begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\boldsymbol{\mathsf{v}}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k}
    \end{aligned}
 
+.. _fluid-phasefield:
+
+Multiphase Fluid
+~~~~~~~~~~~~~~~~
+
+| – Primary variables: velocity :math:`\boldsymbol{v}`, pressure
+  :math:`p`, phase :math:`\phi`, and (chem.) potential :math:`\mu`
+| – conservative form of Navier-Stokes, with capillary force term:
+
+  .. math::
+     :label: fluid-strong-form
+
+     \begin{aligned}
+     \frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) &= \nabla \cdot \boldsymbol{\sigma} -\phi\nabla\mu + \hat{\boldsymbol{b}} &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
+     \frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v}) &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\\
+     \boldsymbol{v} &= \hat{\boldsymbol{v}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{D}} \times [0, T],\\
+     \boldsymbol{t} = \boldsymbol{\sigma}\boldsymbol{n} &= \hat{\boldsymbol{t}} &&\text{on} \; \mathit{\mathit{\Gamma}}_t^{\mathrm{N}} \times [0, T],\\
+     \boldsymbol{v}(\boldsymbol{x},0) &= \hat{\boldsymbol{v}}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_t,
+     \end{aligned}
+
+with the constitutive equation for the Cauchy stress tensor given by
+
+.. math::
+   \begin{aligned}
+   \boldsymbol{\sigma} = -p \boldsymbol{I} + \eta \left(\nabla \boldsymbol{v} + (\nabla \boldsymbol{v})^{\mathrm{T}}\right) + \left(\zeta - \frac{2}{d}\eta\right)\nabla\cdot\boldsymbol{v}
+   \end{aligned}
+
+– conservative form of the Cahn-Hilliard equations:
+
+| 
+
+  .. math::
+     :label: cahnhilliard-strong-form
+
+     \begin{aligned}
+     \frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v}) &= - \nabla\cdot\boldsymbol{J} &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T], \\
+     \mu - \frac{\mathrm{d}\psi}{\mathrm{d}\phi} + \nabla\cdot(\kappa \nabla \phi) &= 0 &&\text{in} \; \mathit{\mathit{\Omega}}_t \times [0, T],\\
+     \phi(\boldsymbol{x},0) &= \hat{\phi}_{0}(\boldsymbol{x}) &&\text{in} \; \mathit{\mathit{\Omega}}_t,
+     \end{aligned}
+
+  with the constitutive equation for the diffusive flux
+
+  .. math::
+     \begin{aligned}
+     \boldsymbol{J} = -M(\phi)\nabla(\mu + \alpha p)
+     \end{aligned}
+
+  where :math:`\alpha=\frac{\rho_1-\rho_2}{\rho_1+\rho_2}`
+| We assume :math:`\phi \in [a, b]` and define the normalized phase
+  field variable
+
+  .. math::
+     \begin{aligned}
+     \chi(\phi) = \frac{\phi-a}{b-a}
+     \end{aligned}
+
+  and fluid desity as well as dynamic and bulk viscosity read
+
+  .. math::
+     \begin{aligned}
+     \rho(\chi(\phi)) &= \rho_1 (1 - \chi) + \rho_2 \chi, \\
+     \eta(\chi(\phi)) &= \eta_1 (1 - \chi) + \eta_2 \chi, \\
+     \zeta(\chi(\phi)) &= \zeta_1 (1 - \chi) + \zeta_2 \chi
+     \end{aligned}
+
+| Chemical potential:
+
+  .. math::
+     \begin{aligned}
+     \psi(\phi) = D_0 (a-\phi)^2 (b-\phi)^2
+     \end{aligned}
+
+  with :math:`D_0` a bulk free-energy parameter
+| Mobility:
+
+  .. math::
+     \begin{aligned}
+     M(\phi) = M_0 |(a-\phi)^{\gamma} (b-\phi)^{\gamma}|
+     \end{aligned}
+
+| Variational form:
+| Find
+  :math:`(\boldsymbol{v},p,\phi,\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h,D} \times \mathcal{V}_{p}^{h,D} \times \mathcal{V}_{\phi}^{h,D} \times \mathcal{V}_{\mu}^{h,D}`
+  such that
+
+  .. math::
+     \begin{aligned}
+     &\int\limits_{\mathit{\Omega}} \left(\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v + \int\limits_{\Omega}\boldsymbol{\sigma} : \nabla\delta\boldsymbol{v}\,\mathrm{d}v + \int\limits_{\Omega}\phi \nabla\mu\cdot\delta\boldsymbol{v}\,\mathrm{d}v - \delta\mathcal{P}_{\mathrm{ext}}(\boldsymbol{v};\delta\boldsymbol{v}) = 0, \\
+     &\int\limits_{\mathit{\Omega}}\left(\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v})\right)\delta p \,\mathrm{d}v = 0, \\
+     &\int\limits_{\mathit{\Omega}} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}v - \int\limits_{\Omega} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}v \quad + \text{(Neumann BCs)} = 0, \\
+     &\int\limits_{\mathit{\Omega}} \mu \,\delta\mu \, \mathrm{d}v - \int\limits_{\Omega} \frac{\mathrm{d}\psi}{\mathrm{d}\phi} \delta\mu \,\mathrm{d}v - \int\limits_{\Omega} \kappa \nabla \phi \cdot \nabla \delta\mu \, \mathrm{d}v \quad + \text{(Neumann BCs)} = 0,
+     \end{aligned}
+
+for all
+:math:`(\delta\boldsymbol{v},\delta p,\delta\phi,\delta\mu) \in \boldsymbol{\mathcal{V}}_{v}^{h} \times \mathcal{V}_{p}^{h} \times \mathcal{V}_{\phi}^{h} \times \mathcal{V}_{\mu}^{h}`,
+with
+
+.. math::
+   \begin{aligned}
+   \frac{\partial\rho}{\partial t} = \rho^{\prime}(\phi)\frac{\partial\phi}{\partial t}
+   \end{aligned}
+
 Demos
 =====
 
@@ -1521,10 +1641,8 @@ Cantilever under tip load
   Hooke’s law to the nonlinear realm.
 
 .. figure:: fig/cantilever_setup.png
-   :name: fig:cantilever_setup
+   :alt: 
    :width: 85.0%
-
-   Cantilever, problem setup.
 
 Study the setup shown in fig. `1 <#fig:cantilever_setup>`__ and the
 comments in the input file ``solid_cantilever.py`` Run the simulation,
@@ -1545,10 +1663,8 @@ Figure `2 <#fig:cantilever_results>`__ shows the displacement magnitude
 at the end of the simulation.
 
 .. figure:: fig/cantilever_results.png
-   :name: fig:cantilever_results
+   :alt: 
    :width: 85.0%
-
-   Cantilever, tip deformation. Color shows displacement magnitude.
 
 Demo: Fluid
 -----------
@@ -1565,10 +1681,8 @@ Taylor-Hood elements (9-node biquadratic quadrilaterals for the
 velocity, 4-node bilinear quadrilaterals for the pressure).
 
 .. figure:: fig/channel_setup.png
-   :name: fig:channel_setup
+   :alt: 
    :width: 90.0%
-
-   Channel flow, problem setup.
 
 Study the setup and the comments in the input file ``fluid_channel.py``.
 Run the simulation, either in one of the provided Docker containers or
@@ -1589,11 +1703,8 @@ Fig. `4 <#fig:channel_results>`__ shows the velocity magnitude (top) as
 well as the pressure (bottom part) at the end of the simulation.
 
 .. figure:: fig/channel_results.png
-   :name: fig:channel_results
+   :alt: 
    :width: 90.0%
-
-   Velocity magnitude (top part) and pressure (bottom part) at end of
-   simulation.
 
 Demo: 0D flow
 -------------
@@ -1617,10 +1728,8 @@ than a specified value, here :literal:`\`eps_periodic'` in the
 is reached after 5 heart cycles.
 
 .. figure:: fig/syspul_setup.png
-   :name: fig:syspul_setup
+   :alt: 
    :width: 65.0%
-
-   0D heart, systemic and pulmonary circulation, problem setup.
 
 Study the setup in fig. `5 <#fig:syspul_setup>`__ and the comments in
 the input file ``flow0d_heart_cycle.py``. Run the simulation, either in
@@ -1655,13 +1764,8 @@ in ``ambit/src/ambit_fe/postprocess/``):
   the time course of volumes and pressures of the circulatory system.
 
 .. figure:: fig/syspul_results.png
-   :name: fig:syspul_results
+   :alt: 
    :width: 100.0%
-
-   A. Left heart and systemic pressures over time. B. Right heart and
-   pulmonary pressures over time. C. Left and right ventricular and
-   atrial volumes over time. D. Left and right ventricular
-   pressure-volume relationships of periodic (5th) cycle.
 
 Demo: Solid + 0D flow
 ---------------------
@@ -1701,11 +1805,8 @@ Demo: Solid + 0D flow
   increase.
 
 .. figure:: fig/heart_syspul_setup.png
-   :name: fig:heart_syspul_setup
+   :alt: 
    :width: 65.0%
-
-   Generic 3D ventricular heart model coupled to a closed-loop systemic
-   and pulmonary circulation model.
 
 Study the setup shown in fig. `7 <#fig:heart_syspul_setup>`__ and the
 comments in the input file ``solid_flow0d_heart_cycle.py``. Run the
@@ -1758,13 +1859,8 @@ in ``ambit/src/ambit_fe/postprocess/``):
   ventricular volume?
 
 .. figure:: fig/heart_syspul_results.png
-   :name: fig:heart_syspul_results
+   :alt: 
    :width: 100.0%
-
-   A. Left heart and systemic pressures over time. B. Left and right
-   ventricular and atrial volumes over time. C. Left and right
-   ventricular pressure-volume relationships. D. Snapshot of heart
-   deformation at end-systole, color indicates displacement magnitude.
 
 Demo: Fluid + 0D flow
 ---------------------
@@ -1791,10 +1887,8 @@ Blocked pipe flow with 0D model bypass
   elements.
 
 .. figure:: fig/pipe_0d_setup.png
-   :name: fig:pipe_0d_setup
+   :alt: 
    :width: 85.0%
-
-   Blocked pipe with 0D model bypass, simulation setup.
 
 Study the setup shown in fig. `9 <#fig:pipe_0d_setup>`__ and the
 comments in the input file ``fluid_flow0d_pipe.py``. Run the simulation,
@@ -1822,11 +1916,8 @@ Paraview, and visualize the velocity over time.
   simulation.
 
 .. figure:: fig/pipe_0d_results.png
-   :name: fig:pipe_0d_results
+   :alt: 
    :width: 85.0%
-
-   Streamlines of velocity at end of simulation, color indicates velcity
-   magnitude.
 
 Demo: FSI
 ---------
@@ -1865,11 +1956,8 @@ Channel flow around elastic flag
   :math:`\bar{U}=2\cdot 10^{3}\;\mathrm{mm}/\mathrm{s}` (FSI3).
 
 .. figure:: fig/channel_flag_setup.png
-   :name: fig:channel_flag_setup
+   :alt: 
    :width: 100.0%
-
-   Channel flow around an elastic flag :cite:p:`turek2006`,
-   problem setup.
 
 Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
 
@@ -1881,11 +1969,12 @@ Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
    | 2500      | 410       | 50        | 350       | 20        | 200         | 200         |
    +-----------+-----------+-----------+-----------+-----------+-------------+-------------+
 
-| Both solid and fluid are discretized with quadrilateral
+| The fluid is discretized with quadrilateral
   :math:`\mathbb{Q}^2`-:math:`\mathbb{Q}^1` Taylor-Hood finite elements,
-  hence no stabilization for the fluid problem is needed. Temporal
-  discretization for both the solid and the fluid are carried out with a
-  Generalized-:math:`\alpha` scheme with no numerical damping
+  hence no stabilization is needed. The solid is discretized with
+  displacement-based quadrilateral :math:`\mathbb{Q}^2` elements.
+  Temporal discretization for both the solid and the fluid are carried
+  out with a Generalized-:math:`\alpha` scheme with no numerical damping
   (:math:`\rho_{\mathrm{inf}}=1`).
 | Study the setup shown in fig. `11 <#fig:channel_flag_setup>`__
   together with the parameters in the table and the comments in the
@@ -1916,23 +2005,126 @@ Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
   data does not correspond to the physical time of the problem setup.)
 
 .. figure:: fig/channel_flag_results.png
-   :name: fig:channel_flag_results
+   :alt: 
    :width: 85.0%
 
-   FSI2 case: Magnitude of fluid velocity at three instances in time
-   (:math:`t=10.5\;\mathrm{s}`, :math:`t=11.2\;\mathrm{s}`, and
-   :math:`t=12\;\mathrm{s}`) towards end of simulation, color indicates
-   velcity magnitude.
-
 .. figure:: fig/channel_flag_results_verif.png
-   :name: fig:channel_flag_results_verif
+   :alt: 
    :width: 100.0%
 
-   Comparison to benchmark reference solution for the time course of the
-   flag’s tip displacement for the two setups FSI2 and FSI3. A fairly
-   coarse time step of :math:`\Delta t = 4 \;\mathrm{ms}` (FSI2) and
-   :math:`\Delta t = 2 \;\mathrm{ms}` (FSI3) already allows a close
-   match to the original results.
+Demo: Multiphase fluid
+----------------------
+
+| – Physics description given in sec. `4.4.7 <#fluid-phasefield>`__
+| – Input files: ``demos/fluid_phasefield``
+
+Rising bubble under gravity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We study a 2D multiphase flow benchmark, where two incompressible fluids
+of different densities and different viscosities interact: a fluid of
+lower density (and viscosity) is immersed into a surrounding fluid of
+higher density (and viscosity), and a gravitational force acts in
+vertical direction, cf. the setup in
+Fig. `14 <#fig:rising_bubble_setup>`__. This setup corresponds to the
+benchmark case described in
+:cite:p:`brunk2026`,:cite:p:`ten-eikelder2024`. The
+following Dirichlet boundary conditions apply:
+
+.. math::
+   \begin{aligned}
+       \boldsymbol{v} = \boldsymbol{0}
+       \quad &  
+       \text{on}\; \mathit{\Gamma}_{\mathrm{b}}^{D}\cup\mathit{\Gamma}_{\mathrm{t}}^{D} \times [0,T], \\
+       \boldsymbol{v}\cdot\boldsymbol{n} = 0
+       \quad &  
+       \text{on}\; \mathit{\Gamma}_{\mathrm{r}}^{D}\cup\mathit{\Gamma}_{\mathrm{l}}^{D} \times [0,T].
+       \label{eq:rising_dbc}
+   \end{aligned}
+
+The body force term takes the form
+:math:`\hat{\boldsymbol{b}}=-\rho\boldsymbol{g}`, with
+:math:`\boldsymbol{g}\cdot\boldsymbol{e}_{y}=0.98`. Our phase field
+variable is bounded between :math:`a=-1` and :math:`b=1`. Further,
+Cahn-Hilliard parameters are chosen as
+
+.. math::
+   \begin{aligned}
+       D_0 = \frac{\tilde{\sigma}}{4\epsilon}, \qquad
+       M_0 = 0.1\epsilon^2, \qquad
+       \kappa = \tilde{\sigma}\epsilon,
+   \end{aligned}
+
+with :math:`\tilde{\sigma}=\frac{3\sigma}{2\sqrt{2}}` (surface energy
+density coefficient) and :math:`\epsilon=0.64\,h_{\mathrm{e}}`, where
+:math:`h_{\mathrm{e}}` is the finite element edge length. Parameters for
+the two cases are shown in the following table. Bulk viscosities are
+assumed zero (:math:`\zeta=0`).
+
+.. container:: center
+
+   +--------+----------+----------+----------+----------+----------+
+   |        | :math:   | :math:   | :math:   | :math:   | :math:   |
+   |        | `\rho_1` | `\rho_2` | `\eta_1` | `\eta_2` | `\sigma` |
+   +========+==========+==========+==========+==========+==========+
+   | Case 1 | 1000     | 100      | 10       | 1        | 24.5     |
+   +--------+----------+----------+----------+----------+----------+
+   | Case 2 | 1000     | 1        | 10       | 0.1      | 1.96     |
+   +--------+----------+----------+----------+----------+----------+
+
+| The fluid is discretized with quadrilateral
+  :math:`\mathbb{Q}^2`-:math:`\mathbb{Q}^1` Taylor-Hood finite elements,
+  while a quadrilateral :math:`\mathbb{Q}^1`-:math:`\mathbb{Q}^1`
+  discretization is chosen for the Cahn-Hilliard equations. A BDF2
+  time-integration scheme is chosen for both fluid and Cahn-Hilliard.
+
+.. figure:: fig/rising_bubble_setup.png
+   :alt: 
+   :width: 50.0%
+
+Study the setup shown in Fig. `14 <#fig:rising_bubble_setup>`__ together
+with the parameters in the table and the comments in the input file
+``fluid_phasefield_rising_bubble.py``. Run the simulation for both cases
+1 and 2, either in one of the provided Docker containers or using your
+own FEniCSx/Ambit installation, using the command
+
+::
+
+   mpiexec -n 1 python3 fluid_phasefield_rising_bubble.py
+
+| Try different settings for the mesh, e.g. vary ``meshsize`` inside
+  ``mesh_domain`` (increase from ``[32,64]`` to ``[64,128]`` to
+  ``[128,256]``; the first value is the number of elements used in
+  horizontal, the second the number in vertical direction). If your
+  system allows, use more than one core, especially for finer mesh sizes
+  (hence run with ``mpiexec -n 4 ...`` or more). A good rule of thumb is
+  to have 10000–20000 degrees of freedom per process. The time step and
+  the interface thickness parameter :math:`\epsilon` will be changed
+  automatically depending on the chosen mesh size. Compare the results
+  for the two cases and the different mesh sizes.
+| Figure `15 <#fig:rising_bubble_results>`__ shows the results of phase
+  field and magnitude of fluid velocity for a mesh size of
+  :math:`128 \times 256` for both cases at the end of the simulation
+  time :math:`t=3`.
+
+.. figure:: fig/rising_bubble_results.png
+   :alt: 
+   :width: 70.0%
+
+Figure `16 <#fig:rising_bubble_results_verif>`__ plots the center of
+mass as well as the rise velocity of the lower-density fluid bubble over
+time (mesh size :math:`128 \times 256`) and compares the solution with
+two different reference solutions (one a mass-, the other a
+volume-averaged velocity formulation) from Brunk and ten Eikelder
+:cite:p:`brunk2026` as well as ten Eikelder and Schillinger
+:cite:p:`ten-eikelder2024`. We observe good agreements between
+our (mass-averaged velocity) solution and the volume-averaged velocity
+reference solutions. Slight deviations to the mass-averaged reference
+solutions are observed.
+
+.. figure:: fig/rising_bubble_results_verif.png
+   :alt: 
+   :width: 100.0%
 
 Table of symbols
 ================
