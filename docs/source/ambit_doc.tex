@@ -480,8 +480,7 @@ for all $(\delta\bs{u},\delta p) \in \boldsymbol{\mathcal{V}}_{u}^{h} \times \ma
 & (1-\alpha_{f})\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n+1};\delta\bs{u}) - \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{ext}}(\bs{u}_{n};\delta\bs{u}) = 0, \quad \forall \; \delta\bs{u}\end{aligned}
 \end{equation}
 
--- One-Step-theta time scheme \verb.timint : "ost".\\
-
+-- One-Step-theta time scheme \verb.timint : "ost".
 \begin{equation}
 \begin{aligned}
 \bs{v}_{n+1} &= \frac{1}{\theta\Delta t}(\bs{u}_{n+1}-\bs{u}_{n}) - \frac{1-\theta}{\theta} \bs{v}_{n} \\
@@ -663,14 +662,14 @@ Full scheme according to \cite{tezduyar2000}: \verb."supg_pspg".:\\
 -- Velocity residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\nabla\delta\bs{v})\,\bs{v} \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) - \nabla \cdot \bs{\sigma}(\bs{v},p)\right]\,\mathrm{d}v \\
+r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{SUPG}}\,(\nabla\delta\bs{v})\,\bs{v} \cdot \left(\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) - \nabla \cdot \bs{\sigma}(\bs{v},p)\right)\,\mathrm{d}v \\
 & + \int\limits_{\Om_t} \tau_{\mathrm{LSIC}}\,\rho\,(\nabla\cdot\delta\bs{v})(\nabla\cdot\bs{v})\,\mathrm{d}v
 \end{aligned}
 \end{equation}
 -- Pressure residual operator in (\ref{equation-fluid-weak-form}) is augmented by the following terms:
 \begin{equation}
 \begin{aligned}
-r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\nabla\delta p) \cdot \left[\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) - \nabla \cdot \bs{\sigma}(\bs{v},p)\right]\,\mathrm{d}v 
+r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\Om_t} \tau_{\mathrm{PSPG}}\,(\nabla\delta p) \cdot \left(\rho\left(\frac{\partial \bs{v}}{\partial t} + (\nabla\bs{v})\,\bs{v}\right) - \nabla \cdot \bs{\sigma}(\bs{v},p)\right)\,\mathrm{d}v 
 \end{aligned}
 \end{equation}
 
@@ -1485,7 +1484,7 @@ We assume $\phi \in [a, b]$ and define the normalized phase field variable
 \begin{align}
 \chi(\phi) = \frac{\phi-a}{b-a}
 \end{align}
-and fluid desity as well as dynamic and bulk viscosity read
+and fluid density as well as dynamic and bulk viscosity read
 \begin{align}
 \rho(\chi(\phi)) &= \rho_1 (1 - \chi) + \rho_2 \chi, \\
 \eta(\chi(\phi)) &= \eta_1 (1 - \chi) + \eta_2 \chi, \\
@@ -1500,7 +1499,7 @@ with $D_0$ a bulk free-energy parameter\\
 
 Mobility:
 \begin{align}
-M(\phi) = M_0 |(a-\phi)^{\gamma} (b-\phi)^{\gamma}|
+M(\phi) = M_0 |(a-\phi)^{\gamma} (b-\phi)^{\gamma}| \label{equation-mobility}
 \end{align}
 
 Variational form:\\
@@ -1519,6 +1518,22 @@ for all $(\delta\bs{v},\delta p,\delta\phi,\delta\mu) \in \boldsymbol{\mathcal{V
 \begin{align}
 \frac{\partial\rho}{\partial t} = \rho^{\prime}(\phi)\frac{\partial\phi}{\partial t}
 \end{align}
+
+-- Discrete nonlinear system to solve in each time step $n$:
+\begin{equation}
+\label{equation-nonlin-sys-multiphase}
+\begin{aligned}
+\ROP_{n+1} = \begin{bmatrix} \ROP_{v}(\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\upphi},\bs{\upmu}) \\ \ROP_{p}(\bs{\mathsf{p}},\bs{\mathsf{v}},\bs{\upphi}) \\ \ROP_{\phi}(\bs{\upphi},\bs{\mathsf{v}},\bs{\mathsf{p}},\bs{\upmu}) \\ \ROP_{\mu}(\bs{\upmu},\bs{\upphi}) \end{bmatrix}_{n+1} = \bs{\mathsf{0}}
+\end{aligned}
+\end{equation}
+
+-- Discrete linear system to solve in each Newton iteration $k$:
+\begin{equation}
+\label{equation-lin-sys-multiphase}
+\begin{aligned}
+\begin{bmatrix} \bs{\mathsf{K}}_{vv} & \bs{\mathsf{K}}_{vp} & \bs{\mathsf{K}}_{v\phi} & \bs{\mathsf{K}}_{v\mu} \\ \\ \bs{\mathsf{K}}_{pv} & \bs{\mathsf{K}}_{pp} & \bs{\mathsf{K}}_{p\phi} & \zerom \\ \\ \bs{\mathsf{K}}_{\phi v} & \bs{\mathsf{K}}_{\phi p} & \bs{\mathsf{K}}_{\phi \phi} & \bs{\mathsf{K}}_{\phi \mu} \\ \\ \zerom & \zerom & \bs{\mathsf{K}}_{\mu\phi} & \bs{\mathsf{K}}_{\mu\mu} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\bs{\mathsf{v}} \\ \\ \Delta\bs{\mathsf{p}} \\ \\ \Delta\bs{\upphi} \\ \\ \Delta\bs{\upmu}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \ROP_{v} \\ \\ \ROP_{p} \\ \\ \ROP_{\phi} \\ \\ \ROP_{\mu}\end{bmatrix}_{n+1}^{k}
+\end{aligned}
+\end{equation}
 
 
 \section{Demos}\label{demos}
@@ -1846,7 +1861,7 @@ The body force term takes the form $\hat{\boldsymbol{b}}=-\rho\boldsymbol{g}$, w
 	M_0 = 0.1\epsilon^2, \qquad
 	\kappa = \tilde{\sigma}\epsilon,
 \end{align}
-with $\tilde{\sigma}=\frac{3\sigma}{2\sqrt{2}}$ (surface energy density coefficient) and $\epsilon=0.64\,h_{\mathrm{e}}$, where $h_{\mathrm{e}}$ is the finite element edge length. Parameters for the two cases are shown in the following table. Bulk viscosities are assumed zero ($\zeta=0$).
+with $\tilde{\sigma}=\frac{3\sigma}{2\sqrt{2}}$ (surface energy density coefficient) and $\epsilon=0.64\,h_{\mathrm{e}}$, where $h_{\mathrm{e}}$ is the finite element edge length. The mobility exponent in Eq.~(\ref{equation-mobility}) is chosen to $\gamma=1$. Parameters for the two cases are shown in the following table. Bulk viscosities are assumed zero ($\zeta=0$).
 
 \begin{table}[!h]
 \begin{center}
@@ -1909,7 +1924,7 @@ Figure~\ref{fig:rising_bubble_results_verif} plots the center of mass as well as
 &\nabla\bs{v} := \frac{\partial v_i}{\partial x_j} \bs{e}_{i} \otimes\bs{e}_{j} &&: \text{Gradient of a vector field} \\
 &\nabla\cdot\bs{v} := \frac{\partial v_i}{\partial x_j} \bs{e}_{i} \cdot\bs{e}_{j} &&: \text{Divergence of a vector field} \\
 &\bs{e}_{i} &&: \text{Basis vectors}, i\in \{1,2,3\} \\
-&t, T &&: \text{current, end time of an initial boundary value problem} \\
+&t, T &&: \text{current, end time of an initial (boundary) value problem} \\
 &\bs{u}, \hat{\bs{u}}_{0} &&: \text{solid mechanics displacement field, and prescribed initial value} \\
 &\delta\bs{u}, \Delta\bs{u} &&: \text{solid mechanics displacement test, trial function} \\
 & p &&: \text{solid mechanics hydrostatic pressure, or fluid mechanics pressure} \\
@@ -1924,6 +1939,13 @@ Figure~\ref{fig:rising_bubble_results_verif} plots the center of mass as well as
 &\hat{\bs{b}}_0, \hat{\bs{b}} &&: \text{body force vector defined in the reference, current frame} \\
 &\widehat{\bs{w}}=\frac{\partial\bs{d}}{\partial t} &&: \text{ALE domain velocity} \\
 &\rho_0, \rho &&: \text{reference, current density} \\
+&\phi, \mu &&: \text{phase field, potential in Cahn-Hilliard equations}
+\end{aligned}
+\end{equation}
+
+\begin{equation}
+\nonumber
+\begin{aligned}
 &\bs{P}=\bs{F}\bs{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
 &\bs{F}=\bs{I}+\nabla_{0}\bs{u} &&: \text{solid deformation gradient} \\
 &\widehat{\bs{F}}=\bs{I}+\nabla_{0}\bs{d} &&: \text{ALE deformation gradient} \\
@@ -1932,7 +1954,7 @@ Figure~\ref{fig:rising_bubble_results_verif} plots the center of mass as well as
 &\bs{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\
 &\bs{\sigma} &&: \text{Cauchy stress tensor} \\
 &\bs{t}_0, \hat{\bs{t}}_{0} &&: \text{1st Piola-Kirchhoff traction, prescribed 1st Piola-Kirchhoff traction} \\
-&\bs{t}, \hat{\bs{t}} &&: \text{Cauchy traction, prescribed Cauchy traction} \\
+&\bs{t}, \hat{\bs{t}} &&: \text{Cauchy traction, prescribed Cauchy traction}
 \end{aligned}
 \end{equation}
 

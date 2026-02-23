@@ -2175,15 +2175,27 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             self.io_params["surface_ids_interface"],
         )
 
+        if isinstance(self.dom_solid, list):
+            cells_solid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
+        else: # can only be a locator function otherwise
+            locator = self.dom_solid.evaluate
+            cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+
+        if isinstance(self.dom_fluid, list):
+            cells_fluid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)]
+        else: # can only be a locator function otherwise
+            locator = self.dom_fluid.evaluate
+            cells_fluid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+
         self.msh_emap_solid = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim,
-            self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)],
+            cells_solid,
         )[0:4] # returns: submesh, cell entity_map, vert entity map, original geo verts
         self.msh_emap_fluid = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim,
-            self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)],
+            cells_fluid,
         )[0:4] # returns: submesh, cell entity_map, vert entity map, original geo verts
 
         self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim)
@@ -2243,10 +2255,16 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         else:
             self.mt_sb_solid, self.mt_sb_fluid = None, None
 
+        if isinstance(self.surf_interf, list):
+            cells_interface = self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)]
+        else: # can only be a locator function otherwise
+            locator = self.surf_interf.evaluate
+            cells_interface = mesh.locate_entities(self.mesh, self.mesh.topology.dim-1, locator)
+
         self.msh_emap_lm = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim - 1,
-            self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)],
+            cells_interface,
         )[0:2]
 
         self.msh_emap_lm[0].topology.create_connectivity(self.mesh.topology.dim - 1, self.mesh.topology.dim - 1)

@@ -436,38 +436,37 @@ Weak form
      & (1-\alpha_{\mathrm{f}})\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) + \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) - \\
      & (1-\alpha_{f})\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - \alpha_{\mathrm{f}}\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
 
-| – One-Step-theta time scheme ``timint : "ost"``
-| 
+– One-Step-theta time scheme ``timint : "ost"``
 
-  .. math::
-     \begin{aligned}
-     \boldsymbol{v}_{n+1} &= \frac{1}{\theta\Delta t}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1-\theta}{\theta} \boldsymbol{v}_{n} \\
-     \boldsymbol{a}_{n+1} &= \frac{1}{\theta^2\Delta t^2}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1}{\theta^2\Delta t} \boldsymbol{v}_{n} - \frac{1-\theta}{\theta}\boldsymbol{a}_{n}
-     \end{aligned}
+.. math::
+   \begin{aligned}
+   \boldsymbol{v}_{n+1} &= \frac{1}{\theta\Delta t}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1-\theta}{\theta} \boldsymbol{v}_{n} \\
+   \boldsymbol{a}_{n+1} &= \frac{1}{\theta^2\Delta t^2}(\boldsymbol{u}_{n+1}-\boldsymbol{u}_{n}) - \frac{1}{\theta^2\Delta t} \boldsymbol{v}_{n} - \frac{1-\theta}{\theta}\boldsymbol{a}_{n}
+   \end{aligned}
 
-  - option ``eval_nonlin_terms : "midpoint"``:
+- option ``eval_nonlin_terms : "midpoint"``:
 
-  .. math::
-     :label: solid-midpoint-ost
+.. math::
+   :label: solid-midpoint-ost
 
-     \begin{aligned}
-     \boldsymbol{u}_{n+\theta} &= \theta \boldsymbol{u}_{n+1} + (1-\theta) \boldsymbol{u}_{n} \\
-     \boldsymbol{v}_{n+\theta} &= \theta \boldsymbol{v}_{n+1} + (1-\theta) \boldsymbol{v}_{n} \\
-     \boldsymbol{a}_{n+\theta} &= \theta \boldsymbol{a}_{n+1} + (1-\theta) \boldsymbol{a}_{n}
-     \end{aligned}
+   \begin{aligned}
+   \boldsymbol{u}_{n+\theta} &= \theta \boldsymbol{u}_{n+1} + (1-\theta) \boldsymbol{u}_{n} \\
+   \boldsymbol{v}_{n+\theta} &= \theta \boldsymbol{v}_{n+1} + (1-\theta) \boldsymbol{v}_{n} \\
+   \boldsymbol{a}_{n+\theta} &= \theta \boldsymbol{a}_{n+1} + (1-\theta) \boldsymbol{a}_{n}
+   \end{aligned}
 
-  .. math::
-     \begin{aligned}
-     \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+\theta};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
+.. math::
+   \begin{aligned}
+   \delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+\theta};\delta\boldsymbol{u}) + \delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) - \delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+\theta};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}\end{aligned}
 
-  - option ``eval_nonlin_terms : "trapezoidal"``:
+- option ``eval_nonlin_terms : "trapezoidal"``:
 
-  .. math::
-     \begin{aligned}
-     &\theta\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n};\delta\boldsymbol{u}) + \\
-     & \theta\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) - \\
-     & \theta\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - (1-\theta)\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}
-     \end{aligned}
+.. math::
+   \begin{aligned}
+   &\theta\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{kin}}(\boldsymbol{a}_{n};\delta\boldsymbol{u}) + \\
+   & \theta\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) + (1-\theta)\,\delta \mathcal{W}_{\mathrm{int}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) - \\
+   & \theta\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n+1};\delta\boldsymbol{u}) - (1-\theta)\,\delta \mathcal{W}_{\mathrm{ext}}(\boldsymbol{u}_{n};\delta\boldsymbol{u}) = 0, \quad \forall \; \delta\boldsymbol{u}
+   \end{aligned}
 
 | Note the equivalence of ``"midpoint"`` and ``"trapezoidal"`` for all
   linear terms, e.g. :math:`\delta \mathcal{W}_{\mathrm{kin}}`, or for
@@ -654,7 +653,7 @@ where :math:`\eta` is the dynamic viscosity
 
   .. math::
      \begin{aligned}
-     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{SUPG}}\,(\nabla\delta\boldsymbol{v})\,\boldsymbol{v} \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v \\
+     r_v \leftarrow r_v &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{SUPG}}\,(\nabla\delta\boldsymbol{v})\,\boldsymbol{v} \cdot \left(\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right)\,\mathrm{d}v \\
      & + \int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{LSIC}}\,\rho\,(\nabla\cdot\delta\boldsymbol{v})(\nabla\cdot\boldsymbol{v})\,\mathrm{d}v
      \end{aligned}
 
@@ -664,7 +663,7 @@ where :math:`\eta` is the dynamic viscosity
 
   .. math::
      \begin{aligned}
-     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{PSPG}}\,(\nabla\delta p) \cdot \left[\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right]\,\mathrm{d}v 
+     r_p \leftarrow r_p &+ \frac{1}{\rho}\int\limits_{\mathit{\Omega}_t} \tau_{\mathrm{PSPG}}\,(\nabla\delta p) \cdot \left(\rho\left(\frac{\partial \boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\,\boldsymbol{v}\right) - \nabla \cdot \boldsymbol{\sigma}(\boldsymbol{v},p)\right)\,\mathrm{d}v 
      \end{aligned}
 
 – Discrete nonlinear system to solve in each time step :math:`n`:
@@ -1574,7 +1573,7 @@ with the constitutive equation for the Cauchy stress tensor given by
      \chi(\phi) = \frac{\phi-a}{b-a}
      \end{aligned}
 
-  and fluid desity as well as dynamic and bulk viscosity read
+  and fluid density as well as dynamic and bulk viscosity read
 
   .. math::
      \begin{aligned}
@@ -1595,7 +1594,8 @@ with the constitutive equation for the Cauchy stress tensor given by
 
   .. math::
      \begin{aligned}
-     M(\phi) = M_0 |(a-\phi)^{\gamma} (b-\phi)^{\gamma}|
+     M(\phi) = M_0 |(a-\phi)^{\gamma} (b-\phi)^{\gamma}| :label: mobility
+
      \end{aligned}
 
 | Variational form:
@@ -1618,6 +1618,24 @@ with
 .. math::
    \begin{aligned}
    \frac{\partial\rho}{\partial t} = \rho^{\prime}(\phi)\frac{\partial\phi}{\partial t}
+   \end{aligned}
+
+– Discrete nonlinear system to solve in each time step :math:`n`:
+
+.. math::
+   :label: nonlin-sys-multiphase
+
+   \begin{aligned}
+   \boldsymbol{\mathsf{r}}_{n+1} = \begin{bmatrix} \boldsymbol{\mathsf{r}}_{v}(\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\upphi},\boldsymbol{\upmu}) \\ \boldsymbol{\mathsf{r}}_{p}(\boldsymbol{\mathsf{p}},\boldsymbol{\mathsf{v}},\boldsymbol{\upphi}) \\ \boldsymbol{\mathsf{r}}_{\phi}(\boldsymbol{\upphi},\boldsymbol{\mathsf{v}},\boldsymbol{\mathsf{p}},\boldsymbol{\upmu}) \\ \boldsymbol{\mathsf{r}}_{\mu}(\boldsymbol{\upmu},\boldsymbol{\upphi}) \end{bmatrix}_{n+1} = \boldsymbol{\mathsf{0}}
+   \end{aligned}
+
+– Discrete linear system to solve in each Newton iteration :math:`k`:
+
+.. math::
+   :label: lin-sys-multiphase
+
+   \begin{aligned}
+   \begin{bmatrix} \boldsymbol{\mathsf{K}}_{vv} & \boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{K}}_{v\phi} & \boldsymbol{\mathsf{K}}_{v\mu} \\ \\ \boldsymbol{\mathsf{K}}_{pv} & \boldsymbol{\mathsf{K}}_{pp} & \boldsymbol{\mathsf{K}}_{p\phi} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}\\ \\ \boldsymbol{\mathsf{K}}_{\phi v} & \boldsymbol{\mathsf{K}}_{\phi p} & \boldsymbol{\mathsf{K}}_{\phi \phi} & \boldsymbol{\mathsf{K}}_{\phi \mu} \\ \\ \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mu\phi} & \boldsymbol{\mathsf{K}}_{\mu\mu} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\boldsymbol{\mathsf{v}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\upphi} \\ \\ \Delta\boldsymbol{\upmu}\end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\phi} \\ \\ \boldsymbol{\mathsf{r}}_{\mu}\end{bmatrix}_{n+1}^{k}
    \end{aligned}
 
 Demos
@@ -2057,9 +2075,10 @@ Cahn-Hilliard parameters are chosen as
 
 with :math:`\tilde{\sigma}=\frac{3\sigma}{2\sqrt{2}}` (surface energy
 density coefficient) and :math:`\epsilon=0.64\,h_{\mathrm{e}}`, where
-:math:`h_{\mathrm{e}}` is the finite element edge length. Parameters for
-the two cases are shown in the following table. Bulk viscosities are
-assumed zero (:math:`\zeta=0`).
+:math:`h_{\mathrm{e}}` is the finite element edge length. The mobility
+exponent in Eq. (`[equation-mobility] <#equation-mobility>`__) is chosen
+to :math:`\gamma=1`. Parameters for the two cases are shown in the
+following table. Bulk viscosities are assumed zero (:math:`\zeta=0`).
 
 .. container:: center
 
@@ -2141,7 +2160,7 @@ Table of symbols
    &\nabla\boldsymbol{v} := \frac{\partial v_i}{\partial x_j} \boldsymbol{e}_{i} \otimes\boldsymbol{e}_{j} &&: \text{Gradient of a vector field} \\
    &\nabla\cdot\boldsymbol{v} := \frac{\partial v_i}{\partial x_j} \boldsymbol{e}_{i} \cdot\boldsymbol{e}_{j} &&: \text{Divergence of a vector field} \\
    &\boldsymbol{e}_{i} &&: \text{Basis vectors}, i\in \{1,2,3\} \\
-   &t, T &&: \text{current, end time of an initial boundary value problem} \\
+   &t, T &&: \text{current, end time of an initial (boundary) value problem} \\
    &\boldsymbol{u}, \hat{\boldsymbol{u}}_{0} &&: \text{solid mechanics displacement field, and prescribed initial value} \\
    &\delta\boldsymbol{u}, \Delta\boldsymbol{u} &&: \text{solid mechanics displacement test, trial function} \\
    & p &&: \text{solid mechanics hydrostatic pressure, or fluid mechanics pressure} \\
@@ -2156,6 +2175,12 @@ Table of symbols
    &\hat{\boldsymbol{b}}_0, \hat{\boldsymbol{b}} &&: \text{body force vector defined in the reference, current frame} \\
    &\widehat{\boldsymbol{w}}=\frac{\partial\boldsymbol{d}}{\partial t} &&: \text{ALE domain velocity} \\
    &\rho_0, \rho &&: \text{reference, current density} \\
+   &\phi, \mu &&: \text{phase field, potential in Cahn-Hilliard equations}
+   \end{aligned}
+
+.. math::
+   \nonumber
+   \begin{aligned}
    &\boldsymbol{P}=\boldsymbol{F}\boldsymbol{S} &&: \text{1st Piola Kirchhoff stress tensor} \\
    &\boldsymbol{F}=\boldsymbol{I}+\nabla_{0}\boldsymbol{u} &&: \text{solid deformation gradient} \\
    &\widehat{\boldsymbol{F}}=\boldsymbol{I}+\nabla_{0}\boldsymbol{d} &&: \text{ALE deformation gradient} \\
@@ -2164,7 +2189,7 @@ Table of symbols
    &\boldsymbol{S} &&: \text{2nd Piola-Kirchhoff stress tensor} \\
    &\boldsymbol{\sigma} &&: \text{Cauchy stress tensor} \\
    &\boldsymbol{t}_0, \hat{\boldsymbol{t}}_{0} &&: \text{1st Piola-Kirchhoff traction, prescribed 1st Piola-Kirchhoff traction} \\
-   &\boldsymbol{t}, \hat{\boldsymbol{t}} &&: \text{Cauchy traction, prescribed Cauchy traction} \\
+   &\boldsymbol{t}, \hat{\boldsymbol{t}} &&: \text{Cauchy traction, prescribed Cauchy traction}
    \end{aligned}
  
 .. bibliography::
