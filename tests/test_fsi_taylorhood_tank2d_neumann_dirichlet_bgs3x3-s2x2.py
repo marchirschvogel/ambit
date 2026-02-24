@@ -32,10 +32,7 @@ def test_main():
             [["velocity", "pressure"],
                 ["aledisplacement"]],
         ],
-        # "domain_ids_solid": [1],
-        # "domain_ids_fluid": [2],
-        # "surface_ids_interface": [3],
-        "write_submeshes":True,
+        "write_submeshes": True,
         "simname": "tank2d_taylorhood_neumanndirichlet",
     }
 

@@ -20,7 +20,7 @@ from .mathutils import spectral_decomposition_3x3
 
 
 class IO:
-    def __init__(self, io_params, fem_params={}, constitutive_params={}, entity_maps=None, comm=None):
+    def __init__(self, io_params, constitutive_params={}, entity_maps=None, comm=None):
         ioparams.check_params_io(io_params)
 
         self.io_params = io_params
@@ -59,9 +59,6 @@ class IO:
         self.write_submeshes = io_params.get("write_submeshes", False)
 
         self.output_midpoint = io_params.get("output_midpoint", False)
-
-        # for creating integration measures
-        self.quad_degree = fem_params.get("quad_degree", 9)
 
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
@@ -174,19 +171,19 @@ class IO:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
 
     # create domain and boundary integration measures
-    def create_integration_measures(self, msh, mt_data, bcdict=None):
+    def create_integration_measures(self, msh, mt_data, qdeg, bcdict=None):
         if mt_data[0] is not None:
             dx = ufl.Measure(
                 "dx",
                 domain=msh,
                 subdomain_data=mt_data[0],
-                metadata={"quadrature_degree": self.quad_degree},
+                metadata={"quadrature_degree": qdeg},
             )
         else:
             dx_ = ufl.Measure(
                 "dx",
                 domain=msh,
-                metadata={"quadrature_degree": self.quad_degree},
+                metadata={"quadrature_degree": qdeg},
             )
             dx = lambda a: dx_  # so that we can call dx(1) even without domain meshtags
 
@@ -195,7 +192,7 @@ class IO:
                 "ds",
                 domain=msh,
                 subdomain_data=mt_data[1],
-                metadata={"quadrature_degree": self.quad_degree},
+                metadata={"quadrature_degree": qdeg},
             )
         else:
             ds = None
@@ -205,7 +202,7 @@ class IO:
                 "dS",
                 domain=msh,
                 subdomain_data=mt_data[1],
-                metadata={"quadrature_degree": self.quad_degree},
+                metadata={"quadrature_degree": qdeg},
             )
         else:
             dS = None
@@ -237,7 +234,7 @@ class IO:
                 facet_tag = mesh.meshtags(
                     msh, fdim, facet_indices[sorted_facets], facet_markers[sorted_facets]
                 )
-                ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": self.quad_degree})
+                ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": qdeg})
                 bmeasures.append(ds_loc)
 
         return dx, bmeasures
@@ -2186,20 +2183,20 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             cells_solid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
         else: # can only be a locator function otherwise
             locator = self.dom_solid.evaluate
-
-            cells_indices, cells_markers = [], []
             cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
-            cells_indices.append(cells_solid)
-            cells_markers.append(np.full_like(cells_solid, 1))
-            cells_indices = np.hstack(cells_indices).astype(np.int32)
-            cells_markers = np.hstack(cells_markers).astype(np.int32)
-            sorted_cells = np.argsort(cells_indices)
-            cells_tag = mesh.meshtags(
-                self.mesh, self.mesh.topology.dim, cells_indices[sorted_cells], cells_markers[sorted_cells]
-            )
+            # cells_indices, cells_markers = [], []
+            # cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+            # cells_indices.append(cells_solid)
+            # cells_markers.append(np.full_like(cells_solid, 1))
+            # cells_indices = np.hstack(cells_indices).astype(np.int32)
+            # cells_markers = np.hstack(cells_markers).astype(np.int32)
+            # sorted_cells = np.argsort(cells_indices)
+            # cells_tag = mesh.meshtags(
+            #     self.mesh, self.mesh.topology.dim, cells_indices[sorted_cells], cells_markers[sorted_cells]
+            # )
 
-            self.dom_solid = [1]
-            dx_loc = ufl.Measure("dx", domain=self.mesh, subdomain_data=cells_tag, metadata={"quadrature_degree": self.quad_degree})
+            # self.dom_solid = [1]
+            # dx_loc = ufl.Measure("dx", domain=self.mesh, subdomain_data=cells_tag, metadata={"quadrature_degree": qdeg})
 
         if isinstance(self.dom_fluid, list):
             cells_fluid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)]
@@ -2312,19 +2309,19 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             tmp.write_mesh(self.msh_emap_lm[0])
 
     # create domain and boundary integration measures
-    def create_integration_measures(self, msh):
+    def create_integration_measures(self, msh, qdeg):
         if self.mt_d is not None:
             self.dx = ufl.Measure(
                 "dx",
                 domain=msh,
                 subdomain_data=self.mt_d,
-                metadata={"quadrature_degree": self.quad_degree},
+                metadata={"quadrature_degree": qdeg},
             )
         else:
             self.dx_ = ufl.Measure(
                 "dx",
                 domain=msh,
-                metadata={"quadrature_degree": self.quad_degree},
+                metadata={"quadrature_degree": qdeg},
             )
             self.dx = lambda a: self.dx_  # so that we can call dx(1) even without domain meshtags
 
@@ -2369,14 +2366,14 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             "ds",
             domain=msh,
             subdomain_data=integration_entities,
-            metadata={"quadrature_degree": self.quad_degree},
+            metadata={"quadrature_degree": qdeg},
         )
         self.de = None
         self.dS = ufl.Measure(
             "dS",
             domain=msh,
             subdomain_data=integration_entities,
-            metadata={"quadrature_degree": self.quad_degree},
+            metadata={"quadrature_degree": qdeg},
         )
 
         self.bmeasures = [self.ds, self.de, self.dS]

@@ -55,18 +55,18 @@ class AleProblem(problem_base):
 
         self.io = io
 
+        self.order_disp = fem_params["order_disp"]
+        self.quad_degree = fem_params["quad_degree"]
+
         # TODO: Find nicer solution here...
         if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
         else:
             self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], bcdict=bc_dict
+                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], self.quad_degree, bcdict=bc_dict
             )
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
-
-        self.order_disp = fem_params["order_disp"]
-        self.quad_degree = fem_params["quad_degree"]
 
         self.localsolve = False  # no idea what might have to be solved locally...
         self.prestress_initial = False  # guess prestressing in ALE is somehow senseless...

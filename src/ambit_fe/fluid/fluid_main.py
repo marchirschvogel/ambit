@@ -69,19 +69,19 @@ class FluidmechanicsProblem(problem_base):
         self.is_ale = is_ale
         self.is_multiphase = is_multiphase
 
+        self.order_vel = fem_params["order_vel"]
+        self.order_pres = fem_params["order_pres"]
+        self.quad_degree = fem_params["quad_degree"]
+
         # TODO: Find nicer solution here...
         if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
         else:
             self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], bcdict=bc_dict
+                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], self.quad_degree, bcdict=bc_dict
             )
 
         self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
-
-        self.order_vel = fem_params["order_vel"]
-        self.order_pres = fem_params["order_pres"]
-        self.quad_degree = fem_params["quad_degree"]
 
         # collect domain data
         self.rho = [[] for _ in range(len(self.io.domain_ids))]
@@ -237,6 +237,7 @@ class FluidmechanicsProblem(problem_base):
                 dxp, bmeasuresp = self.io.create_integration_measures(
                     self.io.submshes_emap[m + 1][0],
                     [self.io.sub_mt_d[m + 1], self.io.sub_mt_b[m + 1], None],
+                    self.quad_degree,
                 )
                 # self.dx_p.append(dxp)
                 # self.bmeasures_p.append(bmeasuresp)

@@ -61,19 +61,19 @@ class PhasefieldProblem(problem_base):
 
         self.phi_range = fem_params.get("phi_range", [0.0, 1.0])
 
-        # TODO: Find nicer solution here...
-        if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
-            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
-        else:
-            self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], bcdict=bc_dict
-            )
-
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
-
         self.order_phi = fem_params["order_phi"]
         self.order_mu = fem_params["order_mu"]
         self.quad_degree = fem_params["quad_degree"]
+
+        # TODO: Find nicer solution here...
+        if self.pbase.problem_type == "fsi_phasefield" or self.pbase.problem_type == "fsi_phasefield_flow0d":
+            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+        else:
+            self.dx, self.bmeasures = self.io.create_integration_measures(
+                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], self.quad_degree, bcdict=bc_dict
+            )
+
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
 
         # collect domain data
         self.kappa = []

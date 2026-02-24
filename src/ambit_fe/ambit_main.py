@@ -82,7 +82,7 @@ class Ambit:
         if problem_type == "solid":
             from .solid import solid_main
 
-            io = ioroutines.IO_solid(io_params, fem_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -105,7 +105,7 @@ class Ambit:
         elif problem_type == "fluid":
             from .fluid import fluid_main
 
-            io = ioroutines.IO_fluid(io_params, fem_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -128,7 +128,7 @@ class Ambit:
         elif problem_type == "ale":
             from .ale import ale_main
 
-            io = ioroutines.IO_ale(io_params, fem_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_ale(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -151,7 +151,7 @@ class Ambit:
         elif problem_type == "fluid_ale":
             from .coupling import fluid_ale_main
 
-            io = ioroutines.IO_fluid_ale(io_params, fem_params[0], constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -178,7 +178,7 @@ class Ambit:
         elif problem_type == "fluid_ale_flow0d":
             from .coupling import fluid_ale_flow0d_main
 
-            io = ioroutines.IO_fluid_ale(io_params, fem_params[0], constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -208,7 +208,7 @@ class Ambit:
         elif problem_type == "fluid_phasefield":
             from .coupling import fluid_phasefield_main
 
-            io = ioroutines.IO_fluid_phasefield(io_params, fem_params[0], constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_phasefield(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -235,7 +235,7 @@ class Ambit:
         elif problem_type == "fluid_ale_phasefield":
             from .coupling import fluid_ale_phasefield_main
 
-            io = ioroutines.IO_fluid_ale_phasefield(io_params, fem_params[0], constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale_phasefield(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -274,7 +274,7 @@ class Ambit:
         elif problem_type == "solid_flow0d":
             from .coupling import solid_flow0d_main
 
-            io = ioroutines.IO_solid(io_params, fem_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -301,7 +301,7 @@ class Ambit:
             from .coupling import solid_flow0d_main
             from .coupling import solid_flow0d_periodicref_main
 
-            io = ioroutines.IO_solid(io_params, fem_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -327,7 +327,7 @@ class Ambit:
         elif problem_type == "fluid_flow0d":
             from .coupling import fluid_flow0d_main
 
-            io = ioroutines.IO_fluid(io_params, fem_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -355,7 +355,7 @@ class Ambit:
 
             from .multiscale import solid_flow0d_growthremodel_main
 
-            io = ioroutines.IO_solid(io_params, fem_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -385,12 +385,13 @@ class Ambit:
             from .coupling import fsi_main
 
             io = ioroutines.IO_fsi(io_params, entity_maps=self.entity_maps, comm=self.comm)
-            ios = ioroutines.IO_solid(io_params, fem_params[0], constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
-            iof = ioroutines.IO_fluid_ale(io_params, fem_params[1], constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
+            ios = ioroutines.IO_solid(io_params, constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
+            iof = ioroutines.IO_fluid_ale(io_params, constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
 
             io.readin_mesh()
             io.create_submeshes(ios.domain_ids, iof.domain_ids, coupling_params["coupling_fluid_ale"]["surface_ids"])
-            io.create_integration_measures(io.mesh)
+            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
+            io.create_integration_measures(io.mesh, fem_params[0]["quad_degree"])
 
             # solid mesh and integration domain variables
             ios.mesh = io.msh_emap_solid[0]
@@ -442,11 +443,12 @@ class Ambit:
             from .coupling import fsi_flow0d_main
 
             io = ioroutines.IO_fsi(io_params, entity_maps=self.entity_maps, comm=self.comm)
-            ios = ioroutines.IO_solid(io_params, fem_params[0], constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
-            iof = ioroutines.IO_fluid_ale(io_params, fem_params[1], constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
+            ios = ioroutines.IO_solid(io_params, constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
+            iof = ioroutines.IO_fluid_ale(io_params, constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
             io.readin_mesh()
             io.create_submeshes(ios.domain_ids, iof.domain_ids, coupling_params[0]["coupling_fluid_ale"]["surface_ids"])
-            io.create_integration_measures(io.mesh)
+            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
+            io.create_integration_measures(io.mesh, fem_params[0]["quad_degree"])
 
             # solid mesh and integration domain variables
             ios.mesh = io.msh_emap_solid[0]
@@ -500,7 +502,7 @@ class Ambit:
         elif problem_type == "solid_constraint":
             from .coupling import solid_constraint_main
 
-            io = ioroutines.IO_solid(io_params, fem_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -524,7 +526,7 @@ class Ambit:
         elif problem_type == "fluid_constraint":
             from .coupling import fluid_constraint_main
 
-            io = ioroutines.IO_fluid(io_params, fem_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -548,7 +550,7 @@ class Ambit:
         elif problem_type == "fluid_ale_constraint":
             from .coupling import fluid_ale_constraint_main
 
-            io = ioroutines.IO_fluid_ale(io_params, fem_params[0], constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0], self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -576,7 +578,7 @@ class Ambit:
         elif problem_type == "phasefield":
             from .phasefield import phasefield_main
 
-            io = ioroutines.IO_phasefield(io_params, fem_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_phasefield(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
@@ -601,7 +603,7 @@ class Ambit:
 
             from .electrophysiology import electrophysiology_main
 
-            io = ioroutines.IO_solid(io_params, fem_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
             io.set_mesh_fields(io.mesh)
 
