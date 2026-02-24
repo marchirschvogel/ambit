@@ -445,7 +445,7 @@ class Ambit:
             ios = ioroutines.IO_solid(io_params, fem_params[0], constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
             iof = ioroutines.IO_fluid_ale(io_params, fem_params[1], constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
             io.readin_mesh()
-            io.create_submeshes(ios.domain_ids, iof.domain_ids, coupling_params[1]["coupling_fluid_ale"]["surface_ids"])
+            io.create_submeshes(ios.domain_ids, iof.domain_ids, coupling_params[0]["coupling_fluid_ale"]["surface_ids"])
             io.create_integration_measures(io.mesh)
 
             # solid mesh and integration domain variables

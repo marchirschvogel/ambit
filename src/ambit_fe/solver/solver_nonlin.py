@@ -1082,7 +1082,7 @@ class solver_nonlinear:
                     increment_forms[i],
                     functionspaces[i],
                     self.pb[0].dx,
-                    domids=self.pb[0].domain_ids,
+                    domids=self.pb[0].io.domain_ids,
                     comm=self.comm,
                 )
                 increments[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
@@ -1102,7 +1102,7 @@ class solver_nonlinear:
                     residual_forms[i],
                     functionspaces[i],
                     self.pb[0].dx,
-                    domids=self.pb[0].domain_ids,
+                    domids=self.pb[0].io.domain_ids,
                     comm=self.comm,
                 )
                 residuals[i].x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
