@@ -389,9 +389,9 @@ class Ambit:
             iof = ioroutines.IO_fluid_ale(io_params, constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
 
             io.readin_mesh()
-            io.create_submeshes(ios.domain_ids, iof.domain_ids, coupling_params["coupling_fluid_ale"]["surface_ids"])
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, fem_params[0]["quad_degree"])
+            io.create_integration_measures(io.mesh, ios.domain_ids, iof.domain_ids, coupling_params["coupling_fluid_ale"]["surface_ids"], fem_params[0]["quad_degree"])
+            io.create_submeshes()
 
             # solid mesh and integration domain variables
             ios.mesh = io.msh_emap_solid[0]
@@ -445,10 +445,11 @@ class Ambit:
             io = ioroutines.IO_fsi(io_params, entity_maps=self.entity_maps, comm=self.comm)
             ios = ioroutines.IO_solid(io_params, constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
             iof = ioroutines.IO_fluid_ale(io_params, constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
+
             io.readin_mesh()
-            io.create_submeshes(ios.domain_ids, iof.domain_ids, coupling_params[0]["coupling_fluid_ale"]["surface_ids"])
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, fem_params[0]["quad_degree"])
+            io.create_integration_measures(io.mesh, ios.domain_ids, iof.domain_ids, coupling_params[0]["coupling_fluid_ale"]["surface_ids"], fem_params[0]["quad_degree"])
+            io.create_submeshes()
 
             # solid mesh and integration domain variables
             ios.mesh = io.msh_emap_solid[0]

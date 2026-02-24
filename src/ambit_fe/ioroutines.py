@@ -170,6 +170,15 @@ class IO:
         else:
             raise AttributeError("Your mesh seems to be 1D! Not supported!")
 
+        # # Now collect the domain cells
+        # if isinstance(self.domain_ids, list):
+        #     self.cells_domain = self.mt_d.indices[np.isin(self.mt_d.values, self.domain_ids)]
+        # else: # can only be a locator function otherwise
+        #     locator = self.domain_ids.evaluate
+        #     self.cells_domain = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+        # print(self.cells_domain)
+        # exit()
+
     # create domain and boundary integration measures
     def create_integration_measures(self, msh, mt_data, qdeg, bcdict=None):
         if mt_data[0] is not None:
@@ -2172,47 +2181,16 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
                 else:
                     raise ValueError("Unknown restart_io_type!")
 
-    def create_submeshes(self, sids, fids, iids):
-        self.dom_solid, self.dom_fluid, self.surf_interf = (
-            sids,
-            fids,
-            iids,
-        )
-
-        if isinstance(self.dom_solid, list):
-            cells_solid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
-        else: # can only be a locator function otherwise
-            locator = self.dom_solid.evaluate
-            cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
-            # cells_indices, cells_markers = [], []
-            # cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
-            # cells_indices.append(cells_solid)
-            # cells_markers.append(np.full_like(cells_solid, 1))
-            # cells_indices = np.hstack(cells_indices).astype(np.int32)
-            # cells_markers = np.hstack(cells_markers).astype(np.int32)
-            # sorted_cells = np.argsort(cells_indices)
-            # cells_tag = mesh.meshtags(
-            #     self.mesh, self.mesh.topology.dim, cells_indices[sorted_cells], cells_markers[sorted_cells]
-            # )
-
-            # self.dom_solid = [1]
-            # dx_loc = ufl.Measure("dx", domain=self.mesh, subdomain_data=cells_tag, metadata={"quadrature_degree": qdeg})
-
-        if isinstance(self.dom_fluid, list):
-            cells_fluid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)]
-        else: # can only be a locator function otherwise
-            locator = self.dom_fluid.evaluate
-            cells_fluid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
-
+    def create_submeshes(self):
         self.msh_emap_solid = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim,
-            cells_solid,
+            self.cells_solid,
         )[0:4] # returns: submesh, cell entity_map, vert entity map, original geo verts
         self.msh_emap_fluid = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim,
-            cells_fluid,
+            self.cells_fluid,
         )[0:4] # returns: submesh, cell entity_map, vert entity map, original geo verts
 
         self.msh_emap_solid[0].topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim)
@@ -2272,16 +2250,10 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         else:
             self.mt_sb_solid, self.mt_sb_fluid = None, None
 
-        if isinstance(self.surf_interf, list):
-            cells_interface = self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)]
-        else: # can only be a locator function otherwise
-            locator = self.surf_interf.evaluate
-            cells_interface = mesh.locate_entities(self.mesh, self.mesh.topology.dim-1, locator)
-
         self.msh_emap_lm = mesh.create_submesh(
             self.mesh,
             self.mesh.topology.dim - 1,
-            cells_interface,
+            self.cells_interface,
         )[0:2]
 
         self.msh_emap_lm[0].topology.create_connectivity(self.mesh.topology.dim - 1, self.mesh.topology.dim - 1)
@@ -2309,7 +2281,44 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             tmp.write_mesh(self.msh_emap_lm[0])
 
     # create domain and boundary integration measures
-    def create_integration_measures(self, msh, qdeg):
+    def create_integration_measures(self, msh, sids, fids, iids, qdeg):
+        self.dom_solid, self.dom_fluid, self.surf_interf = (
+            sids,
+            fids,
+            iids,
+        )
+
+        if isinstance(self.dom_solid, list):
+            self.cells_solid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
+        else: # can only be a locator function otherwise
+            locator = self.dom_solid.evaluate
+            self.cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+            # cells_indices, cells_markers = [], []
+            # cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+            # cells_indices.append(cells_solid)
+            # cells_markers.append(np.full_like(cells_solid, 1))
+            # cells_indices = np.hstack(cells_indices).astype(np.int32)
+            # cells_markers = np.hstack(cells_markers).astype(np.int32)
+            # sorted_cells = np.argsort(cells_indices)
+            # cells_tag = mesh.meshtags(
+            #     self.mesh, self.mesh.topology.dim, cells_indices[sorted_cells], cells_markers[sorted_cells]
+            # )
+
+            # self.dom_solid = [1]
+            # dx_loc = ufl.Measure("dx", domain=self.mesh, subdomain_data=cells_tag, metadata={"quadrature_degree": qdeg})
+
+        if isinstance(self.dom_fluid, list):
+            self.cells_fluid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)]
+        else: # can only be a locator function otherwise
+            locator = self.dom_fluid.evaluate
+            self.cells_fluid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+
+        if isinstance(self.surf_interf, list):
+            self.cells_interface = self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)]
+        else: # can only be a locator function otherwise
+            locator = self.surf_interf.evaluate
+            self.cells_interface = mesh.locate_entities(self.mesh, self.mesh.topology.dim-1, locator)
+
         if self.mt_d is not None:
             self.dx = ufl.Measure(
                 "dx",
@@ -2324,10 +2333,6 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
                 metadata={"quadrature_degree": qdeg},
             )
             self.dx = lambda a: self.dx_  # so that we can call dx(1) even without domain meshtags
-
-        # now the boundary ones
-        interface_facets = self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)]
-        solid_cells = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
 
         integration_entities = []
 
@@ -2355,8 +2360,8 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
 
         meshutils.get_integration_entities_internal(
             msh,
-            interface_facets,
-            solid_cells,
+            self.cells_interface,
+            self.cells_solid,
             self.mesh.topology.dim - 1,
             integration_entities,
             [self.interface_id_s, self.interface_id_f],
