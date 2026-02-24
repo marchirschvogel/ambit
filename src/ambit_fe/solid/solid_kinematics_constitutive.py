@@ -41,6 +41,9 @@ class constitutive:
         self.mat_plastic = mat_plastic
         self.incompr_2field = incompr_2field
 
+        # list entries of mats which do not return a stress
+        self.mat_nostress = ["inertia", "growth", "plastic", "id"]
+
         if self.mat_growth:
             # growth & remodeling parameters
             self.gandrparams = materials["growth"]
@@ -94,15 +97,12 @@ class constitutive:
         else:
             self.mat = materiallaw(C_, Cdot_, self.I)
 
-        m = 0
-        for matlaw in self.matmodels:
-            s_, se_ = self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, Cdot_)
-
-            stress += s_
-            if se_ is not None:
-                strainenergy += se_
-
-            m += 1
+        for m, matlaw in enumerate(self.matmodels):
+            if matlaw not in self.mat_nostress:
+                s_, se_ = self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, Cdot_)
+                stress += s_
+                if se_ is not None:
+                    strainenergy += se_
 
         # add remodeled material
         if self.mat_growth and self.mat_remodel:
@@ -110,13 +110,9 @@ class constitutive:
 
             self.stress_remod = ufl.constantvalue.zero((self.kin.dim, self.kin.dim))
 
-            m = 0
-            for matlaw in self.matmodels_remod:
+            for m, matlaw in enumerate(self.matmodels_remod):
                 s_, _ = self.add_stress_mat(matlaw, self.matparams_remod[m], ivar, C_, Cdot_)
-
                 self.stress_remod += s_
-
-                m += 1
 
             # update the stress expression: S = (1-phi(theta)) * S_base + phi(theta) * S_remod
             stress = (1.0 - self.phi_remod(theta_)) * self.stress_base + self.phi_remod(theta_) * self.stress_remod
@@ -202,18 +198,6 @@ class constitutive:
         elif matlaw == "active_iso":
             tau_a_ = ivar["tau_a"]
             return self.mat.active_iso(tau_a_)
-
-        elif matlaw == "inertia":
-            # density is added to kinetic virtual work
-            return ufl.constantvalue.zero((self.kin.dim, self.kin.dim)), None
-
-        elif matlaw == "growth":
-            # growth (and remodeling) treated separately
-            return ufl.constantvalue.zero((self.kin.dim, self.kin.dim)), None
-
-        elif matlaw == "plastic":
-            # plasticity treated separately
-            return ufl.constantvalue.zero((self.kin.dim, self.kin.dim)), None
 
         else:
             raise NameError("Unknown solid material law!")

@@ -69,11 +69,6 @@ class FluidmechanicsProblem(problem_base):
         self.is_ale = is_ale
         self.is_multiphase = is_multiphase
 
-        # number of distinct domains (each one has to be assigned a own material model)
-        self.num_domains = len(constitutive_models)
-        # for FSI, we want to specify the subdomains
-        self.domain_ids = self.io.io_params.get("domain_ids_fluid", np.arange(1, self.num_domains + 1))
-
         # TODO: Find nicer solution here...
         if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
@@ -89,8 +84,8 @@ class FluidmechanicsProblem(problem_base):
         self.quad_degree = fem_params["quad_degree"]
 
         # collect domain data
-        self.rho = [[] for _ in range(len(self.domain_ids))]
-        for n, M in enumerate(self.domain_ids):
+        self.rho = [[] for _ in range(len(self.io.domain_ids))]
+        for n, M in enumerate(self.io.domain_ids):
             # data for inertial forces: density
             if not self.is_multiphase:
                 self.rho[n].append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho"])
@@ -187,9 +182,9 @@ class FluidmechanicsProblem(problem_base):
         self.dx_p, self.bmeasures_p = [], []
 
         if bool(self.io.duplicate_mesh_domains):
-            assert self.num_domains > 1
+            assert self.io.num_domains > 1
 
-            self.num_dupl = self.num_domains
+            self.num_dupl = self.io.num_domains
 
             (
                 self.io.submshes_emap,
@@ -450,7 +445,7 @@ class FluidmechanicsProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.num_domains):
+        for n in range(self.io.num_domains):
             self.ma.append(
                 fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models["MAT" + str(n + 1)])
             )
@@ -487,7 +482,7 @@ class FluidmechanicsProblem(problem_base):
                 self.fibarray,
                 self.V_v,
                 self.dx,
-                self.domain_ids,
+                self.io.domain_ids,
                 self.order_vel,
             )
 
@@ -622,7 +617,7 @@ class FluidmechanicsProblem(problem_base):
         )
         self.deltaW_p, self.deltaW_p_old, self.deltaW_p_mid = [], [], []
 
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             if self.num_dupl == 1:
                 j = 0
             else:
@@ -1277,7 +1272,7 @@ class FluidmechanicsProblem(problem_base):
             self.acc_prestr = (
                 self.v - self.v_old
             ) / self.prestress_dt  # in case acceleration is used (for kinetic prestress option)
-            for n, M in enumerate(self.domain_ids):
+            for n, M in enumerate(self.io.domain_ids):
                 if self.num_dupl == 1:
                     j = 0
                 else:
@@ -1418,7 +1413,7 @@ class FluidmechanicsProblem(problem_base):
 
             # full scheme
             if self.stabilization["scheme"] == "supg_pspg":
-                for n, M in enumerate(self.domain_ids):
+                for n, M in enumerate(self.io.domain_ids):
                     if self.num_dupl == 1:
                         j = 0
                     else:
@@ -1928,7 +1923,7 @@ class FluidmechanicsProblem(problem_base):
             self.weakform_lin_pp,
         ) = [], [], [], []
 
-        for n in range(self.num_domains):
+        for n in range(self.io.num_domains):
             if not self.ti.continuity_at_midpoint:
                 self.weakform_p.append(self.deltaW_p[n])
             else:
@@ -1942,7 +1937,7 @@ class FluidmechanicsProblem(problem_base):
         self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
         for j in range(self.num_dupl):
             self.weakform_lin_vp.append(ufl.derivative(self.weakform_v, self.p_[j], self.dp_[j]))
-        for n in range(self.num_domains):
+        for n in range(self.io.num_domains):
             self.weakform_lin_pv.append(ufl.derivative(self.weakform_p[n], self.v, self.dv))
             if self.num_dupl == 1:
                 j = 0
@@ -1973,13 +1968,13 @@ class FluidmechanicsProblem(problem_base):
             ) = [], [], [], []
             self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_prestr_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
-            for n in range(self.num_domains):
+            for n in range(self.io.num_domains):
                 self.weakform_prestress_p.append(self.deltaW_p_prestr[n])
             for j in range(self.num_dupl):
                 self.weakform_lin_prestress_vp.append(
                     ufl.derivative(self.weakform_prestress_v, self.p_[j], self.dp_[j])
                 )
-            for n in range(self.num_domains):
+            for n in range(self.io.num_domains):
                 self.weakform_lin_prestress_pv.append(ufl.derivative(self.weakform_prestress_p[n], self.v, self.dv))
                 if self.num_dupl == 1:
                     j = 0
@@ -2000,7 +1995,7 @@ class FluidmechanicsProblem(problem_base):
             self.tau_a_,
             self.Vd_scalar,
             self.dx,
-            domids=self.domain_ids,
+            domids=self.io.domain_ids,
             comm=self.comm,
             entity_maps=self.io.entity_maps,
         )  # TODO: Should be self.ds here, but yields error; why?
@@ -2010,7 +2005,7 @@ class FluidmechanicsProblem(problem_base):
     # computes the fluid's total internal power
     def compute_power(self, N, t):
         ip_all = ufl.as_ufl(0)
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             if self.num_dupl == 1:
                 j = 0
             else:
@@ -2086,7 +2081,7 @@ class FluidmechanicsProblem(problem_base):
             J, J_old = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"])
         else:
             J, J_old = 1.0, 1.0
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             rho_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chi"])
             rho_old_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_old"])
             mass_form += (J * rho_ - J_old * rho_old_) / (self.pbase.dt) * self.dx(M)
@@ -2614,7 +2609,7 @@ class FluidmechanicsProblem(problem_base):
                     self.fib_func[i],
                     self.V_v,
                     self.dx,
-                    domids=self.domain_ids,
+                    domids=self.io.domain_ids,
                     nm="Fiber" + str(i + 1),
                     comm=self.comm,
                     entity_maps=self.io.entity_maps,

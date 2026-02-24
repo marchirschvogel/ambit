@@ -61,11 +61,6 @@ class PhasefieldProblem(problem_base):
 
         self.phi_range = fem_params.get("phi_range", [0.0, 1.0])
 
-        # number of distinct domains (each one has to be assigned a own material model)
-        self.num_domains = len(constitutive_models)
-        # # for FSI, we want to specify the subdomains
-        self.domain_ids = self.io.io_params.get("domain_ids_fluid", np.arange(1, self.num_domains + 1))
-
         # TODO: Find nicer solution here...
         if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
@@ -82,7 +77,7 @@ class PhasefieldProblem(problem_base):
 
         # collect domain data
         self.kappa = []
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             self.kappa.append(self.constitutive_models["MAT" + str(n + 1)]["mat_cahnhilliard"]["kappa"])
 
         self.localsolve = False  # no idea what might have to be solved locally...
@@ -154,7 +149,7 @@ class PhasefieldProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.num_domains):
+        for n in range(self.io.num_domains):
             self.ma.append(
                 phasefield_constitutive.constitutive(self.constitutive_models["MAT" + str(n + 1)], phi_range=self.phi_range)
             )
@@ -238,7 +233,7 @@ class PhasefieldProblem(problem_base):
         self.phase_field_old, self.potential_old = ufl.as_ufl(0), ufl.as_ufl(0)
         self.phase_field_mid, self.potential_mid = ufl.as_ufl(0), ufl.as_ufl(0)
 
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"]), self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
             self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"]), self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
             self.phase_field_mid += self.vf.cahnhilliard_phase(self.phidot_mid, self.phi_mid, self.mu_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"]), self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
@@ -273,7 +268,7 @@ class PhasefieldProblem(problem_base):
             J, J_old = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"])
         else:
             J, J_old = 1.0, 1.0
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             phase_form += (J * self.phi - J_old * self.phi_old) / (self.pbase.dt) * self.dx(M)
 
         pst = fem.assemble_scalar(fem.form(phase_form))

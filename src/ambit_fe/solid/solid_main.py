@@ -67,11 +67,6 @@ class SolidmechanicsProblem(problem_base):
 
         self.io = io
 
-        # number of distinct domains (each one has to be assigned a own material model)
-        self.num_domains = len(constitutive_models)
-        # for FSI, we want to specify the subdomains
-        self.domain_ids = self.io.io_params.get("domain_ids_solid", np.arange(1, self.num_domains + 1))
-
         # TODO: Find nicer solution here...
         if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
@@ -102,7 +97,7 @@ class SolidmechanicsProblem(problem_base):
 
         # collect domain data
         self.rho0 = []
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             # data for inertial forces: density
             if self.timint != "static":
                 self.rho0.append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho0"])
@@ -360,15 +355,15 @@ class SolidmechanicsProblem(problem_base):
             self.mat_growth_thres,
             self.mat_plastic,
         ) = (
-            [False] * self.num_domains,
-            [False] * self.num_domains,
-            [False] * self.num_domains,
-            [None] * self.num_domains,
-            [None] * self.num_domains,
-            [] * self.num_domains,
-            [False] * self.num_domains,
+            [False] * self.io.num_domains,
+            [False] * self.io.num_domains,
+            [False] * self.io.num_domains,
+            [None] * self.io.num_domains,
+            [None] * self.io.num_domains,
+            [] * self.io.num_domains,
+            [False] * self.io.num_domains,
         )
-        self.mat_active_stress_type = ["ode"] * self.num_domains
+        self.mat_active_stress_type = ["ode"] * self.io.num_domains
 
         self.localsolve, growth_dir = False, None
         (
@@ -380,9 +375,9 @@ class SolidmechanicsProblem(problem_base):
             [],
             [],
             [],
-            [None] * self.num_domains,
+            [None] * self.io.num_domains,
         )
-        for n in range(self.num_domains):
+        for n in range(self.io.num_domains):
             if (
                 "holzapfelogden_dev" in self.constitutive_models["MAT" + str(n + 1)].keys()
                 or "guccione_dev" in self.constitutive_models["MAT" + str(n + 1)].keys()
@@ -548,7 +543,7 @@ class SolidmechanicsProblem(problem_base):
                 self.mat_growth_thres,
                 self.Vd_scalar,
                 self.dx,
-                domids=self.domain_ids,
+                domids=self.io.domain_ids,
                 comm=self.pbase.comm,
                 entity_maps=self.io.entity_maps,
             )
@@ -565,7 +560,7 @@ class SolidmechanicsProblem(problem_base):
                 self.fibarray,
                 self.V_u,
                 self.dx,
-                self.domain_ids,
+                self.io.domain_ids,
                 self.order_disp,
             )
 
@@ -580,7 +575,7 @@ class SolidmechanicsProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.num_domains):
+        for n in range(self.io.num_domains):
             self.ma.append(
                 solid_kinematics_constitutive.constitutive(
                     self.ki,
@@ -596,7 +591,7 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             self.ma_prestr = []
             mat_remove = ["visco_green", "growth", "plastic"]
-            for n in range(self.num_domains):
+            for n in range(self.io.num_domains):
                 for mr in mat_remove:
                     try:
                         self.constitutive_models_prestr["MAT" + str(n + 1)].pop(mr)
@@ -699,7 +694,7 @@ class SolidmechanicsProblem(problem_base):
             ufl.as_ufl(0),
         )
 
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             if self.timint != "static":
                 # kinetic virtual work
                 self.deltaW_kin += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx(M))
@@ -897,7 +892,7 @@ class SolidmechanicsProblem(problem_base):
         )
         if self.prestress_initial or self.prestress_initial_only:
             # internal virtual work
-            for n, M in enumerate(self.domain_ids):
+            for n, M in enumerate(self.io.domain_ids):
                 self.deltaW_prestr_int += self.vf.deltaW_int(
                     self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
                     self.ki.F(self.u),
@@ -986,7 +981,7 @@ class SolidmechanicsProblem(problem_base):
         if self.have_growth:
             self.r_growth, self.del_theta = [], []
 
-            for n in range(self.num_domains):
+            for n in range(self.io.num_domains):
                 if (
                     self.mat_growth[n]
                     and self.mat_growth_trig[n] != "prescribed"
@@ -1016,7 +1011,7 @@ class SolidmechanicsProblem(problem_base):
             self.localdata["fnc"].append([self.Vd_scalar])
 
         if self.have_plasticity:
-            for n in range(self.num_domains):
+            for n in range(self.io.num_domains):
                 if self.mat_plastic[n]:
                     raise ValueError("Finite strain plasticity not yet implemented!")
 
@@ -1035,7 +1030,7 @@ class SolidmechanicsProblem(problem_base):
         # point level with deformation-dependent internal variables (i.e. growth or plasticity), we make use of a more explicit formulation
         # of the linearization which involves the fourth-order material tangent operator Ctang ("derivative" cannot take care of the
         # dependence of the internal variables on the deformation if this dependence is nonlinear and cannot be expressed analytically)
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
 
             if not self.inverse_mechanics:
 
@@ -1150,7 +1145,7 @@ class SolidmechanicsProblem(problem_base):
                 ufl.as_ufl(0),
             )
 
-            for n, M in enumerate(self.domain_ids):
+            for n, M in enumerate(self.io.domain_ids):
 
                 if not self.inverse_mechanics:
 
@@ -1268,7 +1263,7 @@ class SolidmechanicsProblem(problem_base):
             # take care of Frank-Starling law (fiber stretch-dependent contractility)
             if self.have_frank_starling:
                 self.amp_old_, na = [], 0
-                for n in range(self.num_domains):
+                for n in range(self.io.num_domains):
                     if self.mat_active_stress[n] and self.actstress[na].frankstarling:
                         # old stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
                         if self.activemodel[n] == "active_fiber":
@@ -1303,7 +1298,7 @@ class SolidmechanicsProblem(problem_base):
                         self.amp_old_.append(ufl.as_ufl(0))
 
             self.tau_a_, na = [], 0
-            for n in range(self.num_domains):
+            for n in range(self.io.num_domains):
                 if self.mat_active_stress[n]:
                     if self.mat_active_stress_type[n] == "ode":
                         # stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
@@ -1369,7 +1364,7 @@ class SolidmechanicsProblem(problem_base):
                 self.amp_old_,
                 self.Vd_scalar,
                 self.dx,
-                domids=self.domain_ids,
+                domids=self.io.domain_ids,
                 comm=self.pbase.comm,
                 entity_maps=self.io.entity_maps,
             )
@@ -1381,7 +1376,7 @@ class SolidmechanicsProblem(problem_base):
             self.tau_a_,
             self.Vd_scalar,
             self.dx,
-            domids=self.domain_ids,
+            domids=self.io.domain_ids,
             comm=self.pbase.comm,
             entity_maps=self.io.entity_maps,
         )
@@ -1394,7 +1389,7 @@ class SolidmechanicsProblem(problem_base):
     # computes and prints the growth rate of the whole solid
     def compute_solid_growth_rate(self, N, t):
         dtheta_all = ufl.as_ufl(0)
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             dtheta_all += (self.theta - self.theta_old) / (self.pbase.dt) * self.dx(M)
 
         gr = fem.assemble_scalar(fem.form(dtheta_all))
@@ -1417,7 +1412,7 @@ class SolidmechanicsProblem(problem_base):
     # computes the solid's total strain energy and internal power
     def compute_strain_energy_power(self, N, t):
         se_all, ip_all = ufl.as_ufl(0), ufl.as_ufl(0)
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             se_all += self.ma[n].S(
                 self.u,
                 self.p,
@@ -1517,7 +1512,7 @@ class SolidmechanicsProblem(problem_base):
         f = fem.Function(self.V_u)  # zero source term
 
         a, L = ufl.as_ufl(0), ufl.as_ufl(0)
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             a += ufl.inner(ufl.grad(uf), ufl.grad(vf)) * self.dx(M)
             L += ufl.dot(f, vf) * self.dx(M)
 
@@ -1540,7 +1535,7 @@ class SolidmechanicsProblem(problem_base):
         lp.solve()
 
         vol_all = ufl.as_ufl(0)
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx(M)
 
         vol = fem.assemble_scalar(fem.form(vol_all))
@@ -1715,7 +1710,7 @@ class SolidmechanicsProblem(problem_base):
                     self.fib_func[i],
                     self.V_u,
                     self.dx,
-                    domids=self.domain_ids,
+                    domids=self.io.domain_ids,
                     nm="Fiber" + str(i + 1),
                     comm=self.pbase.comm,
                     entity_maps=self.io.entity_maps,

@@ -229,7 +229,7 @@ class FluidmechanicsAleProblem(problem_base):
 
         # derivative of fluid continuity w.r.t. ALE displacement
         self.weakform_lin_pd = []
-        for n in range(self.pbf.num_domains):
+        for n in range(self.pbf.io.num_domains):
             self.weakform_lin_pd.append(ufl.derivative(self.pbf.weakform_p[n], self.pba.d, self.pba.dd))
 
     def set_problem_residual_jacobian_forms(self, pre=False):

@@ -28,6 +28,9 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
+        # list entries of mats which do not return a stress
+        self.mat_nostress = ["inertia", "id"]
+
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
 
@@ -43,22 +46,15 @@ class constitutive:
 
         mat = materiallaw(shearrate_, volstrainrate_, self.kin.use_gen_strainrate, self.I)
 
-        m = 0
-        for matlaw in self.matmodels:
-            # extract associated material parameters
-            matparams_m = self.matparams[m]
+        for m, matlaw in enumerate(self.matmodels):
+            if matlaw not in self.mat_nostress:
+                # extract associated material parameters
+                matparams_m = self.matparams[m]
 
-            if matlaw == "newtonian":
-                stress += mat.newtonian(matparams_m, chi=chi)
-
-            elif matlaw == "inertia":
-                # density is added to kinetic virtual power
-                pass
-
-            else:
-                raise NameError("Unknown fluid material law!")
-
-            m += 1
+                if matlaw == "newtonian":
+                    stress += mat.newtonian(matparams_m, chi=chi)
+                else:
+                    raise NameError("Unknown fluid material law!")
 
         # TeX: \sigma_{\mathrm{vol}} = -p\boldsymbol{I}
         stress += -p_ * self.I

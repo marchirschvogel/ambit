@@ -55,11 +55,6 @@ class AleProblem(problem_base):
 
         self.io = io
 
-        # number of distinct domains (each one has to be assigned a own material model)
-        self.num_domains = len(constitutive_models)
-        # for FSI, we want to specify the subdomains
-        self.domain_ids = self.io.io_params.get("domain_ids_fluid", np.arange(1, self.num_domains + 1))
-
         # TODO: Find nicer solution here...
         if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
@@ -197,7 +192,7 @@ class AleProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.num_domains):
+        for n in range(self.io.num_domains):
             self.ma.append(
                 ale_kinematics_constitutive.constitutive(self.ki, self.constitutive_models["MAT" + str(n + 1)])
             )
@@ -248,7 +243,7 @@ class AleProblem(problem_base):
         # internal virtual work
         self.deltaW_int = ufl.as_ufl(0)
 
-        for n, M in enumerate(self.domain_ids):
+        for n, M in enumerate(self.io.domain_ids):
             # internal virtual work
             self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d, self.wel), self.dx(M))
 

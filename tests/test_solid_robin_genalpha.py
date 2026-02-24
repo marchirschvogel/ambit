@@ -61,6 +61,7 @@ def test_main():
         "MAT1": {
             "stvenantkirchhoff": {"Emod": 1000.0, "nu": 0.3},
             "inertia": {"rho0": 1.0e-6},
+            "id": 1,
         }
     }
 

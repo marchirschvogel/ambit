@@ -26,6 +26,9 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
+        # list entries of mats which do not return a stress
+        self.mat_nostress = ["inertia", "id"]
+
     def stress(self, d_, w_):
         F_ = ufl.variable(self.kin.F(d_))
 
@@ -35,36 +38,34 @@ class constitutive:
 
         mat = materiallaw(d_, w_, F_, self.kin.elem_metrics)
 
-        m = 0
-        for matlaw in self.matmodels:
-            # extract associated material parameters
-            matparams_m = self.matparams[m]
+        for m, matlaw in enumerate(self.matmodels):
+            if matlaw not in self.mat_nostress:
+                # extract associated material parameters
+                matparams_m = self.matparams[m]
 
-            if matlaw == "diffusion":
-                stress += mat.diffusion(matparams_m)
+                if matlaw == "diffusion":
+                    stress += mat.diffusion(matparams_m)
 
-            elif matlaw == "diffusion_rate":
-                stress += mat.diffusion_rate(matparams_m)
+                elif matlaw == "diffusion_rate":
+                    stress += mat.diffusion_rate(matparams_m)
 
-            elif matlaw == "diffusion_sym":
-                stress += mat.diffusion_sym(matparams_m)
+                elif matlaw == "diffusion_sym":
+                    stress += mat.diffusion_sym(matparams_m)
 
-            elif matlaw == "diffusion_rate_sym":
-                stress += mat.diffusion_rate_sym(matparams_m)
+                elif matlaw == "diffusion_rate_sym":
+                    stress += mat.diffusion_rate_sym(matparams_m)
 
-            elif matlaw == "linelast":
-                stress += mat.linelast(matparams_m)
+                elif matlaw == "linelast":
+                    stress += mat.linelast(matparams_m)
 
-            elif matlaw == "neohooke":
-                stress += mat.neohooke(matparams_m)
+                elif matlaw == "neohooke":
+                    stress += mat.neohooke(matparams_m)
 
-            elif matlaw == "exponential":
-                stress += mat.exponential(matparams_m)
+                elif matlaw == "exponential":
+                    stress += mat.exponential(matparams_m)
 
-            else:
-                raise NameError("Unknown ALE material law!")
-
-            m += 1
+                else:
+                    raise NameError("Unknown ALE material law!")
 
         return stress
 

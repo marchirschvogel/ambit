@@ -79,9 +79,6 @@ def main():
                 ["aledisplacement", "alevelocity"],
             ],
         ],
-        "domain_ids_solid": [1],
-        "domain_ids_fluid": [2],
-        "surface_ids_interface": [1],
         "simname": "fsi_channel_flag_turek_" + case,
     }
 
@@ -168,14 +165,15 @@ def main():
                 "nu": nu_s,
             },
             "inertia": {"rho0": rho0_s},
+            "id": 1,
         }
     }
 
     # fluid material: standard Newtonian fluid
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": eta_f}, "inertia": {"rho": rho_f}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": eta_f}, "inertia": {"rho": rho_f}, "id": 2}}
 
     # nonlinear material for domain motion problem: This has proved superior to the linear elastic model for large mesh deformations
-    MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}}}
+    MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}, "id": 2}}
 
     """
     User expression, here a spatially varying time-controlled inflow: always need a class variable self.t and an evaluate(self, x)

@@ -11,8 +11,6 @@ def check_params_io(params):
     valid_params = [
         "duplicate_mesh_domains",
         "fiber_data",
-        "domain_ids_solid",
-        "domain_ids_fluid",
         "gridname_domain",
         "gridname_boundary",
         "indicate_results_by",
@@ -37,7 +35,6 @@ def check_params_io(params):
         "restart_step",
         "results_to_write",
         "simname",
-        "surface_ids_interface",
         "volume_laplace",
         "write_initial_fields",
         "write_results_every",

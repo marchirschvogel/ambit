@@ -31,9 +31,6 @@ def test_main():
             [["velocity", "pressure"],
                 ["aledisplacement"]],
         ],
-        "domain_ids_solid": [1],
-        "domain_ids_fluid": [2],
-        "surface_ids_interface": [3],
         "write_submeshes":True,
         "simname": "tank2d_p1p1_stabr_neumannneumann",
     }
@@ -50,8 +47,8 @@ def test_main():
         "tol_inc": [1e-8, 1e-8, 1e-8, 1e5, 1e-8],
     }
 
-    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
-    TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
+    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
+    TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
 
     FEM_PARAMS_SOLID = {
         "order_disp": 1,
@@ -82,12 +79,14 @@ def test_main():
     E = 500. # kPa
     nu = 0.3
     MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},
-                                "inertia": {"rho0": 1.070e-6}}}
+                                "inertia": {"rho0": 1.070e-6},
+                                "id": 1}}
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 1.0e-6}, # kPas
-                                "inertia": {"rho": 1.0e-6}}} # kg/mm^3
+                                "inertia": {"rho": 1.0e-6}, # kg/mm^3
+                                "id": 2}}
 
-    MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}}}
+    MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}, "id": 2}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:

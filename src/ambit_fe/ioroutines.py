@@ -20,10 +20,16 @@ from .mathutils import spectral_decomposition_3x3
 
 
 class IO:
-    def __init__(self, io_params, fem_params, entity_maps, comm):
+    def __init__(self, io_params, fem_params={}, constitutive_params={}, entity_maps=None, comm=None):
         ioparams.check_params_io(io_params)
 
         self.io_params = io_params
+
+        self.num_domains = len(constitutive_params)
+        # collect given domain ids
+        self.domain_ids = []
+        for n in range(self.num_domains):
+            self.domain_ids.append( constitutive_params["MAT"+str(n+1)].get("id", n+1) )
 
         self.write_results_every = io_params["write_results_every"]
         self.output_path = io_params["output_path"]
@@ -33,8 +39,6 @@ class IO:
         self.mesh_boundary = io_params.get("mesh_boundary", None) # in 3D: surfaces, in 2D: edges
         self.mesh_subboundary = io_params.get("mesh_subboundary", None) # in 3D: edges, in 2D: points
         self.mesh_subsubboundary = io_params.get("mesh_subsubboundary", None) # in 3D: points, in 2D: -
-
-        self.quad_degree = fem_params["quad_degree"]
 
         self.fiber_data = io_params.get("fiber_data", [])
 
@@ -55,6 +59,9 @@ class IO:
         self.write_submeshes = io_params.get("write_submeshes", False)
 
         self.output_midpoint = io_params.get("output_midpoint", False)
+
+        # for creating integration measures
+        self.quad_degree = fem_params.get("quad_degree", 9)
 
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
@@ -533,7 +540,7 @@ class IO_solid(IO):
                                 pb.us_mid,
                                 pb.V_u,
                                 pb.dx,
-                                domids=pb.domain_ids,
+                                domids=pb.io.domain_ids,
                                 nm="Displacement",
                                 comm=self.comm,
                                 entity_maps=self.entity_maps,
@@ -553,7 +560,7 @@ class IO_solid(IO):
                             vel,
                             pb.V_u,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="Velocity",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -570,7 +577,7 @@ class IO_solid(IO):
                             acc,
                             pb.V_u,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="Acceleration",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -584,7 +591,7 @@ class IO_solid(IO):
                                 pb.ps_mid,
                                 pb.V_p,
                                 pb.dx,
-                                domids=pb.domain_ids,
+                                domids=pb.io.domain_ids,
                                 nm="Pressure",
                                 comm=self.comm,
                                 entity_maps=self.entity_maps,
@@ -601,13 +608,13 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(u, p, v, ivar=ivars))
                         cauchystress = project(
                             stressfuncs,
                             pb.Vd_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="CauchyStress",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -621,13 +628,13 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             stressfuncs.append(pb.ma[n].sigma(u, p, v, ivar=ivars))
                         cauchystress_nodal = project(
                             stressfuncs,
                             pb.V_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="CauchyStress_nodal",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -641,7 +648,7 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs_eval = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             evals, _, _ = spectral_decomposition_3x3(
                                 pb.ma[n].sigma(u, p, v, ivar=ivars)
                             )
@@ -650,7 +657,7 @@ class IO_solid(IO):
                             stressfuncs_eval,
                             pb.Vd_vector,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="CauchyStress_princ",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -732,7 +739,7 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             stressfuncs.append(
                                 ufl.tr(
                                     pb.ma[n].M(
@@ -747,7 +754,7 @@ class IO_solid(IO):
                             stressfuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="trMandelStress",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -761,7 +768,7 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             if pb.mat_growth[n]:
                                 stressfuncs.append(
                                     ufl.tr(
@@ -780,7 +787,7 @@ class IO_solid(IO):
                             stressfuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="trMandelStress_e",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -794,13 +801,13 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             stressfuncs.append(pb.ma[n].sigma_vonmises(u, p, v, ivar=ivars))
                         vonmises_cauchystress = project(
                             stressfuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="vonMises_CauchyStress",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -814,13 +821,13 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             stressfuncs.append(pb.ma[n].P(u, p, v, ivar=ivars))
                         pk1stress = project(
                             stressfuncs,
                             pb.Vd_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="PK1Stress",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -834,13 +841,13 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             stressfuncs.append(pb.ma[n].S(u, p, v, ivar=ivars))
                         pk2stress = project(
                             stressfuncs,
                             pb.Vd_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="PK2Stress",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -857,7 +864,7 @@ class IO_solid(IO):
                             pb.ki.J(u),
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="Jacobian",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -874,7 +881,7 @@ class IO_solid(IO):
                             pb.ki.E(u),
                             pb.Vd_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="GreenLagrangeStrain",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -893,7 +900,7 @@ class IO_solid(IO):
                             evals_gl,
                             pb.Vd_vector,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="GreenLagrangeStrain_princ",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -910,7 +917,7 @@ class IO_solid(IO):
                             pb.ki.e(u),
                             pb.Vd_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="EulerAlmansiStrain",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -929,7 +936,7 @@ class IO_solid(IO):
                             evals_gl,
                             pb.Vd_vector,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="EulerAlmansiStrain_princ",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -943,7 +950,7 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         sefuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             sefuncs.append(
                                 pb.ma[n].S(
                                     u,
@@ -957,7 +964,7 @@ class IO_solid(IO):
                             sefuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="StrainEnergy",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -971,7 +978,7 @@ class IO_solid(IO):
                         else:
                             u, p, v, ivars = pb.u, pb.p, pb.vel, pb.internalvars
                         pwfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             pwfuncs.append(
                                 ufl.inner(
                                     pb.ma[n].S(
@@ -987,7 +994,7 @@ class IO_solid(IO):
                             pwfuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="InternalPower",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1004,7 +1011,7 @@ class IO_solid(IO):
                             pb.ki.fibstretch(u, pb.fib_func[0]),
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="FiberStretch",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1018,7 +1025,7 @@ class IO_solid(IO):
                         else:
                             u, theta = pb.u, pb.internalvars["theta"]
                         stretchfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             if pb.mat_growth[n]:
                                 stretchfuncs.append(pb.ma[n].fibstretch_e(pb.ki.C(u), theta, pb.fib_func[0]))
                             else:
@@ -1027,7 +1034,7 @@ class IO_solid(IO):
                             stretchfuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="FiberStretch_e",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1041,7 +1048,7 @@ class IO_solid(IO):
                                 pb.internalvars_mid["theta"],
                                 pb.Vd_scalar,
                                 pb.dx,
-                                domids=pb.domain_ids,
+                                domids=pb.io.domain_ids,
                                 nm="theta",
                                 comm=self.comm,
                                 entity_maps=self.entity_maps,
@@ -1058,7 +1065,7 @@ class IO_solid(IO):
                         else:
                             theta = pb.internalvars["theta"]
                         phifuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             if pb.mat_remodel[n]:
                                 phifuncs.append(pb.ma[n].phi_remod(theta))
                             else:
@@ -1067,7 +1074,7 @@ class IO_solid(IO):
                             phifuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="phiRemodel",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1081,7 +1088,7 @@ class IO_solid(IO):
                                 pb.internalvars_mid["tau_a"],
                                 pb.Vd_scalar,
                                 pb.dx,
-                                domids=pb.domain_ids,
+                                domids=pb.io.domain_ids,
                                 nm="tau_a",
                                 comm=self.comm,
                                 entity_maps=self.entity_maps,
@@ -1312,7 +1319,7 @@ class IO_fluid(IO):
                                 pb.vel_mid,
                                 pb.V_v,
                                 pb.dx,
-                                domids=pb.domain_ids,
+                                domids=pb.io.domain_ids,
                                 nm="Velocity",
                                 comm=self.comm,
                                 entity_maps=self.entity_maps,
@@ -1332,7 +1339,7 @@ class IO_fluid(IO):
                             acc,
                             pb.V_v,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="Acceleration",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1352,7 +1359,7 @@ class IO_fluid(IO):
                                         pb.pf_mid_[m],
                                         pb.V_p_[m],
                                         pb.dx_p[m],
-                                        domids=[pb.domain_ids[m]],
+                                        domids=[pb.io.domain_ids[m]],
                                         nm=pb.p_[m].name,
                                         comm=self.comm,
                                         entity_maps=[self.submshes_emap[m + 1][1]],
@@ -1369,7 +1376,7 @@ class IO_fluid(IO):
                                     pb.pf_mid_[0],
                                     pb.V_p_[0],
                                     pb.dx,
-                                    domids=pb.domain_ids,
+                                    domids=pb.io.domain_ids,
                                     nm=pb.p_[0].name,
                                     comm=self.comm,
                                     entity_maps=self.entity_maps,
@@ -1382,7 +1389,7 @@ class IO_fluid(IO):
                             self.resultsfiles[res].write_function(p_out, indicator)
                     elif res == "cauchystress":
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             if self.output_midpoint:
                                 v, p, F, chi = pb.vel_mid, pb.pf_mid_[n], pb.alevar["Fale_mid"], pb.phasevar["chi_mid"]
                             else:
@@ -1392,7 +1399,7 @@ class IO_fluid(IO):
                             stressfuncs,
                             pb.Vd_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="CauchyStress",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1409,7 +1416,7 @@ class IO_fluid(IO):
                             uf,
                             pb.V_v,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="FluidDisplacement",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1458,13 +1465,13 @@ class IO_fluid(IO):
                         else:
                             chi = pb.phasevar["chi"]
                         densfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             densfuncs.append(pb.vf.get_density(pb.rho[n], chi=chi))
                         dens_proj = project(
                             densfuncs,
                             pb.V_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="Density",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1490,7 +1497,7 @@ class IO_fluid(IO):
                         self.resultsfiles[res].write_function(internalpower_membrane_out, indicator)
                     elif res == "internalpower":
                         pwfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             pwfuncs.append(
                                 ufl.inner(
                                     pb.ma[n].sigma(pb.v, pb.p, F=pb.alevar["Fale"], chi=pb.phasevar["chi"]),
@@ -1501,7 +1508,7 @@ class IO_fluid(IO):
                             pwfuncs,
                             pb.Vd_scalar,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="InternalPower",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1701,7 +1708,7 @@ class IO_ale(IO):
                             pb.wel,
                             pb.V_d,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="AleVelocity",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1711,13 +1718,13 @@ class IO_ale(IO):
                         self.resultsfiles[res].write_function(w_out, indicator)
                     elif res == "alestress": # might be needed for some debugging purposes...
                         stressfuncs = []
-                        for n in range(pb.num_domains):
+                        for n in range(pb.io.num_domains):
                             stressfuncs.append(pb.ma[n].stress(pb.d, pb.wel))
                         stress = project(
                             stressfuncs,
                             pb.Vd_tensor,
                             pb.dx,
-                            domids=pb.domain_ids,
+                            domids=pb.io.domain_ids,
                             nm="AleStress",
                             comm=self.comm,
                             entity_maps=self.entity_maps,
@@ -1874,7 +1881,7 @@ class IO_phasefield(IO):
                                 pb.phi,
                                 pb.V_phi,
                                 pb.dx,
-                                domids=pb.domain_ids,
+                                domids=pb.io.domain_ids,
                                 nm="PhaseField",
                                 comm=self.comm,
                                 entity_maps=self.entity_maps,
@@ -1891,7 +1898,7 @@ class IO_phasefield(IO):
                                 pb.mu,
                                 pb.V_mu,
                                 pb.dx,
-                                domids=pb.domain_ids,
+                                domids=pb.io.domain_ids,
                                 nm="Potential",
                                 comm=self.comm,
                                 entity_maps=self.entity_maps,
@@ -2168,18 +2175,31 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
                 else:
                     raise ValueError("Unknown restart_io_type!")
 
-    def create_submeshes(self):
+    def create_submeshes(self, sids, fids, iids):
         self.dom_solid, self.dom_fluid, self.surf_interf = (
-            self.io_params["domain_ids_solid"],
-            self.io_params["domain_ids_fluid"],
-            self.io_params["surface_ids_interface"],
+            sids,
+            fids,
+            iids,
         )
 
         if isinstance(self.dom_solid, list):
             cells_solid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
         else: # can only be a locator function otherwise
             locator = self.dom_solid.evaluate
+
+            cells_indices, cells_markers = [], []
             cells_solid = mesh.locate_entities(self.mesh, self.mesh.topology.dim, locator)
+            cells_indices.append(cells_solid)
+            cells_markers.append(np.full_like(cells_solid, 1))
+            cells_indices = np.hstack(cells_indices).astype(np.int32)
+            cells_markers = np.hstack(cells_markers).astype(np.int32)
+            sorted_cells = np.argsort(cells_indices)
+            cells_tag = mesh.meshtags(
+                self.mesh, self.mesh.topology.dim, cells_indices[sorted_cells], cells_markers[sorted_cells]
+            )
+
+            self.dom_solid = [1]
+            dx_loc = ufl.Measure("dx", domain=self.mesh, subdomain_data=cells_tag, metadata={"quadrature_degree": self.quad_degree})
 
         if isinstance(self.dom_fluid, list):
             cells_fluid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)]

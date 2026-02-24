@@ -40,9 +40,6 @@ def test_main():
                 ["aledisplacement", "alevelocity"],
             ],
         ],
-        "domain_ids_solid": [1],
-        "domain_ids_fluid": [2],
-        "surface_ids_interface": [1],
         "simname": "fsi_flow0d_p1p1_stabr_artseg",
     }
 
@@ -112,12 +109,13 @@ def test_main():
             "neohooke_dev": {"mu": 100.0},
             "sussmanbathe_vol": {"kappa": 500.0},
             "inertia": {"rho0": 1.0e-6},
+            "id": 1,
         }
     }
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 4.0e-6}, "inertia": {"rho": 1.025e-6}, "id": 2}}
 
-    MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}}}
+    MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}, "id": 2}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     # some examples... up to 20 possible (tc1 until tc20 - feel free to implement more in timeintegration.py --> timecurves function if needed...)

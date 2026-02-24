@@ -157,7 +157,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         # add Korteweg force to fluid momentum
         self.korteweg_force, self.korteweg_force_old, self.korteweg_force_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
-        for n, M in enumerate(self.pbf.domain_ids):
+        for n, M in enumerate(self.pbf.io.domain_ids):
             self.korteweg_force += self.pbf.vf.korteweg_force1(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"])
             self.korteweg_force_old += self.pbf.vf.korteweg_force1(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
             self.korteweg_force_mid += self.pbf.vf.korteweg_force1(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
@@ -176,7 +176,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.weakform_lin_vmu = ufl.derivative(self.pbf.weakform_v, self.pbp.mu, self.pbp.dmu)
         # derivative of fluid continuity w.r.t. phase field
         self.weakform_lin_pphi = []
-        for n in range(self.pbf.num_domains):
+        for n in range(self.pbf.io.num_domains):
             self.weakform_lin_pphi.append(ufl.derivative(self.pbf.weakform_p[n], self.pbp.phi, self.pbp.dphi))
         # derivative of phase field w.r.t. fluid velocity
         self.weakform_lin_phiv = ufl.derivative(self.pbp.weakform_phi, self.pbf.v, self.pbf.dv)
