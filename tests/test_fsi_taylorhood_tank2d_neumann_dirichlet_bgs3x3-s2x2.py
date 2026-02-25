@@ -75,7 +75,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": {"surface_ids": [3]},
+        "coupling_fluid_ale": {"interface": [3]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
     }
 

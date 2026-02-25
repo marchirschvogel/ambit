@@ -60,7 +60,7 @@ def test_main():
             return np.logical_or(np.logical_or(left_b, right_b), np.logical_or(top_b, bottom_b))
 
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": {"locator": locate()},
+        "coupling_fluid_ale": {"interface": [locate()]},
     }
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 0.001}, # Pa s

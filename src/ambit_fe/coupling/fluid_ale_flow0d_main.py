@@ -234,7 +234,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
             self.k_sd_subvec, sze_sd = [], []
 
             for n in range(self.pbf0.num_coupling_surf):
-                self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pba.V_d, self.comm, io=self.pba.io, idlist=self.pbf0.surface_vq_ids[n], codim=self.pba.io.mesh.topology.dim-1)
+                self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pba.V_d, self.comm, io=self.pba.io, identifier=self.pbf0.surface_vq_ids[n], codim=self.pba.io.mesh.topology.dim-1)
 
                 self.k_sd_subvec.append(self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 

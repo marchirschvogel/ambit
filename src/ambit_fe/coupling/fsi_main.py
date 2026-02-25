@@ -299,11 +299,11 @@ class FSIProblem(problem_base):
         if self.fsi_system=="neumann_dirichlet":
             self.fluid_to_solid_mapping()
             # solid
-            self.fdofs_solid_global_sub = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.io.surf_interf, codim=self.pbs.io.mesh.topology.dim-1, mapper=self.map_s, mask_owned=True)
+            self.fdofs_solid_global_sub = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, identifier=self.io.surf_interf, codim=self.pbs.io.mesh.topology.dim-1, mapper=self.map_s, mask_owned=True)
             if self.pbs.incompressible_2field:
-                self.fdofs_solidp_global_sub = meshutils.get_index_set(self.pbs.V_p, self.comm, io=self.pbs.io, idlist=self.io.surf_interf, codim=self.pbs.io.mesh.topology.dim-1, mask_owned=True)
+                self.fdofs_solidp_global_sub = meshutils.get_index_set(self.pbs.V_p, self.comm, io=self.pbs.io, identifier=self.io.surf_interf, codim=self.pbs.io.mesh.topology.dim-1, mask_owned=True)
             # fluid
-            self.fdofs_fluid_global_sub = meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, idlist=self.io.surf_interf, codim=self.pbf.io.mesh.topology.dim-1, mapper=self.map_f2s, mask_owned=True)
+            self.fdofs_fluid_global_sub = meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, identifier=self.io.surf_interf, codim=self.pbf.io.mesh.topology.dim-1, mapper=self.map_f2s, mask_owned=True)
             # check consistency of local size - TODO: There can be partitions where the number of owned dofs per core differes for solid and fluid! Weird, but currently, we have to exclude these cases...
             assert(self.fdofs_solid_global_sub.getSize()==self.fdofs_fluid_global_sub.getSize())
             assert(self.fdofs_solid_global_sub.getLocalSize()==self.fdofs_fluid_global_sub.getLocalSize())
@@ -342,16 +342,16 @@ class FSIProblem(problem_base):
         elif self.fsi_system == "neumann_dirichlet":
 
             self.dbcs_coup_fluid_solid = []
-            self.dbcs_coup_fluid_solid.append(
-                fem.dirichletbc(
-                    self.ufs,
-                    fem.locate_dofs_topological(
-                        self.pbs.V_u,
-                        self.pbs.io.mesh.topology.dim - 1,
-                        self.pbs.io.mt_b.indices[np.isin(self.pbs.io.mt_b.values, self.io.surf_interf)],
-                    ),
-                )
-            )
+
+            if all(isinstance(x, int) for x in self.io.surf_interf):
+                nodes_dbcs_fs = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim - 1, self.pbs.io.mt_b.indices[np.isin(self.pbs.io.mt_b.values, self.io.surf_interf)])
+            else: # can only be locator function otherwise...
+                nodes_dbcs_fs_ = []
+                for lc in self.io.surf_interf:
+                    nodes_dbcs_fs_.append(fem.locate_dofs_geometrical(self.pbs.V_u, lc.evaluate))
+                nodes_dbcs_fs = np.concatenate(nodes_dbcs_fs_).ravel()
+
+            self.dbcs_coup_fluid_solid.append(fem.dirichletbc(self.ufs, nodes_dbcs_fs))
 
             # now add the DBCs: pay attention to order... first u=uf, then the others... hence re-set!
             if bool(self.dbcs_coup_fluid_solid):
@@ -374,7 +374,7 @@ class FSIProblem(problem_base):
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
                     if self.pbs.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
-                    self.dbc_dofs_solid_global.append( meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.pbs.bc_dict["dirichlet"][k]["id"], codim=self.pbs.bc_dict["dirichlet"][k].get("codimension", self.pbs.io.mesh.topology.dim-1), sub=sub, mask_owned=True) )
+                    self.dbc_dofs_solid_global.append( meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, identifier=self.pbs.bc_dict["dirichlet"][k]["id"], codim=self.pbs.bc_dict["dirichlet"][k].get("codimension", self.pbs.io.mesh.topology.dim-1), sub=sub, mask_owned=True) )
                 dbcs_dofs_solid_all = []
                 for k in range(len(self.dbc_dofs_solid_global)):
                     dbcs_dofs_solid_all.append( self.dbc_dofs_solid_global[k].allGather().array )
@@ -393,7 +393,7 @@ class FSIProblem(problem_base):
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="z": sub=2
-                    self.dbc_dofs_fluid_global.append( meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, idlist=self.pbf.bc_dict["dirichlet"][k]["id"], codim=self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.io.mesh.topology.dim-1), sub=sub, mask_owned=True) )
+                    self.dbc_dofs_fluid_global.append( meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, identifier=self.pbf.bc_dict["dirichlet"][k]["id"], codim=self.pbf.bc_dict["dirichlet"][k].get("codimension", self.pbf.io.mesh.topology.dim-1), sub=sub, mask_owned=True) )
                 dbcs_dofs_fluid_all = []
                 for k in range(len(self.dbc_dofs_fluid_global)):
                     dbcs_dofs_fluid_all.append( self.dbc_dofs_fluid_global[k].allGather().array )
@@ -827,10 +827,22 @@ class FSIProblem(problem_base):
         dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
         dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
 
-        fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b.indices[np.isin(self.pbs.io.mt_b.values, self.io.surf_interf)])
+        if all(isinstance(x, int) for x in self.io.surf_interf):
+            fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.io.mesh.topology.dim-1, self.pbs.io.mt_b.indices[np.isin(self.pbs.io.mt_b.values, self.io.surf_interf)])
+        else: # can only be locator function otherwise...
+            fnodes_s_loc_ = []
+            for lc in self.io.surf_interf:
+                fnodes_s_loc_.append(fem.locate_dofs_geometrical(self.pbs.V_u, lc.evaluate))
+            fnodes_s_loc = np.concatenate(fnodes_s_loc_).ravel()
         fnodes_s_glb = np.array(self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnodes_s_loc, dtype=np.int32)), dtype=np.int32)
 
-        fnodes_f_loc = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b.indices[np.isin(self.pbf.io.mt_b.values, self.io.surf_interf)])
+        if all(isinstance(x, int) for x in self.io.surf_interf):
+            fnodes_f_loc = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.io.mesh.topology.dim-1, self.pbf.io.mt_b.indices[np.isin(self.pbf.io.mt_b.values, self.io.surf_interf)])
+        else: # can only be locator function otherwise...
+            fnodes_f_loc_ = []
+            for lc in self.io.surf_interf:
+                fnodes_f_loc_.append(fem.locate_dofs_geometrical(self.pbf.V_v, lc.evaluate))
+            fnodes_f_loc = np.concatenate(fnodes_f_loc_).ravel()
         fnodes_f_glb = np.array(self.pbf.V_v.dofmap.index_map.local_to_global(np.asarray(fnodes_f_loc, dtype=np.int32)), dtype=np.int32)
 
         # fluid to solid mapping

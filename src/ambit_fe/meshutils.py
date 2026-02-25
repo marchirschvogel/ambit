@@ -50,7 +50,7 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set(Vspace, comm, nodes_loc=None, io=None, idlist=None, codim=None, sub=None, local_indices=False, mapper=None, mask_owned=False):
+def get_index_set(Vspace, comm, nodes_loc=None, io=None, identifier=None, codim=None, sub=None, local_indices=False, mapper=None, mask_owned=False):
     # get (local) nodes if not already provided
     if nodes_loc is None:
         if codim == io.mesh.topology.dim:
@@ -62,11 +62,17 @@ def get_index_set(Vspace, comm, nodes_loc=None, io=None, idlist=None, codim=None
         if codim == io.mesh.topology.dim - 3:
             mdata = io.mt_ssb
 
-        nodes_loc = fem.locate_dofs_topological(
-            Vspace,
-            codim,
-            mdata.indices[np.isin(mdata.values, idlist)],
-        )
+        if all(isinstance(x, int) for x in identifier):
+            nodes_loc = fem.locate_dofs_topological(
+                Vspace,
+                codim,
+                mdata.indices[np.isin(mdata.values, identifier)],
+            )
+        else: # can only be locator function otherwise...
+            nodes_loc_ = []
+            for lc in identifier:
+                nodes_loc_.append(fem.locate_dofs_geometrical(Vspace, lc.evaluate))
+            nodes_loc = np.concatenate(nodes_loc_).ravel()
 
     if not local_indices:
         nodes_g = np.array(
@@ -100,13 +106,13 @@ def get_index_set(Vspace, comm, nodes_loc=None, io=None, idlist=None, codim=None
     return iset
 
 def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, dimentity):
-    if dimentity=='domain':
+    if dimentity=="domain":
         dim_p = parentmsh.topology.dim
         dim_c = childmsh.topology.dim
-    elif dimentity=='boundary':
+    elif dimentity=="boundary":
         dim_p = parentmsh.topology.dim-1
         dim_c = childmsh.topology.dim-1
-    elif dimentity=='boundary_2':
+    elif dimentity=="boundary_2":
         dim_p = parentmsh.topology.dim-2
         dim_c = childmsh.topology.dim-2
     else:
@@ -139,6 +145,27 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
 
     return mesh.meshtags(childmsh, dim_c, np.arange(num_c_ent, dtype=np.int32), sub_values)
 
+def meshtags_cells_from_locator(msh, cells_loc, dimentity):
+    if dimentity=="domain":
+        cdim = msh.topology.dim
+    elif dimentity=="boundary":
+        cdim = msh.topology.dim-1
+    elif dimentity=="boundary_2":
+        cdim = msh.topology.dim-2
+    else:
+        raise ValueError("Unknown dim entity!")
+
+    cell_indices, cell_markers = [], []
+    for marker, locator in cells_loc:
+        cells = mesh.locate_entities(msh, cdim, locator)
+        cell_indices.append(cells)
+        cell_markers.append(np.full_like(cells, marker))
+    cell_indices = np.hstack(cell_indices).astype(np.int32)
+    cell_markers = np.hstack(cell_markers).astype(np.int32)
+    sorted_cells = np.argsort(cell_indices)
+
+    cell_indices_sorted = cell_indices[sorted_cells]
+    return mesh.meshtags(msh, cdim, cell_indices_sorted, cell_markers[sorted_cells])
 
 def get_integration_entities(msh, entity_indices, codim, integration_entities):
     dim = msh.topology.dim

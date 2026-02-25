@@ -61,7 +61,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": {"surface_ids": [1]},
+        "coupling_fluid_ale": {"interface": [1]},
         "fsi_system": "neumann_dirichlet",
         "fsi_governing_type": "fluid_governed",  # solid_governed, fluid_governed
     }

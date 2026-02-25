@@ -371,16 +371,16 @@ class SolidmechanicsConstraintProblem(problem_base):
         self.k_us_subvec, self.k_su_subvec, sze_us, sze_su = [], [], [], []
 
         for n in range(self.num_coupling_surf):
-            self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.surface_vq_ids[n], codim=self.pbs.io.mesh.topology.dim-1)
+            self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, identifier=self.surface_vq_ids[n], codim=self.pbs.io.mesh.topology.dim-1)
 
             self.k_su_subvec.append(self.k_su_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
             sze_su.append(self.k_su_subvec[-1].getSize())
 
             if self.coupling_params["multiplier_physics"][n]["type"] == "pressure":
-                self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.surface_lm_ids[n], codim=self.pbs.io.mesh.topology.dim-1)
+                self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, identifier=self.surface_lm_ids[n], codim=self.pbs.io.mesh.topology.dim-1)
             if self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
-                self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, idlist=self.surface_lm_ids[n], codim=self.pbs.io.mesh.topology.dim)
+                self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbs.V_u, self.comm, io=self.pbs.io, identifier=self.surface_lm_ids[n], codim=self.pbs.io.mesh.topology.dim)
 
             self.k_us_subvec.append(self.k_us_vec[n].getSubVector(self.dofs_coupling_p[n]))
 

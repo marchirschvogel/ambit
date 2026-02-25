@@ -73,7 +73,7 @@ def test_main():
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 6}
 
-    COUPLING_PARAMS = {"coupling_fluid_ale": {"surface_ids": [1, 6]}}
+    COUPLING_PARAMS = {"coupling_fluid_ale": {"interface": [1, 6]}}
 
     CONSTRAINT_PARAMS = {
         "constraint_physics": [{"id": [2, 3], "type": "flux", "prescribed_curve": 1}],

@@ -69,8 +69,13 @@ def test_main():
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
+    # for testing purposes, we locate the interface by this function (could use id 3 instead...)
+    class locate_interf:
+        def evaluate(self, x):
+            return np.isclose(x[0], 0.0)
+
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": {"surface_ids": [3]},
+        "coupling_fluid_ale": {"interface": [locate_interf()]}, # here test interface given by locator, instead of using id 3...
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
     }
 

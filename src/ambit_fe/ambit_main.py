@@ -390,7 +390,7 @@ class Ambit:
 
             io.readin_mesh()
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, ios.domain_ids, iof.domain_ids, coupling_params["coupling_fluid_ale"]["surface_ids"], fem_params[0]["quad_degree"])
+            io.create_integration_measures(io.mesh, ios.domain_ids, iof.domain_ids, coupling_params["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"])
             io.create_submeshes()
 
             # solid mesh and integration domain variables
@@ -448,7 +448,7 @@ class Ambit:
 
             io.readin_mesh()
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, ios.domain_ids, iof.domain_ids, coupling_params[0]["coupling_fluid_ale"]["surface_ids"], fem_params[0]["quad_degree"])
+            io.create_integration_measures(io.mesh, ios.domain_ids, iof.domain_ids, coupling_params[0]["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"])
             io.create_submeshes()
 
             # solid mesh and integration domain variables

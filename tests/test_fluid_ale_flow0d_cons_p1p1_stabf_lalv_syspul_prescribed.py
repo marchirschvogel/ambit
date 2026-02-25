@@ -110,7 +110,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
     COUPLING_PARAMS_ALE_FLUID = {
-        "coupling_ale_fluid": {"surface_ids": [1]}
+        "coupling_ale_fluid": {"interface": [1]}
     }
 
     COUPLING_PARAMS_FLUID_FLOW0D = {

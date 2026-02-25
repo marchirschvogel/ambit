@@ -107,7 +107,7 @@ def test_main():
             return np.logical_and(ctr_x, ctr_y)
 
     COUPLING_PARAMS_FLUID_ALE = {
-        "coupling_ale_fluid": {"locator": locate()}, # no-slip at moving ALE boundary
+        "coupling_ale_fluid": {"interface": [locate()]}, # no-slip at moving ALE boundary
     }
 
     # fluid1 oil, fluid2 water
