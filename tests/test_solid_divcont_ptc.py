@@ -58,7 +58,7 @@ def test_main():
             return np.isclose(x[0], 1.0)
     BC_DICT = {
         "dirichlet": [{"id": [2], "dir": "all", "val": 0.0}],
-        "neumann": [{"locator": loc1(), "dir": "xyz_ref", "curve": [0, 1, 1]}], # at x=1 - test version with locator; could also use "id":[3] instead
+        "neumann": [{"id": [loc1()], "dir": "xyz_ref", "curve": [0, 1, 1]}], # at x=1 - test version with locator; could also use "id":[3] instead
     }
 
     # problem setup

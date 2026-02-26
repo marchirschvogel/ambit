@@ -120,7 +120,7 @@ def main():
     3D-0D coupling parameters
     """
     COUPLING_PARAMS = {  # the surfaces IDs which couple to the 0D world: 1 is the left ventricle, 2 is the right (order here would be lv, rv, la, ra)
-        "surface_ids": [[1], [2]],
+        "interfaces": [[1], [2]],
         # the coupling type: 'monolithic_lagrange' here is a more general scheme that enforces equality of 3D and 0D fluxes/volumes via (Lagrange) multipliers, outsourcing the 0D
         # solve to a sub-solver in each nonlinear iteration, whereas 'monolithic_direct' would embed the 0D system of equations directly into the monolithic system matrix
         "coupling_type": "monolithic_lagrange",

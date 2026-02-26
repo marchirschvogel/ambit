@@ -122,10 +122,10 @@ def test_main():
             return np.logical_and(ctr_x, ctr_y)
 
     BC_DICT_FLUID = {
-        "dirichlet" : [{"locator": locate_top_bottom(), "dir": "all", "val": 0.0},
-                       {"locator": locate_left_right(), "dir": "x", "val": 0.0}],
-        "dirichlet_pres" : [{"locator": locate_center(), "dir": "all", "val": 0.0}], # fix pressure in middle of domain to have a well-defined pressure level
-        "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
+        "dirichlet" : [{"id": [locate_top_bottom()], "dir": "all", "val": 0.0},
+                       {"id": [locate_left_right()], "dir": "x", "val": 0.0}],
+        "dirichlet_pres" : [{"id": [locate_center()], "dir": "all", "val": 0.0}], # fix pressure in middle of domain to have a well-defined pressure level
+        "bodyforce" : [{"id": [locate_all()], "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
     }
 
     BC_DICT_PF = { }

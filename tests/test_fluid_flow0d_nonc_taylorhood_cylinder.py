@@ -64,7 +64,7 @@ def test_main():
     FEM_PARAMS = {"order_vel": 2, "order_pres": 1, "quad_degree": 5}
 
     COUPLING_PARAMS = {
-        "surface_ids": [[3]],
+        "interfaces": [[3]],
         "coupling_quantity": ["pressure"],
         "variable_quantity": ["flux"],
         "print_subiter": True,

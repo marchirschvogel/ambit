@@ -177,10 +177,13 @@ class boundary_cond:
 
             if d["dir"] == "all":
                 if "id" in d.keys():
-                    nodes_bc = fem.locate_dofs_topological(V_dbc, codim, mdata.indices[np.isin(mdata.values, d["id"])])
-                elif "locator" in d.keys():
-                    locator = d["locator"]
-                    nodes_bc = fem.locate_dofs_geometrical(V_dbc, locator.evaluate)
+                    if all(isinstance(x, int) for x in d["id"]):
+                        nodes_bc = fem.locate_dofs_topological(V_dbc, codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    else:
+                        nodes_bc_ = []
+                        for lc in d["id"]:
+                            nodes_bc_.append(fem.locate_dofs_geometrical(V_dbc, lc.evaluate))
+                        nodes_bc = np.concatenate(nodes_bc_).ravel()
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc = fem.locate_dofs_topological(V_dbc, codim, cells)
@@ -188,10 +191,13 @@ class boundary_cond:
 
             elif d["dir"] == "x":
                 if "id" in d.keys():
-                    nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0),codim, mdata.indices[np.isin(mdata.values, d["id"])])
-                elif "locator" in d.keys():
-                    locator = d["locator"]
-                    nodes_bc_x = fem.locate_dofs_geometrical((V_dbc.sub(0), V_dbc.sub(0).collapse()[0]), locator.evaluate)[0]
+                    if all(isinstance(x, int) for x in d["id"]):
+                        nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0),codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    else:
+                        nodes_bc_x_ = []
+                        for lc in d["id"]:
+                            nodes_bc_x_.append(fem.locate_dofs_geometrical((V_dbc.sub(0), V_dbc.sub(0).collapse()[0]), lc.evaluate)[0])
+                        nodes_bc_x = np.concatenate(nodes_bc_x_).ravel()
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0), codim, cells)
@@ -199,10 +205,13 @@ class boundary_cond:
 
             elif d["dir"] == "y":
                 if "id" in d.keys():
-                    nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, mdata.indices[np.isin(mdata.values, d["id"])])
-                elif "locator" in d.keys():
-                    locator = d["locator"]
-                    nodes_bc_y = fem.locate_dofs_geometrical((V_dbc.sub(1), V_dbc.sub(1).collapse()[0]), locator.evaluate)[0]
+                    if all(isinstance(x, int) for x in d["id"]):
+                        nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1),codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    else:
+                        nodes_bc_y_ = []
+                        for lc in d["id"]:
+                            nodes_bc_y_.append(fem.locate_dofs_geometrical((V_dbc.sub(1), V_dbc.sub(1).collapse()[0]), lc.evaluate)[0])
+                        nodes_bc_y = np.concatenate(nodes_bc_y_).ravel()
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, cells)
@@ -210,10 +219,13 @@ class boundary_cond:
 
             elif d["dir"] == "z":
                 if "id" in d.keys():
-                    nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, mdata.indices[np.isin(mdata.values, d["id"])])
-                elif "locator" in d.keys():
-                    locator = d["locator"]
-                    nodes_bc_z = fem.locate_dofs_geometrical((V_dbc.sub(2), V_dbc.sub(2).collapse()[0]), locator.evaluate)[0]
+                    if all(isinstance(x, int) for x in d["id"]):
+                        nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2),codim, mdata.indices[np.isin(mdata.values, d["id"])])
+                    else:
+                        nodes_bc_z_ = []
+                        for lc in d["id"]:
+                            nodes_bc_z_.append(fem.locate_dofs_geometrical((V_dbc.sub(2), V_dbc.sub(2).collapse()[0]), lc.evaluate)[0])
+                        nodes_bc_z = np.concatenate(nodes_bc_z_).ravel()
                 else:
                     cells = mesh.locate_entities(self.io.mesh, codim, self.all)
                     nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, cells)
@@ -255,7 +267,7 @@ class boundary_cond:
             codim = n.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in n.keys(): dind=2
+            if "is_locator" in n.keys(): dind=2
 
             if n["dir"] == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
@@ -434,7 +446,7 @@ class boundary_cond:
             codim = n.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in n.keys(): dind=2
+            if "is_locator" in n.keys(): dind=2
 
             if n["dir"] == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
@@ -534,7 +546,7 @@ class boundary_cond:
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in r.keys(): dind=2
+            if "is_locator" in r.keys(): dind=2
 
             if r["type"] == "spring":
                 # may be an expression
@@ -606,7 +618,7 @@ class boundary_cond:
             codim = m.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in m.keys(): dind=2
+            if "is_locator" in m.keys(): dind=2
 
             internal = m.get("internal", False)
 
@@ -729,7 +741,7 @@ class boundary_cond_fluid(boundary_cond):
             codim = sn.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in sn.keys(): dind=2
+            if "is_locator" in sn.keys(): dind=2
 
             for i in range(len(sn["id"])):
                 beta = sn["beta"]
@@ -746,7 +758,7 @@ class boundary_cond_fluid(boundary_cond):
             codim = sn.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in sn.keys(): dind=2
+            if "is_locator" in sn.keys(): dind=2
 
             for i in range(len(sn["id"])):
                 beta = sn["beta"]
@@ -771,7 +783,7 @@ class boundary_cond_fluid(boundary_cond):
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in r.keys(): dind=2
+            if "is_locator" in r.keys(): dind=2
 
             direction = r.get("dir", "xyz_ref")
 
@@ -841,7 +853,7 @@ class boundary_cond_fluid(boundary_cond):
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in r.keys(): dind=2
+            if "is_locator" in r.keys(): dind=2
 
             q = ufl.as_ufl(0)
 
@@ -896,7 +908,7 @@ class boundary_cond_fluid(boundary_cond):
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             dind=0
-            if "locator" in r.keys(): dind=2
+            if "is_locator" in r.keys(): dind=2
 
             spatial = r.get("spatial", False)
 

@@ -69,7 +69,7 @@ def test_main():
     }
 
     COUPLING_PARAMS = {
-        "surface_ids": [[3]],
+        "interfaces": [[3]],
         "coupling_quantity": ["pressure"],
         "variable_quantity": ["flux"],
         "coupling_type": "monolithic_lagrange",

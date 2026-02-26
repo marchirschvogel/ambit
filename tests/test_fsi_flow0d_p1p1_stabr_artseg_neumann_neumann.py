@@ -97,7 +97,7 @@ def test_main():
     }
 
     COUPLING_PARAMS_FLUID_FLOW0D = {
-        "surface_ids": [[5]],
+        "interfaces": [[5]],
         "coupling_quantity": ["pressure"],
         "variable_quantity": ["flux"],
         "coupling_type": "monolithic_lagrange",

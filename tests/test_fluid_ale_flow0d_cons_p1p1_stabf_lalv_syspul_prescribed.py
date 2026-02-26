@@ -114,7 +114,7 @@ def test_main():
     }
 
     COUPLING_PARAMS_FLUID_FLOW0D = {
-        "surface_ids": [[5], [6], [7], [8], [4]],
+        "interfaces": [[5], [6], [7], [8], [4]],
         "coupling_quantity": ["pressure"] * 5,
         "variable_quantity": ["flux"] * 5,
         "cq_factor": [

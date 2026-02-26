@@ -144,8 +144,8 @@ def test_main():
         def evaluate(self, x):
             return np.full(x.shape[1], True, dtype=bool)
 
-    BC_DICT_FLUID = { "bodyforce" : [{"locator": locate_all(), "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
-                     "dirichlet_pres" : [{"locator": locate_center(), "dir": "all", "val": 0.0}] } # fix pressure in middle of domain to have a well-defined pressure level
+    BC_DICT_FLUID = { "bodyforce" : [{"id": [locate_all()], "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
+                     "dirichlet_pres" : [{"id": [locate_center()], "dir": "all", "val": 0.0}] } # fix pressure in middle of domain to have a well-defined pressure level
 
     BC_DICT_ALE = {
         "dirichlet": [{"dir": "all", "expression": expr2, "codimension": 2}]

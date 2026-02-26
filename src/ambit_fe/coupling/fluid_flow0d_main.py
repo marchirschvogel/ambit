@@ -115,8 +115,8 @@ class FluidmechanicsFlow0DProblem(problem_base):
         )
 
     def set_coupling_parameters(self):
-        self.surface_vq_ids = self.coupling_params["surface_ids"]
-        self.surface_p_ids = self.coupling_params.get("surface_p_ids", self.surface_vq_ids)
+        self.surface_vq_ids = self.coupling_params["interfaces"]
+        self.surface_p_ids = self.coupling_params.get("interfaces_p", self.surface_vq_ids)
 
         self.num_coupling_surf = len(self.surface_vq_ids)
 

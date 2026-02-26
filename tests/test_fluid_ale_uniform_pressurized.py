@@ -77,7 +77,7 @@ def test_main():
             return -pmax*t/t_ramp
 
     BC_DICT_FLUID = {
-        "neumann" : [{"locator" : locate(), "dir": "normal_cur", "curve": 1}],
+        "neumann" : [{"id" : [locate()], "dir": "normal_cur", "curve": 1}],
     }
 
 

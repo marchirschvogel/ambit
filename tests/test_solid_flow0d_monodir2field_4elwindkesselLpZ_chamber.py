@@ -68,7 +68,7 @@ def test_main():
     }
 
     COUPLING_PARAMS = {
-        "surface_ids": [[3]],
+        "interfaces": [[3]],
         "coupling_quantity": ["volume"],
         "coupling_type": "monolithic_direct",
     }

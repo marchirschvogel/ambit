@@ -210,21 +210,37 @@ class IO:
         bmeasures = [ds, dS]
 
         # if user-defined locators (instead of ids) are given, create a separate measure
-        boundaries_loc = []
+        facets_bc_indices, facets_bc_markers = [], []
         if bcdict is not None:
             id_=0
             for k in bcdict.keys():
                 if "dirichlet" not in k: # treated differently (no integration measure needed)
                     for i in range(len(bcdict[k])):
-                        if "locator" in bcdict[k][i]:
+                        if all(isinstance(x, int) for x in bcdict[k][i]["id"]):
+                            pass
+                        else:
+                            codim = bcdict[k][i].get("codimension", msh.topology.dim-1)
                             id_+=1
-                            bcdict[k][i]["id"] = [id_] # add id
-                            boundaries_loc.append( (id_, bcdict[k][i]["locator"].evaluate) )
+                            facets_bc_ = []
+                            for lc in bcdict[k][i]["id"]:
+                                facets_bc_.append(mesh.locate_entities(msh, codim, lc.evaluate))
+                            bcdict[k][i]["id"] = [id_] # overwrite with an integer identifier
+                            bcdict[k][i]["is_locator"] = True
+                            facets_bc = np.concatenate(facets_bc_).ravel()
+                            # append to list of all locator BCs
+                            facets_bc_indices.append(facets_bc)
+                            facets_bc_markers.append(np.full_like(facets_bc, id_))
 
-            if id_>0:
-                facet_tag = meshutils.meshtags_cells_from_locator(msh, boundaries_loc, "boundary")
-                ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": qdeg})
-                bmeasures.append(ds_loc)
+                    if id_>0:
+                        # stack all facets/markers
+                        facets_bc_indices = np.hstack(facets_bc_indices).astype(np.int32)
+                        facets_bc_markers = np.hstack(facets_bc_markers).astype(np.int32)
+                        sorted_facets_bc = np.argsort(facets_bc_indices)
+
+                        facet_tag = mesh.meshtags(msh, codim, facets_bc_indices[sorted_facets_bc], facets_bc_markers[sorted_facets_bc])
+                        ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": qdeg})
+
+                        bmeasures.append(ds_loc)
 
         return dx, bmeasures
 

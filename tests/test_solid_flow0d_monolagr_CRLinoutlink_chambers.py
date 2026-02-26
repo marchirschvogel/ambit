@@ -69,7 +69,7 @@ def test_main():
     }
 
     COUPLING_PARAMS = {
-        "surface_ids": [[2], [4]],
+        "interfaces": [[2], [4]],
         "coupling_quantity": ["pressure"] * 2,
         "variable_quantity": ["flux"] * 2,
         "cq_factor": [1.0, -1.0],  # out-flow positive, in-flow negative

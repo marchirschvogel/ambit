@@ -89,7 +89,7 @@ def test_main():
     }
 
     COUPLING_PARAMS = {
-        "surface_ids": [[1], [2]],
+        "interfaces": [[1], [2]],
         "cq_factor": [80.0, 80.0],
         "coupling_quantity": ["volume"] * 2,
         "coupling_type": "monolithic_direct",

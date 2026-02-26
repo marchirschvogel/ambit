@@ -101,7 +101,7 @@ def test_main():
 
     BC_DICT_FLUID = {
         "dirichlet": [{"id":[4], "dir": "all", "val": 0.}],
-        'stabilized_neumann' : [{'id' : [5], 'beta' : 0.2e-6, 'gamma' : 1.}]
+        "stabilized_neumann" : [{"id" : [5], "beta" : 0.2e-6, "gamma" : 1.}]
     }
 
     BC_DICT_ALE = {

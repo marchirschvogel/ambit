@@ -79,6 +79,10 @@ def test_main():
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
     }
 
+    class locate_solid:
+        def evaluate(self, x):
+            return (x[0] <= 0.0)
+
     E = 500. # kPa
     nu = 0.3
     MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},

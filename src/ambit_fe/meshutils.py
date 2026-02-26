@@ -185,7 +185,6 @@ def get_integration_entities(msh, entity_indices, codim, integration_entities):
             local_entity = c_to_e.links(cell).tolist().index(entity)
             integration_entities.extend([cell, local_entity])
 
-
 def get_integration_entities_internal(msh, entity_indices, entities_a, codim, integration_entities, ids):
     dim = msh.topology.dim
 
