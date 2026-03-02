@@ -76,6 +76,11 @@ def test_main():
         "remove_mutual_solid_fluid_bcs":False, # TODO: Not working!
     }
 
+    # for testing purposes, we locate the solid by this function (could use id 1 instead...)
+    class locate_solid:
+        def evaluate(self, x):
+            return (x[0] <= 0.0)
+
     E = 500. # kPa
     nu = 0.3
     MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},
@@ -95,7 +100,13 @@ def test_main():
             pmax = 3.0 # kPa
             return -pmax * np.sin(2.*np.pi*t/Tp)
 
-    BC_DICT_SOLID = {"neumann": [{"id": [1], "dir": "normal_cur", "curve": 1}],
+
+    # for testing purposes, we locate the left boundary by this function (could use id 1 instead...)
+    class locate_left:
+        def evaluate(self, x):
+            return np.isclose(x[0], -1.0)
+
+    BC_DICT_SOLID = {"neumann": [{"id": [locate_left()], "dir": "normal_cur", "curve": 1}],
         "dirichlet": [{"id": [2], "dir": "all", "val": 0.}],
         }
 

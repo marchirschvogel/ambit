@@ -145,28 +145,6 @@ def meshtags_parent_to_child(mshtags, childmsh, childmsh_emap, parentmsh, diment
 
     return mesh.meshtags(childmsh, dim_c, np.arange(num_c_ent, dtype=np.int32), sub_values)
 
-def meshtags_cells_from_locator(msh, cells_loc, dimentity):
-    if dimentity=="domain":
-        cdim = msh.topology.dim
-    elif dimentity=="boundary":
-        cdim = msh.topology.dim-1
-    elif dimentity=="boundary_2":
-        cdim = msh.topology.dim-2
-    else:
-        raise ValueError("Unknown dim entity!")
-
-    cell_indices, cell_markers = [], []
-    for marker, locator in cells_loc:
-        cells = mesh.locate_entities(msh, cdim, locator)
-        cell_indices.append(cells)
-        cell_markers.append(np.full_like(cells, marker))
-    cell_indices = np.hstack(cell_indices).astype(np.int32)
-    cell_markers = np.hstack(cell_markers).astype(np.int32)
-    sorted_cells = np.argsort(cell_indices)
-
-    cell_indices_sorted = cell_indices[sorted_cells]
-    return mesh.meshtags(msh, cdim, cell_indices_sorted, cell_markers[sorted_cells])
-
 def get_integration_entities(msh, entity_indices, codim, integration_entities):
     dim = msh.topology.dim
 

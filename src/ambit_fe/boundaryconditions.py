@@ -266,8 +266,9 @@ class boundary_cond:
         for n in bcdict:
             codim = n.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in n.keys(): dind=2
+            if "id_loc" in n.keys(): ID="id_loc"
 
             if n["dir"] == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
@@ -312,8 +313,8 @@ class boundary_cond:
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-                for i in range(len(n["id"])):
-                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n["id"][i]))
+                for i in range(len(n[ID])):
+                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
 
             elif n["dir"] == "normal_ref":  # reference normal
                 func = fem.Function(self.Vdisc_scalar)
@@ -344,8 +345,8 @@ class boundary_cond:
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-                for i in range(len(n["id"])):
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n["id"][i]))
+                for i in range(len(n[ID])):
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
 
             elif n["dir"] == "xyz_cur":  # current xyz
                 func = fem.Function(self.V_field)
@@ -390,8 +391,8 @@ class boundary_cond:
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-                for i in range(len(n["id"])):
-                    w += self.vf.deltaW_ext_neumann_cur(func, ds_[dind](n["id"][i]), F=F)
+                for i in range(len(n[ID])):
+                    w += self.vf.deltaW_ext_neumann_cur(func, ds_[dind](n[ID][i]), F=F)
 
             elif n["dir"] == "normal_cur":  # current normal
                 func = fem.Function(self.Vdisc_scalar)
@@ -422,8 +423,8 @@ class boundary_cond:
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-                for i in range(len(n["id"])):
-                    w += self.vf.deltaW_ext_neumann_normal_cur(func, ds_[dind](n["id"][i]), F=F)
+                for i in range(len(n[ID])):
+                    w += self.vf.deltaW_ext_neumann_normal_cur(func, ds_[dind](n[ID][i]), F=F)
 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
@@ -445,8 +446,9 @@ class boundary_cond:
         for n in bcdict:
             codim = n.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in n.keys(): dind=2
+            if "id_loc" in n.keys(): ID="id_loc"
 
             if n["dir"] == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
@@ -491,8 +493,8 @@ class boundary_cond:
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-                for i in range(len(n["id"])):
-                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n["id"][i]))
+                for i in range(len(n[ID])):
+                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
 
             elif n["dir"] == "normal_ref":  # reference normal
                 func = fem.Function(self.Vdisc_scalar)
@@ -525,8 +527,8 @@ class boundary_cond:
                 else:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-                for i in range(len(n["id"])):
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n["id"][i]))
+                for i in range(len(n[ID])):
+                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
 
             else:
                 raise NameError("Unknown dir option for Neumann prestress BC!")
@@ -545,8 +547,9 @@ class boundary_cond:
         for r in bcdict:
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in r.keys(): dind=2
+            if "id_loc" in r.keys(): ID="id_loc"
 
             if r["type"] == "spring":
                 # may be an expression
@@ -559,16 +562,16 @@ class boundary_cond:
                     stiff_ = stiff
 
                 if r["dir"] == "xyz_ref":  # reference xyz
-                    for i in range(len(r["id"])):
-                        w += self.vf.deltaW_ext_robin_spring(u, stiff_, ds_[dind](r["id"][i]), u_pre)
+                    for i in range(len(r[ID])):
+                        w += self.vf.deltaW_ext_robin_spring(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
                 elif r["dir"] == "normal_ref":  # reference normal
-                    for i in range(len(r["id"])):
-                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, stiff_, ds_[dind](r["id"][i]), u_pre)
+                    for i in range(len(r[ID])):
+                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
                 elif r["dir"] == "normal_cross":  # cross normal
-                    for i in range(len(r["id"])):
-                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, stiff_, ds_[dind](r["id"][i]), u_pre)
+                    for i in range(len(r[ID])):
+                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -584,16 +587,16 @@ class boundary_cond:
                     visc_ = visc
 
                 if r["dir"] == "xyz_ref":  # reference xyz
-                    for i in range(len(r["id"])):
-                        w += self.vf.deltaW_ext_robin_dashpot(v, visc_, ds_[dind](r["id"][i]))
+                    for i in range(len(r[ID])):
+                        w += self.vf.deltaW_ext_robin_dashpot(v, visc_, ds_[dind](r[ID][i]))
 
                 elif r["dir"] == "normal_ref":  # reference normal
-                    for i in range(len(r["id"])):
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, visc_, ds_[dind](r["id"][i]))
+                    for i in range(len(r[ID])):
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, visc_, ds_[dind](r[ID][i]))
 
                 elif r["dir"] == "normal_cross":  # cross normal
-                    for i in range(len(r["id"])):
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, visc_, ds_[dind](r["id"][i]))
+                    for i in range(len(r[ID])):
+                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, visc_, ds_[dind](r[ID][i]))
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -617,8 +620,9 @@ class boundary_cond:
         for m in bcdict:
             codim = m.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in m.keys(): dind=2
+            if "id_loc" in m.keys(): ID="id_loc"
 
             internal = m.get("internal", False)
 
@@ -640,15 +644,15 @@ class boundary_cond:
             else:
                 actweight = None
 
-            for i in range(len(m["id"])):
-                idmem.append(m["id"][i])
+            for i in range(len(m[ID])):
+                idmem.append(m[ID][i])
 
                 w += self.vf.deltaW_ext_membrane(
                     self.ki.F(u),
                     self.ki.Fdot(v),
                     a,
                     m["params"],
-                    ds_[dind](m["id"][i]),
+                    ds_[dind](m[ID][i]),
                     ivar=ivar,
                     fibfnc=self.ff,
                     wallfield=wallfield,
@@ -660,7 +664,7 @@ class boundary_cond:
                     self.ki.Fdot(v),
                     a,
                     m["params"],
-                    ds_[dind](m["id"][i]),
+                    ds_[dind](m[ID][i]),
                     ivar=ivar,
                     fibfnc=self.ff,
                     wallfield=wallfield,
@@ -740,13 +744,14 @@ class boundary_cond_fluid(boundary_cond):
         for sn in bcdict:
             codim = sn.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in sn.keys(): dind=2
+            if "id_loc" in sn.keys(): ID="id_loc"
 
-            for i in range(len(sn["id"])):
+            for i in range(len(sn[ID])):
                 beta = sn["beta"]
 
-                w += self.vf.deltaW_ext_stabilized_neumann(v, beta, ds_[dind](sn["id"][i]), w=wel, F=F)
+                w += self.vf.deltaW_ext_stabilized_neumann(v, beta, ds_[dind](sn[ID][i]), w=wel, F=F)
 
         return w
 
@@ -757,14 +762,15 @@ class boundary_cond_fluid(boundary_cond):
         for sn in bcdict:
             codim = sn.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in sn.keys(): dind=2
+            if "id_loc" in sn.keys(): ID="id_loc"
 
-            for i in range(len(sn["id"])):
+            for i in range(len(sn[ID])):
                 beta = sn["beta"]
                 gamma = sn["gamma"]
 
-                w += self.vf.deltaW_ext_stabilized_neumann_mod(v, beta, gamma, ds_[dind](sn["id"][i]), w=wel, F=F)
+                w += self.vf.deltaW_ext_stabilized_neumann_mod(v, beta, gamma, ds_[dind](sn[ID][i]), w=wel, F=F)
 
         return w
 
@@ -782,20 +788,21 @@ class boundary_cond_fluid(boundary_cond):
 
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in r.keys(): dind=2
+            if "id_loc" in r.keys(): ID="id_loc"
 
             direction = r.get("dir", "xyz_ref")
 
             beta_.append(fem.Function(self.Vdisc_scalar))
 
             if direction == "xyz_ref":  # reference xyz
-                for i in range(len(r["id"])):
+                for i in range(len(r[ID])):
                     if dw is None:
                         w += self.vf.deltaW_ext_robin_valve(
                             v,
                             beta_[-1],
-                            dS_[0](r["id"][i]),
+                            dS_[0](r[ID][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
@@ -805,19 +812,19 @@ class boundary_cond_fluid(boundary_cond):
                         dwddp += self.vf.deltaW_ext_robin_valve(
                             v,
                             ufl.as_ufl(1.0),
-                            dS_[0](r["id"][i]),
+                            dS_[0](r[ID][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
                         )
 
             elif direction == "normal_ref":  # reference normal
-                for i in range(len(r["id"])):
+                for i in range(len(r[ID])):
                     if dw is None:
                         w += self.vf.deltaW_ext_robin_valve_normal_ref(
                             v,
                             beta_[-1],
-                            dS_[0](r["id"][i]),
+                            dS_[0](r[ID][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
@@ -827,7 +834,7 @@ class boundary_cond_fluid(boundary_cond):
                         dwddp += self.vf.deltaW_ext_robin_valve_normal_ref(
                             v,
                             ufl.as_ufl(1.0),
-                            dS_[0](r["id"][i]),
+                            dS_[0](r[ID][i]),
                             fcts="+",
                             w=wel_,
                             F=F,
@@ -852,8 +859,9 @@ class boundary_cond_fluid(boundary_cond):
         for r in bcdict:
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in r.keys(): dind=2
+            if "id_loc" in r.keys(): ID="id_loc"
 
             q = ufl.as_ufl(0)
 
@@ -869,27 +877,27 @@ class boundary_cond_fluid(boundary_cond):
             if on_subdomain:
                 dom_u = r["domain"]
 
-            for i in range(len(r["id"])):
+            for i in range(len(r[ID])):
                 if not internal:
                     if not on_subdomain:
                         db_ = ufl.ds(
                             domain=self.io.mesh_master,
                             subdomain_data=self.io.mt_b_master,
-                            subdomain_id=r["id"][i],
+                            subdomain_id=r[ID][i],
                             metadata={"quadrature_degree": self.quad_degree},
                         )
                     else:
                         db_ = ufl.ds(
                             domain=self.io.submshes_emap[dom_u][0],
                             subdomain_data=self.io.sub_mt_b[dom_u],
-                            subdomain_id=r["id"][i],
+                            subdomain_id=r[ID][i],
                             metadata={"quadrature_degree": self.quad_degree},
                         )
                 else:
                     db_ = ufl.dS(
                         domain=self.io.mesh_master,
                         subdomain_data=self.io.mt_b_master,
-                        subdomain_id=r["id"][i],
+                        subdomain_id=r[ID][i],
                         metadata={"quadrature_degree": self.quad_degree},
                     )
 
@@ -907,8 +915,9 @@ class boundary_cond_fluid(boundary_cond):
         for r in bcdict:
             codim = r.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
-            dind=0
+            ID, dind = "id", 0
             if "is_locator" in r.keys(): dind=2
+            if "id_loc" in r.keys(): ID="id_loc"
 
             spatial = r.get("spatial", False)
 
@@ -928,17 +937,17 @@ class boundary_cond_fluid(boundary_cond):
                 ufl.as_ufl(0),
             )
 
-            for i in range(len(r["id"])):
+            for i in range(len(r[ID])):
                 db_u_ = ufl.ds(
                     domain=self.io.submshes_emap[dom_u][0],
                     subdomain_data=self.io.sub_mt_b[dom_u],
-                    subdomain_id=r["id"][i],
+                    subdomain_id=r[ID][i],
                     metadata={"quadrature_degree": self.quad_degree},
                 )
                 db_d_ = ufl.ds(
                     domain=self.io.submshes_emap[dom_d][0],
                     subdomain_data=self.io.sub_mt_b[dom_d],
-                    subdomain_id=r["id"][i],
+                    subdomain_id=r[ID][i],
                     metadata={"quadrature_degree": self.quad_degree},
                 )
 

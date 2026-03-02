@@ -224,8 +224,8 @@ class IO:
                             facets_bc_ = []
                             for lc in bcdict[k][i]["id"]:
                                 facets_bc_.append(mesh.locate_entities(msh, codim, lc.evaluate))
-                            bcdict[k][i]["id"] = [id_] # overwrite with an integer identifier
-                            bcdict[k][i]["is_locator"] = True
+                            bcdict[k][i]["id_loc"] = [id_] # set new integer identifier
+                            bcdict[k][i]["is_locator"] = True # TODO: Find nicer solution for this in boundaryconditions.py
                             facets_bc = np.concatenate(facets_bc_).ravel()
                             # append to list of all locator BCs
                             facets_bc_indices.append(facets_bc)
@@ -2277,36 +2277,31 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             tmp.write_mesh(self.msh_emap_lm[0])
 
     # create domain and boundary integration measures
-    def create_integration_measures(self, msh, sids, fids, iids, qdeg):
+    def create_integration_measures(self, msh, sids, fids, iids, qdeg, bcdict=None):
         self.dom_solid, self.dom_fluid, self.surf_interf = (
             sids,
             fids,
             iids,
         )
 
-        cells_loc, off = [], 0
-
         if all(isinstance(x, int) for x in self.dom_solid):
             self.cells_solid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
         else: # can only be a locator function otherwise
-            assert(self.mt_d is None) # we're not allowed to mix meshtags and domain locators...
+            #assert(self.mt_d is None) # we're not allowed to mix meshtags and domain locators...
             cells_solid = []
             for i, lc in enumerate(self.dom_solid):
                 locator_solid = lc.evaluate
                 cells_solid.append(mesh.locate_entities(msh, msh.topology.dim, locator_solid))
-                cells_loc.append((i+1, locator_solid))
-                off+=1
             self.cells_solid = np.concatenate(cells_solid).ravel()
 
         if all(isinstance(x, int) for x in self.dom_fluid):
             self.cells_fluid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)]
         else: # can only be a locator function otherwise
-            assert(self.mt_d is None) # we're not allowed to mix meshtags and domain locators...
+            #assert(self.mt_d is None) # we're not allowed to mix meshtags and domain locators...
             cells_fluid = []
             for i, lc in enumerate(self.dom_fluid):
                 locator_fluid = lc.evaluate
                 cells_fluid.append(mesh.locate_entities(msh, msh.topology.dim, locator_fluid))
-                cells_loc.append((i+1+off, locator_fluid))
             self.cells_fluid = np.concatenate(cells_fluid).ravel()
 
         if all(isinstance(x, int) for x in self.surf_interf):
@@ -2317,9 +2312,6 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
                 locator_interf = lc.evaluate
                 facets_interf.append(mesh.locate_entities(msh, msh.topology.dim-1, locator_interf))
             self.facets_interface = np.concatenate(facets_interf).ravel()
-
-        if self.mt_d is None:
-            cells_tag = meshutils.meshtags_cells_from_locator(msh, cells_loc, "domain")
 
         # create global dx measure
         if self.mt_d is not None:
@@ -2339,19 +2331,40 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             #self.dx = ufl.Measure("dx", domain=msh, subdomain_data=cells_tag, metadata={"quadrature_degree": qdeg})
 
         integration_entities = []
-
-        # we need one global "master" ds measure, so need to append all other facets from mesh tags
-        # using the format (cell, local_facet_index)
-
         # first, get all mesh tags
-        meshtags = list(set(self.mt_b.values))
-        # loop over mesh tags
-        for mt in meshtags:
-            other_integration_entities = []
-            other_indices = self.mt_b.indices[self.mt_b.values == mt]
-            meshutils.get_integration_entities(msh, other_indices, self.mesh.topology.dim - 1, other_integration_entities)
-            # append
-            integration_entities.append((mt, other_integration_entities))
+        if self.mt_b is not None:
+            meshtags = list(set(self.mt_b.values))
+            meshtags = self.comm.allreduce(meshtags)
+            # loop over mesh tags
+            for mt in meshtags:
+                other_integration_entities = []
+                other_indices = self.mt_b.indices[self.mt_b.values == mt]
+                meshutils.get_integration_entities(msh, other_indices, self.mesh.topology.dim - 1, other_integration_entities)
+                # append
+                integration_entities.append((mt, other_integration_entities))
+        else:
+            meshtags = [0]
+
+        # we need one global "master" ds measure, so need to append all additional facets from locators
+        if bcdict is not None:
+            id_loc = max(meshtags)
+            for B in bcdict:
+                for k in B.keys():
+                    if "dirichlet" not in k: # treated differently (no integration measure needed)
+                        for i in range(len(B[k])):
+                            codim = B[k][i].get("codimension", msh.topology.dim-1)
+                            if all(isinstance(x, int) for x in B[k][i]["id"]):
+                                pass
+                            else:
+                                B[k][i]["id_loc"] = []
+                                for lc in B[k][i]["id"]:
+                                    id_loc += 1
+                                    other_integration_entities = []
+                                    other_indices = mesh.locate_entities(msh, codim, lc.evaluate)
+                                    meshutils.get_integration_entities(msh, other_indices, codim, other_integration_entities)
+                                    integration_entities.append((id_loc, other_integration_entities))
+                                    # append for later access in BC routines
+                                    B[k][i]["id_loc"].append(id_loc)
 
         # now get the interface and use ids larger than the previous ones (we need a sorted list here!)
         self.interface_id_s = 1001
@@ -2365,6 +2378,15 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             integration_entities,
             [self.interface_id_s, self.interface_id_f],
         )
+
+        # cell_indices, cell_markers = [], []
+        # for marker, cells in integration_entities2:
+        #     cell_indices.append(cells)
+        #     cell_markers.append(np.full_like(cells, marker))
+        # cell_indices = np.hstack(cell_indices).astype(np.int32)
+        # cell_markers = np.hstack(cell_markers).astype(np.int32)
+        # sorted_cell_indices = np.argsort(cell_indices)
+        # tmppp = mesh.meshtags(msh, msh.topology.dim-1, cell_indices, cell_markers)
 
         self.ds = ufl.Measure(
             "ds",
