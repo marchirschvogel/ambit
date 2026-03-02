@@ -685,6 +685,9 @@ class boundary_cond:
         w = ufl.as_ufl(0)
 
         for b in bcdict:
+            ID = "id"
+            if "id_loc" in b.keys(): ID="id_loc"
+
             func, func_dir = (
                 fem.Function(self.Vdisc_scalar),
                 fem.Function(self.V_field),
@@ -730,8 +733,8 @@ class boundary_cond:
             # scale by density
             scale_dens = b.get("scale_density", False)
 
-            for i in range(len(b["id"])):
-                w += self.vf.deltaW_ext_bodyforce(func, func_dir, rho[b["id"][i]-1], dx_(b["id"][i]), F=F, chi=chi, scale_dens=scale_dens)
+            for i in range(len(b[ID])):
+                w += self.vf.deltaW_ext_bodyforce(func, func_dir, rho[b[ID][i]-1], dx_(b[ID][i]), F=F, chi=chi, scale_dens=scale_dens)
 
         return w
 
