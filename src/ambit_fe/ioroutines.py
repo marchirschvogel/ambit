@@ -235,9 +235,9 @@ class IO:
                         # stack all facets/markers
                         facets_bc_indices = np.hstack(facets_bc_indices).astype(np.int32)
                         facets_bc_markers = np.hstack(facets_bc_markers).astype(np.int32)
-                        sorted_facets_bc = np.argsort(facets_bc_indices)
+                        sorter_facets_bc = np.argsort(facets_bc_indices)
 
-                        facet_tag = mesh.meshtags(msh, codim, facets_bc_indices[sorted_facets_bc], facets_bc_markers[sorted_facets_bc])
+                        facet_tag = mesh.meshtags(msh, codim, facets_bc_indices[sorter_facets_bc], facets_bc_markers[sorter_facets_bc])
                         ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": qdeg})
 
                         bmeasures.append(ds_loc)
@@ -2284,52 +2284,61 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             iids,
         )
 
-        if all(isinstance(x, int) for x in self.dom_solid):
-            self.cells_solid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_solid)]
-        else: # can only be a locator function otherwise
-            #assert(self.mt_d is None) # we're not allowed to mix meshtags and domain locators...
-            cells_solid = []
-            for i, lc in enumerate(self.dom_solid):
-                locator_solid = lc.evaluate
-                cells_solid.append(mesh.locate_entities(msh, msh.topology.dim, locator_solid))
-            self.cells_solid = np.concatenate(cells_solid).ravel()
+        id_loc = 0
 
-        if all(isinstance(x, int) for x in self.dom_fluid):
-            self.cells_fluid = self.mt_d.indices[np.isin(self.mt_d.values, self.dom_fluid)]
+        cells_solid = []
+        if all(isinstance(x, int) for x in self.dom_solid):
+            for id_ in self.dom_solid:
+                cells_solid.append(self.mt_d.indices[self.mt_d.values == id_])
         else: # can only be a locator function otherwise
-            #assert(self.mt_d is None) # we're not allowed to mix meshtags and domain locators...
-            cells_fluid = []
+            for i, lc in enumerate(self.dom_solid):
+                id_loc += 1
+                cells_solid.append(mesh.locate_entities(msh, msh.topology.dim, lc.evaluate))
+                # need to overwrite with an id
+                self.dom_solid[i] = id_loc
+
+        self.cells_solid = np.concatenate(cells_solid).ravel()
+
+        cells_fluid = []
+        if all(isinstance(x, int) for x in self.dom_fluid):
+            for id_ in self.dom_fluid:
+                cells_fluid.append(self.mt_d.indices[self.mt_d.values == id_])
+        else: # can only be a locator function otherwise
             for i, lc in enumerate(self.dom_fluid):
-                locator_fluid = lc.evaluate
-                cells_fluid.append(mesh.locate_entities(msh, msh.topology.dim, locator_fluid))
-            self.cells_fluid = np.concatenate(cells_fluid).ravel()
+                id_loc += 1
+                cells_fluid.append(mesh.locate_entities(msh, msh.topology.dim, lc.evaluate))
+                # need to overwrite with an id
+                self.dom_fluid[i] = id_loc
+
+        self.cells_fluid = np.concatenate(cells_fluid).ravel()
 
         if all(isinstance(x, int) for x in self.surf_interf):
             self.facets_interface = self.mt_b.indices[np.isin(self.mt_b.values, self.surf_interf)]
         else: # can only be a locator function otherwise
             facets_interf = []
-            for i, lc in enumerate(self.surf_interf):
+            for lc in self.surf_interf:
                 locator_interf = lc.evaluate
                 facets_interf.append(mesh.locate_entities(msh, msh.topology.dim-1, locator_interf))
             self.facets_interface = np.concatenate(facets_interf).ravel()
 
         # create global dx measure
-        if self.mt_d is not None:
-            self.dx = ufl.Measure(
-                "dx",
-                domain=msh,
-                subdomain_data=self.mt_d,
-                metadata={"quadrature_degree": qdeg},
-            )
-        else:
-            self.dx_ = ufl.Measure(
-                "dx",
-                domain=msh,
-                metadata={"quadrature_degree": qdeg},
-            )
-            self.dx = lambda a: self.dx_  # so that we can call dx(1) even without domain meshtags
-            #self.dx = ufl.Measure("dx", domain=msh, subdomain_data=cells_tag, metadata={"quadrature_degree": qdeg})
+        # build new meshtags (we might have locators that specify the cells)
+        domain_indices, domain_markers = [], []
+        for i in range(len(cells_solid)):
+            domain_indices.append(cells_solid[i])
+            domain_markers.append(np.full_like(cells_solid[i], self.dom_solid[i]))
+        for i in range(len(cells_fluid)):
+            domain_indices.append(cells_fluid[i])
+            domain_markers.append(np.full_like(cells_fluid[i], self.dom_fluid[i]))
 
+        domain_indices = np.hstack(domain_indices).astype(np.int32)
+        domain_markers = np.hstack(domain_markers).astype(np.int32)
+        sorter_domain_indices = np.argsort(domain_indices)
+
+        domain_tags = mesh.meshtags(msh, self.mesh.topology.dim, domain_indices[sorter_domain_indices], domain_markers[sorter_domain_indices])
+        self.dx = ufl.Measure("dx", domain=msh, subdomain_data=domain_tags, metadata={"quadrature_degree": qdeg})
+
+        # now take care of the global ds measure...
         integration_entities = []
         # first, get all mesh tags
         if self.mt_b is not None:
@@ -2378,15 +2387,6 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             integration_entities,
             [self.interface_id_s, self.interface_id_f],
         )
-
-        # cell_indices, cell_markers = [], []
-        # for marker, cells in integration_entities2:
-        #     cell_indices.append(cells)
-        #     cell_markers.append(np.full_like(cells, marker))
-        # cell_indices = np.hstack(cell_indices).astype(np.int32)
-        # cell_markers = np.hstack(cell_markers).astype(np.int32)
-        # sorted_cell_indices = np.argsort(cell_indices)
-        # tmppp = mesh.meshtags(msh, msh.topology.dim-1, cell_indices, cell_markers)
 
         self.ds = ufl.Measure(
             "ds",

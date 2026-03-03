@@ -85,7 +85,7 @@ def test_main():
     nu = 0.3
     MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},
                                 "inertia": {"rho0": 1.070e-6},
-                                "id": 1}}
+                                "id": locate_solid()}} # locator instead of id 1
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 1.0e-6}, # kPas
                                 "inertia": {"rho": 1.0e-6}, # kg/mm^3
