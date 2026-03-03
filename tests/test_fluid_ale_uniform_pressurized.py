@@ -20,7 +20,7 @@ def test_main():
         "write_results_every": 1,
         "indicate_results_by": "step",
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"unit_square", "celltype":"triangle", "meshsize":[10,10]},
+        "mesh_domain": {"type":"unit_square", "celltype":"quadrilateral", "meshsize":[10,10]}, # TODO: Fails for triangles in dolfinx post5 release!
         "results_to_write": [["velocity", "pressure"],["aledisplacement"]],
         "simname": "fluid_ale_uniform_pressurized",
     }
