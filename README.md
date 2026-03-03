@@ -20,9 +20,9 @@ The following is supported:
   - Finite strain elastodynamics, implementing a range of hyperelastic isotropic and anisotropic as well as viscous constitutive laws
   - Active stress for modeling of cardiac contraction mechanics
   - Quasi-static, generalized-alpha, or one-step theta time integration
-  - Nearly incompressible as well as fully incompressible formulations (latter using pressure dofs)
-  - Prestressing using MULF method in displacement formulation
-  - Volumetric growth & remodeling
+  - Nearly incompressible as well as fully incompressible formulations
+  - Inverse mechanics formulations for recovery of a stress-free reference configuration, and a so-called prestressing method (MULF)
+  - Volumetric growth & remodeling: Prescribed, strain-, and stress-mediated growth
 * Fluid dynamics
   - Incompressible Navier-Stokes/Stokes equations, either in nonconservative or conservative formulation
   - Navier-Stokes/Stokes flow in an Arbitrary Lagrangian Eulerian (ALE) reference frame
@@ -35,7 +35,7 @@ The following is supported:
   - Signalling network model
 * Coupling of different physics:
   - Fluid-solid interaction (FSI): Monolithic FSI in ALE formulation using Lagrange multiplier
-  - Monolithic coupling of 3D solid/fluid/ALE-fluid with lumped 0D flow models
+  - Monolithic coupling of 3D solid/fluid/ALE-fluid and FSI with lumped 0D flow models
   - Multiscale-in-time analysis of growth & remodeling (staggered solution of 3D-0D coupled solid-flow0d and G&R solid problem)
 * Fluid-reduced-solid interaction (FrSI)
   - Boundary subspace-projected physics-reduced solid model (incl. hyperelastic, viscous, and active parts) in an ALE fluid reference frame
@@ -47,7 +47,7 @@ The following is supported:
 
 Still experimental / to-do:
 
-- Finite strain plasticity
+- Finite strain plasticity / sophisticated solid constitutive models beyond hyperelasticity
 - Electrophysiology/scalar transport
 - ... whatever might be wanted in some future ...
 
