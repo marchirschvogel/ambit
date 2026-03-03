@@ -90,7 +90,7 @@ class IO:
 
             elif self.mesh_format == "gmsh":
                 # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
-                self.mesh, self.mt_d, self.mt_b = io.gmshio.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)[
+                self.mesh, self.mt_d, self.mt_b = io.gmsh.read_from_msh(self.mesh_domain, self.comm, gdim=self.mesh_dim)[
                     0:3
                 ]
                 assert self.mesh.geometry.dim == self.mesh_dim  # would be weird if this wasn't true...

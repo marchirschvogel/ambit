@@ -93,7 +93,7 @@ Installation
 
 | In order to use Ambit, you need to install FEniCSx
   (https://github.com/FEniCS/dolfinx#installation) (latest
-  Ambit-compatible tested dolfinx release version: v0.10.0.post2).
+  Ambit-compatible tested dolfinx release version: v0.10.0.post5).
 | Ambit can then be installed using pip, either the current release
 
 ::
@@ -125,10 +125,11 @@ Ambit input
 
 Here, a minimal Ambit input file is shown, exemplarily for a
 single-field problem. The mandatory parameter dictionaries to provide
-are input parameters (IO), time parameters (TME), solver parameters
-(SOL), finite element parameters (FEM), and constitutive/material
-parameters (MAT). For multi-physics problems, each field needs
-individual time, finite element, and constitutive parameters.
+are input parameters (IO), global control parameters (CTR),
+time-integration parameters (TME), solver parameters (SOL), finite
+element parameters (FEM), and constitutive/material parameters (MAT).
+For multi-physics problems, each field needs individual time, finite
+element, and constitutive parameters.
 
 ::
 
@@ -1659,8 +1660,10 @@ Cantilever under tip load
   Hooke’s law to the nonlinear realm.
 
 .. figure:: fig/cantilever_setup.png
-   :alt: 
+   :name: fig:cantilever_setup
    :width: 85.0%
+
+   Cantilever, problem setup.
 
 Study the setup shown in fig. `1 <#fig:cantilever_setup>`__ and the
 comments in the input file ``solid_cantilever.py`` Run the simulation,
@@ -1681,8 +1684,10 @@ Figure `2 <#fig:cantilever_results>`__ shows the displacement magnitude
 at the end of the simulation.
 
 .. figure:: fig/cantilever_results.png
-   :alt: 
+   :name: fig:cantilever_results
    :width: 85.0%
+
+   Cantilever, tip deformation. Color shows displacement magnitude.
 
 Demo: Fluid
 -----------
@@ -1699,8 +1704,10 @@ Taylor-Hood elements (9-node biquadratic quadrilaterals for the
 velocity, 4-node bilinear quadrilaterals for the pressure).
 
 .. figure:: fig/channel_setup.png
-   :alt: 
+   :name: fig:channel_setup
    :width: 90.0%
+
+   Channel flow, problem setup.
 
 Study the setup and the comments in the input file ``fluid_channel.py``.
 Run the simulation, either in one of the provided Docker containers or
@@ -1721,8 +1728,11 @@ Fig. `4 <#fig:channel_results>`__ shows the velocity magnitude (top) as
 well as the pressure (bottom part) at the end of the simulation.
 
 .. figure:: fig/channel_results.png
-   :alt: 
+   :name: fig:channel_results
    :width: 90.0%
+
+   Velocity magnitude (top part) and pressure (bottom part) at end of
+   simulation.
 
 Demo: 0D flow
 -------------
@@ -1746,8 +1756,10 @@ than a specified value, here :literal:`\`eps_periodic'` in the
 is reached after 5 heart cycles.
 
 .. figure:: fig/syspul_setup.png
-   :alt: 
+   :name: fig:syspul_setup
    :width: 65.0%
+
+   0D heart, systemic and pulmonary circulation, problem setup.
 
 Study the setup in fig. `5 <#fig:syspul_setup>`__ and the comments in
 the input file ``flow0d_heart_cycle.py``. Run the simulation, either in
@@ -1782,8 +1794,13 @@ in ``ambit/src/ambit_fe/postprocess/``):
   the time course of volumes and pressures of the circulatory system.
 
 .. figure:: fig/syspul_results.png
-   :alt: 
+   :name: fig:syspul_results
    :width: 100.0%
+
+   A. Left heart and systemic pressures over time. B. Right heart and
+   pulmonary pressures over time. C. Left and right ventricular and
+   atrial volumes over time. D. Left and right ventricular
+   pressure-volume relationships of periodic (5th) cycle.
 
 Demo: Solid + 0D flow
 ---------------------
@@ -1823,8 +1840,11 @@ Demo: Solid + 0D flow
   increase.
 
 .. figure:: fig/heart_syspul_setup.png
-   :alt: 
+   :name: fig:heart_syspul_setup
    :width: 65.0%
+
+   Generic 3D ventricular heart model coupled to a closed-loop systemic
+   and pulmonary circulation model.
 
 Study the setup shown in fig. `7 <#fig:heart_syspul_setup>`__ and the
 comments in the input file ``solid_flow0d_heart_cycle.py``. Run the
@@ -1877,8 +1897,13 @@ in ``ambit/src/ambit_fe/postprocess/``):
   ventricular volume?
 
 .. figure:: fig/heart_syspul_results.png
-   :alt: 
+   :name: fig:heart_syspul_results
    :width: 100.0%
+
+   A. Left heart and systemic pressures over time. B. Left and right
+   ventricular and atrial volumes over time. C. Left and right
+   ventricular pressure-volume relationships. D. Snapshot of heart
+   deformation at end-systole, color indicates displacement magnitude.
 
 Demo: Fluid + 0D flow
 ---------------------
@@ -1905,8 +1930,10 @@ Blocked pipe flow with 0D model bypass
   elements.
 
 .. figure:: fig/pipe_0d_setup.png
-   :alt: 
+   :name: fig:pipe_0d_setup
    :width: 85.0%
+
+   Blocked pipe with 0D model bypass, simulation setup.
 
 Study the setup shown in fig. `9 <#fig:pipe_0d_setup>`__ and the
 comments in the input file ``fluid_flow0d_pipe.py``. Run the simulation,
@@ -1934,8 +1961,11 @@ Paraview, and visualize the velocity over time.
   simulation.
 
 .. figure:: fig/pipe_0d_results.png
-   :alt: 
+   :name: fig:pipe_0d_results
    :width: 85.0%
+
+   Streamlines of velocity at end of simulation, color indicates velcity
+   magnitude.
 
 Demo: FSI
 ---------
@@ -1974,8 +2004,11 @@ Channel flow around elastic flag
   :math:`\bar{U}=2\cdot 10^{3}\;\mathrm{mm}/\mathrm{s}` (FSI3).
 
 .. figure:: fig/channel_flag_setup.png
-   :alt: 
+   :name: fig:channel_flag_setup
    :width: 100.0%
+
+   Channel flow around an elastic flag :cite:p:`turek2006`,
+   problem setup.
 
 Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
 
@@ -2023,12 +2056,23 @@ Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
   data does not correspond to the physical time of the problem setup.)
 
 .. figure:: fig/channel_flag_results.png
-   :alt: 
+   :name: fig:channel_flag_results
    :width: 85.0%
 
+   FSI2 case: Magnitude of fluid velocity at three instances in time
+   (:math:`t=10.5\;\mathrm{s}`, :math:`t=11.2\;\mathrm{s}`, and
+   :math:`t=12\;\mathrm{s}`) towards end of simulation, color indicates
+   velcity magnitude.
+
 .. figure:: fig/channel_flag_results_verif.png
-   :alt: 
+   :name: fig:channel_flag_results_verif
    :width: 100.0%
+
+   Comparison to benchmark reference solution for the time course of the
+   flag’s tip displacement for the two setups FSI2 and FSI3. A fairly
+   coarse time step of :math:`\Delta t = 4 \;\mathrm{ms}` (FSI2) and
+   :math:`\Delta t = 2 \;\mathrm{ms}` (FSI3) already allows a close
+   match to the original results.
 
 Demo: Multiphase fluid
 ----------------------
@@ -2098,8 +2142,15 @@ following table. Bulk viscosities are assumed zero (:math:`\zeta=0`).
   time-integration scheme is chosen for both fluid and Cahn-Hilliard.
 
 .. figure:: fig/rising_bubble_setup.png
-   :alt: 
+   :name: fig:rising_bubble_setup
    :width: 50.0%
+
+   Rising bubble benchmark
+   :cite:p:`brunk2026`,:cite:p:`ten-eikelder2024`: A
+   fluid with lower density (fluid 2) is surrounded by a fluid of higher
+   density (fluid 1). Bottom and top velocities are constrained, as well
+   as the normal velocity on the left and right walls. A gravitational
+   force acts in vertical direction.
 
 Study the setup shown in Fig. `14 <#fig:rising_bubble_setup>`__ together
 with the parameters in the table and the comments in the input file
@@ -2127,8 +2178,12 @@ own FEniCSx/Ambit installation, using the command
   time :math:`t=3`.
 
 .. figure:: fig/rising_bubble_results.png
-   :alt: 
+   :name: fig:rising_bubble_results
    :width: 70.0%
+
+   Phase field :math:`\phi` (left part) and magnitude of velocity
+   :math:`||\boldsymbol{v}||` (right part) solutions for both cases at
+   the final time :math:`t=3.0`.
 
 Figure `16 <#fig:rising_bubble_results_verif>`__ plots the center of
 mass as well as the rise velocity of the lower-density fluid bubble over
@@ -2142,8 +2197,12 @@ reference solutions. Slight deviations to the mass-averaged reference
 solutions are observed.
 
 .. figure:: fig/rising_bubble_results_verif.png
-   :alt: 
+   :name: fig:rising_bubble_results_verif
    :width: 100.0%
+
+   Center of mass (left column) and rise velocity (right column) for
+   both cases over time, comparison to reference solutions from Brunk
+   and ten Eikelder :cite:p:`brunk2026`.
 
 Table of symbols
 ================

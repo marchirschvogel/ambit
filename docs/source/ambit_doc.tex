@@ -173,7 +173,7 @@ This documentation is structured as follows. In sec. \ref{installation}, instruc
 
 \section{Installation}\label{installation}
 
-In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible tested dolfinx release version: v0.10.0.post2).\\
+In order to use Ambit, you need to install FEniCSx (https://github.com/FEniCS/dolfinx\#installation) (latest Ambit-compatible tested dolfinx release version: v0.10.0.post5).\\
 
 Ambit can then be installed using pip, either the current release
 \begin{verbatim}
@@ -197,7 +197,7 @@ docker pull ghcr.io/marchirschvogel/ambit:devenv
 
 \section{Ambit input}
 
-Here, a minimal Ambit input file is shown, exemplarily for a single-field problem. The mandatory parameter dictionaries to provide are input parameters (IO), time parameters (TME), solver parameters (SOL), finite element parameters (FEM), and constitutive/material parameters (MAT). For multi-physics problems, each field needs individual time, finite element, and constitutive parameters.
+Here, a minimal Ambit input file is shown, exemplarily for a single-field problem. The mandatory parameter dictionaries to provide are input parameters (IO), global control parameters (CTR), time-integration parameters (TME), solver parameters (SOL), finite element parameters (FEM), and constitutive/material parameters (MAT). For multi-physics problems, each field needs individual time, finite element, and constitutive parameters.
 
 \begin{Verbatim}[breaklines=true]
 #!/usr/bin/env python3
