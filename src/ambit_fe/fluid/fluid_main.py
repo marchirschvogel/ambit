@@ -1933,7 +1933,7 @@ class FluidmechanicsProblem(problem_base):
                 if self.ti.res_eval == "midp":
                     self.weakform_p.append(self.deltaW_p_mid[n])
                 if self.ti.res_eval == "back":
-                    elf.weakform_p.append(self.deltaW_p[n])
+                    self.weakform_p.append(self.deltaW_p[n])
 
         self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
         for j in range(self.num_dupl):
