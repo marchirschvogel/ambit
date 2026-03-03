@@ -175,7 +175,7 @@ class FluidmechanicsAleProblem(problem_base):
                 )
             else: # can only be locator function otherwise...
                 nodes_fluid_ale_ = []
-                for i, lc in enumerate(self.coupling_fluid_ale["interface"]):
+                for lc in self.coupling_fluid_ale["interface"]:
                     nodes_fluid_ale_.append(fem.locate_dofs_geometrical(self.pba.V_d, lc.evaluate))
                 nodes_fluid_ale = np.concatenate(nodes_fluid_ale_).ravel()
             dbcs_coup_fluid_ale = [fem.dirichletbc(self.ufa, nodes_fluid_ale)]
