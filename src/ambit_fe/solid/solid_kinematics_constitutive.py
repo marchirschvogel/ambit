@@ -42,7 +42,7 @@ class constitutive:
         self.incompr_2field = incompr_2field
 
         # list entries of mats which do not return a stress
-        self.mat_nostress = ["inertia", "growth", "plastic", "id"]
+        self.mat_void = ["inertia", "growth", "plastic", "id"]
 
         if self.mat_growth:
             # growth & remodeling parameters
@@ -98,7 +98,7 @@ class constitutive:
             self.mat = materiallaw(C_, Cdot_, self.I)
 
         for m, matlaw in enumerate(self.matmodels):
-            if matlaw not in self.mat_nostress:
+            if matlaw not in self.mat_void:
                 s_, se_ = self.add_stress_mat(matlaw, self.matparams[m], ivar, C_, Cdot_)
                 stress += s_
                 if se_ is not None:

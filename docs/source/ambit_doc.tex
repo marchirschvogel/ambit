@@ -1444,7 +1444,7 @@ r_{\lambda}(\bs{v},\bs{u};\delta\bs{\lambda}):= \int\limits_{\Gm_0^{\mathrm{\fF\
 \end{equation}
 
 \clearpage
-\subsubsection{Multiphase Fluid}\label{fluid-phasefield}
+\subsubsection{Multiphase Fluid}\label{fluid-multiphase}
 -- Primary variables: velocity $\bs{v}$, pressure $p$, phase $\phi$, and (chem.) potential $\mu$\\
 
 -- conservative form of Navier-Stokes, with capillary force term:
@@ -1837,9 +1837,9 @@ Figure \ref{fig:channel_flag_results} depicts the velocity at three instances in
 \clearpage
 \subsection{Demo: Multiphase fluid}\label{demo-multiphase-fluid}
 
--- Physics description given in sec. \ref{fluid-phasefield}\\
+-- Physics description given in sec. \ref{fluid-multiphase}\\
 
--- Input files: \verb"demos/fluid_phasefield"
+-- Input files: \verb"demos/fluid_multiphase"
 
 \subsubsection*{Rising bubble under gravity}
 
@@ -1883,9 +1883,9 @@ The fluid is discretized with quadrilateral $\mathbb{Q}^2$-$\mathbb{Q}^1$ Taylor
 \label{fig:rising_bubble_setup}
 \end{figure}
 
-Study the setup shown in Fig.~\ref{fig:rising_bubble_setup} together with the parameters in the table and the comments in the input file \verb"fluid_phasefield_rising_bubble.py". Run the simulation for both cases 1 and 2, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
+Study the setup shown in Fig.~\ref{fig:rising_bubble_setup} together with the parameters in the table and the comments in the input file \verb"fluid_multiphase_rising_bubble.py". Run the simulation for both cases 1 and 2, either in one of the provided Docker containers or using your own FEniCSx/Ambit installation, using the command
 \begin{verbatim}
-mpiexec -n 1 python3 fluid_phasefield_rising_bubble.py
+mpiexec -n 1 python3 fluid_multiphase_rising_bubble.py
 \end{verbatim}
 Try different settings for the mesh, e.g. vary \verb"meshsize" inside \verb"mesh_domain" (increase from \verb"[32,64]" to \verb"[64,128]" to \verb"[128,256]"; the first value is the number of elements used in horizontal, the second the number in vertical direction). If your system allows, use more than one core, especially for finer mesh sizes (hence run with \verb"mpiexec -n 4 ..." or more). A good rule of thumb is to have 10000--20000 degrees of freedom per process. The time step and the interface thickness parameter $\epsilon$ will be changed automatically depending on the chosen mesh size. Compare the results for the two cases and the different mesh sizes.\\
 

@@ -1518,7 +1518,7 @@ Fluid-reduced-Solid Interaction (FrSI)
    \begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vp} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{v\mathit{\Lambda}} & \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{K}}_{vd} \\ \\ \boldsymbol{\mathsf{K}}_{pv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \boldsymbol{\mathsf{K}}_{pp} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{pd} \\ \\ \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}v}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}} & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}\mathit{\Lambda}} & \boldsymbol{\mathsf{K}}_{\mathit{\Lambda}d} \\ \\ \boldsymbol{\mathsf{K}}_{dv}\boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}}  & \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \textcolor{lightgray}{\boldsymbol{\mathsf{0}}}& \boldsymbol{\mathsf{K}}_{dd} \end{bmatrix}_{n+1}^{k}\begin{bmatrix} \Delta\tilde{\boldsymbol{\mathsf{v}}} \\ \\ \Delta\boldsymbol{\mathsf{p}} \\ \\ \Delta\boldsymbol{\mathsf{\Lambda}}\\ \\ \Delta\boldsymbol{\mathsf{d}} \end{bmatrix}_{n+1}^{k+1}=-\begin{bmatrix} \boldsymbol{\mathsf{V}}_{v}^{\mathit{\Gamma}^\mathrm{T}}\boldsymbol{\mathsf{r}}_{v} \\ \\ \boldsymbol{\mathsf{r}}_{p} \\ \\ \boldsymbol{\mathsf{r}}_{\mathit{\Lambda}} \\ \\ \boldsymbol{\mathsf{r}}_{d}\end{bmatrix}_{n+1}^{k}
    \end{aligned}
 
-.. _fluid-phasefield:
+.. _fluid-multiphase:
 
 Multiphase Fluid
 ~~~~~~~~~~~~~~~~
@@ -1660,10 +1660,8 @@ Cantilever under tip load
   Hooke’s law to the nonlinear realm.
 
 .. figure:: fig/cantilever_setup.png
-   :name: fig:cantilever_setup
+   :alt: 
    :width: 85.0%
-
-   Cantilever, problem setup.
 
 Study the setup shown in fig. `1 <#fig:cantilever_setup>`__ and the
 comments in the input file ``solid_cantilever.py`` Run the simulation,
@@ -1684,10 +1682,8 @@ Figure `2 <#fig:cantilever_results>`__ shows the displacement magnitude
 at the end of the simulation.
 
 .. figure:: fig/cantilever_results.png
-   :name: fig:cantilever_results
+   :alt: 
    :width: 85.0%
-
-   Cantilever, tip deformation. Color shows displacement magnitude.
 
 Demo: Fluid
 -----------
@@ -1704,10 +1700,8 @@ Taylor-Hood elements (9-node biquadratic quadrilaterals for the
 velocity, 4-node bilinear quadrilaterals for the pressure).
 
 .. figure:: fig/channel_setup.png
-   :name: fig:channel_setup
+   :alt: 
    :width: 90.0%
-
-   Channel flow, problem setup.
 
 Study the setup and the comments in the input file ``fluid_channel.py``.
 Run the simulation, either in one of the provided Docker containers or
@@ -1728,11 +1722,8 @@ Fig. `4 <#fig:channel_results>`__ shows the velocity magnitude (top) as
 well as the pressure (bottom part) at the end of the simulation.
 
 .. figure:: fig/channel_results.png
-   :name: fig:channel_results
+   :alt: 
    :width: 90.0%
-
-   Velocity magnitude (top part) and pressure (bottom part) at end of
-   simulation.
 
 Demo: 0D flow
 -------------
@@ -1756,10 +1747,8 @@ than a specified value, here :literal:`\`eps_periodic'` in the
 is reached after 5 heart cycles.
 
 .. figure:: fig/syspul_setup.png
-   :name: fig:syspul_setup
+   :alt: 
    :width: 65.0%
-
-   0D heart, systemic and pulmonary circulation, problem setup.
 
 Study the setup in fig. `5 <#fig:syspul_setup>`__ and the comments in
 the input file ``flow0d_heart_cycle.py``. Run the simulation, either in
@@ -1794,13 +1783,8 @@ in ``ambit/src/ambit_fe/postprocess/``):
   the time course of volumes and pressures of the circulatory system.
 
 .. figure:: fig/syspul_results.png
-   :name: fig:syspul_results
+   :alt: 
    :width: 100.0%
-
-   A. Left heart and systemic pressures over time. B. Right heart and
-   pulmonary pressures over time. C. Left and right ventricular and
-   atrial volumes over time. D. Left and right ventricular
-   pressure-volume relationships of periodic (5th) cycle.
 
 Demo: Solid + 0D flow
 ---------------------
@@ -1840,11 +1824,8 @@ Demo: Solid + 0D flow
   increase.
 
 .. figure:: fig/heart_syspul_setup.png
-   :name: fig:heart_syspul_setup
+   :alt: 
    :width: 65.0%
-
-   Generic 3D ventricular heart model coupled to a closed-loop systemic
-   and pulmonary circulation model.
 
 Study the setup shown in fig. `7 <#fig:heart_syspul_setup>`__ and the
 comments in the input file ``solid_flow0d_heart_cycle.py``. Run the
@@ -1897,13 +1878,8 @@ in ``ambit/src/ambit_fe/postprocess/``):
   ventricular volume?
 
 .. figure:: fig/heart_syspul_results.png
-   :name: fig:heart_syspul_results
+   :alt: 
    :width: 100.0%
-
-   A. Left heart and systemic pressures over time. B. Left and right
-   ventricular and atrial volumes over time. C. Left and right
-   ventricular pressure-volume relationships. D. Snapshot of heart
-   deformation at end-systole, color indicates displacement magnitude.
 
 Demo: Fluid + 0D flow
 ---------------------
@@ -1930,10 +1906,8 @@ Blocked pipe flow with 0D model bypass
   elements.
 
 .. figure:: fig/pipe_0d_setup.png
-   :name: fig:pipe_0d_setup
+   :alt: 
    :width: 85.0%
-
-   Blocked pipe with 0D model bypass, simulation setup.
 
 Study the setup shown in fig. `9 <#fig:pipe_0d_setup>`__ and the
 comments in the input file ``fluid_flow0d_pipe.py``. Run the simulation,
@@ -1961,11 +1935,8 @@ Paraview, and visualize the velocity over time.
   simulation.
 
 .. figure:: fig/pipe_0d_results.png
-   :name: fig:pipe_0d_results
+   :alt: 
    :width: 85.0%
-
-   Streamlines of velocity at end of simulation, color indicates velcity
-   magnitude.
 
 Demo: FSI
 ---------
@@ -2004,11 +1975,8 @@ Channel flow around elastic flag
   :math:`\bar{U}=2\cdot 10^{3}\;\mathrm{mm}/\mathrm{s}` (FSI3).
 
 .. figure:: fig/channel_flag_setup.png
-   :name: fig:channel_flag_setup
+   :alt: 
    :width: 100.0%
-
-   Channel flow around an elastic flag :cite:p:`turek2006`,
-   problem setup.
 
 Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
 
@@ -2056,29 +2024,18 @@ Geometrical parameters, given in :math:`[\mathrm{mm}]`, are:
   data does not correspond to the physical time of the problem setup.)
 
 .. figure:: fig/channel_flag_results.png
-   :name: fig:channel_flag_results
+   :alt: 
    :width: 85.0%
 
-   FSI2 case: Magnitude of fluid velocity at three instances in time
-   (:math:`t=10.5\;\mathrm{s}`, :math:`t=11.2\;\mathrm{s}`, and
-   :math:`t=12\;\mathrm{s}`) towards end of simulation, color indicates
-   velcity magnitude.
-
 .. figure:: fig/channel_flag_results_verif.png
-   :name: fig:channel_flag_results_verif
+   :alt: 
    :width: 100.0%
-
-   Comparison to benchmark reference solution for the time course of the
-   flag’s tip displacement for the two setups FSI2 and FSI3. A fairly
-   coarse time step of :math:`\Delta t = 4 \;\mathrm{ms}` (FSI2) and
-   :math:`\Delta t = 2 \;\mathrm{ms}` (FSI3) already allows a close
-   match to the original results.
 
 Demo: Multiphase fluid
 ----------------------
 
-| – Physics description given in sec. `4.4.7 <#fluid-phasefield>`__
-| – Input files: ``demos/fluid_phasefield``
+| – Physics description given in sec. `4.4.7 <#fluid-multiphase>`__
+| – Input files: ``demos/fluid_multiphase``
 
 Rising bubble under gravity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2142,25 +2099,18 @@ following table. Bulk viscosities are assumed zero (:math:`\zeta=0`).
   time-integration scheme is chosen for both fluid and Cahn-Hilliard.
 
 .. figure:: fig/rising_bubble_setup.png
-   :name: fig:rising_bubble_setup
+   :alt: 
    :width: 50.0%
-
-   Rising bubble benchmark
-   :cite:p:`brunk2026`,:cite:p:`ten-eikelder2024`: A
-   fluid with lower density (fluid 2) is surrounded by a fluid of higher
-   density (fluid 1). Bottom and top velocities are constrained, as well
-   as the normal velocity on the left and right walls. A gravitational
-   force acts in vertical direction.
 
 Study the setup shown in Fig. `14 <#fig:rising_bubble_setup>`__ together
 with the parameters in the table and the comments in the input file
-``fluid_phasefield_rising_bubble.py``. Run the simulation for both cases
+``fluid_multiphase_rising_bubble.py``. Run the simulation for both cases
 1 and 2, either in one of the provided Docker containers or using your
 own FEniCSx/Ambit installation, using the command
 
 ::
 
-   mpiexec -n 1 python3 fluid_phasefield_rising_bubble.py
+   mpiexec -n 1 python3 fluid_multiphase_rising_bubble.py
 
 | Try different settings for the mesh, e.g. vary ``meshsize`` inside
   ``mesh_domain`` (increase from ``[32,64]`` to ``[64,128]`` to
@@ -2178,12 +2128,8 @@ own FEniCSx/Ambit installation, using the command
   time :math:`t=3`.
 
 .. figure:: fig/rising_bubble_results.png
-   :name: fig:rising_bubble_results
+   :alt: 
    :width: 70.0%
-
-   Phase field :math:`\phi` (left part) and magnitude of velocity
-   :math:`||\boldsymbol{v}||` (right part) solutions for both cases at
-   the final time :math:`t=3.0`.
 
 Figure `16 <#fig:rising_bubble_results_verif>`__ plots the center of
 mass as well as the rise velocity of the lower-density fluid bubble over
@@ -2197,12 +2143,8 @@ reference solutions. Slight deviations to the mass-averaged reference
 solutions are observed.
 
 .. figure:: fig/rising_bubble_results_verif.png
-   :name: fig:rising_bubble_results_verif
+   :alt: 
    :width: 100.0%
-
-   Center of mass (left column) and rise velocity (right column) for
-   both cases over time, comparison to reference solutions from Brunk
-   and ten Eikelder :cite:p:`brunk2026`.
 
 Table of symbols
 ================

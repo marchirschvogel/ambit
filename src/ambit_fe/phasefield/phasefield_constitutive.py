@@ -26,6 +26,9 @@ class constitutive:
         for i in range(len(materials.values())):
             self.matparams.append(list(materials.values())[i])
 
+        # list entries of mats which do not return a flux/driving force
+        self.mat_void = ["id"]
+
         self.phi_range = phi_range
 
     # diffusive flux
@@ -36,17 +39,15 @@ class constitutive:
 
         mat_flux = materiallaw_flux(mu_, phi_, a=self.phi_range[0], b=self.phi_range[1])
 
-        m = 0
-        for matlaw in self.matmodels:
-            # extract associated material parameters
-            matparams_m = self.matparams[m]
+        for m, matlaw in enumerate(self.matmodels):
+            if matlaw not in self.mat_void:
+                # extract associated material parameters
+                matparams_m = self.matparams[m]
 
-            if matlaw == "mat_cahnhilliard":
-                Jflux += mat_flux.mat_cahnhilliard_flux(matparams_m, p=p, F=F)
-            else:
-                raise NameError("Unknown Cahn-Hilliard material law!")
-
-            m += 1
+                if matlaw == "mat_cahnhilliard":
+                    Jflux += mat_flux.mat_cahnhilliard_flux(matparams_m, p=p, F=F)
+                else:
+                    raise NameError("Unknown Cahn-Hilliard material law!")
 
         return Jflux
 
@@ -58,16 +59,14 @@ class constitutive:
 
         mat = materiallaw(phi_, a=self.phi_range[0], b=self.phi_range[1])
 
-        m = 0
-        for matlaw in self.matmodels:
-            # extract associated material parameters
-            matparams_m = self.matparams[m]
+        for m, matlaw in enumerate(self.matmodels):
+            if matlaw not in self.mat_void:
+                # extract associated material parameters
+                matparams_m = self.matparams[m]
 
-            if matlaw == "mat_cahnhilliard":
-                dpsi_dphi += mat.mat_cahnhilliard(matparams_m)
-            else:
-                raise NameError("Unknown Cahn-Hilliard material law!")
-
-            m += 1
+                if matlaw == "mat_cahnhilliard":
+                    dpsi_dphi += mat.mat_cahnhilliard(matparams_m)
+                else:
+                    raise NameError("Unknown Cahn-Hilliard material law!")
 
         return dpsi_dphi

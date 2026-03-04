@@ -20,14 +20,14 @@ from .. import utilities, meshutils
 from ..mpiroutines import allgather_vec
 
 from .fluid_ale_main import FluidmechanicsAleProblem
-from .fluid_phasefield_main import FluidmechanicsPhasefieldProblem
+from .fluid_multiphase_main import FluidmechanicsMultiphaseProblem
 from ..fluid.fluid_main import FluidmechanicsProblem
 from ..fluid.fluid_main import FluidmechanicsSolverPrestr
 from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
 
 
-class FluidmechanicsAlePhasefieldProblem(problem_base):
+class FluidmechanicsAleMultiphaseProblem(problem_base):
     def __init__(
         self,
         pbase,
@@ -47,6 +47,7 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
         coupling_params_fluid_ale,
         io,
         mor_params={},
+        pbfa=None,
     ):
         self.pbase = pbase
 
@@ -55,29 +56,32 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
 
         ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
 
-        self.problem_physics = "fluid_ale_phasefield"
+        self.problem_physics = "fluid_ale_multiphase"
 
         # instantiate problem classes
         # fluid-ALE
-        self.pbfa = FluidmechanicsAleProblem(
-            pbase,
-            io_params,
-            time_params_fluid,
-            fem_params_fluid,
-            fem_params_ale,
-            constitutive_models_fluid,
-            constitutive_models_ale,
-            bc_dict_fluid,
-            bc_dict_ale,
-            time_curves,
-            coupling_params_fluid_ale,
-            io,
-            mor_params=mor_params,
-            is_multiphase=True,
-        )
+        if pbfa is None:
+            self.pbfa = FluidmechanicsAleProblem(
+                pbase,
+                io_params,
+                time_params_fluid,
+                fem_params_fluid,
+                fem_params_ale,
+                constitutive_models_fluid,
+                constitutive_models_ale,
+                bc_dict_fluid,
+                bc_dict_ale,
+                time_curves,
+                coupling_params_fluid_ale,
+                io,
+                mor_params=mor_params,
+                is_multiphase=True,
+            )
+        else:
+            self.pbfa = pbfa
 
         # fluid-phasefield
-        self.pbfp = FluidmechanicsPhasefieldProblem(
+        self.pbfp = FluidmechanicsMultiphaseProblem(
             pbase,
             io_params,
             time_params_fluid,
@@ -121,7 +125,7 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
 
         self.set_coupling_parameters()
 
-        self.numdof = self.pbf.numdof + self.pba.numdof + self.pbp.numdof
+        self.numdof = self.pbfa.numdof + self.pbp.numdof
 
         self.localsolve = False
 
@@ -393,7 +397,7 @@ class FluidmechanicsAlePhasefieldProblem(problem_base):
         self.pbp.destroy()
 
 
-class FluidmechanicsAlePhasefieldSolver(solver_base):
+class FluidmechanicsAleMultiphaseSolver(solver_base):
     def initialize_nonlinear_solver(self):
         self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbf.pre)
         self.pb.set_problem_vector_matrix_structures()

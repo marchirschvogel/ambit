@@ -17,8 +17,8 @@ def main():
     case = 1
 
     IO_PARAMS = {
-        # problem type 'fluid_phasefield': Navier-Stokes Cahn-Hilliard equations
-        "problem_type": "fluid_phasefield",
+        # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations
+        "problem_type": "fluid_multiphase",
         # at which step frequency to write results (set to 0 in order to not write any output)
         "write_results_every": 1,
         # where to write the output to
@@ -28,7 +28,7 @@ def main():
         # which results to write
         "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"]],
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
-        "simname": "fluid_phasefield_rising_bubble"+str(case)+"_exp1.0_BDF2_eps0.64_-11",
+        "simname": "fluid_multiphase_rising_bubble"+str(case)+"_exp1.0_BDF2_eps0.64_-11",
         # write the initial fields (e.g., the phase field, for visualization/checks)
         "write_initial_fields": True,
         # report mass and phase field conservation

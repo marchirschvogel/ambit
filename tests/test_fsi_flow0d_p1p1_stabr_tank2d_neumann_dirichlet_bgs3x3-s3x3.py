@@ -28,8 +28,8 @@ def test_main():
         "mesh_encoding": "ASCII",  # HDF5, ASCII
         "results_to_write": [
             ["displacement"],
-            [["velocity", "pressure"],
-                ["aledisplacement"]],
+            ["velocity", "pressure"],
+            ["aledisplacement"],
         ],
         "write_submeshes":True,
         "simname": "tank2d_flow0d_p1p1_stabr_neumanndirichlet",

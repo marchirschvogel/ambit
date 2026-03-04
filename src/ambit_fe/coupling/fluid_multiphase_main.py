@@ -25,7 +25,7 @@ from ..phasefield.phasefield_main import PhasefieldProblem
 from ..base import problem_base, solver_base
 
 
-class FluidmechanicsPhasefieldProblem(problem_base):
+class FluidmechanicsMultiphaseProblem(problem_base):
     def __init__(
         self,
         pbase,
@@ -52,7 +52,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        self.problem_physics = "fluid_phasefield"
+        self.problem_physics = "fluid_multiphase"
 
         # instantiate problem classes
         # fluid
@@ -372,7 +372,7 @@ class FluidmechanicsPhasefieldProblem(problem_base):
         self.pbp.destroy()
 
 
-class FluidmechanicsPhasefieldSolver(solver_base):
+class FluidmechanicsMultiphaseSolver(solver_base):
     def initialize_nonlinear_solver(self):
         self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbf.pre)
         self.pb.set_problem_vector_matrix_structures()

@@ -273,19 +273,19 @@ if category == "fluid_ale" or category == "fluid" or category == "all":
         ["mpiexec", "-n", "1", "python3", "test_fluid_ale_uniform_pressurized.py"]
     )
 
-if category == "fluid_phasefield" or category == "fluid" or category == "all":
-    errs["test_fluid_phasefield_bdf2_rising_bubble 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fluid_phasefield_bdf2_rising_bubble.py"]
+if category == "fluid_multiphase" or category == "fluid" or category == "all":
+    errs["test_fluid_multiphase_bdf2_rising_bubble 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_multiphase_bdf2_rising_bubble.py"]
     )
-    errs["test_fluid_phasefield_bdf2_rising_bubble 2 restart"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fluid_phasefield_bdf2_rising_bubble.py", str(4)]
+    errs["test_fluid_multiphase_bdf2_rising_bubble 2 restart"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fluid_multiphase_bdf2_rising_bubble.py", str(4)]
     )
-if category == "fluid_ale_phasefield" or category == "fluid_phasefield" or category == "fluid" or category == "all":
-    errs["test_fluid_ale_phasefield_sloshing 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fluid_ale_phasefield_sloshing.py"]
+if category == "fluid_ale_multiphase" or category == "fluid_multiphase" or category == "fluid" or category == "all":
+    errs["test_fluid_ale_multiphase_sloshing 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fluid_ale_multiphase_sloshing.py"]
     )
-    errs["test_fluid_ale_phasefield_sloshing 3 restart"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fluid_ale_phasefield_sloshing.py", str(4)]
+    errs["test_fluid_ale_multiphase_sloshing 3 restart"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fluid_ale_multiphase_sloshing.py", str(4)]
     )
 
 if category == "fsi" or category == "all":

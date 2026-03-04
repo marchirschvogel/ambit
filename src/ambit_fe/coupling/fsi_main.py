@@ -41,14 +41,16 @@ class FSIProblem(problem_base):
         fem_params_fluid,
         fem_params_ale,
         constitutive_models_solid,
-        constitutive_models_fluid_ale,
+        constitutive_models_fluid,
+        constitutive_models_ale,
         bc_dict_solid,
-        bc_dict_fluid_ale,
+        bc_dict_fluid,
+        bc_dict_ale,
         time_curves,
         coupling_params,
         io,
         ios,
-        iof,
+        iofa,
         mor_params={},
         is_multiphase=False,
         pbs=None,
@@ -68,7 +70,7 @@ class FSIProblem(problem_base):
         self.problem_physics = "fsi"
 
         self.io = io
-        self.ios, self.iof = ios, iof
+        self.ios, self.iofa = ios, iofa
 
         # instantiate problem classes
         # solid
@@ -92,13 +94,13 @@ class FSIProblem(problem_base):
                 time_params_fluid,
                 fem_params_fluid,
                 fem_params_ale,
-                constitutive_models_fluid_ale[0],
-                constitutive_models_fluid_ale[1],
-                bc_dict_fluid_ale[0],
-                bc_dict_fluid_ale[1],
+                constitutive_models_fluid,
+                constitutive_models_ale,
+                bc_dict_fluid,
+                bc_dict_ale,
                 time_curves,
                 coupling_params,
-                iof,
+                iofa,
                 mor_params=mor_params,
                 is_multiphase=is_multiphase,
             )
@@ -114,8 +116,8 @@ class FSIProblem(problem_base):
 
         # modify results to write...
         self.pbs.results_to_write = io_params["results_to_write"][0]
-        self.pbf.results_to_write = io_params["results_to_write"][1][0]
-        self.pba.results_to_write = io_params["results_to_write"][1][1]
+        self.pbf.results_to_write = io_params["results_to_write"][1]
+        self.pba.results_to_write = io_params["results_to_write"][2]
 
         self.incompressible_2field = self.pbs.incompressible_2field
         self.have_condensed_variables = False

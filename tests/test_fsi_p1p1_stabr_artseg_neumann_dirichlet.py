@@ -36,10 +36,8 @@ def test_main():
         "mesh_subboundary": basepath + "/input/artseg-fsi-tet-lin_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet"
         "results_to_write": [
             ["displacement", "velocity"],
-            [
-                ["fluiddisplacement", "velocity", "pressure"],
-                ["aledisplacement", "alevelocity"],
-            ],
+            ["fluiddisplacement", "velocity", "pressure"],
+            ["aledisplacement", "alevelocity"],
         ],
         "simname": "fsi_p1p1_stabr_artseg",
         "write_submeshes":True,

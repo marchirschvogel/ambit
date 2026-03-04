@@ -29,7 +29,7 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
 
         # list entries of mats which do not return a stress
-        self.mat_nostress = ["inertia", "id"]
+        self.mat_void = ["inertia", "id"]
 
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
@@ -47,7 +47,7 @@ class constitutive:
         mat = materiallaw(shearrate_, volstrainrate_, self.kin.use_gen_strainrate, self.I)
 
         for m, matlaw in enumerate(self.matmodels):
-            if matlaw not in self.mat_nostress:
+            if matlaw not in self.mat_void:
                 # extract associated material parameters
                 matparams_m = self.matparams[m]
 
@@ -80,7 +80,7 @@ class kinematics:
         else:
             return 0.5 * (ufl.grad(v_) + ufl.grad(v_).T)
 
-    # volumetric strain rare
+    # volumetric strain rate
     def volstrainrate(self, v_, F=None):
         if F is not None:
             return ufl.inner(ufl.grad(v_),ufl.inv(F).T) * self.I

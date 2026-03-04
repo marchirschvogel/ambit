@@ -2034,7 +2034,7 @@ class IO_fluid_ale(IO_fluid, IO_ale):
             IO_ale.writecheckpoint(self, pb.pba, N)
 
 
-class IO_fluid_phasefield(IO_fluid, IO_phasefield):
+class IO_fluid_multiphase(IO_fluid, IO_phasefield):
     def write_output(self, pb, writemesh=False, N=1, t=0):
         IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)
         IO_phasefield.write_output(self, pb.pbp, writemesh=writemesh, N=N, t=t)
@@ -2049,7 +2049,7 @@ class IO_fluid_phasefield(IO_fluid, IO_phasefield):
             IO_phasefield.writecheckpoint(self, pb.pbp, N)
 
 
-class IO_fluid_ale_phasefield(IO_fluid, IO_ale, IO_phasefield):
+class IO_fluid_ale_multiphase(IO_fluid, IO_ale, IO_phasefield):
     def write_output(self, pb, writemesh=False, N=1, t=0):
         IO_fluid.write_output(self, pb.pbf, writemesh=writemesh, N=N, t=t)
         IO_phasefield.write_output(self, pb.pbp, writemesh=writemesh, N=N, t=t)
@@ -2198,35 +2198,41 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         self.msh_emap_fluid[0].topology.create_connectivity(self.mesh.topology.dim - 2, self.mesh.topology.dim)
 
         # TODO: Assert that meshtags start actually from 1 when transferred!
-        self.mt_d_solid = meshutils.meshtags_parent_to_child(
-            self.mt_d,
-            self.msh_emap_solid[0],
-            self.msh_emap_solid[1],
-            self.mesh,
-            "domain",
-        )
-        self.mt_d_fluid = meshutils.meshtags_parent_to_child(
-            self.mt_d,
-            self.msh_emap_fluid[0],
-            self.msh_emap_fluid[1],
-            self.mesh,
-            "domain",
-        )
+        if self.mt_d is not None:
+            self.mt_d_solid = meshutils.meshtags_parent_to_child(
+                self.mt_d,
+                self.msh_emap_solid[0],
+                self.msh_emap_solid[1],
+                self.mesh,
+                "domain",
+            )
+            self.mt_d_fluid = meshutils.meshtags_parent_to_child(
+                self.mt_d,
+                self.msh_emap_fluid[0],
+                self.msh_emap_fluid[1],
+                self.mesh,
+                "domain",
+            )
+        else:
+            self.mt_d_solid, self.mt_d_fluid = None, None
 
-        self.mt_b_solid = meshutils.meshtags_parent_to_child(
-            self.mt_b,
-            self.msh_emap_solid[0],
-            self.msh_emap_solid[1],
-            self.mesh,
-            "boundary",
-        )
-        self.mt_b_fluid = meshutils.meshtags_parent_to_child(
-            self.mt_b,
-            self.msh_emap_fluid[0],
-            self.msh_emap_fluid[1],
-            self.mesh,
-            "boundary",
-        )
+        if self.mt_b is not None:
+            self.mt_b_solid = meshutils.meshtags_parent_to_child(
+                self.mt_b,
+                self.msh_emap_solid[0],
+                self.msh_emap_solid[1],
+                self.mesh,
+                "boundary",
+            )
+            self.mt_b_fluid = meshutils.meshtags_parent_to_child(
+                self.mt_b,
+                self.msh_emap_fluid[0],
+                self.msh_emap_fluid[1],
+                self.mesh,
+                "boundary",
+            )
+        else:
+            self.mt_b_solid, self.mt_b_fluid = None, None
 
         if self.mt_sb is not None:
             self.mt_sb_solid = meshutils.meshtags_parent_to_child(
@@ -2269,10 +2275,12 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         if self.write_submeshes:
             tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_solid.xdmf", "w")
             tmp.write_mesh(self.msh_emap_solid[0])
-            tmp.write_meshtags(self.mt_d_solid, self.msh_emap_solid[0].geometry)
+            if self.mt_d_solid is not None:
+                tmp.write_meshtags(self.mt_d_solid, self.msh_emap_solid[0].geometry)
             tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_fluid.xdmf", "w")
             tmp.write_mesh(self.msh_emap_fluid[0])
-            tmp.write_meshtags(self.mt_d_fluid, self.msh_emap_fluid[0].geometry)
+            if self.mt_d_fluid is not None:
+                tmp.write_meshtags(self.mt_d_fluid, self.msh_emap_fluid[0].geometry)
             tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_interface.xdmf", "w")
             tmp.write_mesh(self.msh_emap_lm[0])
 

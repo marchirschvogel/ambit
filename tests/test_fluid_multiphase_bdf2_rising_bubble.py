@@ -24,7 +24,7 @@ def test_main():
         restart_step = 0
 
     IO_PARAMS = {
-        "problem_type": "fluid_phasefield",
+        "problem_type": "fluid_multiphase",
         "write_results_every": 5,
         "write_restart_every": 4,
         "indicate_results_by": "time",
@@ -32,7 +32,7 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[32,64]},
         "results_to_write": [["velocity", "pressure", "acceleration", "cauchystress", "density"],["phase", "potential"]],
-        "simname": "fluid_phasefield_rising_bubble",
+        "simname": "fluid_multiphase_rising_bubble",
         "write_initial_fields": True,
         "report_conservation_properties": True,
     }

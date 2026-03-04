@@ -41,10 +41,12 @@ class FSIFlow0DProblem(problem_base):
         fem_params_fluid,
         fem_params_ale,
         constitutive_models_solid,
-        constitutive_models_fluid_ale,
+        constitutive_models_fluid,
+        constitutive_models_ale,
         model_params_flow0d,
         bc_dict_solid,
-        bc_dict_fluid_ale,
+        bc_dict_fluid,
+        bc_dict_ale,
         time_curves,
         coupling_params_fluid_ale,
         coupling_params_fluid_flow0d,
@@ -81,9 +83,11 @@ class FSIFlow0DProblem(problem_base):
             fem_params_fluid,
             fem_params_ale,
             constitutive_models_solid,
-            constitutive_models_fluid_ale,
+            constitutive_models_fluid,
+            constitutive_models_ale,
             bc_dict_solid,
-            bc_dict_fluid_ale,
+            bc_dict_fluid,
+            bc_dict_ale,
             time_curves,
             coupling_params_fluid_ale,
             io,
@@ -100,11 +104,11 @@ class FSIFlow0DProblem(problem_base):
             time_params_flow0d,
             fem_params_fluid,
             fem_params_ale,
-            constitutive_models_fluid_ale[0],
-            constitutive_models_fluid_ale[1],
+            constitutive_models_fluid,
+            constitutive_models_ale,
             model_params_flow0d,
-            bc_dict_fluid_ale[0],
-            bc_dict_fluid_ale[1],
+            bc_dict_fluid,
+            bc_dict_ale,
             time_curves,
             coupling_params_fluid_ale,
             coupling_params_fluid_flow0d,
@@ -126,8 +130,8 @@ class FSIFlow0DProblem(problem_base):
 
         # modify results to write...
         self.pbs.results_to_write = io_params["results_to_write"][0]
-        self.pbf.results_to_write = io_params["results_to_write"][1][0]
-        self.pba.results_to_write = io_params["results_to_write"][1][1]
+        self.pbf.results_to_write = io_params["results_to_write"][1]
+        self.pba.results_to_write = io_params["results_to_write"][2]
 
         self.incompressible_2field = self.pbs.incompressible_2field
         self.fsi_system = self.pbfas.fsi_system
@@ -140,9 +144,7 @@ class FSIFlow0DProblem(problem_base):
         self.localsolve = False
         self.print_subiter = self.pbf0.print_subiter
 
-        self.numdof = self.pbs.numdof + self.pbf.numdof + self.pba.numdof + self.pbf0.LM.getSize()
-        if self.pbfas.fsi_system == "neumann_neumann":
-            self.numdof += self.pbfas.lm.x.petsc_vec.getSize()
+        self.numdof = self.pbfas.numdof + self.pbf0.LM.getSize()
 
         self.sub_solve = True
 

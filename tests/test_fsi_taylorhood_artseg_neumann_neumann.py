@@ -25,10 +25,8 @@ def test_main():
         "mesh_boundary": basepath + "/input/artseg-fsi-hex-quad_boundary.xdmf",
         "results_to_write": [
             ["displacement", "velocity"],
-            [
-                ["fluiddisplacement", "velocity", "pressure"],
-                ["aledisplacement", "alevelocity"],
-            ],
+            ["fluiddisplacement", "velocity", "pressure"],
+            ["aledisplacement", "alevelocity"],
         ],
         "simname": "fsi_taylorhood_artseg",
     }

@@ -74,10 +74,8 @@ def main():
         "mesh_encoding": "HDF5",
         "results_to_write": [
             ["displacement", "velocity"],
-            [
-                ["fluiddisplacement", "velocity", "pressure"],
-                ["aledisplacement", "alevelocity"],
-            ],
+            ["fluiddisplacement", "velocity", "pressure"],
+            ["aledisplacement", "alevelocity"],
         ],
         "simname": "fsi_channel_flag_turek_" + case,
     }

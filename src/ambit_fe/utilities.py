@@ -51,13 +51,13 @@ def print_problem(ptype, sname, comm, numdof):
             comm,
         )
 
-    elif ptype == "fluid_phasefield":
+    elif ptype == "fluid_multiphase":
         print_status(
             "################ Welcome to Cahn-Hilliard Navier-Stokes fluid mechanics ###############",
             comm,
         )
 
-    elif ptype == "fluid_ale_phasefield":
+    elif ptype == "fluid_ale_multiphase":
         print_status(
             "############### Welcome to ALE Cahn-Hilliard Navier-Stokes fluid mechanics #############",
             comm,
@@ -76,6 +76,12 @@ def print_problem(ptype, sname, comm, numdof):
         )
         print_status(
             "############################# with coupling to 0D flow ################################",
+            comm,
+        )
+
+    elif ptype == "fsi_multiphase":
+        print_status(
+            "############ Welcome to monolithic Multiphase Fluid-Solid Interaction (FSI) ###########",
             comm,
         )
 
