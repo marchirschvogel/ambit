@@ -73,7 +73,6 @@ def test_main():
         "coupling_fluid_ale": {"interface": [3]},
         "fsi_governing_type": "solid_governed", # solid_governed, fluid_governed
         "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
-        "remove_mutual_solid_fluid_bcs":False, # TODO: Not working!
     }
 
     # for testing purposes, we locate the solid by this function (could use id 1 instead...)

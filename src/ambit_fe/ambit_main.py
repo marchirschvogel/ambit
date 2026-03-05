@@ -417,6 +417,11 @@ class Ambit:
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
+            try:
+                bcs_lm = boundary_conditions[3]
+            except:
+                bcs_lm = None
+
             self.mp = fsi_main.FSIProblem(
                 pbase,
                 io_params,
@@ -431,6 +436,7 @@ class Ambit:
                 boundary_conditions[0],
                 boundary_conditions[1],
                 boundary_conditions[2],
+                bcs_lm,
                 time_curves,
                 coupling_params,
                 io,
@@ -477,6 +483,11 @@ class Ambit:
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
+            try:
+                bcs_lm = boundary_conditions[3]
+            except:
+                bcs_lm = None
+
             self.mp = fsi_flow0d_main.FSIFlow0DProblem(
                 pbase,
                 io_params,
@@ -493,6 +504,7 @@ class Ambit:
                 boundary_conditions[0],
                 boundary_conditions[1],
                 boundary_conditions[2],
+                bcs_lm,
                 time_curves,
                 coupling_params[0],
                 coupling_params[1],
@@ -540,6 +552,11 @@ class Ambit:
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
+            try:
+                bcs_lm = boundary_conditions[4]
+            except:
+                bcs_lm = None
+
             self.mp = fsi_multiphase_main.FSIMultiphaseProblem(
                 pbase,
                 io_params,
@@ -558,6 +575,7 @@ class Ambit:
                 boundary_conditions[1],
                 boundary_conditions[2],
                 boundary_conditions[3],
+                bcs_lm,
                 time_curves,
                 coupling_params,
                 io,

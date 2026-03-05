@@ -91,7 +91,6 @@ def test_main():
     COUPLING_PARAMS_ALE_FLUID = {
         "coupling_fluid_ale": {"interface": [1]},
         "fsi_governing_type": "fluid_governed",  # solid_governed, fluid_governed
-        "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
     }
 
     COUPLING_PARAMS_FLUID_FLOW0D = {

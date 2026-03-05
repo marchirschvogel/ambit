@@ -97,9 +97,9 @@ def main():
             1e-8,
             1e-8,
             1e-8,
-            1e-3,
+            1e-8,
         ],  # solid-mom,fluid-mom,fluid-cont,FSI-coup,ALE-mom
-        "tol_inc": [1e-0, 1e-0, 1e-0, 1e5, 1e-0],
+        "tol_inc": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
     }  # du,dv,dp,dlm,dd
 
     """
@@ -152,7 +152,6 @@ def main():
         "coupling_fluid_ale": {"interface": [1]},
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
         "fsi_system": "neumann_neumann",
-        "remove_mutual_solid_fluid_bcs": False,  # Not yet implemented!
     }
 
     # solid material: St.-Venant Kirchhoff
@@ -210,6 +209,16 @@ def main():
 
     BC_DICT_ALE = {"dirichlet": [{"id": [2, 3, 4, 5], "dir": "all", "val": 0.0}]}
 
+    """
+    At locations/nodes where both solid and fluid have Dirichlet BCs, we should constrain the Lagrange multiplier to zero (the solution is not well defined there)
+    """
+    class locate_lm_zero:
+        def evaluate(self, x):
+            return np.logical_or(np.logical_and(np.isclose(x[0], 248.99), np.isclose(x[1], 210.0)), np.logical_and(np.isclose(x[0], 248.99), np.isclose(x[1], 190.0)))
+
+    BC_DICT_LM = {"dirichlet": [{"id": [locate_lm_zero()], "dir": "all", "val": 0.0}]}
+
+
     # Pass parameters to Ambit to set up the problem
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
@@ -218,7 +227,7 @@ def main():
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE],
-        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE],
+        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE, BC_DICT_LM],
         coupling_params=COUPLING_PARAMS,
     )
 

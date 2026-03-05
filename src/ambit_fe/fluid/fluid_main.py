@@ -2188,11 +2188,11 @@ class FluidmechanicsProblem(problem_base):
             self.K_pp = fem.petsc.assemble_matrix(self.jac_pp_, self.dbcs_pres)
         else:
             self.K_pp = fem.petsc.assemble_matrix(self.jac_pp, self.dbcs_pres)
-        self.K_pp.assemble()
         # we need to set this to apply pressure DBCs, at least in cases where this block is zero,
         # e.g. for Taylor-Hood approximations of incompressible flow without stabilization
         if bool(self.dbcs_pres):
             self.K_pp.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+        self.K_pp.assemble()
 
         if self.have_robin_valve_implicit:
             self.r_z = PETSc.Vec().createMPI(size=self.num_valve_coupling_surf)

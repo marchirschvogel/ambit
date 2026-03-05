@@ -46,6 +46,7 @@ class FSIProblem(problem_base):
         bc_dict_solid,
         bc_dict_fluid,
         bc_dict_ale,
+        bc_dict_lm,
         time_curves,
         coupling_params,
         io,
@@ -140,64 +141,12 @@ class FSIProblem(problem_base):
             self.dlm = ufl.TrialFunction(self.V_lm)  # incremental lm
             self.var_lm = ufl.TestFunction(self.V_lm)  # lm test function
 
-            if self.remove_mutual_solid_fluid_bcs:  # TODO: Seems to not work properly - investigate!
-
-                ndbc_solid, ndbc_fluid = len(self.pbs.dbcs), len(self.pbf.dbcs)
-
-                dbcs_dofs_solid_all, dbcs_dofs_fluid_all = [], []
-                for k in range(ndbc_solid):
-                    dbcs_dofs_solid_all.append(self.pbs.dbcs[k].dof_indices()[0])
-                for k in range(ndbc_fluid):
-                    dbcs_dofs_fluid_all.append(self.pbf.dbcs[k].dof_indices()[0])
-
-                dbcs_dofs_solid_all_glob, dbcs_dofs_fluid_all_glob = [], []
-                for k in range(ndbc_solid):
-                    dbcs_dofs_solid_all_glob.append(self.dofs_solid_main[dbcs_dofs_solid_all[k]])
-                # dbcs_dofs_fluid_all_con = np.sort(np.concatenate(dbcs_dofs_fluid_all))
-                dbcs_dofs_fluid_all_con = np.concatenate(dbcs_dofs_fluid_all)
-                dbcs_dofs_fluid_all_glob = self.dofs_fluid_main[dbcs_dofs_fluid_all_con]
-
-                common_dbcs_glob = []
-                for k in range(ndbc_solid):
-                    common_dbcs_glob.append( np.intersect1d(dbcs_dofs_solid_all_glob[k], dbcs_dofs_fluid_all_glob) )
-
-                dbc_dofs_solid_all_glob_new = [[] for _ in range(ndbc_solid)]
-                for k in range(ndbc_solid):
-                    if common_dbcs_glob[k].size > 0:
-                        dbc_dofs_solid_all_glob_new[k] = np.setdiff1d(dbcs_dofs_solid_all_glob[k], dbcs_dofs_fluid_all_glob)
-                    else:
-                        dbc_dofs_solid_all_glob_new[k] = dbcs_dofs_solid_all_glob[k]
-
-                dbcs_dofs_solid_all_new = [[] for _ in range(ndbc_solid)]
-                for k in range(ndbc_solid):
-                    dbcs_dofs_solid_all_new[k] = dbcs_dofs_solid_all[k][np.argsort(dbc_dofs_solid_all_glob_new[k])]
-
-                dbcs_dofs_solid_all_new_tmp = [[] for _ in range(ndbc_solid)]
-                for k in range(ndbc_solid):
-                    if self.pbs.bc_dict["dirichlet"][k]['dir']=='all':
-                        dbcs_dofs_solid_all_new_tmp[k] = dbcs_dofs_solid_all_new[k]
-                    elif self.pbs.bc_dict["dirichlet"][k]['dir']=='x' or self.pbs.bc_dict["dirichlet"][k]['dir']=='y' or self.pbs.bc_dict["dirichlet"][k]['dir']=='z':
-                        dbcs_dofs_solid_all_new_tmp[k] = np.empty(bs*len(dbcs_dofs_solid_all_new[k]), dtype=np.int32)
-                        for i in range(len(dbcs_dofs_solid_all_new[k])):
-                            for j in range(bs):
-                                dbcs_dofs_solid_all_new_tmp[k][bs*i+j] = dbcs_dofs_solid_all_new[k][i]
-
-                dbcs_verts_solid_all_new = [[] for _ in range(ndbc_solid)]
-                for k in range(ndbc_solid):
-                    dbcs_verts_solid_all_new[k] = np.empty(int(len(dbcs_dofs_solid_all_new[k]/bs)), dtype=np.int32)
-
-                for k in range(ndbc_solid):
-                    for i in range(len(dbcs_verts_solid_all_new[k])):
-                        dbcs_verts_solid_all_new[k][i] = int(dbcs_dofs_solid_all_new_tmp[k][bs*i] / bs)
-
-                self.pbs.dbcs = []
-                for k in range(ndbc_solid):
-                    # if common_dbcs_glob[k].size > 0: # ...
-                    self.pbs.bc_dict["dirichlet"][k]['dir'] += '_by_dofs'
-                    self.pbs.bc_dict["dirichlet"][k]['dofs'] = dbcs_verts_solid_all_new[k] # vertices!
-                self.pbs.bc.dirichlet_bcs(self.pbs.bc_dict["dirichlet"], self.pbs.dbcs)
-
-                raise RuntimeError("Under development!")
+            # Dirichlet boundary conditions for LM - if given
+            self.dbcs_lm = []
+            if bc_dict_lm is not None:
+                bc = boundaryconditions.boundary_cond(self.io, V_field=self.V_lm)
+                if "dirichlet" in bc_dict_lm.keys():
+                    bc.dirichlet_bcs(bc_dict_lm["dirichlet"], self.dbcs_lm)
 
         self.numdof = self.pbs.numdof + self.pbfa.numdof
         if self.fsi_system == "neumann_neumann":
@@ -232,7 +181,6 @@ class FSIProblem(problem_base):
     def set_coupling_parameters(self):
         self.fsi_governing_type = self.coupling_params.get("fsi_governing_type", "solid_governed")
         self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann") # neumann_neumann, neumann_dirichlet
-        self.remove_mutual_solid_fluid_bcs = self.coupling_params.get("remove_mutual_solid_fluid_bcs", False)
 
     def get_problem_var_list(self):
         if self.fsi_system == "neumann_neumann":
@@ -340,6 +288,9 @@ class FSIProblem(problem_base):
 
             self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
             self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+
+            # for DBC application to LM, even if zero...
+            self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)
 
         elif self.fsi_system == "neumann_dirichlet":
 
@@ -470,6 +421,8 @@ class FSIProblem(problem_base):
 
             self.jac_ul = fem.form(self.weakform_lin_ul, entity_maps=self.io.entity_maps)
             self.jac_vl = fem.form(self.weakform_lin_vl, entity_maps=self.io.entity_maps)
+            # needed for DBC application to LM
+            self.jac_ll = fem.form(self.weakform_lin_ll, entity_maps=self.io.entity_maps)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -489,10 +442,15 @@ class FSIProblem(problem_base):
             self.K_vl = fem.petsc.assemble_matrix(self.jac_vl, self.pbf.dbcs)
             self.K_vl.assemble()
 
-            self.K_lu = fem.petsc.assemble_matrix(self.jac_lu, [])
+            self.K_lu = fem.petsc.assemble_matrix(self.jac_lu, self.dbcs_lm)
             self.K_lu.assemble()
-            self.K_lv = fem.petsc.assemble_matrix(self.jac_lv, [])
+            self.K_lv = fem.petsc.assemble_matrix(self.jac_lv, self.dbcs_lm)
             self.K_lv.assemble()
+
+            self.K_ll = fem.petsc.assemble_matrix(self.jac_ll, self.dbcs_lm)
+            if bool(self.dbcs_lm):
+                self.K_ll.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
+            self.K_ll.assemble()
 
         if self.fsi_system == "neumann_dirichlet":
             # solid reaction forces
@@ -607,7 +565,15 @@ class FSIProblem(problem_base):
             with self.r_l.localForm() as r_local:
                 r_local.set(0.0)
             fem.petsc.assemble_vector(self.r_l, self.res_l)
+            fem.apply_lifting(
+                self.r_l,
+                [self.jac_ll],
+                [self.dbcs_lm],
+                x0=[self.lm.x.petsc_vec],
+                alpha=-1.0,
+            )
             self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            fem.set_bc(self.r_l, self.dbcs_lm, x0=self.lm.x.petsc_vec, alpha=-1.0)
 
     def assemble_stiffness(self, t, subsolver=None):
         if self.pbs.incompressible_2field:
@@ -653,6 +619,7 @@ class FSIProblem(problem_base):
         if self.fsi_system == "neumann_neumann":
             self.K_list[3 + ofs][0] = self.K_lu
             self.K_list[3 + ofs][1 + ofs] = self.K_lv
+            self.K_list[3 + ofs][3 + ofs] = self.K_ll
         # ALE
         self.K_list[3 + ofc + ofs][3 + ofc + ofs] = self.pbfa.K_list[2][2]
         self.K_list[3 + ofc + ofs][1 + ofs] = self.pbfa.K_list[2][0]
@@ -667,11 +634,15 @@ class FSIProblem(problem_base):
             self.K_vl.assemble()
             # LM
             self.K_lu.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, [])
+            fem.petsc.assemble_matrix(self.K_lu, self.jac_lu, self.dbcs_lm)
             self.K_lu.assemble()
             self.K_lv.zeroEntries()
-            fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, [])
+            fem.petsc.assemble_matrix(self.K_lv, self.jac_lv, self.dbcs_lm)
             self.K_lv.assemble()
+            # zero matrix, but can have entries if DBCs are given on LM
+            self.K_ll.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_ll, self.jac_ll, self.dbcs_lm)
+            self.K_ll.assemble()
 
         if self.fsi_system == "neumann_dirichlet":
             # first do stiffness from Dirichlet conditions fluid-to-solid

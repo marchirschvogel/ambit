@@ -47,6 +47,7 @@ class FSIFlow0DProblem(problem_base):
         bc_dict_solid,
         bc_dict_fluid,
         bc_dict_ale,
+        bc_dict_lm,
         time_curves,
         coupling_params_fluid_ale,
         coupling_params_fluid_flow0d,
@@ -88,6 +89,7 @@ class FSIFlow0DProblem(problem_base):
             bc_dict_solid,
             bc_dict_fluid,
             bc_dict_ale,
+            bc_dict_lm,
             time_curves,
             coupling_params_fluid_ale,
             io,
@@ -333,6 +335,7 @@ class FSIFlow0DProblem(problem_base):
         if self.pbfas.fsi_system == "neumann_neumann":
             self.K_list[3 + ofs][0] = self.pbfas.K_list[3 + ofs][0]
             self.K_list[3 + ofs][1 + ofs] = self.pbfas.K_list[3 + ofs][1 + ofs]
+            self.K_list[3 + ofs][3 + ofs] = self.pbfas.K_list[3 + ofs][3 + ofs]
         # 3D-0D
         self.K_list[3 + ofc + ofs][1 + ofs] = self.pbf0.K_sv
         self.K_list[3 + ofc + ofs][3 + ofc + ofs] = self.pbf0.K_lm

@@ -251,7 +251,6 @@ def check_params_coupling_fluid_ale(params):
         "coupling_strategy",
         "fsi_governing_type",
         "fsi_system",
-        "remove_mutual_solid_fluid_bcs",
     ]
 
     for k in params.keys():
