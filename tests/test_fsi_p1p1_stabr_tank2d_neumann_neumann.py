@@ -44,7 +44,7 @@ def test_main():
         "solve_type": "direct",
         "direct_solver": "mumps",
         "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
-        "tol_inc": [1e-8, 1e-8, 1e-8, 1e5, 1e-8],
+        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
@@ -120,6 +120,12 @@ def test_main():
         ]
     }
 
+    class locate_lm_zero:
+        def evaluate(self, x):
+            return np.logical_or(np.isclose(x[1], 0.0), np.isclose(x[1], 10.0))
+
+    BC_DICT_LM = {"dirichlet": [{"id": [locate_lm_zero()], "dir": "all", "val": 0.0}]}
+
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
@@ -127,7 +133,7 @@ def test_main():
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE],
-        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE],
+        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE, BC_DICT_LM],
         time_curves=time_curves(),
         coupling_params=COUPLING_PARAMS
     )

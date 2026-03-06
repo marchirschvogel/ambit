@@ -19,7 +19,7 @@ def main():
     except:
         restart_step = 0
 
-    case = "FSI2"  # 'FSI2', 'FSI3'
+    case = "FSI2"  # "FSI2", "FSI3"
 
     # cases from Tab. 12, Turek et al. 2006
     if case == "FSI2":

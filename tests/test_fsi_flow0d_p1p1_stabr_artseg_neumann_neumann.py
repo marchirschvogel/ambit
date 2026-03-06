@@ -47,7 +47,7 @@ def test_main():
         "solve_type": "direct",
         "direct_solver": "mumps",
         "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-6],
-        "tol_inc": [1e-0, 1e-0, 1e-0, 1e5, 1e-0, 1e-0],
+        "tol_inc": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
         "subsolver_params": {"tol_res": 1.0e-8, "tol_inc": 1.0e-8},
     }
 
@@ -149,6 +149,17 @@ def test_main():
         ]
     }
 
+    class locate_lm_x:
+        def evaluate(self, x):
+            return np.isclose(x[0], 0.0)
+
+    class locate_lm_y:
+        def evaluate(self, x):
+            return np.isclose(x[1], 0.0)
+
+    BC_DICT_LM = {"dirichlet": [{"id": [locate_lm_x()], "dir": "x", "val": 0.0},
+                                {"id": [locate_lm_y()], "dir": "y", "val": 0.0}]}
+
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
@@ -157,7 +168,7 @@ def test_main():
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE, MODEL_PARAMS_FLOW0D],
-        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE],
+        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE, BC_DICT_LM],
         time_curves=time_curves(),
         coupling_params=[
             COUPLING_PARAMS_ALE_FLUID,
