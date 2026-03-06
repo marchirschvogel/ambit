@@ -590,39 +590,44 @@ class FSIProblem(problem_base):
         self.assemble_stiffness_coupling(t)
 
         # solid momentum
-        self.K_list[0][0] = self.pbs.K_list[0][0]
+        self.K_list[0][0] = self.pbs.K_list[0][0]  # w.r.t. solid displacement
         if self.pbs.incompressible_2field:
-            self.K_list[0][1] = self.pbs.K_list[0][1]
+            self.K_list[0][1] = self.pbs.K_list[0][1]  # w.r.t. solid pressure
         if self.fsi_system == "neumann_neumann":
-            self.K_list[0][3 + ofs] = self.K_ul
+            self.K_list[0][3 + ofs] = self.K_ul  # w.r.t. Lagrange multiplier
         if self.fsi_system == "neumann_dirichlet":
-            self.K_list[0][1 + ofs] = self.K_uv
+            self.K_list[0][1 + ofs] = self.K_uv  # w.r.t. fluid velocity
+
         # solid incompressibility
         if self.pbs.incompressible_2field:
-            self.K_list[1][0] = self.pbs.K_list[1][0]
-            self.K_list[1][1] = self.pbs.K_list[1][1]
-            if self.fsi_system == "neumann_dirichlet":
-                self.K_list[1 + ofs][1] = self.K_vps
+            self.K_list[1][0] = self.pbs.K_list[1][0]  # w.r.t. solid displacement
+            self.K_list[1][1] = self.pbs.K_list[1][1]  # w.r.t. solid pressure
+
         # fluid momentum
-        self.K_list[1 + ofs][1 + ofs] = self.pbfa.K_list[0][0]
-        self.K_list[1 + ofs][2 + ofs] = self.pbfa.K_list[0][1]
+        self.K_list[1 + ofs][1 + ofs] = self.pbfa.K_list[0][0]  # w.r.t. fluid velocity
+        self.K_list[1 + ofs][2 + ofs] = self.pbfa.K_list[0][1]  # w.r.t. fluid pressure
         if self.fsi_system == "neumann_neumann":
-            self.K_list[1 + ofs][3 + ofs] = self.K_vl
+            self.K_list[1 + ofs][3 + ofs] = self.K_vl  # w.r.t. Lagrange multiplier
         if self.fsi_system == "neumann_dirichlet":
-            self.K_list[1 + ofs][0] = self.K_vu
-        self.K_list[1 + ofs][3 + ofc + ofs] = self.pbfa.K_list[0][2]
+            self.K_list[1 + ofs][0] = self.K_vu  # w.r.t. solid displacement
+            if self.pbs.incompressible_2field:
+                self.K_list[1 + ofs][1] = self.K_vps  # w.r.t. solid pressure
+        self.K_list[1 + ofs][3 + ofc + ofs] = self.pbfa.K_list[0][2]  # w.r.t. ALE displacement
+
         # fluid continuity
-        self.K_list[2 + ofs][1 + ofs] = self.pbf.K_list[1][0]
-        self.K_list[2 + ofs][2 + ofs] = self.pbf.K_list[1][1]
-        self.K_list[2 + ofs][3 + ofc + ofs] = self.pbfa.K_list[1][2]
+        self.K_list[2 + ofs][1 + ofs] = self.pbf.K_list[1][0]  # w.r.t. fluid velocity
+        self.K_list[2 + ofs][2 + ofs] = self.pbf.K_list[1][1]  # w.r.t. fluid pressure
+        self.K_list[2 + ofs][3 + ofc + ofs] = self.pbfa.K_list[1][2]  # w.r.t. ALE displacement
+
         # FSI coupling constraint
         if self.fsi_system == "neumann_neumann":
-            self.K_list[3 + ofs][0] = self.K_lu
-            self.K_list[3 + ofs][1 + ofs] = self.K_lv
-            self.K_list[3 + ofs][3 + ofs] = self.K_ll
+            self.K_list[3 + ofs][0] = self.K_lu  # w.r.t. solid displacement
+            self.K_list[3 + ofs][1 + ofs] = self.K_lv  # w.r.t. fluid velocity
+            self.K_list[3 + ofs][3 + ofs] = self.K_ll  # w.r.t. Lagrange multiplier (zero, only LM DBCs)
+
         # ALE
-        self.K_list[3 + ofc + ofs][3 + ofc + ofs] = self.pbfa.K_list[2][2]
-        self.K_list[3 + ofc + ofs][1 + ofs] = self.pbfa.K_list[2][0]
+        self.K_list[3 + ofc + ofs][3 + ofc + ofs] = self.pbfa.K_list[2][2]   # w.r.t. ALE displacement
+        self.K_list[3 + ofc + ofs][1 + ofs] = self.pbfa.K_list[2][0]  # w.r.t. fluid velocity
 
     def assemble_stiffness_coupling(self, t, subsolver=None):
         if self.fsi_system == "neumann_neumann":

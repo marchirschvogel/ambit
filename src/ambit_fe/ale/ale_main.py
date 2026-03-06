@@ -59,7 +59,7 @@ class AleProblem(problem_base):
         self.quad_degree = fem_params["quad_degree"]
 
         # TODO: Find nicer solution here...
-        if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d":
+        if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d" or self.pbase.problem_type == "fsi_multiphase":
             self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
         else:
             self.dx, self.bmeasures = self.io.create_integration_measures(
