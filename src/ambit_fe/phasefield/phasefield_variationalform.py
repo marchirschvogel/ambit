@@ -21,13 +21,13 @@ class variationalform():
         else:
             advec = ufl.as_ufl(0)
         """ TeX:
-        \int\limits_{\Omega} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}v - \int\limits_{\Omega} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}v = 0
+        \int\limits_{\Omega} \left(\frac{\partial \phi}{\partial t} + \nabla\cdot(\phi\boldsymbol{v})\right) \delta \phi \, \mathrm{d}V - \int\limits_{\Omega} \boldsymbol{J} \cdot \nabla \delta \phi \, \mathrm{d}V = 0
         """
         return ( ufl.inner(phidot, self.var_phi) + ufl.inner(advec, self.var_phi) - ufl.inner(Jflux, ufl.grad(self.var_phi)) ) * ddomain
 
     def cahnhilliard_potential(self, phi, mu, driv_force, kappa, ddomain, F=None):
         """ TeX:
-        \int\limits_{\Omega} \mu \,\delta\mu \, \mathrm{d}v - \int\limits_{\Omega} \frac{\mathrm{d}\psi}{\mathrm{d}\phi} \delta\mu \,\mathrm{d}v - \int\limits_{\Omega} \kappa \nabla \phi \cdot \nabla \delta\mu \, \mathrm{d}v = 0
+        \int\limits_{\Omega} \mu \,\delta\mu \, \mathrm{d}V - \int\limits_{\Omega} \frac{\mathrm{d}\psi}{\mathrm{d}\phi} \delta\mu \,\mathrm{d}V - \int\limits_{\Omega} \kappa \nabla \phi \cdot \nabla \delta\mu \, \mathrm{d}V = 0
         """
         return ( ufl.inner(mu, self.var_mu) - ufl.inner(driv_force, self.var_mu) - kappa*ufl.inner(ufl.grad(phi), ufl.grad(self.var_mu)) ) * ddomain
 

@@ -650,17 +650,21 @@ class FluidmechanicsConstraintProblem(problem_base):
         # fluid main blocks
         self.pbf.assemble_stiffness(t)
 
-        self.K_list[0][0] = self.pbf.K_list[0][0]
-        self.K_list[0][1] = self.pbf.K_list[0][1]
-        self.K_list[1][0] = self.pbf.K_list[1][0]
-        self.K_list[1][1] = self.pbf.K_list[1][1]  # non-zero if we have stabilization
+        # fluid momentum
+        self.K_list[0][0] = self.pbf.K_list[0][0]  # w.r.t. fluid velocity
+        self.K_list[0][1] = self.pbf.K_list[0][1]  # w.r.t. fluid pressure
+        # fluid continuity
+        self.K_list[1][0] = self.pbf.K_list[1][0]  # w.r.t. fluid velocity
+        self.K_list[1][1] = self.pbf.K_list[1][1]  # w.r.t. fluid pressure
 
         self.assemble_stiffness_coupling(t)
 
-        self.K_list[0][2] = self.K_vs
-        self.K_list[2][0] = self.K_sv
+        # fluid momentum
+        self.K_list[0][2] = self.K_vs  # w.r.t. LM
+        # constraint
+        self.K_list[2][0] = self.K_sv  # w.r.t. fluid velocity
         if self.have_regularization:
-            self.K_list[2][2] = self.K_lm
+            self.K_list[2][2] = self.K_lm  # w.r.t. LM
 
     def assemble_stiffness_coupling(self, t, subsolver=None):
         # offdiagonal s-v rows

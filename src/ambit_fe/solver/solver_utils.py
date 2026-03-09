@@ -356,6 +356,89 @@ class sol_utils:
                         "d",
                     )  # using greek symbol print (Λ) is not supported everywhere...
                     numres = 5
+        elif ptype == "fsi_multiphase":
+            if self.solver.pb[0].fsi_system == "neumann_neumann":
+                if self.solver.pb[0].incompressible_2field:
+                    eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8 = (
+                        "solid momentum",
+                        "solid incompressibility",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "phase field",
+                        "potential",
+                        "FSI coup constraint",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5, v6, v7, v8 = (
+                        "u",
+                        "p",
+                        "v",
+                        "p",
+                        "phi",
+                        "mu",
+                        "lm",
+                        "d",
+                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
+                    numres = 8
+                else:
+                    eq1, eq2, eq3, eq4, eq5, eq6, eq7 = (
+                        "solid momentum",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "phase field",
+                        "potential",
+                        "FSI coup constraint",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5, v6, v7 = (
+                        "u",
+                        "v",
+                        "p",
+                        "phi",
+                        "mu",
+                        "lm",
+                        "d",
+                    )  # using greek symbol print (λ, Λ) is not supported everywhere...
+                    numres = 7
+            else:
+                if self.solver.pb[0].incompressible_2field:
+                    eq1, eq2, eq3, eq4, eq5, eq6, eq7 = (
+                        "solid momentum",
+                        "solid incompressibility",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "phase field",
+                        "potential",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5, v6, v7 = (
+                        "u",
+                        "p",
+                        "v",
+                        "p",
+                        "phi",
+                        "mu",
+                        "d",
+                    )  # using greek symbol print (Λ) is not supported everywhere...
+                    numres = 7
+                else:
+                    eq1, eq2, eq3, eq4, eq5, eq6 = (
+                        "solid momentum",
+                        "fluid momentum",
+                        "fluid continuity",
+                        "phase field",
+                        "potential",
+                        "ALE momentum",
+                    )
+                    v1, v2, v3, v4, v5, v6 = (
+                        "u",
+                        "v",
+                        "p",
+                        "phi",
+                        "mu",
+                        "d",
+                    )  # using greek symbol print (Λ) is not supported everywhere...
+                    numres = 6
         elif ptype == "phasefield":
             eq1, eq2 = (
                 "phase field",

@@ -698,6 +698,7 @@ class FSIProblem(problem_base):
             self.pbf.v_old.x.petsc_vec,
             self.pbf.uf_old.x.petsc_vec,
             self.pbase.dt,
+            varint_veryold=self.pbf.uf_veryold.x.petsc_vec,
             varintout=self.pbf.uf.x.petsc_vec,
             uflform=False,
         )

@@ -470,11 +470,13 @@ class SolidmechanicsConstraintProblem(problem_base):
         # solid main blocks
         self.pbs.assemble_stiffness(t)
 
-        self.K_list[0][0] = self.pbs.K_list[0][0]
+        # solid momentum
+        self.K_list[0][0] = self.pbs.K_list[0][0]  # w.r.t. displacement
         if self.pbs.incompressible_2field:
-            self.K_list[0][1] = self.pbs.K_list[0][1]
-            self.K_list[1][0] = self.pbs.K_list[1][0]
-            self.K_list[1][1] = self.pbs.K_list[1][1]  # should be only non-zero if we have stress-mediated growth...
+            self.K_list[0][1] = self.pbs.K_list[0][1]  # w.r.t. pressure
+            # incompressibility constraint
+            self.K_list[1][0] = self.pbs.K_list[1][0]  # w.r.t. displacement
+            self.K_list[1][1] = self.pbs.K_list[1][1]  # w.r.t. pressure (mostly zero... not in case of stress-mediated growth)
 
         # offdiagonal s-u rows
         for i in range(len(self.row_ids)):

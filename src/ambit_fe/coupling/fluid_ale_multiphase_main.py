@@ -232,49 +232,46 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         self.pbfa.assemble_stiffness(t)
         self.pbp.assemble_stiffness(t)
         self.pbfp.assemble_stiffness_coupling(t)
+        # phase field w.r.t. ALE
+        self.assemble_stiffness_coupling(t)
 
         # fluid momentum
         self.K_list[0][0] = self.pbf.K_list[0][0]   # w.r.t. velocity
         self.K_list[0][1] = self.pbf.K_list[0][1]   # w.r.t. pressure
-        self.K_list[0][2] = self.pbfp.K_list[0][2]  # w.r.t. phase
-        self.K_list[0][3] = self.pbfp.K_list[0][3]  # w.r.t. potential
-        self.K_list[0][4] = self.pbfa.K_list[0][2]  # w.r.t. ALE disp
-
+        self.K_list[0][2] = self.pbfp.K_vphi        # w.r.t. phase
+        self.K_list[0][3] = self.pbfp.K_vmu         # w.r.t. potential
+        self.K_list[0][4] = self.pbfa.K_list[0][2]  # w.r.t. ALE displacement
         # fluid continuity
         self.K_list[1][0] = self.pbf.K_list[1][0]   # w.r.t. velocity
         self.K_list[1][1] = self.pbf.K_list[1][1]   # w.r.t. pressure
-        self.K_list[1][2] = self.pbfp.K_list[1][2]  # w.r.t. phase
-        self.K_list[1][4] = self.pbfa.K_list[1][2]  # w.r.t. ALE disp
+        self.K_list[1][2] = self.pbfp.K_pphi        # w.r.t. phase
+        self.K_list[1][4] = self.pbfa.K_list[1][2]  # w.r.t. ALE displacement
 
-        # phasefield phase
-        self.K_list[2][0] = self.pbfp.K_list[2][0] # w.r.t. velocity
+        # phase field
+        self.K_list[2][0] = self.pbfp.K_phiv       # w.r.t. velocity
+        self.K_list[2][1] = self.pbfp.K_phip       # w.r.t. pressure
         self.K_list[2][2] = self.pbp.K_list[0][0]  # w.r.t. phase
         self.K_list[2][3] = self.pbp.K_list[0][1]  # w.r.t. potential
-        # phasefield potential
+        self.K_list[2][4] = self.K_phid            # w.r.t. ALE displacement
+        # potential
         self.K_list[3][2] = self.pbp.K_list[1][0]  # w.r.t. phase
         self.K_list[3][3] = self.pbp.K_list[1][1]  # w.r.t. potential
+        self.K_list[3][4] = self.K_mud             # w.r.t. ALE displacement
 
         # ALE
         self.K_list[4][0] = self.pbfa.K_list[2][0]  # w.r.t. velocity
-        self.K_list[4][4] = self.pba.K_list[0][0]   # w.r.t. ALE disp
-
-        # phasefield w.r.t. ALE
-        self.assemble_stiffness_coupling(t)
+        self.K_list[4][4] = self.pba.K_list[0][0]   # w.r.t. ALE displacement
 
     def assemble_stiffness_coupling(self, t):
-        # derivative of phasefield w.r.t. ALE displacement
+        # derivative of phase field w.r.t. ALE displacement
         self.K_phid.zeroEntries()
         fem.petsc.assemble_matrix(self.K_phid, self.jac_phid, self.pbp.dbcs)
         self.K_phid.assemble()
-
-        self.K_list[2][4] = self.K_phid
 
         # derivative of potential w.r.t. ALE displacement
         self.K_mud.zeroEntries()
         fem.petsc.assemble_matrix(self.K_mud, self.jac_mud, [])
         self.K_mud.assemble()
-
-        self.K_list[3][4] = self.K_mud
 
     def get_solver_index_sets(self, isoptions={}):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable

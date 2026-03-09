@@ -75,7 +75,7 @@ class FSIFlow0DProblem(problem_base):
 
         # instantiate problem classes
         # FSI - fluid-ALE-solid
-        self.pbfas = FSIProblem(
+        self.pbfsi = FSIProblem(
             pbase,
             io_params,
             time_params_solid,
@@ -117,12 +117,12 @@ class FSIFlow0DProblem(problem_base):
             iof,
             mor_params=mor_params,
             is_multiphase=is_multiphase,
-            pbfa=self.pbfas.pbfa,
+            pbfa=self.pbfsi.pbfa,
         )
 
-        self.pbs = self.pbfas.pbs
-        self.pbf = self.pbfas.pbfa.pbf
-        self.pba = self.pbfas.pbfa.pba
+        self.pbs = self.pbfsi.pbs
+        self.pbf = self.pbfsi.pbfa.pbf
+        self.pba = self.pbfsi.pbfa.pba
 
         self.pbf0 = self.pbfa0.pbf0
         self.pb0 = self.pbfa0.pb0
@@ -136,7 +136,7 @@ class FSIFlow0DProblem(problem_base):
         self.pba.results_to_write = io_params["results_to_write"][2]
 
         self.incompressible_2field = self.pbs.incompressible_2field
-        self.fsi_system = self.pbfas.fsi_system
+        self.fsi_system = self.pbfsi.fsi_system
 
         self.io = io
 
@@ -146,12 +146,12 @@ class FSIFlow0DProblem(problem_base):
         self.localsolve = False
         self.print_subiter = self.pbf0.print_subiter
 
-        self.numdof = self.pbfas.numdof + self.pbf0.LM.getSize()
+        self.numdof = self.pbfsi.numdof + self.pbf0.LM.getSize()
 
         self.sub_solve = True
 
         # number of fields involved
-        if self.pbfas.fsi_system == "neumann_neumann":
+        if self.pbfsi.fsi_system == "neumann_neumann":
             if self.pbs.incompressible_2field:
                 self.nfields = 7
             else:
@@ -173,7 +173,7 @@ class FSIFlow0DProblem(problem_base):
         )
 
     def get_problem_var_list(self):
-        if self.pbfas.fsi_system == "neumann_neumann":
+        if self.pbfsi.fsi_system == "neumann_neumann":
             if self.pbs.incompressible_2field:
                 if self.pbf.num_dupl > 1:
                     is_ghosted = [1, 1, 1, 2, 1, 0, 1]
@@ -184,7 +184,7 @@ class FSIFlow0DProblem(problem_base):
                     self.pbs.p.x.petsc_vec,
                     self.pbf.v.x.petsc_vec,
                     self.pbf.p.x.petsc_vec,
-                    self.pbfas.lm.x.petsc_vec,
+                    self.pbfsi.lm.x.petsc_vec,
                     self.pbf0.LM,
                     self.pba.d.x.petsc_vec,
                 ], is_ghosted
@@ -197,7 +197,7 @@ class FSIFlow0DProblem(problem_base):
                     self.pbs.u.x.petsc_vec,
                     self.pbf.v.x.petsc_vec,
                     self.pbf.p.x.petsc_vec,
-                    self.pbfas.lm.x.petsc_vec,
+                    self.pbfsi.lm.x.petsc_vec,
                     self.pbf0.LM,
                     self.pba.d.x.petsc_vec,
                 ], is_ghosted
@@ -230,7 +230,7 @@ class FSIFlow0DProblem(problem_base):
 
     def set_variational_forms(self):
         # FSI - fluid, solid, ALE, + FSI coup
-        self.pbfas.set_variational_forms()
+        self.pbfsi.set_variational_forms()
         # fluid-0D, ALE-0D coup
         self.pbf0.set_variational_forms_coupling()
         self.pbfa0.set_variational_forms_coupling()
@@ -240,7 +240,7 @@ class FSIFlow0DProblem(problem_base):
 
     def set_problem_residual_jacobian_forms(self):
         # FSI - fluid, solid, ALE, + FSI coup
-        self.pbfas.set_problem_residual_jacobian_forms()
+        self.pbfsi.set_problem_residual_jacobian_forms()
         # fluid-0D, ALE-0D coup
         self.pbf0.set_problem_residual_jacobian_forms_coupling()
         self.pbfa0.set_problem_residual_jacobian_forms_coupling()
@@ -250,7 +250,7 @@ class FSIFlow0DProblem(problem_base):
 
     def set_problem_vector_matrix_structures(self):
         # FSI - fluid, solid, ALE, + FSI coup
-        self.pbfas.set_problem_vector_matrix_structures()
+        self.pbfsi.set_problem_vector_matrix_structures()
         # fluid-0D, ALE-0D coup
         self.pbf0.set_problem_vector_matrix_structures_coupling()
         self.pbfa0.set_problem_vector_matrix_structures_coupling()
@@ -263,7 +263,7 @@ class FSIFlow0DProblem(problem_base):
             ofs = 1
         else:
             ofs = 0
-        if self.pbfas.fsi_system == "neumann_neumann":
+        if self.pbfsi.fsi_system == "neumann_neumann":
             ofc = 1
         else:
             ofc = 0
@@ -271,28 +271,28 @@ class FSIFlow0DProblem(problem_base):
         # fluid-0D coup - prior to fluid assemble!
         self.pbf0.assemble_residual_coupling(t, subsolver=subsolver)
         # FSI - fluid, solid, ALE, + FSI coup
-        self.pbfas.assemble_residual(t)
+        self.pbfsi.assemble_residual(t)
 
         # solid
-        self.r_list[0] = self.pbfas.r_list[0]
+        self.r_list[0] = self.pbfsi.r_list[0]
         if self.pbs.incompressible_2field:
-            self.r_list[1] = self.pbfas.r_list[1]
+            self.r_list[1] = self.pbfsi.r_list[1]
         # fluid
-        self.r_list[1 + ofs] = self.pbfas.r_list[1 + ofs]
-        self.r_list[2 + ofs] = self.pbfas.r_list[2 + ofs]
-        if self.pbfas.fsi_system == "neumann_neumann":
-            self.r_list[3 + ofs] = self.pbfas.r_list[3 + ofs]
+        self.r_list[1 + ofs] = self.pbfsi.r_list[1 + ofs]
+        self.r_list[2 + ofs] = self.pbfsi.r_list[2 + ofs]
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            self.r_list[3 + ofs] = self.pbfsi.r_list[3 + ofs]
         # 3D-0D constraint
         self.r_list[3 + ofc + ofs] = self.pbf0.r_list[2]
         # ALE
-        self.r_list[4 + ofc + ofs] = self.pbfas.r_list[3 + ofc + ofs]
+        self.r_list[4 + ofc + ofs] = self.pbfsi.r_list[3 + ofc + ofs]
 
     def assemble_stiffness(self, t, subsolver=None):
         if self.pbs.incompressible_2field:
             ofs = 1
         else:
             ofs = 0
-        if self.pbfas.fsi_system == "neumann_neumann":
+        if self.pbfsi.fsi_system == "neumann_neumann":
             ofc = 1
         else:
             ofc = 0
@@ -302,58 +302,58 @@ class FSIFlow0DProblem(problem_base):
         # ALE-0D
         self.pbfa0.assemble_stiffness_coupling(t)
         # FSI - fluid, solid, ALE, + FSI coup
-        self.pbfas.assemble_stiffness(t)
+        self.pbfsi.assemble_stiffness(t)
 
         # solid momentum
-        self.K_list[0][0] = self.pbfas.K_list[0][0]   # w.r.t. solid displacement
+        self.K_list[0][0] = self.pbfsi.K_list[0][0]                  # w.r.t. solid displacement
         if self.pbs.incompressible_2field:
-            self.K_list[0][1] = self.pbfas.K_list[0][1]   # w.r.t. solid pressure
-        if self.pbfas.fsi_system == "neumann_neumann":
-            self.K_list[0][3 + ofs] = self.pbfas.K_list[0][3 + ofs]   # w.r.t. Lagrange multiplier
-        if self.pbfas.fsi_system == "neumann_dirichlet":
-            self.K_list[0][1 + ofs] = self.pbfas.K_list[0][1 + ofs]   # w.r.t. fluid velocity
+            self.K_list[0][1] = self.pbfsi.K_list[0][1]              # w.r.t. solid pressure
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            self.K_list[0][3 + ofs] = self.pbfsi.K_list[0][3 + ofs]  # w.r.t. Lagrange multiplier
+        if self.pbfsi.fsi_system == "neumann_dirichlet":
+            self.K_list[0][1 + ofs] = self.pbfsi.K_list[0][1 + ofs]  # w.r.t. fluid velocity
 
         # solid incompressibility
         if self.pbs.incompressible_2field:
-            self.K_list[1][0] = self.pbfas.K_list[1][0]   # w.r.t. solid displacement
-            self.K_list[1][1] = self.pbfas.K_list[1][1]   # w.r.t. solid pressure
-            if self.pbfas.fsi_system == "neumann_dirichlet":
-                self.K_list[1 + ofs][1] = self.pbfas.K_list[1 + ofs][1]   # w.r.t. fluid velocity
+            self.K_list[1][0] = self.pbfsi.K_list[1][0]                  # w.r.t. solid displacement
+            self.K_list[1][1] = self.pbfsi.K_list[1][1]                  # w.r.t. solid pressure
+            if self.pbfsi.fsi_system == "neumann_dirichlet":
+                self.K_list[1 + ofs][1] = self.pbfsi.K_list[1 + ofs][1]  # w.r.t. fluid velocity
 
         # fluid momentum
-        self.K_list[1 + ofs][1 + ofs] = self.pbfas.K_list[1 + ofs][1 + ofs]   # w.r.t. fluid velocity
-        self.K_list[1 + ofs][2 + ofs] = self.pbfas.K_list[1 + ofs][2 + ofs]   # w.r.t. fluid pressure
-        if self.pbfas.fsi_system == "neumann_neumann":
-            self.K_list[1 + ofs][3 + ofs] = self.pbfas.K_list[1 + ofs][3 + ofs]   # w.r.t. Lagrange multiplier
-        if self.pbfas.fsi_system == "neumann_dirichlet":
-            self.K_list[1 + ofs][0] = self.pbfas.K_list[1 + ofs][0]   # w.r.t. solid displacement
-        self.K_list[1 + ofs][3 + ofc + ofs] = self.pbf0.K_vs   # w.r.t. 0D LM
-        self.K_list[1 + ofs][4 + ofc + ofs] = self.pbfas.K_list[1 + ofs][3 + ofc + ofs]   # w.r.t. ALE displacement
+        self.K_list[1 + ofs][1 + ofs] = self.pbfsi.K_list[1 + ofs][1 + ofs]              # w.r.t. fluid velocity
+        self.K_list[1 + ofs][2 + ofs] = self.pbfsi.K_list[1 + ofs][2 + ofs]              # w.r.t. fluid pressure
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            self.K_list[1 + ofs][3 + ofs] = self.pbfsi.K_list[1 + ofs][3 + ofs]          # w.r.t. Lagrange multiplier
+        if self.pbfsi.fsi_system == "neumann_dirichlet":
+            self.K_list[1 + ofs][0] = self.pbfsi.K_list[1 + ofs][0]                      # w.r.t. solid displacement
+        self.K_list[1 + ofs][3 + ofc + ofs] = self.pbf0.K_vs                             # w.r.t. 0D LM
+        self.K_list[1 + ofs][4 + ofc + ofs] = self.pbfsi.K_list[1 + ofs][3 + ofc + ofs]  # w.r.t. ALE displacement
 
         # fluid continuity
-        self.K_list[2 + ofs][1 + ofs] = self.pbfas.K_list[2 + ofs][1 + ofs]  # w.r.t. fluid velocity
-        self.K_list[2 + ofs][2 + ofs] = self.pbfas.K_list[2 + ofs][2 + ofs]  # w.r.t. fluid pressure
-        self.K_list[2 + ofs][4 + ofc + ofs] = self.pbfas.K_list[2 + ofs][3 + ofc + ofs]   # w.r.t. ALE displacement
+        self.K_list[2 + ofs][1 + ofs] = self.pbfsi.K_list[2 + ofs][1 + ofs]              # w.r.t. fluid velocity
+        self.K_list[2 + ofs][2 + ofs] = self.pbfsi.K_list[2 + ofs][2 + ofs]              # w.r.t. fluid pressure
+        self.K_list[2 + ofs][4 + ofc + ofs] = self.pbfsi.K_list[2 + ofs][3 + ofc + ofs]  # w.r.t. ALE displacement
 
         # FSI coupling constraint
-        if self.pbfas.fsi_system == "neumann_neumann":
-            self.K_list[3 + ofs][0] = self.pbfas.K_list[3 + ofs][0]  # w.r.t. solid displacement
-            self.K_list[3 + ofs][1 + ofs] = self.pbfas.K_list[3 + ofs][1 + ofs]  # w.r.t. fluid velocity
-            self.K_list[3 + ofs][3 + ofs] = self.pbfas.K_list[3 + ofs][3 + ofs]  # w.r.t. Lagrange multiplier (zero, only LM DBCs)
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            self.K_list[3 + ofs][0] = self.pbfsi.K_list[3 + ofs][0]              # w.r.t. solid displacement
+            self.K_list[3 + ofs][1 + ofs] = self.pbfsi.K_list[3 + ofs][1 + ofs]  # w.r.t. fluid velocity
+            self.K_list[3 + ofs][3 + ofs] = self.pbfsi.K_list[3 + ofs][3 + ofs]  # w.r.t. Lagrange multiplier (zero, only LM DBCs)
 
         # 3D-0D
-        self.K_list[3 + ofc + ofs][1 + ofs] = self.pbf0.K_sv   # w.r.t. fluid velocity
+        self.K_list[3 + ofc + ofs][1 + ofs] = self.pbf0.K_sv         # w.r.t. fluid velocity
         self.K_list[3 + ofc + ofs][3 + ofc + ofs] = self.pbf0.K_lm   # w.r.t. 0D LM
-        self.K_list[3 + ofc + ofs][4 + ofc + ofs] = self.pbfa0.K_sd   # w.r.t. ALE displacement
+        self.K_list[3 + ofc + ofs][4 + ofc + ofs] = self.pbfa0.K_sd  # w.r.t. ALE displacement
 
         # ALE
-        self.K_list[4 + ofc + ofs][4 + ofc + ofs] = self.pbfas.K_list[3 + ofc + ofs][3 + ofc + ofs]   # w.r.t. fluid velocity
-        self.K_list[4 + ofc + ofs][1 + ofs] = self.pbfas.K_list[3 + ofc + ofs][1 + ofs]   # w.r.t. ALE displacement
+        self.K_list[4 + ofc + ofs][4 + ofc + ofs] = self.pbfsi.K_list[3 + ofc + ofs][3 + ofc + ofs]  # w.r.t. fluid velocity
+        self.K_list[4 + ofc + ofs][1 + ofs] = self.pbfsi.K_list[3 + ofc + ofs][1 + ofs]              # w.r.t. ALE displacement
 
 
     def get_solver_index_sets(self, isoptions={}):
         # iterative solvers here are only implemented for neumann_dirichlet system!
-        assert(self.pbfas.fsi_system == "neumann_dirichlet")
+        assert(self.pbfsi.fsi_system == "neumann_dirichlet")
 
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
@@ -428,49 +428,49 @@ class FSIFlow0DProblem(problem_base):
             self.pb0.cardvasc0D.read_restart(self.pb0.output_path_0D, sname + "_lm", N, self.pbf0.LM_old)
 
     def evaluate_initial(self):
-        self.pbfas.evaluate_initial()
+        self.pbfsi.evaluate_initial()
         self.pbf0.evaluate_initial_coupling()
 
     def write_output_ini(self):
         # self.io.write_output(self, writemesh=True)
-        self.pbfas.write_output_ini()
+        self.pbfsi.write_output_ini()
         #self.pbf0.write_output_ini()
 
     def write_output_pre(self):
-        self.pbfas.write_output_pre()
+        self.pbfsi.write_output_pre()
         #self.pbf0.write_output_pre()
 
     def evaluate_pre_solve(self, t, N, dt):
-        self.pbfas.evaluate_pre_solve(t, N, dt)
+        self.pbfsi.evaluate_pre_solve(t, N, dt)
         self.pbf0.evaluate_pre_solve(t, N, dt)
 
     def evaluate_post_solve(self, t, N):
-        self.pbfas.evaluate_post_solve(t, N)
+        self.pbfsi.evaluate_post_solve(t, N)
         self.pbf0.evaluate_post_solve(t, N)
 
     def set_output_state(self, N):
-        self.pbfas.set_output_state(N)
+        self.pbfsi.set_output_state(N)
         self.pbf0.set_output_state(N)
 
     def write_output(self, N, t, mesh=False):
-        self.pbfas.write_output(N, t)
+        self.pbfsi.write_output(N, t)
         self.pbf0.write_output_coupling(N, t)  # writes LMs of 3D-0D
 
     def update(self):
         # update time step - solid,fluid,ALE, fluid-flow0d coup
-        self.pbfas.update()
+        self.pbfsi.update()
         self.pbf0.update_coupling()
 
     def print_to_screen(self):
-        self.pbfas.print_to_screen()
+        self.pbfsi.print_to_screen()
         self.pbf0.print_to_screen_coupling()
 
     def induce_state_change(self):
-        self.pbfas.induce_state_change()
+        self.pbfsi.induce_state_change()
         self.pbf0.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
-        self.pbfas.write_restart(self, N, force=force)
+        self.pbfsi.write_restart(self, N, force=force)
         self.pb0.write_restart(sname, N, force=force)
 
         if (self.pbf.io.write_restart_every > 0 and N % self.pbf.io.write_restart_every == 0) or force:
@@ -489,7 +489,7 @@ class FSIFlow0DProblem(problem_base):
         return self.pbfa0.check_abort(t)
 
     def destroy(self):
-        self.pbfas.destroy()
+        self.pbfsi.destroy()
         self.pbfa0.destroy()
 
 
@@ -520,7 +520,7 @@ class FSIFlow0DSolver(solver_base):
             )
 
             # weak form at initial state for consistent initial acceleration solve
-            if self.pb.pbfas.fsi_system=="neumann_dirichlet":
+            if self.pb.pbfsi.fsi_system=="neumann_dirichlet":
                 weakform_a_solid = (
                     self.pb.pbs.deltaW_kin_old
                     + self.pb.pbs.deltaW_int_old
@@ -531,7 +531,7 @@ class FSIFlow0DSolver(solver_base):
                     self.pb.pbs.deltaW_kin_old
                     + self.pb.pbs.deltaW_int_old
                     - self.pb.pbs.deltaW_ext_old
-                    + self.pb.pbfas.work_coupling_solid_old
+                    + self.pb.pbfsi.work_coupling_solid_old
                 )
 
             weakform_lin_aa_solid = ufl.derivative(
@@ -561,7 +561,7 @@ class FSIFlow0DSolver(solver_base):
             )
 
             # weak form at initial state for consistent initial acceleration solve
-            if self.pb.pbfas.fsi_system=="neumann_dirichlet":
+            if self.pb.pbfsi.fsi_system=="neumann_dirichlet":
                 weakform_a_fluid = (
                     self.pb.pbf.deltaW_kin_old
                     + self.pb.pbf.deltaW_int_old
@@ -573,7 +573,7 @@ class FSIFlow0DSolver(solver_base):
                     self.pb.pbf.deltaW_kin_old
                     + self.pb.pbf.deltaW_int_old
                     - self.pb.pbf.deltaW_ext_old
-                    - self.pb.pbfas.power_coupling_fluid_old
+                    - self.pb.pbfsi.power_coupling_fluid_old
                     - self.pb.pbf0.power_coupling_old
                 )
 

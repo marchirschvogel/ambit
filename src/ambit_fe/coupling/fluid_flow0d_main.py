@@ -585,10 +585,12 @@ class FluidmechanicsFlow0DProblem(problem_base):
         # fluid main blocks
         self.pbf.assemble_stiffness(t)
 
-        self.K_list[0][0] = self.pbf.K_list[0][0]
-        self.K_list[0][1] = self.pbf.K_list[0][1]
-        self.K_list[1][0] = self.pbf.K_list[1][0]
-        self.K_list[1][1] = self.pbf.K_list[1][1]  # should be only non-zero if we have stabilization...
+        # fluid momentum
+        self.K_list[0][0] = self.pbf.K_list[0][0]  # w.r.t. fluid velocity
+        self.K_list[0][1] = self.pbf.K_list[0][1]  # w.r.t. fluid pressure
+        # fluid continuity
+        self.K_list[1][0] = self.pbf.K_list[1][0]  # w.r.t. fluid velocity
+        self.K_list[1][1] = self.pbf.K_list[1][1]  # w.r.t. fluid pressure
 
         if self.condense_0d:
             if self.condense_0d_model == "full":
@@ -596,9 +598,11 @@ class FluidmechanicsFlow0DProblem(problem_base):
             if self.condense_0d_model == "diag":
                 self.pbf.K_vv.axpy(-1.0, self.Kvs_Klminvmat_Ksv)
         else:
-            self.K_list[2][2] = self.K_lm
-            self.K_list[0][2] = self.K_vs
-            self.K_list[2][0] = self.K_sv
+            # 3D-0D constraint
+            self.K_list[2][2] = self.K_lm  # w.r.t. 0D LM
+            self.K_list[2][0] = self.K_sv  # w.r.t. fluid velocity
+            # fluid momentum
+            self.K_list[0][2] = self.K_vs  # w.r.t. 0D LM
 
     def assemble_stiffness_coupling(self, t, subsolver=None):
         # Lagrange multipliers (pressures) to be passed to 0D model

@@ -23,7 +23,7 @@ class variationalform(variationalform_base):
         if self.formulation == "nonconservative":
             assert(phi[0] is None)
             """ TeX:
-            \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+            \int\limits_{\Omega} \rho \left(\frac{\partial\boldsymbol{v}}{\partial t} + (\nabla\boldsymbol{v})\boldsymbol{v}\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return rho_ * ufl.dot(a + ufl.grad(v) * v, self.var_v) * ddomain
         elif self.formulation == "conservative":
@@ -32,7 +32,7 @@ class variationalform(variationalform_base):
             else:
                 rhodot_ = ufl.as_ufl(0)
             """ TeX:
-            \int\limits_{\Omega} \left(\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+            \int\limits_{\Omega} \left(\frac{\partial(\rho\boldsymbol{v})}{\partial t} + \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v}))\right) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return ufl.dot(rho_*a + rhodot_*v + ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
         else:
@@ -43,12 +43,12 @@ class variationalform(variationalform_base):
         if self.formulation == "nonconservative":
             assert(phi[0] is None)
             """ TeX:
-            \int\limits_{\Omega} \rho (\nabla\boldsymbol{v})\boldsymbol{v} \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+            \int\limits_{\Omega} \rho (\nabla\boldsymbol{v})\boldsymbol{v} \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return rho_ * ufl.dot(ufl.grad(v) * v, self.var_v) * ddomain
         elif self.formulation == "conservative":
             """ TeX:
-            \int\limits_{\Omega} \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) \cdot \delta\boldsymbol{v} \,\mathrm{d}v
+            \int\limits_{\Omega} \nabla\cdot(\rho(\boldsymbol{v}\otimes\boldsymbol{v})) \cdot \delta\boldsymbol{v} \,\mathrm{d}V
             """
             return ufl.dot(ufl.div(rho_*ufl.outer(v, v)), self.var_v) * ddomain
         else:
@@ -65,7 +65,7 @@ class variationalform(variationalform_base):
     # Internal virtual power \delta \mathcal{P}_{\mathrm{int}}
     def deltaW_int(self, sig, ddomain, F=None):
         """ TeX:
-        \int\limits_{\Omega}\boldsymbol{\sigma} : \nabla\delta\boldsymbol{v}\,\mathrm{d}v
+        \int\limits_{\Omega}\boldsymbol{\sigma} : \nabla\delta\boldsymbol{v}\,\mathrm{d}V
         """
         return ufl.inner(sig, ufl.grad(self.var_v)) * ddomain
 
@@ -78,12 +78,12 @@ class variationalform(variationalform_base):
             rhodot_ = ufl.as_ufl(0)
         if self.formulation == "nonconservative":
             """ TeX:
-            \int\limits_{\Omega}\left(\frac{\partial\rho}{\partial t} + \nabla\rho\cdot\boldsymbol{v} + \rho\nabla\cdot\boldsymbol{v}\right)\delta p\,\mathrm{d}v
+            \int\limits_{\Omega}\left(\frac{\partial\rho}{\partial t} + \nabla\rho\cdot\boldsymbol{v} + \rho\nabla\cdot\boldsymbol{v}\right)\delta p\,\mathrm{d}V
             """
             return (rhodot_ + ufl.dot(ufl.grad(rho_), v) + rho_*ufl.div(v)) * var_p * ddomain
         elif self.formulation == "conservative":
             """ TeX:
-            \int\limits_{\Omega}\left(\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v})\right)\delta p \,\mathrm{d}v = 0
+            \int\limits_{\Omega}\left(\frac{\partial\rho}{\partial t} + \nabla\cdot(\rho\boldsymbol{v})\right)\delta p \,\mathrm{d}V = 0
             """
             return (rhodot_ + ufl.div(rho_*v)) * var_p * ddomain
         else:

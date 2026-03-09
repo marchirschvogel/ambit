@@ -351,10 +351,13 @@ class PhasefieldProblem(problem_base):
         fem.petsc.assemble_matrix(self.K_muphi, self.jac_muphi, [])
         self.K_muphi.assemble()
 
-        self.K_list[0][0] = self.K_phiphi
-        self.K_list[0][1] = self.K_phimu
-        self.K_list[1][1] = self.K_mumu
-        self.K_list[1][0] = self.K_muphi
+        # phase field
+        self.K_list[0][0] = self.K_phiphi  # w.r.t. phase
+        self.K_list[0][1] = self.K_phimu   # w.r.t. potential
+
+        # potential
+        self.K_list[1][1] = self.K_mumu    # w.r.t. potential
+        self.K_list[1][0] = self.K_muphi   # w.r.t. phase
 
     ### now the base routines for this problem
 
