@@ -234,7 +234,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
             self.k_sd_subvec, sze_sd = [], []
 
             for n in range(self.pbf0.num_coupling_surf):
-                self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pba.V_d, self.comm, io=self.pba.io, identifier=self.pbf0.surface_vq_ids[n], codim=self.pba.io.mesh.topology.dim-1)
+                self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pba.V_d, self.comm, pb=self.pba, identifier=self.pbf0.surface_vq_ids[n], codim=self.pba.io.mesh.topology.dim-1)
 
                 self.k_sd_subvec.append(self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
@@ -413,7 +413,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         self.pbfa.set_output_state(N)
         self.pb0.set_output_state(N)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine
         self.pb0.write_output(N, t)
 

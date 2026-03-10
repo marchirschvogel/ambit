@@ -50,17 +50,17 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set(Vspace, comm, nodes_loc=None, io=None, identifier=None, codim=None, sub=None, local_indices=False, mapper=None, mask_owned=False):
+def get_index_set(Vspace, comm, nodes_loc=None, pb=None, identifier=None, codim=None, sub=None, local_indices=False, mapper=None, mask_owned=False):
     # get (local) nodes if not already provided
     if nodes_loc is None:
-        if codim == io.mesh.topology.dim:
-            mdata = io.mt_d
-        if codim == io.mesh.topology.dim - 1:
-            mdata = io.mt_b
-        if codim == io.mesh.topology.dim - 2:
-            mdata = io.mt_sb
-        if codim == io.mesh.topology.dim - 3:
-            mdata = io.mt_ssb
+        if codim == pb.mesh.topology.dim:
+            mdata = pb.mt_d
+        if codim == pb.mesh.topology.dim - 1:
+            mdata = pb.mt_b
+        if codim == pb.mesh.topology.dim - 2:
+            mdata = pb.mt_sb
+        if codim == pb.mesh.topology.dim - 3:
+            mdata = pb.mt_ssb
 
         if all(isinstance(x, int) for x in identifier):
             nodes_loc = fem.locate_dofs_topological(
@@ -100,7 +100,7 @@ def get_index_set(Vspace, comm, nodes_loc=None, io=None, identifier=None, codim=
     # only extract dofs associated to a direction - x(0), y(1), z(2) - if given
     if sub is not None:
         idxs_i = iset.getIndices()
-        idxs_i_new = idxs_i[sub::io.mesh.topology.dim]
+        idxs_i_new = idxs_i[sub::pb.mesh.topology.dim]
         iset = PETSc.IS().createGeneral(idxs_i_new, comm=comm)
 
     return iset

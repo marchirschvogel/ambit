@@ -170,8 +170,8 @@ class FluidmechanicsAleProblem(problem_base):
                 ids_fluid_ale = self.coupling_fluid_ale["interface"]
                 nodes_fluid_ale = fem.locate_dofs_topological(
                     self.pba.V_d,
-                    self.io.mesh.topology.dim - 1,
-                    self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_fluid_ale)],
+                    self.pbf.mesh.topology.dim - 1,
+                    self.pbf.mt_b.indices[np.isin(self.pbf.mt_b.values, ids_fluid_ale)],
                 )
             else: # can only be locator function otherwise...
                 nodes_fluid_ale_ = []
@@ -199,8 +199,8 @@ class FluidmechanicsAleProblem(problem_base):
                 ids_ale_fluid = self.coupling_ale_fluid["interface"]
                 nodes_ale_fluid = fem.locate_dofs_topological(
                     self.pbf.V_v,
-                    self.io.mesh.topology.dim - 1,
-                    self.io.mt_b.indices[np.isin(self.io.mt_b.values, ids_ale_fluid)],
+                    self.pbf.mesh.topology.dim - 1,
+                    self.pbf.mt_b.indices[np.isin(self.pbf.mt_b.values, ids_ale_fluid)],
                 )
             else: # can only be locator function otherwise...
                 nodes_ale_fluid_ = []
@@ -227,7 +227,7 @@ class FluidmechanicsAleProblem(problem_base):
 
         # derivative of fluid continuity w.r.t. ALE displacement
         self.weakform_lin_pd = []
-        for n in range(self.pbf.io.num_domains):
+        for n in range(self.pbf.num_domains):
             self.weakform_lin_pd.append(ufl.derivative(self.pbf.weakform_p[n], self.pba.d, self.pba.dd))
 
     def set_problem_residual_jacobian_forms(self, pre=False):
@@ -520,7 +520,7 @@ class FluidmechanicsAleProblem(problem_base):
         self.pbf.set_output_state(N)
         self.pba.set_output_state(N)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)
 
     def update(self):

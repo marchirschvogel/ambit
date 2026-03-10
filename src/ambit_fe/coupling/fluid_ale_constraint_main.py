@@ -181,7 +181,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
                 if self.pbfc.on_subdomain[i]:
                     # entity map child to parent
                     em_u = {
-                        self.io.mesh: self.pbf.io.submshes_emap[
+                        self.pbf.mesh: self.pbf.io.submshes_emap[
                             self.coupling_params["constraint_physics"][i]["domain"]
                         ][1]
                     }
@@ -213,7 +213,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
             self.k_sd_subvec, sze_sd = [], []
 
             for n in range(self.pbfc.num_coupling_surf):
-                self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pba.V_d, self.comm, io=self.pba.io, identifier=self.pbfc.surface_vq_ids[n], codim=self.pba.io.mesh.topology.dim-1)
+                self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pba.V_d, self.comm, pb=self.pba, identifier=self.pbfc.surface_vq_ids[n], codim=self.pba.io.mesh.topology.dim-1)
 
                 self.k_sd_subvec.append(self.k_sd_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
@@ -396,7 +396,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
     def set_output_state(self, N):
         self.pbfa.set_output_state(N)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine
 
         if self.pbf.io.write_results_every > 0 and N % self.pbf.io.write_results_every == 0:

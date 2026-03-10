@@ -367,7 +367,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         self.pbfa.set_output_state(N)
         self.pbp.set_output_state(N)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)  # combined fluid-ALE output routine
 
     def update(self):

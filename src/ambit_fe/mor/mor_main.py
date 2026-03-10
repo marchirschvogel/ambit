@@ -369,7 +369,7 @@ class ModelOrderReduction:
                     + ".xdmf",
                     "w",
                 )
-                outfile.write_mesh(self.pb.io.mesh)
+                outfile.write_mesh(self.pb.mesh)
                 podfunc = fem.Function(
                     self.Vspace,
                     name="POD_Mode_P" + str(h + 1) + "_" + str(i + 1),

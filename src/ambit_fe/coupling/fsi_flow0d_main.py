@@ -52,13 +52,9 @@ class FSIFlow0DProblem(problem_base):
         coupling_params_fluid_ale,
         coupling_params_fluid_flow0d,
         io,
-        ios,
-        iof,
         mor_params={},
         is_multiphase=False,
     ):
-        # problem_base.__init__(self, io_params, time_params_solid, comm=comm, comm_sq=comm_sq)
-
         self.pbase = pbase
 
         # pointer to communicator
@@ -69,7 +65,6 @@ class FSIFlow0DProblem(problem_base):
         self.problem_physics = "fsi_flow0d"
 
         self.io = io
-        self.ios, self.iof = ios, iof
 
         self.have_condensed_variables = False
 
@@ -93,8 +88,6 @@ class FSIFlow0DProblem(problem_base):
             time_curves,
             coupling_params_fluid_ale,
             io,
-            ios,
-            iof,
             mor_params=mor_params,
             is_multiphase=is_multiphase,
         )
@@ -114,7 +107,7 @@ class FSIFlow0DProblem(problem_base):
             time_curves,
             coupling_params_fluid_ale,
             coupling_params_fluid_flow0d,
-            iof,
+            io,
             mor_params=mor_params,
             is_multiphase=is_multiphase,
             pbfa=self.pbfsi.pbfa,
@@ -137,8 +130,6 @@ class FSIFlow0DProblem(problem_base):
 
         self.incompressible_2field = self.pbs.incompressible_2field
         self.fsi_system = self.pbfsi.fsi_system
-
-        self.io = io
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1
@@ -452,7 +443,7 @@ class FSIFlow0DProblem(problem_base):
         self.pbfsi.set_output_state(N)
         self.pbf0.set_output_state(N)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.pbfsi.write_output(N, t)
         self.pbf0.write_output_coupling(N, t)  # writes LMs of 3D-0D
 

@@ -58,15 +58,18 @@ class AleProblem(problem_base):
         self.order_disp = fem_params["order_disp"]
         self.quad_degree = fem_params["quad_degree"]
 
-        # TODO: Find nicer solution here...
-        if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d" or self.pbase.problem_type == "fsi_multiphase":
-            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
-        else:
-            self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], self.quad_degree, bcdict=bc_dict
-            )
+        # collect relevant domain data and mesh
+        self.domain_ids = self.io.domain_ids[self.io.m_id_ale]
+        self.num_domains = self.io.num_domains[self.io.m_id_ale]
+        self.mesh = self.io.mesh_[self.io.m_id_ale]
+        # mesh tags for DBCs
+        self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_ale], self.io.mt_b_[self.io.m_id_ale], self.io.mt_sb_[self.io.m_id_ale]
+        # global measures for weak BCs
+        self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+        # results files dictionary for I/O
+        self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
 
         self.localsolve = False  # no idea what might have to be solved locally...
         self.prestress_initial = False  # guess prestressing in ALE is somehow senseless...
@@ -76,21 +79,21 @@ class AleProblem(problem_base):
         self.sub_solve = False
         self.print_subiter = False
 
-        self.dim = self.io.mesh.geometry.dim
+        self.dim = self.mesh.geometry.dim
 
         # type of discontinuous function spaces
         if (
-            str(self.io.mesh.ufl_cell()) == "tetrahedron"
-            or str(self.io.mesh.ufl_cell()) == "triangle"
-            or str(self.io.mesh.ufl_cell()) == "triangle3D"
+            str(self.mesh.ufl_cell()) == "tetrahedron"
+            or str(self.mesh.ufl_cell()) == "triangle"
+            or str(self.mesh.ufl_cell()) == "triangle3D"
         ):
             dg_type = "DG"
             if (self.order_disp > 1) and self.quad_degree < 3:
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif (
-            str(self.io.mesh.ufl_cell()) == "hexahedron"
-            or str(self.io.mesh.ufl_cell()) == "quadrilateral"
-            or str(self.io.mesh.ufl_cell()) == "quadrilateral3D"
+            str(self.mesh.ufl_cell()) == "hexahedron"
+            or str(self.mesh.ufl_cell()) == "quadrilateral"
+            or str(self.mesh.ufl_cell()) == "quadrilateral3D"
         ):
             dg_type = "DQ"
             if (self.order_disp > 1) and self.quad_degree < 5:
@@ -98,7 +101,7 @@ class AleProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
-        self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
+        self.Vex = self.mesh.ufl_domain().ufl_coordinate_element()
 
         # model order reduction
         self.mor_params = mor_params
@@ -111,54 +114,54 @@ class AleProblem(problem_base):
 
         # function space for d
         self.V_d = fem.functionspace(
-            self.io.mesh,
-            ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            ("Lagrange", self.order_disp, (self.mesh.geometry.dim,)),
         )
 
         # continuous tensor and scalar function spaces of order order_disp
         self.V_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 "Lagrange",
                 self.order_disp,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
-        self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
+        self.V_scalar = fem.functionspace(self.mesh, ("Lagrange", self.order_disp))
 
         # a discontinuous tensor, vector, and scalar function space
         self.Vd_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 dg_type,
                 self.order_disp - 1,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
         self.Vd_vector = fem.functionspace(
-            self.io.mesh,
-            (dg_type, self.order_disp - 1, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            (dg_type, self.order_disp - 1, (self.mesh.geometry.dim,)),
         )
-        self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_disp - 1))
+        self.Vd_scalar = fem.functionspace(self.mesh, (dg_type, self.order_disp - 1))
 
         # for output writing - function spaces on the degree of the mesh
-        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+        self.mesh_degree = self.mesh._ufl_domain._ufl_coordinate_element._degree
         self.V_out_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 "Lagrange",
                 self.mesh_degree,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
         self.V_out_vector = fem.functionspace(
-            self.io.mesh,
-            ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            ("Lagrange", self.mesh_degree, (self.mesh.geometry.dim,)),
         )
-        self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+        self.V_out_scalar = fem.functionspace(self.mesh, ("Lagrange", self.mesh_degree))
 
         # coordinate element function space - based on input mesh
-        self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+        self.Vcoord = fem.functionspace(self.mesh, self.Vex)
 
         # functions
         self.dd = ufl.TrialFunction(self.V_d)  # Incremental displacement
@@ -172,7 +175,7 @@ class AleProblem(problem_base):
         self.d_veryold = fem.Function(self.V_d) # for FSI: if BDF2 is used in fluid, we want a BDF2-like wel
 
         # reference coordinates
-        self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
+        self.x_ref = ufl.SpatialCoordinate(self.mesh)
 
         self.numdof = self.d.x.petsc_vec.getSize()
 
@@ -192,7 +195,7 @@ class AleProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.io.num_domains):
+        for n in range(self.num_domains):
             self.ma.append(
                 ale_kinematics_constitutive.constitutive(self.ki, self.constitutive_models["MAT" + str(n + 1)])
             )
@@ -205,10 +208,7 @@ class AleProblem(problem_base):
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
-            self.io,
-            fem_params=fem_params,
-            vf=self.vf,
-            ti=self.ti,
+            self,
             V_field=self.V_d,
             Vdisc_scalar=self.Vd_scalar,
         )
@@ -243,7 +243,7 @@ class AleProblem(problem_base):
         # internal virtual work
         self.deltaW_int = ufl.as_ufl(0)
 
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             # internal virtual work
             self.deltaW_int += self.vf.deltaW_int(self.ma[n].stress(self.d, self.wel), self.dx(M))
 

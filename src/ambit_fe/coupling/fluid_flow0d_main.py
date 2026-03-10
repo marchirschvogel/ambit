@@ -376,13 +376,13 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.k_vs_subvec, self.k_sv_subvec, sze_vs, sze_sv = [], [], [], []
 
         for n in range(self.num_coupling_surf):
-            self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, identifier=self.surface_vq_ids[n], codim=self.pbf.io.mesh.topology.dim-1)
+            self.dofs_coupling_vq[n] = meshutils.get_index_set(self.pbf.V_v, self.comm, pb=self.pbf, identifier=self.surface_vq_ids[n], codim=self.pbf.io.mesh.topology.dim-1)
 
             self.k_sv_subvec.append(self.k_sv_vec[n].getSubVector(self.dofs_coupling_vq[n]))
 
             sze_sv.append(self.k_sv_subvec[-1].getSize())
 
-            self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbf.V_v, self.comm, io=self.pbf.io, identifier=self.surface_p_ids[n], codim=self.pbf.io.mesh.topology.dim-1)
+            self.dofs_coupling_p[n] = meshutils.get_index_set(self.pbf.V_v, self.comm, pb=self.pbf, identifier=self.surface_p_ids[n], codim=self.pbf.io.mesh.topology.dim-1)
 
             self.k_vs_subvec.append(self.k_vs_vec[n].getSubVector(self.dofs_coupling_p[n]))
 
@@ -946,7 +946,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
         self.pbf.set_output_state(N)
         self.pb0.set_output_state(N)
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.pbf.write_output(N, t)
         self.pb0.write_output(N, t)
         self.write_output_coupling(N, t)

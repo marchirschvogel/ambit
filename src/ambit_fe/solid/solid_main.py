@@ -71,15 +71,18 @@ class SolidmechanicsProblem(problem_base):
         self.order_pres = fem_params.get("order_pres", 1)
         self.quad_degree = fem_params["quad_degree"]
 
-        # TODO: Find nicer solution here...
-        if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d" or self.pbase.problem_type == "fsi_multiphase":
-            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
-        else:
-            self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], self.quad_degree, bcdict=bc_dict
-            )
+        # collect relevant domain data and mesh
+        self.domain_ids = self.io.domain_ids[self.io.m_id_solid]
+        self.num_domains = self.io.num_domains[self.io.m_id_solid]
+        self.mesh = self.io.mesh_[self.io.m_id_solid]
+        # mesh tags for DBCs
+        self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_solid], self.io.mt_b_[self.io.m_id_solid], self.io.mt_sb_[self.io.m_id_solid]
+        # global measures for weak BCs
+        self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+        # results files dictionary for I/O
+        self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
 
         self.incompressibility = fem_params.get("incompressibility", "no")
 
@@ -97,7 +100,7 @@ class SolidmechanicsProblem(problem_base):
 
         # collect domain data
         self.rho0 = []
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             # data for inertial forces: density
             if self.timint != "static":
                 self.rho0.append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho0"])
@@ -121,29 +124,29 @@ class SolidmechanicsProblem(problem_base):
 
         if self.prestress_initial or self.prestress_initial_only:
             self.constitutive_models_prestr = utilities.mat_params_to_dolfinx_constant(
-                constitutive_models, self.io.mesh
+                constitutive_models, self.mesh
             )
 
         self.have_condensed_variables = False
 
-        self.dim = self.io.mesh.geometry.dim
+        self.dim = self.mesh.geometry.dim
 
         self.sub_solve = False
         self.print_subiter = False
 
         # type of discontinuous function spaces
         if (
-            str(self.io.mesh.ufl_cell()) == "tetrahedron"
-            or str(self.io.mesh.ufl_cell()) == "triangle"
-            or str(self.io.mesh.ufl_cell()) == "triangle3D"
+            str(self.mesh.ufl_cell()) == "tetrahedron"
+            or str(self.mesh.ufl_cell()) == "triangle"
+            or str(self.mesh.ufl_cell()) == "triangle3D"
         ):
             self.dg_type = "DG"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 3:
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif (
-            str(self.io.mesh.ufl_cell()) == "hexahedron"
-            or str(self.io.mesh.ufl_cell()) == "quadrilateral"
-            or str(self.io.mesh.ufl_cell()) == "quadrilateral3D"
+            str(self.mesh.ufl_cell()) == "hexahedron"
+            or str(self.mesh.ufl_cell()) == "quadrilateral"
+            or str(self.mesh.ufl_cell()) == "quadrilateral3D"
         ):
             self.dg_type = "DQ"
             if (self.order_disp > 1 or self.order_pres > 1) and self.quad_degree < 5:
@@ -153,9 +156,9 @@ class SolidmechanicsProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
-        self.basix_celltype = utilities.get_basix_cell_type(self.io.mesh.ufl_cell())
+        self.basix_celltype = utilities.get_basix_cell_type(self.mesh.ufl_cell())
 
-        self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
+        self.Vex = self.mesh.ufl_domain().ufl_coordinate_element()
 
         # model order reduction
         self.mor_params = mor_params
@@ -168,65 +171,65 @@ class SolidmechanicsProblem(problem_base):
 
         # function spaces for u and p
         self.V_u = fem.functionspace(
-            self.io.mesh,
-            ("Lagrange", self.order_disp, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            ("Lagrange", self.order_disp, (self.mesh.geometry.dim,)),
         )
-        self.V_p = fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres))
+        self.V_p = fem.functionspace(self.mesh, ("Lagrange", self.order_pres))
 
         # continuous tensor and scalar function spaces of order order_disp
         self.V_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 "Lagrange",
                 self.order_disp,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
-        self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_disp))
+        self.V_scalar = fem.functionspace(self.mesh, ("Lagrange", self.order_disp))
 
         # discontinuous function spaces
         self.Vd_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 self.dg_type,
                 self.order_disp - 1,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
         self.Vd_vector = fem.functionspace(
-            self.io.mesh,
-            (self.dg_type, self.order_disp - 1, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            (self.dg_type, self.order_disp - 1, (self.mesh.geometry.dim,)),
         )
-        self.Vd_scalar = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp - 1))
+        self.Vd_scalar = fem.functionspace(self.mesh, (self.dg_type, self.order_disp - 1))
 
         # for output writing - function spaces on the degree of the mesh
-        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+        self.mesh_degree = self.mesh._ufl_domain._ufl_coordinate_element._degree
         self.V_out_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 "Lagrange",
                 self.mesh_degree,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
         self.V_out_vector = fem.functionspace(
-            self.io.mesh,
-            ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            ("Lagrange", self.mesh_degree, (self.mesh.geometry.dim,)),
         )
-        self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+        self.V_out_scalar = fem.functionspace(self.mesh, ("Lagrange", self.mesh_degree))
 
         # coordinate element function space - based on input mesh
-        self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+        self.Vcoord = fem.functionspace(self.mesh, self.Vex)
 
         # # Quadrature tensor, vector, and scalar elements
-        # Q_tensor = ufl.TensorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
-        # Q_vector = ufl.VectorElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
-        # Q_scalar = ufl.FiniteElement("Quadrature", self.io.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        # Q_tensor = ufl.TensorElement("Quadrature", self.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        # Q_vector = ufl.VectorElement("Quadrature", self.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
+        # Q_scalar = ufl.FiniteElement("Quadrature", self.mesh.ufl_cell(), degree=self.quad_degree, quad_scheme="default")
         #
         # # quadrature function spaces
-        # self.Vq_tensor = fem.FunctionSpace(self.io.mesh, Q_tensor)
-        # self.Vq_vector = fem.FunctionSpace(self.io.mesh, Q_vector)
-        # self.Vq_scalar = fem.FunctionSpace(self.io.mesh, Q_scalar)
+        # self.Vq_tensor = fem.FunctionSpace(self.mesh, Q_tensor)
+        # self.Vq_vector = fem.FunctionSpace(self.mesh, Q_vector)
+        # self.Vq_scalar = fem.FunctionSpace(self.mesh, Q_scalar)
         #
         # self.quadrature_points, wts = basix.make_quadrature(basix_celltype, self.quad_degree)
 
@@ -316,7 +319,7 @@ class SolidmechanicsProblem(problem_base):
         )
 
         # reference coordinates
-        self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
+        self.x_ref = ufl.SpatialCoordinate(self.mesh)
 
         if self.incompressible_2field:
             self.numdof = self.u.x.petsc_vec.getSize() + self.p.x.petsc_vec.getSize()
@@ -355,15 +358,15 @@ class SolidmechanicsProblem(problem_base):
             self.mat_growth_thres,
             self.mat_plastic,
         ) = (
-            [False] * self.io.num_domains,
-            [False] * self.io.num_domains,
-            [False] * self.io.num_domains,
-            [None] * self.io.num_domains,
-            [None] * self.io.num_domains,
-            [] * self.io.num_domains,
-            [False] * self.io.num_domains,
+            [False] * self.num_domains,
+            [False] * self.num_domains,
+            [False] * self.num_domains,
+            [None] * self.num_domains,
+            [None] * self.num_domains,
+            [] * self.num_domains,
+            [False] * self.num_domains,
         )
-        self.mat_active_stress_type = ["ode"] * self.io.num_domains
+        self.mat_active_stress_type = ["ode"] * self.num_domains
 
         self.localsolve, growth_dir = False, None
         (
@@ -375,9 +378,9 @@ class SolidmechanicsProblem(problem_base):
             [],
             [],
             [],
-            [None] * self.io.num_domains,
+            [None] * self.num_domains,
         )
-        for n in range(self.io.num_domains):
+        for n in range(self.num_domains):
             if (
                 "holzapfelogden_dev" in self.constitutive_models["MAT" + str(n + 1)].keys()
                 or "guccione_dev" in self.constitutive_models["MAT" + str(n + 1)].keys()
@@ -543,7 +546,7 @@ class SolidmechanicsProblem(problem_base):
                 self.mat_growth_thres,
                 self.Vd_scalar,
                 self.dx,
-                domids=self.io.domain_ids,
+                domids=self.domain_ids,
                 comm=self.pbase.comm,
                 entity_maps=self.io.entity_maps,
             )
@@ -560,7 +563,7 @@ class SolidmechanicsProblem(problem_base):
                 self.fibarray,
                 self.V_u,
                 self.dx,
-                self.io.domain_ids,
+                self.domain_ids,
                 self.order_disp,
             )
 
@@ -575,7 +578,7 @@ class SolidmechanicsProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.io.num_domains):
+        for n in range(self.num_domains):
             self.ma.append(
                 solid_kinematics_constitutive.constitutive(
                     self.ki,
@@ -591,7 +594,7 @@ class SolidmechanicsProblem(problem_base):
         if self.prestress_initial or self.prestress_initial_only:
             self.ma_prestr = []
             mat_remove = ["visco_green", "growth", "plastic"]
-            for n in range(self.io.num_domains):
+            for n in range(self.num_domains):
                 for mr in mat_remove:
                     try:
                         self.constitutive_models_prestr["MAT" + str(n + 1)].pop(mr)
@@ -620,11 +623,7 @@ class SolidmechanicsProblem(problem_base):
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
-            self.io,
-            fem_params=self.fem_params,
-            vf=self.vf,
-            ti=self.ti,
-            ki=self.ki,
+            self,
             V_field=self.V_u,
             Vdisc_scalar=self.Vd_scalar,
         )
@@ -694,7 +693,7 @@ class SolidmechanicsProblem(problem_base):
             ufl.as_ufl(0),
         )
 
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             if self.timint != "static":
                 # kinetic virtual work
                 self.deltaW_kin += self.vf.deltaW_kin(self.acc, self.rho0[n], self.dx(M))
@@ -892,7 +891,7 @@ class SolidmechanicsProblem(problem_base):
         )
         if self.prestress_initial or self.prestress_initial_only:
             # internal virtual work
-            for n, M in enumerate(self.io.domain_ids):
+            for n, M in enumerate(self.domain_ids):
                 self.deltaW_prestr_int += self.vf.deltaW_int(
                     self.ma_prestr[n].S(self.u, self.p, self.vel, ivar=self.internalvars),
                     self.ki.F(self.u),
@@ -906,11 +905,7 @@ class SolidmechanicsProblem(problem_base):
                     if r["type"] == "dashpot":
                         r["visc"] = 0.0
             bc_prestr = boundaryconditions.boundary_cond(
-                self.io,
-                fem_params=self.fem_params,
-                vf=self.vf,
-                ti=self.ti,
-                ki=self.ki,
+                self,
                 V_field=self.V_u,
                 Vdisc_scalar=self.Vd_scalar,
             )
@@ -981,7 +976,7 @@ class SolidmechanicsProblem(problem_base):
         if self.have_growth:
             self.r_growth, self.del_theta = [], []
 
-            for n in range(self.io.num_domains):
+            for n in range(self.num_domains):
                 if (
                     self.mat_growth[n]
                     and self.mat_growth_trig[n] != "prescribed"
@@ -1011,7 +1006,7 @@ class SolidmechanicsProblem(problem_base):
             self.localdata["fnc"].append([self.Vd_scalar])
 
         if self.have_plasticity:
-            for n in range(self.io.num_domains):
+            for n in range(self.num_domains):
                 if self.mat_plastic[n]:
                     raise ValueError("Finite strain plasticity not yet implemented!")
 
@@ -1030,7 +1025,7 @@ class SolidmechanicsProblem(problem_base):
         # point level with deformation-dependent internal variables (i.e. growth or plasticity), we make use of a more explicit formulation
         # of the linearization which involves the fourth-order material tangent operator Ctang ("derivative" cannot take care of the
         # dependence of the internal variables on the deformation if this dependence is nonlinear and cannot be expressed analytically)
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
 
             if not self.inverse_mechanics:
 
@@ -1145,7 +1140,7 @@ class SolidmechanicsProblem(problem_base):
                 ufl.as_ufl(0),
             )
 
-            for n, M in enumerate(self.io.domain_ids):
+            for n, M in enumerate(self.domain_ids):
 
                 if not self.inverse_mechanics:
 
@@ -1263,7 +1258,7 @@ class SolidmechanicsProblem(problem_base):
             # take care of Frank-Starling law (fiber stretch-dependent contractility)
             if self.have_frank_starling:
                 self.amp_old_, na = [], 0
-                for n in range(self.io.num_domains):
+                for n in range(self.num_domains):
                     if self.mat_active_stress[n] and self.actstress[na].frankstarling:
                         # old stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
                         if self.activemodel[n] == "active_fiber":
@@ -1298,7 +1293,7 @@ class SolidmechanicsProblem(problem_base):
                         self.amp_old_.append(ufl.as_ufl(0))
 
             self.tau_a_, na = [], 0
-            for n in range(self.io.num_domains):
+            for n in range(self.num_domains):
                 if self.mat_active_stress[n]:
                     if self.mat_active_stress_type[n] == "ode":
                         # stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
@@ -1364,7 +1359,7 @@ class SolidmechanicsProblem(problem_base):
                 self.amp_old_,
                 self.Vd_scalar,
                 self.dx,
-                domids=self.io.domain_ids,
+                domids=self.domain_ids,
                 comm=self.pbase.comm,
                 entity_maps=self.io.entity_maps,
             )
@@ -1376,20 +1371,20 @@ class SolidmechanicsProblem(problem_base):
             self.tau_a_,
             self.Vd_scalar,
             self.dx,
-            domids=self.io.domain_ids,
+            domids=self.domain_ids,
             comm=self.pbase.comm,
             entity_maps=self.io.entity_maps,
         )
         self.tau_a.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         self.tau_a.interpolate(tau_a_proj)
 
-        # mathutils.quad_interpolation(tau_a_[0], self.Vq_scalar, self.io.mesh, self.quadrature_points, self.tau_a)
+        # mathutils.quad_interpolation(tau_a_[0], self.Vq_scalar, self.mesh, self.quadrature_points, self.tau_a)
         # sys.exit()
 
     # computes and prints the growth rate of the whole solid
     def compute_solid_growth_rate(self, N, t):
         dtheta_all = ufl.as_ufl(0)
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             dtheta_all += (self.theta - self.theta_old) / (self.pbase.dt) * self.dx(M)
 
         gr = fem.assemble_scalar(fem.form(dtheta_all))
@@ -1412,7 +1407,7 @@ class SolidmechanicsProblem(problem_base):
     # computes the solid's total strain energy and internal power
     def compute_strain_energy_power(self, N, t):
         se_all, ip_all = ufl.as_ufl(0), ufl.as_ufl(0)
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             se_all += self.ma[n].S(
                 self.u,
                 self.p,
@@ -1512,7 +1507,7 @@ class SolidmechanicsProblem(problem_base):
         f = fem.Function(self.V_u)  # zero source term
 
         a, L = ufl.as_ufl(0), ufl.as_ufl(0)
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             a += ufl.inner(ufl.grad(uf), ufl.grad(vf)) * self.dx(M)
             L += ufl.dot(f, vf) * self.dx(M)
 
@@ -1525,7 +1520,7 @@ class SolidmechanicsProblem(problem_base):
                 fem.locate_dofs_topological(
                     self.V_u,
                     2,
-                    self.io.mt_b.indices[np.isin(self.io.mt_b.values, self.volume_laplace)],
+                    self.mt_b.indices[np.isin(self.mt_b.values, self.volume_laplace)],
                 ),
             )
         )
@@ -1535,7 +1530,7 @@ class SolidmechanicsProblem(problem_base):
         lp.solve()
 
         vol_all = ufl.as_ufl(0)
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx(M)
 
         vol = fem.assemble_scalar(fem.form(vol_all))
@@ -1710,7 +1705,7 @@ class SolidmechanicsProblem(problem_base):
                     self.fib_func[i],
                     self.V_u,
                     self.dx,
-                    domids=self.io.domain_ids,
+                    domids=self.domain_ids,
                     nm="Fiber" + str(i + 1),
                     comm=self.pbase.comm,
                     entity_maps=self.io.entity_maps,
@@ -1760,7 +1755,7 @@ class SolidmechanicsProblem(problem_base):
     def set_output_state(self, t):
         pass
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)
 
     def update(self):

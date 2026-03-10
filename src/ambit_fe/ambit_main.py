@@ -82,9 +82,16 @@ class Ambit:
         if problem_type == "solid":
             from .solid import solid_main
 
-            io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_solid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -105,9 +112,16 @@ class Ambit:
         elif problem_type == "fluid":
             from .fluid import fluid_main
 
-            io = ioroutines.IO_fluid(io_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -128,9 +142,16 @@ class Ambit:
         elif problem_type == "ale":
             from .ale import ale_main
 
-            io = ioroutines.IO_ale(io_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_ale(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_ale = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -151,9 +172,16 @@ class Ambit:
         elif problem_type == "fluid_ale":
             from .coupling import fluid_ale_main
 
-            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, constitutive_params, self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid, io.m_id_ale = 0, 1
+
+            io.mesh_ = [io.mesh, io.mesh]
+            io.mt_d_ = [io.mt_d, io.mt_d]
+            io.mt_b_ = [io.mt_b, io.mt_b]
+            io.mt_sb_ = [io.mt_sb, io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -178,9 +206,16 @@ class Ambit:
         elif problem_type == "fluid_ale_flow0d":
             from .coupling import fluid_ale_flow0d_main
 
-            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0:2], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid, io.m_id_ale = 0, 1
+
+            io.mesh_ = [io.mesh, io.mesh]
+            io.mt_d_ = [io.mt_d, io.mt_d]
+            io.mt_b_ = [io.mt_b, io.mt_b]
+            io.mt_sb_ = [io.mt_sb, io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
@@ -208,9 +243,16 @@ class Ambit:
         elif problem_type == "fluid_multiphase":
             from .coupling import fluid_multiphase_main
 
-            io = ioroutines.IO_fluid_multiphase(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_multiphase(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid, io.m_id_phase = 0, 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -235,9 +277,16 @@ class Ambit:
         elif problem_type == "fluid_ale_multiphase":
             from .coupling import fluid_ale_multiphase_main
 
-            io = ioroutines.IO_fluid_ale_multiphase(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale_multiphase(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid, io.m_id_phase, io.m_id_ale = 0, 0, 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -274,9 +323,16 @@ class Ambit:
         elif problem_type == "solid_flow0d":
             from .coupling import solid_flow0d_main
 
-            io = ioroutines.IO_solid(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_solid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
@@ -301,9 +357,16 @@ class Ambit:
             from .coupling import solid_flow0d_main
             from .coupling import solid_flow0d_periodicref_main
 
-            io = ioroutines.IO_solid(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_solid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
@@ -327,9 +390,16 @@ class Ambit:
         elif problem_type == "fluid_flow0d":
             from .coupling import fluid_flow0d_main
 
-            io = ioroutines.IO_fluid(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
@@ -355,9 +425,16 @@ class Ambit:
 
             from .multiscale import solid_flow0d_growthremodel_main
 
-            io = ioroutines.IO_solid(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_solid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
@@ -384,36 +461,18 @@ class Ambit:
         elif problem_type == "fsi":
             from .coupling import fsi_main
 
-            io = ioroutines.IO_fsi(io_params, entity_maps=self.entity_maps, comm=self.comm)
-            ios = ioroutines.IO_solid(io_params, constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
-            iofa = ioroutines.IO_fluid_ale(io_params, constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
-
+            io = ioroutines.IO_fsi(io_params, constitutive_params[0:2], entity_maps=self.entity_maps, comm=self.comm)
             io.readin_mesh()
-            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, ios.domain_ids, iofa.domain_ids, coupling_params["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
+            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
+            io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
+            io.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
             io.create_submeshes()
+            io.m_id_solid, io.m_id_fluid, io.m_id_ale = 0, 1, 1
 
-            # solid mesh and integration domain variables
-            ios.mesh = io.msh_emap_solid[0]
-            ios.mt_d, ios.mt_b, ios.mt_sb = (
-                io.mt_d_solid,
-                io.mt_b_solid,
-                io.mt_sb_solid,
-            )  # for DBCs, we need to access the tags on the submesh
-            ios.dx, ios.bmeasures = io.dx, io.bmeasures
-
-            ios.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
-
-            # ALE-fluid mesh and integration domain variables
-            iofa.mesh = io.msh_emap_fluid[0]
-            iofa.mt_d, iofa.mt_b, iofa.mt_sb = (
-                io.mt_d_fluid,
-                io.mt_b_fluid,
-                io.mt_sb_fluid,
-            )  # for DBCs, we need to access the tags on the submesh
-            iofa.dx, iofa.bmeasures = io.dx, io.bmeasures
-
-            iofa.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
+            io.mesh_ = [io.msh_emap_solid[0], io.msh_emap_fluid[0]]
+            io.mt_d_ = [io.mt_d_solid, io.mt_d_fluid]
+            io.mt_b_ = [io.mt_b_solid, io.mt_b_fluid]
+            io.mt_sb_ = [io.mt_sb_solid, io.mt_sb_fluid]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -440,8 +499,6 @@ class Ambit:
                 time_curves,
                 coupling_params,
                 io,
-                ios,
-                iofa,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -450,36 +507,18 @@ class Ambit:
         elif problem_type == "fsi_flow0d":
             from .coupling import fsi_flow0d_main
 
-            io = ioroutines.IO_fsi(io_params, entity_maps=self.entity_maps, comm=self.comm)
-            ios = ioroutines.IO_solid(io_params, constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
-            iofa = ioroutines.IO_fluid_ale(io_params, constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
-
+            io = ioroutines.IO_fsi(io_params, constitutive_params[0:2], entity_maps=self.entity_maps, comm=self.comm)
             io.readin_mesh()
-            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, ios.domain_ids, iofa.domain_ids, coupling_params[0]["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
+            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
+            io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params[0]["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
+            io.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
             io.create_submeshes()
+            io.m_id_solid, io.m_id_fluid, io.m_id_ale = 0, 1, 1
 
-            # solid mesh and integration domain variables
-            ios.mesh = io.msh_emap_solid[0]
-            ios.mt_d, ios.mt_b, ios.mt_sb = (
-                io.mt_d_solid,
-                io.mt_b_solid,
-                io.mt_sb_solid,
-            )  # for DBCs, we need to access the tags on the submesh
-            ios.dx, ios.bmeasures = io.dx, io.bmeasures
-
-            ios.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
-
-            # ALE-fluid mesh and integration domain variables
-            iofa.mesh = io.msh_emap_fluid[0]
-            iofa.mt_d, iofa.mt_b, iofa.mt_sb = (
-                io.mt_d_fluid,
-                io.mt_b_fluid,
-                io.mt_sb_fluid,
-            )  # for DBCs, we need to access the tags on the submesh
-            iofa.dx, iofa.bmeasures = io.dx, io.bmeasures
-
-            iofa.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
+            io.mesh_ = [io.msh_emap_solid[0], io.msh_emap_fluid[0]]
+            io.mt_d_ = [io.mt_d_solid, io.mt_d_fluid]
+            io.mt_b_ = [io.mt_b_solid, io.mt_b_fluid]
+            io.mt_sb_ = [io.mt_sb_solid, io.mt_sb_fluid]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
@@ -509,8 +548,6 @@ class Ambit:
                 coupling_params[0],
                 coupling_params[1],
                 io,
-                ios,
-                iofa,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -519,36 +556,18 @@ class Ambit:
         elif problem_type == "fsi_multiphase":
             from .coupling import fsi_multiphase_main
 
-            io = ioroutines.IO_fsi(io_params, entity_maps=self.entity_maps, comm=self.comm)
-            ios = ioroutines.IO_solid(io_params, constitutive_params[0], entity_maps=self.entity_maps, comm=self.comm)
-            iofap = ioroutines.IO_fluid_ale_multiphase(io_params, constitutive_params[1], entity_maps=self.entity_maps, comm=self.comm)
-
+            io = ioroutines.IO_fsi(io_params, constitutive_params[0:2], entity_maps=self.entity_maps, comm=self.comm)
             io.readin_mesh()
-            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"]) # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, ios.domain_ids, iofap.domain_ids, coupling_params["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
+            assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
+            io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
+            io.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
             io.create_submeshes()
+            io.m_id_solid, io.m_id_fluid, io.m_id_phase, io.m_id_ale = 0, 1, 1, 1
 
-            # solid mesh and integration domain variables
-            ios.mesh = io.msh_emap_solid[0]
-            ios.mt_d, ios.mt_b, ios.mt_sb = (
-                io.mt_d_solid,
-                io.mt_b_solid,
-                io.mt_sb_solid,
-            )  # for DBCs, we need to access the tags on the submesh
-            ios.dx, ios.bmeasures = io.dx, io.bmeasures
-
-            ios.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
-
-            # ALE-fluid mesh and integration domain variables
-            iofap.mesh = io.msh_emap_fluid[0]
-            iofap.mt_d, iofap.mt_b, iofap.mt_sb = (
-                io.mt_d_fluid,
-                io.mt_b_fluid,
-                io.mt_sb_fluid,
-            )  # for DBCs, we need to access the tags on the submesh
-            iofap.dx, iofap.bmeasures = io.dx, io.bmeasures
-
-            iofap.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
+            io.mesh_ = [io.msh_emap_solid[0], io.msh_emap_fluid[0]]
+            io.mt_d_ = [io.mt_d_solid, io.mt_d_fluid]
+            io.mt_b_ = [io.mt_b_solid, io.mt_b_fluid]
+            io.mt_sb_ = [io.mt_sb_solid, io.mt_sb_fluid]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm, comm_sq=self.comm_sq)
 
@@ -579,8 +598,6 @@ class Ambit:
                 time_curves,
                 coupling_params,
                 io,
-                ios,
-                iofap,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -589,9 +606,16 @@ class Ambit:
         elif problem_type == "solid_constraint":
             from .coupling import solid_constraint_main
 
-            io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_solid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -613,9 +637,16 @@ class Ambit:
         elif problem_type == "fluid_constraint":
             from .coupling import fluid_constraint_main
 
-            io = ioroutines.IO_fluid(io_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -637,9 +668,16 @@ class Ambit:
         elif problem_type == "fluid_ale_constraint":
             from .coupling import fluid_ale_constraint_main
 
-            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0], self.entity_maps, self.comm)
+            io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)
+            io.m_id_fluid, io.m_id_ale = 0, 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -665,9 +703,16 @@ class Ambit:
         elif problem_type == "phasefield":
             from .phasefield import phasefield_main
 
-            io = ioroutines.IO_phasefield(io_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_phasefield(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_phase = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 
@@ -690,9 +735,16 @@ class Ambit:
 
             from .electrophysiology import electrophysiology_main
 
-            io = ioroutines.IO_solid(io_params, constitutive_params, self.entity_maps, self.comm)
+            io = ioroutines.IO_solid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
+            io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
             io.set_mesh_fields(io.mesh)
+            io.m_id_ep = 0
+
+            io.mesh_ = [io.mesh]
+            io.mt_d_ = [io.mt_d]
+            io.mt_b_ = [io.mt_b]
+            io.mt_sb_ = [io.mt_sb]
 
             pbase = problem_base(io_params, ctrl_params, comm=self.comm)
 

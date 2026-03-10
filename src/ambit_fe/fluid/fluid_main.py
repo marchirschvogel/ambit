@@ -73,19 +73,22 @@ class FluidmechanicsProblem(problem_base):
         self.order_pres = fem_params["order_pres"]
         self.quad_degree = fem_params["quad_degree"]
 
-        # TODO: Find nicer solution here...
-        if self.pbase.problem_type == "fsi" or self.pbase.problem_type == "fsi_flow0d" or self.pbase.problem_type == "fsi_multiphase":
-            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
-        else:
-            self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], self.quad_degree, bcdict=bc_dict
-            )
+        # collect relevant domain data and mesh
+        self.domain_ids = self.io.domain_ids[self.io.m_id_fluid]
+        self.num_domains = self.io.num_domains[self.io.m_id_fluid]
+        self.mesh = self.io.mesh_[self.io.m_id_fluid]
+        # mesh tags for DBCs
+        self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_fluid], self.io.mt_b_[self.io.m_id_fluid], self.io.mt_sb_[self.io.m_id_fluid]
+        # global measures for weak BCs
+        self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+        # results files dictionary for I/O
+        self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
 
         # collect domain data
-        self.rho = [[] for _ in range(len(self.io.domain_ids))]
-        for n, M in enumerate(self.io.domain_ids):
+        self.rho = [[] for _ in range(len(self.domain_ids))]
+        for n, M in enumerate(self.domain_ids):
             # data for inertial forces: density
             if not self.is_multiphase:
                 self.rho[n].append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho"])
@@ -116,7 +119,7 @@ class FluidmechanicsProblem(problem_base):
         self.sub_solve = False
         self.print_subiter = False
         self.have_condensed_variables = False
-        self.dim = self.io.mesh.geometry.dim
+        self.dim = self.mesh.geometry.dim
 
         (
             self.have_flux_monitor,
@@ -131,17 +134,17 @@ class FluidmechanicsProblem(problem_base):
 
         # type of discontinuous function spaces
         if (
-            str(self.io.mesh.ufl_cell()) == "tetrahedron"
-            or str(self.io.mesh.ufl_cell()) == "triangle"
-            or str(self.io.mesh.ufl_cell()) == "triangle3D"
+            str(self.mesh.ufl_cell()) == "tetrahedron"
+            or str(self.mesh.ufl_cell()) == "triangle"
+            or str(self.mesh.ufl_cell()) == "triangle3D"
         ):
             dg_type = "DG"
             if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 3:
                 raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
         elif (
-            str(self.io.mesh.ufl_cell()) == "hexahedron"
-            or str(self.io.mesh.ufl_cell()) == "quadrilateral"
-            or str(self.io.mesh.ufl_cell()) == "quadrilateral3D"
+            str(self.mesh.ufl_cell()) == "hexahedron"
+            or str(self.mesh.ufl_cell()) == "quadrilateral"
+            or str(self.mesh.ufl_cell()) == "quadrilateral3D"
         ):
             dg_type = "DQ"
             if (self.order_vel > 1 or self.order_pres > 1) and self.quad_degree < 5:
@@ -149,7 +152,7 @@ class FluidmechanicsProblem(problem_base):
         else:
             raise NameError("Unknown cell/element type!")
 
-        self.Vex = self.io.mesh.ufl_domain().ufl_coordinate_element()
+        self.Vex = self.mesh.ufl_domain().ufl_coordinate_element()
 
         if self.stabilization is None and self.order_vel == self.order_pres:
             raise ValueError(
@@ -172,8 +175,8 @@ class FluidmechanicsProblem(problem_base):
 
         # function space for v
         self.V_v = fem.functionspace(
-            self.io.mesh,
-            ("Lagrange", self.order_vel, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            ("Lagrange", self.order_vel, (self.mesh.geometry.dim,)),
         )
 
         # now collect those for p (pressure space may be duplicate!)
@@ -182,9 +185,9 @@ class FluidmechanicsProblem(problem_base):
         self.dx_p, self.bmeasures_p = [], []
 
         if bool(self.io.duplicate_mesh_domains):
-            assert self.io.num_domains > 1
+            assert self.num_domains > 1
 
-            self.num_dupl = self.io.num_domains
+            self.num_dupl = self.num_domains
 
             (
                 self.io.submshes_emap,
@@ -200,12 +203,12 @@ class FluidmechanicsProblem(problem_base):
 
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
                 self.io.submshes_emap[m + 1] = mesh.create_submesh(
-                    self.io.mesh,
-                    self.io.mesh.topology.dim,
-                    self.io.mt_d.indices[np.isin(self.io.mt_d.values, mp)],
+                    self.mesh,
+                    self.mesh.topology.dim,
+                    self.mt_d.indices[np.isin(self.mt_d.values, mp)],
                 )[0:2]
 
-            cell_imap = self.io.mesh.topology.index_map(self.io.mesh.topology.dim)
+            cell_imap = self.mesh.topology.index_map(self.mesh.topology.dim)
             num_cells = cell_imap.size_local + cell_imap.num_ghosts
 
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
@@ -220,17 +223,17 @@ class FluidmechanicsProblem(problem_base):
                 self.io.entity_maps.append(self.io.submshes_emap[m + 1][1])
                 # transfer meshtags to submesh
                 self.io.sub_mt_d[m + 1] = meshutils.meshtags_parent_to_child(
-                    self.io.mt_d,
+                    self.mt_d,
                     self.io.submshes_emap[m + 1][0],
                     self.io.submshes_emap[m + 1][1],
-                    self.io.mesh,
+                    self.mesh,
                     "domain",
                 )
                 self.io.sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
-                    self.io.mt_b,
+                    self.mt_b,
                     self.io.submshes_emap[m + 1][0],
                     self.io.submshes_emap[m + 1][1],
-                    self.io.mesh,
+                    self.mesh,
                     "boundary",
                 )
 
@@ -246,54 +249,54 @@ class FluidmechanicsProblem(problem_base):
 
         else:
             self.num_dupl = 1
-            self.V_p_ = [fem.functionspace(self.io.mesh, ("Lagrange", self.order_pres))]
+            self.V_p_ = [fem.functionspace(self.mesh, ("Lagrange", self.order_pres))]
             self.dx_p.append(self.dx)
             self.bmeasures_p.append(self.bmeasures)
 
         # continuous tensor and scalar function spaces of order order_vel
         self.V_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 "Lagrange",
                 self.order_vel,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
-        self.V_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.order_vel))
+        self.V_scalar = fem.functionspace(self.mesh, ("Lagrange", self.order_vel))
 
         # a discontinuous tensor, vector, and scalar function space
         self.Vd_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 dg_type,
                 self.order_vel - 1,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
         self.Vd_vector = fem.functionspace(
-            self.io.mesh,
-            (dg_type, self.order_vel - 1, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            (dg_type, self.order_vel - 1, (self.mesh.geometry.dim,)),
         )
-        self.Vd_scalar = fem.functionspace(self.io.mesh, (dg_type, self.order_vel - 1))
+        self.Vd_scalar = fem.functionspace(self.mesh, (dg_type, self.order_vel - 1))
 
         # for output writing - function spaces on the degree of the mesh
-        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
+        self.mesh_degree = self.mesh._ufl_domain._ufl_coordinate_element._degree
         self.V_out_tensor = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             (
                 "Lagrange",
                 self.mesh_degree,
-                (self.io.mesh.geometry.dim, self.io.mesh.geometry.dim),
+                (self.mesh.geometry.dim, self.mesh.geometry.dim),
             ),
         )
         self.V_out_vector = fem.functionspace(
-            self.io.mesh,
-            ("Lagrange", self.mesh_degree, (self.io.mesh.geometry.dim,)),
+            self.mesh,
+            ("Lagrange", self.mesh_degree, (self.mesh.geometry.dim,)),
         )
-        self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+        self.V_out_scalar = fem.functionspace(self.mesh, ("Lagrange", self.mesh_degree))
 
         # coordinate element function space - based on input mesh
-        self.Vcoord = fem.functionspace(self.io.mesh, self.Vex)
+        self.Vcoord = fem.functionspace(self.mesh, self.Vex)
 
         # functions
         self.dv = ufl.TrialFunction(self.V_v)  # Incremental velocity
@@ -414,7 +417,7 @@ class FluidmechanicsProblem(problem_base):
         )
 
         # reference coordinates
-        self.x_ref = ufl.SpatialCoordinate(self.io.mesh)
+        self.x_ref = ufl.SpatialCoordinate(self.mesh)
 
         self.numdof = self.v.x.petsc_vec.getSize() + self.p.x.petsc_vec.getSize()
 
@@ -446,7 +449,7 @@ class FluidmechanicsProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.io.num_domains):
+        for n in range(self.num_domains):
             self.ma.append(
                 fluid_kinematics_constitutive.constitutive(self.ki, self.constitutive_models["MAT" + str(n + 1)])
             )
@@ -483,7 +486,7 @@ class FluidmechanicsProblem(problem_base):
                 self.fibarray,
                 self.V_v,
                 self.dx,
-                self.io.domain_ids,
+                self.domain_ids,
                 self.order_vel,
             )
 
@@ -492,12 +495,7 @@ class FluidmechanicsProblem(problem_base):
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond_fluid(
-            self.io,
-            fem_params=fem_params,
-            vf=self.vf,
-            ti=self.ti,
-            ki=self.ki,
-            ff=self.fib_func,
+            self,
             V_field=self.V_v,
             Vdisc_scalar=self.Vd_scalar,
         )
@@ -618,7 +616,7 @@ class FluidmechanicsProblem(problem_base):
         )
         self.deltaW_p, self.deltaW_p_old, self.deltaW_p_mid = [], [], []
 
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             if self.num_dupl == 1:
                 j = 0
             else:
@@ -1273,7 +1271,7 @@ class FluidmechanicsProblem(problem_base):
             self.acc_prestr = (
                 self.v - self.v_old
             ) / self.prestress_dt  # in case acceleration is used (for kinetic prestress option)
-            for n, M in enumerate(self.io.domain_ids):
+            for n, M in enumerate(self.domain_ids):
                 if self.num_dupl == 1:
                     j = 0
                 else:
@@ -1414,7 +1412,7 @@ class FluidmechanicsProblem(problem_base):
 
             # full scheme
             if self.stabilization["scheme"] == "supg_pspg":
-                for n, M in enumerate(self.io.domain_ids):
+                for n, M in enumerate(self.domain_ids):
                     if self.num_dupl == 1:
                         j = 0
                     else:
@@ -1924,7 +1922,7 @@ class FluidmechanicsProblem(problem_base):
             self.weakform_lin_pp,
         ) = [], [], [], []
 
-        for n in range(self.io.num_domains):
+        for n in range(self.num_domains):
             if not self.ti.continuity_at_midpoint:
                 self.weakform_p.append(self.deltaW_p[n])
             else:
@@ -1938,7 +1936,7 @@ class FluidmechanicsProblem(problem_base):
         self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
         for j in range(self.num_dupl):
             self.weakform_lin_vp.append(ufl.derivative(self.weakform_v, self.p_[j], self.dp_[j]))
-        for n in range(self.io.num_domains):
+        for n in range(self.num_domains):
             self.weakform_lin_pv.append(ufl.derivative(self.weakform_p[n], self.v, self.dv))
             if self.num_dupl == 1:
                 j = 0
@@ -1969,13 +1967,13 @@ class FluidmechanicsProblem(problem_base):
             ) = [], [], [], []
             self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_prestr_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
-            for n in range(self.io.num_domains):
+            for n in range(self.num_domains):
                 self.weakform_prestress_p.append(self.deltaW_p_prestr[n])
             for j in range(self.num_dupl):
                 self.weakform_lin_prestress_vp.append(
                     ufl.derivative(self.weakform_prestress_v, self.p_[j], self.dp_[j])
                 )
-            for n in range(self.io.num_domains):
+            for n in range(self.num_domains):
                 self.weakform_lin_prestress_pv.append(ufl.derivative(self.weakform_prestress_p[n], self.v, self.dv))
                 if self.num_dupl == 1:
                     j = 0
@@ -1996,7 +1994,7 @@ class FluidmechanicsProblem(problem_base):
             self.tau_a_,
             self.Vd_scalar,
             self.dx,
-            domids=self.io.domain_ids,
+            domids=self.domain_ids,
             comm=self.comm,
             entity_maps=self.io.entity_maps,
         )  # TODO: Should be self.ds here, but yields error; why?
@@ -2006,7 +2004,7 @@ class FluidmechanicsProblem(problem_base):
     # computes the fluid's total internal power
     def compute_power(self, N, t):
         ip_all = ufl.as_ufl(0)
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             if self.num_dupl == 1:
                 j = 0
             else:
@@ -2082,7 +2080,7 @@ class FluidmechanicsProblem(problem_base):
             J, J_old = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"])
         else:
             J, J_old = 1.0, 1.0
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             rho_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chi"])
             rho_old_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_old"])
             mass_form += (J * rho_ - J_old * rho_old_) / (self.pbase.dt) * self.dx(M)
@@ -2230,7 +2228,7 @@ class FluidmechanicsProblem(problem_base):
             self.k_vz_subvec, self.k_zp_subvec, sze_vz, sze_zp = [], [], [], []
 
             for n in range(self.num_valve_coupling_surf):
-                # nds_p_local = fem.locate_dofs_topological(self.V_p, self.io.mesh.topology.dim-1, self.io.mt_b.indices[np.isin(self.io.mt_b.values, self.surface_vlv_ids[n])])
+                # nds_p_local = fem.locate_dofs_topological(self.V_p, self.mesh.topology.dim-1, self.mt_b.indices[np.isin(self.mt_b.values, self.surface_vlv_ids[n])])
                 # nds_p = np.array( self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_p_local, dtype=np.int32)), dtype=np.int32 )
                 # self.dofs_coupling_p[n] = PETSc.IS().createBlock(self.V_p.dofmap.index_map_bs, nds_p, comm=self.comm)
                 #
@@ -2240,8 +2238,8 @@ class FluidmechanicsProblem(problem_base):
 
                 nds_v_local = fem.locate_dofs_topological(
                     self.V_v,
-                    self.io.mesh.topology.dim - 1,
-                    self.io.mt_b.indices[np.isin(self.io.mt_b.values, self.surface_vlv_ids[n])],
+                    self.mesh.topology.dim - 1,
+                    self.mt_b.indices[np.isin(self.mt_b.values, self.surface_vlv_ids[n])],
                 )
                 nds_v = np.array(
                     self.V_v.dofmap.index_map.local_to_global(np.asarray(nds_v_local, dtype=np.int32)),
@@ -2610,7 +2608,7 @@ class FluidmechanicsProblem(problem_base):
                     self.fib_func[i],
                     self.V_v,
                     self.dx,
-                    domids=self.io.domain_ids,
+                    domids=self.domain_ids,
                     nm="Fiber" + str(i + 1),
                     comm=self.comm,
                     entity_maps=self.io.entity_maps,
@@ -2662,7 +2660,7 @@ class FluidmechanicsProblem(problem_base):
     def set_output_state(self, t):
         pass
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)
 
     def update(self):

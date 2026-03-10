@@ -22,29 +22,18 @@ Boundary condition classes for all problems
 class boundary_cond:
     def __init__(
         self,
-        io,
-        fem_params=None,
-        vf=None,
-        ti=None,
-        ki=None,
-        ff=None,
+        pb,
         dim=None,
         V_field=None,
         Vdisc_scalar=None,
     ):
-        self.io = io
-        self.vf = vf
-        self.ti = ti
-        self.ki = ki
-        self.ff = ff
+
+        self.pb = pb
 
         if dim is None:
-            self.dim = self.io.mesh.topology.dim
+            self.dim = V_field.mesh.topology.dim
         else:
             self.dim = dim
-
-        if fem_params is not None:
-            self.quad_degree = fem_params["quad_degree"]
 
         # continuous function space of primary field (e.g. displacement or velocity)
         self.V_field = V_field
@@ -63,13 +52,13 @@ class boundary_cond:
             codim = d.get("codimension", self.dim - 1)
 
             if codim == self.dim:
-                mdata = self.io.mt_d
+                mdata = self.pb.mt_d
             if codim == self.dim - 1:
-                mdata = self.io.mt_b
+                mdata = self.pb.mt_b
             if codim == self.dim - 2:
-                mdata = self.io.mt_sb
+                mdata = self.pb.mt_sb
             if codim == self.dim - 3:
-                mdata = self.io.mt_ssb
+                mdata = self.pb.mt_ssb
 
             func = fem.Function(V_dbc)
 
@@ -89,39 +78,39 @@ class boundary_cond:
                         d["curve"],
                     )
                 load.val_x, load.val_y, load.val_z = (
-                    self.ti.timecurves(curve_x)(self.ti.t_init),
-                    self.ti.timecurves(curve_y)(self.ti.t_init),
-                    self.ti.timecurves(curve_z)(self.ti.t_init),
+                    self.pb.ti.timecurves(curve_x)(self.pb.ti.t_init),
+                    self.pb.ti.timecurves(curve_y)(self.pb.ti.t_init),
+                    self.pb.ti.timecurves(curve_z)(self.pb.ti.t_init),
                 )
                 func.interpolate(load.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
-                self.ti.funcs_to_update_vec.append(
+                self.pb.ti.funcs_to_update_vec.append(
                     {
                         func: [
-                            self.ti.timecurves(curve_x),
-                            self.ti.timecurves(curve_y),
-                            self.ti.timecurves(curve_z),
+                            self.pb.ti.timecurves(curve_x),
+                            self.pb.ti.timecurves(curve_y),
+                            self.pb.ti.timecurves(curve_z),
                         ]
                     }
                 )
-                self.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
+                self.pb.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
             elif "val" in d.keys():
                 assert "curve" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 func.x.petsc_vec.set(d["val"])
             elif "expression" in d.keys():
                 assert "curve" not in d.keys() and "val" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 expr = d["expression"]()
-                expr.t = self.ti.t_init
+                expr.t = self.pb.ti.t_init
                 func.interpolate(expr.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
-                self.ti.funcsexpr_to_update_vec[func] = expr
-                self.ti.funcsexpr_to_update_vec_old[func] = None  # DBCs don't need an old state
+                self.pb.ti.funcsexpr_to_update_vec[func] = expr
+                self.pb.ti.funcsexpr_to_update_vec_old[func] = None  # DBCs don't need an old state
             elif "file" in d.keys():
                 assert "curve" not in d.keys() and "val" not in d.keys() and "expression" not in d.keys() and "fileseries" not in d.keys()
                 fle = d["file"]  # a single file
@@ -134,30 +123,30 @@ class boundary_cond:
                         fem.Function(V_dbc),
                     )
                     # first read file into function
-                    self.io.readfunction(func_file, fle)
+                    self.pb.io.readfunction(func_file, fle)
                     # now store ramp curve into function
                     load_ = expression.template_vector(dim=self.dim)
                     load_.val_x, load_.val_y, load_.val_z = (
-                        self.ti.timecurves(d["ramp_curve"])(self.ti.t_init),
-                        self.ti.timecurves(d["ramp_curve"])(self.ti.t_init),
-                        self.ti.timecurves(d["ramp_curve"])(self.ti.t_init),
+                        self.pb.ti.timecurves(d["ramp_curve"])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(d["ramp_curve"])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(d["ramp_curve"])(self.pb.ti.t_init),
                     )
                     func_ramp.interpolate(load_.evaluate)
                     func_ramp.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    self.ti.funcs_to_update_vec.append(
+                    self.pb.ti.funcs_to_update_vec.append(
                         {
                             func_ramp: [
-                                self.ti.timecurves(d["ramp_curve"]),
-                                self.ti.timecurves(d["ramp_curve"]),
-                                self.ti.timecurves(d["ramp_curve"]),
+                                self.pb.ti.timecurves(d["ramp_curve"]),
+                                self.pb.ti.timecurves(d["ramp_curve"]),
+                                self.pb.ti.timecurves(d["ramp_curve"]),
                             ],
                             "funcs_mult": [func_file, func],
                         }
                     )
-                    self.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
+                    self.pb.ti.funcs_to_update_vec_old.append({None: -1})  # DBCs don't need an old state
                     # now multiply
                     func.x.petsc_vec.pointwiseMult(func_ramp.x.petsc_vec, func_file.x.petsc_vec)
                     func.x.petsc_vec.ghostUpdate(
@@ -166,11 +155,11 @@ class boundary_cond:
                     )
                 else:
                     # read file into function
-                    self.io.readfunction(func, fle)
+                    self.pb.io.readfunction(func, fle)
             elif "fileseries" in d.keys():  # file series, where we'd have one file per time step
                 assert "curve" not in d.keys() and "val" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys()
                 scale = d.get("scale", 1.0)
-                self.ti.funcs_data.append({func: d["fileseries"], "scale": scale})
+                self.pb.ti.funcs_data.append({func: d["fileseries"], "scale": scale})
                 self.have_dirichlet_fileseries = True
             else:
                 raise RuntimeError("Need to have 'curve', 'val', 'expression', 'file', or 'fileseries' specified!")
@@ -185,7 +174,7 @@ class boundary_cond:
                             nodes_bc_.append(fem.locate_dofs_geometrical(V_dbc, lc.evaluate))
                         nodes_bc = np.concatenate(nodes_bc_).ravel()
                 else:
-                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    cells = mesh.locate_entities(self.pb.mesh, codim, self.all)
                     nodes_bc = fem.locate_dofs_topological(V_dbc, codim, cells)
                 dbcs.append(fem.dirichletbc(func, nodes_bc))
 
@@ -199,7 +188,7 @@ class boundary_cond:
                             nodes_bc_x_.append(fem.locate_dofs_geometrical((V_dbc.sub(0), V_dbc.sub(0).collapse()[0]), lc.evaluate)[0])
                         nodes_bc_x = np.concatenate(nodes_bc_x_).ravel()
                 else:
-                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    cells = mesh.locate_entities(self.pb.mesh, codim, self.all)
                     nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0), codim, cells)
                 dbcs.append(fem.dirichletbc(func.sub(0), nodes_bc_x))
 
@@ -213,7 +202,7 @@ class boundary_cond:
                             nodes_bc_y_.append(fem.locate_dofs_geometrical((V_dbc.sub(1), V_dbc.sub(1).collapse()[0]), lc.evaluate)[0])
                         nodes_bc_y = np.concatenate(nodes_bc_y_).ravel()
                 else:
-                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    cells = mesh.locate_entities(self.pb.mesh, codim, self.all)
                     nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, cells)
                 dbcs.append(fem.dirichletbc(func.sub(1), nodes_bc_y))
 
@@ -227,7 +216,7 @@ class boundary_cond:
                             nodes_bc_z_.append(fem.locate_dofs_geometrical((V_dbc.sub(2), V_dbc.sub(2).collapse()[0]), lc.evaluate)[0])
                         nodes_bc_z = np.concatenate(nodes_bc_z_).ravel()
                 else:
-                    cells = mesh.locate_entities(self.io.mesh, codim, self.all)
+                    cells = mesh.locate_entities(self.pb.mesh, codim, self.all)
                     nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, cells)
                 dbcs.append(fem.dirichletbc(func.sub(2), nodes_bc_z))
 
@@ -277,9 +266,9 @@ class boundary_cond:
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = (
-                        self.ti.timecurves(n["curve"][0])(self.ti.t_init),
-                        self.ti.timecurves(n["curve"][1])(self.ti.t_init),
-                        self.ti.timecurves(n["curve"][2])(self.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][0])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][1])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][2])(self.pb.ti.t_init),
                     )
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
@@ -289,9 +278,9 @@ class boundary_cond:
                     funcs_to_update_vec.append(
                         {
                             func: [
-                                self.ti.timecurves(n["curve"][0]),
-                                self.ti.timecurves(n["curve"][1]),
-                                self.ti.timecurves(n["curve"][2]),
+                                self.pb.ti.timecurves(n["curve"][0]),
+                                self.pb.ti.timecurves(n["curve"][1]),
+                                self.pb.ti.timecurves(n["curve"][2]),
                             ]
                         }
                     )
@@ -303,7 +292,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.ti.t_init
+                    expr.t = self.pb.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -314,7 +303,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
 
             elif n["dir"] == "normal_ref":  # reference normal
                 func = fem.Function(self.Vdisc_scalar)
@@ -322,20 +311,20 @@ class boundary_cond:
                 if "curve" in n.keys():
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template()
-                    load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
+                    load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
+                    funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(n["val"])
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.ti.t_init
+                    expr.t = self.pb.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -346,7 +335,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
 
             elif n["dir"] == "xyz_cur":  # current xyz
                 func = fem.Function(self.V_field)
@@ -355,9 +344,9 @@ class boundary_cond:
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = (
-                        self.ti.timecurves(n["curve"][0])(self.ti.t_init),
-                        self.ti.timecurves(n["curve"][1])(self.ti.t_init),
-                        self.ti.timecurves(n["curve"][2])(self.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][0])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][1])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][2])(self.pb.ti.t_init),
                     )
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
@@ -367,9 +356,9 @@ class boundary_cond:
                     funcs_to_update_vec.append(
                         {
                             func: [
-                                self.ti.timecurves(n["curve"][0]),
-                                self.ti.timecurves(n["curve"][1]),
-                                self.ti.timecurves(n["curve"][2]),
+                                self.pb.ti.timecurves(n["curve"][0]),
+                                self.pb.ti.timecurves(n["curve"][1]),
+                                self.pb.ti.timecurves(n["curve"][2]),
                             ]
                         }
                     )
@@ -381,7 +370,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.ti.t_init
+                    expr.t = self.pb.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -392,7 +381,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.vf.deltaW_ext_neumann_cur(func, ds_[dind](n[ID][i]), F=F)
+                    w += self.pb.vf.deltaW_ext_neumann_cur(func, ds_[dind](n[ID][i]), F=F)
 
             elif n["dir"] == "normal_cur":  # current normal
                 func = fem.Function(self.Vdisc_scalar)
@@ -400,20 +389,20 @@ class boundary_cond:
                 if "curve" in n.keys():
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template()
-                    load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
+                    load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
+                    funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(n["val"])
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.ti.t_init
+                    expr.t = self.pb.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -424,7 +413,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.vf.deltaW_ext_neumann_normal_cur(func, ds_[dind](n[ID][i]), F=F)
+                    w += self.pb.vf.deltaW_ext_neumann_normal_cur(func, ds_[dind](n[ID][i]), F=F)
 
             else:
                 raise NameError("Unknown dir option for Neumann BC!")
@@ -457,9 +446,9 @@ class boundary_cond:
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template_vector(dim=self.dim)
                     load.val_x, load.val_y, load.val_z = (
-                        self.ti.timecurves(n["curve"][0])(self.ti.t_init),
-                        self.ti.timecurves(n["curve"][1])(self.ti.t_init),
-                        self.ti.timecurves(n["curve"][2])(self.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][0])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][1])(self.pb.ti.t_init),
+                        self.pb.ti.timecurves(n["curve"][2])(self.pb.ti.t_init),
                     )
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
@@ -469,9 +458,9 @@ class boundary_cond:
                     funcs_to_update_vec.append(
                         {
                             func: [
-                                self.ti.timecurves(n["curve"][0]),
-                                self.ti.timecurves(n["curve"][1]),
-                                self.ti.timecurves(n["curve"][2]),
+                                self.pb.ti.timecurves(n["curve"][0]),
+                                self.pb.ti.timecurves(n["curve"][1]),
+                                self.pb.ti.timecurves(n["curve"][2]),
                             ]
                         }
                     )
@@ -483,7 +472,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.ti.t_init
+                    expr.t = self.pb.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -494,7 +483,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
 
             elif n["dir"] == "normal_ref":  # reference normal
                 func = fem.Function(self.Vdisc_scalar)
@@ -502,13 +491,13 @@ class boundary_cond:
                 if "curve" in n.keys():
                     assert "val" not in n.keys() and "expression" not in n.keys()
                     load = expression.template()
-                    load.val = self.ti.timecurves(n["curve"])(self.ti.t_init)
+                    load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
                     func.interpolate(load.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
                         mode=PETSc.ScatterMode.FORWARD,
                     )
-                    funcs_to_update.append({func: self.ti.timecurves(n["curve"])})
+                    funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
                 elif "val" in n.keys():
                     assert "curve" not in n.keys() and "expression" not in n.keys()
                     func.x.petsc_vec.set(
@@ -517,7 +506,7 @@ class boundary_cond:
                 elif "expression" in n.keys():
                     assert "curve" not in n.keys() and "val" not in n.keys()
                     expr = n["expression"]()
-                    expr.t = self.ti.t_init
+                    expr.t = self.pb.ti.t_init
                     func.interpolate(expr.evaluate)
                     func.x.petsc_vec.ghostUpdate(
                         addv=PETSc.InsertMode.INSERT,
@@ -528,7 +517,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
 
             else:
                 raise NameError("Unknown dir option for Neumann prestress BC!")
@@ -563,15 +552,15 @@ class boundary_cond:
 
                 if r["dir"] == "xyz_ref":  # reference xyz
                     for i in range(len(r[ID])):
-                        w += self.vf.deltaW_ext_robin_spring(u, stiff_, ds_[dind](r[ID][i]), u_pre)
+                        w += self.pb.vf.deltaW_ext_robin_spring(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
                 elif r["dir"] == "normal_ref":  # reference normal
                     for i in range(len(r[ID])):
-                        w += self.vf.deltaW_ext_robin_spring_normal_ref(u, stiff_, ds_[dind](r[ID][i]), u_pre)
+                        w += self.pb.vf.deltaW_ext_robin_spring_normal_ref(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
                 elif r["dir"] == "normal_cross":  # cross normal
                     for i in range(len(r[ID])):
-                        w += self.vf.deltaW_ext_robin_spring_normal_cross(u, stiff_, ds_[dind](r[ID][i]), u_pre)
+                        w += self.pb.vf.deltaW_ext_robin_spring_normal_cross(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -588,15 +577,15 @@ class boundary_cond:
 
                 if r["dir"] == "xyz_ref":  # reference xyz
                     for i in range(len(r[ID])):
-                        w += self.vf.deltaW_ext_robin_dashpot(v, visc_, ds_[dind](r[ID][i]))
+                        w += self.pb.vf.deltaW_ext_robin_dashpot(v, visc_, ds_[dind](r[ID][i]))
 
                 elif r["dir"] == "normal_ref":  # reference normal
                     for i in range(len(r[ID])):
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_ref(v, visc_, ds_[dind](r[ID][i]))
+                        w += self.pb.vf.deltaW_ext_robin_dashpot_normal_ref(v, visc_, ds_[dind](r[ID][i]))
 
                 elif r["dir"] == "normal_cross":  # cross normal
                     for i in range(len(r[ID])):
-                        w += self.vf.deltaW_ext_robin_dashpot_normal_cross(v, visc_, ds_[dind](r[ID][i]))
+                        w += self.pb.vf.deltaW_ext_robin_dashpot_normal_cross(v, visc_, ds_[dind](r[ID][i]))
 
                 else:
                     raise NameError("Unknown dir option for Robin BC!")
@@ -647,26 +636,26 @@ class boundary_cond:
             for i in range(len(m[ID])):
                 idmem.append(m[ID][i])
 
-                w += self.vf.deltaW_ext_membrane(
-                    self.ki.F(u),
-                    self.ki.Fdot(v),
+                w += self.pb.vf.deltaW_ext_membrane(
+                    self.pb.ki.F(u),
+                    self.pb.ki.Fdot(v),
                     a,
                     m["params"],
                     ds_[dind](m[ID][i]),
                     ivar=ivar,
-                    fibfnc=self.ff,
+                    fibfnc=self.pb.fib_func,
                     wallfield=wallfield,
                     actweight=actweight,
                     fcts=fcts,
                 )
-                bstr, bse, bip = self.vf.deltaW_ext_membrane(
-                    self.ki.F(u),
-                    self.ki.Fdot(v),
+                bstr, bse, bip = self.pb.vf.deltaW_ext_membrane(
+                    self.pb.ki.F(u),
+                    self.pb.ki.Fdot(v),
                     a,
                     m["params"],
                     ds_[dind](m[ID][i]),
                     ivar=ivar,
-                    fibfnc=self.ff,
+                    fibfnc=self.pb.fib_func,
                     wallfield=wallfield,
                     actweight=actweight,
                     fcts=fcts,
@@ -707,20 +696,20 @@ class boundary_cond:
             if "curve" in b.keys():
                 assert "val" not in b.keys() and "expression" not in b.keys()
                 load = expression.template()
-                load.val = self.ti.timecurves(b["curve"])(self.ti.t_init)
+                load.val = self.pb.ti.timecurves(b["curve"])(self.pb.ti.t_init)
                 func.interpolate(load.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
                     mode=PETSc.ScatterMode.FORWARD,
                 )
-                funcs_to_update.append({func: self.ti.timecurves(b["curve"])})
+                funcs_to_update.append({func: self.pb.ti.timecurves(b["curve"])})
             elif "val" in b.keys():
                 assert "curve" not in b.keys() and "expression" not in b.keys()
                 func.x.petsc_vec.set(b["val"])
             elif "expression" in b.keys():
                 assert "curve" not in b.keys() and "val" not in b.keys()
                 expr = b["expression"]()
-                expr.t = self.ti.t_init
+                expr.t = self.pb.ti.t_init
                 func.interpolate(expr.evaluate)
                 func.x.petsc_vec.ghostUpdate(
                     addv=PETSc.InsertMode.INSERT,
@@ -734,7 +723,7 @@ class boundary_cond:
             scale_dens = b.get("scale_density", False)
 
             for i in range(len(b[ID])):
-                w += self.vf.deltaW_ext_bodyforce(func, func_dir, rho[b[ID][i]-1], dx_(b[ID][i]), F=F, chi=chi, scale_dens=scale_dens)
+                w += self.pb.vf.deltaW_ext_bodyforce(func, func_dir, rho[b[ID][i]-1], dx_(b[ID][i]), F=F, chi=chi, scale_dens=scale_dens)
 
         return w
 
@@ -754,7 +743,7 @@ class boundary_cond_fluid(boundary_cond):
             for i in range(len(sn[ID])):
                 beta = sn["beta"]
 
-                w += self.vf.deltaW_ext_stabilized_neumann(v, beta, ds_[dind](sn[ID][i]), w=wel, F=F)
+                w += self.pb.vf.deltaW_ext_stabilized_neumann(v, beta, ds_[dind](sn[ID][i]), w=wel, F=F)
 
         return w
 
@@ -773,7 +762,7 @@ class boundary_cond_fluid(boundary_cond):
                 beta = sn["beta"]
                 gamma = sn["gamma"]
 
-                w += self.vf.deltaW_ext_stabilized_neumann_mod(v, beta, gamma, ds_[dind](sn[ID][i]), w=wel, F=F)
+                w += self.pb.vf.deltaW_ext_stabilized_neumann_mod(v, beta, gamma, ds_[dind](sn[ID][i]), w=wel, F=F)
 
         return w
 
@@ -802,7 +791,7 @@ class boundary_cond_fluid(boundary_cond):
             if direction == "xyz_ref":  # reference xyz
                 for i in range(len(r[ID])):
                     if dw is None:
-                        w += self.vf.deltaW_ext_robin_valve(
+                        w += self.pb.vf.deltaW_ext_robin_valve(
                             v,
                             beta_[-1],
                             dS_[0](r[ID][i]),
@@ -812,7 +801,7 @@ class boundary_cond_fluid(boundary_cond):
                         )
                     else:
                         # derivative (for implicit valve law)
-                        dwddp += self.vf.deltaW_ext_robin_valve(
+                        dwddp += self.pb.vf.deltaW_ext_robin_valve(
                             v,
                             ufl.as_ufl(1.0),
                             dS_[0](r[ID][i]),
@@ -824,7 +813,7 @@ class boundary_cond_fluid(boundary_cond):
             elif direction == "normal_ref":  # reference normal
                 for i in range(len(r[ID])):
                     if dw is None:
-                        w += self.vf.deltaW_ext_robin_valve_normal_ref(
+                        w += self.pb.vf.deltaW_ext_robin_valve_normal_ref(
                             v,
                             beta_[-1],
                             dS_[0](r[ID][i]),
@@ -834,7 +823,7 @@ class boundary_cond_fluid(boundary_cond):
                         )
                     else:
                         # derivative (for implicit valve law)
-                        dwddp += self.vf.deltaW_ext_robin_valve_normal_ref(
+                        dwddp += self.pb.vf.deltaW_ext_robin_valve_normal_ref(
                             v,
                             ufl.as_ufl(1.0),
                             dS_[0](r[ID][i]),
@@ -884,31 +873,31 @@ class boundary_cond_fluid(boundary_cond):
                 if not internal:
                     if not on_subdomain:
                         db_ = ufl.ds(
-                            domain=self.io.mesh_master,
-                            subdomain_data=self.io.mt_b_master,
+                            domain=self.pb.io.mesh_master,
+                            subdomain_data=self.pb.io.mt_b_master,
                             subdomain_id=r[ID][i],
-                            metadata={"quadrature_degree": self.quad_degree},
+                            metadata={"quadrature_degree": self.pb.quad_degree},
                         )
                     else:
                         db_ = ufl.ds(
-                            domain=self.io.submshes_emap[dom_u][0],
-                            subdomain_data=self.io.sub_mt_b[dom_u],
+                            domain=self.pb.io.submshes_emap[dom_u][0],
+                            subdomain_data=self.pb.io.sub_mt_b[dom_u],
                             subdomain_id=r[ID][i],
-                            metadata={"quadrature_degree": self.quad_degree},
+                            metadata={"quadrature_degree": self.pb.quad_degree},
                         )
                 else:
                     db_ = ufl.dS(
-                        domain=self.io.mesh_master,
-                        subdomain_data=self.io.mt_b_master,
+                        domain=self.pb.io.mesh_master,
+                        subdomain_data=self.pb.io.mt_b_master,
                         subdomain_id=r[ID][i],
-                        metadata={"quadrature_degree": self.quad_degree},
+                        metadata={"quadrature_degree": self.pb.quad_degree},
                     )
 
-                q += self.vf.flux(v, db_, w=wel_, F=F, fcts=fcts)
+                q += self.pb.vf.flux(v, db_, w=wel_, F=F, fcts=fcts)
 
             if on_subdomain:
                 # entity map child to parent
-                em_u = [self.io.submshes_emap[dom_u][1]]
+                em_u = [self.pb.io.submshes_emap[dom_u][1]]
                 qdict_.append(fem.form(q, entity_maps=em_u))
             else:
                 qdict_.append(fem.form(q))
@@ -927,7 +916,7 @@ class boundary_cond_fluid(boundary_cond):
             # area map for integration
             if spatial and F is not None:
                 J = ufl.det(F)
-                ja = J * ufl.sqrt(ufl.dot(self.vf.n0, (ufl.inv(F) * ufl.inv(F).T) * self.vf.n0))
+                ja = J * ufl.sqrt(ufl.dot(self.pb.vf.n0, (ufl.inv(F) * ufl.inv(F).T) * self.pb.vf.n0))
             else:
                 ja = 1.0
 
@@ -942,16 +931,16 @@ class boundary_cond_fluid(boundary_cond):
 
             for i in range(len(r[ID])):
                 db_u_ = ufl.ds(
-                    domain=self.io.submshes_emap[dom_u][0],
-                    subdomain_data=self.io.sub_mt_b[dom_u],
+                    domain=self.pb.io.submshes_emap[dom_u][0],
+                    subdomain_data=self.pb.io.sub_mt_b[dom_u],
                     subdomain_id=r[ID][i],
-                    metadata={"quadrature_degree": self.quad_degree},
+                    metadata={"quadrature_degree": self.pb.quad_degree},
                 )
                 db_d_ = ufl.ds(
-                    domain=self.io.submshes_emap[dom_d][0],
-                    subdomain_data=self.io.sub_mt_b[dom_d],
+                    domain=self.pb.io.submshes_emap[dom_d][0],
+                    subdomain_data=self.pb.io.sub_mt_b[dom_d],
                     subdomain_id=r[ID][i],
-                    metadata={"quadrature_degree": self.quad_degree},
+                    metadata={"quadrature_degree": self.pb.quad_degree},
                 )
 
                 # area forms
@@ -963,8 +952,8 @@ class boundary_cond_fluid(boundary_cond):
                 pint_d += pdict[dom_d] * ja * db_d_
 
             # entity maps child to parent
-            em_u = [self.io.submshes_emap[dom_u][1]]
-            em_d = [self.io.submshes_emap[dom_d][1]]
+            em_u = [self.pb.io.submshes_emap[dom_u][1]]
+            em_d = [self.pb.io.submshes_emap[dom_d][1]]
 
             a_u_.append(fem.form(a_u, entity_maps=em_u))
             a_d_.append(fem.form(a_d, entity_maps=em_d))

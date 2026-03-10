@@ -65,19 +65,22 @@ class PhasefieldProblem(problem_base):
         self.order_mu = fem_params["order_mu"]
         self.quad_degree = fem_params["quad_degree"]
 
-        # TODO: Find nicer solution here...
-        if self.pbase.problem_type == "fsi_multiphase":
-            self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
-        else:
-            self.dx, self.bmeasures = self.io.create_integration_measures(
-                self.io.mesh, [self.io.mt_d, self.io.mt_b, self.io.mt_sb], self.quad_degree, bcdict=bc_dict
-            )
+        # collect relevant domain data and mesh
+        self.domain_ids = self.io.domain_ids[self.io.m_id_phase]
+        self.num_domains = self.io.num_domains[self.io.m_id_phase]
+        self.mesh = self.io.mesh_[self.io.m_id_phase]
+        # mesh tags for DBCs
+        self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_phase], self.io.mt_b_[self.io.m_id_phase], self.io.mt_sb_[self.io.m_id_phase]
+        # global measures for weak BCs
+        self.dx, self.bmeasures = self.io.dx, self.io.bmeasures
+        # results files dictionary for I/O
+        self.resultsfiles = {}
 
-        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.io.mesh)
+        self.constitutive_models = utilities.mat_params_to_dolfinx_constant(constitutive_models, self.mesh)
 
         # collect domain data
         self.kappa = []
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             self.kappa.append(self.constitutive_models["MAT" + str(n + 1)]["mat_cahnhilliard"]["kappa"])
 
         self.localsolve = False  # no idea what might have to be solved locally...
@@ -86,7 +89,7 @@ class PhasefieldProblem(problem_base):
         self.have_condensed_variables = False  # always False here...
         self.sub_solve = False
         self.print_subiter = False
-        self.dim = self.io.mesh.geometry.dim
+        self.dim = self.mesh.geometry.dim
 
         # model order reduction
         self.mor_params = mor_params
@@ -104,18 +107,18 @@ class PhasefieldProblem(problem_base):
 
         # function spaces for phi and mu
         self.V_phi = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             ("Lagrange", self.order_phi),
         )
 
         self.V_mu = fem.functionspace(
-            self.io.mesh,
+            self.mesh,
             ("Lagrange", self.order_mu),
         )
 
         # for output writing - function spaces on the degree of the mesh
-        self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
-        self.V_out_scalar = fem.functionspace(self.io.mesh, ("Lagrange", self.mesh_degree))
+        self.mesh_degree = self.mesh._ufl_domain._ufl_coordinate_element._degree
+        self.V_out_scalar = fem.functionspace(self.mesh, ("Lagrange", self.mesh_degree))
 
         # functions phase field
         self.dphi = ufl.TrialFunction(self.V_phi)  # Incremental phase field
@@ -149,7 +152,7 @@ class PhasefieldProblem(problem_base):
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
-        for n in range(self.io.num_domains):
+        for n in range(self.num_domains):
             self.ma.append(
                 phasefield_constitutive.constitutive(self.constitutive_models["MAT" + str(n + 1)], phi_range=self.phi_range)
             )
@@ -170,10 +173,7 @@ class PhasefieldProblem(problem_base):
 
         # initialize boundary condition class
         self.bc = boundaryconditions.boundary_cond(
-            self.io,
-            fem_params=fem_params,
-            vf=self.vf,
-            ti=self.ti,
+            self,
             V_field=self.V_phi,
         )
         self.bc_dict = bc_dict
@@ -233,7 +233,7 @@ class PhasefieldProblem(problem_base):
         self.phase_field_old, self.potential_old = ufl.as_ufl(0), ufl.as_ufl(0)
         self.phase_field_mid, self.potential_mid = ufl.as_ufl(0), ufl.as_ufl(0)
 
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             self.phase_field += self.vf.cahnhilliard_phase(self.phidot_expr, self.phi, self.mu, self.ma[n].diffusive_flux(self.mu, self.phi, p=self.fluidvar["p"], F=self.alevar["Fale"]), self.dx(M), v=self.fluidvar["v"], w=self.alevar["w"], F=self.alevar["Fale"])
             self.phase_field_old += self.vf.cahnhilliard_phase(self.phidot_old, self.phi_old, self.mu_old, self.ma[n].diffusive_flux(self.mu_old, self.phi_old, p=self.fluidvar["p_old"], F=self.alevar["Fale_old"]), self.dx(M), v=self.fluidvar["v_old"], w=self.alevar["w_old"], F=self.alevar["Fale_old"])
             self.phase_field_mid += self.vf.cahnhilliard_phase(self.phidot_mid, self.phi_mid, self.mu_mid, self.ma[n].diffusive_flux(self.mu_mid, self.phi_mid, p=self.fluidvar["p_mid"], F=self.alevar["Fale_mid"]), self.dx(M), v=self.fluidvar["v_mid"], w=self.alevar["w_mid"], F=self.alevar["Fale_mid"])
@@ -268,7 +268,7 @@ class PhasefieldProblem(problem_base):
             J, J_old = ufl.det(self.alevar["Fale"]), ufl.det(self.alevar["Fale_old"])
         else:
             J, J_old = 1.0, 1.0
-        for n, M in enumerate(self.io.domain_ids):
+        for n, M in enumerate(self.domain_ids):
             phase_form += (J * self.phi - J_old * self.phi_old) / (self.pbase.dt) * self.dx(M)
 
         pst = fem.assemble_scalar(fem.form(phase_form))
@@ -415,7 +415,7 @@ class PhasefieldProblem(problem_base):
     def set_output_state(self, N):
         pass
 
-    def write_output(self, N, t, mesh=False):
+    def write_output(self, N, t, msh=False):
         self.io.write_output(self, N=N, t=t)
 
     def update(self):
