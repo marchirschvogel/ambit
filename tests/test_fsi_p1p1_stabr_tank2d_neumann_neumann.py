@@ -109,9 +109,25 @@ def test_main():
         "dirichlet": [{"id": [2], "dir": "all", "val": 0.}],
         }
 
+    # for testing purposes, use these locators instead of mesh tags
+    class locate_top:
+        def evaluate(self, x):
+            return np.isclose(x[1], 10.0)
+    class locate_bottom:
+        def evaluate(self, x):
+            return np.isclose(x[1], 0.0)
+    class locate_right_outlet:
+        def evaluate(self, x):
+            return np.logical_and(np.isclose(x[0], 10.0), x[1] < 2.0)
+    class locate_right_wall:
+        def evaluate(self, x):
+            eps=1e-5
+            return np.logical_and(np.isclose(x[0], 10.0), x[1] >= 2.0-eps)
+
+
     BC_DICT_FLUID = {
-        "dirichlet": [{"id":[4], "dir": "all", "val": 0.}],
-        "stabilized_neumann" : [{"id" : [5], "beta" : 0.2e-6, "gamma" : 1.}]
+        "dirichlet": [{"id": [locate_top(),locate_bottom(),locate_right_wall()], "dir": "all", "val": 0.}],  # could use id 4 instead
+        "stabilized_neumann" : [{"id" : [locate_right_outlet()], "beta" : 0.2e-6, "gamma" : 1.}],  # could use id 5 instead
     }
 
     BC_DICT_ALE = {

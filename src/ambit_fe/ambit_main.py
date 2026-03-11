@@ -556,7 +556,7 @@ class Ambit:
         elif problem_type == "fsi_multiphase":
             from .coupling import fsi_multiphase_main
 
-            io = ioroutines.IO_fsi(io_params, constitutive_params[0:2], entity_maps=self.entity_maps, comm=self.comm)
+            io = ioroutines.IO_fsi_multiphase(io_params, constitutive_params[0:2], entity_maps=self.entity_maps, comm=self.comm)
             io.readin_mesh()
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
             io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)

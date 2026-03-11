@@ -201,7 +201,7 @@ class AleProblem(problem_base):
             )
 
         # initialize ALE variational form class
-        self.vf = ale_variationalform.variationalform(self.var_d, n0=self.io.n0, ro0=self.io.ro0)
+        self.vf = ale_variationalform.variationalform(tstfnc1=self.var_d, n0=self.io.n0, ro0=self.io.ro0)
 
         # set form for domain velocity
         self.wel = self.ti.set_wel(self.d, self.d_old, self.d_veryold, self.w_old)

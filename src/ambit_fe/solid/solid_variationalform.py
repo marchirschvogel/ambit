@@ -17,8 +17,24 @@ Principle of Virtual Work
 
 
 class variationalform(variationalform_base):
-    ### Kinetic virtual work
+    def __init__(
+        self,
+        tstfnc1=None,
+        tstfnc2=None,
+        trlfnc1=None,
+        trlfnc2=None,
+        n0=None,
+        x_ref=None,
+        formulation=None,
+        ro0=None,
+    ):
+        self.var_u = tstfnc1
+        self.var_p = tstfnc2
+        self.du = trlfnc1
+        self.dp = trlfnc2
+        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, formulation=formulation, ro0=ro0)
 
+    ### Kinetic virtual work
     # TeX: \delta \mathcal{W}_{\mathrm{kin}} := \int\limits_{\Omega_{0}} \rho_{0}\boldsymbol{a} \cdot \delta\boldsymbol{u} \,\mathrm{d}V
     def deltaW_kin(self, a, rho0, ddomain):
         return rho0 * ufl.dot(a, self.var_u) * ddomain

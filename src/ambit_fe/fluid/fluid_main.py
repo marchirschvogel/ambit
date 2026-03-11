@@ -457,8 +457,8 @@ class FluidmechanicsProblem(problem_base):
         # initialize fluid variational form class
         if not self.is_ale:
             self.vf = fluid_variationalform.variationalform(
-                self.var_v,
-                var_p=self.var_p_,
+                tstfnc1=self.var_v,
+                tstfnc2=self.var_p_,
                 n0=self.io.n0,
                 formulation=self.fluid_formulation,
             )
@@ -466,8 +466,8 @@ class FluidmechanicsProblem(problem_base):
         else:
             # fully consistent ALE formulation of Navier-Stokes
             self.vf = fluid_variationalform.variationalform_ale(
-                self.var_v,
-                var_p=self.var_p_,
+                tstfnc1=self.var_v,
+                tstfnc2=self.var_p_,
                 n0=self.io.n0,
                 formulation=self.fluid_formulation,
             )

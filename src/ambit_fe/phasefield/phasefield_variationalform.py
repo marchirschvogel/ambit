@@ -7,11 +7,23 @@
 # LICENSE file in the root directory of this source tree.
 
 import ufl
+from ..variationalform import variationalform_base
 
-class variationalform():
-    def __init__(self, var_phi, var_mu):
-        self.var_phi = var_phi  # phase field test functions
-        self.var_mu = var_mu  # potential test functions
+class variationalform(variationalform_base):
+    def __init__(
+        self,
+        tstfnc1=None,
+        tstfnc2=None,
+        trlfnc1=None,
+        trlfnc2=None,
+        n0=None,
+        x_ref=None,
+        formulation=None,
+        ro0=None,
+    ):
+        self.var_phi = tstfnc1
+        self.var_mu = tstfnc2
+        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, formulation=formulation, ro0=ro0)
 
     def cahnhilliard_phase(self, phidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
         # advection term if coupled to fluid flow

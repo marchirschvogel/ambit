@@ -765,6 +765,72 @@ class sol_utils:
                     ),
                     self.solver.comm,
                 )
+            elif numres == 8:
+                utilities.print_status(
+                    (
+                        "{:<"
+                        + str(self.solver.indlen)
+                        + "s}{:<6s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<25s}{:<3s}{:<7s}"
+                    ).format(
+                        " ",
+                        "it |",
+                        eq1,
+                        "| ",
+                        eq2,
+                        "| ",
+                        eq3,
+                        "| ",
+                        eq4,
+                        "| ",
+                        eq5,
+                        "| ",
+                        eq6,
+                        "| ",
+                        eq7,
+                        "| ",
+                        eq8,
+                        "| ",
+                        "timings",
+                    ),
+                    self.solver.comm,
+                )
+                utilities.print_status(
+                    (
+                        "{:<"
+                        + str(self.solver.indlen)
+                        + "s}{:<6s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<13s}{:<12s}{:<3s}{:<10s}{:<7s}"
+                    ).format(
+                        " ",
+                        "#  |",
+                        "||r_" + v1 + "||_2",
+                        "||d" + v1 + "||_2",
+                        "| ",
+                        "||r_" + v2 + "||_2",
+                        "||d" + v2 + "||_2",
+                        "| ",
+                        "||r_" + v3 + "||_2",
+                        "||d" + v3 + "||_2",
+                        "| ",
+                        "||r_" + v4 + "||_2",
+                        "||d" + v4 + "||_2",
+                        "| ",
+                        "||r_" + v5 + "||_2",
+                        "||d" + v5 + "||_2",
+                        "| ",
+                        "||r_" + v6 + "||_2",
+                        "||d" + v6 + "||_2",
+                        "| ",
+                        "||r_" + v7 + "||_2",
+                        "||d" + v7 + "||_2",
+                        "| ",
+                        "||r_" + v8 + "||_2",
+                        "||d" + v8 + "||_2",
+                        "| ",
+                        "te",
+                        "ts",
+                    ),
+                    self.solver.comm,
+                )
             else:
                 raise RuntimeError("Error. You should not be here!")
 
@@ -1008,6 +1074,54 @@ class sol_utils:
                         " ",
                         "  |  ",
                         resnorms["res7"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        te,
+                        " ",
+                        " ",
+                    ),
+                    self.solver.comm,
+                )
+            elif numres == 8:
+                utilities.print_status(
+                    (
+                        "{:<"
+                        + str(self.solver.indlen)
+                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.4e}{:<3s}{:<10s}{:<5s}{:<4.2e}{:<2s}{:<8s}"
+                    ).format(
+                        " ",
+                        it,
+                        "| ",
+                        resnorms["res1"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res2"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res3"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res4"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res5"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res6"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res7"],
+                        " ",
+                        " ",
+                        "  |  ",
+                        resnorms["res8"],
                         " ",
                         " ",
                         "  |  ",
@@ -1267,6 +1381,54 @@ class sol_utils:
                     ),
                     self.solver.comm,
                 )
+            elif numres == 8:
+                utilities.print_status(
+                    (
+                        "{:<"
+                        + str(self.solver.indlen)
+                        + "s}{:<3d}{:<3s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.4e}{:<3s}{:<4.4e}{:<5s}{:<4.2e}{:<2s}{:<4.2e}"
+                    ).format(
+                        " ",
+                        it,
+                        "| ",
+                        resnorms["res1"],
+                        " ",
+                        incnorms["inc1"],
+                        "  |  ",
+                        resnorms["res2"],
+                        " ",
+                        incnorms["inc2"],
+                        "  |  ",
+                        resnorms["res3"],
+                        " ",
+                        incnorms["inc3"],
+                        "  |  ",
+                        resnorms["res4"],
+                        " ",
+                        incnorms["inc4"],
+                        "  |  ",
+                        resnorms["res5"],
+                        " ",
+                        incnorms["inc5"],
+                        "  |  ",
+                        resnorms["res6"],
+                        " ",
+                        incnorms["inc6"],
+                        "  |  ",
+                        resnorms["res7"],
+                        " ",
+                        incnorms["inc7"],
+                        "  |  ",
+                        resnorms["res8"],
+                        " ",
+                        incnorms["inc8"],
+                        "  |  ",
+                        te,
+                        " ",
+                        ts,
+                    ),
+                    self.solver.comm,
+                )
             else:
                 raise RuntimeError("Number of residual norms inconsistent.")
 
@@ -1376,6 +1538,8 @@ class sol_utils:
             seplen = 195
         elif len(self.solver.tolerances[0]) == 14:
             seplen = 221
+        elif len(self.solver.tolerances[0]) == 16:
+            seplen = 240
         else:
             raise ValueError("Unknown size of tolerances!")
 

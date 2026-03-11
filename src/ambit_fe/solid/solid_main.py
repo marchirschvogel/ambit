@@ -613,10 +613,10 @@ class SolidmechanicsProblem(problem_base):
 
         # initialize solid variational form class
         self.vf = solid_variationalform.variationalform(
-            self.var_u,
-            var_p=self.var_p,
-            du=self.du,
-            dp=self.dp,
+            tstfnc1=self.var_u,
+            tstfnc2=self.var_p,
+            trlfnc1=self.du,
+            trlfnc2=self.dp,
             n0=self.io.n0,
             x_ref=self.x_ref,
         )

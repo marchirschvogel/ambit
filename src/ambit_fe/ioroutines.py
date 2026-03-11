@@ -1917,7 +1917,7 @@ class IO_phasefield(IO):
                         # iteration counters, written by base class
                         pass
                     else:
-                        raise NameError("Unknown output to write for ALE mechanics!")
+                        raise NameError("Unknown output to write for Cahn-Hilliard problem!")
 
     def readcheckpoint(self, pb, N_rest):
         vecs_to_read = {}
@@ -2413,3 +2413,18 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         )
 
         self.bmeasures = [self.ds, self.de, self.dS]
+
+
+class IO_fsi_multiphase(IO_fsi, IO_phasefield):
+    def write_output(self, pb, writemesh=False, N=1, t=0):
+        IO_fsi.write_output(self, pb.pbfsi, writemesh=writemesh, N=N, t=t)
+        IO_phasefield.write_output(self, pb.pbp, writemesh=writemesh, N=N, t=t)
+
+    def readcheckpoint(self, pb, N_rest):
+        IO_fsi.readcheckpoint(self, pb.pbfsi, N_rest)
+        IO_phasefield.readcheckpoint(self, pb.pbp, N_rest)
+
+    def write_restart(self, pb, N, force=False):
+        IO_fsi.write_restart(self, pb.pbfsi, N, force=force)
+        if (self.write_restart_every > 0 and N % self.write_restart_every == 0) or force:
+            IO_phasefield.writecheckpoint(self, pb.pbp, N)

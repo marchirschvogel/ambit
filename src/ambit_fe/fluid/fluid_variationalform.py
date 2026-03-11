@@ -16,6 +16,21 @@ Principle of Virtual Power
 """
 
 class variationalform(variationalform_base):
+    def __init__(
+        self,
+        tstfnc1=None,
+        tstfnc2=None,
+        trlfnc1=None,
+        trlfnc2=None,
+        n0=None,
+        x_ref=None,
+        formulation=None,
+        ro0=None,
+    ):
+        self.var_v = tstfnc1
+        self.var_p = tstfnc2
+        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, formulation=formulation, ro0=ro0)
+
     # Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
     def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
         rho_ = self.get_density(rho, chi=phi[1])

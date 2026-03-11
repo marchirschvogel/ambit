@@ -159,9 +159,9 @@ class PhasefieldProblem(problem_base):
 
         # initialize pahse field (Cahn-Hilliard) variational form class
         if not self.is_ale:
-            self.vf = phasefield_variationalform.variationalform(self.var_phi, self.var_mu)
+            self.vf = phasefield_variationalform.variationalform(tstfnc1=self.var_phi, tstfnc2=self.var_mu)
         else:
-            self.vf = phasefield_variationalform.variationalform_ale(self.var_phi, self.var_mu)
+            self.vf = phasefield_variationalform.variationalform_ale(tstfnc1=self.var_phi, tstfnc2=self.var_mu)
 
         # set form for phidot
         self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)
@@ -241,20 +241,64 @@ class PhasefieldProblem(problem_base):
             self.potential_old += self.vf.cahnhilliard_potential(self.phi_old, self.mu_old, self.ma[n].driv_force(self.phi_old), self.kappa[n], self.dx(M), F=self.alevar["Fale_old"])
             self.potential_mid += self.vf.cahnhilliard_potential(self.phi_mid, self.mu_mid, self.ma[n].driv_force(self.phi_mid), self.kappa[n], self.dx(M), F=self.alevar["Fale_mid"])
 
+        self.have_neumann = False
+        self.have_robin = False
+
+        w_neumann_phi, w_robin_phi = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_phi_old, w_robin_phi_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_phi_mid, w_robin_phi_mid = ufl.as_ufl(0), ufl.as_ufl(0)
+
+        # take care of BCs
+        if "neumann" in self.bc_dict.keys():
+            self.have_neumann = True
+            raise RuntimeError("Currently, no Neumann conditions are supported in phase field model!")
+        if "robin" in self.bc_dict.keys():
+            self.have_robin = True
+            w_robin_phi = self.bc.robin_bcs(
+                self.bc_dict["robin"],
+                self.phi,
+                self.phidot_expr,
+                self.bmeasures,
+            )
+            w_robin_phi_old = self.bc.robin_bcs(
+                self.bc_dict["robin"],
+                self.phi_old,
+                self.phidot_old,
+                self.bmeasures,
+            )
+            w_robin_phi_mid = self.bc.robin_bcs(
+                self.bc_dict["robin"],
+                self.phi_mid,
+                self.phidot_mid,
+                self.bmeasures,
+            )
+
         if self.ti.res_eval == "trap":
             self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old
+            if self.have_neumann:
+                self.weakform_phi += -(self.timefac * w_neumann_phi + (1.-self.timefac) * w_neumann_phi_old)
+            if self.have_robin:
+                self.weakform_phi += -(self.timefac * w_robin_phi + (1.-self.timefac) * w_robin_phi_old)
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
             else:
                 self.weakform_mu = self.timefac * self.potential + (1.-self.timefac) * self.potential_old
         if self.ti.res_eval == "midp":
             self.weakform_phi = self.phase_field_mid
+            if self.have_neumann:
+                self.weakform_phi += -w_neumann_phi_mid
+            if self.have_robin:
+                self.weakform_phi += -w_robin_phi_mid
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
             else:
                 self.weakform_mu = self.potential_mid
         if self.ti.res_eval == "back":
             self.weakform_phi = self.phase_field
+            if self.have_neumann:
+                self.weakform_phi += -w_neumann_phi
+            if self.have_robin:
+                self.weakform_phi += -w_robin_phi
             self.weakform_mu = self.potential
 
         self.weakform_lin_phiphi = ufl.derivative(self.weakform_phi, self.phi, self.dphi)

@@ -265,12 +265,11 @@ class FSIProblem(problem_base):
             self.power_coupling_fluid_old = ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
 
             # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
-            self.pbs.weakform_u += (
-                self.pbs.timefac * self.work_coupling_solid + (1.0 - self.pbs.timefac) * self.work_coupling_solid_old
-            )
-            self.pbf.weakform_v += (
-                -self.pbf.timefac * self.power_coupling_fluid - (1.0 - self.pbf.timefac) * self.power_coupling_fluid_old
-            )
+            # NOTE: We rather want the loads always at t_{n+1} to be consistent to the Neumann-Dirichlet scheme!
+            # self.pbs.weakform_u += self.pbs.timefac * self.work_coupling_solid + (1.0 - self.pbs.timefac) * self.work_coupling_solid_old
+            # self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling_fluid - (1.0 - self.pbf.timefac) * self.power_coupling_fluid_old
+            self.pbs.weakform_u += self.work_coupling_solid
+            self.pbf.weakform_v += -self.power_coupling_fluid
 
             if self.fsi_governing_type == "solid_governed":
                 self.weakform_l = ufl.dot(self.pbs.u, self.var_lm) * self.io.ds(self.io.interface_id_s) - ufl.dot(
@@ -286,8 +285,10 @@ class FSIProblem(problem_base):
             self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
             self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
 
-            self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
-            self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+            # self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
+            # self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+            self.weakform_lin_ul = ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
+            self.weakform_lin_vl = -ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
 
             # for DBC application to LM, even if zero...
             self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)

@@ -18,10 +18,18 @@ import pytest
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try:
+        restart_step = int(sys.argv[1])
+    except:
+        restart_step = 0
+
     IO_PARAMS = {
         "problem_type": "fsi",
         "write_results_every": 1,
+        "write_restart_every": 2,
         "indicate_results_by": "step",
+        "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/tank2d_domain.xdmf",
         "mesh_boundary": basepath + "/input/tank2d_boundary.xdmf",

@@ -540,6 +540,8 @@ class boundary_cond:
             if "is_locator" in r.keys(): dind=2
             if "id_loc" in r.keys(): ID="id_loc"
 
+            direction = r.get("dir", "xyz_ref")
+
             if r["type"] == "spring":
                 # may be an expression
                 stiff = r["stiff"]
@@ -550,15 +552,15 @@ class boundary_cond:
                 else:
                     stiff_ = stiff
 
-                if r["dir"] == "xyz_ref":  # reference xyz
+                if direction == "xyz_ref":  # reference xyz
                     for i in range(len(r[ID])):
                         w += self.pb.vf.deltaW_ext_robin_spring(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
-                elif r["dir"] == "normal_ref":  # reference normal
+                elif direction == "normal_ref":  # reference normal
                     for i in range(len(r[ID])):
                         w += self.pb.vf.deltaW_ext_robin_spring_normal_ref(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
-                elif r["dir"] == "normal_cross":  # cross normal
+                elif direction == "normal_cross":  # cross normal
                     for i in range(len(r[ID])):
                         w += self.pb.vf.deltaW_ext_robin_spring_normal_cross(u, stiff_, ds_[dind](r[ID][i]), u_pre)
 
@@ -575,15 +577,15 @@ class boundary_cond:
                 else:
                     visc_ = visc
 
-                if r["dir"] == "xyz_ref":  # reference xyz
+                if direction == "xyz_ref":  # reference xyz
                     for i in range(len(r[ID])):
                         w += self.pb.vf.deltaW_ext_robin_dashpot(v, visc_, ds_[dind](r[ID][i]))
 
-                elif r["dir"] == "normal_ref":  # reference normal
+                elif direction == "normal_ref":  # reference normal
                     for i in range(len(r[ID])):
                         w += self.pb.vf.deltaW_ext_robin_dashpot_normal_ref(v, visc_, ds_[dind](r[ID][i]))
 
-                elif r["dir"] == "normal_cross":  # cross normal
+                elif direction == "normal_cross":  # cross normal
                     for i in range(len(r[ID])):
                         w += self.pb.vf.deltaW_ext_robin_dashpot_normal_cross(v, visc_, ds_[dind](r[ID][i]))
 

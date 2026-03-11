@@ -17,8 +17,21 @@ Principle of Virtual Work
 
 
 class variationalform(variationalform_base):
-    ### Internal virtual work
+    def __init__(
+        self,
+        tstfnc1=None,
+        tstfnc2=None,
+        trlfnc1=None,
+        trlfnc2=None,
+        n0=None,
+        x_ref=None,
+        formulation=None,
+        ro0=None,
+    ):
+        self.var_d = tstfnc1
+        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, formulation=formulation, ro0=ro0)
 
+    ### Internal virtual work
     # TeX: \delta \mathcal{W}_{\mathrm{int}} := \int\limits_{\Omega_0} \boldsymbol{\sigma} : \delta\boldsymbol{\epsilon} \,\mathrm{d}V
     def deltaW_int(self, stress, ddomain):
         return ufl.inner(stress, ufl.grad(self.var_d)) * ddomain

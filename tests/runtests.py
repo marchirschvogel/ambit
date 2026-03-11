@@ -331,6 +331,17 @@ if category == "fsi" or category == "all":
         ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3-s2x2.py"]
     )
 
+if category == "fsi" or category == "fsi_multiphase" or category == "all":
+    errs["test_fsi_multiphase_neumann_neumann 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_neumann_neumann.py"]
+    )
+    errs["test_fsi_multiphase_neumann_dirichlet 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_neumann_dirichlet.py"]
+    )
+    errs["test_fsi_multiphase_neumann_neumann 2 restart"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_neumann_neumann.py", str(2)]
+    )
+
 if category == "fsi_flow0d" or category == "all":
     errs["test_fsi_flow0d_p1p1_stabr_artseg_neumann_neumann 2"] = subprocess.call(
         [

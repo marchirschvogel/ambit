@@ -17,51 +17,43 @@ Variational form base class
 class variationalform_base:
     def __init__(
         self,
-        var_u,
-        var_p=None,
-        du=None,
-        dp=None,
+        tstfnc1=None,
+        tstfnc2=None,
+        trlfnc1=None,
+        trlfnc2=None,
         n0=None,
         x_ref=None,
         formulation=None,
         ro0=None,
     ):
-        self.var_u = var_u  # displacement/velocity test functions
-        self.var_p = var_p  # pressure test functions
-        self.du = du  # displacement/velocity trial functions
-        self.dp = dp  # pressure trial functions
-
-        self.var_v, self.var_d = (
-            var_u,
-            var_u,
-        )  # for naming convenience, to use var_v (var_d) in derived fluid (ALE) class
+        self.tstfnc1 = tstfnc1
+        self.tstfnc2 = tstfnc2
+        self.trlfnc1 = trlfnc1
+        self.trlfnc2 = trlfnc2
 
         self.n0 = n0  # reference normal field
         self.x_ref = x_ref  # reference coordinates
 
         self.formulation = formulation  # fluid formulation (conservative or non-conservative)
 
-        self.I = ufl.Identity(len(self.var_u))  # identity
-        self.dim = self.I.ufl_shape[0]  # dimension
-
         self.ro0 = ro0  # cell circumradius (for weak DBC on linear problem, e.g. ALE)
 
     # Neumann load on reference configuration (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} \hat{\boldsymbol{t}}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
     def deltaW_ext_neumann_ref(self, func, dboundary):
-        return ufl.dot(func, self.var_u) * dboundary
+        return ufl.dot(func, self.tstfnc1) * dboundary
 
     # Neumann load in reference normal (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} p\,\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_neumann_normal_ref(self, func, dboundary):
-        return func * ufl.dot(self.n0, self.var_u) * dboundary
+        return func * ufl.dot(self.n0, self.tstfnc1) * dboundary
 
     # Neumann follower load on current configuration (Cauchy traction)
     # TeX: \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
     def deltaW_ext_neumann_cur(self, func, dboundary, F=None):
         if F is not None:
             J = ufl.det(F)
-            return J * ufl.dot(ufl.inv(F).T * func, self.var_u) * dboundary
+            return J * ufl.dot(ufl.inv(F).T * func, self.tstfnc1) * dboundary
         else:
             return self.deltaW_ext_neumann_ref(func, dboundary)
 
@@ -70,7 +62,7 @@ class variationalform_base:
     def deltaW_ext_neumann_normal_cur(self, func, dboundary, F=None):
         if F is not None:
             J = ufl.det(F)
-            return func * J * ufl.dot(ufl.inv(F).T * self.n0, self.var_u) * dboundary
+            return func * J * ufl.dot(ufl.inv(F).T * self.n0, self.tstfnc1) * dboundary
         else:
             return self.deltaW_ext_neumann_normal_ref(func, dboundary)
 
@@ -83,45 +75,46 @@ class variationalform_base:
             fac = ufl.as_ufl(1.)
         if F is not None:
             J = ufl.det(F)
-            return fac * J * func * ufl.dot(funcdir, self.var_u) * ddomain  # for ALE fluid
+            return fac * J * func * ufl.dot(funcdir, self.tstfnc1) * ddomain  # for ALE fluid
         else:
-            return fac * func * ufl.dot(funcdir, self.var_u) * ddomain
+            return fac * func * ufl.dot(funcdir, self.tstfnc1) * ddomain
 
     # Robin condition (spring)
     # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring(self, u, k, dboundary, u_prestr=None):
         if u_prestr is not None:
-            return -k * ufl.dot(u + u_prestr, self.var_u) * dboundary
+            return -k * ufl.dot(u + u_prestr, self.tstfnc1) * dboundary
         else:
-            return -k * ufl.dot(u, self.var_u) * dboundary
+            return -k * ufl.dot(u, self.tstfnc1) * dboundary
 
     # Robin condition (spring) in reference normal direction
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_spring_normal_ref(self, u, k_n, dboundary, u_prestr=None):
         if u_prestr is not None:
-            return -k_n * ufl.dot(ufl.outer(self.n0, self.n0) * (u + u_prestr), self.var_u) * dboundary
+            return -k_n * ufl.dot(ufl.outer(self.n0, self.n0) * (u + u_prestr), self.tstfnc1) * dboundary
         else:
-            return -k_n * ufl.dot(ufl.outer(self.n0, self.n0) * u, self.var_u) * dboundary
+            return -k_n * ufl.dot(ufl.outer(self.n0, self.n0) * u, self.tstfnc1) * dboundary
 
     # Robin condition (spring) in cross normal direction
     def deltaW_ext_robin_spring_normal_cross(self, u, k_c, dboundary, u_prestr=None):
+        I = ufl.Identity(len(u))
         if u_prestr is not None:
             return (
                 -k_c
                 * ufl.dot(
-                    (self.I - ufl.outer(self.n0, self.n0)) * (u + u_prestr),
-                    self.var_u,
+                    (I - ufl.outer(self.n0, self.n0)) * (u + u_prestr),
+                    self.tstfnc1,
                 )
                 * dboundary
             )
         else:
-            return -k_c * ufl.dot((self.I - ufl.outer(self.n0, self.n0)) * u, self.var_u) * dboundary
+            return -k_c * ufl.dot((I - ufl.outer(self.n0, self.n0)) * u, self.tstfnc1) * dboundary
 
     # Robin condition (dashpot)
     # TeX: \int\limits_{\Gamma_0} c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot(self, v, c, dboundary):
         if not isinstance(v, ufl.constantvalue.Zero):
-            return -c * ufl.dot(v, self.var_u) * dboundary
+            return -c * ufl.dot(v, self.tstfnc1) * dboundary
         else:
             return ufl.as_ufl(0)
 
@@ -129,14 +122,15 @@ class variationalform_base:
     # TeX: \int\limits_{\Gamma_0} (\boldsymbol{n}_{0}\otimes \boldsymbol{n}_{0})\,c\,\dot{\boldsymbol{u}}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
     def deltaW_ext_robin_dashpot_normal_ref(self, v, c_n, dboundary):
         if not isinstance(v, ufl.constantvalue.Zero):
-            return -c_n * ufl.dot(ufl.outer(self.n0, self.n0) * v, self.var_u) * dboundary
+            return -c_n * ufl.dot(ufl.outer(self.n0, self.n0) * v, self.tstfnc1) * dboundary
         else:
             return ufl.as_ufl(0)
 
     # Robin condition (dashpot) in cross normal direction
     def deltaW_ext_robin_dashpot_normal_cross(self, v, c_c, dboundary):
         if not isinstance(v, ufl.constantvalue.Zero):
-            return -c_c * ufl.dot((self.I - ufl.outer(self.n0, self.n0)) * v, self.var_u) * dboundary
+            I = ufl.Identity(len(v))
+            return -c_c * ufl.dot((I - ufl.outer(self.n0, self.n0)) * v, self.tstfnc1) * dboundary
         else:
             return ufl.as_ufl(0)
 
@@ -159,6 +153,9 @@ class variationalform_base:
         fcts=None,
         returnquantity="weakform",
     ):
+        I = ufl.Identity(len(self.tstfnc1))  # identity
+        dim = I.ufl_shape[0]  # dimension
+
         C = F.T * F
 
         n0n0 = ufl.outer(self.n0, self.n0)
@@ -189,8 +186,8 @@ class variationalform_base:
                     omega * ufl.outer(c0, c0) + iota * ufl.outer(l0, l0) + 2.0 * gamma * ufl.sym(ufl.outer(c0, l0))
                 )
             elif params["active_stress"]["dir"] == "iso":
-                S_act = w_act * tau * self.I
-                dS_act = w_act * self.I
+                S_act = w_act * tau * I
+                dS_act = w_act * I
             else:
                 ValueError("Unknown ative stress dir!")
 
@@ -224,7 +221,7 @@ class variationalform_base:
         Cmoddot = Fdotmod.T * F0 + F0.T * Fdotmod - (IIIplanedot / (IIIplane**2.0)) * n0n0
 
         # only in-plane components of test function derivatives should be used!
-        var_F = ufl.grad(self.var_u) - ufl.grad(self.var_u) * n0n0
+        var_F = ufl.grad(self.tstfnc1) - ufl.grad(self.tstfnc1) * n0n0
 
         if model == "membrane":
             Fmod = F0
@@ -268,9 +265,9 @@ class variationalform_base:
         # exponential isotropic strain energy
         if material == "isoexp":
             b_0 = params["b_0"]
-            Psi = a_0 / (2.0 * b_0) * (ufl.exp(b_0 * (Ic_ - self.dim)) - 1.0)
+            Psi = a_0 / (2.0 * b_0) * (ufl.exp(b_0 * (Ic_ - dim)) - 1.0)
         elif material == "neohooke":
-            Psi = (a_0 / 2.0) * (Ic_ - self.dim)
+            Psi = (a_0 / 2.0) * (Ic_ - dim)
         else:
             raise ValueError("Unknown membrane elastic material!")
 
@@ -281,7 +278,7 @@ class variationalform_base:
         dPsi_dIIc = ufl.diff(Psi, IIc_)
 
         # elastic 2nd PK stress
-        S = 2.0 * (dPsi_dIc + Ic * dPsi_dIIc) * self.I - 2.0 * dPsi_dIIc * Cmod
+        S = 2.0 * (dPsi_dIc + Ic * dPsi_dIIc) * I - 2.0 * dPsi_dIIc * Cmod
         # viscous 2nd PK stress
         S += 2.0 * ufl.diff(Psi_v, Cmoddot_)
 
@@ -315,9 +312,9 @@ class variationalform_base:
         # boundary kinetic virtual work/power
         if not isinstance(a, ufl.constantvalue.Zero):
             if fcts is None:
-                dWb_kin = rho0 * (h0 * ufl.dot(a, self.var_u) * dboundary)
+                dWb_kin = rho0 * (h0 * ufl.dot(a, self.tstfnc1) * dboundary)
             else:
-                dWb_kin = rho0 * (h0 * ufl.dot(a, self.var_u)(fcts) * dboundary)
+                dWb_kin = rho0 * (h0 * ufl.dot(a, self.tstfnc1)(fcts) * dboundary)
         else:
             dWb_kin = ufl.as_ufl(0)
 
