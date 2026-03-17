@@ -414,18 +414,20 @@ class solver_nonlinear:
                         self.ksp[npr].getPC().setUp()
                         ksp_fields = self.ksp[npr].getPC().getFieldSplitSubKSP()
 
-                        assert nsets == len(self.precond_fields[npr])  # sanity check
+                        precond_fields = [item for sublist in list(self.precond_fields[npr].values()) for item in sublist]
+
+                        assert nsets == len(precond_fields)  # sanity check
 
                         # set field-specific preconditioners
                         for n in range(nsets):
-                            if self.precond_fields[npr][n]["prec"] == "amg":
-                                solvetype = self.precond_fields[npr][n].get("solve", "preonly")
+                            if precond_fields[n]["prec"] == "amg":
+                                solvetype = precond_fields[n].get("solve", "preonly")
                                 ksp_fields[n].setType(solvetype)
-                                amgtype = self.precond_fields[npr][n].get("amgtype", "hypre")
+                                amgtype = precond_fields[n].get("amgtype", "hypre")
                                 ksp_fields[n].getPC().setType(amgtype)
                                 if amgtype == "hypre":
                                     ksp_fields[n].getPC().setHYPREType("boomeramg")
-                            elif self.precond_fields[npr][n]["prec"] == "direct":
+                            elif precond_fields[n]["prec"] == "direct":
                                 ksp_fields[n].setType("preonly")
                                 ksp_fields[n].getPC().setType("lu")
                                 ksp_fields[n].getPC().setFactorSolverType("mumps")
@@ -594,8 +596,8 @@ class solver_nonlinear:
                         self.ksp[npr].getPC().setHYPREType("boomeramg")
 
                         # set additional PETSc options for single-field preconditioner
-                        if "petsc_options" in self.precond_fields[npr][0].keys():
-                            opt_dict = self.precond_fields[npr][0]["petsc_options"]
+                        if "petsc_options" in self.precond_fields[npr].keys():
+                            opt_dict = self.precond_fields[npr]["petsc_options"]
                             opts = PETSc.Options()
                             for o in opt_dict:
                                 opts.setValue(o, opt_dict[o])
@@ -607,13 +609,13 @@ class solver_nonlinear:
                         raise ValueError("Unknown block_precond option!")
 
                 else:
-                    if self.precond_fields[npr][0]["prec"] == "amg":
+                    if self.precond_fields[npr]["prec"] == "amg":
                         self.ksp[npr].getPC().setType("hypre")
                         self.ksp[npr].getPC().setHYPREType("boomeramg")
 
                         # set additional PETSc options for single-field preconditioner
-                        if "petsc_options" in self.precond_fields[npr][0].keys():
-                            opt_dict = self.precond_fields[npr][0]["petsc_options"]
+                        if "petsc_options" in self.precond_fields[npr].keys():
+                            opt_dict = self.precond_fields[npr]["petsc_options"]
                             opts = PETSc.Options()
                             for o in opt_dict:
                                 opts.setValue(o, opt_dict[o])

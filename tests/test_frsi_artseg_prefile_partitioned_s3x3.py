@@ -58,7 +58,7 @@ def test_main():
         "iterative_solver": "gmres",
         "block_precond": ["s3x3full", None],
         "precond_fields": [
-            [{"prec": "amg"}, {"prec": "amg"}, {"prec": "direct"}],
+            {"s3x3": [{"prec": "amg"}, {"prec": "amg"}, {"prec": "direct"}]},
             [{}],
         ],  # fluid-v, fluid-p, fluid-red.v, ale-d
         "tol_lin_rel": 1.0e-5,

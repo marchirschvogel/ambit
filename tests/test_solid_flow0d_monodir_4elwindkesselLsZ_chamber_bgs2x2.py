@@ -34,7 +34,7 @@ def test_main():
         "solve_type": "iterative",
         "iterative_solver": "gmres",
         "block_precond": "bgs2x2",
-        "precond_fields": [{"prec": "amg"}, {"prec": "direct"}],
+        "precond_fields": {"bgs2x2": [{"prec": "amg"}, {"prec": "direct"}]},
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",
         "print_liniter_every": 50,

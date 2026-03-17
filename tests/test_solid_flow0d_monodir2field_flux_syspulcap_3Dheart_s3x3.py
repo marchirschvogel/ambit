@@ -37,11 +37,11 @@ def test_main():
         "solve_type": "iterative",
         "iterative_solver": "gmres",
         "block_precond": "s3x3",  # can as well use s3x3full version - interestingly, the SIMPLE version yields fewer linear iterations!
-        "precond_fields": [
+        "precond_fields": {"s3x3": [
             {"prec": "amg"},
             {"prec": "amg"},
             {"prec": "direct"},
-        ],
+        ]},
         "tol_res": [1.0e-8, 1.0e-8, 1.0e-6],  # u,p,0d
         "tol_inc": [1.0e-8, 1.0e-8, 1.0e-6],  # u,p,0d
         "tol_lin_rel": 1.0e-9,

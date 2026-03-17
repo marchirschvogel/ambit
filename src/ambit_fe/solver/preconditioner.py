@@ -563,112 +563,6 @@ class schur3x3(schur3x3full):
         y.assemble()
 
 
-# BGS with inner schur3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
-# influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
-# --> NO upward solve that accounts for fluid on ALE influence
-class BGS_1_schur3x3full(schur3x3full):
-    def check_field_size(self):
-        assert self.nfields == 4
-
-    def init_mat_vec(self):
-        opmats = super().init_mat_vec()
-
-        self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
-
-        # create index set encompassing the first 3 blocks
-        self.iset_012 = self.iset[0].expand(self.iset[1])
-        self.iset_012 = self.iset_012.expand(self.iset[2])
-        self.iset_012.sort()
-        # get additional offdiagonal blocks
-        self.H = self.P.createSubMatrix(self.iset_012, self.iset[3])
-
-        self.x4 = self.G.createVecLeft()
-        self.y4 = self.G.createVecLeft()
-        self.z4 = self.G.createVecLeft()
-
-        self.x123 = self.H.createVecLeft()
-        self.y123 = self.H.createVecLeft()
-        self.z123 = self.H.createVecLeft()
-
-        self.Hy = self.H.createVecLeft()
-
-        self.xtmp = self.P.createVecLeft()
-
-        # do we need this???
-        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-
-        return [opmats[0], opmats[1], opmats[2], self.G]
-
-    def setUp(self, pc):
-        super().setUp(pc)
-
-        self.P.createSubMatrix(self.iset[3], self.iset[3], submat=self.G)
-        self.P.createSubMatrix(self.iset_012, self.iset[3], submat=self.H)
-
-        # operator values have changed - do we need to re-set it?
-        self.ksp_fields[3].setOperators(self.G)
-
-    # computes y = P^{-1} x
-    def apply(self, pc, x, y):
-        # get subvectors
-        x.getSubVector(self.iset[3], subvec=self.x4)
-        x.getSubVector(self.iset_012, subvec=self.x123)
-
-        # 1) solve G * y_4 = x_4
-        self.ksp_fields[3].solve(self.x4, self.y4)
-
-        self.H.mult(self.y4, self.Hy)
-
-        # compute z123 = x123 - self.Hy4
-        self.z123.axpby(1.0, 0.0, self.x123)
-        self.z123.axpy(-1.0, self.Hy)
-
-        # 2) Schur solve F * y_123 = z_123
-        self.xtmp.setValues(self.iset_012, self.z123.array)
-        self.xtmp.assemble()
-        super().apply(pc, self.xtmp, y)
-
-        # restore/clean up
-        x.restoreSubVector(self.iset_012, subvec=self.x123)
-        x.restoreSubVector(self.iset[3], subvec=self.x4)
-
-        # set into y vector
-        y.setValues(self.iset[3], self.y4.array)
-
-        y.assemble()
-
-
-# SIMPLE version of above: last A-solve replaced by diag(A)^{-1} update
-class BGS_1_schur3x3(BGS_1_schur3x3full):
-    # computes y = P^{-1} x
-    def apply(self, pc, x, y):
-        # get subvectors
-        x.getSubVector(self.iset[3], subvec=self.x4)
-        x.getSubVector(self.iset_012, subvec=self.x123)
-
-        # 1) solve G * y_4 = x_4
-        self.ksp_fields[3].solve(self.x4, self.y4)
-
-        self.H.mult(self.y4, self.Hy)
-
-        # compute z123 = x123 - self.Hy4
-        self.z123.axpby(1.0, 0.0, self.x123)
-        self.z123.axpy(-1.0, self.Hy)
-
-        # 2) Schur solve F * y_123 = z_123
-        self.xtmp.setValues(self.iset_012, self.z123.array)
-        self.xtmp.assemble()
-        schur3x3.apply(self, pc, self.xtmp, y)
-
-        # restore/clean up
-        x.restoreSubVector(self.iset_012, subvec=self.x123)
-        x.restoreSubVector(self.iset[3], subvec=self.x4)
-
-        # set into y vector
-        y.setValues(self.iset[3], self.y4.array)
-
-        y.assemble()
-
 
 # Schur complement preconditioner replacing the last solve with a diag(A)^{-1} update
 class schur2x2(schur2x2full):
@@ -1078,6 +972,117 @@ class jacobi2x2(block_precond):
         y.assemble()
 
 
+
+# BGS with inner schur3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
+# influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
+# --> NO upward solve that accounts for fluid on ALE influence
+class BGS_1_schur3x3full(block_precond):
+    def __init__(self, iset, precond_fields, io, solparams, comm=None):
+        super().__init__(iset, precond_fields, io, solparams, comm=comm)
+
+        # create index set encompassing 0-1-2 blocks
+        self.iset_012 = self.iset[0].expand(self.iset[1])
+        self.iset_012 = self.iset_012.expand(self.iset[2])
+        self.iset_012.sort()
+
+        # single-field preconditioner
+        self.sing1 = block_precond(self.iset[3:4], precond_fields["1"], io, solparams, comm=comm)
+        # Schur 3x3 preconditioner
+        self.s3x3 = schur3x3full(self.iset[0:3], precond_fields["s3x3"], io, solparams, comm=comm)
+
+    def create(self, pc):
+        # get reference to preconditioner matrix object
+        _, self.P = pc.getOperators()
+        operator_mats = self.init_mat_vec()
+        # set field precs for individual single and block preconditioners
+        self.sing1.create_fieldprec(operator_mats[3:4])
+        self.s3x3.create_fieldprec(operator_mats[0:3])
+
+    def check_field_size(self):
+        assert self.nfields == 4
+
+    def init_mat_vec(self):
+        self.s3x3.P = self.P
+
+        opmats_s = self.s3x3.init_mat_vec()
+
+        self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
+
+        # get additional offdiagonal blocks
+        self.H = self.P.createSubMatrix(self.iset_012, self.iset[3])
+
+        self.x4 = self.G.createVecLeft()
+        self.y4 = self.G.createVecLeft()
+        self.z4 = self.G.createVecLeft()
+
+        self.x123 = self.H.createVecLeft()
+        self.y123 = self.H.createVecLeft()
+        self.z123 = self.H.createVecLeft()
+
+        self.Hy = self.H.createVecLeft()
+
+        self.xtmp = self.P.createVecLeft()
+
+        # do we need this???
+        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
+        return [opmats_s[0], opmats_s[1], opmats_s[2], self.G]
+
+    def setUp(self, pc):
+        self.s3x3.setUp(pc)
+
+        self.P.createSubMatrix(self.iset[3], self.iset[3], submat=self.G)
+        self.P.createSubMatrix(self.iset_012, self.iset[3], submat=self.H)
+
+        # operator values have changed - do we need to re-set it?
+        self.sing1.ksp_fields[0].setOperators(self.G)
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+        # get subvectors
+        x.getSubVector(self.iset[3], subvec=self.x4)
+        x.getSubVector(self.iset_012, subvec=self.x123)
+
+        # 1) solve G * y_4 = x_4
+        self.sing1.ksp_fields[0].solve(self.x4, self.y4)
+
+        self.H.mult(self.y4, self.Hy)
+
+        # compute z123 = x123 - self.Hy4
+        self.z123.axpby(1.0, 0.0, self.x123)
+        self.z123.axpy(-1.0, self.Hy)
+
+        # 2) Schur solve F * y_123 = z_123
+        self.xtmp.setValues(self.iset_012, self.z123.array)
+        self.xtmp.assemble()
+        self.s3x3.apply(pc, self.xtmp, y)
+
+        # restore/clean up
+        x.restoreSubVector(self.iset_012, subvec=self.x123)
+        x.restoreSubVector(self.iset[3], subvec=self.x4)
+
+        # set into y vector
+        y.setValues(self.iset[3], self.y4.array)
+
+        y.assemble()
+
+
+# SIMPLE version of above: last A-solve replaced by diag(A)^{-1} update
+class BGS_1_schur3x3(BGS_1_schur3x3full):
+    def __init__(self, iset, precond_fields, io, solparams, comm=None):
+        super().__init__(iset, precond_fields, io, solparams, comm=comm)
+
+        # create index set encompassing 0-1-2 blocks
+        self.iset_012 = self.iset[0].expand(self.iset[1])
+        self.iset_012 = self.iset_012.expand(self.iset[2])
+        self.iset_012.sort()
+
+        # single-field preconditioner
+        self.sing1 = block_precond(self.iset[3:4], precond_fields["1"], io, solparams, comm=comm)
+        # Schur 3x3 preconditioner
+        self.s3x3 = schur3x3(self.iset[0:3], precond_fields["s3x3"], io, solparams, comm=comm)
+
+
 class BGS_1_1_schur2x2(block_precond):
     def __init__(self, iset, precond_fields, io, solparams, comm=None):
         super().__init__(iset, precond_fields, io, solparams, comm=comm)
@@ -1112,9 +1117,6 @@ class BGS_1_1_schur2x2(block_precond):
         self.K = self.P.createSubMatrix(self.iset[0], self.iset[0])
         self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
 
-        # create index set encompassing the fluid blocks
-        self.iset_12 = self.iset[1].expand(self.iset[2])
-        self.iset_12.sort()
         # get additional offdiagonal blocks
         self.H = self.P.createSubMatrix(self.iset_12, self.iset[0])
         self.J = self.P.createSubMatrix(self.iset_12, self.iset[3])

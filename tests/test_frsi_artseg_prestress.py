@@ -55,19 +55,15 @@ def test_main():
         "solve_type": "iterative",
         "solve_type_prestr": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "bgs-s3x3",  # can as well use bgs-s3x3full version - interestingly, the SIMPLE version yields fewer linear iterations!
-        "precond_fields": [
-            {"prec": "direct"},  # fluid-v
-            {"prec": "direct"},  # fluid-p (Schur)
-            {"prec": "direct"},  # fluid-red.v
-            {"prec": "direct"},
-        ],  # ale-d
+        "block_precond": "BGS_1_s3x3",  # can as well use bgs-s3x3full version - interestingly, the SIMPLE version yields fewer linear iterations!
+        "precond_fields": {
+            "1": [{"prec": "amg"}],  # ale-d
+            "s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}],  # fluid-v,p,red.v
+        },
         "block_precond_prestr": "s3x3",
-        "precond_fields_prestr": [
-            {"prec": "direct"},  # fluid-v
-            {"prec": "direct"},  # fluid-p (Schur)
-            {"prec": "direct"},
-        ],  # fluid-red.v
+        "precond_fields_prestr": {
+            "s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}],  # fluid-v,p,red.v
+        },
         "indexset_options": {"rom_to_new": True},
         "print_liniter_every": 10,
         "lin_norm_type": "unpreconditioned",

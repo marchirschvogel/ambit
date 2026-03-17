@@ -47,13 +47,11 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "BGS_1_s3x3",  # can as well use bgsschur3x3 version - interestingly, the SIMPLE version yields fewer linear iterations!
-        "precond_fields": [
-            {"prec": "amg"},  # fluid-v
-            {"prec": "amg"},  # fluid-p (Schur)
-            {"prec": "direct"},  # fluid-red.v
-            {"prec": "amg"},
-        ],  # ale-d
+        "block_precond": "BGS_1_s3x3",  # can as well use BGS_1_s3x3full version (only minor improvement, does full last A solve instead of diag(A)^{-1} update)
+        "precond_fields": {
+            "1": [{"prec": "amg"}],  # ale-d
+            "s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}],  # fluid-v,p,LM+red.v
+        },
         "tol_lin_rel": 1.0e-5,
         "tol_lin_abs": 1.0e-30,
         "lin_norm_type": "preconditioned",
