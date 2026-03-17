@@ -308,7 +308,42 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
 
     def get_solver_index_sets(self, isoptions={}):
-        raise RuntimeError("Index set retrieval not yet implemented!")
+        if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
+            vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
+            vvec_ls = self.rom.V.getLocalSize()[1]
+        else:
+            vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
+            vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
+
+        offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
+        iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
+
+        offset_p = offset_v + vvec_ls
+        iset_p = PETSc.IS().createStride(
+            self.pbf.p.x.petsc_vec.getLocalSize(),
+            first=offset_p,
+            step=1,
+            comm=self.comm,
+        )
+
+        offset_phi = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+        iset_phi = PETSc.IS().createStride(
+            self.pbp.phi.x.petsc_vec.getLocalSize(),
+            first=offset_phi,
+            step=1,
+            comm=self.comm,
+        )
+
+        offset_mu = offset_phi + self.pbp.phi.x.petsc_vec.getLocalSize()
+        iset_mu = PETSc.IS().createStride(
+            self.pbp.mu.x.petsc_vec.getLocalSize(),
+            first=offset_mu,
+            step=1,
+            comm=self.comm,
+        )
+
+        ilist = [iset_v, iset_p, iset_phi, iset_mu]
+
         return ilist
 
     ### now the base routines for this problem

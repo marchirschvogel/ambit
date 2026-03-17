@@ -23,8 +23,18 @@ https://petsc.org/main/petsc4py/petsc_python_types.html#petsc-python-preconditio
 class block_precond:
     def __init__(self, iset, precond_fields, io, solparams, comm=None):
         self.iset = iset
+
+        if isinstance(precond_fields, dict):
+            precond_fields = [item for sublist in list(precond_fields.values()) for item in sublist]
+        elif isinstance(precond_fields, list):
+            pass
+        else:
+            raise RuntimeError("Unknown type!")
+
+        num_precs = len(precond_fields)
         self.precond_fields = precond_fields
-        self.nfields = len(precond_fields)
+
+        self.nfields = num_precs
         assert len(self.iset) == self.nfields
         self.comm = comm
         # acess to problem IO object
@@ -40,25 +50,30 @@ class block_precond:
         else:
             self.schur_block_scaling = [schur_block_scaling] * 2
 
-    def create(self, pc):
-        ts = time.time()
-        utilities.print_status("Creating preconditioner objects...", self.comm, e=" ")
+    def check_field_size(self):
+        assert self.nfields == 1
 
+    def create(self, pc):
         # get reference to preconditioner matrix object
         _, self.P = pc.getOperators()
+        operator_mats = self.init_mat_vec()
+        self.create_fieldprec(operator_mats)
 
+    def create_fieldprec(self, operator_mats):
+        ts = time.time()
+        utilities.print_status("Creating preconditioner objects...", self.comm, e=" ")
         # reference to PETSc options
         opts = PETSc.Options()
 
         self.check_field_size()
-        operator_mats = self.init_mat_vec(pc)
+        nf = len(operator_mats)
 
-        self.ksp_fields, self.ksp_py_solver = [], [None] * self.nfields
+        self.ksp_fields, self.ksp_py_solver = [], [None] * nf
         # create field ksps
-        for n in range(self.nfields):
+        for n in range(nf):
             self.ksp_fields.append(PETSc.KSP().create(self.comm))
         # set the options
-        for n in range(self.nfields):
+        for n in range(nf):
             if self.precond_fields[n]["prec"] == "amg":
                 solvetype = self.precond_fields[n].get("solve", "preonly")
                 self.ksp_fields[n].setType(solvetype)
@@ -114,13 +129,11 @@ class schur2x2full(block_precond):
     def check_field_size(self):
         assert self.nfields == 2
 
-    def init_mat_vec(self, pc, sids=[0,1]):
-        self.sids = sids
-
-        self.A = self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[0]])
-        self.Bt = self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[1]])
-        self.B = self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[0]])
-        self.C = self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[1]])
+    def init_mat_vec(self):
+        self.A = self.P.createSubMatrix(self.iset[0], self.iset[0])
+        self.Bt = self.P.createSubMatrix(self.iset[0], self.iset[1])
+        self.B = self.P.createSubMatrix(self.iset[1], self.iset[0])
+        self.C = self.P.createSubMatrix(self.iset[1], self.iset[1])
 
         # the matrix to later insert the diagonal
         self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1, 1), csr=None, comm=self.comm)
@@ -163,10 +176,10 @@ class schur2x2full(block_precond):
     def setUp(self, pc):
         ts = time.time()
 
-        self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[0]], submat=self.A)
-        self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[1]], submat=self.Bt)
-        self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[0]], submat=self.B)
-        self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[1]], submat=self.C)
+        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.A)
+        self.P.createSubMatrix(self.iset[0], self.iset[1], submat=self.Bt)
+        self.P.createSubMatrix(self.iset[1], self.iset[0], submat=self.B)
+        self.P.createSubMatrix(self.iset[1], self.iset[1], submat=self.C)
 
         if self.schur_block_scaling[0]["type"] == "diag":
             self.A.getDiagonal(result=self.adinv_vec)
@@ -194,8 +207,8 @@ class schur2x2full(block_precond):
         self.Smod.axpy(-1.0, self.B_Adinv_Bt)
 
         # operator values have changed - do we need to re-set them?
-        self.ksp_fields[self.sids[0]].setOperators(self.A)
-        self.ksp_fields[self.sids[1]].setOperators(self.Smod)
+        self.ksp_fields[0].setOperators(self.A)
+        self.ksp_fields[1].setOperators(self.Smod)
 
         te = time.time() - ts
         if self.io.print_enhanced_info:
@@ -204,11 +217,11 @@ class schur2x2full(block_precond):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors
-        x.getSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.getSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
+        x.getSubVector(self.iset[0], subvec=self.x_[0])
+        x.getSubVector(self.iset[1], subvec=self.x_[1])
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[self.sids[0]].solve(self.x_[0], self.y_[0])
+        self.ksp_fields[0].solve(self.x_[0], self.y_[0])
 
         self.B.mult(self.y_[0], self.By)
 
@@ -217,7 +230,7 @@ class schur2x2full(block_precond):
         self.z_[1].axpy(-1.0, self.By)
 
         # 2) solve Smod * y_2 = z_2
-        self.ksp_fields[self.sids[1]].solve(self.z_[1], self.y_[1])
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
         self.Bt.mult(self.y_[1], self.Bty)
 
@@ -226,15 +239,15 @@ class schur2x2full(block_precond):
         self.z_[0].axpy(-1.0, self.Bty)
 
         # 3) solve A * y_1 = z_1
-        self.ksp_fields[self.sids[0]].solve(self.z_[0], self.y_[0])
+        self.ksp_fields[0].solve(self.z_[0], self.y_[0])
 
         # restore/clean up
-        x.restoreSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.restoreSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
+        x.restoreSubVector(self.iset[0], subvec=self.x_[0])
+        x.restoreSubVector(self.iset[1], subvec=self.x_[1])
 
         # set into y vector
-        y.setValues(self.iset[self.sids[0]], self.y_[0].array)
-        y.setValues(self.iset[self.sids[1]], self.y_[1].array)
+        y.setValues(self.iset[0], self.y_[0].array)
+        y.setValues(self.iset[1], self.y_[1].array)
 
         y.assemble()
 
@@ -244,18 +257,16 @@ class schur3x3full(block_precond):
     def check_field_size(self):
         assert self.nfields == 3
 
-    def init_mat_vec(self, pc, sids=[0,1,2]):
-        self.sids = sids
-
-        self.A = self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[0]])
-        self.Bt = self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[1]])
-        self.Dt = self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[2]])
-        self.B = self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[0]])
-        self.C = self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[1]])
-        self.Et = self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[2]])
-        self.D = self.P.createSubMatrix(self.iset[self.sids[2]], self.iset[self.sids[0]])
-        self.E = self.P.createSubMatrix(self.iset[self.sids[2]], self.iset[self.sids[1]])
-        self.R = self.P.createSubMatrix(self.iset[self.sids[2]], self.iset[self.sids[2]])
+    def init_mat_vec(self):
+        self.A = self.P.createSubMatrix(self.iset[0], self.iset[0])
+        self.Bt = self.P.createSubMatrix(self.iset[0], self.iset[1])
+        self.Dt = self.P.createSubMatrix(self.iset[0], self.iset[2])
+        self.B = self.P.createSubMatrix(self.iset[1], self.iset[0])
+        self.C = self.P.createSubMatrix(self.iset[1], self.iset[1])
+        self.Et = self.P.createSubMatrix(self.iset[1], self.iset[2])
+        self.D = self.P.createSubMatrix(self.iset[2], self.iset[0])
+        self.E = self.P.createSubMatrix(self.iset[2], self.iset[1])
+        self.R = self.P.createSubMatrix(self.iset[2], self.iset[2])
 
         # the matrix to later insert the diagonal
         self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1, 1), csr=None, comm=self.comm)
@@ -337,15 +348,15 @@ class schur3x3full(block_precond):
     def setUp(self, pc):
         ts = time.time()
 
-        self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[0]], submat=self.A)
-        self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[1]], submat=self.Bt)
-        self.P.createSubMatrix(self.iset[self.sids[0]], self.iset[self.sids[2]], submat=self.Dt)
-        self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[0]], submat=self.B)
-        self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[1]], submat=self.C)
-        self.P.createSubMatrix(self.iset[self.sids[1]], self.iset[self.sids[2]], submat=self.Et)
-        self.P.createSubMatrix(self.iset[self.sids[2]], self.iset[self.sids[0]], submat=self.D)
-        self.P.createSubMatrix(self.iset[self.sids[2]], self.iset[self.sids[1]], submat=self.E)
-        self.P.createSubMatrix(self.iset[self.sids[2]], self.iset[self.sids[2]], submat=self.R)
+        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.A)
+        self.P.createSubMatrix(self.iset[0], self.iset[1], submat=self.Bt)
+        self.P.createSubMatrix(self.iset[0], self.iset[2], submat=self.Dt)
+        self.P.createSubMatrix(self.iset[1], self.iset[0], submat=self.B)
+        self.P.createSubMatrix(self.iset[1], self.iset[1], submat=self.C)
+        self.P.createSubMatrix(self.iset[1], self.iset[2], submat=self.Et)
+        self.P.createSubMatrix(self.iset[2], self.iset[0], submat=self.D)
+        self.P.createSubMatrix(self.iset[2], self.iset[1], submat=self.E)
+        self.P.createSubMatrix(self.iset[2], self.iset[2], submat=self.R)
 
         if self.schur_block_scaling[0]["type"] == "diag":
             self.A.getDiagonal(result=self.adinv_vec)
@@ -418,9 +429,9 @@ class schur3x3full(block_precond):
         self.Wmod.axpy(-1.0, self.Umod_Smoddinv_Tmod)
 
         # operator values have changed - do we need to re-set them?
-        self.ksp_fields[self.sids[0]].setOperators(self.A)
-        self.ksp_fields[self.sids[1]].setOperators(self.Smod)
-        self.ksp_fields[self.sids[2]].setOperators(self.Wmod)
+        self.ksp_fields[0].setOperators(self.A)
+        self.ksp_fields[1].setOperators(self.Smod)
+        self.ksp_fields[2].setOperators(self.Wmod)
 
         te = time.time() - ts
         if self.io.print_enhanced_info:
@@ -429,14 +440,14 @@ class schur3x3full(block_precond):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors (references!)
-        x.getSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.getSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
-        x.getSubVector(self.iset[self.sids[2]], subvec=self.x_[2])
+        x.getSubVector(self.iset[0], subvec=self.x_[0])
+        x.getSubVector(self.iset[1], subvec=self.x_[1])
+        x.getSubVector(self.iset[2], subvec=self.x_[2])
 
         tss = time.time()
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[self.sids[0]].solve(self.x_[0], self.y_[0])
+        self.ksp_fields[0].solve(self.x_[0], self.y_[0])
 
         self.B.mult(self.y_[0], self.By)
 
@@ -445,7 +456,7 @@ class schur3x3full(block_precond):
         self.z_[1].axpy(-1.0, self.By)
 
         # 2) solve Smod * y_2 = z_2
-        self.ksp_fields[self.sids[1]].solve(self.z_[1], self.y_[1])
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
         self.D.mult(self.y_[0], self.Dy)
         self.Umod.mult(self.y_[1], self.Umody)
@@ -456,7 +467,7 @@ class schur3x3full(block_precond):
         self.z_[2].axpy(-1.0, self.Umody)
 
         # 3) solve Wmod * y_3 = z_3
-        self.ksp_fields[self.sids[2]].solve(self.z_[2], self.y_[2])
+        self.ksp_fields[2].solve(self.z_[2], self.y_[2])
 
         self.Tmod.mult(self.y_[2], self.Tmody)
 
@@ -464,7 +475,7 @@ class schur3x3full(block_precond):
         self.z_[1].axpy(-1.0, self.Tmody)
 
         # 4) solve Smod * y_2 = z_2
-        self.ksp_fields[self.sids[1]].solve(self.z_[1], self.y_[1])
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
         self.Bt.mult(self.y_[1], self.Bty)
         self.Dt.mult(self.y_[2], self.Dty)
@@ -475,17 +486,17 @@ class schur3x3full(block_precond):
         self.z_[0].axpy(-1.0, self.Dty)
 
         # 5) solve A * y_1 = z_1
-        self.ksp_fields[self.sids[0]].solve(self.z_[0], self.y_[0])
+        self.ksp_fields[0].solve(self.z_[0], self.y_[0])
 
         # restore/clean up
-        x.restoreSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.restoreSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
-        x.restoreSubVector(self.iset[self.sids[2]], subvec=self.x_[2])
+        x.restoreSubVector(self.iset[0], subvec=self.x_[0])
+        x.restoreSubVector(self.iset[1], subvec=self.x_[1])
+        x.restoreSubVector(self.iset[2], subvec=self.x_[2])
 
         # set into y vector
-        y.setValues(self.iset[self.sids[0]], self.y_[0].array)
-        y.setValues(self.iset[self.sids[1]], self.y_[1].array)
-        y.setValues(self.iset[self.sids[2]], self.y_[2].array)
+        y.setValues(self.iset[0], self.y_[0].array)
+        y.setValues(self.iset[1], self.y_[1].array)
+        y.setValues(self.iset[2], self.y_[2].array)
 
         y.assemble()
 
@@ -495,14 +506,14 @@ class schur3x3(schur3x3full):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors (references!)
-        x.getSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.getSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
-        x.getSubVector(self.iset[self.sids[2]], subvec=self.x_[2])
+        x.getSubVector(self.iset[0], subvec=self.x_[0])
+        x.getSubVector(self.iset[1], subvec=self.x_[1])
+        x.getSubVector(self.iset[2], subvec=self.x_[2])
 
         tss = time.time()
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[self.sids[0]].solve(self.x_[0], self.y_[0])
+        self.ksp_fields[0].solve(self.x_[0], self.y_[0])
 
         self.B.mult(self.y_[0], self.By)
 
@@ -511,7 +522,7 @@ class schur3x3(schur3x3full):
         self.z_[1].axpy(-1.0, self.By)
 
         # 2) solve Smod * y_2 = z_2
-        self.ksp_fields[self.sids[1]].solve(self.z_[1], self.y_[1])
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
         self.D.mult(self.y_[0], self.Dy)
         self.Umod.mult(self.y_[1], self.Umody)
@@ -522,7 +533,7 @@ class schur3x3(schur3x3full):
         self.z_[2].axpy(-1.0, self.Umody)
 
         # 3) solve Wmod * y_3 = z_3
-        self.ksp_fields[self.sids[2]].solve(self.z_[2], self.y_[2])
+        self.ksp_fields[2].solve(self.z_[2], self.y_[2])
 
         self.Tmod.mult(self.y_[2], self.Tmody)
 
@@ -530,7 +541,7 @@ class schur3x3(schur3x3full):
         self.z_[1].axpy(-1.0, self.Tmody)
 
         # 4) solve Smod * y_2 = z_2
-        self.ksp_fields[self.sids[1]].solve(self.z_[1], self.y_[1])
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
         # 5) update y_1
         self.Adinv_Bt.mult(self.y_[1], self.Bty)
@@ -540,14 +551,14 @@ class schur3x3(schur3x3full):
         self.y_[0].axpy(-1.0, self.Dty)
 
         # restore/clean up
-        x.restoreSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.restoreSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
-        x.restoreSubVector(self.iset[self.sids[2]], subvec=self.x_[2])
+        x.restoreSubVector(self.iset[0], subvec=self.x_[0])
+        x.restoreSubVector(self.iset[1], subvec=self.x_[1])
+        x.restoreSubVector(self.iset[2], subvec=self.x_[2])
 
         # set into y vector
-        y.setValues(self.iset[self.sids[0]], self.y_[0].array)
-        y.setValues(self.iset[self.sids[1]], self.y_[1].array)
-        y.setValues(self.iset[self.sids[2]], self.y_[2].array)
+        y.setValues(self.iset[0], self.y_[0].array)
+        y.setValues(self.iset[1], self.y_[1].array)
+        y.setValues(self.iset[2], self.y_[2].array)
 
         y.assemble()
 
@@ -555,12 +566,12 @@ class schur3x3(schur3x3full):
 # BGS with inner schur3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
 # influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
 # --> NO upward solve that accounts for fluid on ALE influence
-class bgs_schur3x3full(schur3x3full):
+class BGS_1_schur3x3full(schur3x3full):
     def check_field_size(self):
         assert self.nfields == 4
 
-    def init_mat_vec(self, pc, sids=[0,1,2]):
-        opmats = super().init_mat_vec(pc, sids=sids)
+    def init_mat_vec(self):
+        opmats = super().init_mat_vec()
 
         self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
 
@@ -628,7 +639,7 @@ class bgs_schur3x3full(schur3x3full):
 
 
 # SIMPLE version of above: last A-solve replaced by diag(A)^{-1} update
-class bgs_schur3x3(bgs_schur3x3full):
+class BGS_1_schur3x3(BGS_1_schur3x3full):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors
@@ -664,11 +675,11 @@ class schur2x2(schur2x2full):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors
-        x.getSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.getSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
+        x.getSubVector(self.iset[0], subvec=self.x_[0])
+        x.getSubVector(self.iset[1], subvec=self.x_[1])
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[self.sids[0]].solve(self.x_[0], self.y_[0])
+        self.ksp_fields[0].solve(self.x_[0], self.y_[0])
 
         self.B.mult(self.y_[0], self.By)
 
@@ -677,7 +688,7 @@ class schur2x2(schur2x2full):
         self.z_[1].axpy(-1.0, self.By)
 
         # 2) solve Smod * y_2 = z_2
-        self.ksp_fields[self.sids[1]].solve(self.z_[1], self.y_[1])
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
         # 3) update y_1
         self.Adinv_Bt.mult(self.y_[1], self.Bty)
@@ -685,195 +696,15 @@ class schur2x2(schur2x2full):
         self.y_[0].axpy(-1.0, self.Bty)
 
         # restore/clean up
-        x.restoreSubVector(self.iset[self.sids[0]], subvec=self.x_[0])
-        x.restoreSubVector(self.iset[self.sids[1]], subvec=self.x_[1])
+        x.restoreSubVector(self.iset[0], subvec=self.x_[0])
+        x.restoreSubVector(self.iset[1], subvec=self.x_[1])
 
         # set into y vector
-        y.setValues(self.iset[self.sids[0]], self.y_[0].array)
-        y.setValues(self.iset[self.sids[1]], self.y_[1].array)
+        y.setValues(self.iset[0], self.y_[0].array)
+        y.setValues(self.iset[1], self.y_[1].array)
 
         y.assemble()
 
-
-class bgs3x3_schur2x2(schur2x2):
-    def check_field_size(self):
-        assert self.nfields == 4
-
-    def init_mat_vec(self, pc, sids=[1,2]):
-        opmats = super().init_mat_vec(pc, sids=sids)
-
-        self.K = self.P.createSubMatrix(self.iset[0], self.iset[0])
-        self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
-
-        # create index set encompassing the fluid blocks
-        self.iset_12 = self.iset[1].expand(self.iset[2])
-        self.iset_12.sort()
-        # get additional offdiagonal blocks
-        self.H = self.P.createSubMatrix(self.iset_12, self.iset[0])
-        self.J = self.P.createSubMatrix(self.iset_12, self.iset[3])
-
-        self.x1 = self.K.createVecLeft()
-        self.y1 = self.K.createVecLeft()
-        self.z1 = self.K.createVecLeft()
-
-        self.x4 = self.G.createVecLeft()
-        self.y4 = self.G.createVecLeft()
-        self.z4 = self.G.createVecLeft()
-
-        self.x23 = self.H.createVecLeft()
-        self.y23 = self.H.createVecLeft()
-        self.z23 = self.H.createVecLeft()
-
-        self.Hy = self.H.createVecLeft()
-        self.Jy = self.J.createVecLeft()
-
-        self.xtmp = self.P.createVecLeft()
-
-        # do we need this???
-        self.K.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-
-        return [self.K, opmats[0], opmats[1], self.G]
-
-    def setUp(self, pc):
-        super().setUp(pc)
-
-        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.K)
-        self.P.createSubMatrix(self.iset[3], self.iset[3], submat=self.G)
-        self.P.createSubMatrix(self.iset_12, self.iset[0], submat=self.H)
-        self.P.createSubMatrix(self.iset_12, self.iset[3], submat=self.J)
-
-        # operator values have changed - do we need to re-set it?
-        self.ksp_fields[0].setOperators(self.K)
-        self.ksp_fields[3].setOperators(self.G)
-
-    # computes y = P^{-1} x
-    def apply(self, pc, x, y):
-        # get subvectors
-        x.getSubVector(self.iset[0], subvec=self.x1)
-        x.getSubVector(self.iset[3], subvec=self.x4)
-        x.getSubVector(self.iset_12, subvec=self.x23)
-
-        # 1) solve K * y_1 = x_1
-        self.ksp_fields[0].solve(self.x1, self.y1)
-
-        # 2) solve G * y_4 = x_4
-        self.ksp_fields[3].solve(self.x4, self.y4)
-
-        self.H.mult(self.y1, self.Hy)
-        self.J.mult(self.y4, self.Jy)
-
-        # compute z23 = x23 - self.Hy - self.Jy
-        self.z23.axpby(1.0, 0.0, self.x23)
-        self.z23.axpy(-1.0, self.Hy)
-        self.z23.axpy(-1.0, self.Jy)
-
-        # 3) Schur solve F * y_23 = z_23
-        self.xtmp.setValues(self.iset_12, self.z23.array)
-        self.xtmp.assemble()
-        super().apply(pc, self.xtmp, y)
-
-        # restore/clean up
-        x.restoreSubVector(self.iset[0], subvec=self.x1)
-        x.restoreSubVector(self.iset_12, subvec=self.x23)
-        x.restoreSubVector(self.iset[3], subvec=self.x4)
-
-        # set into y vector
-        y.setValues(self.iset[0], self.y1.array)
-        y.setValues(self.iset[3], self.y4.array)
-
-        y.assemble()
-
-
-class bgs3x3_schur3x3(schur3x3):
-    def check_field_size(self):
-        assert self.nfields == 5
-
-    def init_mat_vec(self, pc, sids=[1,2,3]):
-        opmats = super().init_mat_vec(pc, sids=sids)
-
-        self.K = self.P.createSubMatrix(self.iset[0], self.iset[0])
-        self.G = self.P.createSubMatrix(self.iset[4], self.iset[4])
-
-        # create index set encompassing the fluid-0D blocks
-        self.iset_123 = self.iset[1].expand(self.iset[2])
-        self.iset_123 = self.iset_123.expand(self.iset[3])
-        self.iset_123.sort()
-        # get additional offdiagonal blocks
-        self.H = self.P.createSubMatrix(self.iset_123, self.iset[0])
-        self.J = self.P.createSubMatrix(self.iset_123, self.iset[4])
-
-        self.x1 = self.K.createVecLeft()
-        self.y1 = self.K.createVecLeft()
-        self.z1 = self.K.createVecLeft()
-
-        self.x5 = self.G.createVecLeft()
-        self.y5 = self.G.createVecLeft()
-        self.z5 = self.G.createVecLeft()
-
-        self.x234 = self.H.createVecLeft()
-        self.y234 = self.H.createVecLeft()
-        self.z234 = self.H.createVecLeft()
-
-        self.Hy = self.H.createVecLeft()
-        self.Jy = self.J.createVecLeft()
-
-        self.xtmp = self.P.createVecLeft()
-
-        # do we need this???
-        self.K.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-
-        return [self.K, opmats[0], opmats[1], opmats[2], self.G]
-
-    def setUp(self, pc):
-        super().setUp(pc)
-
-        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.K)
-        self.P.createSubMatrix(self.iset[4], self.iset[4], submat=self.G)
-        self.P.createSubMatrix(self.iset_123, self.iset[0], submat=self.H)
-        self.P.createSubMatrix(self.iset_123, self.iset[4], submat=self.J)
-
-        # operator values have changed - do we need to re-set it?
-        self.ksp_fields[0].setOperators(self.K)
-        self.ksp_fields[4].setOperators(self.G)
-
-    # computes y = P^{-1} x
-    def apply(self, pc, x, y):
-        # get subvectors
-        x.getSubVector(self.iset[0], subvec=self.x1)
-        x.getSubVector(self.iset[4], subvec=self.x5)
-        x.getSubVector(self.iset_123, subvec=self.x234)
-
-        # 1) solve K * y_1 = x_1
-        self.ksp_fields[0].solve(self.x1, self.y1)
-
-        # 2) solve G * y_5 = x_5
-        self.ksp_fields[4].solve(self.x5, self.y5)
-
-        self.H.mult(self.y1, self.Hy)
-        self.J.mult(self.y5, self.Jy)
-
-        # compute z234 = x234 - self.Hy - self.Jy
-        self.z234.axpby(1.0, 0.0, self.x234)
-        self.z234.axpy(-1.0, self.Hy)
-        self.z234.axpy(-1.0, self.Jy)
-
-        # 3) Schur solve F * y_234 = z_234
-        self.xtmp.setValues(self.iset_123, self.z234.array)
-        self.xtmp.assemble()
-        super().apply(pc, self.xtmp, y)
-
-        # restore/clean up
-        x.restoreSubVector(self.iset[0], subvec=self.x1)
-        x.restoreSubVector(self.iset_123, subvec=self.x234)
-        x.restoreSubVector(self.iset[4], subvec=self.x5)
-
-        # set into y vector
-        y.setValues(self.iset[0], self.y1.array)
-        y.setValues(self.iset[4], self.y5.array)
-
-        y.assemble()
 
 
 # own 2x2 Block Gauss-Seidel (can be also called via PETSc's fieldsplit) - implementation mainly for testing purposes
@@ -883,7 +714,7 @@ class bgs2x2(block_precond):
     def check_field_size(self):
         assert self.nfields == 2
 
-    def init_mat_vec(self, pc):
+    def init_mat_vec(self):
         self.A = self.P.createSubMatrix(self.iset[0], self.iset[0])
         self.Bt = self.P.createSubMatrix(self.iset[0], self.iset[1])
         self.B = self.P.createSubMatrix(self.iset[1], self.iset[0])
@@ -891,9 +722,9 @@ class bgs2x2(block_precond):
 
         self.By = self.B.createVecLeft()
 
-        self.x1, self.x2 = self.A.createVecLeft(), self.C.createVecLeft()
-        self.y1, self.y2 = self.A.createVecLeft(), self.C.createVecLeft()
-        self.z2 = self.C.createVecLeft()
+        self.x_ = [self.A.createVecLeft(), self.C.createVecLeft()]
+        self.y_ = [self.A.createVecLeft(), self.C.createVecLeft()]
+        self.z_ = [None, self.C.createVecLeft()]
 
         # do we need these???
         self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
@@ -919,28 +750,28 @@ class bgs2x2(block_precond):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors
-        x.getSubVector(self.iset[0], subvec=self.x1)
-        x.getSubVector(self.iset[1], subvec=self.x2)
+        x.getSubVector(self.iset[0], subvec=self.x_[0])
+        x.getSubVector(self.iset[1], subvec=self.x_[1])
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[0].solve(self.x1, self.y1)
+        self.ksp_fields[0].solve(self.x_[0], self.y_[0])
 
-        self.B.mult(self.y1, self.By)
+        self.B.mult(self.y_[0], self.By)
 
         # compute z2 = x2 - self.By
-        self.z2.axpby(1.0, 0.0, self.x2)
-        self.z2.axpy(-1.0, self.By)
+        self.z_[1].axpby(1.0, 0.0, self.x_[1])
+        self.z_[1].axpy(-1.0, self.By)
 
         # 2) solve C * y_2 = z_2
-        self.ksp_fields[1].solve(self.z2, self.y2)
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
         # restore/clean up
-        x.restoreSubVector(self.iset[0], subvec=self.x1)
-        x.restoreSubVector(self.iset[1], subvec=self.x2)
+        x.restoreSubVector(self.iset[0], subvec=self.x_[0])
+        x.restoreSubVector(self.iset[1], subvec=self.x_[1])
 
         # set into y vector
-        y.setValues(self.iset[0], self.y1.array)
-        y.setValues(self.iset[1], self.y2.array)
+        y.setValues(self.iset[0], self.y_[0].array)
+        y.setValues(self.iset[1], self.y_[1].array)
 
         y.assemble()
 
@@ -952,14 +783,14 @@ class bgssym2x2(bgs2x2):
     def check_field_size(self):
         assert self.nfields == 2
 
-    def init_mat_vec(self, pc):
-        opmats = super().init_mat_vec(pc)
+    def init_mat_vec(self):
+        opmats = super().init_mat_vec()
 
         self.Bt = self.P.createSubMatrix(self.iset[0], self.iset[1])
 
         self.Bty = self.Bt.createVecLeft()
 
-        self.z1 = self.A.createVecLeft()
+        self.z_[0] = self.A.createVecLeft()
 
         return [opmats[0], opmats[1]]
 
@@ -971,37 +802,37 @@ class bgssym2x2(bgs2x2):
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors
-        x.getSubVector(self.iset[0], subvec=self.x1)
-        x.getSubVector(self.iset[1], subvec=self.x2)
+        x.getSubVector(self.iset[0], subvec=self.x_[0])
+        x.getSubVector(self.iset[1], subvec=self.x_[1])
 
         # 1) solve A * y_1 = x_1
-        self.ksp_fields[0].solve(self.x1, self.y1)
+        self.ksp_fields[0].solve(self.x_[0], self.y_[0])
 
-        self.B.mult(self.y1, self.By)
+        self.B.mult(self.y_[0], self.By)
 
         # compute z2 = x2 - self.By
-        self.z2.axpby(1.0, 0.0, self.x2)
-        self.z2.axpy(-1.0, self.By)
+        self.z_[1].axpby(1.0, 0.0, self.x_[1])
+        self.z_[1].axpy(-1.0, self.By)
 
         # 2) solve C * y_2 = z_2
-        self.ksp_fields[1].solve(self.z2, self.y2)
+        self.ksp_fields[1].solve(self.z_[1], self.y_[1])
 
-        self.Bt.mult(self.y2, self.Bty)
+        self.Bt.mult(self.y_[1], self.Bty)
 
         # compute z1 = x1 - self.Bty1
-        self.z1.axpby(1.0, 0.0, self.x1)
-        self.z1.axpy(-1.0, self.Bty)
+        self.z_[0].axpby(1.0, 0.0, self.x_[0])
+        self.z_[0].axpy(-1.0, self.Bty)
 
         # 3) solve A * y_1 = x_1
-        self.ksp_fields[0].solve(self.z1, self.y1)
+        self.ksp_fields[0].solve(self.z_[0], self.y_[0])
 
         # restore/clean up
-        x.restoreSubVector(self.iset[0], subvec=self.x1)
-        x.restoreSubVector(self.iset[1], subvec=self.x2)
+        x.restoreSubVector(self.iset[0], subvec=self.x_[0])
+        x.restoreSubVector(self.iset[1], subvec=self.x_[1])
 
         # set into y vector
-        y.setValues(self.iset[0], self.y1.array)
-        y.setValues(self.iset[1], self.y2.array)
+        y.setValues(self.iset[0], self.y_[0].array)
+        y.setValues(self.iset[1], self.y_[1].array)
 
         y.assemble()
 
@@ -1011,7 +842,7 @@ class bgs3x3(block_precond):
     def check_field_size(self):
         assert self.nfields == 3
 
-    def init_mat_vec(self, pc):
+    def init_mat_vec(self):
         self.A = self.P.createSubMatrix(self.iset[0], self.iset[0])
         self.B = self.P.createSubMatrix(self.iset[1], self.iset[0])
         self.C = self.P.createSubMatrix(self.iset[1], self.iset[1])
@@ -1109,8 +940,8 @@ class bgssym3x3(bgs3x3):
     def check_field_size(self):
         assert self.nfields == 3
 
-    def init_mat_vec(self, pc):
-        opmats = super().init_mat_vec(pc)
+    def init_mat_vec(self):
+        opmats = super().init_mat_vec()
 
         self.Bt = self.P.createSubMatrix(self.iset[0], self.iset[1])
         self.Dt = self.P.createSubMatrix(self.iset[0], self.iset[2])
@@ -1200,7 +1031,7 @@ class jacobi2x2(block_precond):
     def check_field_size(self):
         assert self.nfields == 2
 
-    def init_mat_vec(self, pc):
+    def init_mat_vec(self):
         self.A = self.P.createSubMatrix(self.iset[0], self.iset[0])
         self.C = self.P.createSubMatrix(self.iset[1], self.iset[1])
 
@@ -1244,4 +1075,312 @@ class jacobi2x2(block_precond):
         y.setValues(self.iset[0], self.y1.array)
         y.setValues(self.iset[1], self.y2.array)
 
+        y.assemble()
+
+
+class BGS_1_1_schur2x2(block_precond):
+    def __init__(self, iset, precond_fields, io, solparams, comm=None):
+        super().__init__(iset, precond_fields, io, solparams, comm=comm)
+
+        # create index set encompassing 1-2 blocks
+        self.iset_12 = self.iset[1].expand(self.iset[2])
+        self.iset_12.sort()
+
+        # single-field preconditioners
+        self.sing1 = block_precond(self.iset[0:1], precond_fields["1"], io, solparams, comm=comm)
+        self.sing2 = block_precond(self.iset[3:4], precond_fields["2"], io, solparams, comm=comm)
+        # Schur 2x2 preconditioner
+        self.s2x2 = schur2x2(self.iset[1:3], precond_fields["s2x2"], io, solparams, comm=comm)
+
+    def create(self, pc):
+        # get reference to preconditioner matrix object
+        _, self.P = pc.getOperators()
+        operator_mats = self.init_mat_vec()
+        # set field precs for individual single and block preconditioners
+        self.sing1.create_fieldprec(operator_mats[0:1])
+        self.sing2.create_fieldprec(operator_mats[3:4])
+        self.s2x2.create_fieldprec(operator_mats[1:3])
+
+    def check_field_size(self):
+        assert self.nfields == 4
+
+    def init_mat_vec(self):
+        self.s2x2.P = self.P
+
+        opmats_s = self.s2x2.init_mat_vec()
+
+        self.K = self.P.createSubMatrix(self.iset[0], self.iset[0])
+        self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
+
+        # create index set encompassing the fluid blocks
+        self.iset_12 = self.iset[1].expand(self.iset[2])
+        self.iset_12.sort()
+        # get additional offdiagonal blocks
+        self.H = self.P.createSubMatrix(self.iset_12, self.iset[0])
+        self.J = self.P.createSubMatrix(self.iset_12, self.iset[3])
+
+        self.x1 = self.K.createVecLeft()
+        self.y1 = self.K.createVecLeft()
+        self.z1 = self.K.createVecLeft()
+
+        self.x4 = self.G.createVecLeft()
+        self.y4 = self.G.createVecLeft()
+        self.z4 = self.G.createVecLeft()
+
+        self.x23 = self.H.createVecLeft()
+        self.y23 = self.H.createVecLeft()
+        self.z23 = self.H.createVecLeft()
+
+        self.Hy = self.H.createVecLeft()
+        self.Jy = self.J.createVecLeft()
+
+        self.xtmp = self.P.createVecLeft()
+
+        # do we need this???
+        self.K.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
+        return [self.K, opmats_s[0], opmats_s[1], self.G]
+
+    def setUp(self, pc):
+        self.s2x2.setUp(pc)
+
+        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.K)
+        self.P.createSubMatrix(self.iset[3], self.iset[3], submat=self.G)
+        self.P.createSubMatrix(self.iset_12, self.iset[0], submat=self.H)
+        self.P.createSubMatrix(self.iset_12, self.iset[3], submat=self.J)
+
+        # operator values have changed - do we need to re-set them?
+        self.sing1.ksp_fields[0].setOperators(self.K)
+        self.sing2.ksp_fields[0].setOperators(self.G)
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+        # get subvectors
+        x.getSubVector(self.iset[0], subvec=self.x1)
+        x.getSubVector(self.iset[3], subvec=self.x4)
+        x.getSubVector(self.iset_12, subvec=self.x23)
+
+        # 1) solve K * y_1 = x_1
+        self.sing1.ksp_fields[0].solve(self.x1, self.y1)
+
+        # 2) solve G * y_4 = x_4
+        self.sing2.ksp_fields[0].solve(self.x4, self.y4)
+
+        self.H.mult(self.y1, self.Hy)
+        self.J.mult(self.y4, self.Jy)
+
+        # compute z23 = x23 - self.Hy - self.Jy
+        self.z23.axpby(1.0, 0.0, self.x23)
+        self.z23.axpy(-1.0, self.Hy)
+        self.z23.axpy(-1.0, self.Jy)
+
+        # 3) Schur solve F * y_23 = z_23
+        self.xtmp.setValues(self.iset_12, self.z23.array)
+        self.xtmp.assemble()
+        self.s2x2.apply(pc, self.xtmp, y)
+
+        # restore/clean up
+        x.restoreSubVector(self.iset[0], subvec=self.x1)
+        x.restoreSubVector(self.iset_12, subvec=self.x23)
+        x.restoreSubVector(self.iset[3], subvec=self.x4)
+
+        # set into y vector
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[3], self.y4.array)
+
+        y.assemble()
+
+
+class BGS_1_1_schur3x3(block_precond):
+    def __init__(self, iset, precond_fields, io, solparams, comm=None):
+        super().__init__(iset, precond_fields, io, solparams, comm=comm)
+
+        # create index set encompassing 1-2-3 blocks
+        self.iset_123 = self.iset[1].expand(self.iset[2])
+        self.iset_123 = self.iset_123.expand(self.iset[3])
+        self.iset_123.sort()
+
+        # single-field preconditioners
+        self.sing1 = block_precond(self.iset[0:1], precond_fields["1"], io, solparams, comm=comm)
+        self.sing2 = block_precond(self.iset[4:5], precond_fields["2"], io, solparams, comm=comm)
+        # Schur 3x3 preconditioner
+        self.s3x3 = schur3x3(self.iset[1:4], precond_fields["s3x3"], io, solparams, comm=comm)
+
+    def create(self, pc):
+        # get reference to preconditioner matrix object
+        _, self.P = pc.getOperators()
+        operator_mats = self.init_mat_vec()
+        # set field precs for individual single and block preconditioners
+        self.sing1.create_fieldprec(operator_mats[0:1])
+        self.sing2.create_fieldprec(operator_mats[4:5])
+        self.s3x3.create_fieldprec(operator_mats[1:4])
+
+    def check_field_size(self):
+        assert self.nfields == 5
+
+    def init_mat_vec(self):
+        self.s3x3.P = self.P
+
+        opmats_s = self.s3x3.init_mat_vec()
+
+        self.K = self.P.createSubMatrix(self.iset[0], self.iset[0])
+        self.G = self.P.createSubMatrix(self.iset[4], self.iset[4])
+
+        # get additional offdiagonal blocks
+        self.H = self.P.createSubMatrix(self.iset_123, self.iset[0])
+        self.J = self.P.createSubMatrix(self.iset_123, self.iset[4])
+
+        self.x1 = self.K.createVecLeft()
+        self.y1 = self.K.createVecLeft()
+        self.z1 = self.K.createVecLeft()
+
+        self.x5 = self.G.createVecLeft()
+        self.y5 = self.G.createVecLeft()
+        self.z5 = self.G.createVecLeft()
+
+        self.x234 = self.H.createVecLeft()
+        self.y234 = self.H.createVecLeft()
+        self.z234 = self.H.createVecLeft()
+
+        self.Hy = self.H.createVecLeft()
+        self.Jy = self.J.createVecLeft()
+
+        self.xtmp = self.P.createVecLeft()
+
+        # do we need this???
+        self.K.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
+
+        return [self.K, opmats_s[0], opmats_s[1], opmats_s[2], self.G]
+
+    def setUp(self, pc):
+        self.s3x3.setUp(pc)
+
+        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.K)
+        self.P.createSubMatrix(self.iset[4], self.iset[4], submat=self.G)
+        self.P.createSubMatrix(self.iset_123, self.iset[0], submat=self.H)
+        self.P.createSubMatrix(self.iset_123, self.iset[4], submat=self.J)
+
+        # operator values have changed - do we need to re-set them?
+        self.sing1.ksp_fields[0].setOperators(self.K)
+        self.sing2.ksp_fields[0].setOperators(self.G)
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+        # get subvectors
+        x.getSubVector(self.iset[0], subvec=self.x1)
+        x.getSubVector(self.iset[4], subvec=self.x5)
+        x.getSubVector(self.iset_123, subvec=self.x234)
+
+        # 1) solve K * y_1 = x_1
+        self.sing1.ksp_fields[0].solve(self.x1, self.y1)
+
+        # 2) solve G * y_5 = x_5
+        self.sing2.ksp_fields[0].solve(self.x5, self.y5)
+
+        self.H.mult(self.y1, self.Hy)
+        self.J.mult(self.y5, self.Jy)
+
+        # compute z234 = x234 - self.Hy - self.Jy
+        self.z234.axpby(1.0, 0.0, self.x234)
+        self.z234.axpy(-1.0, self.Hy)
+        self.z234.axpy(-1.0, self.Jy)
+
+        # 3) Schur solve F * y_234 = z_234
+        self.xtmp.setValues(self.iset_123, self.z234.array)
+        self.xtmp.assemble()
+        self.s3x3.apply(pc, self.xtmp, y)
+
+        # restore/clean up
+        x.restoreSubVector(self.iset[0], subvec=self.x1)
+        x.restoreSubVector(self.iset_123, subvec=self.x234)
+        x.restoreSubVector(self.iset[4], subvec=self.x5)
+
+        # set into y vector - 1,2,3 already set by s3x3
+        y.setValues(self.iset[0], self.y1.array)
+        y.setValues(self.iset[4], self.y5.array)
+
+        y.assemble()
+
+
+
+class BGS_schur2x2_bgs2x2(block_precond):
+    def __init__(self, iset, precond_fields, io, solparams, comm=None):
+        super().__init__(iset, precond_fields, io, solparams, comm=comm)
+
+        # create index set encompassing 0-1 and 2-3 blocks
+        self.iset_01 = self.iset[0].expand(self.iset[1])
+        self.iset_01.sort()
+        self.iset_23 = self.iset[2].expand(self.iset[3])
+        self.iset_23.sort()
+
+        self.s2x2 = schur2x2(self.iset[0:2], precond_fields["s2x2"], io, solparams, comm=comm)
+        self.bgs2x2 = bgs2x2(self.iset[2:4], precond_fields["bgs2x2"], io, solparams, comm=comm)
+
+    def create(self, pc):
+        # get reference to preconditioner matrix object
+        _, self.P = pc.getOperators()
+        operator_mats = self.init_mat_vec()
+        # set field precs for individual block precs
+        self.s2x2.create_fieldprec(operator_mats[0:2])
+        self.bgs2x2.create_fieldprec(operator_mats[2:4])
+
+    def check_field_size(self):
+        assert self.nfields == 4
+
+    def init_mat_vec(self):
+        self.s2x2.P = self.P
+        self.bgs2x2.P = self.P
+
+        opmats_s = self.s2x2.init_mat_vec()
+        opmats_b = self.bgs2x2.init_mat_vec()
+
+        # get additional offdiagonal block
+        self.H = self.P.createSubMatrix(self.iset_23, self.iset_01)
+
+        self.x01 = self.H.createVecRight()
+        self.y01 = self.H.createVecRight()
+        self.z01 = self.H.createVecRight()
+
+        self.x23 = self.H.createVecLeft()
+        self.z23 = self.H.createVecLeft()
+
+        self.Hy = self.H.createVecLeft()
+
+        self.xtmp = self.P.createVecLeft()
+
+        return [opmats_s[0], opmats_s[1], opmats_b[0], opmats_b[1]]
+
+    def setUp(self, pc):
+        self.s2x2.setUp(pc)
+        self.bgs2x2.setUp(pc)
+
+        self.P.createSubMatrix(self.iset_23, self.iset_01, submat=self.H)
+
+    # computes y = P^{-1} x
+    def apply(self, pc, x, y):
+        # get subvectors
+        x.getSubVector(self.iset_01, subvec=self.x01)
+        x.getSubVector(self.iset_23, subvec=self.x23)
+
+        self.s2x2.apply(pc, x, y)
+        y.getSubVector(self.iset_01, subvec=self.y01)
+
+        self.H.mult(self.y01, self.Hy)
+
+        # compute z23 = x23 - self.Hy
+        self.z23.axpby(1.0, 0.0, self.x23)
+        self.z23.axpy(-1.0, self.Hy)
+
+        self.xtmp.setValues(self.iset_23, self.z23.array)
+        self.xtmp.assemble()
+        self.bgs2x2.apply(pc, self.xtmp, y)
+
+        # restore/clean up
+        x.restoreSubVector(self.iset_01, subvec=self.x01)
+        x.restoreSubVector(self.iset_23, subvec=self.x23)
+        y.restoreSubVector(self.iset_01, subvec=self.y01)
+
+        # no more need to set into y vector
         y.assemble()

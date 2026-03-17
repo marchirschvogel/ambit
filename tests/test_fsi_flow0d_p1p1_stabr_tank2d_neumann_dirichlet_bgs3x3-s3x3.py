@@ -43,14 +43,12 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "bgs3x3-s3x3",
-        "precond_fields": [
-            {"prec": "amg"},  # solid-u
-            {"prec": "amg"},  # fluid-v
-            {"prec": "amg"},  # fluid-p
-            {"prec": "direct"},  # LM 3D-0D
-            {"prec": "amg"},  # ale-d
-        ],
+        "block_precond": "BGS_1_1_s3x3",
+        "precond_fields": {
+            "1": [{"prec": "amg"}],  # solid-u
+            "2": [{"prec": "amg"}],  # ale-d
+            "s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}],  # fluid-v,p,LM
+        },
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",
         "print_liniter_every": 50,

@@ -35,7 +35,7 @@ def test_main():
         "solve_type": "iterative",
         "iterative_solver": "fgmres",
         "block_precond": "s2x2full",
-        "precond_fields": [{"prec": "amg"}, {"prec": "amg"}],  # v, p
+        "precond_fields": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]},  # v, p
         "tol_lin_rel": 1.0e-5,
         "tol_lin_abs": 1.0e-30,
         "res_lin_monitor": "rel",

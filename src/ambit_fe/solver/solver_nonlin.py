@@ -183,7 +183,7 @@ class solver_nonlinear:
 
         self.precond_fields = [[]] * self.nprob
         for npr in range(self.nprob):
-            if isinstance(precond_fields[npr], list):
+            if isinstance(precond_fields, list):
                 self.precond_fields[npr] = precond_fields[npr]
             else:
                 self.precond_fields[npr] = precond_fields
@@ -478,9 +478,9 @@ class solver_nonlinear:
                         )
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == "bgs-s3x3":
+                    elif self.block_precond[npr] == "BGS_1_s3x3":
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_schur3x3(
+                        bj = preconditioner.BGS_1_schur3x3(
                             self.iset[npr],
                             self.precond_fields[npr],
                             self.pb[npr].io,
@@ -489,9 +489,9 @@ class solver_nonlinear:
                         )
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == "bgs-s3x3full":
+                    elif self.block_precond[npr] == "BGS_1_s3x3full":
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs_schur3x3full(
+                        bj = preconditioner.BGS_1_schur3x3full(
                             self.iset[npr],
                             self.precond_fields[npr],
                             self.pb[npr].io,
@@ -500,9 +500,9 @@ class solver_nonlinear:
                         )
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == "bgs3x3-s2x2":
+                    elif self.block_precond[npr] == "BGS_1_1_s2x2":
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs3x3_schur2x2(
+                        bj = preconditioner.BGS_1_1_schur2x2(
                             self.iset[npr],
                             self.precond_fields[npr],
                             self.pb[npr].io,
@@ -511,9 +511,20 @@ class solver_nonlinear:
                         )
                         self.ksp[npr].getPC().setPythonContext(bj)
 
-                    elif self.block_precond[npr] == "bgs3x3-s3x3":
+                    elif self.block_precond[npr] == "BGS_1_1_s3x3":
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.bgs3x3_schur3x3(
+                        bj = preconditioner.BGS_1_1_schur3x3(
+                            self.iset[npr],
+                            self.precond_fields[npr],
+                            self.pb[npr].io,
+                            self.solver_params,
+                            self.comm,
+                        )
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    elif self.block_precond[npr] == "BGS_s2x2_bgs2x2":
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.BGS_schur2x2_bgs2x2(
                             self.iset[npr],
                             self.precond_fields[npr],
                             self.pb[npr].io,

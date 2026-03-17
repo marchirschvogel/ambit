@@ -47,7 +47,7 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "bgs-s3x3",  # can as well use bgsschur3x3 version - interestingly, the SIMPLE version yields fewer linear iterations!
+        "block_precond": "BGS_1_s3x3",  # can as well use bgsschur3x3 version - interestingly, the SIMPLE version yields fewer linear iterations!
         "precond_fields": [
             {"prec": "amg"},  # fluid-v
             {"prec": "amg"},  # fluid-p (Schur)
