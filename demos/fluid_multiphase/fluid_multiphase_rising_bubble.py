@@ -26,7 +26,7 @@ def main():
         # mesh command that uses dolfinx internal mesh creation of simple domains (here a rectangular 2D grid)
         "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 32,64   64,128   128,256
         # which results to write
-        "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"]],
+        "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"],"counters"],
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
         "simname": "fluid_multiphase_rising_bubble"+str(case)+"_exp1.0_BDF2_eps0.64_-11",
         # write the initial fields (e.g., the phase field, for visualization/checks)
@@ -70,8 +70,19 @@ def main():
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS = {
-        "solve_type": "direct",
+        "solve_type": "direct",   # direct, iterative
         "direct_solver": "mumps",
+        # BEGIN: Settings for iterative solver - TODO: Currently, this preconditioner (outer BGS btw. fluid and CH, Schur/SIMPLE on fluid, BGS on CH) works OK for case 1, but not at all for case 2.
+        "iterative_solver": "fgmres",
+        "block_precond": "BGS_s2x2_bgs2x2",
+        "precond_fields": {
+            "s2x2": [{"prec": "direct"},{"prec": "direct"}],  # fluid-v,p
+            "bgs2x2": [{"prec": "direct"},{"prec": "direct"}],  # CH-phi,mu
+        },
+        "tol_lin_rel": 1e-7,
+        "lin_norm_type": "unpreconditioned",
+        "print_liniter_every": 50,
+        # END: Settings for iterative solver
         "maxiter": 10,
         "tol_res": [1e-5, 1e-5, 1e-5, 1e-5],
         "tol_inc": [1e-3, 1e-3, 1e-3, 1e-3],
