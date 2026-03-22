@@ -50,7 +50,7 @@ def gather_surface_dof_indices(io, Vspace, surflist, comm):
 
     return fd
 
-def get_index_set(Vspace, comm, nodes_loc=None, pb=None, identifier=None, codim=None, sub=None, local_indices=False, mapper=None, mask_owned=False):
+def get_index_set(Vspace, comm, nodes_loc=None, pb=None, identifier=None, codim=None, sub=None, local_indices=False, mask_owned=False):
     # get (local) nodes if not already provided
     if nodes_loc is None:
         if codim == pb.mesh.topology.dim:
@@ -81,9 +81,6 @@ def get_index_set(Vspace, comm, nodes_loc=None, pb=None, identifier=None, codim=
         )
     else:
         nodes_g = nodes_loc
-
-    if mapper is not None:
-        nodes_g = nodes_g[mapper]
 
     if mask_owned:
         if not local_indices:
