@@ -336,6 +336,9 @@ class PhasefieldProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def set_problem_vector_matrix_structures(self):
+        ts = time.time()
+        utilities.print_status("Creating vector and matrix data structures for phasefield (Cahn-Hilliard)...", self.pbase.comm, e=" ")
+
         self.r_phi = fem.petsc.assemble_vector(self.res_phi)
         self.r_mu = fem.petsc.assemble_vector(self.res_mu)
         self.K_phiphi = fem.petsc.assemble_matrix(self.jac_phiphi, self.dbcs)
@@ -353,6 +356,9 @@ class PhasefieldProblem(problem_base):
         self.K_list[0][1] = self.K_phimu
         self.K_list[1][1] = self.K_mumu
         self.K_list[1][0] = self.K_muphi
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         # assemble rhs vector

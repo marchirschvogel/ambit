@@ -1585,6 +1585,9 @@ class SolidmechanicsProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
     def set_problem_vector_matrix_structures(self):
+        ts = time.time()
+        utilities.print_status("Creating vector and matrix data structures for solid...", self.pbase.comm, e=" ")
+
         self.r_u = fem.petsc.assemble_vector(self.res_u)
         self.K_uu = fem.petsc.assemble_matrix(self.jac_uu, self.dbcs)
         self.K_uu.assemble()
@@ -1601,6 +1604,9 @@ class SolidmechanicsProblem(problem_base):
                 self.K_pp = fem.petsc.assemble_matrix(self.jac_pp, [])
             else:
                 self.K_pp = None
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.pbase.comm)
 
     def assemble_residual(self, t, subsolver=None):
         # assemble rhs vector

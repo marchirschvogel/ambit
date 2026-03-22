@@ -221,6 +221,9 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
 
     def set_problem_vector_matrix_structures_coupling(self):
         if self.pbfa.coupling_strategy == "monolithic":
+            ts = time.time()
+            utilities.print_status("Creating vector and matrix data structures for ALE-0D coupling...", self.pbase.comm, e=" ")
+
             # setup offdiagonal matrix
             locmatsize = self.pba.V_d.dofmap.index_map.size_local * self.pba.V_d.dofmap.index_map_bs
             matsize = self.pba.V_d.dofmap.index_map.size_global * self.pba.V_d.dofmap.index_map_bs
@@ -253,6 +256,9 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
             )
             self.K_sd.setUp()
             self.K_sd.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
+
+            te = time.time() - ts
+            utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         self.pbf0.assemble_residual_coupling(t, subsolver=subsolver)

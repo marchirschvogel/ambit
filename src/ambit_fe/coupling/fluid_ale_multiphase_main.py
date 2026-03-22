@@ -209,10 +209,16 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
+        ts = time.time()
+        utilities.print_status("Creating vector and matrix data structures for phasefield-ALE coupling...", self.pbase.comm, e=" ")
+
         self.K_phid = fem.petsc.assemble_matrix(self.jac_phid, self.pbp.dbcs)
         self.K_phid.assemble()
         self.K_mud = fem.petsc.assemble_matrix(self.jac_mud, [])
         self.K_mud.assemble()
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         self.pbfa.assemble_residual(t)

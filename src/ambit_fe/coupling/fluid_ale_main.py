@@ -266,6 +266,9 @@ class FluidmechanicsAleProblem(problem_base):
 
     def set_problem_vector_matrix_structures_coupling(self):
         if self.coupling_strategy == "monolithic":
+            ts = time.time()
+            utilities.print_status("Creating vector and matrix data structures for fluid-ALE coupling...", self.pbase.comm, e=" ")
+
             self.K_vd = fem.petsc.assemble_matrix(self.jac_vd, self.pbf.dbcs)
             self.K_vd.assemble()
             if self.have_dbc_fluid_ale:
@@ -343,6 +346,9 @@ class FluidmechanicsAleProblem(problem_base):
             else:
                 self.K_pd = fem.petsc.assemble_matrix(self.jac_pd, self.pbf.dbcs_pres)
             self.K_pd.assemble()
+
+            te = time.time() - ts
+            utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         # prior to ALE residual assemble!

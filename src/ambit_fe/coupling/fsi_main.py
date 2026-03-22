@@ -435,6 +435,9 @@ class FSIProblem(problem_base):
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
+        ts = time.time()
+        utilities.print_status("Creating vector and matrix data structures for FSI coupling...", self.pbase.comm, e=" ")
+
         if self.fsi_system == "neumann_neumann":
             self.r_l = fem.petsc.assemble_vector(self.res_l)
 
@@ -526,6 +529,9 @@ class FSIProblem(problem_base):
                 addv=PETSc.InsertMode.INSERT,
             )
             self.Ifo.assemble()
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         if self.pbs.incompressible_2field:

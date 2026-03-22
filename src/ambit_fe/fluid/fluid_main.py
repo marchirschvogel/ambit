@@ -2165,6 +2165,9 @@ class FluidmechanicsProblem(problem_base):
         utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def set_problem_vector_matrix_structures(self, rom=None):
+        ts = time.time()
+        utilities.print_status("Creating vector and matrix data structures for fluid...", self.pbase.comm, e=" ")
+
         self.r_v = fem.petsc.assemble_vector(self.res_v)
         if self.num_dupl > 1:
             self.r_p = fem.petsc.assemble_vector(self.res_p, kind=PETSc.Vec.Type.MPI)
@@ -2268,6 +2271,9 @@ class FluidmechanicsProblem(problem_base):
             # self.K_zp = PETSc.Mat().createAIJ(size=((PETSc.DECIDE,self.num_valve_coupling_surf),(locmatsize,matsize)), bsize=None, nnz=max(sze_sv), csr=None, comm=self.comm)
             # self.K_zp.setUp()
             # self.K_zp.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         # NOTE: we do not linearize integrated pressure-dependent valves w.r.t. p,

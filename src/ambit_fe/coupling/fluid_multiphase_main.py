@@ -224,6 +224,9 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
+        ts = time.time()
+        utilities.print_status("Creating vector and matrix data structures for fluid-phasefield coupling...", self.pbase.comm, e=" ")
+
         self.K_vphi = fem.petsc.assemble_matrix(self.jac_vphi, self.pbf.dbcs)
         self.K_vphi.assemble()
         self.K_vmu = fem.petsc.assemble_matrix(self.jac_vmu, self.pbf.dbcs)
@@ -238,6 +241,9 @@ class FluidmechanicsMultiphaseProblem(problem_base):
             self.K_phip = fem.petsc.assemble_matrix(self.jac_phip, self.pbp.dbcs)
         self.K_pphi.assemble()
         self.K_phip.assemble()
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         self.pbf.assemble_residual(t)

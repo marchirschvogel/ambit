@@ -463,6 +463,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
         self.set_problem_vector_matrix_structures_coupling()
 
     def set_problem_vector_matrix_structures_coupling(self):
+        ts = time.time()
+        utilities.print_status("Creating vector and matrix data structures for solid-0D coupling...", self.pbase.comm, e=" ")
+
         self.r_lm = PETSc.Vec().createMPI(size=self.num_coupling_surf)
 
         # Lagrange multiplier stiffness matrix (currently treated with FD!)
@@ -536,6 +539,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
         )
         self.K_su.setUp()
         self.K_su.setOption(PETSc.Mat.Option.ROW_ORIENTED, False)
+
+        te = time.time() - ts
+        utilities.print_status("t = %.4f s" % (te), self.comm)
 
     def assemble_residual(self, t, subsolver=None):
         # first the coupling, then the main res
