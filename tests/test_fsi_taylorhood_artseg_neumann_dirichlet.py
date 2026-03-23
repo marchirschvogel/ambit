@@ -14,7 +14,6 @@ import pytest
 
 @pytest.mark.fsi
 @pytest.mark.fluid_solid
-@pytest.mark.skip(reason="Not yet ready for testing.")
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
@@ -40,7 +39,7 @@ def test_main():
         "solve_type": "direct",
         "direct_solver": "mumps",
         "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-6],
-        "tol_inc": [1e-0, 1e-0, 1e-0, 1e-0, 1e-0],
+        "tol_inc": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
     }
 
     TIME_PARAMS_SOLID = {"timint": "ost", "theta_ost": 1.0}
