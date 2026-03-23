@@ -256,6 +256,8 @@ class FSIProblem(problem_base):
             bs = bs_s
 
             s0, s1 = self.pbs.u.x.petsc_vec.getOwnershipRange()
+            if self.pbs.incompressible_2field:
+                sp0, sp1 = self.pbs.p.x.petsc_vec.getOwnershipRange()
 
             # convert to owned block/node range
             assert s0 % bs == 0 and s1 % bs == 0
@@ -263,9 +265,18 @@ class FSIProblem(problem_base):
 
             # distribute by owned solid nodes!
             mask = (self.solid_nodes_glob >= s0b) & (self.solid_nodes_glob < s1b)
+            if self.pbs.incompressible_2field:
+                mask_p = (self.solidp_nodes_glob >= sp0) & (self.solidp_nodes_glob < sp1)
 
             solid_nodes_loc = self.solid_nodes_glob[mask]
             fluid_nodes_loc = self.fluid_nodes_glob[mask]
+            if self.pbs.incompressible_2field:
+                solidp_nodes_loc = self.solidp_nodes_glob[mask_p]
+                fluid_nodes_loc_sp = self.fluid_nodes_glob_sp[mask_p]
+
+            assert solid_nodes_loc.size == fluid_nodes_loc.size
+            if self.pbs.incompressible_2field:
+                assert solidp_nodes_loc.size == fluid_nodes_loc_sp.size
 
             # now build the index sets according to owned solid nodes distribution!
             self.fdofs_solid_global_sub = PETSc.IS().createBlock(bs, solid_nodes_loc, comm=self.comm)
@@ -276,8 +287,10 @@ class FSIProblem(problem_base):
             self.cols_fs = self.fdofs_fluid_global_sub.getIndices()
 
             if self.pbs.incompressible_2field:
-                self.fdofs_solidp_global_sub = PETSc.IS().createBlock(1, solid_nodes_loc, comm=self.comm)
+                self.fdofs_solidp_global_sub = PETSc.IS().createGeneral(solidp_nodes_loc, comm=self.comm)
+                self.fdofs_fluid_global_sub_sp = PETSc.IS().createBlock(bs, fluid_nodes_loc_sp, comm=self.comm)
                 self.rows_fsp = self.fdofs_solidp_global_sub.getIndices()
+                self.cols_fsp = self.fdofs_fluid_global_sub_sp.getIndices()
 
         if self.fsi_system == "neumann_neumann":
             self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
@@ -473,7 +486,7 @@ class FSIProblem(problem_base):
                 )
                 self.Diag_solp.setUp()
                 # now only set the 1's at surface dofs
-                for i, j in zip(self.rows_fsp, self.cols_fs):
+                for i, j in zip(self.rows_fsp, self.cols_fsp):
                     self.Diag_solp.setValue(i, j, 1.0, addv=PETSc.InsertMode.INSERT)
                 self.Diag_solp.assemble()
 
@@ -505,6 +518,16 @@ class FSIProblem(problem_base):
                 addv=PETSc.InsertMode.INSERT,
             )
             self.Ifo.assemble()
+
+            if self.pbs.incompressible_2field:
+                self.Ifop = self.K_vps.createVecRight()
+                self.Ifop.array[:] = 1.0
+                self.Ifop.setValues(
+                    self.fdofs_solidp_global_sub,
+                    np.zeros(self.fdofs_solidp_global_sub.getLocalSize()),
+                    addv=PETSc.InsertMode.INSERT,
+                )
+                self.Ifop.assemble()
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -672,12 +695,14 @@ class FSIProblem(problem_base):
                 self.K_up_work.assemble()
 
                 self.Diag_solp.transposeMatMult(self.K_up_work, result=self.K_vps)
+
+                # self.K_vps.diagonalScale(R=self.Ifop)
                 self.K_vps.assemble()
 
                 for i in range(len(self.dbc_dofs_fluid_global)):
                     self.K_vps.zeroRows(self.dbc_dofs_fluid_global[i], diag=0.0)
 
-                self.K_vps.scale(-fac)
+                self.K_vps.scale(-1.0)
 
     def evaluate_residual_dbc_coupling(self):
         # we need a vector representation of ufluid to apply in solid DBCs
@@ -801,6 +826,8 @@ class FSIProblem(problem_base):
 
         dofs_s = self.pbs.V_u.tabulate_dof_coordinates()
         dofs_f = self.pbf.V_v.tabulate_dof_coordinates()
+        if self.pbs.incompressible_2field:
+            dofs_sp = self.pbs.V_p.tabulate_dof_coordinates()
 
         if all(isinstance(x, int) for x in self.io.surf_interf):
             fnodes_s_loc = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.mesh.topology.dim-1, self.pbs.mt_b.indices[np.isin(self.pbs.mt_b.values, self.io.surf_interf)])
@@ -810,6 +837,16 @@ class FSIProblem(problem_base):
                 fnodes_s_loc_.append(fem.locate_dofs_geometrical(self.pbs.V_u, lc.evaluate))
             fnodes_s_loc = np.concatenate(fnodes_s_loc_).ravel()
         fnodes_s_glb = np.array(self.pbs.V_u.dofmap.index_map.local_to_global(np.asarray(fnodes_s_loc, dtype=np.int32)), dtype=np.int32)
+
+        if self.pbs.incompressible_2field:
+            if all(isinstance(x, int) for x in self.io.surf_interf):
+                fnodes_sp_loc = fem.locate_dofs_topological(self.pbs.V_p, self.pbs.mesh.topology.dim-1, self.pbs.mt_b.indices[np.isin(self.pbs.mt_b.values, self.io.surf_interf)])
+            else: # can only be locator function otherwise...
+                fnodes_sp_loc_ = []
+                for lc in self.io.surf_interf:
+                    fnodes_sp_loc_.append(fem.locate_dofs_geometrical(self.pbs.V_p, lc.evaluate))
+                fnodes_sp_loc = np.concatenate(fnodes_sp_loc_).ravel()
+            fnodes_sp_glb = np.array(self.pbs.V_p.dofmap.index_map.local_to_global(np.asarray(fnodes_sp_loc, dtype=np.int32)), dtype=np.int32)
 
         if all(isinstance(x, int) for x in self.io.surf_interf):
             fnodes_f_loc = fem.locate_dofs_topological(self.pbf.V_v, self.pbf.mesh.topology.dim-1, self.pbf.mt_b.indices[np.isin(self.pbf.mt_b.values, self.io.surf_interf)])
@@ -824,6 +861,10 @@ class FSIProblem(problem_base):
         Istart_s, Iend_s = self.pbs.V_u.dofmap.index_map.local_range
         mask_s = np.logical_and(fnodes_s_glb >= Istart_s, fnodes_s_glb < Iend_s)
         fnodes_s_glb = fnodes_s_glb[mask_s]
+        if self.pbs.incompressible_2field:
+            Istart_sp, Iend_sp = self.pbs.V_p.dofmap.index_map.local_range
+            mask_sp = np.logical_and(fnodes_sp_glb >= Istart_sp, fnodes_sp_glb < Iend_sp)
+            fnodes_sp_glb = fnodes_sp_glb[mask_sp]
 
         # restrict to owned global
         Istart_f, Iend_f = self.pbf.V_v.dofmap.index_map.local_range
@@ -832,42 +873,61 @@ class FSIProblem(problem_base):
 
         # back to owned local
         fnodes_s_loc = np.array(self.pbs.V_u.dofmap.index_map.global_to_local(np.asarray(fnodes_s_glb, dtype=np.int32)), dtype=np.int32)
+        if self.pbs.incompressible_2field:
+            fnodes_sp_loc = np.array(self.pbs.V_p.dofmap.index_map.global_to_local(np.asarray(fnodes_sp_glb, dtype=np.int32)), dtype=np.int32)
         fnodes_f_loc = np.array(self.pbf.V_v.dofmap.index_map.global_to_local(np.asarray(fnodes_f_glb, dtype=np.int32)), dtype=np.int32)
 
         # assert that they have the same size...
         assert(fnodes_s_loc.size==fnodes_s_glb.size)
         assert(fnodes_f_loc.size==fnodes_f_glb.size)
-
-        gdim_s = self.pbs.mesh.geometry.dim
-        gdim_f = self.pbf.mesh.geometry.dim
+        if self.pbs.incompressible_2field:
+            assert(fnodes_sp_loc.size==fnodes_sp_glb.size)
 
         # get local node coordinates
         xs_loc = dofs_s[fnodes_s_loc]
+        if self.pbs.incompressible_2field:
+            xsp_loc = dofs_sp[fnodes_sp_loc]
         xf_loc = dofs_f[fnodes_f_loc]
 
         # now gather: we need a global correspondence
         all_xs = self.comm.allgather(xs_loc)
         all_gs = self.comm.allgather(fnodes_s_glb)
+        if self.pbs.incompressible_2field:
+            all_xsp = self.comm.allgather(xsp_loc)
+            all_gsp = self.comm.allgather(fnodes_sp_glb)
         all_xf = self.comm.allgather(xf_loc)
         all_gf = self.comm.allgather(fnodes_f_glb)
 
         xs = np.vstack(all_xs)
         gs = np.concatenate(all_gs)
+        if self.pbs.incompressible_2field:
+            xsp = np.vstack(all_xsp)
+            gsp = np.concatenate(all_gsp)
         xf = np.vstack(all_xf)
         gf = np.concatenate(all_gf)
 
         tree = cKDTree(xs)
         dist, idx = tree.query(xf, distance_upper_bound=1e-6)
-
         if np.isinf(dist).any():
             raise RuntimeError("Unmatched fluid interface dofs")
 
+        if self.pbs.incompressible_2field:
+            tree_p = cKDTree(xsp)
+            dist_p, idx_p = tree_p.query(xf, distance_upper_bound=1e-6)
+            good = np.isfinite(dist_p)
+
         solid_of_fluid = gs[idx]
         fluid_glob = gf
+        if self.pbs.incompressible_2field:
+            solidp_of_fluid = gsp[idx_p[good]]
+            fluid_glob_sp = gf[good]
 
         # global gathered node arrays for later index set construction
         self.solid_nodes_glob = np.asarray(solid_of_fluid, dtype=PETSc.IntType)
-        self.fluid_nodes_glob = np.asarray(fluid_glob,     dtype=PETSc.IntType)
+        self.fluid_nodes_glob = np.asarray(fluid_glob, dtype=PETSc.IntType)
+        if self.pbs.incompressible_2field:
+            self.solidp_nodes_glob = np.asarray(solidp_of_fluid, dtype=PETSc.IntType)
+            self.fluid_nodes_glob_sp = np.asarray(fluid_glob_sp, dtype=PETSc.IntType)
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
