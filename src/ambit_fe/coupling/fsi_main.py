@@ -696,13 +696,11 @@ class FSIProblem(problem_base):
 
                 self.Diag_solp.transposeMatMult(self.K_up_work, result=self.K_vps)
 
-                # self.K_vps.diagonalScale(R=self.Ifop)
+                self.K_vps.diagonalScale(R=self.Ifop)
                 self.K_vps.assemble()
 
                 for i in range(len(self.dbc_dofs_fluid_global)):
                     self.K_vps.zeroRows(self.dbc_dofs_fluid_global[i], diag=0.0)
-
-                self.K_vps.scale(-1.0)
 
     def evaluate_residual_dbc_coupling(self):
         # we need a vector representation of ufluid to apply in solid DBCs
