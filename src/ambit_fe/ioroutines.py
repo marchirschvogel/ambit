@@ -26,13 +26,13 @@ class IO:
         self.io_params = io_params
 
         self.num_domains = []
-        self.ndistrprob = len(constitutive_params)  # number of distributed problems (e.g. in FSI, we have solid, fluid, ALE, hence 3)
-        for i in range(self.ndistrprob):
+        self.num_meshes = len(constitutive_params)  # number of different meshes involved (normally one; in FSI, we have 2: one for solid, the other for fluid+ALE, interface not counted here)
+        for i in range(self.num_meshes):
             self.num_domains.append(len(constitutive_params[i]))
 
         # collect given domain ids
-        self.domain_ids = [[] * self.ndistrprob for _ in range(self.ndistrprob)]
-        for i in range(self.ndistrprob):
+        self.domain_ids = [[] * self.num_meshes for _ in range(self.num_meshes)]
+        for i in range(self.num_meshes):
             for n in range(self.num_domains[i]):
                 self.domain_ids[i].append( constitutive_params[i]["MAT"+str(n+1)].get("id", n+1) )
 
@@ -174,6 +174,27 @@ class IO:
 
     # create domain and boundary integration measures
     def create_integration_measures(self, msh, mt_data, qdeg, bcdict=None):
+        if all(isinstance(x, int) for x in self.domain_ids[0]):
+            pass
+        else: # can only be a locator function otherwise
+            id_loc = 0
+            cells_domain = []
+            for i, lc in enumerate(self.domain_ids[0]):
+                id_loc += 1
+                cells_domain.append(mesh.locate_entities(msh, msh.topology.dim, lc.evaluate))
+                # need to overwrite with an id
+                self.domain_ids[0][i] = id_loc
+            self.cells_domain = np.concatenate(cells_domain).ravel()
+
+            domain_indices, domain_markers = [], []
+            for i in range(len(cells_domain)):
+                domain_indices.append(cells_domain[i])
+                domain_markers.append(np.full_like(cells_domain[i], self.domain_ids[0][i]))
+
+            domain_indices = np.hstack(domain_indices).astype(np.int32)
+            domain_markers = np.hstack(domain_markers).astype(np.int32)
+            sorter_domain_indices = np.argsort(domain_indices)
+
         if mt_data[0] is not None:
             dx = ufl.Measure(
                 "dx",
@@ -182,12 +203,9 @@ class IO:
                 metadata={"quadrature_degree": qdeg},
             )
         else:
-            dx_ = ufl.Measure(
-                "dx",
-                domain=msh,
-                metadata={"quadrature_degree": qdeg},
-            )
-            dx = lambda a: dx_  # so that we can call dx(1) even without domain meshtags
+            # if we don't have meshtags, create them out of locator functions
+            domain_tags = mesh.meshtags(msh, msh.topology.dim, domain_indices[sorter_domain_indices], domain_markers[sorter_domain_indices])
+            dx = ufl.Measure("dx", domain=msh, subdomain_data=domain_tags, metadata={"quadrature_degree": qdeg})
 
         if mt_data[1] is not None:
             ds = ufl.Measure(
@@ -213,11 +231,12 @@ class IO:
 
         # if user-defined locators (instead of ids) are given, create a separate measure
         facets_bc_indices, facets_bc_markers = [], []
+        non_facet_bcs = ["dirichlet", "dirichlet_pres"] # treated differently (no facet integration measure needed)
         if bcdict is not None:
             id_=0
             for B in bcdict:
                 for k in B.keys():
-                    if "dirichlet" not in k: # treated differently (no integration measure needed)
+                    if k not in non_facet_bcs:
                         for i in range(len(B[k])):
                             if all(isinstance(x, int) for x in B[k][i]["id"]):
                                 pass
@@ -2365,11 +2384,12 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             meshtags = [0]
 
         # we need one global "master" ds measure, so need to append all additional facets from locators
+        non_facet_bcs = ["dirichlet", "dirichlet_pres"] # treated differently (no facet integration measure needed)
         if bcdict is not None:
             id_loc = max(meshtags)
             for B in bcdict:
                 for k in B.keys():
-                    if "dirichlet" not in k: # treated differently (no integration measure needed)
+                    if k not in non_facet_bcs:
                         for i in range(len(B[k])):
                             codim = B[k][i].get("codimension", msh.topology.dim-1)
                             if all(isinstance(x, int) for x in B[k][i]["id"]):

@@ -52,6 +52,7 @@ def test_main():
         "MAT1": {
             "stvenantkirchhoff": {"Emod": 210e9, "nu": 0.3},  # Pa
             "inertia": {"rho0": 7850.0},
+            "bodyforce": {"dir": [0.0, 0.0, -1.0], "curve": 1, "scale_density": True}, # scaled by density, hence curve value is an acceleration
         }
     }  # kg/m^3
 
@@ -60,7 +61,7 @@ def test_main():
         def tc1(self, t):
             return 9.81 # m/s^2
 
-    BC_DICT = {"bodyforce": [{"id": [1], "dir": [0.0, 0.0, -1.0], "curve": 1, "scale_density": True}]} # scaled by density, hence curve value is an acceleration
+    BC_DICT = { }
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(

@@ -89,18 +89,36 @@ def main():
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS = {
-        "solve_type": "direct",
+        "solve_type": "direct",  # direct, iterative (NOTE: Iterative solver only for 'neumann_dirichlet' setting of fsi_system parameter in COUPLING_PARAMS)
         "direct_solver": "mumps",
+        # BEGIN Iterative solver settings
+        "iterative_solver": "fgmres",
+        "block_precond": "BGS_1_1_s2x2",
+        "precond_fields": {
+            "1": [{"prec": "amg"}],  # solid-u
+            "2": [{"prec": "amg"}],  # ale-d
+            "s2x2": [{"prec": "amg"},{"prec": "amg"}],  # fluid-v,p
+        },
+        "tol_lin_rel": 1e-7,
+        "lin_norm_type": "unpreconditioned",
+        "print_liniter_every": 50,
+        # END
         # residual and increment tolerances
         "tol_res": [
-            1e-8,
-            1e-8,
-            1e-8,
-            1e-8,
-            1e-8,
-        ],  # solid-mom,fluid-mom,fluid-cont,FSI-coup,ALE-mom
-        "tol_inc": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
-    }  # du,dv,dp,dlm,dd
+            1e-8, # solid momentum
+            1e-8, # fluid momentum
+            1e-8, # fluid continuity
+            1e-8, # FSI coupling (only for neumann_neumann)
+            1e-8, # ALE
+        ],
+        "tol_inc": [
+            1e-4, # du
+            1e-4, # dv
+            1e-4, # dp
+            1e-4, # dlm (only for neumann_neumann)
+            1e-4, # dd
+        ]
+    }
 
     """
     Parameters for the solid mechanics time integration scheme
@@ -151,7 +169,7 @@ def main():
     COUPLING_PARAMS = {
         "coupling_fluid_ale": {"interface": [1]},
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
-        "fsi_system": "neumann_neumann",
+        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
     }
 
     # solid material: St.-Venant Kirchhoff

@@ -809,28 +809,6 @@ class SolidmechanicsProblem(problem_base):
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
                 funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid,
             )
-        if "bodyforce" in self.bc_dict.keys():
-            w_body = self.bc.bodyforce(
-                self.bc_dict["bodyforce"],
-                self.dx,
-                [self.rho0],
-                funcs_to_update=self.ti.funcs_to_update,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update,
-            )
-            w_body_old = self.bc.bodyforce(
-                self.bc_dict["bodyforce"],
-                self.dx,
-                [self.rho0],
-                funcs_to_update=self.ti.funcs_to_update_old,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
-            )
-            w_body_mid = self.bc.bodyforce(
-                self.bc_dict["bodyforce"],
-                self.dx,
-                [self.rho0],
-                funcs_to_update=self.ti.funcs_to_update_mid,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
-            )
         if "robin" in self.bc_dict.keys():
             w_robin = self.bc.robin_bcs(
                 self.bc_dict["robin"],
@@ -929,6 +907,31 @@ class SolidmechanicsProblem(problem_base):
             self.deltaW_prestr_ext = w_neumann_prestr + w_robin_prestr
         else:
             assert "neumann_prestress" not in self.bc_dict.keys()
+
+        # now take care of body forces
+        for n, M in enumerate(self.domain_ids):
+            if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
+                w_body += self.bc.bodyforce(
+                    self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
+                    self.dx(M),
+                    self.rho0,
+                    funcs_to_update=self.ti.funcs_to_update,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update,
+                )
+                w_body_old += self.bc.bodyforce(
+                    self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
+                    self.dx(M),
+                    self.rho0,
+                    funcs_to_update=self.ti.funcs_to_update_old,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
+                )
+                w_body_mid += self.bc.bodyforce(
+                    self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
+                    self.dx(M),
+                    self.rho0,
+                    funcs_to_update=self.ti.funcs_to_update_mid,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
+                )
 
         self.deltaW_ext = w_neumann + w_body + w_robin + w_membrane
         self.deltaW_ext_old = w_neumann_old + w_body_old + w_robin_old + w_membrane_old

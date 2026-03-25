@@ -122,12 +122,17 @@ def test_main():
     sig = 100.0
     M0 = 1e-3
 
+    class locate_all:
+        def evaluate(self, x):
+            return np.full(x.shape[1], True, dtype=bool)
+
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
-                                "inertia": {"rho1": rho1, "rho2": rho2}}}
+                                "inertia": {"rho1": rho1, "rho2": rho2}, "id": locate_all(),
+                                "bodyforce": {"dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps, "kappa": sig*eps}}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps, "kappa": sig*eps}, "id": locate_all()}}
 
-    MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}}}
+    MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}, "id": locate_all()}}
 
     class expr2:
         def __init__(self):
@@ -144,12 +149,7 @@ def test_main():
             return (np.full(x.shape[1], val_t),
                     np.full(x.shape[1], 0.0))
 
-    class locate_all:
-        def evaluate(self, x):
-            return np.full(x.shape[1], True, dtype=bool)
-
-    BC_DICT_FLUID = { "bodyforce" : [{"id": [locate_all()], "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
-                     "dirichlet_pres" : [{"id": [locate_center()], "dir": "all", "val": 0.0}] } # fix pressure in middle of domain to have a well-defined pressure level
+    BC_DICT_FLUID = { "dirichlet_pres" : [{"id": [locate_center()], "dir": "all", "val": 0.0}] } # fix pressure in middle of domain to have a well-defined pressure level
 
     BC_DICT_ALE = {
         "dirichlet": [{"dir": "all", "expression": expr2, "codimension": 2}]

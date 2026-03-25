@@ -141,11 +141,17 @@ def main():
     alpha = (rho1-rho2)/(rho1+rho2) # TODO: Negative in Eikelder et al. (2024), Brunk and Eikelder (2026), but then not working!
     sigtilde = 3.*sig/(2.*np.sqrt(2.))
 
+    class locate_all:
+        def evaluate(self, x):
+            return np.full(x.shape[1], True, dtype=bool)
+
     """
     Constitutive parameters for the fluid
     """
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2, "zeta1": zeta, "zeta2": zeta},
-                                "inertia": {"rho1": rho1, "rho2": rho2}}}
+                                "inertia": {"rho1": rho1, "rho2": rho2},
+                                "id": locate_all(),
+                                "bodyforce": {"dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}}}
 
     """
     Constitutive parameters for the phase field
@@ -156,7 +162,8 @@ def main():
                                                   "M0": 0.1*eps**2.0,   # Mobility [m^5/(Pa s)]
                                                   "D": sigtilde/(4.*eps),         # Bulk free-energy parameter [Pa/m^3]
                                                   "kappa": sigtilde*eps,     # Gradient energy coefficient [Pa/m]
-                                                  "alpha": alpha}}}   # Pressure factor in diffusive flux
+                                                  "alpha": alpha},   # Pressure factor in diffusive flux
+                                                  "id": locate_all()}}
 
     """
     Some locators for boundary conditions
@@ -173,10 +180,6 @@ def main():
             right_b = np.isclose(x[0], 1.0)
             return np.logical_or(left_b, right_b)
 
-    class locate_all:
-        def evaluate(self, x):
-            return np.full(x.shape[1], True, dtype=bool)
-
     class locate_center:
         def evaluate(self, x):
             ctr_x = np.isclose(x[0], 0.5)
@@ -190,7 +193,6 @@ def main():
         "dirichlet" : [{"id": [locate_top_bottom()], "dir": "all", "val": 0.0},
                        {"id": [locate_left_right()], "dir": "x", "val": 0.0}],
         "dirichlet_pres" : [{"id": [locate_center()], "dir": "all", "val": 0.0}], # fix pressure in middle of domain to have a well-defined pressure level
-        "bodyforce" : [{"id": [locate_all()], "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
     }
 
     """

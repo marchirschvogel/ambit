@@ -91,13 +91,18 @@ def test_main():
     sig = 24.5
     M0 = 1e-3
 
+    class locate_all:
+        def evaluate(self, x):
+            return np.full(x.shape[1], True, dtype=bool)
+
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2},
-                                "inertia": {"rho1": rho1, "rho2": rho2}}}
+                                "inertia": {"rho1": rho1, "rho2": rho2}, "id": locate_all(),
+                                "bodyforce": {"dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}}}
 
 
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps,
                                                   "kappa": sig*eps,
-                                                  "mobility": "degenerate"}}}
+                                                  "mobility": "degenerate"}, "id": locate_all()}}
 
     class locate_top_bottom:
         def evaluate(self, x):
@@ -111,10 +116,6 @@ def test_main():
             right_b = np.isclose(x[0], 1.0)
             return np.logical_or(left_b, right_b)
 
-    class locate_all:
-        def evaluate(self, x):
-            return np.full(x.shape[1], True, dtype=bool)
-
     class locate_center:
         def evaluate(self, x):
             ctr_x = np.isclose(x[0], 0.5)
@@ -125,7 +126,6 @@ def test_main():
         "dirichlet" : [{"id": [locate_top_bottom()], "dir": "all", "val": 0.0},
                        {"id": [locate_left_right()], "dir": "x", "val": 0.0}],
         "dirichlet_pres" : [{"id": [locate_center()], "dir": "all", "val": 0.0}], # fix pressure in middle of domain to have a well-defined pressure level
-        "bodyforce" : [{"id": [locate_all()], "dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}],
     }
 
     BC_DICT_PF = { }

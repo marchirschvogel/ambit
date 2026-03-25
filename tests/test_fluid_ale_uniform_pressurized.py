@@ -63,10 +63,15 @@ def test_main():
         "coupling_fluid_ale": {"interface": [locate()]},
     }
 
-    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 0.001}, # Pa s
-                                "inertia": {"rho": 1000.0}}} # kg/m^3
+    class locate_all:
+        def evaluate(self, x):
+            return np.full(x.shape[1], True, dtype=bool)
 
-    MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}}}
+    MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 0.001}, # Pa s
+                                "inertia": {"rho": 1000.0}, # kg/m^3
+                                "id": locate_all()}}
+
+    MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}, "id": locate_all()}}
 
     # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
     class time_curves:

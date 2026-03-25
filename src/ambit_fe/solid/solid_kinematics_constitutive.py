@@ -42,7 +42,7 @@ class constitutive:
         self.incompr_2field = incompr_2field
 
         # list entries of mats which do not return a stress
-        self.mat_void = ["inertia", "growth", "plastic", "id"]
+        self.mat_void = ["inertia", "growth", "plastic", "bodyforce", "id"]
 
         if self.mat_growth:
             # growth & remodeling parameters

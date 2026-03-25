@@ -53,7 +53,11 @@ def test_main():
 
     FEM_PARAMS = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
 
-    MATERIALS = {"MAT1": {"mat_cahnhilliard": {"M0": 1.0, "D": 100., "kappa": 0.01}}}
+    class locate_all:
+        def evaluate(self, x):
+            return np.full(x.shape[1], True, dtype=bool)
+
+    MATERIALS = {"MAT1": {"mat_cahnhilliard": {"M0": 1.0, "D": 100., "kappa": 0.01}, "id": locate_all()}}
 
     BC_DICT = { }
 

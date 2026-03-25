@@ -672,62 +672,54 @@ class boundary_cond:
         return w, idmem, bstress, bstrainenergy, bintpower
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def bodyforce(self, bcdict, dx_, rho, F=None, chi=None, funcs_to_update=None, funcsexpr_to_update=None):
-        w = ufl.as_ufl(0)
+    def bodyforce(self, mdict, dx_, rho, F=None, chi=None, funcs_to_update=None, funcsexpr_to_update=None):
+        func, func_dir = (
+            fem.Function(self.Vdisc_scalar),
+            fem.Function(self.V_field),
+        )
 
-        for b in bcdict:
-            ID = "id"
-            if "id_loc" in b.keys(): ID="id_loc"
+        # direction needs to be set
+        driection = expression.template_vector(dim=self.dim)
+        dir_x, dir_y, dir_z = mdict["dir"][0], mdict["dir"][1], mdict["dir"][2]
+        dir_norm = np.sqrt(dir_x**2.0 + dir_y**2.0 + dir_z**2.0)
+        driection.val_x, driection.val_y, driection.val_z = (
+            dir_x / dir_norm,
+            dir_y / dir_norm,
+            dir_z / dir_norm,
+        )
+        func_dir.interpolate(driection.evaluate)
 
-            func, func_dir = (
-                fem.Function(self.Vdisc_scalar),
-                fem.Function(self.V_field),
+        if "curve" in mdict.keys():
+            assert "val" not in mdict.keys() and "expression" not in mdict.keys()
+            load = expression.template()
+            load.val = self.pb.ti.timecurves(mdict["curve"])(self.pb.ti.t_init)
+            func.interpolate(load.evaluate)
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
             )
-
-            # direction needs to be set
-            driection = expression.template_vector(dim=self.dim)
-            dir_x, dir_y, dir_z = b["dir"][0], b["dir"][1], b["dir"][2]
-            dir_norm = np.sqrt(dir_x**2.0 + dir_y**2.0 + dir_z**2.0)
-            driection.val_x, driection.val_y, driection.val_z = (
-                dir_x / dir_norm,
-                dir_y / dir_norm,
-                dir_z / dir_norm,
+            funcs_to_update.append({func: self.pb.ti.timecurves(mdict["curve"])})
+        elif "val" in mdict.keys():
+            assert "curve" not in mdict.keys() and "expression" not in mdict.keys()
+            func.x.petsc_vec.set(mdict["val"])
+        elif "expression" in mdict.keys():
+            assert "curve" not in mdict.keys() and "val" not in mdict.keys()
+            expr = mdict["expression"]()
+            expr.t = self.pb.ti.t_init
+            func.interpolate(expr.evaluate)
+            func.x.petsc_vec.ghostUpdate(
+                addv=PETSc.InsertMode.INSERT,
+                mode=PETSc.ScatterMode.FORWARD,
             )
-            func_dir.interpolate(driection.evaluate)
+            funcsexpr_to_update[func] = expr
+        else:
+            raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-            if "curve" in b.keys():
-                assert "val" not in b.keys() and "expression" not in b.keys()
-                load = expression.template()
-                load.val = self.pb.ti.timecurves(b["curve"])(self.pb.ti.t_init)
-                func.interpolate(load.evaluate)
-                func.x.petsc_vec.ghostUpdate(
-                    addv=PETSc.InsertMode.INSERT,
-                    mode=PETSc.ScatterMode.FORWARD,
-                )
-                funcs_to_update.append({func: self.pb.ti.timecurves(b["curve"])})
-            elif "val" in b.keys():
-                assert "curve" not in b.keys() and "expression" not in b.keys()
-                func.x.petsc_vec.set(b["val"])
-            elif "expression" in b.keys():
-                assert "curve" not in b.keys() and "val" not in b.keys()
-                expr = b["expression"]()
-                expr.t = self.pb.ti.t_init
-                func.interpolate(expr.evaluate)
-                func.x.petsc_vec.ghostUpdate(
-                    addv=PETSc.InsertMode.INSERT,
-                    mode=PETSc.ScatterMode.FORWARD,
-                )
-                funcsexpr_to_update[func] = expr
-            else:
-                raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
+        # scale by density
+        scale_dens = mdict.get("scale_density", False)
 
-            # scale by density
-            scale_dens = b.get("scale_density", False)
+        return self.pb.vf.deltaW_ext_bodyforce(func, func_dir, rho, dx_, F=F, chi=chi, scale_dens=scale_dens)
 
-            for i in range(len(b[ID])):
-                w += self.pb.vf.deltaW_ext_bodyforce(func, func_dir, rho[b[ID][i]-1], dx_(b[ID][i]), F=F, chi=chi, scale_dens=scale_dens)
-
-        return w
 
 
 class boundary_cond_fluid(boundary_cond):

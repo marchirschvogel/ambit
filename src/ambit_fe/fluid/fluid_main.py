@@ -850,34 +850,6 @@ class FluidmechanicsProblem(problem_base):
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
                 funcsexpr_to_update_vec=self.ti.funcsexpr_to_update_vec_mid,
             )
-        if "bodyforce" in self.bc_dict.keys():
-            w_body = self.bc.bodyforce(
-                self.bc_dict["bodyforce"],
-                self.dx,
-                self.rho,
-                F=self.alevar["Fale"],
-                chi=self.phasevar["chi"],
-                funcs_to_update=self.ti.funcs_to_update,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update,
-            )
-            w_body_old = self.bc.bodyforce(
-                self.bc_dict["bodyforce"],
-                self.dx,
-                self.rho,
-                F=self.alevar["Fale_old"],
-                chi=self.phasevar["chi_old"],
-                funcs_to_update=self.ti.funcs_to_update_old,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
-            )
-            w_body_mid = self.bc.bodyforce(
-                self.bc_dict["bodyforce"],
-                self.dx,
-                self.rho,
-                F=self.alevar["Fale_mid"],
-                chi=self.phasevar["chi_mid"],
-                funcs_to_update=self.ti.funcs_to_update_mid,
-                funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
-            )
         if "robin" in self.bc_dict.keys():
             w_robin = self.bc.robin_bcs(
                 self.bc_dict["robin"],
@@ -1359,6 +1331,37 @@ class FluidmechanicsProblem(problem_base):
             )
         else:
             assert "neumann_prestress" not in self.bc_dict.keys()
+
+        # now take care of body forces
+        for n, M in enumerate(self.domain_ids):
+            if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
+                w_body += self.bc.bodyforce(
+                    self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
+                    self.dx(M),
+                    self.rho[n],
+                    F=self.alevar["Fale"],
+                    chi=self.phasevar["chi"],
+                    funcs_to_update=self.ti.funcs_to_update,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update,
+                )
+                w_body_old += self.bc.bodyforce(
+                    self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
+                    self.dx(M),
+                    self.rho[n],
+                    F=self.alevar["Fale_old"],
+                    chi=self.phasevar["chi_old"],
+                    funcs_to_update=self.ti.funcs_to_update_old,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
+                )
+                w_body_mid += self.bc.bodyforce(
+                    self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
+                    self.dx(M),
+                    self.rho[n],
+                    F=self.alevar["Fale_mid"],
+                    chi=self.phasevar["chi_mid"],
+                    funcs_to_update=self.ti.funcs_to_update_mid,
+                    funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
+                )
 
         self.deltaW_ext = w_neumann + w_body + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane + w_robin_valve
         self.deltaW_ext_old = (

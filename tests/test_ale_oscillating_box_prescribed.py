@@ -43,7 +43,11 @@ def test_main():
 
     FEM_PARAMS = {"order_disp": 2, "quad_degree": 5}
 
-    MATERIALS = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}}}
+    class locate_all:
+        def evaluate(self, x):
+            return np.full(x.shape[1], True, dtype=bool)
+
+    MATERIALS = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}, "id": locate_all()}}
 
     class expr1:
         def __init__(self):

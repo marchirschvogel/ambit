@@ -29,7 +29,7 @@ class constitutive:
             self.matparams.append(list(materials.values())[i])
 
         # list entries of mats which do not return a stress
-        self.mat_void = ["inertia", "id"]
+        self.mat_void = ["inertia", "bodyforce", "id"]
 
         # identity tensor
         self.I = ufl.Identity(self.kin.dim)
