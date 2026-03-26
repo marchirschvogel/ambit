@@ -172,7 +172,7 @@ class PhasefieldProblem(problem_base):
         self.mu_mid = self.timefac * self.mu + (1.0 - self.timefac) * self.mu_old
 
         # initialize boundary condition class
-        self.bc = boundaryconditions.boundary_cond(
+        self.bc = boundaryconditions.boundary_cond_phasefield(
             self,
             V_field=self.V_phi,
         )
@@ -241,65 +241,106 @@ class PhasefieldProblem(problem_base):
             self.potential_old += self.vf.cahnhilliard_potential(self.phi_old, self.mu_old, self.ma[n].driv_force(self.phi_old), self.kappa[n], self.dx(M), F=self.alevar["Fale_old"])
             self.potential_mid += self.vf.cahnhilliard_potential(self.phi_mid, self.mu_mid, self.ma[n].driv_force(self.phi_mid), self.kappa[n], self.dx(M), F=self.alevar["Fale_mid"])
 
-        self.have_neumann = False
-        self.have_robin = False
 
-        w_neumann_phi, w_robin_phi = ufl.as_ufl(0), ufl.as_ufl(0)
-        w_neumann_phi_old, w_robin_phi_old = ufl.as_ufl(0), ufl.as_ufl(0)
-        w_neumann_phi_mid, w_robin_phi_mid = ufl.as_ufl(0), ufl.as_ufl(0)
 
         # take care of BCs
-        if "neumann" in self.bc_dict.keys():
-            self.have_neumann = True
-            raise RuntimeError("Currently, no Neumann conditions are supported in phase field model!")
-        if "robin" in self.bc_dict.keys():
-            self.have_robin = True
-            w_robin_phi = self.bc.robin_bcs(
-                self.bc_dict["robin"],
+        # NOTE: Neumann or Robin BCs "grad phi n" enter the chemical potential residual (since in there, we apply integration by parts on "laplace phi") - denoted by suffix "wetting"
+        # Neumann or Robin BCs "grad mu n" are diffusive flux BCs and enter the phase field residual - denoted by suffix "flux"
+        self.have_neumann_wetting, self.have_neumann_flux = False, False
+        self.have_robin_wetting, self.have_robin_flux = False, False
+
+        w_neumann_wetting, w_robin_wetting = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_wetting_old, w_robin_wetting_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_wetting_mid, w_robin_wetting_mid = ufl.as_ufl(0), ufl.as_ufl(0)
+
+        w_neumann_flux, w_robin_flux = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_flux_old, w_robin_flux_old = ufl.as_ufl(0), ufl.as_ufl(0)
+        w_neumann_flux_mid, w_robin_flux_mid = ufl.as_ufl(0), ufl.as_ufl(0)
+
+        if "neumann_wetting" in self.bc_dict.keys():
+            self.have_neumann_wetting = True
+            raise RuntimeError("Currently, wetting Neumann conditions are supported in phase field model!")
+        if "neumann_flux" in self.bc_dict.keys():
+            self.have_neumann_flux = True
+            raise RuntimeError("Currently, flux Neumann conditions are supported in phase field model!")
+        if "robin_wetting" in self.bc_dict.keys():
+            self.have_robin_wetting = True
+            w_robin_wetting = self.bc.robin_wetting_bcs(
+                self.bc_dict["robin_wetting"],
                 self.phi,
                 self.phidot_expr,
                 self.bmeasures,
             )
-            w_robin_phi_old = self.bc.robin_bcs(
-                self.bc_dict["robin"],
+            w_robin_wetting_old = self.bc.robin_wetting_bcs(
+                self.bc_dict["robin_wetting"],
                 self.phi_old,
                 self.phidot_old,
                 self.bmeasures,
             )
-            w_robin_phi_mid = self.bc.robin_bcs(
-                self.bc_dict["robin"],
+            w_robin_wetting_mid = self.bc.robin_wetting_bcs(
+                self.bc_dict["robin_wetting"],
                 self.phi_mid,
                 self.phidot_mid,
                 self.bmeasures,
             )
+        if "robin_flux" in self.bc_dict.keys():
+            self.have_robin_flux = True
+            raise RuntimeError("Currently, flux Robin conditions are supported in phase field model!")
 
         if self.ti.res_eval == "trap":
+            # phase field residual
             self.weakform_phi = self.timefac * self.phase_field + (1.-self.timefac) * self.phase_field_old
-            if self.have_neumann:
-                self.weakform_phi += -(self.timefac * w_neumann_phi + (1.-self.timefac) * w_neumann_phi_old)
-            if self.have_robin:
-                self.weakform_phi += -(self.timefac * w_robin_phi + (1.-self.timefac) * w_robin_phi_old)
+            # flux BCs on phase field residual
+            if self.have_neumann_flux:
+                self.weakform_phi += -(self.timefac * w_neumann_flux + (1.-self.timefac) * w_neumann_flux_old)
+            if self.have_robin_flux:
+                self.weakform_phi += -(self.timefac * w_robin_flux + (1.-self.timefac) * w_robin_flux_old)
+            # chemical potential residual
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
+                if self.have_neumann_wetting:
+                    self.weakform_mu += -w_neumann_wetting
+                if self.have_robin_wetting:
+                    self.weakform_mu += -w_robin_wetting
             else:
                 self.weakform_mu = self.timefac * self.potential + (1.-self.timefac) * self.potential_old
+                if self.have_neumann_wetting:
+                    self.weakform_mu += -(self.timefac * w_neumann_wetting + (1.-self.timefac) * w_neumann_wetting_old)
+                if self.have_robin_wetting:
+                    self.weakform_mu += -(self.timefac * w_robin_wetting + (1.-self.timefac) * w_robin_wetting_old)
         if self.ti.res_eval == "midp":
+            # phase field residual
             self.weakform_phi = self.phase_field_mid
-            if self.have_neumann:
-                self.weakform_phi += -w_neumann_phi_mid
-            if self.have_robin:
-                self.weakform_phi += -w_robin_phi_mid
+            if self.have_neumann_flux:
+                self.weakform_phi += -w_neumann_flux_mid
+            if self.have_robin_flux:
+                self.weakform_phi += -w_robin_flux_mid
+            # chemical potential residual
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
+                if self.have_neumann_wetting:
+                    self.weakform_mu += -w_neumann_wetting
+                if self.have_robin_wetting:
+                    self.weakform_mu += -w_robin_wetting
             else:
                 self.weakform_mu = self.potential_mid
+                if self.have_neumann_wetting:
+                    self.weakform_mu += -w_neumann_wetting_mid
+                if self.have_robin_wetting:
+                    self.weakform_mu += -w_robin_wetting_mid
         if self.ti.res_eval == "back":
+            # phase field residual
             self.weakform_phi = self.phase_field
-            if self.have_neumann:
-                self.weakform_phi += -w_neumann_phi
-            if self.have_robin:
-                self.weakform_phi += -w_robin_phi
+            if self.have_neumann_flux:
+                self.weakform_phi += -w_neumann_flux
+            if self.have_robin_flux:
+                self.weakform_phi += -w_robin_flux
+            # chemical potential residual
             self.weakform_mu = self.potential
+            if self.have_neumann_wetting:
+                self.weakform_mu += -w_neumann_wetting
+            if self.have_robin_wetting:
+                self.weakform_mu += -w_robin_wetting
 
         self.weakform_lin_phiphi = ufl.derivative(self.weakform_phi, self.phi, self.dphi)
         self.weakform_lin_phimu = ufl.derivative(self.weakform_phi, self.mu, self.dmu)

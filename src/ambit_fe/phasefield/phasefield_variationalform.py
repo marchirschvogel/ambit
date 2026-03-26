@@ -43,6 +43,9 @@ class variationalform(variationalform_base):
         """
         return ( ufl.inner(mu, self.var_mu) - ufl.inner(driv_force, self.var_mu) - kappa*ufl.inner(ufl.grad(phi), ufl.grad(self.var_mu)) ) * ddomain
 
+    def weakform_robin_wetting(self, phi, coeff, dboundary, F=None):
+        return ((3.0/4.0) * (phi**2.0 - 1.0) * coeff * self.var_mu) * dboundary
+
 
 # gradients of a scalar field transform according to:
 # grad(phi) = F^(-T) * Grad(phi)

@@ -251,6 +251,7 @@ def check_params_coupling_fluid_ale(params):
         "coupling_strategy",
         "fsi_governing_type",
         "fsi_system",
+        "wetting_condition_interface",
     ]
 
     for k in params.keys():

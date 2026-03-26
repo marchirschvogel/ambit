@@ -954,3 +954,30 @@ class boundary_cond_fluid(boundary_cond):
 
             pint_u_.append(fem.form(pint_u, entity_maps=em_u))
             pint_d_.append(fem.form(pint_d, entity_maps=em_d))
+
+
+class boundary_cond_phasefield(boundary_cond):
+    # set wetting Robin BCs
+    def robin_wetting_bcs(self, bcdict, phi, phidot, ds_, F=None):
+        w = ufl.as_ufl(0)
+
+        for b in bcdict:
+            codim = b.get("codimension", self.dim - 1)
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            ID, dind = "id", 0
+            if "is_locator" in b.keys(): dind=2
+            if "id_loc" in b.keys(): ID="id_loc"
+
+            btype = b.get("type", "wet1")
+
+            if btype == "wet1":
+                # may be an expression
+                coeff = b["coeff"]
+
+                for i in range(len(b[ID])):
+                    w += self.pb.vf.weakform_robin_wetting(phi, coeff, ds_[dind](b[ID][i]))
+
+            else:
+                raise NameError("Unknown type option for Robin wetting BC!")
+
+        return w

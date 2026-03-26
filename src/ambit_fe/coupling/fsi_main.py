@@ -181,6 +181,7 @@ class FSIProblem(problem_base):
     def set_coupling_parameters(self):
         self.fsi_governing_type = self.coupling_params.get("fsi_governing_type", "solid_governed")
         self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann") # neumann_neumann, neumann_dirichlet
+        self.wetting_interface = self.coupling_params.get("wetting_condition_interface", {}) # only for multiphase FSI
 
     def get_problem_var_list(self):
         if self.fsi_system == "neumann_neumann":

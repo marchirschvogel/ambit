@@ -227,9 +227,28 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfp.set_variational_forms_coupling()
         # ALE-phasefield
         self.pbfap.set_variational_forms_coupling()
+        # create additional coupling forms (e.g. interface wetting conditions)
+        self.set_variational_forms_coupling()
 
     def set_variational_forms_coupling(self):
-        pass # no additional coupling forms needed
+        # wetting (or other) conditions imposed at interface
+        if bool(self.pbfsi.wetting_interface):
+            wetting = self.pbp.vf.weakform_robin_wetting(self.pbp.phi, self.pbfsi.wetting_interface["coeff"], self.io.ds(self.io.interface_id_f))
+            wetting_old = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_old, self.pbfsi.wetting_interface["coeff"], self.io.ds(self.io.interface_id_f))
+            wetting_mid = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_mid, self.pbfsi.wetting_interface["coeff"], self.io.ds(self.io.interface_id_f))
+
+            if self.pbp.ti.res_eval == "trap":
+                if not self.pbp.ti.potential_at_midpoint:
+                    self.pbp.weakform_mu += -wetting
+                else:
+                    self.pbp.weakform_mu += -(self.pbp.timefac * wetting + (1.-self.pbp.timefac) * wetting_old)
+            if self.pbp.ti.res_eval == "midp":
+                if not self.pbp.ti.potential_at_midpoint:
+                    self.pbp.weakform_mu += -wetting
+                else:
+                    self.pbp.weakform_mu += -wetting_mid
+            if self.pbp.ti.res_eval == "back":
+                self.pbp.weakform_mu += -wetting
 
     def set_problem_residual_jacobian_forms(self):
         # FSI - fluid, solid, ALE, + FSI coup
