@@ -49,16 +49,14 @@ class FSIMultiphaseProblem(problem_base):
         bc_dict_ale,
         bc_dict_lm,
         time_curves,
-        coupling_params_fluid_ale,
         io,
+        coupling_params={},
         mor_params={},
     ):
         self.pbase = pbase
 
         # pointer to communicator
         self.comm = self.pbase.comm
-
-        ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
 
         self.problem_physics = "fsi_multiphase"
 
@@ -84,8 +82,8 @@ class FSIMultiphaseProblem(problem_base):
             bc_dict_ale,
             bc_dict_lm,
             time_curves,
-            coupling_params_fluid_ale,
             io,
+            coupling_params=coupling_params[0],
             mor_params=mor_params,
             is_multiphase=True,
         )
@@ -106,8 +104,8 @@ class FSIMultiphaseProblem(problem_base):
             bc_dict_phasefield,
             bc_dict_ale,
             time_curves,
-            coupling_params_fluid_ale,
             io,
+            coupling_params=coupling_params,
             mor_params=mor_params,
             pbfa=self.pbfsi.pbfa,
         )

@@ -168,7 +168,7 @@ def test_main():
         [FEM_PARAMS_FLUID, FEM_PARAMS_PF, FEM_PARAMS_ALE],
         [MATERIALS_FLUID, MATERIALS_PF, MATERIALS_ALE],
         [BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE],
-        coupling_params=COUPLING_PARAMS_FLUID_ALE,
+        coupling_params=[COUPLING_PARAMS_FLUID_ALE,{}],
     )
 
     # problem solve

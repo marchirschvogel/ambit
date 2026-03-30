@@ -218,7 +218,7 @@ def test_main():
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_PF, MATERIALS_ALE],
         [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE],
         time_curves=time_curves(),
-        coupling_params=COUPLING_PARAMS
+        coupling_params=[COUPLING_PARAMS,{}]
     )
 
     # problem solve

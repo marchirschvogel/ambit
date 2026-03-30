@@ -39,8 +39,8 @@ class SolidmechanicsFlow0DProblem(problem_base):
         model_params_flow0d,
         bc_dict,
         time_curves,
-        coupling_params,
         io,
+        coupling_params={},
         mor_params={},
     ):
         self.pbase = pbase

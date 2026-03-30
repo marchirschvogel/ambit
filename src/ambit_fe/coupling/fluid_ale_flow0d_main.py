@@ -43,9 +43,8 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         bc_dict_fluid,
         bc_dict_ale,
         time_curves,
-        coupling_params_fluid_ale,
-        coupling_params_fluid_flow0d,
         io,
+        coupling_params={},
         mor_params={},
         is_multiphase=False,
         pbfa=None,
@@ -60,7 +59,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
+        ioparams.check_params_coupling_fluid_ale(coupling_params[0])
 
         self.problem_physics = "fluid_ale_flow0d"
 
@@ -80,8 +79,8 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
                 bc_dict_fluid,
                 bc_dict_ale,
                 time_curves,
-                coupling_params_fluid_ale,
                 io,
+                coupling_params=coupling_params[0],
                 mor_params=mor_params,
                 is_multiphase=is_multiphase,
             )
@@ -94,7 +93,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
                 time_params_flow0d,
                 model_params_flow0d,
                 time_curves,
-                coupling_params_fluid_flow0d,
+                coupling_params[1],
             )
         # fluid-0D
         if pbf0 is None:
@@ -108,8 +107,8 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
                 model_params_flow0d,
                 bc_dict_fluid,
                 time_curves,
-                coupling_params_fluid_flow0d,
                 io,
+                coupling_params=coupling_params[1],
                 mor_params=mor_params,
                 is_multiphase=is_multiphase,
                 is_ale=True,

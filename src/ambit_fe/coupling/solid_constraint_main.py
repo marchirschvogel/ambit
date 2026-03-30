@@ -35,8 +35,8 @@ class SolidmechanicsConstraintProblem(problem_base):
         constitutive_models,
         bc_dict,
         time_curves,
-        coupling_params,
         io,
+        coupling_params={},
         mor_params={},
     ):
         self.pbase = pbase

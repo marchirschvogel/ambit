@@ -99,7 +99,6 @@ def test_main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}, "id": locate_all(),
                                 "bodyforce": {"dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}}}
 
-
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps,
                                                   "kappa": sig*eps,
                                                   "mobility": "degenerate"}, "id": locate_all()}}

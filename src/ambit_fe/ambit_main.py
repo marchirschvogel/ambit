@@ -196,8 +196,8 @@ class Ambit:
                 boundary_conditions[0],
                 boundary_conditions[1],
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -232,9 +232,8 @@ class Ambit:
                 boundary_conditions[0],
                 boundary_conditions[1],
                 time_curves,
-                coupling_params[0],
-                coupling_params[1],
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -269,6 +268,7 @@ class Ambit:
                 boundary_conditions[1],
                 time_curves,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -305,8 +305,8 @@ class Ambit:
                 boundary_conditions[1],
                 boundary_conditions[2],
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -346,8 +346,8 @@ class Ambit:
                 constitutive_params[1],
                 boundary_conditions,
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -380,8 +380,8 @@ class Ambit:
                 constitutive_params[1],
                 boundary_conditions,
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -413,8 +413,8 @@ class Ambit:
                 constitutive_params[1],
                 boundary_conditions,
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -449,9 +449,9 @@ class Ambit:
                 constitutive_params[1],
                 boundary_conditions,
                 time_curves,
-                coupling_params,
                 multiscale_params,
                 io,
+                coupling_params=coupling_params,
             )
             self.mp.set_variational_forms()
             self.ms = solid_flow0d_growthremodel_main.SolidmechanicsFlow0DMultiscaleGrowthRemodelingSolver(
@@ -497,8 +497,8 @@ class Ambit:
                 boundary_conditions[2],
                 bcs_lm,
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -545,9 +545,8 @@ class Ambit:
                 boundary_conditions[2],
                 bcs_lm,
                 time_curves,
-                coupling_params[0],
-                coupling_params[1],
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -559,7 +558,7 @@ class Ambit:
             io = ioroutines.IO_fsi_multiphase(io_params, constitutive_params[0:2], entity_maps=self.entity_maps, comm=self.comm)
             io.readin_mesh()
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
-            io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
+            io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params[0]["coupling_fluid_ale"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
             io.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
             io.create_submeshes()
             io.m_id_solid, io.m_id_fluid, io.m_id_phase, io.m_id_ale = 0, 1, 1, 1
@@ -596,8 +595,8 @@ class Ambit:
                 boundary_conditions[3],
                 bcs_lm,
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -627,8 +626,8 @@ class Ambit:
                 constitutive_params,
                 boundary_conditions,
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -658,8 +657,8 @@ class Ambit:
                 constitutive_params,
                 boundary_conditions,
                 time_curves,
-                coupling_params,
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()
@@ -692,9 +691,8 @@ class Ambit:
                 boundary_conditions[0],
                 boundary_conditions[1],
                 time_curves,
-                coupling_params[0],
-                coupling_params[1],
                 io,
+                coupling_params=coupling_params,
                 mor_params=mor_params,
             )
             self.mp.set_variational_forms()

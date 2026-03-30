@@ -52,10 +52,10 @@ class constitutive:
         return Jflux
 
     # driving force
-    def driv_force(self, phi_):
+    def driv_force(self, phi_, returnquantity="deriv"):
         phi_ = ufl.variable(phi_)
 
-        dpsi_dphi = ufl.as_ufl(0)
+        dpsi_dphi, psi = ufl.as_ufl(0), ufl.as_ufl(0)
 
         mat = materiallaw(phi_, a=self.phi_range[0], b=self.phi_range[1])
 
@@ -65,8 +65,15 @@ class constitutive:
                 matparams_m = self.matparams[m]
 
                 if matlaw == "mat_cahnhilliard":
-                    dpsi_dphi += mat.mat_cahnhilliard(matparams_m)
+                    dpsi_dphi_, psi_ = mat.mat_cahnhilliard(matparams_m)
+                    dpsi_dphi += dpsi_dphi_
+                    psi += psi_
                 else:
                     raise NameError("Unknown Cahn-Hilliard material law!")
 
-        return dpsi_dphi
+        if returnquantity=="deriv":
+            return dpsi_dphi
+        elif returnquantity=="doublewell":
+            return psi
+        else:
+            raise ValueError("Unknown returnquantity!")

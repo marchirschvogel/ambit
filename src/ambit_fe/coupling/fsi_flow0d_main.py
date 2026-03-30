@@ -49,9 +49,8 @@ class FSIFlow0DProblem(problem_base):
         bc_dict_ale,
         bc_dict_lm,
         time_curves,
-        coupling_params_fluid_ale,
-        coupling_params_fluid_flow0d,
         io,
+        coupling_params={},
         mor_params={},
         is_multiphase=False,
     ):
@@ -60,7 +59,7 @@ class FSIFlow0DProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_coupling_fluid_ale(coupling_params_fluid_ale)
+        ioparams.check_params_coupling_fluid_ale(coupling_params[0])
 
         self.problem_physics = "fsi_flow0d"
 
@@ -86,8 +85,8 @@ class FSIFlow0DProblem(problem_base):
             bc_dict_ale,
             bc_dict_lm,
             time_curves,
-            coupling_params_fluid_ale,
             io,
+            coupling_params=coupling_params[0],
             mor_params=mor_params,
             is_multiphase=is_multiphase,
         )
@@ -105,9 +104,8 @@ class FSIFlow0DProblem(problem_base):
             bc_dict_fluid,
             bc_dict_ale,
             time_curves,
-            coupling_params_fluid_ale,
-            coupling_params_fluid_flow0d,
             io,
+            coupling_params=coupling_params,
             mor_params=mor_params,
             is_multiphase=is_multiphase,
             pbfa=self.pbfsi.pbfa,

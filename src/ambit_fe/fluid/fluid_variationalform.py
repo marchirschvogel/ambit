@@ -30,6 +30,7 @@ class variationalform(variationalform_base):
         self.var_v = tstfnc1
         self.var_p = tstfnc2
         variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, formulation=formulation, ro0=ro0)
+        self.I = ufl.Identity(len(self.var_v))
 
     # Kinetic virtual power \delta \mathcal{P}_{\mathrm{kin}}
     def deltaW_kin_navierstokes_transient(self, a, v, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
@@ -232,11 +233,11 @@ class variationalform(variationalform_base):
             return (ufl.dot(self.n0, v))(fcts) * dboundary
 
     # Korteweg force in multiphase flow
-    def korteweg_force1(self, phi, mu, ddomain, F=None):
+    def korteweg_force(self, phi, mu, ddomain, F=None):
         return ufl.dot(phi * ufl.grad(mu), self.var_v) * ddomain
 
-    def korteweg_force2(self, phi, mu, ddomain, F=None):
-        return ufl.dot(mu * ufl.grad(phi), self.var_v) * ddomain
+    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None):
+        return ufl.inner( (kappa*ufl.outer(ufl.grad(phi),ufl.grad(phi)) + (mu*phi - psi - 0.5*kappa*ufl.dot(ufl.grad(phi),ufl.grad(phi)))*self.I), ufl.grad(self.var_v)) * ddomain
 
 
 # ALE fluid mechanics variational forms class
@@ -508,10 +509,10 @@ class variationalform_ale(variationalform):
             return (J * ufl.dot(ufl.inv(F).T * self.n0, (v - w)))(fcts) * dboundary
 
     # Korteweg force in multiphase flow
-    def korteweg_force1(self, phi, mu, ddomain, F=None):
+    def korteweg_force(self, phi, mu, ddomain, F=None):
         J = ufl.det(F)
         return J * ufl.dot(phi * ufl.inv(F).T*ufl.grad(mu), self.var_v) * ddomain
 
-    def korteweg_force2(self, phi, mu, ddomain, F=None):
+    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None):
         J = ufl.det(F)
-        return J * ufl.dot(mu * ufl.inv(F).T*ufl.grad(phi), self.var_v) * ddomain
+        return J * ufl.inner( (kappa*ufl.outer(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(phi)) + (mu*phi - psi - 0.5*kappa*ufl.dot(ufl.inv(F).T*ufl.grad(phi), ufl.inv(F).T*ufl.grad(phi)))*self.I), ufl.grad(self.var_v)*ufl.inv(F)) * ddomain

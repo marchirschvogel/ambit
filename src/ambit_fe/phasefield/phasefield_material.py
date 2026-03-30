@@ -21,7 +21,7 @@ class materiallaw:
         # generalized double-well potential with minima at a and b
         psi = D * (self.a-self.phi)**2.0 * (self.b-self.phi)**2.0
 
-        return ufl.diff(psi,self.phi)
+        return ufl.diff(psi,self.phi), psi
 
 
 class materiallaw_flux:

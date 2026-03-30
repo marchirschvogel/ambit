@@ -35,7 +35,7 @@ def main():
             ["aledisplacement"],
         ],
         "write_initial_fields": True,
-        "simname": "fsi_multiphase_elastocapillary_II",
+        "simname": "fsi_multiphase_elastocapillary",
     }
 
     h = 350.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
@@ -57,7 +57,7 @@ def main():
 
     CONTROL_PARAMS = {"maxtime": 1000.0, # µs
                       "dt": 1.0, # µs
-                      # "numstep_stop": 3,
+                      # "numstep_stop": 100,
                       "initial_fields": [expr1, None],
                       }
 
@@ -95,11 +95,14 @@ def main():
 
     sig_sl = 36e-3
     sig_sa = 31e-3
-    COUPLING_PARAMS = {
+    COUPLING_PARAMS_FSI = {
         "coupling_fluid_ale": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
         "wetting_condition_interface": {"coeff": sig_sa-sig_sl}, # wetting Robin condition at interface
     }
+
+    # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
+    COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": True}
 
     class locate_solid:
         def evaluate(self, x):
@@ -210,7 +213,7 @@ def main():
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_PF, MATERIALS_ALE],
         [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE, BC_DICT_LM],
         # time_curves=time_curves(),
-        coupling_params=COUPLING_PARAMS
+        coupling_params=[COUPLING_PARAMS_FSI,COUPLING_PARAMS_MULTIPHASE],
     )
 
     # problem solve

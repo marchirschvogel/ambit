@@ -28,7 +28,7 @@ def main():
         # which results to write
         "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"],"counters"],
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
-        "simname": "fluid_multiphase_rising_bubble"+str(case)+"_exp1.0_BDF2_eps0.64_-11",
+        "simname": "KORTESTRESSIIIa",#"fluid_multiphase_rising_bubble"+str(case)+"_exp1.0_BDF2_eps0.64_-11",
         # write the initial fields (e.g., the phase field, for visualization/checks)
         "write_initial_fields": True,
         # report mass and phase field conservation
@@ -121,6 +121,8 @@ def main():
     FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 9,
                      "phi_range" : [-1.0, 1.0]}   # [-1.0, 1.0], [0.0, 1.0]
 
+    COUPLING_PARAMS = {"capillary_force_from_korteweg_stress": True} # True, False
+
     # fluid1 is surrounding, fluid2 is bubble
     if case==1:
         rho1 = 1000.0
@@ -210,6 +212,7 @@ def main():
         [FEM_PARAMS_FLUID, FEM_PARAMS_PF],
         [MATERIALS_FLUID, MATERIALS_PF],
         [BC_DICT_FLUID, BC_DICT_PF],
+        coupling_params=COUPLING_PARAMS,
     )
 
     # problem solve
