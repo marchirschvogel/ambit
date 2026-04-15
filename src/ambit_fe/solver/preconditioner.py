@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2025, Dr.-Ing. Marc Hirschvogel
+# Copyright (c) 2019-2026, Dr.-Ing. Marc Hirschvogel
 # All rights reserved.
 
 # This source code is licensed under the MIT-style license found in the
@@ -1340,6 +1340,7 @@ class BGS_schur2x2_bgs2x2(block_precond):
 
         # get additional offdiagonal block
         self.H = self.P.createSubMatrix(self.iset_23, self.iset_01)
+        #self.Ht = self.P.createSubMatrix(self.iset_01, self.iset_23)  # only for symmetric BGS...
 
         self.x01 = self.H.createVecRight()
         self.y01 = self.H.createVecRight()
@@ -1359,6 +1360,7 @@ class BGS_schur2x2_bgs2x2(block_precond):
         self.bgs2x2.setUp(pc)
 
         self.P.createSubMatrix(self.iset_23, self.iset_01, submat=self.H)
+        # self.P.createSubMatrix(self.iset_01, self.iset_23, submat=self.Ht)  # only for symmetric BGS...
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
@@ -1382,6 +1384,7 @@ class BGS_schur2x2_bgs2x2(block_precond):
         # restore/clean up
         x.restoreSubVector(self.iset_01, subvec=self.x01)
         x.restoreSubVector(self.iset_23, subvec=self.x23)
+
         y.restoreSubVector(self.iset_01, subvec=self.y01)
 
         # no more need to set into y vector

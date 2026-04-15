@@ -55,6 +55,9 @@ def main():
                 np.full(x.shape[1], val),
             )
 
+    """
+    Parameters for the global time control
+    """
     CONTROL_PARAMS = {"maxtime": 128*1000.0, # µs
                       "dt": 100.0, # µs
                       # "numstep_stop": 100,
@@ -156,7 +159,7 @@ def main():
                                 "inertia": {"rho1": rho1, "rho2": rho2},
                                 "id": locate_fluid()}}
 
-    MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}, "id": locate_fluid()}}
+    MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}, "id": locate_fluid()}}
 
     m = 1e-4 # should be rather low if capillary stress is rather high
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",

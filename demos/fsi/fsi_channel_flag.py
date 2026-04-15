@@ -169,7 +169,7 @@ def main():
     COUPLING_PARAMS = {
         "coupling_fluid_ale": {"interface": [1]},
         "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
-        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
     }
 
     # solid material: St.-Venant Kirchhoff
