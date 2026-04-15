@@ -547,6 +547,10 @@ class FluidmechanicsProblem(problem_base):
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
+
+    def set_variational_forms_residual(self):
         if self.is_ale:
             # mid-point representation of ALE velocity
             self.alevar["w_mid"] = self.timefac * self.alevar["w"] + (1.0 - self.timefac) * self.alevar["w_old"]
@@ -1936,17 +1940,6 @@ class FluidmechanicsProblem(problem_base):
                 if self.ti.res_eval == "back":
                     self.weakform_p.append(self.deltaW_p[n])
 
-        self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
-        for j in range(self.num_dupl):
-            self.weakform_lin_vp.append(ufl.derivative(self.weakform_v, self.p_[j], self.dp_[j]))
-        for n in range(self.num_domains):
-            self.weakform_lin_pv.append(ufl.derivative(self.weakform_p[n], self.v, self.dv))
-            if self.num_dupl == 1:
-                j = 0
-            else:
-                j = n
-            self.weakform_lin_pp.append(ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]))
-
         if any(self.mem_active_stress):
             # active stress for reduced solid (FrSI)
             self.tau_a_, na = [], 0
@@ -1962,16 +1955,31 @@ class FluidmechanicsProblem(problem_base):
 
         if self.prestress_initial or self.prestress_initial_only:
             # prestressing weak forms
+            self.weakform_prestress_p = []
+            self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_prestr_int - self.deltaW_prestr_ext
+            for n in range(self.num_domains):
+                self.weakform_prestress_p.append(self.deltaW_p_prestr[n])
+
+    def set_variational_forms_jacobian(self):
+        self.weakform_lin_vv = ufl.derivative(self.weakform_v, self.v, self.dv)
+        for j in range(self.num_dupl):
+            self.weakform_lin_vp.append(ufl.derivative(self.weakform_v, self.p_[j], self.dp_[j]))
+        for n in range(self.num_domains):
+            self.weakform_lin_pv.append(ufl.derivative(self.weakform_p[n], self.v, self.dv))
+            if self.num_dupl == 1:
+                j = 0
+            else:
+                j = n
+            self.weakform_lin_pp.append(ufl.derivative(self.weakform_p[n], self.p_[j], self.dp_[j]))
+
+        if self.prestress_initial or self.prestress_initial_only:
+            # prestressing weak forms
             (
-                self.weakform_prestress_p,
                 self.weakform_lin_prestress_vp,
                 self.weakform_lin_prestress_pv,
                 self.weakform_lin_prestress_pp,
-            ) = [], [], [], []
-            self.weakform_prestress_v = self.deltaW_prestr_kin + self.deltaW_prestr_int - self.deltaW_prestr_ext
+            ) = [], [], []
             self.weakform_lin_prestress_vv = ufl.derivative(self.weakform_prestress_v, self.v, self.dv)
-            for n in range(self.num_domains):
-                self.weakform_prestress_p.append(self.deltaW_p_prestr[n])
             for j in range(self.num_dupl):
                 self.weakform_lin_prestress_vp.append(
                     ufl.derivative(self.weakform_prestress_v, self.p_[j], self.dp_[j])
@@ -2048,11 +2056,11 @@ class FluidmechanicsProblem(problem_base):
                 se_mem_all += self.bstrainenergy[nm] * self.bmeasures[0](self.idmem[nm])
                 ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])
 
-        se_mem = fem.assemble_scalar(fem.form(se_mem_all))
+        se_mem = fem.assemble_scalar(fem.form(se_mem_all, entity_maps=self.io.entity_maps))
         se_mem = self.comm.allgather(se_mem)
         strain_energy_mem = sum(se_mem)
 
-        ip_mem = fem.assemble_scalar(fem.form(ip_mem_all))
+        ip_mem = fem.assemble_scalar(fem.form(ip_mem_all, entity_maps=self.io.entity_maps))
         ip_mem = self.comm.allgather(ip_mem)
         internal_power_mem = sum(ip_mem)
 
@@ -2088,7 +2096,7 @@ class FluidmechanicsProblem(problem_base):
             rho_old_ = self.vf.get_density(self.rho[n], chi=self.phasevar["chi_old"])
             mass_form += (J * rho_ - J_old * rho_old_) / (self.pbase.dt) * self.dx(M)
 
-        mst = fem.assemble_scalar(fem.form(mass_form))
+        mst = fem.assemble_scalar(fem.form(mass_form, entity_maps=self.io.entity_maps))
         mst = self.comm.allgather(mst)
         self.mass_total = abs(sum(mst))
 

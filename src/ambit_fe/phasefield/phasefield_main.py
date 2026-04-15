@@ -204,6 +204,10 @@ class PhasefieldProblem(problem_base):
 
     # the main function that defines the Cahn-Hilliard problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
+
+    def set_variational_forms_residual(self):
         if self.is_ale:
             # mid-point representation of ALE velocity
             self.alevar["w_mid"] = self.timefac * self.alevar["w"] + (1.0 - self.timefac) * self.alevar["w_old"]
@@ -241,8 +245,6 @@ class PhasefieldProblem(problem_base):
             self.potential_old += self.vf.cahnhilliard_potential(self.phi_old, self.mu_old, self.ma[n].driv_force(self.phi_old), self.kappa[n], self.dx(M), F=self.alevar["Fale_old"])
             self.potential_mid += self.vf.cahnhilliard_potential(self.phi_mid, self.mu_mid, self.ma[n].driv_force(self.phi_mid), self.kappa[n], self.dx(M), F=self.alevar["Fale_mid"])
 
-
-
         # take care of BCs
         # NOTE: Neumann or Robin BCs "grad phi n" enter the chemical potential residual (since in there, we apply integration by parts on "laplace phi") - denoted by suffix "wetting"
         # Neumann or Robin BCs "grad mu n" are diffusive flux BCs and enter the phase field residual - denoted by suffix "flux"
@@ -259,7 +261,24 @@ class PhasefieldProblem(problem_base):
 
         if "neumann_wetting" in self.bc_dict.keys():
             self.have_neumann_wetting = True
-            raise RuntimeError("Currently, wetting Neumann conditions are supported in phase field model!")
+            w_neumann_wetting = self.bc.neumann_bcs(
+                self.bc_dict["neumann_wetting"],
+                self.bmeasures,
+                funcs_to_update=self.ti.funcs_to_update,
+                funcsexpr_to_update=self.ti.funcsexpr_to_update,
+            )
+            w_neumann_wetting_old = self.bc.neumann_bcs(
+                self.bc_dict["neumann_wetting"],
+                self.bmeasures,
+                funcs_to_update=self.ti.funcs_to_update_old,
+                funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
+            )
+            w_neumann_wetting_mid = self.bc.neumann_bcs(
+                self.bc_dict["neumann_wetting"],
+                self.bmeasures,
+                funcs_to_update=self.ti.funcs_to_update_mid,
+                funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
+            )
         if "neumann_flux" in self.bc_dict.keys():
             self.have_neumann_flux = True
             raise RuntimeError("Currently, flux Neumann conditions are supported in phase field model!")
@@ -342,6 +361,7 @@ class PhasefieldProblem(problem_base):
             if self.have_robin_wetting:
                 self.weakform_mu += -w_robin_wetting
 
+    def set_variational_forms_jacobian(self):
         self.weakform_lin_phiphi = ufl.derivative(self.weakform_phi, self.phi, self.dphi)
         self.weakform_lin_phimu = ufl.derivative(self.weakform_phi, self.mu, self.dmu)
         self.weakform_lin_mumu = ufl.derivative(self.weakform_mu, self.mu, self.dmu)
@@ -356,7 +376,7 @@ class PhasefieldProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
             phase_form += (J * self.phi - J_old * self.phi_old) / (self.pbase.dt) * self.dx(M)
 
-        pst = fem.assemble_scalar(fem.form(phase_form))
+        pst = fem.assemble_scalar(fem.form(phase_form, entity_maps=self.io.entity_maps))
         pst = self.comm.allgather(pst)
         self.phase_total = abs(sum(pst))
 
@@ -553,7 +573,7 @@ class PhasefieldSolver(solver_base):
         #     weakform_lin_mumu = ufl.derivative(self.pb.potential_old, self.pb.mu_old, self.pb.dmu)  # actually linear in mu_old
 
         #     # solve for consistent initial potential mu_old
-        #     res_mu, jac_mumu = fem.form(self.pb.potential_old), fem.form(weakform_lin_mumu)
+        #     res_mu, jac_mumu = fem.form(self.pb.potential_old, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_mumu, entity_maps=self.pb.io.entity_maps)
         #     self.solnln.solve_consistent_init(res_mu, jac_mumu, self.pb.mu_old)
 
         #     te = time.time() - ts

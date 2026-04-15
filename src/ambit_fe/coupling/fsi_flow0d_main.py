@@ -218,13 +218,27 @@ class FSIFlow0DProblem(problem_base):
                 ], is_ghosted
 
     def set_variational_forms(self):
-        # FSI - fluid, solid, ALE, + FSI coup
-        self.pbfsi.set_variational_forms()
-        # fluid-0D, ALE-0D coup
-        self.pbf0.set_variational_forms_coupling()
-        self.pbfa0.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
+    def set_variational_forms_residual(self):
+        # FSI - fluid, solid, ALE, + FSI coup
+        self.pbfsi.set_variational_forms_residual()
+        # fluid-0D, ALE-0D coup
+        self.pbf0.set_variational_forms_residual_coupling()
+        self.pbfa0.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        # FSI - fluid, solid, ALE, + FSI coup
+        self.pbfsi.set_variational_forms_jacobian()
+        # fluid-0D, ALE-0D coup
+        self.pbf0.set_variational_forms_jacobian_coupling()
+        self.pbfa0.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
+        pass # no additional coupling forms needed
+
+    def set_variational_forms_jacobian_coupling(self):
         pass # no additional coupling forms needed
 
     def set_problem_residual_jacobian_forms(self):

@@ -165,11 +165,19 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
     # defines the monolithic coupling forms for 0D flow and fluid mechanics
     def set_variational_forms(self):
-        self.pbf.set_variational_forms()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
-        self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
+    def set_variational_forms_residual(self):
+        self.pbf.set_variational_forms_residual()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        self.pbf.set_variational_forms_jacobian()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
+        self.cq, self.cq_old = [], []
         self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
 
         (
@@ -215,29 +223,9 @@ class FluidmechanicsFlow0DProblem(problem_base):
                 )
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
-            self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
 
-            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
                 ds_p = self.pbf.bmeasures[0](self.surface_p_ids[n][i])
-                df_ += self.pbf.timefac * self.pbf.vf.flux(
-                    self.pbf.var_v,
-                    ds_p,
-                    w=ufl.constantvalue.zero(self.pbf.ki.dim),
-                    F=self.pbf.alevar["Fale"],
-                )
-                df_mid_ += self.pbf.timefac * self.pbf.vf.flux(
-                    self.pbf.var_v,
-                    ds_p,
-                    w=ufl.constantvalue.zero(self.pbf.ki.dim),
-                    F=self.pbf.alevar["Fale_mid"],
-                )
-                df_back_ += self.pbf.vf.flux(
-                    self.pbf.var_v,
-                    ds_p,
-                    w=ufl.constantvalue.zero(self.pbf.ki.dim),
-                    F=self.pbf.alevar["Fale"],
-                )
 
                 # add to fluid rhs contributions
                 self.power_coupling += self.pbf.vf.deltaW_ext_neumann_normal_cur(
@@ -254,30 +242,17 @@ class FluidmechanicsFlow0DProblem(problem_base):
                     F=self.pbf.alevar["Fale_mid"],
                 )
 
-            if self.pbf.ti.res_eval == "trap":
-                self.dforce.append(df_)
-            if self.pbf.ti.res_eval == "midp":
-                self.dforce.append(df_mid_)
-            if self.pbf.ti.res_eval == "back":
-                self.dforce.append(df_back_)
-
         if self.pbf.ti.res_eval == "trap":
             # minus sign, since contribution to external power!
             self.pbf.weakform_v += (
                 -self.pbf.timefac * self.power_coupling - (1.0 - self.pbf.timefac) * self.power_coupling_old
             )
-            # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
         if self.pbf.ti.res_eval == "midp":
             # minus sign, since contribution to external power!
             self.pbf.weakform_v += -self.power_coupling_mid
-            # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
         if self.pbf.ti.res_eval == "back":
             # minus sign, since contribution to external power!
             self.pbf.weakform_v += -self.power_coupling
-            # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
         # old Lagrange multipliers - initialize with initial pressures
         if self.pbase.restart_step == 0:
@@ -306,6 +281,53 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         # re-define coupling array
         self.pb0.c = [[]] * (self.num_coupling_surf + self.offc)
+
+    def set_variational_forms_jacobian_coupling(self):
+        self.dcq, self.dforce = [], []
+
+        # coupling variational forms and Jacobian contributions
+        for n in range(self.num_coupling_surf):
+            self.dcq.append(ufl.derivative(self.cq[n], self.pbf.v, self.pbf.dv))
+
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            for i in range(len(self.surface_p_ids[n])):
+                ds_p = self.pbf.bmeasures[0](self.surface_p_ids[n][i])
+                df_ += self.pbf.timefac * self.pbf.vf.flux(
+                    self.pbf.var_v,
+                    ds_p,
+                    w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                    F=self.pbf.alevar["Fale"],
+                )
+                df_mid_ += self.pbf.timefac * self.pbf.vf.flux(
+                    self.pbf.var_v,
+                    ds_p,
+                    w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                    F=self.pbf.alevar["Fale_mid"],
+                )
+                df_back_ += self.pbf.vf.flux(
+                    self.pbf.var_v,
+                    ds_p,
+                    w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                    F=self.pbf.alevar["Fale"],
+                )
+
+            if self.pbf.ti.res_eval == "trap":
+                self.dforce.append(df_)
+            if self.pbf.ti.res_eval == "midp":
+                self.dforce.append(df_mid_)
+            if self.pbf.ti.res_eval == "back":
+                self.dforce.append(df_back_)
+
+        # if self.pbf.ti.res_eval == "trap":
+        #     # add to fluid Jacobian
+        #     self.pbf.weakform_lin_vv += -self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
+        # if self.pbf.ti.res_eval == "midp":
+        #     # add to fluid Jacobian
+        #     self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
+        # if self.pbf.ti.res_eval == "back":
+        #     # add to fluid Jacobian
+        #     self.pbf.weakform_lin_vv += -ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
+
 
     def set_problem_residual_jacobian_forms(self, pre=False):
         self.pbf.set_problem_residual_jacobian_forms(pre=pre)

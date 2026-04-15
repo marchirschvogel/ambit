@@ -116,6 +116,9 @@ class FSIMultiphaseProblem(problem_base):
         self.pbp = self.pbfap.pbp
         self.pbfp = self.pbfap.pbfp
 
+        # in order to get correct contributions of the capillary stress on the (FSI) boundary, we should use this option...
+        assert(self.pbfp.capillary_force_from_korteweg_stress)
+
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self
 
@@ -217,18 +220,34 @@ class FSIMultiphaseProblem(problem_base):
                 ], is_ghosted
 
     def set_variational_forms(self):
-        # FSI - fluid, solid, ALE, + FSI coup
-        self.pbfsi.set_variational_forms()
-        # phasefield
-        self.pbp.set_variational_forms()
-        # fluid-phasefield
-        self.pbfp.set_variational_forms_coupling()
-        # ALE-phasefield
-        self.pbfap.set_variational_forms_coupling()
-        # create additional coupling forms (e.g. interface wetting conditions)
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
+    def set_variational_forms_residual(self):
+        # FSI - fluid, solid, ALE, + FSI coup
+        self.pbfsi.set_variational_forms_residual()
+        # phasefield
+        self.pbp.set_variational_forms_residual()
+        # fluid-phasefield
+        self.pbfp.set_variational_forms_residual_coupling()
+        # ALE-phasefield
+        self.pbfap.set_variational_forms_residual_coupling()
+        # create additional coupling forms (e.g. interface wetting conditions)
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        # FSI - fluid, solid, ALE, + FSI coup
+        self.pbfsi.set_variational_forms_jacobian()
+        # phasefield
+        self.pbp.set_variational_forms_jacobian()
+        # fluid-phasefield
+        self.pbfp.set_variational_forms_jacobian_coupling()
+        # ALE-phasefield
+        self.pbfap.set_variational_forms_jacobian_coupling()
+        # create additional coupling forms (e.g. interface wetting conditions)
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
         # wetting (or other) conditions imposed at interface
         if bool(self.pbfsi.wetting_interface):
             wetting = self.pbp.vf.weakform_robin_wetting(self.pbp.phi, self.pbfsi.wetting_interface["coeff"], self.io.ds(self.io.interface_id_f))
@@ -247,6 +266,9 @@ class FSIMultiphaseProblem(problem_base):
                     self.pbp.weakform_mu += -wetting_mid
             if self.pbp.ti.res_eval == "back":
                 self.pbp.weakform_mu += -wetting
+
+    def set_variational_forms_jacobian_coupling(self):
+        pass
 
     def set_problem_residual_jacobian_forms(self):
         # FSI - fluid, solid, ALE, + FSI coup

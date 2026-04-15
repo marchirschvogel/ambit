@@ -136,11 +136,19 @@ class SolidmechanicsConstraintProblem(problem_base):
 
     # defines the monolithic coupling forms for constraints and solid mechanics
     def set_variational_forms(self):
-        self.pbs.set_variational_forms()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
-        self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
+    def set_variational_forms_residual(self):
+        self.pbs.set_variational_forms_residual()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        self.pbs.set_variational_forms_jacobian()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
+        self.cq, self.cq_old = [], []
         self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
 
         self.work_coupling, self.work_coupling_old, self.work_coupling_mid = (
@@ -196,9 +204,7 @@ class SolidmechanicsConstraintProblem(problem_base):
                     raise NameError("Unknown constraint quantity! Choose either volume or flux!")
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
-            self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
 
-            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_lm_ids[n])):
                 if self.coupling_params["multiplier_physics"][n]["type"] == "pressure":
                     ds_p = self.pbs.bmeasures[0](self.surface_lm_ids[n][i])
@@ -220,23 +226,6 @@ class SolidmechanicsConstraintProblem(problem_base):
                         F=self.pbs.ki.F(self.pbs.us_mid, ext=True),
                     )
 
-                    # derivative w.r.t. multiplier
-                    df_ += self.pbs.timefac * self.pbs.vf.flux(
-                        self.pbs.var_u,
-                        ds_p,
-                        F=self.pbs.ki.F(self.pbs.u, ext=True),
-                    )
-                    df_mid_ += self.pbs.timefac * self.pbs.vf.flux(
-                        self.pbs.var_u,
-                        ds_p,
-                        F=self.pbs.ki.F(self.pbs.us_mid, ext=True),
-                    )
-                    df_back_ += self.pbs.vf.flux(
-                        self.pbs.var_u,
-                        ds_p,
-                        F=self.pbs.ki.F(self.pbs.u, ext=True),
-                    )
-
                 elif self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
                     dx_p = self.pbs.dx(self.surface_lm_ids[n][i])  # here a domain actually...
 
@@ -244,19 +233,16 @@ class SolidmechanicsConstraintProblem(problem_base):
                         S_act = self.coupfuncs[-1] * self.pbs.ki.structural_iso()
                         S_act_old = self.coupfuncs_old[-1] * self.pbs.ki.structural_iso()
                         S_act_mid = self.coupfuncs_mid[-1] * self.pbs.ki.structural_iso()
-                        dS_act = self.pbs.ki.structural_iso()
                     elif self.coupling_params["multiplier_physics"][n]["dir"] == "fiber":
                         assert bool(self.pbs.io.fiber_data)
                         S_act = self.coupfuncs[-1] * self.pbs.ki.structural_fiber(self.pbs.ki.fib_funcs[0])
                         S_act_old = self.coupfuncs_old[-1] * self.pbs.ki.structural_fiber(self.pbs.ki.fib_funcs[0])
                         S_act_mid = self.coupfuncs_mid[-1] * self.pbs.ki.structural_fiber(self.pbs.ki.fib_funcs[0])
-                        dS_act = self.pbs.ki.structural_fiber(self.pbs.ki.fib_funcs[0])
                     elif self.coupling_params["multiplier_physics"][n]["dir"] == "crossfiber":
                         assert bool(self.pbs.io.fiber_data)
                         S_act = self.coupfuncs[-1] * self.pbs.ki.structural_crossfiber(self.pbs.ki.fib_funcs[0])
                         S_act_old = self.coupfuncs_old[-1] * self.pbs.ki.structural_crossfiber(self.pbs.ki.fib_funcs[0])
                         S_act_mid = self.coupfuncs_mid[-1] * self.pbs.ki.structural_crossfiber(self.pbs.ki.fib_funcs[0])
-                        dS_act = self.pbs.ki.structural_crossfiber(self.pbs.ki.fib_funcs[0])
                     else:
                         raise NameError("Unknown active stress direction! Choose either iso, fiber, or crossfiber!")
 
@@ -264,6 +250,51 @@ class SolidmechanicsConstraintProblem(problem_base):
                     self.work_coupling += self.pbs.vf.deltaW_int(S_act, self.pbs.ki.F(self.pbs.u), dx_p)
                     self.work_coupling_old += self.pbs.vf.deltaW_int(S_act_old, self.pbs.ki.F(self.pbs.u_old), dx_p)
                     self.work_coupling_mid += self.pbs.vf.deltaW_int(S_act_mid, self.pbs.ki.F(self.pbs.us_mid), dx_p)
+
+                else:
+                    raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")
+
+        if self.pbs.ti.res_eval == "trap":
+            # add to solid rhs
+            self.pbs.weakform_u += (
+                self.pbs.timefac * self.work_coupling + (1.0 - self.pbs.timefac) * self.work_coupling_old
+            )
+        if self.pbs.ti.res_eval == "midp":
+            # add to solid rhs
+            self.pbs.weakform_u += self.work_coupling_mid
+        if self.pbs.ti.res_eval == "back":
+            # add to solid rhs
+            self.pbs.weakform_u += self.work_coupling
+
+    def set_variational_forms_jacobian_coupling(self):
+        self.dcq, self.dforce = [], []
+
+        # coupling variational forms and Jacobian contributions
+        for n in range(self.num_coupling_surf):
+            self.dcq.append(ufl.derivative(self.cq[n], self.pbs.u, self.pbs.du))
+
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            for i in range(len(self.surface_lm_ids[n])):
+                if self.coupling_params["multiplier_physics"][n]["type"] == "pressure":
+                    ds_p = self.pbs.bmeasures[0](self.surface_lm_ids[n][i])
+                    # derivative w.r.t. multiplier
+                    df_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
+                    df_mid_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid, ext=True))
+                    df_back_ += self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
+
+                elif self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
+                    dx_p = self.pbs.dx(self.surface_lm_ids[n][i])  # here a domain actually...
+
+                    if self.coupling_params["multiplier_physics"][n]["dir"] == "iso":
+                        dS_act = self.pbs.ki.structural_iso()
+                    elif self.coupling_params["multiplier_physics"][n]["dir"] == "fiber":
+                        assert bool(self.pbs.io.fiber_data)
+                        dS_act = self.pbs.ki.structural_fiber(self.pbs.ki.fib_funcs[0])
+                    elif self.coupling_params["multiplier_physics"][n]["dir"] == "crossfiber":
+                        assert bool(self.pbs.io.fiber_data)
+                        dS_act = self.pbs.ki.structural_crossfiber(self.pbs.ki.fib_funcs[0])
+                    else:
+                        raise NameError("Unknown active stress direction! Choose either iso, fiber, or crossfiber!")
 
                     # derivative w.r.t. multiplier
                     df_ += self.pbs.timefac * self.pbs.vf.deltaW_int(dS_act, self.pbs.ki.F(self.pbs.u), dx_p)
@@ -279,21 +310,16 @@ class SolidmechanicsConstraintProblem(problem_base):
             if self.pbs.ti.res_eval == "back":
                 self.dforce.append(df_back_)
 
+        # NOTE: In solid mechanics, we do not use ufl.derivative on the full weakform, but add linearization contributions separately
+        # (in order to deal with complex materials models that iterate on integration-point level)
+        # Hence, add linearization contribution directly to Jacobian form
         if self.pbs.ti.res_eval == "trap":
-            # add to solid rhs
-            self.pbs.weakform_u += (
-                self.pbs.timefac * self.work_coupling + (1.0 - self.pbs.timefac) * self.work_coupling_old
-            )
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
         if self.pbs.ti.res_eval == "midp":
-            # add to solid rhs
-            self.pbs.weakform_u += self.work_coupling_mid
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += ufl.derivative(self.work_coupling_mid, self.pbs.u, self.pbs.du)
         if self.pbs.ti.res_eval == "back":
-            # add to solid rhs
-            self.pbs.weakform_u += self.work_coupling
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
 

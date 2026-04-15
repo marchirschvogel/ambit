@@ -667,6 +667,10 @@ class SolidmechanicsProblem(problem_base):
 
     # the main function that defines the solid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
+
+    def set_variational_forms_residual(self):
         # set forms for acceleration and velocity
         self.acc, self.vel = self.ti.set_acc_vel(self.u, self.u_old, self.v_old, self.a_old)
 
@@ -1013,8 +1017,103 @@ class SolidmechanicsProblem(problem_base):
                 if self.mat_plastic[n]:
                     raise ValueError("Finite strain plasticity not yet implemented!")
 
-        ### Jacobians
+        # set forms for active stress
+        if any(self.mat_active_stress):
+            # take care of Frank-Starling law (fiber stretch-dependent contractility)
+            if self.have_frank_starling:
+                self.amp_old_, na = [], 0
+                for n in range(self.num_domains):
+                    if self.mat_active_stress[n] and self.actstress[na].frankstarling:
+                        # old stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
+                        if self.activemodel[n] == "active_fiber":
+                            if self.mat_growth[n]:
+                                lam_fib_old = self.ma[n].fibstretch_e(
+                                    self.ki.C(self.u_old),
+                                    self.theta_old,
+                                    self.fib_func[0],
+                                )
+                            else:
+                                lam_fib_old = self.ki.fibstretch(self.u_old, self.fib_func[0])
+                        elif self.activemodel[n] == "active_crossfiber":
+                            if self.mat_growth[n]:
+                                lam_fib_old = self.ma[n].crossfibstretch_e(
+                                    self.ki.C(self.u_old),
+                                    self.theta_old,
+                                    self.fib_func[0],
+                                )
+                            else:
+                                lam_fib_old = self.ki.crossfibstretch(self.u_old, self.fib_func[0])
+                        elif self.activemodel[n] == "active_iso":
+                            if self.mat_growth[n]:
+                                lam_fib_old = self.ma[n].isostretch_e(self.ki.C(self.u_old), self.theta_old)
+                            else:
+                                lam_fib_old = self.ki.isostretch(self.u_old)
+                        else:
+                            raise ValueError("Unknown active model!")
 
+                        self.amp_old_.append(self.actstress[na].amp(lam_fib_old, self.amp_old))
+                        na += 1
+                    else:
+                        self.amp_old_.append(ufl.as_ufl(0))
+
+            self.tau_a_, na = [], 0
+            for n in range(self.num_domains):
+                if self.mat_active_stress[n]:
+                    if self.mat_active_stress_type[n] == "ode":
+                        # stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
+                        if self.actstress[na].frankstarling:
+                            if self.activemodel[n] == "active_fiber":
+                                if self.mat_growth[n]:
+                                    lam_fib = self.ma[n].fibstretch_e(
+                                        self.ki.C(self.u),
+                                        self.theta,
+                                        self.fib_func[0],
+                                    )
+                                else:
+                                    lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
+                            elif self.activemodel[n] == "active_crossfiber":
+                                if self.mat_growth[n]:
+                                    lam_fib = self.ma[n].crossfibstretch_e(
+                                        self.ki.C(self.u),
+                                        self.theta,
+                                        self.fib_func[0],
+                                    )
+                                else:
+                                    lam_fib = self.ki.crossfibstretch(self.u, self.fib_func[0])
+                            elif self.activemodel[n] == "active_iso":
+                                if self.mat_growth[n]:
+                                    lam_fib = self.ma[n].isostretch_e(self.ki.C(self.u), self.theta)
+                                else:
+                                    lam_fib = self.ki.isostretch(self.u)
+                            else:
+                                raise ValueError("Unknown active model!")
+                        else:
+                            lam_fib = ufl.as_ufl(1)
+
+                        self.tau_a_.append(
+                            self.actstress[na].tau_act(
+                                self.tau_a_old,
+                                self.pbase.dt,
+                                lam=lam_fib,
+                                amp_old=self.amp_old,
+                            )
+                        )
+                        na += 1
+                    if self.mat_active_stress_type[n] == "prescribed":
+                        self.tau_a_.append(self.act_curve[n])  # act_curve now stores the prescribed active stress
+                    if self.mat_active_stress_type[n] == "prescribed_from_file":
+                        pass
+                else:
+                    self.tau_a_.append(ufl.as_ufl(0))
+
+        if self.prestress_initial or self.prestress_initial_only:
+            # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
+            self.weakform_prestress_u = self.deltaW_prestr_int - self.deltaW_prestr_ext
+            if self.incompressible_2field:
+                self.weakform_prestress_p = self.deltaW_p
+
+    ### Jacobians
+    def set_variational_forms_jacobian(self):
         # kinetic virtual work linearization (deltaW_kin already has contributions from all domains)
         # since this is actually linear in the acceleration (and hence the displacement), 'trapezoidal' and 'midpoint' yield the same
         if self.ti.res_eval == "trap":
@@ -1031,7 +1130,6 @@ class SolidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
 
             if not self.inverse_mechanics:
-
                 # elastic and viscous material tangent operator
                 if self.ti.res_eval == "trap" or self.ti.res_eval == "back":
                     Cmat, Cmat_v = self.ma[n].S(
@@ -1256,101 +1354,10 @@ class SolidmechanicsProblem(problem_base):
                     self.weakform_lin_pu += ufl.derivative(self.weakform_p, self.u, self.du)
                     self.weakform_lin_up += ufl.derivative(self.weakform_u, self.p, self.dp)
 
-        # set forms for active stress
-        if any(self.mat_active_stress):
-            # take care of Frank-Starling law (fiber stretch-dependent contractility)
-            if self.have_frank_starling:
-                self.amp_old_, na = [], 0
-                for n in range(self.num_domains):
-                    if self.mat_active_stress[n] and self.actstress[na].frankstarling:
-                        # old stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
-                        if self.activemodel[n] == "active_fiber":
-                            if self.mat_growth[n]:
-                                lam_fib_old = self.ma[n].fibstretch_e(
-                                    self.ki.C(self.u_old),
-                                    self.theta_old,
-                                    self.fib_func[0],
-                                )
-                            else:
-                                lam_fib_old = self.ki.fibstretch(self.u_old, self.fib_func[0])
-                        elif self.activemodel[n] == "active_crossfiber":
-                            if self.mat_growth[n]:
-                                lam_fib_old = self.ma[n].crossfibstretch_e(
-                                    self.ki.C(self.u_old),
-                                    self.theta_old,
-                                    self.fib_func[0],
-                                )
-                            else:
-                                lam_fib_old = self.ki.crossfibstretch(self.u_old, self.fib_func[0])
-                        elif self.activemodel[n] == "active_iso":
-                            if self.mat_growth[n]:
-                                lam_fib_old = self.ma[n].isostretch_e(self.ki.C(self.u_old), self.theta_old)
-                            else:
-                                lam_fib_old = self.ki.isostretch(self.u_old)
-                        else:
-                            raise ValueError("Unknown active model!")
-
-                        self.amp_old_.append(self.actstress[na].amp(lam_fib_old, self.amp_old))
-                        na += 1
-                    else:
-                        self.amp_old_.append(ufl.as_ufl(0))
-
-            self.tau_a_, na = [], 0
-            for n in range(self.num_domains):
-                if self.mat_active_stress[n]:
-                    if self.mat_active_stress_type[n] == "ode":
-                        # stretch state (needed for Frank-Starling law) - a stretch that corresponds to the active model is used
-                        if self.actstress[na].frankstarling:
-                            if self.activemodel[n] == "active_fiber":
-                                if self.mat_growth[n]:
-                                    lam_fib = self.ma[n].fibstretch_e(
-                                        self.ki.C(self.u),
-                                        self.theta,
-                                        self.fib_func[0],
-                                    )
-                                else:
-                                    lam_fib = self.ki.fibstretch(self.u, self.fib_func[0])
-                            elif self.activemodel[n] == "active_crossfiber":
-                                if self.mat_growth[n]:
-                                    lam_fib = self.ma[n].crossfibstretch_e(
-                                        self.ki.C(self.u),
-                                        self.theta,
-                                        self.fib_func[0],
-                                    )
-                                else:
-                                    lam_fib = self.ki.crossfibstretch(self.u, self.fib_func[0])
-                            elif self.activemodel[n] == "active_iso":
-                                if self.mat_growth[n]:
-                                    lam_fib = self.ma[n].isostretch_e(self.ki.C(self.u), self.theta)
-                                else:
-                                    lam_fib = self.ki.isostretch(self.u)
-                            else:
-                                raise ValueError("Unknown active model!")
-                        else:
-                            lam_fib = ufl.as_ufl(1)
-
-                        self.tau_a_.append(
-                            self.actstress[na].tau_act(
-                                self.tau_a_old,
-                                self.pbase.dt,
-                                lam=lam_fib,
-                                amp_old=self.amp_old,
-                            )
-                        )
-                        na += 1
-                    if self.mat_active_stress_type[n] == "prescribed":
-                        self.tau_a_.append(self.act_curve[n])  # act_curve now stores the prescribed active stress
-                    if self.mat_active_stress_type[n] == "prescribed_from_file":
-                        pass
-                else:
-                    self.tau_a_.append(ufl.as_ufl(0))
-
         if self.prestress_initial or self.prestress_initial_only:
             # quasi-static weak forms (don't dare to use fancy growth laws or other inelastic stuff during prestressing...)
-            self.weakform_prestress_u = self.deltaW_prestr_int - self.deltaW_prestr_ext
             self.weakform_lin_prestress_uu = ufl.derivative(self.weakform_prestress_u, self.u, self.du)
             if self.incompressible_2field:
-                self.weakform_prestress_p = self.deltaW_p
                 self.weakform_lin_prestress_up = ufl.derivative(self.weakform_prestress_u, self.p, self.dp)
                 self.weakform_lin_prestress_pu = ufl.derivative(self.weakform_prestress_p, self.u, self.du)
                 self.weakform_lin_prestress_pp = ufl.derivative(self.weakform_prestress_p, self.p, self.dp)
@@ -1390,7 +1397,7 @@ class SolidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
             dtheta_all += (self.theta - self.theta_old) / (self.pbase.dt) * self.dx(M)
 
-        gr = fem.assemble_scalar(fem.form(dtheta_all))
+        gr = fem.assemble_scalar(fem.form(dtheta_all, entity_maps=self.io.entity_maps))
         gr = self.comm.allgather(gr)
         self.growth_rate = sum(gr)
 
@@ -1423,11 +1430,11 @@ class SolidmechanicsProblem(problem_base):
                 self.ki.Edot(self.u, self.vel),
             ) * self.dx(M)
 
-        se = fem.assemble_scalar(fem.form(se_all))
+        se = fem.assemble_scalar(fem.form(se_all, entity_maps=self.io.entity_maps))
         se = self.pbase.comm.allgather(se)
         strain_energy = sum(se)
 
-        ip = fem.assemble_scalar(fem.form(ip_all))
+        ip = fem.assemble_scalar(fem.form(ip_all, entity_maps=self.io.entity_maps))
         ip = self.pbase.comm.allgather(ip)
         internal_power = sum(ip)
 
@@ -1466,11 +1473,11 @@ class SolidmechanicsProblem(problem_base):
                 se_mem_all += self.bstrainenergy[nm] * self.bmeasures[0](self.idmem[nm])
                 ip_mem_all += self.bintpower[nm] * self.bmeasures[0](self.idmem[nm])
 
-        se_mem = fem.assemble_scalar(fem.form(se_mem_all))
+        se_mem = fem.assemble_scalar(fem.form(se_mem_all, entity_maps=self.io.entity_maps))
         se_mem = self.pbase.comm.allgather(se_mem)
         strain_energy_mem = sum(se_mem)
 
-        ip_mem = fem.assemble_scalar(fem.form(ip_mem_all))
+        ip_mem = fem.assemble_scalar(fem.form(ip_mem_all, entity_maps=self.io.entity_maps))
         ip_mem = self.pbase.comm.allgather(ip_mem)
         internal_power_mem = sum(ip_mem)
 
@@ -1536,7 +1543,7 @@ class SolidmechanicsProblem(problem_base):
         for n, M in enumerate(self.domain_ids):
             vol_all += ufl.det(ufl.Identity(len(uf)) + ufl.grad(uf)) * self.dx(M)
 
-        vol = fem.assemble_scalar(fem.form(vol_all))
+        vol = fem.assemble_scalar(fem.form(vol_all, entity_maps=self.io.entity_maps))
         vol = self.pbase.comm.allgather(vol)
         volume = sum(vol)
 
@@ -1829,7 +1836,7 @@ class SolidmechanicsSolver(solver_base):
             weakform_lin_aa = ufl.derivative(weakform_a, self.pb.a_old, self.pb.du)  # actually linear in a_old
 
             # solve for consistent initial acceleration a_old
-            res_a, jac_aa = fem.form(weakform_a), fem.form(weakform_lin_aa)
+            res_a, jac_aa = fem.form(weakform_a, entity_maps=self.pb.io.entity_maps), fem.form(weakform_lin_aa, entity_maps=self.pb.io.entity_maps)
             self.solnln.solve_consistent_init(res_a, jac_aa, self.pb.a_old)
 
             te = time.time() - ts

@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 
 """
-Multiphase FSI elaso-capillary simulation of a sessile droplet on a soft solid substrate
-Example from M. Shokrpour Roudbari and E. H. van Brummelen, "Binary-Fluid-Solid Interaction Based on the Navier-Stokes-Korteweg Equations", Mathematical Models and Methods in Applied Sciences, 2019
-Let's assume a ng-µm-µs unit system, hence viscosities are 1 ng/(µm µs) = 10^{3} mPa s
+Multiphase FSI elaso-capillary simulation of a sessile droplet on a soft solid substrate - cf. example in demos folder for more detailed description
+TODO: Restart of Neumann-Dirichlet FSI not yet working!
 """
 
 import ambit_fe
+
+import sys
 import numpy as np
 from pathlib import Path
+import pytest
 
 
-def main():
+@pytest.mark.fsi
+@pytest.mark.fluid_solid
+def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
     # reads in restart step from the command line
@@ -22,12 +26,12 @@ def main():
 
     IO_PARAMS = {
         "problem_type": "fsi_multiphase",
-        "write_results_every": 10,
-        "write_restart_every": -1,
+        "write_results_every": 1,
+        "write_restart_every": 4,
         "indicate_results_by": "step",
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, -50.0], "coords_b":[350.0, 300.0], "meshsize":[140,140]}, # should be divisible by 7
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, -50.0], "coords_b":[350.0, 300.0], "meshsize":[35,35]}, # should be divisible by 7
         "results_to_write": [
             ["displacement"],
             ["velocity", "pressure", "density"],
@@ -36,7 +40,7 @@ def main():
         ],
         "write_initial_fields": True,
         "report_conservation_properties": True,
-        "simname": "fsi_multiphase_elastocapillary_largerdt_m1e-4_wet1",
+        "simname": "fsi_multiphase_elastocap_neumann_dirichlet",
     }
 
     h = 350.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
@@ -55,9 +59,9 @@ def main():
                 np.full(x.shape[1], val),
             )
 
-    CONTROL_PARAMS = {"maxtime": 128*1000.0, # µs
-                      "dt": 100.0, # µs
-                      # "numstep_stop": 100,
+    CONTROL_PARAMS = {"maxtime": 1000.0, # µs
+                      "dt": 1.0, # µs
+                      "numstep_stop": 5,
                       "initial_fields": [expr1, None],
                       }
 
@@ -69,10 +73,8 @@ def main():
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
-    # TIME_PARAMS_FLUID = {"timint": "bdf2"}
-    # TIME_PARAMS_PF    = {"timint": "bdf2"}
-    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint", "continuity_at_midpoint": True}
-    TIME_PARAMS_PF    = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint"}
+    TIME_PARAMS_FLUID = {"timint": "bdf2"}
+    TIME_PARAMS_PF    = {"timint": "bdf2"}
 
 
     FEM_PARAMS_SOLID = {
@@ -99,7 +101,7 @@ def main():
     sig_sa = 31e-3
     COUPLING_PARAMS_FSI = {
         "coupling_fluid_ale": {"interface": [locate_interf()]},
-        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+        "fsi_system": "neumann_dirichlet",
         "wetting_condition_interface": {"coeff": sig_sa-sig_sl}, # wetting Robin condition at interface
     }
 
@@ -136,9 +138,6 @@ def main():
     MATERIALS_SOLID = {"MAT1": {"stvenantkirchhoff": {"Emod": E, "nu": nu},
                                 "inertia": {"rho0": 12.6e-3}, # 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
                                 "id": locate_solid()}}
-    # MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},
-    #                             "inertia": {"rho0": 12.6e-3},
-    #                             "id": locate_solid()}}
 
     # fluid1 is vapour (surrounding), fluid2 is liquid (bubble)
     rho1 = 1.26e-3 #0.0816 # pg/(µm^3) = 10^{-3} ng/(µm^3)
@@ -150,7 +149,6 @@ def main():
     zeta = 0.0
 
     alpha = (rho1-rho2)/(rho1+rho2)
-    sigtilde = sig #3.*sig/(2.*np.sqrt(2.))
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2, "zeta1": zeta, "zeta2": zeta},
                                 "inertia": {"rho1": rho1, "rho2": rho2},
@@ -158,14 +156,14 @@ def main():
 
     MATERIALS_ALE = {"MAT1": {"diffusion": {"D": 1.0}, "id": locate_fluid()}}
 
-    m = 1e-4 # should be rather low if capillary stress is rather high
+    m = 1e-4 # mobility should be rather low if capillary stress is rather high
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
                                                   "epsilon": 0.0,
                                                   "exponent": 1.0,
-                                                  "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
-                                                  "D": sigtilde/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
-                                                  "kappa": sigtilde*eps,   # Gradient energy coefficient [pressure/length]
-                                                  "alpha": alpha},         # Pressure factor in diffusive flux
+                                                  "M0": m*eps**2.0, # Mobility [length^5/(pressure time)]
+                                                  "D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
+                                                  "kappa": sig*eps,   # Gradient energy coefficient [pressure/length]
+                                                  "alpha": alpha},    # Pressure factor in diffusive flux
                                                   "id": locate_fluid()}}
 
     class locate_all:
@@ -177,13 +175,6 @@ def main():
             ctr_x = np.isclose(x[0], 0.0)
             ctr_y = np.isclose(x[1], 0.0)
             return np.logical_and(ctr_x, ctr_y)
-
-    # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    # class time_curves:
-    #     def tc1(self, t):
-    #         Tp = 0.5
-    #         pmax = 3.0 # kPa
-    #         return -pmax * np.sin(2.*np.pi*t/Tp)
 
 
     BC_DICT_SOLID = {
@@ -204,9 +195,6 @@ def main():
 
     BC_DICT_PF = { }
 
-
-    BC_DICT_LM = {"dirichlet": [{"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}]}
-
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
@@ -214,14 +202,57 @@ def main():
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_PF, FEM_PARAMS_ALE],
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_PF, MATERIALS_ALE],
-        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE, BC_DICT_LM],
-        # time_curves=time_curves(),
+        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE],
         coupling_params=[COUPLING_PARAMS_FSI,COUPLING_PARAMS_MULTIPHASE],
     )
 
     # problem solve
     problem.solve_problem()
 
+    # --- results check
+    tol = 1.0e-6
+
+    check_node = []
+    check_node.append(np.array([180., 0., 0.]))
+
+    u_corr, v_corr = (
+        np.zeros(2 * len(check_node)),
+        np.zeros(2 * len(check_node)),
+    )
+
+    # correct results
+    u_corr[0] = 5.0624368117306081E-03  # x
+    u_corr[1] = 2.4882564101985184E-02  # y
+
+    v_corr[0] = 1.2541892712594409E-03  # x
+    v_corr[1] = 6.1319838156856741E-03  # y
+
+    check1 = ambit_fe.resultcheck.results_check_node(
+        problem.mp.pbs.u,
+        check_node,
+        u_corr,
+        problem.mp.pbs.V_u,
+        problem.mp.comm,
+        tol=tol,
+        nm="u",
+        readtol=1e-4,
+    )
+    check2 = ambit_fe.resultcheck.results_check_node(
+        problem.mp.pbf.v,
+        check_node,
+        v_corr,
+        problem.mp.pbf.V_v,
+        problem.mp.comm,
+        tol=tol,
+        nm="v",
+        readtol=1e-4,
+    )
+
+    success = ambit_fe.resultcheck.success_check([check1, check2], problem.mp.comm)
+
+    if not success:
+        raise RuntimeError("Test failed!")
+
 
 if __name__ == "__main__":
-    main()
+    test_main()

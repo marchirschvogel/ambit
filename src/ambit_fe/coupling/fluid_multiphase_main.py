@@ -151,11 +151,20 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
     # defines the monolithic coupling forms for fluid mechanics in ALE reference frame
     def set_variational_forms(self):
-        self.pbf.set_variational_forms()
-        self.pbp.set_variational_forms()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
+    def set_variational_forms_residual(self):
+        self.pbf.set_variational_forms_residual()
+        self.pbp.set_variational_forms_residual()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        self.pbf.set_variational_forms_jacobian()
+        self.pbp.set_variational_forms_jacobian()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
         # add capillary force to fluid momentum
         self.capillary_force, self.capillary_force_old, self.capillary_force_mid = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
 
@@ -178,6 +187,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         if self.pbf.ti.res_eval == "back":
             self.pbf.weakform_v += self.capillary_force
 
+    def set_variational_forms_jacobian_coupling(self):
         # derivative of fluid momentum w.r.t. phase field
         self.weakform_lin_vphi = ufl.derivative(self.pbf.weakform_v, self.pbp.phi, self.pbp.dphi)
         # derivative of fluid momentum w.r.t. potential

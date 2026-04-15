@@ -162,16 +162,33 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         ], is_ghosted
 
     def set_variational_forms(self):
-        # fluid, ALE, fluid-ALE coupling
-        self.pbfa.set_variational_forms()
-        # phasefield
-        self.pbp.set_variational_forms()
-        # fluid-phasefield coupling
-        self.pbfp.set_variational_forms_coupling()
-        # ALE-phasefield coupling
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
+    def set_variational_forms_residual(self):
+        # fluid, ALE, fluid-ALE coupling
+        self.pbfa.set_variational_forms_residual()
+        # phasefield
+        self.pbp.set_variational_forms_residual()
+        # fluid-phasefield coupling
+        self.pbfp.set_variational_forms_residual_coupling()
+        # ALE-phasefield coupling
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        # fluid, ALE, fluid-ALE coupling
+        self.pbfa.set_variational_forms_jacobian()
+        # phasefield
+        self.pbp.set_variational_forms_jacobian()
+        # fluid-phasefield coupling
+        self.pbfp.set_variational_forms_jacobian_coupling()
+        # ALE-phasefield coupling
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
+        pass
+
+    def set_variational_forms_jacobian_coupling(self):
         # derivative of phasefield and potential w.r.t. ALE displacement
         self.weakform_lin_phid = ufl.derivative(self.pbp.weakform_phi, self.pba.d, self.pba.dd)
         self.weakform_lin_mud = ufl.derivative(self.pbp.weakform_mu, self.pba.d, self.pba.dd)

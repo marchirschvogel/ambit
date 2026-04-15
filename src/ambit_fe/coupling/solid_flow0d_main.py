@@ -188,11 +188,19 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
     # defines the monolithic coupling forms for 0D flow and solid mechanics
     def set_variational_forms(self):
-        self.pbs.set_variational_forms()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
-        self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
+    def set_variational_forms_residual(self):
+        self.pbs.set_variational_forms_residual()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        self.pbs.set_variational_forms_jacobian()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
+        self.cq, self.cq_old = [], []
         (
             self.coupfuncs,
             self.coupfuncs_old,
@@ -295,19 +303,9 @@ class SolidmechanicsFlow0DProblem(problem_base):
                     raise NameError("Unknown coupling quantity! Choose either volume, flux, or pressure!")
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
-            self.dcq.append(ufl.derivative(self.cq[-1], self.pbs.u, self.pbs.du))
 
-            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_p_ids[n])):
                 ds_p = self.pbs.bmeasures[0](self.surface_p_ids[n][i])
-                df_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
-                df_mid_ += self.pbs.timefac * self.pbs.vf.flux(
-                    self.pbs.var_u,
-                    ds_p,
-                    F=self.pbs.ki.F(self.pbs.us_mid, ext=True),
-                )
-                df_back_ += self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
-
                 # add to solid rhs contributions
                 self.work_coupling += self.pbs.vf.deltaW_ext_neumann_normal_cur(
                     self.coupfuncs[-1],
@@ -325,6 +323,37 @@ class SolidmechanicsFlow0DProblem(problem_base):
                     F=self.pbs.ki.F(self.pbs.us_mid, ext=True),
                 )
 
+        if self.pbs.ti.res_eval == "trap":
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += (
+                -self.pbs.timefac * self.work_coupling - (1.0 - self.pbs.timefac) * self.work_coupling_old
+            )
+        if self.pbs.ti.res_eval == "midp":
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += -self.work_coupling_mid
+        if self.pbs.ti.res_eval == "back":
+            # minus sign, since contribution to external work!
+            self.pbs.weakform_u += -self.work_coupling
+
+        if self.coupling_type == "monolithic_lagrange" and self.pbase.restart_step == 0:
+            # old Lagrange multipliers - initialize with initial pressures
+            self.pb0.cardvasc0D.initialize_lm(self.LM, self.pb0.initialconditions)
+            self.pb0.cardvasc0D.initialize_lm(self.LM_old, self.pb0.initialconditions)
+
+    def set_variational_forms_jacobian_coupling(self):
+        self.dcq, self.dforce = [], []
+
+        # coupling variational forms and Jacobian contributions
+        for n in range(self.num_coupling_surf):
+            self.dcq.append(ufl.derivative(self.cq[n], self.pbs.u, self.pbs.du))
+
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            for i in range(len(self.surface_p_ids[n])):
+                ds_p = self.pbs.bmeasures[0](self.surface_p_ids[n][i])
+                df_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
+                df_mid_ += self.pbs.timefac * self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.us_mid, ext=True))
+                df_back_ += self.pbs.vf.flux(self.pbs.var_u, ds_p, F=self.pbs.ki.F(self.pbs.u, ext=True))
+
             if self.pbs.ti.res_eval == "trap":
                 self.dforce.append(df_)
             if self.pbs.ti.res_eval == "midp":
@@ -332,28 +361,18 @@ class SolidmechanicsFlow0DProblem(problem_base):
             if self.pbs.ti.res_eval == "back":
                 self.dforce.append(df_back_)
 
+        # NOTE: In solid mechanics, we do not use ufl.derivative on the full weakform, but add linearization contributions separately
+        # (in order to deal with complex materials models that iterate on integration-point level)
+        # Hence, add linearization contribution directly to Jacobian form
         if self.pbs.ti.res_eval == "trap":
-            # minus sign, since contribution to external work!
-            self.pbs.weakform_u += (
-                -self.pbs.timefac * self.work_coupling - (1.0 - self.pbs.timefac) * self.work_coupling_old
-            )
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += -self.pbs.timefac * ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
         if self.pbs.ti.res_eval == "midp":
-            # minus sign, since contribution to external work!
-            self.pbs.weakform_u += -self.work_coupling_mid
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += -ufl.derivative(self.work_coupling_mid, self.pbs.u, self.pbs.du)
         if self.pbs.ti.res_eval == "back":
-            # minus sign, since contribution to external work!
-            self.pbs.weakform_u += -self.work_coupling
             # add to solid Jacobian
             self.pbs.weakform_lin_uu += -ufl.derivative(self.work_coupling, self.pbs.u, self.pbs.du)
-
-        if self.coupling_type == "monolithic_lagrange" and self.pbase.restart_step == 0:
-            # old Lagrange multipliers - initialize with initial pressures
-            self.pb0.cardvasc0D.initialize_lm(self.LM, self.pb0.initialconditions)
-            self.pb0.cardvasc0D.initialize_lm(self.LM_old, self.pb0.initialconditions)
 
     # for multiscale G&R analysis
     def set_homeostatic_threshold(self, t):

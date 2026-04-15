@@ -159,11 +159,20 @@ class FluidmechanicsAleProblem(problem_base):
 
     # defines the monolithic coupling forms for fluid mechanics in ALE reference frame
     def set_variational_forms(self):
-        self.pbf.set_variational_forms()
-        self.pba.set_variational_forms()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
+    def set_variational_forms_residual(self):
+        self.pbf.set_variational_forms_residual()
+        self.pba.set_variational_forms_residual()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        self.pbf.set_variational_forms_jacobian()
+        self.pba.set_variational_forms_jacobian()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
         # any DBC conditions that we want to set from fluid to ALE (mandatory for FSI or FrSI)
         if bool(self.coupling_fluid_ale):
             if all(isinstance(x, int) for x in self.coupling_fluid_ale["interface"]):
@@ -222,9 +231,9 @@ class FluidmechanicsAleProblem(problem_base):
                 self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict["dirichlet"], self.pbf.dbcs)
             self.have_dbc_ale_fluid = True
 
+    def set_variational_forms_jacobian_coupling(self):
         # derivative of fluid momentum w.r.t. ALE displacement
         self.weakform_lin_vd = ufl.derivative(self.pbf.weakform_v, self.pba.d, self.pba.dd)
-
         # derivative of fluid continuity w.r.t. ALE displacement
         self.weakform_lin_pd = []
         for n in range(self.pbf.num_domains):

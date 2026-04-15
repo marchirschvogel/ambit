@@ -237,12 +237,22 @@ class FSIProblem(problem_base):
 
     # defines the monolithic coupling forms for FSI
     def set_variational_forms(self):
-        # solid + ALE-fluid
-        self.pbs.set_variational_forms()
-        self.pbfa.set_variational_forms()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
+    def set_variational_forms_residual(self):
+        # solid + ALE-fluid
+        self.pbs.set_variational_forms_residual()
+        self.pbfa.set_variational_forms_residual()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        # solid + ALE-fluid
+        self.pbs.set_variational_forms_jacobian()
+        self.pbfa.set_variational_forms_jacobian()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
         # fluid displacement, but defined on solid domain
         self.ufs = fem.Function(self.pbs.V_u)
 
@@ -302,16 +312,6 @@ class FSIProblem(problem_base):
             else:
                 raise ValueError("Unknown FSI governing type.")
 
-            self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
-            self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
-
-            # self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
-            # self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
-            self.weakform_lin_ul = ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
-            self.weakform_lin_vl = -ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
-
-            # for DBC application to LM, even if zero...
-            self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)
 
         elif self.fsi_system == "neumann_dirichlet":
 
@@ -381,6 +381,25 @@ class FSIProblem(problem_base):
                 self.fdofs_fluid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
             self.ufs_subvec = self.pbf.uf.x.petsc_vec.getSubVector(self.fdofs_fluid_global_sub)
+
+        else:
+            raise ValueError("Unknown value for 'fsi_system'. Choose 'neumann_neumann' or 'neumann_dirichlet'.")
+
+    def set_variational_forms_jacobian_coupling(self):
+        if self.fsi_system == "neumann_neumann":
+            self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
+            self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
+
+            # self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
+            # self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+            self.weakform_lin_ul = ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
+            self.weakform_lin_vl = -ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+
+            # for DBC application to LM, even if zero...
+            self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)
+
+        elif self.fsi_system == "neumann_dirichlet":
+            pass
 
         else:
             raise ValueError("Unknown value for 'fsi_system'. Choose 'neumann_neumann' or 'neumann_dirichlet'.")

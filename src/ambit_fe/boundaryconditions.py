@@ -253,13 +253,14 @@ class boundary_cond:
         w = ufl.as_ufl(0)
 
         for n in bcdict:
+            direction = n.get("dir", "xyz_ref")
             codim = n.get("codimension", self.dim - 1)
             assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
             ID, dind = "id", 0
             if "is_locator" in n.keys(): dind=2
             if "id_loc" in n.keys(): ID="id_loc"
 
-            if n["dir"] == "xyz_ref":  # reference xyz
+            if direction == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
 
                 if "curve" in n.keys():
@@ -305,7 +306,7 @@ class boundary_cond:
                 for i in range(len(n[ID])):
                     w += self.pb.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
 
-            elif n["dir"] == "normal_ref":  # reference normal
+            elif direction == "normal_ref":  # reference normal
                 func = fem.Function(self.Vdisc_scalar)
 
                 if "curve" in n.keys():
@@ -337,7 +338,7 @@ class boundary_cond:
                 for i in range(len(n[ID])):
                     w += self.pb.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
 
-            elif n["dir"] == "xyz_cur":  # current xyz
+            elif direction == "xyz_cur":  # current xyz
                 func = fem.Function(self.V_field)
 
                 if "curve" in n.keys():
@@ -383,7 +384,7 @@ class boundary_cond:
                 for i in range(len(n[ID])):
                     w += self.pb.vf.deltaW_ext_neumann_cur(func, ds_[dind](n[ID][i]), F=F)
 
-            elif n["dir"] == "normal_cur":  # current normal
+            elif direction == "normal_cur":  # current normal
                 func = fem.Function(self.Vdisc_scalar)
 
                 if "curve" in n.keys():
@@ -957,6 +958,56 @@ class boundary_cond_fluid(boundary_cond):
 
 
 class boundary_cond_phasefield(boundary_cond):
+    # set Neumann BCs
+    def neumann_bcs(
+        self,
+        bcdict,
+        ds_,
+        funcs_to_update=None,
+        funcsexpr_to_update=None,
+    ):
+        w = ufl.as_ufl(0)
+
+        for n in bcdict:
+            codim = n.get("codimension", self.dim - 1)
+            assert(codim==self.dim - 1) # currently, only integration on codimension dim-1 supported (in a straightforward way...)
+            ID, dind = "id", 0
+            if "is_locator" in n.keys(): dind=2
+            if "id_loc" in n.keys(): ID="id_loc"
+
+            func = fem.Function(self.V_field)
+
+            if "curve" in n.keys():
+                assert "val" not in n.keys() and "expression" not in n.keys()
+                load = expression.template()
+                load.val = self.pb.ti.timecurves(n["curve"])(self.pb.ti.t_init)
+                func.interpolate(load.evaluate)
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
+                funcs_to_update.append({func: self.pb.ti.timecurves(n["curve"])})
+            elif "val" in n.keys():
+                assert "curve" not in n.keys() and "expression" not in n.keys()
+                func.x.petsc_vec.set(n["val"])
+            elif "expression" in n.keys():
+                assert "curve" not in n.keys() and "val" not in n.keys()
+                expr = n["expression"]()
+                expr.t = self.pb.ti.t_init
+                func.interpolate(expr.evaluate)
+                func.x.petsc_vec.ghostUpdate(
+                    addv=PETSc.InsertMode.INSERT,
+                    mode=PETSc.ScatterMode.FORWARD,
+                )
+                funcsexpr_to_update[func] = expr
+            else:
+                raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
+
+            for i in range(len(n[ID])):
+                w += self.pb.vf.weakform_neumann_wetting(func, ds_[dind](n[ID][i]))
+
+        return w
+
     # set wetting Robin BCs
     def robin_wetting_bcs(self, bcdict, phi, phidot, ds_, F=None):
         w = ufl.as_ufl(0)

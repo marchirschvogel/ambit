@@ -240,7 +240,11 @@ class AleProblem(problem_base):
 
     # the main function that defines the fluid mechanics problem in terms of symbolic residual and jacobian forms
     def set_variational_forms(self):
-        # internal virtual work
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
+
+    def set_variational_forms_residual(self):
+        # internal "virtual work"
         self.deltaW_int = ufl.as_ufl(0)
 
         for n, M in enumerate(self.domain_ids):
@@ -266,8 +270,10 @@ class AleProblem(problem_base):
 
         self.deltaW_ext = w_neumann + w_robin
 
-        # internal minus external virtual work
+        # internal minus external "virtual work"
         self.weakform_d = self.deltaW_int - self.deltaW_ext
+
+    def set_variational_forms_jacobian(self):
         self.weakform_lin_dd = ufl.derivative(self.weakform_d, self.d, self.dd)
 
     def set_problem_residual_jacobian_forms(self):

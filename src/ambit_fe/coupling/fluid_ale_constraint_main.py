@@ -148,11 +148,23 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         ], is_ghosted
 
     def set_variational_forms(self):
-        self.pbfa.set_variational_forms()
-        self.pbfc.set_variational_forms_coupling()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
+    def set_variational_forms_residual(self):
+        self.pbfa.set_variational_forms_residual()
+        self.pbfc.set_variational_forms_residual_coupling()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        self.pbfa.set_variational_forms_jacobian()
+        self.pbfc.set_variational_forms_jacobian_coupling()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
+        pass
+
+    def set_variational_forms_jacobian_coupling(self):
         self.dcqd = []
         for n in range(self.pbfc.num_coupling_surf):
             self.dcqd.append(ufl.derivative(self.pbfc.cq[n], self.pba.d, self.pba.dd))

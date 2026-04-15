@@ -146,11 +146,19 @@ class FluidmechanicsConstraintProblem(problem_base):
 
     # defines the monolithic coupling forms for constraints and fluid mechanics
     def set_variational_forms(self):
-        self.pbf.set_variational_forms()
-        self.set_variational_forms_coupling()
+        self.set_variational_forms_residual()
+        self.set_variational_forms_jacobian()
 
-    def set_variational_forms_coupling(self):
-        self.cq, self.cq_old, self.dcq, self.dforce = [], [], [], []
+    def set_variational_forms_residual(self):
+        self.pbf.set_variational_forms_residual()
+        self.set_variational_forms_residual_coupling()
+
+    def set_variational_forms_jacobian(self):
+        self.pbf.set_variational_forms_jacobian()
+        self.set_variational_forms_jacobian_coupling()
+
+    def set_variational_forms_residual_coupling(self):
+        self.cq, self.cq_old = [], []
         self.coupfuncs, self.coupfuncs_old, self.coupfuncs_mid = [], [], []
 
         (
@@ -219,9 +227,7 @@ class FluidmechanicsConstraintProblem(problem_base):
                 )
 
             self.cq.append(cq_), self.cq_old.append(cq_old_)
-            self.dcq.append(ufl.derivative(self.cq[-1], self.pbf.v, self.pbf.dv))
 
-            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
             for i in range(len(self.surface_lm_ids[n])):
                 if self.btype_lm[n][i] == "ext":
                     fct_side = None
@@ -250,26 +256,6 @@ class FluidmechanicsConstraintProblem(problem_base):
                         self.coupfuncs_mid[-1],
                         ds_p,
                         F=self.pbf.alevar["Fale_mid"],
-                    )
-
-                    # derivative w.r.t. multiplier
-                    df_ += self.pbf.timefac * self.pbf.vf.flux(
-                        self.pbf.var_v,
-                        ds_p,
-                        w=ufl.constantvalue.zero(self.pbf.ki.dim),
-                        F=self.pbf.alevar["Fale"],
-                    )
-                    df_mid_ += self.pbf.timefac * self.pbf.vf.flux(
-                        self.pbf.var_v,
-                        ds_p,
-                        w=ufl.constantvalue.zero(self.pbf.ki.dim),
-                        F=self.pbf.alevar["Fale_mid"],
-                    )
-                    df_back_ += self.pbf.vf.flux(
-                        self.pbf.var_v,
-                        ds_p,
-                        w=ufl.constantvalue.zero(self.pbf.ki.dim),
-                        F=self.pbf.alevar["Fale"],
                     )
 
                 elif self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
@@ -362,6 +348,149 @@ class FluidmechanicsConstraintProblem(problem_base):
                         returnquantity="active_stress_power",
                     )
 
+                elif self.coupling_params["multiplier_physics"][n]["type"] == "valve_viscosity":
+                    # add to fluid rhs contributions - external power; should be positive, hence minus sign
+                    self.power_coupling += -self.pbf.vf.deltaW_ext_robin_valve(
+                        self.pbf.v,
+                        self.coupfuncs[-1],
+                        ds_p,
+                        fcts=fct_side,
+                        w=self.pbf.alevar["w"],
+                        F=self.pbf.alevar["Fale"],
+                    )
+                    self.power_coupling_old += -self.pbf.vf.deltaW_ext_robin_valve(
+                        self.pbf.v_old,
+                        self.coupfuncs_old[-1],
+                        ds_p,
+                        fcts=fct_side,
+                        w=self.pbf.alevar["w_old"],
+                        F=self.pbf.alevar["Fale_old"],
+                    )
+                    self.power_coupling_mid += -self.pbf.vf.deltaW_ext_robin_valve(
+                        self.pbf.vel_mid,
+                        self.coupfuncs_mid[-1],
+                        ds_p,
+                        fcts=fct_side,
+                        w=self.pbf.alevar["w_mid"],
+                        F=self.pbf.alevar["Fale_mid"],
+                    )
+
+                else:
+                    raise NameError("Unknown multiplier physics type! Choose either pressure or active_stress!")
+
+        if self.pbf.ti.res_eval == "trap":
+            # add to fluid rhs
+            self.pbf.weakform_v += (
+                self.pbf.timefac * self.power_coupling + (1.0 - self.pbf.timefac) * self.power_coupling_old
+            )
+        if self.pbf.ti.res_eval == "midp":
+            # add to fluid rhs
+            self.pbf.weakform_v += self.power_coupling_mid
+        if self.pbf.ti.res_eval == "back":
+            # add to fluid rhs
+            self.pbf.weakform_v += self.power_coupling
+
+        # 3D fluxes
+        self.constr, self.constr_old = (
+            [[]] * self.num_coupling_surf,
+            [[]] * self.num_coupling_surf,
+        )
+
+    def set_variational_forms_jacobian_coupling(self):
+        self.dcq, self.dforce = [], []
+
+        # coupling variational forms and Jacobian contributions
+        for n in range(self.num_coupling_surf):
+            self.dcq.append(ufl.derivative(self.cq[n], self.pbf.v, self.pbf.dv))
+
+            df_, df_mid_, df_back_ = ufl.as_ufl(0), ufl.as_ufl(0), ufl.as_ufl(0)
+            for i in range(len(self.surface_lm_ids[n])):
+                if self.btype_lm[n][i] == "ext":
+                    fct_side = None
+                    bmi = 0  # to grep out ds from bmeasures
+                elif self.btype_lm[n][i] == "int":
+                    fct_side = "+"
+                    bmi = 2  # to grep out dS from bmeasures
+                else:
+                    raise NameError(
+                        "Unknown boundary type for multiplier! Can only be 'ext' (external) or 'int' (internal)."
+                    )
+
+                ds_p = self.pbf.bmeasures[bmi](self.surface_lm_ids[n][i])
+
+                if self.coupling_params["multiplier_physics"][n]["type"] == "pressure":
+                    # derivative w.r.t. multiplier
+                    df_ += self.pbf.timefac * self.pbf.vf.flux(
+                        self.pbf.var_v,
+                        ds_p,
+                        w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                        F=self.pbf.alevar["Fale"],
+                    )
+                    df_mid_ += self.pbf.timefac * self.pbf.vf.flux(
+                        self.pbf.var_v,
+                        ds_p,
+                        w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                        F=self.pbf.alevar["Fale_mid"],
+                    )
+                    df_back_ += self.pbf.vf.flux(
+                        self.pbf.var_v,
+                        ds_p,
+                        w=ufl.constantvalue.zero(self.pbf.ki.dim),
+                        F=self.pbf.alevar["Fale"],
+                    )
+
+                elif self.coupling_params["multiplier_physics"][n]["type"] == "active_stress":
+                    # for safety reasons, we require a membrane model on each of the surfaces we use for applying the active stress multiplier!
+                    assert self.surface_lm_ids[n][i] == self.pbf.bc_dict["membrane"][n]["id"][i]
+                    # assert that there's no active stress model used in the membrane model at that boundary
+                    assert "active_stress" not in self.pbf.bc_dict["membrane"][n]["params"]
+                    # use the same parameters from the membrane model at that boundary
+                    h0, memmodel = (
+                        self.pbf.bc_dict["membrane"][n]["params"]["h0"],
+                        self.pbf.bc_dict["membrane"][n]["params"]["model"],
+                    )
+
+                    if self.coupling_params["multiplier_physics"][n]["dir"] == "iso":
+                        params_ = {
+                            "h0": h0,
+                            "model": memmodel,
+                            "active_stress": {"dir": "iso"},
+                        }
+                    elif self.coupling_params["multiplier_physics"][n]["dir"] == "cl":
+                        assert bool(self.pbf.io.fiber_data)
+                        omega, iota, gamma = (
+                            self.coupling_params["multiplier_physics"][n]["omega"],
+                            self.coupling_params["multiplier_physics"][n]["iota"],
+                            self.coupling_params["multiplier_physics"][n]["gamma"],
+                        )
+                        params_ = {
+                            "h0": h0,
+                            "model": memmodel,
+                            "active_stress": {
+                                "dir": "cl",
+                                "omega": omega,
+                                "iota": iota,
+                                "gamma": gamma,
+                            },
+                        }
+                    else:
+                        raise NameError("Unknown active stress direction! Choose either iso or cl!")
+
+                    ivar_ = {"tau_a": self.coupfuncs[-1]}
+                    ivar_old_ = {"tau_a": self.coupfuncs_old[-1]}
+                    ivar_mid_ = {"tau_a": self.coupfuncs_mid[-1]}
+
+                    if "weight" in self.coupling_params["multiplier_physics"][n].keys():
+                        # active stress weighting for reduced solid
+                        wact_func = fem.Function(self.pbf.V_scalar)
+                        self.pbf.io.readfunction(
+                            wact_func,
+                            self.coupling_params["multiplier_physics"][n]["weight"],
+                        )
+                        self.pbf.actweights.append(wact_func)
+                    else:
+                        self.pbf.actweights.append(None)
+
                     # derivative w.r.t. multiplier
                     df_ += self.pbf.timefac * self.pbf.vf.deltaW_ext_membrane(
                         self.pbf.ki.F(self.pbf.ufluid),
@@ -401,32 +530,6 @@ class FluidmechanicsConstraintProblem(problem_base):
                     )
 
                 elif self.coupling_params["multiplier_physics"][n]["type"] == "valve_viscosity":
-                    # add to fluid rhs contributions - external power; should be positive, hence minus sign
-                    self.power_coupling += -self.pbf.vf.deltaW_ext_robin_valve(
-                        self.pbf.v,
-                        self.coupfuncs[-1],
-                        ds_p,
-                        fcts=fct_side,
-                        w=self.pbf.alevar["w"],
-                        F=self.pbf.alevar["Fale"],
-                    )
-                    self.power_coupling_old += -self.pbf.vf.deltaW_ext_robin_valve(
-                        self.pbf.v_old,
-                        self.coupfuncs_old[-1],
-                        ds_p,
-                        fcts=fct_side,
-                        w=self.pbf.alevar["w_old"],
-                        F=self.pbf.alevar["Fale_old"],
-                    )
-                    self.power_coupling_mid += -self.pbf.vf.deltaW_ext_robin_valve(
-                        self.pbf.vel_mid,
-                        self.coupfuncs_mid[-1],
-                        ds_p,
-                        fcts=fct_side,
-                        w=self.pbf.alevar["w_mid"],
-                        F=self.pbf.alevar["Fale_mid"],
-                    )
-
                     # derivative w.r.t. multiplier
                     df_ += -self.pbf.timefac * self.pbf.vf.deltaW_ext_robin_valve_deriv_visc(
                         self.pbf.v,
@@ -460,29 +563,15 @@ class FluidmechanicsConstraintProblem(problem_base):
             if self.pbf.ti.res_eval == "back":
                 self.dforce.append(df_back_)
 
-        if self.pbf.ti.res_eval == "trap":
-            # add to fluid rhs
-            self.pbf.weakform_v += (
-                self.pbf.timefac * self.power_coupling + (1.0 - self.pbf.timefac) * self.power_coupling_old
-            )
-            # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
-        if self.pbf.ti.res_eval == "midp":
-            # add to fluid rhs
-            self.pbf.weakform_v += self.power_coupling_mid
-            # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
-        if self.pbf.ti.res_eval == "back":
-            # add to fluid rhs
-            self.pbf.weakform_v += self.power_coupling
-            # add to fluid Jacobian
-            self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
-
-        # 3D fluxes
-        self.constr, self.constr_old = (
-            [[]] * self.num_coupling_surf,
-            [[]] * self.num_coupling_surf,
-        )
+        # if self.pbf.ti.res_eval == "trap":
+        #     # add to fluid Jacobian
+        #     self.pbf.weakform_lin_vv += self.pbf.timefac * ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
+        # if self.pbf.ti.res_eval == "midp":
+        #     # add to fluid Jacobian
+        #     self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling_mid, self.pbf.v, self.pbf.dv)
+        # if self.pbf.ti.res_eval == "back":
+        #     # add to fluid Jacobian
+        #     self.pbf.weakform_lin_vv += ufl.derivative(self.power_coupling, self.pbf.v, self.pbf.dv)
 
     def set_multiplier(self, var, p0Da):
         # set pressure functions
