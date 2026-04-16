@@ -339,6 +339,9 @@ if category == "fsi" or category == "fsi_multiphase" or category == "all":
     errs["test_fsi_multiphase_elastocap_neumann_dirichlet 2"] = subprocess.call(
         ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_elastocap_neumann_dirichlet.py"]
     )
+    errs["test_fsi_multiphase_elastocap_neumann_dirichlet 2 restart"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_elastocap_neumann_dirichlet.py", str(4)]
+    )
     errs["test_fsi_multiphase_elastocap_neumann_neumann 2"] = subprocess.call(
         ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_elastocap_neumann_neumann.py"]
     )

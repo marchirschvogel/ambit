@@ -3,6 +3,8 @@
 """
 Multiphase FSI elaso-capillary simulation of a sessile droplet on a soft solid substrate
 Example from M. Shokrpour Roudbari and E. H. van Brummelen, "Binary-Fluid-Solid Interaction Based on the Navier-Stokes-Korteweg Equations", Mathematical Models and Methods in Applied Sciences, 2019
+with a more recent version in E. H. van Brummelen et al. "An adaptive isogeometric analysis approach to elasto-capillary fluid-solid interaction", International Journal for Numerical Methods in Engineering, 2021
+Cases (1,2,3) taken from the latter publication!
 Let's assume a ng-µm-µs unit system, hence viscosities are 1 ng/(µm µs) = 10^{3} mPa s
 """
 
@@ -20,6 +22,8 @@ def main():
     except:
         restart_step = 0
 
+    case = 1
+
     IO_PARAMS = {
         "problem_type": "fsi_multiphase",
         "write_results_every": 10,
@@ -27,7 +31,7 @@ def main():
         "indicate_results_by": "step",
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, -50.0], "coords_b":[350.0, 300.0], "meshsize":[140,140]}, # should be divisible by 7
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, -50.0], "coords_b":[350.0, 300.0], "meshsize":[140,140]}, # should be divisible by 7 - 35,35 - 70,70, 140,140 - 280,280
         "results_to_write": [
             ["displacement"],
             ["velocity", "pressure", "density"],
@@ -36,7 +40,7 @@ def main():
         ],
         "write_initial_fields": True,
         "report_conservation_properties": True,
-        "simname": "fsi_multiphase_elastocapillary_largerdt_m1e-4_wet1",
+        "simname": "fsi_multiphase_elastocapillary"+str(case)+"",
     }
 
     h = 350.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
@@ -55,12 +59,31 @@ def main():
                 np.full(x.shape[1], val),
             )
 
+    # fluid1 is vapour (surrounding), fluid2 is liquid (bubble)
+    if case==1:
+        dt = 0.01e3#0.1e3 # µs
+        rho1 = 1.26e-3 #0.0816 # pg/(µm^3) = 10^{-3} ng/(µm^3)
+        rho2 = 1.26e-3 #0.2408 # pg/(µm^3) = 10^{-3} ng/(µm^3)
+        eta1 = 1412e-3 # 1 mPa s = 10^{-3} ng/(µm µs)
+        eta2 = 1412e-3 # Glycerol - 1 mPa s = 10^{-3} ng/(µm µs)
+        sig = 46e-3 # surface energy density coefficient - mN/m = g/(s^2) = 10^{-3} ng/(µs^2)
+        rho_s = 1.0e-3#12.6e-3 # solid density - 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
+    elif case==2:
+        dt = 0.01e3 # µs
+        rho1 = 0.1e-3 # 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
+        rho2 = 1.26e-3 # 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
+        eta1 = 100e-3 # 1 mPa s = 10^{-3} ng/(µm µs)
+        eta2 = 1412e-3 # Glycerol - 1 mPa s = 10^{-3} ng/(µm µs)
+        sig = 46e-3 # surface energy density coefficient - mN/m = g/(s^2) = 10^{-3} ng/(µs^2)
+        rho_s = 1.0e-3 # solid density - 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
+    else:
+        raise ValueError("Unknown case.")
+
     """
     Parameters for the global time control
     """
-    CONTROL_PARAMS = {"maxtime": 128*1000.0, # µs
-                      "dt": 100.0, # µs
-                      # "numstep_stop": 100,
+    CONTROL_PARAMS = {"maxtime": 10e3, # µs
+                      "dt": dt,
                       "initial_fields": [expr1, None],
                       }
 
@@ -68,21 +91,24 @@ def main():
         "solve_type": "direct",
         "direct_solver": "mumps",   # superlu_dist, mumps
         "tol_res": 1e-8,
-        "tol_inc": 1e-8,
+        "tol_inc": 1e-6,
     }
 
-    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
-    # TIME_PARAMS_FLUID = {"timint": "bdf2"}
-    # TIME_PARAMS_PF    = {"timint": "bdf2"}
-    TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint", "continuity_at_midpoint": True}
-    TIME_PARAMS_PF    = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint"}
+    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "trapezoidal"}
+    TIME_PARAMS_FLUID = {"timint": "bdf2"}
+    TIME_PARAMS_PF    = {"timint": "bdf2"}
+    # TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint", "continuity_at_midpoint": True}
+    # TIME_PARAMS_PF    = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint"}
 
+    E = 3.0e-3 # 1 kPa = 10^{-3} ng/(µm µs^2)
+    nu = 0.499
 
     FEM_PARAMS_SOLID = {
         "order_disp": 2,
         "order_pres": 1,
         "quad_degree": 5,
-        "incompressibility": "no",
+        "incompressibility": "nearly",
+        "bulkmod": E/(3.*(1.-2.*nu)),
     }
 
     FEM_PARAMS_FLUID = {"order_vel": 2,
@@ -133,24 +159,13 @@ def main():
         def evaluate(self, x):
             return np.isclose(x[1], -50.0)
 
-    E = 3.0e-3 # 1 kPa = 10^{-3} ng/(µm µs^2)
-    nu = 0.499
-    # - devide the solid into two portions that could have different material properties
-    MATERIALS_SOLID = {"MAT1": {"stvenantkirchhoff": {"Emod": E, "nu": nu},
-                                "inertia": {"rho0": 12.6e-3}, # 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
-                                "id": locate_solid()}}
-    # MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},
-    #                             "inertia": {"rho0": 12.6e-3},
-    #                             "id": locate_solid()}}
-
-    # fluid1 is vapour (surrounding), fluid2 is liquid (bubble)
-    rho1 = 1.26e-3 #0.0816 # pg/(µm^3) = 10^{-3} ng/(µm^3)
-    rho2 = 1.26e-3 #0.2408 # pg/(µm^3) = 10^{-3} ng/(µm^3)
-    eta1 = 1412e-3 # mPa s = 10^{-3} ng/(µm µs)
-    eta2 = 1412e-3 # mPa s = 10^{-3} ng/(µm µs)
-    sig = 46e-3 # surface energy density coefficient - mN/m = g/(s^2) = 10^{-3} ng/(µs^2)
 
     zeta = 0.0
+
+    MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": E/3.},
+                                # "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
+                                "inertia": {"rho0": rho_s},
+                                "id": locate_solid()}}
 
     alpha = (rho1-rho2)/(rho1+rho2)
     sigtilde = sig #3.*sig/(2.*np.sqrt(2.))
@@ -161,32 +176,22 @@ def main():
 
     MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}, "id": locate_fluid()}}
 
-    m = 1e-4 # should be rather low if capillary stress is rather high
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
+    m = 1e-2 # should be rather low if capillary stress is rather high
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "constant", # constant, degenerate
                                                   "epsilon": 0.0,
                                                   "exponent": 1.0,
-                                                  "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
+                                                  # "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
+                                                  "M0": m,                 # Mobility [length^5/(pressure time)]
                                                   "D": sigtilde/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
                                                   "kappa": sigtilde*eps,   # Gradient energy coefficient [pressure/length]
-                                                  "alpha": alpha},         # Pressure factor in diffusive flux
+                                                  "alpha": None},         # Pressure factor in diffusive flux
                                                   "id": locate_fluid()}}
-
-    class locate_all:
-        def evaluate(self, x):
-            return np.full(x.shape[1], True, dtype=bool)
 
     class locate_corner:
         def evaluate(self, x):
             ctr_x = np.isclose(x[0], 0.0)
             ctr_y = np.isclose(x[1], 0.0)
             return np.logical_and(ctr_x, ctr_y)
-
-    # define your load curves here (syntax: tcX refers to curve X, to be used in BC_DICT key 'curve' : [X,0,0], or 'curve' : X)
-    # class time_curves:
-    #     def tc1(self, t):
-    #         Tp = 0.5
-    #         pmax = 3.0 # kPa
-    #         return -pmax * np.sin(2.*np.pi*t/Tp)
 
 
     BC_DICT_SOLID = {
@@ -205,7 +210,7 @@ def main():
                       {"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}],
     }
 
-    BC_DICT_PF = { }
+    BC_DICT_PF = { }# "dirichlet": [{"id": [locate_top(),locate_right()], "dir": "all", "val": -1.0}] }
 
 
     BC_DICT_LM = {"dirichlet": [{"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}]}
@@ -218,7 +223,6 @@ def main():
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_PF, FEM_PARAMS_ALE],
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_PF, MATERIALS_ALE],
         [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_PF, BC_DICT_ALE, BC_DICT_LM],
-        # time_curves=time_curves(),
         coupling_params=[COUPLING_PARAMS_FSI,COUPLING_PARAMS_MULTIPHASE],
     )
 

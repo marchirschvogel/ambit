@@ -458,8 +458,10 @@ class FSIProblem(problem_base):
         if self.fsi_system == "neumann_dirichlet":
             # solid reaction forces
             self.r_reac_sol = fem.petsc.assemble_vector(self.pbs.res_u)
+            with self.r_reac_sol.localForm() as r_local: r_local.set(0.0)
             # reaction forces on fluid side
             self.r_reac_on_fluid = fem.petsc.assemble_vector(self.pbf.res_v)
+            with self.r_reac_on_fluid.localForm() as r_local: r_local.set(0.0)
 
             # get interface solid rhs vector
             self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
@@ -675,7 +677,6 @@ class FSIProblem(problem_base):
 
                 self.Diag_sol.transposeMatMult(self.K_up_work, result=self.K_vps)
                 self.K_vps.assemble()
-
 
     def evaluate_residual_dbc_coupling(self):
         # we need a vector representation of ufluid to apply in solid DBCs

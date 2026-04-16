@@ -1765,6 +1765,7 @@ class IO_ale(IO):
         vecs_to_read = {}
         vecs_to_read[pb.d] = "d"
         vecs_to_read[pb.d_old] = "d_old"
+        vecs_to_read[pb.d_veryold] = "d_veryold"
         vecs_to_read[pb.w_old] = "w_old"
 
         for key in vecs_to_read:
@@ -1815,6 +1816,7 @@ class IO_ale(IO):
         vecs_to_write = {}
         vecs_to_write[pb.d] = "d"
         vecs_to_write[pb.d_old] = "d_old"
+        vecs_to_write[pb.d_veryold] = "d_veryold"
         vecs_to_write[pb.w_old] = "w_old"
 
         for key in vecs_to_write:
