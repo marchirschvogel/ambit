@@ -19,13 +19,7 @@ from .. import boundaryconditions
 from ..mpiroutines import allgather_vec
 
 from .fsi_main import FSIProblem
-from .fluid_ale_main import FluidmechanicsAleProblem
-from .fluid_flow0d_main import FluidmechanicsFlow0DProblem
 from .fluid_ale_flow0d_main import FluidmechanicsAleFlow0DProblem
-from ..fluid.fluid_main import FluidmechanicsProblem
-from ..solid.solid_main import SolidmechanicsProblem
-from ..flow0d.flow0d_main import Flow0DProblem
-from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
 
 

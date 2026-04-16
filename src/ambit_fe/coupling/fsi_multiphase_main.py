@@ -20,10 +20,6 @@ from ..mpiroutines import allgather_vec
 
 from .fsi_main import FSIProblem
 from .fluid_ale_multiphase_main import FluidmechanicsAleMultiphaseProblem
-from .fluid_ale_main import FluidmechanicsAleProblem
-from ..fluid.fluid_main import FluidmechanicsProblem
-from ..solid.solid_main import SolidmechanicsProblem
-from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
 
 

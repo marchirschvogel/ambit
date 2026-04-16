@@ -21,9 +21,7 @@ from ..mpiroutines import allgather_vec
 
 from .fluid_ale_main import FluidmechanicsAleProblem
 from .fluid_multiphase_main import FluidmechanicsMultiphaseProblem
-from ..fluid.fluid_main import FluidmechanicsProblem
 from ..fluid.fluid_main import FluidmechanicsSolverPrestr
-from ..ale.ale_main import AleProblem
 from ..base import problem_base, solver_base
 
 

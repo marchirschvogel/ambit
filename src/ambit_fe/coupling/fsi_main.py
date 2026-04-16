@@ -19,8 +19,6 @@ from .. import utilities, meshutils
 from .. import boundaryconditions
 
 from ..solid.solid_main import SolidmechanicsProblem
-from ..ale.ale_main import AleProblem
-from ..fluid.fluid_main import FluidmechanicsProblem
 from .fluid_ale_main import FluidmechanicsAleProblem
 
 from ..base import problem_base, solver_base
