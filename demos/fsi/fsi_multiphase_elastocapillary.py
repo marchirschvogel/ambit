@@ -31,7 +31,10 @@ def main():
         "indicate_results_by": "step",
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, -50.0], "coords_b":[350.0, 300.0], "meshsize":[140,140]}, # should be divisible by 7 - 35,35 - 70,70, 140,140 - 280,280
+        # "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, -50.0], "coords_b":[500.0, 500.0], "meshsize":[250,250]},
+        "mesh_domain": basepath + "/input/droplet-substrate_domain.xdmf",
+        # "mesh_boundary": basepath + "/input/droplet-substrate_boundary.xdmf", # - not needed: we use locator functions!
+        "mesh_encoding": "ASCII", # HDF5, ASCII
         "results_to_write": [
             ["displacement"],
             ["velocity", "pressure", "density"],
@@ -43,8 +46,9 @@ def main():
         "simname": "fsi_multiphase_elastocapillary"+str(case)+"",
     }
 
-    h = 350.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
-    eps = 1.28*h
+    # h = 350.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
+    # eps = 1.28*h
+    eps = 1.0 # 1 µm (E. H. van Brummelen et al. 2021)
 
     class expr1:
         def __init__(self):
@@ -146,14 +150,14 @@ def main():
     # locators for boundary conditions
     class locate_right:
         def evaluate(self, x):
-            return np.isclose(x[0], 350.0)
+            return np.isclose(x[0], 500.0)
     class locate_left:
         def evaluate(self, x):
             return np.isclose(x[0], 0.0)
 
     class locate_top:
         def evaluate(self, x):
-            return np.isclose(x[1], 300.0)
+            return np.isclose(x[1], 500.0)
 
     class locate_bottom:
         def evaluate(self, x):

@@ -189,61 +189,12 @@ class FluidmechanicsProblem(problem_base):
 
             self.num_dupl = self.num_domains
 
-            (
-                self.io.submshes_emap,
-                inv_emap,
-                self.io.sub_mt_d,
-                self.io.sub_mt_b,
-            ) = (
-                {},
-                {},
-                {},
-                {},
-            )
-
-            for m, mp in enumerate(self.io.duplicate_mesh_domains):
-                self.io.submshes_emap[m + 1] = mesh.create_submesh(
-                    self.mesh,
-                    self.mesh.topology.dim,
-                    self.mt_d.indices[np.isin(self.mt_d.values, mp)],
-                )[0:2]
-
-            cell_imap = self.mesh.topology.index_map(self.mesh.topology.dim)
-            num_cells = cell_imap.size_local + cell_imap.num_ghosts
-
             for m, mp in enumerate(self.io.duplicate_mesh_domains):
                 self.V_p__[m + 1] = fem.functionspace(
                     self.io.submshes_emap[m + 1][0],
                     ("Lagrange", self.order_pres),
                 )
 
-                inv_emap[m + 1] = np.full(num_cells, -1)
-
-            for m, mp in enumerate(self.io.duplicate_mesh_domains):
-                self.io.entity_maps.append(self.io.submshes_emap[m + 1][1])
-                # transfer meshtags to submesh
-                self.io.sub_mt_d[m + 1] = meshutils.meshtags_parent_to_child(
-                    self.mt_d,
-                    self.io.submshes_emap[m + 1][0],
-                    self.io.submshes_emap[m + 1][1],
-                    self.mesh,
-                    "domain",
-                )
-                self.io.sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
-                    self.mt_b,
-                    self.io.submshes_emap[m + 1][0],
-                    self.io.submshes_emap[m + 1][1],
-                    self.mesh,
-                    "boundary",
-                )
-
-                dxp, bmeasuresp = self.io.create_integration_measures(
-                    self.io.submshes_emap[m + 1][0],
-                    [self.io.sub_mt_d[m + 1], self.io.sub_mt_b[m + 1], None],
-                    self.quad_degree,
-                )
-                # self.dx_p.append(dxp)
-                # self.bmeasures_p.append(bmeasuresp)
                 self.dx_p.append(self.dx)
                 self.bmeasures_p.append(self.bmeasures)
 
