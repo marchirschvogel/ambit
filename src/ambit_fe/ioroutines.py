@@ -253,16 +253,16 @@ class IO:
                                 facets_bc_indices.append(facets_bc)
                                 facets_bc_markers.append(np.full_like(facets_bc, id_))
 
-                        if id_>0:
-                            # stack all facets/markers
-                            facets_bc_indices = np.hstack(facets_bc_indices).astype(np.int32)
-                            facets_bc_markers = np.hstack(facets_bc_markers).astype(np.int32)
-                            sorter_facets_bc = np.argsort(facets_bc_indices)
+            if id_>0:
+                # stack all facets/markers
+                facets_bc_indices = np.hstack(facets_bc_indices).astype(np.int32)
+                facets_bc_markers = np.hstack(facets_bc_markers).astype(np.int32)
+                sorter_facets_bc = np.argsort(facets_bc_indices)
 
-                            facet_tag = mesh.meshtags(msh, codim, facets_bc_indices[sorter_facets_bc], facets_bc_markers[sorter_facets_bc])
-                            ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": qdeg})
+                facet_tag = mesh.meshtags(msh, codim, facets_bc_indices[sorter_facets_bc], facets_bc_markers[sorter_facets_bc])
+                ds_loc = ufl.Measure("ds", domain=msh, subdomain_data=facet_tag, metadata={"quadrature_degree": qdeg})
 
-                            bmeasures.append(ds_loc)
+                bmeasures.append(ds_loc)
 
         if bool(self.duplicate_mesh_domains):
             self.create_fluid_duplicate_pressure_mesh()
@@ -516,51 +516,6 @@ class IO:
         viewer.setFileName(self.output_path + "/" + fname)
         mat.view(viewer=viewer)
         viewer.destroy()
-
-    # for duplicate (fluid) pressure nodes at an internal boundary, we can split the domain into two subdomains for the pressure function space
-    def create_fluid_duplicate_pressure_mesh(self):
-        (
-            self.submshes_emap,
-            self.sub_mt_d,
-            self.sub_mt_b,
-        ) = (
-            {},
-            {},
-            {},
-        )
-        for m, mp in enumerate(self.duplicate_mesh_domains):
-            cells_part_ = []
-            if all(isinstance(x, int) for x in mp):
-                for id_ in mp:
-                    cells_part_.append(self.mt_d.indices[self.mt_d.values == id_])
-            else: # can only be a locator function otherwise
-                for i, lc in enumerate(mp):
-                    cells_part_.append(mesh.locate_entities(self.mesh, self.mesh.topology.dim, lc.evaluate))
-            cells_part = np.concatenate(cells_part_).ravel()
-
-            self.submshes_emap[m + 1] = mesh.create_submesh(
-                self.mesh,
-                self.mesh.topology.dim,
-                cells_part,
-            )[0:2]
-
-        for m, mp in enumerate(self.duplicate_mesh_domains):
-            self.entity_maps.append(self.submshes_emap[m + 1][1])
-            # transfer meshtags to submesh
-            self.sub_mt_d[m + 1] = meshutils.meshtags_parent_to_child(
-                self.mt_d,
-                self.submshes_emap[m + 1][0],
-                self.submshes_emap[m + 1][1],
-                self.mesh,
-                "domain",
-            )
-            self.sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
-                self.mt_b,
-                self.submshes_emap[m + 1][0],
-                self.submshes_emap[m + 1][1],
-                self.mesh,
-                "boundary",
-            )
 
 class IO_solid(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
@@ -1725,6 +1680,51 @@ class IO_fluid(IO):
                             pb.resultsfiles[res + str(m + 1)].close()
                     else:
                         pb.resultsfiles[res].close()
+
+    # for duplicate (fluid) pressure nodes at an internal boundary, we can split the domain into two subdomains for the pressure function space
+    def create_fluid_duplicate_pressure_mesh(self):
+        (
+            self.submshes_emap,
+            self.sub_mt_d,
+            self.sub_mt_b,
+        ) = (
+            {},
+            {},
+            {},
+        )
+        for m, mp in enumerate(self.duplicate_mesh_domains):
+            cells_part_ = []
+            if all(isinstance(x, int) for x in mp):
+                for id_ in mp:
+                    cells_part_.append(self.mt_d.indices[self.mt_d.values == id_])
+            else: # can only be a locator function otherwise
+                for i, lc in enumerate(mp):
+                    cells_part_.append(mesh.locate_entities(self.mesh, self.mesh.topology.dim, lc.evaluate))
+            cells_part = np.concatenate(cells_part_).ravel()
+
+            self.submshes_emap[m + 1] = mesh.create_submesh(
+                self.mesh,
+                self.mesh.topology.dim,
+                cells_part,
+            )[0:2]
+
+        for m, mp in enumerate(self.duplicate_mesh_domains):
+            self.entity_maps.append(self.submshes_emap[m + 1][1])
+            # transfer meshtags to submesh
+            self.sub_mt_d[m + 1] = meshutils.meshtags_parent_to_child(
+                self.mt_d,
+                self.submshes_emap[m + 1][0],
+                self.submshes_emap[m + 1][1],
+                self.mesh,
+                "domain",
+            )
+            self.sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
+                self.mt_b,
+                self.submshes_emap[m + 1][0],
+                self.submshes_emap[m + 1][1],
+                self.mesh,
+                "boundary",
+            )
 
 
 class IO_ale(IO):

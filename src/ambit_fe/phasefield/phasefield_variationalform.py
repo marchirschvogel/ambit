@@ -47,7 +47,13 @@ class variationalform(variationalform_base):
         return coeff * self.var_mu * dboundary
 
     def weakform_robin_wetting(self, phi, coeff, dboundary, F=None):
-        return ((3.0/4.0) * (phi**2.0 - 1.0) * coeff * self.var_mu) * dboundary
+        return (coeff * (phi**2.0 - 1.0) * self.var_mu) * dboundary
+
+    def weakform_neumann_flux(self, coeff, dboundary, F=None):
+        return coeff * self.var_phi * dboundary
+
+    def weakform_robin_flux(self, phi, coeff, dboundary, F=None):
+        return (coeff * 0.5*(1.0 - phi) * self.var_phi) * dboundary
 
 
 # gradients of a scalar field transform according to:

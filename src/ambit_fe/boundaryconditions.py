@@ -965,6 +965,7 @@ class boundary_cond_phasefield(boundary_cond):
         ds_,
         funcs_to_update=None,
         funcsexpr_to_update=None,
+        bspec="wetting",
     ):
         w = ufl.as_ufl(0)
 
@@ -1003,13 +1004,18 @@ class boundary_cond_phasefield(boundary_cond):
             else:
                 raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
-            for i in range(len(n[ID])):
-                w += self.pb.vf.weakform_neumann_wetting(func, ds_[dind](n[ID][i]))
-
+            if bspec == "wetting":
+                for i in range(len(n[ID])):
+                    w += self.pb.vf.weakform_neumann_wetting(func, ds_[dind](n[ID][i]))
+            elif bspec == "flux":
+                for i in range(len(n[ID])):
+                    w += self.pb.vf.weakform_neumann_flux(func, ds_[dind](n[ID][i]))
+            else:
+                raise NameError("Unknown type option for phasefield Neumann BC!")
         return w
 
-    # set wetting Robin BCs
-    def robin_wetting_bcs(self, bcdict, phi, phidot, ds_, F=None):
+    # set Robin BCs
+    def robin_bcs(self, bcdict, phi, phidot, ds_, F=None, bspec="wetting"):
         w = ufl.as_ufl(0)
 
         for b in bcdict:
@@ -1019,14 +1025,22 @@ class boundary_cond_phasefield(boundary_cond):
             if "is_locator" in b.keys(): dind=2
             if "id_loc" in b.keys(): ID="id_loc"
 
-            btype = b.get("type", "wet1")
+            # may be an expression
+            coeff = b["coeff"]
+            if inspect.isclass(coeff):
+                coeff_expr = coeff()
+                coeff_ = fem.Function(self.Vdisc_scalar)
+                coeff_.interpolate(coeff_expr.evaluate)
+            else:
+                coeff_ = coeff
 
-            if btype == "wet1":
-                # may be an expression
-                coeff = b["coeff"]
-
+            if bspec == "wetting":
                 for i in range(len(b[ID])):
-                    w += self.pb.vf.weakform_robin_wetting(phi, coeff, ds_[dind](b[ID][i]))
+                    w += self.pb.vf.weakform_robin_wetting(phi, coeff_, ds_[dind](b[ID][i]))
+
+            elif bspec == "flux":
+                for i in range(len(b[ID])):
+                    w += self.pb.vf.weakform_robin_flux(phi, coeff_, ds_[dind](b[ID][i]))
 
             else:
                 raise NameError("Unknown type option for Robin wetting BC!")

@@ -15,47 +15,28 @@ class sol_utils:
     def __init__(self, solver):
         self.solver = solver
 
-    def catch_solver_errors(self, resnorm=0, incnorm=0, maxresval=1e16, maxincval=1e16, linconv=1):
+    def catch_solver_errors(self, resnorm=0, incnorm=0, maxresval=1e16, maxincval=1e16, linconv=1, report=True):
         err = 0
 
         if np.isnan(resnorm):
-            utilities.print_status(
-                "NaN encountered. Reset Newton and perform PTC adaption.",
-                self.solver.comm,
-            )
-
+            if report: utilities.print_status("NaN encountered.", self.solver.comm)
             err = 1
 
         if resnorm >= maxresval:
-            utilities.print_status(
-                "Large residual > max val %.1E encountered. Reset Newton and perform PTC adaption." % (maxresval),
-                self.solver.comm,
-            )
+            if report: utilities.print_status("Large residual > max val %.1E encountered." % (maxresval), self.solver.comm)
 
             err = 1
 
         if incnorm >= maxincval:
-            utilities.print_status(
-                "Large increment > max val %.1E encountered. Reset Newton and perform PTC adaption." % (maxincval),
-                self.solver.comm,
-            )
-
+            if report: utilities.print_status("Large increment > max val %.1E encountered." % (maxincval), self.solver.comm)
             err = 1
 
         if np.isinf(incnorm):
-            utilities.print_status(
-                "Inf encountered. Reset Newton and perform PTC adaption.",
-                self.solver.comm,
-            )
-
+            if report: utilities.print_status("Inf encountered.",self.solver.comm)
             err = 1
 
         if linconv < 0:  # values smaller 0 indicate divergence of PETSc ksp method
-            utilities.print_status(
-                "Linear solver diverged. Reset Newton and perform PTC adaption.",
-                self.solver.comm,
-            )
-
+            if report: utilities.print_status("Linear solver diverged.", self.solver.comm)
             err = 1
 
         return err

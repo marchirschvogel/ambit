@@ -938,13 +938,24 @@ class solver_nonlinear:
                             linconv=linconv,
                         )
                     )
+                if self.ignore_unconverged:
+                    err.append(
+                        self.solutils.catch_solver_errors(
+                            resnorm=max(self.resnorms[npr].values()),
+                            incnorm=max(self.incnorms[npr].values()),
+                            maxresval=self.maxresval,
+                            maxincval=self.maxincval,
+                            linconv=linconv,
+                            report=False,
+                        )
+                    )
 
             # iteration update after all problems have been solved
             it += 1
             self.ni_all += 1
 
             # now check if errors occurred
-            if any(err):
+            if any(err) and self.divcont == "PTC":
                 self.PTC = True
                 # reset Newton step
                 it, k_PTC = 1, self.k_PTC_initial
@@ -956,7 +967,7 @@ class solver_nonlinear:
                         self.PTC_randadapt_range[1],
                     )
 
-                utilities.print_status("PTC factor: %.4f" % (k_PTC), self.comm)
+                utilities.print_status("Reset Newton and perform PTC adaption. PTC factor: %.4f" % (k_PTC), self.comm)
 
                 counter_adapt += 1
 
@@ -988,6 +999,9 @@ class solver_nonlinear:
                 self.pb[npr].destroy()
                 raise RuntimeError("Newton did not converge after %i iterations!" % (it))
             else: # use with care...
+                if any(err):
+                    self.pb[npr].destroy()
+                    raise RuntimeError("Errors encountered! Newton finally terminates...")
                 self.unc_stp.append(t)
                 utilities.print_status("*** WARNING: Newton did not converge, but continuation is requested! ***", self.comm)
 

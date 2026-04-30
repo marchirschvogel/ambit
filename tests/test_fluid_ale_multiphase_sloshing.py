@@ -45,11 +45,7 @@ def test_main():
 
     class expr1:
         def __init__(self):
-            self.t = 0
-            self.eps = 1e0
             self.h_0 = 0.6
-
-            self.x_c = np.asarray([0.5, 0.5, 0.0])
 
         def evaluate(self, x):
 

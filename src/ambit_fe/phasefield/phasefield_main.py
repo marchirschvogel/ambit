@@ -116,6 +116,29 @@ class PhasefieldProblem(problem_base):
             ("Lagrange", self.order_mu),
         )
 
+        # type of discontinuous function spaces
+        if (
+            str(self.mesh.ufl_cell()) == "tetrahedron"
+            or str(self.mesh.ufl_cell()) == "triangle"
+            or str(self.mesh.ufl_cell()) == "triangle3D"
+        ):
+            dg_type = "DG"
+            if (self.order_phi > 1 or self.order_mu > 1) and self.quad_degree < 3:
+                raise ValueError("Use at least a quadrature degree of 3 or more for higher-order meshes!")
+        elif (
+            str(self.mesh.ufl_cell()) == "hexahedron"
+            or str(self.mesh.ufl_cell()) == "quadrilateral"
+            or str(self.mesh.ufl_cell()) == "quadrilateral3D"
+        ):
+            dg_type = "DQ"
+            if (self.order_phi > 1 or self.order_mu > 1) and self.quad_degree < 5:
+                raise ValueError("Use at least a quadrature degree of 5 or more for higher-order meshes!")
+        else:
+            raise NameError("Unknown cell/element type!")
+
+        self.Vd_phi_scalar = fem.functionspace(self.mesh, (dg_type, self.order_phi - 1))
+        self.Vd_mu_scalar = fem.functionspace(self.mesh, (dg_type, self.order_mu - 1))
+
         # for output writing - function spaces on the degree of the mesh
         self.mesh_degree = self.mesh._ufl_domain._ufl_coordinate_element._degree
         self.V_out_scalar = fem.functionspace(self.mesh, ("Lagrange", self.mesh_degree))
@@ -175,6 +198,7 @@ class PhasefieldProblem(problem_base):
         self.bc = boundaryconditions.boundary_cond_phasefield(
             self,
             V_field=self.V_phi,
+            Vdisc_scalar=self.Vd_phi_scalar,
         )
         self.bc_dict = bc_dict
         self.dbcs = []
@@ -266,45 +290,91 @@ class PhasefieldProblem(problem_base):
                 self.bmeasures,
                 funcs_to_update=self.ti.funcs_to_update,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update,
+                bspec="wetting",
             )
             w_neumann_wetting_old = self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
                 funcs_to_update=self.ti.funcs_to_update_old,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
+                bspec="wetting",
             )
             w_neumann_wetting_mid = self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
                 funcs_to_update=self.ti.funcs_to_update_mid,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
+                bspec="wetting",
             )
         if "neumann_flux" in self.bc_dict.keys():
             self.have_neumann_flux = True
-            raise RuntimeError("Currently, flux Neumann conditions are supported in phase field model!")
+            w_neumann_flux = self.bc.neumann_bcs(
+                self.bc_dict["neumann_flux"],
+                self.bmeasures,
+                funcs_to_update=self.ti.funcs_to_update,
+                funcsexpr_to_update=self.ti.funcsexpr_to_update,
+                bspec="flux",
+            )
+            w_neumann_flux_old = self.bc.neumann_bcs(
+                self.bc_dict["neumann_flux"],
+                self.bmeasures,
+                funcs_to_update=self.ti.funcs_to_update_old,
+                funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
+                bspec="flux",
+            )
+            w_neumann_flux_mid = self.bc.neumann_bcs(
+                self.bc_dict["neumann_flux"],
+                self.bmeasures,
+                funcs_to_update=self.ti.funcs_to_update_mid,
+                funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
+                bspec="flux",
+            )
         if "robin_wetting" in self.bc_dict.keys():
             self.have_robin_wetting = True
-            w_robin_wetting = self.bc.robin_wetting_bcs(
+            w_robin_wetting = self.bc.robin_bcs(
                 self.bc_dict["robin_wetting"],
                 self.phi,
                 self.phidot_expr,
                 self.bmeasures,
+                bspec="wetting",
             )
-            w_robin_wetting_old = self.bc.robin_wetting_bcs(
+            w_robin_wetting_old = self.bc.robin_bcs(
                 self.bc_dict["robin_wetting"],
                 self.phi_old,
                 self.phidot_old,
                 self.bmeasures,
+                bspec="wetting",
             )
-            w_robin_wetting_mid = self.bc.robin_wetting_bcs(
+            w_robin_wetting_mid = self.bc.robin_bcs(
                 self.bc_dict["robin_wetting"],
                 self.phi_mid,
                 self.phidot_mid,
                 self.bmeasures,
+                bspec="wetting",
             )
         if "robin_flux" in self.bc_dict.keys():
             self.have_robin_flux = True
-            raise RuntimeError("Currently, flux Robin conditions are supported in phase field model!")
+            w_robin_flux = self.bc.robin_bcs(
+                self.bc_dict["robin_flux"],
+                self.phi,
+                self.phidot_expr,
+                self.bmeasures,
+                bspec="flux",
+            )
+            w_robin_flux_old = self.bc.robin_bcs(
+                self.bc_dict["robin_flux"],
+                self.phi_old,
+                self.phidot_old,
+                self.bmeasures,
+                bspec="flux",
+            )
+            w_robin_flux_mid = self.bc.robin_bcs(
+                self.bc_dict["robin_flux"],
+                self.phi_mid,
+                self.phidot_mid,
+                self.bmeasures,
+                bspec="flux",
+            )
 
         if self.ti.res_eval == "trap":
             # phase field residual
