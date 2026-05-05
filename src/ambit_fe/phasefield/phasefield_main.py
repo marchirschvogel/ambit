@@ -383,7 +383,7 @@ class PhasefieldProblem(problem_base):
             if self.have_neumann_flux:
                 self.weakform_phi += -(self.timefac * w_neumann_flux + (1.-self.timefac) * w_neumann_flux_old)
             if self.have_robin_flux:
-                self.weakform_phi += -(self.timefac * w_robin_flux + (1.-self.timefac) * w_robin_flux_old)
+                self.weakform_phi += (self.timefac * w_robin_flux + (1.-self.timefac) * w_robin_flux_old)
             # chemical potential residual
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
@@ -403,7 +403,7 @@ class PhasefieldProblem(problem_base):
             if self.have_neumann_flux:
                 self.weakform_phi += -w_neumann_flux_mid
             if self.have_robin_flux:
-                self.weakform_phi += -w_robin_flux_mid
+                self.weakform_phi += w_robin_flux_mid
             # chemical potential residual
             if not self.ti.potential_at_midpoint:
                 self.weakform_mu = self.potential
@@ -423,7 +423,7 @@ class PhasefieldProblem(problem_base):
             if self.have_neumann_flux:
                 self.weakform_phi += -w_neumann_flux
             if self.have_robin_flux:
-                self.weakform_phi += -w_robin_flux
+                self.weakform_phi += w_robin_flux
             # chemical potential residual
             self.weakform_mu = self.potential
             if self.have_neumann_wetting:

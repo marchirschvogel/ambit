@@ -14,21 +14,23 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     # cases (1,2) from Eikelder et al. (2024), Brunk and Eikelder (2026)
-    case = 1
+    case = 2
 
     IO_PARAMS = {
         # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations
         "problem_type": "fluid_multiphase",
         # at which step frequency to write results (set to 0 in order to not write any output)
         "write_results_every": 1,
+        "write_restart_every": -1,
+        "restart_step": 0,
         # where to write the output to
         "output_path": basepath + "/tmp/",
         # mesh command that uses dolfinx internal mesh creation of simple domains (here a rectangular 2D grid)
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[64,128]}, # 32,64   64,128   128,256
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[128,256]}, # 32,64   64,128   128,256
         # which results to write
         "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"],"counters"],
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
-        "simname": "fluid_multiphase_rising_bubble"+str(case)+"_exp1.0_BDF2_eps0.64_-11",
+        "simname": "fluid_multiphase_rising_bubble"+str(case),
         # write the initial fields (e.g., the phase field, for visualization/checks)
         "write_initial_fields": True,
         # report mass and phase field conservation
@@ -86,7 +88,6 @@ def main():
         "maxiter": 10,
         "tol_res": [1e-5, 1e-5, 1e-5, 1e-5],
         "tol_inc": [1e-3, 1e-3, 1e-3, 1e-3],
-        "ignore_unconverged": True, # badass, but we might have some time steps that stagnate... :-/
     }
 
     """
@@ -119,9 +120,15 @@ def main():
     Finite element parameters for phase field model (Cahn-Hilliard equations): here linear finite elements for both phase (phi) and potential (mu)
     """
     FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 9,
-                     "phi_range" : [-1.0, 1.0]}   # [-1.0, 1.0], [0.0, 1.0]
+                     "phi_range" : [-1.0, 1.0]}
 
-    COUPLING_PARAMS = {"capillary_force_from_korteweg_stress": False}
+    """
+    Parameters that govern the coupling between fluid and phase field model
+    """
+    COUPLING_PARAMS = {"capillary_force_from_korteweg_stress": False,  # get capillary force from divergence of Korteweg stress; if False, use "phi \grad mu" as bulk capillary "body" force (same in theory, but has impact if fluid carries Neumann boundary conditions - if the interface could exert a force on the fluid boundary)
+                       "clip_phi_range": True,  # clip phi range such that material parameters (density, viscosity) are not affected by phi overshoots...
+                       "smooth_clip": "cubic",  # None, "cubic", "quintic" - how to smooth the clipped region in case "clip_phi_range" is True
+                       "epsilon_clip": 1e-3}  # smoothing parameter ("smooth_clip":None is reproduced for epsilon --> 0)
 
     # fluid1 is surrounding, fluid2 is bubble
     if case==1:

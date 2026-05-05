@@ -62,10 +62,12 @@ class boundary_cond:
 
             func = fem.Function(V_dbc)
 
+            direction = d.get("dir", "all")
+
             if "curve" in d.keys():
                 assert "val" not in d.keys() and "expression" not in d.keys() and "file" not in d.keys() and "fileseries" not in d.keys()
                 load = expression.template_vector(dim=self.dim)
-                if d["dir"] == "all":
+                if direction == "all":
                     curve_x, curve_y, curve_z = (
                         d["curve"][0],
                         d["curve"][1],
@@ -164,7 +166,7 @@ class boundary_cond:
             else:
                 raise RuntimeError("Need to have 'curve', 'val', 'expression', 'file', or 'fileseries' specified!")
 
-            if d["dir"] == "all":
+            if direction == "all":
                 if "id" in d.keys():
                     if all(isinstance(x, int) for x in d["id"]):
                         nodes_bc = fem.locate_dofs_topological(V_dbc, codim, mdata.indices[np.isin(mdata.values, d["id"])])
@@ -178,7 +180,7 @@ class boundary_cond:
                     nodes_bc = fem.locate_dofs_topological(V_dbc, codim, cells)
                 dbcs.append(fem.dirichletbc(func, nodes_bc))
 
-            elif d["dir"] == "x":
+            elif direction == "x":
                 if "id" in d.keys():
                     if all(isinstance(x, int) for x in d["id"]):
                         nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0),codim, mdata.indices[np.isin(mdata.values, d["id"])])
@@ -192,7 +194,7 @@ class boundary_cond:
                     nodes_bc_x = fem.locate_dofs_topological(V_dbc.sub(0), codim, cells)
                 dbcs.append(fem.dirichletbc(func.sub(0), nodes_bc_x))
 
-            elif d["dir"] == "y":
+            elif direction == "y":
                 if "id" in d.keys():
                     if all(isinstance(x, int) for x in d["id"]):
                         nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1),codim, mdata.indices[np.isin(mdata.values, d["id"])])
@@ -206,7 +208,7 @@ class boundary_cond:
                     nodes_bc_y = fem.locate_dofs_topological(V_dbc.sub(1), codim, cells)
                 dbcs.append(fem.dirichletbc(func.sub(1), nodes_bc_y))
 
-            elif d["dir"] == "z":
+            elif direction == "z":
                 if "id" in d.keys():
                     if all(isinstance(x, int) for x in d["id"]):
                         nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2),codim, mdata.indices[np.isin(mdata.values, d["id"])])
@@ -220,16 +222,16 @@ class boundary_cond:
                     nodes_bc_z = fem.locate_dofs_topological(V_dbc.sub(2), codim, cells)
                 dbcs.append(fem.dirichletbc(func.sub(2), nodes_bc_z))
 
-            elif d["dir"] == "all_by_dofs":
+            elif direction == "all_by_dofs":
                 dbcs.append(fem.dirichletbc(func, d["dofs"]))
 
-            elif d["dir"] == "x_by_dofs":
+            elif direction == "x_by_dofs":
                 dbcs.append(fem.dirichletbc(func.sub(0), d["dofs"]))
 
-            elif d["dir"] == "y_by_dofs":
+            elif direction == "y_by_dofs":
                 dbcs.append(fem.dirichletbc(func.sub(1), d["dofs"]))
 
-            elif d["dir"] == "z_by_dofs":
+            elif direction == "z_by_dofs":
                 dbcs.append(fem.dirichletbc(func.sub(2), d["dofs"]))
 
             else:
@@ -1040,7 +1042,7 @@ class boundary_cond_phasefield(boundary_cond):
 
             elif bspec == "flux":
                 for i in range(len(b[ID])):
-                    w += self.pb.vf.weakform_robin_flux(phi, coeff_, ds_[dind](b[ID][i]))
+                    w += self.pb.vf.weakform_robin_flux(phi, coeff_, b["phi0"], ds_[dind](b[ID][i]))
 
             else:
                 raise NameError("Unknown type option for Robin wetting BC!")

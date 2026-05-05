@@ -86,19 +86,22 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                 is_ale=is_ale,
                 is_advected=True,
             )
+        self.coupling_params = coupling_params
+        self.set_coupling_parameters()
+
         self.pbf.phasevar["phi"] = self.pbp.phi
         self.pbf.phasevar["phi_old"] = self.pbp.phi_old
         self.pbf.phasevar["phidot"] = self.pbp.phidot_expr
         self.pbf.phasevar["phidot_old"] = self.pbp.phidot_old
         self.pbf.phasevar["phi_range"] = self.pbp.phi_range
+        self.pbf.phasevar["clip_phi_range"] = self.clip_phi_range
+        self.pbf.phasevar["epsilon_clip"] = self.epsilon_clip
+        self.pbf.phasevar["smooth_clip"] = self.smooth_clip
 
         self.pbp.fluidvar["v"] = self.pbf.v
         self.pbp.fluidvar["v_old"] = self.pbf.v_old
         self.pbp.fluidvar["p"] = self.pbf.p
         self.pbp.fluidvar["p_old"] = self.pbf.p_old
-
-        self.coupling_params = coupling_params
-        self.set_coupling_parameters()
 
         self.pbrom = self.pbf  # ROM problem can only be fluid
         self.pbrom_host = self
@@ -136,6 +139,9 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
     def set_coupling_parameters(self):
         self.capillary_force_from_korteweg_stress = self.coupling_params.get("capillary_force_from_korteweg_stress", False)
+        self.clip_phi_range = self.coupling_params.get("clip_phi_range", False)
+        self.epsilon_clip = self.coupling_params.get("epsilon_clip", 1e-3)
+        self.smooth_clip = self.coupling_params.get("smooth_clip", None)
 
     def get_problem_var_list(self):
         if self.pbf.num_dupl > 1:
@@ -325,9 +331,9 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         # derivative of phase field w.r.t. fluid pressure (for some formulations...)
         self.K_phip.zeroEntries()
         if self.pbf.num_dupl > 1:
-            fem.petsc.assemble_matrix(self.K_phip, self.jac_phip_, [])
+            fem.petsc.assemble_matrix(self.K_phip, self.jac_phip_, self.pbp.dbcs)
         else:
-            fem.petsc.assemble_matrix(self.K_phip, self.jac_phip, [])
+            fem.petsc.assemble_matrix(self.K_phip, self.jac_phip, self.pbp.dbcs)
         self.K_phip.assemble()
 
 

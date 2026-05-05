@@ -83,6 +83,11 @@ def test_main():
 
     FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [0.0, 1.0]}
 
+    COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": False,
+                                  "clip_phi_range": True,
+                                  "smooth_clip": "cubic",
+                                  "epsilon_clip": 1e-16}  # essentially the same as if "smooth_clip" were None...
+
     # fluid1 is surrounding, fluid2 is bubble
     rho1 = 1000.0
     rho2 = 100.0
@@ -139,7 +144,7 @@ def test_main():
         [FEM_PARAMS_FLUID, FEM_PARAMS_PF],
         [MATERIALS_FLUID, MATERIALS_PF],
         [BC_DICT_FLUID, BC_DICT_PF],
-        # time_curves=time_curves(),
+        coupling_params=COUPLING_PARAMS_MULTIPHASE,
     )
 
     # problem solve
