@@ -30,6 +30,7 @@ def check_params_io(params):
         "output_path_pre",
         "print_enhanced_info",
         "problem_type",
+        "refine_mesh",
         "report_conservation_properties",
         "restart_io_type",
         "restart_step",

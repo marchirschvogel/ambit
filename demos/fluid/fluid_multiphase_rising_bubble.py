@@ -14,7 +14,7 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     # cases (1,2) from Eikelder et al. (2024), Brunk and Eikelder (2026)
-    case = 2
+    case = 1
 
     IO_PARAMS = {
         # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations
@@ -128,7 +128,7 @@ def main():
     COUPLING_PARAMS = {"capillary_force_from_korteweg_stress": False,  # get capillary force from divergence of Korteweg stress; if False, use "phi \grad mu" as bulk capillary "body" force (same in theory, but has impact if fluid carries Neumann boundary conditions - if the interface could exert a force on the fluid boundary)
                        "clip_phi_range": True,  # clip phi range such that material parameters (density, viscosity) are not affected by phi overshoots...
                        "smooth_clip": "cubic",  # None, "cubic", "quintic" - how to smooth the clipped region in case "clip_phi_range" is True
-                       "epsilon_clip": 1e-3}  # smoothing parameter ("smooth_clip":None is reproduced for epsilon --> 0)
+                       "epsilon_clip": 1e-2}  # smoothing parameter ("smooth_clip":None is reproduced for epsilon --> 0)
 
     # fluid1 is surrounding, fluid2 is bubble
     if case==1:

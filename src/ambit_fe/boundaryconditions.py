@@ -1037,8 +1037,10 @@ class boundary_cond_phasefield(boundary_cond):
                 coeff_ = coeff
 
             if bspec == "wetting":
+                exp_ = b.get("exp", 2.0)
+                phi0_ = b.get("phi0", 1.0)
                 for i in range(len(b[ID])):
-                    w += self.pb.vf.weakform_robin_wetting(phi, coeff_, ds_[dind](b[ID][i]))
+                    w += self.pb.vf.weakform_robin_wetting(phi, coeff_, ds_[dind](b[ID][i]), exp=exp_, phi0=phi0_)
 
             elif bspec == "flux":
                 for i in range(len(b[ID])):

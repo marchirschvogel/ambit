@@ -5,7 +5,7 @@ Multiphase FSI elaso-capillary simulation of a sessile droplet on a soft solid s
 Example from M. Shokrpour Roudbari and E. H. van Brummelen, "Binary-Fluid-Solid Interaction Based on the Navier-Stokes-Korteweg Equations", Mathematical Models and Methods in Applied Sciences, 2019
 with a more recent version in E. H. van Brummelen et al. "An adaptive isogeometric analysis approach to elasto-capillary fluid-solid interaction", International Journal for Numerical Methods in Engineering, 2021
 Cases (1,2,3) taken from the latter publication!
-Let's assume a ng-µm-µs unit system, hence viscosities are 1 ng/(µm µs) = 10^{3} mPa s
+Let's assume a pg-µm-µs unit system
 """
 
 import ambit_fe
@@ -24,6 +24,15 @@ def main():
 
     case = 1
 
+    dim = "2D" # 2D, 3D - need to set it up for 3D appropriately (mesh...)
+
+    """
+    Refinement strip around elastocapillary contact region
+    """
+    class locate_refine_strip:
+        def evaluate(self, x):
+            return np.logical_and(x[0] > 120., x[0] < 230.)
+
     IO_PARAMS = {
         "problem_type": "fsi_multiphase",
         "write_results_every": 10,
@@ -31,10 +40,10 @@ def main():
         "indicate_results_by": "step",
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        # "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, -50.0], "coords_b":[500.0, 500.0], "meshsize":[250,250]},
-        "mesh_domain": basepath + "/input/droplet-substrate_domain.xdmf",
-        # "mesh_boundary": basepath + "/input/droplet-substrate_boundary.xdmf", # - not needed: we use locator functions!
+        "mesh_domain": {"type":"rectangle", "celltype":"triangle", "coords_a":[0.0, -50.0], "coords_b":[500.0, 500.0], "meshsize":[40,44]},
+        # "mesh_domain": {"type":"box", "celltype":"tetrahedron", "coords_a":[0.0, -50.0, 0.0], "coords_b":[500.0, 500.0, 500.0], "meshsize":[40,44,40]},
         "mesh_encoding": "ASCII", # HDF5, ASCII
+        "refine_mesh": {"region": locate_refine_strip(), "steps": 3},  # refinement working only for triangles/tetrahedra
         "results_to_write": [
             ["displacement"],
             ["velocity", "pressure", "density"],
@@ -43,11 +52,10 @@ def main():
         ],
         "write_initial_fields": True,
         "report_conservation_properties": True,
-        "simname": "fsi_multiphase_elastocapillary"+str(case)+"",
+        # "write_submeshes": True,
+        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"R3",
     }
 
-    # h = 350.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
-    # eps = 1.28*h
     eps = 1.0 # 1 µm (E. H. van Brummelen et al. 2021)
 
     class expr1:
@@ -66,20 +74,20 @@ def main():
     # fluid1 is vapour (surrounding), fluid2 is liquid (bubble)
     if case==1:
         dt = 0.01e3#0.1e3 # µs
-        rho1 = 1.26e-3 #0.0816 # pg/(µm^3) = 10^{-3} ng/(µm^3)
-        rho2 = 1.26e-3 #0.2408 # pg/(µm^3) = 10^{-3} ng/(µm^3)
-        eta1 = 1412e-3 # 1 mPa s = 10^{-3} ng/(µm µs)
-        eta2 = 1412e-3 # Glycerol - 1 mPa s = 10^{-3} ng/(µm µs)
-        sig = 46e-3 # surface energy density coefficient - mN/m = g/(s^2) = 10^{-3} ng/(µs^2)
-        rho_s = 1.0e-3#12.6e-3 # solid density - 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
+        rho1 = 1.26 #0.0816 # pg/(µm^3) = pg/(µm^3)
+        rho2 = 1.26 #0.2408 # pg/(µm^3) = pg/(µm^3)
+        eta1 = 1412. # 1 mPa s = pg/(µm µs)
+        eta2 = 1412. # Glycerol - 1 mPa s = pg/(µm µs)
+        sig = 46. # surface energy density coefficient - mN/m = g/(s^2) = pg/(µs^2)
+        rho_s = 1.0#12.6e-3 # solid density - 1 pg/(µm^3) = pg/(µm^3)
     elif case==2:
         dt = 0.01e3 # µs
-        rho1 = 0.1e-3 # 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
-        rho2 = 1.26e-3 # 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
-        eta1 = 100e-3 # 1 mPa s = 10^{-3} ng/(µm µs)
-        eta2 = 1412e-3 # Glycerol - 1 mPa s = 10^{-3} ng/(µm µs)
-        sig = 46e-3 # surface energy density coefficient - mN/m = g/(s^2) = 10^{-3} ng/(µs^2)
-        rho_s = 1.0e-3 # solid density - 1 pg/(µm^3) = 10^{-3} ng/(µm^3)
+        rho1 = 0.1 # 1 pg/(µm^3) = pg/(µm^3)
+        rho2 = 1.26 # 1 pg/(µm^3) = pg/(µm^3)
+        eta1 = 100. # 1 mPa s = pg/(µm µs)
+        eta2 = 1412. # Glycerol - 1 mPa s = pg/(µm µs)
+        sig = 46. # surface energy density coefficient - mN/m = g/(s^2) = pg/(µs^2)
+        rho_s = 1.0 # solid density - 1 pg/(µm^3) = pg/(µm^3)
     else:
         raise ValueError("Unknown case.")
 
@@ -88,30 +96,29 @@ def main():
     """
     CONTROL_PARAMS = {"maxtime": 10e3, # µs
                       "dt": dt,
+                      # "numstep_stop": 100,
                       "initial_fields": [expr1, None],
                       }
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",   # superlu_dist, mumps
-        "tol_res": 1e-8,
-        "tol_inc": 1e-6,
+        "tol_res": 1e-6,
+        "tol_inc": 1e-4,
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "trapezoidal"}
     TIME_PARAMS_FLUID = {"timint": "bdf2"}
     TIME_PARAMS_PF    = {"timint": "bdf2"}
-    # TIME_PARAMS_FLUID = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint", "continuity_at_midpoint": True}
-    # TIME_PARAMS_PF    = {"timint": "ost", "theta_ost": 0.5, "eval_nonlin_terms": "midpoint"}
 
-    E = 3.0e-3 # 1 kPa = 10^{-3} ng/(µm µs^2)
+    E = 3.0 # 1 kPa = pg/(µm µs^2)
     nu = 0.499
 
     FEM_PARAMS_SOLID = {
         "order_disp": 2,
         "order_pres": 1,
         "quad_degree": 5,
-        "incompressibility": "nearly",
+        "incompressibility": "no",
         "bulkmod": E/(3.*(1.-2.*nu)),
     }
 
@@ -128,24 +135,28 @@ def main():
         def evaluate(self, x):
             return np.isclose(x[1], 0.0)
 
-    sig_sl = 36e-3
-    sig_sa = 31e-3
+    sig_sl = 36.
+    sig_sa = 31.
     COUPLING_PARAMS_FSI = {
         "coupling_fluid_ale": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
-        "wetting_condition_interface": {"coeff": sig_sa-sig_sl}, # wetting Robin condition at interface
+        "wetting_condition_interface": {"coeff": 3.*(sig_sa-sig_sl)/4.}, # wetting Robin condition at interface
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
-    COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": True}
+    COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": True,
+                                  "clip_phi_range": True,
+                                  "smooth_clip": "cubic",
+                                  "epsilon_clip": 1e-3}
 
+    dlt=1e-5
     class locate_solid:
         def evaluate(self, x):
-            return (x[1] <= 0.0)
+            return (x[1] <= 0.0+dlt)
 
     class locate_fluid:
         def evaluate(self, x):
-            return (x[1] >= 0.0)
+            return (x[1] >= 0.0-dlt)
 
     # locators for boundary conditions
     class locate_right:
@@ -163,11 +174,19 @@ def main():
         def evaluate(self, x):
             return np.isclose(x[1], -50.0)
 
+    # for 3D
+    class locate_back:
+        def evaluate(self, x):
+            return np.isclose(x[2], 0.0)
+    class locate_front:
+        def evaluate(self, x):
+            return np.isclose(x[2], 500.0)
+
 
     zeta = 0.0
 
     MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": E/3.},
-                                # "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
+                                "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
                                 "inertia": {"rho0": rho_s},
                                 "id": locate_solid()}}
 
@@ -178,9 +197,10 @@ def main():
                                 "inertia": {"rho1": rho1, "rho2": rho2},
                                 "id": locate_fluid()}}
 
-    MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 1.0, "nu": 0.1}, "id": locate_fluid()}}
+    # MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 10.0, "nu": 0.3, "scale_det" : True, "scale_exp" : 1.5}, "id": locate_fluid()}}
+    MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}, "id": locate_fluid()}}
 
-    m = 1e-2 # should be rather low if capillary stress is rather high
+    m = 1e-5 # should be rather low if capillary stress is rather high
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "constant", # constant, degenerate
                                                   "epsilon": 0.0,
                                                   "exponent": 1.0,
@@ -218,6 +238,13 @@ def main():
 
 
     BC_DICT_LM = {"dirichlet": [{"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}]}
+
+    if dim=="3D":
+        BC_DICT_SOLID["dirichlet"].append({"id": [locate_front(),locate_back()], "dir": "z", "val": 0.0})
+        BC_DICT_FLUID["dirichlet"].append({"id": [locate_front(),locate_back()], "dir": "z", "val": 0.0})
+        BC_DICT_ALE["dirichlet"].append({"id": [locate_front(),locate_back()], "dir": "z", "val": 0.0})
+        BC_DICT_LM["dirichlet"].append({"id": [locate_front(),locate_back()], "dir": "z", "val": 0.0})
+
 
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,

@@ -54,6 +54,8 @@ class IO:
         self.gridname_boundary = io_params.get("gridname_boundary", "Grid")
         self.duplicate_mesh_domains = io_params.get("duplicate_mesh_domains", [])
 
+        self.refine_mesh = io_params.get("refine_mesh", {})
+
         self.write_restart_every = io_params.get("write_restart_every", -1)
         self.restart_io_type = io_params.get("restart_io_type", "petscvector")
         self.indicate_results_by = io_params.get("indicate_results_by", "time")
@@ -134,8 +136,19 @@ class IO:
         # seems that we need this (at least when locating dofs for DBCs on volume portions)
         self.mesh.topology.create_connectivity(self.mesh.topology.dim, self.mesh.topology.dim)
 
-        # read in xdmf mesh - boundary
+        # if requested, do an initial refinement around a region, or uniformly
+        if bool(self.refine_mesh):
+            refine_region = self.refine_mesh.get("region", None)
+            refine_steps = self.refine_mesh.get("steps", 1)
+            for i in range(refine_steps):
+                self.mesh.topology.create_connectivity(1, self.mesh.topology.dim)
+                if refine_region is not None: # TODO: Always need edges (not faces?) even in 3D?
+                    ee = mesh.locate_entities(self.mesh, 1, self.refine_mesh["region"].evaluate)
+                else:
+                    ee = None
+                self.mesh, _, _ = mesh.refine(self.mesh, ee)
 
+        # read in xdmf mesh - boundary
         # here, mt_b refers to BCs as BCs associated to a topology one dimension less than the problem (most common),
         # mt_sb BCs two dimensions less, and mt_ssb BCs three dimensions less
         # for a 3D problem - b: surface BCs, sb: edge BCs, ssb: point BCs
