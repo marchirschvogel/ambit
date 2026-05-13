@@ -13,7 +13,7 @@ from pathlib import Path
 def main():
     basepath = str(Path(__file__).parent.absolute())
 
-    # cases (1,2) from Eikelder et al. (2024), Brunk and Eikelder (2026)
+    # cases (1,2) from ten Eikelder et al. (2024), Brunk and ten Eikelder (2026)
     case = 1
 
     IO_PARAMS = {
@@ -41,7 +41,7 @@ def main():
     IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0])
 
     h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
-    eps = 0.64*h # 1.28*h (Eikelder et al. (2024)), 0.64*h (Brunk and Eikelder (2026))
+    eps = 0.64*h # 1.28*h (ten Eikelder et al. (2024)), 0.64*h (Brunk and ten Eikelder (2026))
 
     """
     The initial phase field (phi=-1 is surrounding fluid 1, phi=1 is bubble)
@@ -64,7 +64,7 @@ def main():
     Parameters for the global time control
     """
     CONTROL_PARAMS = {"maxtime": 3.0,
-                      "dt": 0.128*h, # from Eikelder et al. (2024)
+                      "dt": 0.128*h, # from ten Eikelder et al. (2024)
                       "initial_fields": [expr1, None],
                       }
 
@@ -140,14 +140,14 @@ def main():
     elif case==2:
         rho1 = 1000.0
         rho2 = 1.0
-        eta1 = 10.0   # 10.0, 1.0 TODO: Ambiguity code (10.0) vs. papers (1.0)
+        eta1 = 10.0   # NOTE: Ambiguity code (10.0) vs. papers (1.0) - Author confirmation by M. ten Eikelder: 10.0 is the correct value!
         eta2 = 0.1
         sig = 1.96 # surface energy density coefficient
     else:
         raise ValueError("Unknown case.")
     zeta = 0.0
 
-    alpha = (rho1-rho2)/(rho1+rho2) # TODO: Negative in Eikelder et al. (2024), Brunk and Eikelder (2026), but then not working!
+    alpha = (rho1-rho2)/(rho1+rho2) # TODO: Negative in ten Eikelder et al. (2024), Brunk and ten Eikelder (2026), but then not working!
     sigtilde = 3.*sig/(2.*np.sqrt(2.))
 
     class locate_all:

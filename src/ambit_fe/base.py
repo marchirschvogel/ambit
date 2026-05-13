@@ -128,6 +128,9 @@ class solver_base:
             self.pb.numdof,
         )
 
+        # initial time
+        self.t0 = 0.0
+
         # model order reduction stuff
         if self.pb.pbase.have_rom:
             from .mor import mor_main
@@ -140,8 +143,9 @@ class solver_base:
 
         # read restart information if requested - TODO: Maybe move to evaluate_system_initial, but needs thorough checking!
         self.pb.read_restart(self.pb.pbase.simname, self.pb.pbase.restart_step)
-        # update simname
+        # read time and update simname
         if self.pb.pbase.restart_step > 0:
+            self.read_step_time(self.pb.pbase.restart_step)
             self.pb.pbase.simname += "_r" + str(self.pb.pbase.restart_step)
 
         self.initialize_nonlinear_solver()
@@ -201,7 +205,7 @@ class solver_base:
             wts = time.time()
 
             # current time
-            t = N * self.pb.pbase.dt
+            t = self.t0 + (N-self.pb.pbase.restart_step) * self.pb.pbase.dt
 
             # evaluate any (solution-independent) time curves or other functions
             self.pb.evaluate_pre_solve(t, N, self.pb.pbase.dt)
@@ -235,6 +239,7 @@ class solver_base:
 
             # write restart information if desired
             self.pb.write_restart(self.pb.pbase.simname, N)
+            self.write_step_time(N, t)
 
             # update nonlinear and linear iteration counters
             self.update_counters(wt, t)
@@ -368,6 +373,20 @@ class solver_base:
                 )
                 f.write("%.16E %.16E %i %i\n" % (t, wt, self.solnln.ni, self.solnln.li))
                 f.close()
+
+    def write_step_time(self, N, t):
+        if (self.pb.io.write_restart_every > 0 and N % self.pb.io.write_restart_every == 0):
+            if self.pb.comm.rank == 0:
+                f = open(
+                    self.pb.pbase.output_path + "/checkpoint_" + self.pb.pbase.simname + "_step_time_" + str(N) + ".txt",
+                    "wt",
+                )
+                f.write("%i %.16E\n" % (N, t))
+                f.close()
+
+    def read_step_time(self, rstep):
+        restart_data_time = np.loadtxt(self.pb.pbase.output_path + "/checkpoint_" + self.pb.pbase.simname + "_step_time_" + str(rstep) + ".txt", ndmin=1)
+        self.t0 = restart_data_time[1]
 
     def reset_counters(self):
         self.wt, self.ni, self.li = 0.0, 0, 0
