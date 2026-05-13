@@ -54,6 +54,7 @@ class AleProblem(problem_base):
         self.results_to_write = io_params["results_to_write"]
 
         self.io = io
+        self.write_restart_every = self.io.write_restart_every
 
         self.order_disp = fem_params["order_disp"]
         self.quad_degree = fem_params["quad_degree"]

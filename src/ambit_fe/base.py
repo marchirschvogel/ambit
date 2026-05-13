@@ -53,7 +53,12 @@ class problem_base:
 
         self.initial_fields = ctrl_params.get("initial_fields", None)
 
-        self.t_init = self.restart_step * self.dt
+        self.t_init = 0.0
+        if self.restart_step > 0: # needs to be done here already, since problems initialize with t_init...
+            # NOTE: We do not want to compute initial time with "self.restart_step * self.dt",
+            # since user might request restart with a different time step size!
+            # Hence we read the initial (restart) time from file.
+            self.t_init = self.read_step_time(self.restart_step)[1]
 
         self.have_rom = False
 
@@ -103,6 +108,10 @@ class problem_base:
     def destroy(self):
         raise RuntimeError("Problem misses function implementation!")
 
+    def read_step_time(self, rstep):
+        restart_data_time = np.loadtxt(self.output_path + "/checkpoint_" + self.simname + "_step_time_" + str(rstep) + ".txt", ndmin=1)
+        return restart_data_time
+
     def scale_residual_list(self, rlist):
         for n in range(len(rlist)):
             rlist[n].scale(self.pbase.residual_scale[n])
@@ -128,9 +137,6 @@ class solver_base:
             self.pb.numdof,
         )
 
-        # initial time
-        self.t0 = 0.0
-
         # model order reduction stuff
         if self.pb.pbase.have_rom:
             from .mor import mor_main
@@ -143,9 +149,8 @@ class solver_base:
 
         # read restart information if requested - TODO: Maybe move to evaluate_system_initial, but needs thorough checking!
         self.pb.read_restart(self.pb.pbase.simname, self.pb.pbase.restart_step)
-        # read time and update simname
+        # update simname
         if self.pb.pbase.restart_step > 0:
-            self.read_step_time(self.pb.pbase.restart_step)
             self.pb.pbase.simname += "_r" + str(self.pb.pbase.restart_step)
 
         self.initialize_nonlinear_solver()
@@ -205,7 +210,7 @@ class solver_base:
             wts = time.time()
 
             # current time
-            t = self.t0 + (N-self.pb.pbase.restart_step) * self.pb.pbase.dt
+            t = self.pb.pbase.t_init + (N-self.pb.pbase.restart_step) * self.pb.pbase.dt
 
             # evaluate any (solution-independent) time curves or other functions
             self.pb.evaluate_pre_solve(t, N, self.pb.pbase.dt)
@@ -375,7 +380,7 @@ class solver_base:
                 f.close()
 
     def write_step_time(self, N, t):
-        if (self.pb.io.write_restart_every > 0 and N % self.pb.io.write_restart_every == 0):
+        if (self.pb.write_restart_every > 0 and N % self.pb.write_restart_every == 0):
             if self.pb.comm.rank == 0:
                 f = open(
                     self.pb.pbase.output_path + "/checkpoint_" + self.pb.pbase.simname + "_step_time_" + str(N) + ".txt",
@@ -383,10 +388,6 @@ class solver_base:
                 )
                 f.write("%i %.16E\n" % (N, t))
                 f.close()
-
-    def read_step_time(self, rstep):
-        restart_data_time = np.loadtxt(self.pb.pbase.output_path + "/checkpoint_" + self.pb.pbase.simname + "_step_time_" + str(rstep) + ".txt", ndmin=1)
-        self.t0 = restart_data_time[1]
 
     def reset_counters(self):
         self.wt, self.ni, self.li = 0.0, 0, 0

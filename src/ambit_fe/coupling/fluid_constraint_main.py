@@ -83,6 +83,7 @@ class FluidmechanicsConstraintProblem(problem_base):
         self.have_condensed_variables = False
 
         self.io = self.pbf.io
+        self.write_restart_every = self.io.write_restart_every
 
         # number of fields involved
         self.nfields = 3

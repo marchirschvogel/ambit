@@ -67,6 +67,7 @@ class FSIProblem(problem_base):
         self.problem_physics = "fsi"
 
         self.io = io
+        self.write_restart_every = self.io.write_restart_every
 
         # instantiate problem classes
         # solid

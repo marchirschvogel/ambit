@@ -102,6 +102,7 @@ class FluidmechanicsAleConstraintProblem(problem_base):
         self.have_condensed_variables = False
 
         self.io = io
+        self.write_restart_every = self.io.write_restart_every
 
         self.set_coupling_parameters()
 

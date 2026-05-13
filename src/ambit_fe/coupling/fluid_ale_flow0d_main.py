@@ -125,6 +125,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         self.pba.results_to_write = io_params["results_to_write"][1]
 
         self.io = io
+        self.write_restart_every = self.io.write_restart_every
 
         # indicator for no periodic reference state estimation
         self.noperiodicref = 1

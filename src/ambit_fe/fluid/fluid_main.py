@@ -47,7 +47,7 @@ class FluidmechanicsProblem(problem_base):
         constitutive_models,
         bc_dict,
         time_curves,
-        iof,
+        io,
         mor_params={},
         is_ale=False,
         is_multiphase=False,
@@ -64,7 +64,8 @@ class FluidmechanicsProblem(problem_base):
 
         self.results_to_write = io_params["results_to_write"]
 
-        self.io = iof
+        self.io = io
+        self.write_restart_every = self.io.write_restart_every
 
         self.is_ale = is_ale
         self.is_multiphase = is_multiphase

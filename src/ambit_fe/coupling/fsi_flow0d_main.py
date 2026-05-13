@@ -58,6 +58,7 @@ class FSIFlow0DProblem(problem_base):
         self.problem_physics = "fsi_flow0d"
 
         self.io = io
+        self.write_restart_every = self.io.write_restart_every
 
         self.have_condensed_variables = False
 

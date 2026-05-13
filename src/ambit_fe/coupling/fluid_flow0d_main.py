@@ -97,6 +97,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
 
         self.sub_solve = True
         self.io = self.pbf.io
+        self.write_restart_every = self.io.write_restart_every
 
         # number of fields involved
         if not self.condense_0d:
