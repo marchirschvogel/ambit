@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Multiphase FSI elaso-capillary simulation of a sessile droplet on a soft solid substrate
+Multiphase FSI elaso-capillary simulation of a sessile droplet on a soft incompressible solid substrate
 Example from M. Shokrpour Roudbari and E. H. van Brummelen, "Binary-Fluid-Solid Interaction Based on the Navier-Stokes-Korteweg Equations", Mathematical Models and Methods in Applied Sciences, 2019
 with a more recent version in E. H. van Brummelen et al. "An adaptive isogeometric analysis approach to elasto-capillary fluid-solid interaction", International Journal for Numerical Methods in Engineering, 2021
 Cases (1,2,3) taken from the latter publication!
@@ -25,6 +25,7 @@ def main():
     case = 1
 
     dim = "2D" # 2D, 3D - need to set it up for 3D appropriately (mesh...)
+    num_refine = 4
 
     """
     Refinement strip around elastocapillary contact region
@@ -43,7 +44,7 @@ def main():
         "mesh_domain": {"type":"rectangle", "celltype":"triangle", "coords_a":[0.0, -50.0], "coords_b":[500.0, 500.0], "meshsize":[40,44]},
         # "mesh_domain": {"type":"box", "celltype":"tetrahedron", "coords_a":[0.0, -50.0, 0.0], "coords_b":[500.0, 500.0, 500.0], "meshsize":[40,44,40]},
         "mesh_encoding": "ASCII", # HDF5, ASCII
-        "refine_mesh": {"region": locate_refine_strip(), "steps": 3},  # refinement working only for triangles/tetrahedra
+        "refine_mesh": {"region": locate_refine_strip(), "steps": num_refine},  # refinement working only for triangles/tetrahedra
         "results_to_write": [
             ["displacement"],
             ["velocity", "pressure", "density"],
@@ -53,7 +54,7 @@ def main():
         "write_initial_fields": True,
         "report_conservation_properties": True,
         # "write_submeshes": True,
-        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"R3",
+        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"_R"+str(num_refine)+"wet-3.75",
     }
 
     eps = 1.0 # 1 µm (E. H. van Brummelen et al. 2021)
@@ -105,6 +106,8 @@ def main():
         "direct_solver": "mumps",   # superlu_dist, mumps
         "tol_res": 1e-6,
         "tol_inc": 1e-4,
+        # "divergence_continue": "PTC",
+        # "k_ptc_initial": 1.0,
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "trapezoidal"}
@@ -112,14 +115,14 @@ def main():
     TIME_PARAMS_PF    = {"timint": "bdf2"}
 
     E = 3.0 # 1 kPa = pg/(µm µs^2)
-    nu = 0.499
+    # nu = 0.499 # not used - in case of full incompressibility
 
     FEM_PARAMS_SOLID = {
         "order_disp": 2,
         "order_pres": 1,
         "quad_degree": 5,
-        "incompressibility": "no",
-        "bulkmod": E/(3.*(1.-2.*nu)),
+        "incompressibility": "full",
+        # "bulkmod": E/(3.*(1.-2.*nu)),
     }
 
     FEM_PARAMS_FLUID = {"order_vel": 2,
@@ -137,10 +140,11 @@ def main():
 
     sig_sl = 36.
     sig_sa = 31.
+    wet = 3.*(sig_sa-sig_sl)/4.
     COUPLING_PARAMS_FSI = {
         "coupling_fluid_ale": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
-        "wetting_condition_interface": {"coeff": 3.*(sig_sa-sig_sl)/4.}, # wetting Robin condition at interface
+        "wetting_condition_interface": {"coeff": wet}, # wetting Robin condition at interface
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
@@ -186,7 +190,7 @@ def main():
     zeta = 0.0
 
     MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": E/3.},
-                                "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
+                                # "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
                                 "inertia": {"rho0": rho_s},
                                 "id": locate_solid()}}
 
@@ -197,7 +201,6 @@ def main():
                                 "inertia": {"rho1": rho1, "rho2": rho2},
                                 "id": locate_fluid()}}
 
-    # MATERIALS_ALE = {"MAT1": {"neohooke": {"mu": 10.0, "nu": 0.3, "scale_det" : True, "scale_exp" : 1.5}, "id": locate_fluid()}}
     MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}, "id": locate_fluid()}}
 
     m = 1e-5 # should be rather low if capillary stress is rather high
@@ -224,9 +227,7 @@ def main():
         }
 
     BC_DICT_FLUID = {
-        "dirichlet": [{"id": [locate_top()], "dir": "all", "val": 0.0},
-                      {"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}],
-        # "dirichlet_pres" : [{"id": [locate_corner()], "dir": "all", "val": 0.0}],
+        "dirichlet": [{"id": [locate_left(),locate_right()], "dir": "x", "val": 0.0}],
     }
 
     BC_DICT_ALE = {

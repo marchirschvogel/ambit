@@ -80,3 +80,23 @@ class variationalform_ale(variationalform):
         \int\limits_{\mathit{\Omega}_0} \widehat{J}\mu \,\delta\mu \, \mathrm{d}V - \int\limits_{\mathit{\Omega}_0} \widehat{J}\frac{\mathrm{d}\psi}{\mathrm{d}\phi} \delta\mu \,\mathrm{d}V - \int\limits_{\mathit{\Omega}_0} \kappa\,\widehat{J} \widehat{\boldsymbol{F}}^{-1}\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0 \phi \cdot \nabla_0 \delta\mu \, \mathrm{d}V = 0
         """
         return ( J*ufl.inner(mu, self.var_mu) - J*ufl.inner(driv_force, self.var_mu) - J*kappa*ufl.inner(ufl.inv(F)*ufl.inv(F).T*ufl.grad(phi), ufl.grad(self.var_mu)) ) * ddomain
+
+    def weakform_neumann_wetting(self, coeff, dboundary, F=None):
+        J = ufl.det(F)
+        ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
+        return coeff * self.var_mu * ja*dboundary
+
+    def weakform_robin_wetting(self, phi, coeff, dboundary, exp=2.0, phi0=1.0, F=None):
+        J = ufl.det(F)
+        ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
+        return (coeff * (phi**exp - phi0) * self.var_mu) * ja*dboundary
+
+    def weakform_neumann_flux(self, coeff, dboundary, F=None):
+        J = ufl.det(F)
+        ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
+        return coeff * self.var_phi * ja*dboundary
+
+    def weakform_robin_flux(self, phi, coeff, phi0, dboundary, F=None):
+        J = ufl.det(F)
+        ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
+        return (coeff * (phi - phi0) * self.var_phi) * ja*dboundary

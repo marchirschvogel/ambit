@@ -965,6 +965,7 @@ class boundary_cond_phasefield(boundary_cond):
         self,
         bcdict,
         ds_,
+        F=None,
         funcs_to_update=None,
         funcsexpr_to_update=None,
         bspec="wetting",
@@ -1008,10 +1009,10 @@ class boundary_cond_phasefield(boundary_cond):
 
             if bspec == "wetting":
                 for i in range(len(n[ID])):
-                    w += self.pb.vf.weakform_neumann_wetting(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.weakform_neumann_wetting(func, ds_[dind](n[ID][i]), F=F)
             elif bspec == "flux":
                 for i in range(len(n[ID])):
-                    w += self.pb.vf.weakform_neumann_flux(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.weakform_neumann_flux(func, ds_[dind](n[ID][i]), F=F)
             else:
                 raise NameError("Unknown type option for phasefield Neumann BC!")
         return w
@@ -1044,7 +1045,7 @@ class boundary_cond_phasefield(boundary_cond):
 
             elif bspec == "flux":
                 for i in range(len(b[ID])):
-                    w += self.pb.vf.weakform_robin_flux(phi, coeff_, b["phi0"], ds_[dind](b[ID][i]))
+                    w += self.pb.vf.weakform_robin_flux(phi, coeff_, b["phi0"], ds_[dind](b[ID][i]), F=F)
 
             else:
                 raise NameError("Unknown type option for Robin wetting BC!")

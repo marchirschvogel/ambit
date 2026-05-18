@@ -183,9 +183,9 @@ class PhasefieldProblem(problem_base):
 
         # initialize pahse field (Cahn-Hilliard) variational form class
         if not self.is_ale:
-            self.vf = phasefield_variationalform.variationalform(tstfnc1=self.var_phi, tstfnc2=self.var_mu)
+            self.vf = phasefield_variationalform.variationalform(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.io.n0)
         else:
-            self.vf = phasefield_variationalform.variationalform_ale(tstfnc1=self.var_phi, tstfnc2=self.var_mu)
+            self.vf = phasefield_variationalform.variationalform_ale(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.io.n0)
 
         # set form for phidot
         self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)
@@ -289,6 +289,7 @@ class PhasefieldProblem(problem_base):
             w_neumann_wetting = self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
+                F=self.alevar["Fale"],
                 funcs_to_update=self.ti.funcs_to_update,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update,
                 bspec="wetting",
@@ -296,6 +297,7 @@ class PhasefieldProblem(problem_base):
             w_neumann_wetting_old = self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
+                F=self.alevar["Fale_old"],
                 funcs_to_update=self.ti.funcs_to_update_old,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
                 bspec="wetting",
@@ -303,6 +305,7 @@ class PhasefieldProblem(problem_base):
             w_neumann_wetting_mid = self.bc.neumann_bcs(
                 self.bc_dict["neumann_wetting"],
                 self.bmeasures,
+                F=self.alevar["Fale_mid"],
                 funcs_to_update=self.ti.funcs_to_update_mid,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
                 bspec="wetting",
@@ -312,6 +315,7 @@ class PhasefieldProblem(problem_base):
             w_neumann_flux = self.bc.neumann_bcs(
                 self.bc_dict["neumann_flux"],
                 self.bmeasures,
+                F=self.alevar["Fale"],
                 funcs_to_update=self.ti.funcs_to_update,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update,
                 bspec="flux",
@@ -319,6 +323,7 @@ class PhasefieldProblem(problem_base):
             w_neumann_flux_old = self.bc.neumann_bcs(
                 self.bc_dict["neumann_flux"],
                 self.bmeasures,
+                F=self.alevar["Fale_old"],
                 funcs_to_update=self.ti.funcs_to_update_old,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
                 bspec="flux",
@@ -326,6 +331,7 @@ class PhasefieldProblem(problem_base):
             w_neumann_flux_mid = self.bc.neumann_bcs(
                 self.bc_dict["neumann_flux"],
                 self.bmeasures,
+                F=self.alevar["Fale_mid"],
                 funcs_to_update=self.ti.funcs_to_update_mid,
                 funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
                 bspec="flux",
@@ -337,6 +343,7 @@ class PhasefieldProblem(problem_base):
                 self.phi,
                 self.phidot_expr,
                 self.bmeasures,
+                F=self.alevar["Fale"],
                 bspec="wetting",
             )
             w_robin_wetting_old = self.bc.robin_bcs(
@@ -344,6 +351,7 @@ class PhasefieldProblem(problem_base):
                 self.phi_old,
                 self.phidot_old,
                 self.bmeasures,
+                F=self.alevar["Fale_old"],
                 bspec="wetting",
             )
             w_robin_wetting_mid = self.bc.robin_bcs(
@@ -351,6 +359,7 @@ class PhasefieldProblem(problem_base):
                 self.phi_mid,
                 self.phidot_mid,
                 self.bmeasures,
+                F=self.alevar["Fale_mid"],
                 bspec="wetting",
             )
         if "robin_flux" in self.bc_dict.keys():
@@ -360,6 +369,7 @@ class PhasefieldProblem(problem_base):
                 self.phi,
                 self.phidot_expr,
                 self.bmeasures,
+                F=self.alevar["Fale"],
                 bspec="flux",
             )
             w_robin_flux_old = self.bc.robin_bcs(
@@ -367,6 +377,7 @@ class PhasefieldProblem(problem_base):
                 self.phi_old,
                 self.phidot_old,
                 self.bmeasures,
+                F=self.alevar["Fale_old"],
                 bspec="flux",
             )
             w_robin_flux_mid = self.bc.robin_bcs(
@@ -374,6 +385,7 @@ class PhasefieldProblem(problem_base):
                 self.phi_mid,
                 self.phidot_mid,
                 self.bmeasures,
+                F=self.alevar["Fale_mid"],
                 bspec="flux",
             )
 
