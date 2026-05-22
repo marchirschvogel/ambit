@@ -1297,10 +1297,11 @@ class FluidmechanicsProblem(problem_base):
         else:
             assert "neumann_prestress" not in self.bc_dict.keys()
 
-        # now take care of body forces
+        # now take care of body forces - collect forces first, later dot with test function and integrate over domain (since forces can enter strong residual expressions in case of residual-based stabilization)
+        f_body, f_body_old, f_body_mid = [], [], []
         for n, M in enumerate(self.domain_ids):
             if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
-                w_body += self.bc.bodyforce(
+                f_body.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
                     self.dx(M),
                     self.rho[n],
@@ -1308,8 +1309,9 @@ class FluidmechanicsProblem(problem_base):
                     chi=self.phasevar["chi"],
                     funcs_to_update=self.ti.funcs_to_update,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update,
-                )
-                w_body_old += self.bc.bodyforce(
+                    return_type="force",
+                ))
+                f_body_old.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
                     self.dx(M),
                     self.rho[n],
@@ -1317,8 +1319,9 @@ class FluidmechanicsProblem(problem_base):
                     chi=self.phasevar["chi_old"],
                     funcs_to_update=self.ti.funcs_to_update_old,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update_old,
-                )
-                w_body_mid += self.bc.bodyforce(
+                    return_type="force",
+                ))
+                f_body_mid.append(self.bc.bodyforce(
                     self.constitutive_models["MAT" + str(n + 1)]["bodyforce"],
                     self.dx(M),
                     self.rho[n],
@@ -1326,7 +1329,19 @@ class FluidmechanicsProblem(problem_base):
                     chi=self.phasevar["chi_mid"],
                     funcs_to_update=self.ti.funcs_to_update_mid,
                     funcsexpr_to_update=self.ti.funcsexpr_to_update_mid,
-                )
+                    return_type="force",
+                ))
+            else:
+                f_body.append(ufl.constantvalue.zero(self.dim))
+                f_body_old.append(ufl.constantvalue.zero(self.dim))
+                f_body_mid.append(ufl.constantvalue.zero(self.dim))
+
+        # now calculate body force virtual work
+        for n, M in enumerate(self.domain_ids):
+            if "bodyforce" in self.constitutive_models["MAT" + str(n + 1)].keys():
+                w_body += ufl.dot(f_body[n], self.var_v) * self.dx(M)
+                w_body_old += ufl.dot(f_body_old[n], self.var_v) * self.dx(M)
+                w_body_mid += ufl.dot(f_body_mid[n], self.var_v) * self.dx(M)
 
         self.deltaW_ext = w_neumann + w_body + w_robin + w_stabneumann + w_stabneumann_mod + w_membrane + w_robin_valve
         self.deltaW_ext_old = (
@@ -1405,6 +1420,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
+                                f_body[n],
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=[self.phasevar["phi"],self.phasevar["chi"]],
@@ -1420,6 +1436,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_old"],
                                     chi=self.phasevar["phi_old"],
                                 ),
+                                f_body_old[n],
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=[self.phasevar["phi_old"],self.phasevar["chi_old"]],
@@ -1435,6 +1452,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_mid"],
                                     chi=self.phasevar["chi_mid"],
                                 ),
+                                f_body_mid[n],
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=[self.phasevar["phi_mid"],self.phasevar["chi_mid"]],
@@ -1474,6 +1492,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
+                                f_body[n],
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=[self.phasevar["phi"],self.phasevar["chi"]],
@@ -1488,6 +1507,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_old"],
                                     chi=self.phasevar["chi_old"],
                                 ),
+                                f_body_old[n],
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=[self.phasevar["phi_old"],self.phasevar["chi_old"]],
@@ -1502,6 +1522,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_mid"],
                                     chi=self.phasevar["chi_mid"],
                                 ),
+                                f_body_mid[n],
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=[self.phasevar["phi_mid"],self.phasevar["chi_mid"]],
@@ -1544,6 +1565,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
+                                f_body[n],
                                 w=self.alevar["w"],
                                 F=self.alevar["Fale"],
                                 phi=[self.phasevar["phi"],self.phasevar["chi"]],
@@ -1559,6 +1581,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_old"],
                                     chi=self.phasevar["chi_old"],
                                 ),
+                                f_body_old[n],
                                 w=self.alevar["w_old"],
                                 F=self.alevar["Fale_old"],
                                 phi=[self.phasevar["phi_old"],self.phasevar["chi_old"]],
@@ -1574,6 +1597,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_mid"],
                                     chi=self.phasevar["chi_mid"],
                                 ),
+                                f_body_mid[n],
                                 w=self.alevar["w_mid"],
                                 F=self.alevar["Fale_mid"],
                                 phi=[self.phasevar["phi_mid"],self.phasevar["chi_mid"]],
@@ -1617,6 +1641,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale"],
                                     chi=self.phasevar["chi"],
                                 ),
+                                f_body[n],
                                 F=self.alevar["Fale"],
                             )
                             residual_v_strong_old = self.vf.res_v_strong_stokes_steady(
@@ -1627,6 +1652,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_old"],
                                     chi=self.phasevar["chi_old"],
                                 ),
+                                f_body_old[n],
                                 F=self.alevar["Fale_old"],
                             )
                             residual_v_strong_mid = self.vf.res_v_strong_stokes_steady(
@@ -1637,6 +1663,7 @@ class FluidmechanicsProblem(problem_base):
                                     F=self.alevar["Fale_mid"],
                                     chi=self.phasevar["chi_mid"],
                                 ),
+                                f_body_mid[n],
                                 F=self.alevar["Fale_mid"],
                             )
                         else:  # no viscous stress term

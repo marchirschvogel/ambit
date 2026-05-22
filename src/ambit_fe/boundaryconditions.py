@@ -675,7 +675,7 @@ class boundary_cond:
         return w, idmem, bstress, bstrainenergy, bintpower
 
     # set body forces (technically, no "boundary" conditions, since acting on a volume element... but implemented here for convenience)
-    def bodyforce(self, mdict, dx_, rho, F=None, chi=None, funcs_to_update=None, funcsexpr_to_update=None):
+    def bodyforce(self, mdict, dx_, rho, F=None, chi=None, funcs_to_update=None, funcsexpr_to_update=None, return_type="work"):
         func, func_dir = (
             fem.Function(self.Vdisc_scalar),
             fem.Function(self.V_field),
@@ -721,8 +721,7 @@ class boundary_cond:
         # scale by density
         scale_dens = mdict.get("scale_density", False)
 
-        return self.pb.vf.deltaW_ext_bodyforce(func, func_dir, rho, dx_, F=F, chi=chi, scale_dens=scale_dens)
-
+        return self.pb.vf.deltaW_ext_bodyforce(func, func_dir, rho, dx_, F=F, chi=chi, scale_dens=scale_dens, return_type=return_type)
 
 
 class boundary_cond_fluid(boundary_cond):
@@ -1018,7 +1017,7 @@ class boundary_cond_phasefield(boundary_cond):
         return w
 
     # set Robin BCs
-    def robin_bcs(self, bcdict, phi, phidot, ds_, F=None, bspec="wetting"):
+    def robin_bcs(self, bcdict, phi, phidot, ds_, v=None, F=None, bspec="wetting"):
         w = ufl.as_ufl(0)
 
         for b in bcdict:
@@ -1029,23 +1028,21 @@ class boundary_cond_phasefield(boundary_cond):
             if "id_loc" in b.keys(): ID="id_loc"
 
             # may be an expression
-            coeff = b["coeff"]
-            if inspect.isclass(coeff):
-                coeff_expr = coeff()
-                coeff_ = fem.Function(self.Vdisc_scalar)
-                coeff_.interpolate(coeff_expr.evaluate)
+            c1 = b["c1"]
+            if inspect.isclass(c1):
+                c1_expr = c1()
+                c1_ = fem.Function(self.Vdisc_scalar)
+                c1_.interpolate(c1_expr.evaluate)
             else:
-                coeff_ = coeff
+                c1_ = c1
 
             if bspec == "wetting":
-                exp_ = b.get("exp", 2.0)
-                phi0_ = b.get("phi0", 1.0)
                 for i in range(len(b[ID])):
-                    w += self.pb.vf.weakform_robin_wetting(phi, coeff_, ds_[dind](b[ID][i]), exp=exp_, phi0=phi0_)
+                    w += self.pb.vf.weakform_robin_wetting(phi, phidot, c1_, ds_[dind](b[ID][i]), v=v, F=F)
 
             elif bspec == "flux":
                 for i in range(len(b[ID])):
-                    w += self.pb.vf.weakform_robin_flux(phi, coeff_, b["phi0"], ds_[dind](b[ID][i]), F=F)
+                    w += self.pb.vf.weakform_robin_flux(phi, c1_, b["phi0"], ds_[dind](b[ID][i]), F=F)
 
             else:
                 raise NameError("Unknown type option for Robin wetting BC!")

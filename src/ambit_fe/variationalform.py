@@ -68,16 +68,22 @@ class variationalform_base:
 
     # body force external virtual work
     # TeX: \int\limits_{\Omega_{0}} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{u}\,\mathrm{d}V
-    def deltaW_ext_bodyforce(self, func, funcdir, rho, ddomain, F=None, chi=None, scale_dens=False):
+    def deltaW_ext_bodyforce(self, func, funcdir, rho, ddomain, F=None, chi=None, scale_dens=False, return_type="work"):
         if scale_dens:
             fac = self.get_density(rho, chi=chi)
         else:
             fac = ufl.as_ufl(1.)
         if F is not None:
             J = ufl.det(F)
-            return fac * J * func * ufl.dot(funcdir, self.tstfnc1) * ddomain  # for ALE fluid
+            bodyforce = fac * J * func * funcdir  # for ALE fluid
         else:
-            return fac * func * ufl.dot(funcdir, self.tstfnc1) * ddomain
+            bodyforce = fac * func * funcdir
+        if return_type=="work":
+            return ufl.dot(bodyforce, self.tstfnc1) * ddomain
+        elif return_type=="force":
+            return bodyforce
+        else:
+            raise ValueError("Unknown return type.")
 
     # Robin condition (spring)
     # TeX: \int\limits_{\Gamma_0} k\,\boldsymbol{u}\cdot\delta\boldsymbol{u}\,\mathrm{d}A

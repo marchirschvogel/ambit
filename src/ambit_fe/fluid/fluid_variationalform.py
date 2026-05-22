@@ -105,17 +105,17 @@ class variationalform(variationalform_base):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None, phi=[None,None], phidot=None):
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
+        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
-    def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, F=None, phi=[None,None], phidot=None):
-        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_steady(self, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
+        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
-    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None, phi=[None,None]):
-        return self.f_inert_strong_stokes_transient(a, rho, phi=phi) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_stokes_transient(self, a, v, rho, sig, fbody, w=None, F=None, phi=[None,None]):
+        return self.f_inert_strong_stokes_transient(a, rho, phi=phi) - self.f_stress_strong(sig, F=F) - fbody
 
-    def res_v_strong_stokes_steady(self, rho, sig, F=None):
-        return -self.f_stress_strong(sig, F=F)
+    def res_v_strong_stokes_steady(self, rho, sig, fbody, F=None):
+        return -self.f_stress_strong(sig, F=F) - fbody
 
     def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None, phi=[None,None], phidot=None):
         rho_ = self.get_density(rho, chi=phi[1])
@@ -211,7 +211,9 @@ class variationalform(variationalform_base):
         return ufl.dot(tau_pspg * ufl.grad(var_p), res_v_strong) * ddomain
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
-        return tau_lsic * ufl.div(self.var_v) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
+        # return tau_lsic * ufl.div(self.var_v) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
+        rho_ = self.get_density(rho, chi=phi[1])
+        return tau_lsic * ufl.div(self.var_v) * rho_ * ufl.div(v) * ddomain
 
     # components of element-level Reynolds number - cf. Tezduyar and Osawa (2000) - not used so far... need to assemble a cell-based vector in order to evaluate these!
     def re_c(self, rho, v, ddomain, w=None, F=None, phi=[None,None], phidot=None):
@@ -232,15 +234,15 @@ class variationalform(variationalform_base):
         else:
             return (ufl.dot(self.n0, v))(fcts) * dboundary
 
-    # Korteweg force in multiphase flow
-    def korteweg_force(self, phi, mu, ddomain, F=None):
+    # capillary force in multiphase flow
+    def capillary_force(self, phi, mu, ddomain, F=None, return_type="work"):
         """ TeX:
         \int\limits_{\mathit{\Omega}}\phi\nabla\mu \cdot \delta\boldsymbol{v} \,\mathrm{d}V
         """
         return ufl.dot(phi * ufl.grad(mu), self.var_v) * ddomain
 
     # Generalized form of Korteweg stress in multiphase flow
-    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None):
+    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="work"):
         """ TeX:
         \int\limits_{\mathit{\Omega}} \left(\kappa\nabla\phi\otimes\nabla\phi + \left(\mu\phi - \psi -\frac{1}{2}\kappa\nabla\phi\cdot\nabla\phi\right)\boldsymbol{I}\right) : \nabla\delta\boldsymbol{v}\,\mathrm{d}V
         """
@@ -356,17 +358,17 @@ class variationalform_ale(variationalform):
         else:
             raise ValueError("Unknown fluid formulation!")
 
-    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, w=None, F=None, phi=[None,None], phidot=None):
-        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_transient(self, a, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
+        return self.f_inert_strong_navierstokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
-    def res_v_strong_navierstokes_steady(self, v, rho, sig, w=None, F=None, phi=[None,None], phidot=None):
-        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_navierstokes_steady(self, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
+        return self.f_inert_strong_navierstokes_steady(v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
-    def res_v_strong_stokes_transient(self, a, v, rho, sig, w=None, F=None, phi=[None,None], phidot=None):
-        return self.f_inert_strong_stokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F)
+    def res_v_strong_stokes_transient(self, a, v, rho, sig, fbody, w=None, F=None, phi=[None,None], phidot=None):
+        return self.f_inert_strong_stokes_transient(a, v, rho, w=w, F=F, phi=phi, phidot=phidot) - self.f_stress_strong(sig, F=F) - fbody
 
-    def res_v_strong_stokes_steady(self, rho, sig, F=None):
-        return -self.f_stress_strong(sig, F=F)
+    def res_v_strong_stokes_steady(self, rho, sig, fbody, F=None):
+        return -self.f_stress_strong(sig, F=F) - fbody
 
     def f_inert_strong_navierstokes_transient(self, a, v, rho, w=None, F=None, phi=[None,None], phidot=None):
         J = ufl.det(F)
@@ -470,11 +472,12 @@ class variationalform_ale(variationalform):
         F=None,
         symmetric=False,
     ):
+        vel = v - w # streamline direction should be relavive velocity in ALE
         # NOTE: J=det(F) already included in res_v_strong
         if symmetric:  # modification to make the effective stress symmetric - experimental, use with care...
-            return ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * v, res_v_strong) * ddomain
+            return ufl.dot(tau_supg * ufl.sym(ufl.grad(self.var_v) * ufl.inv(F)) * vel, res_v_strong) * ddomain
         else:
-            return ufl.dot(tau_supg * ufl.grad(self.var_v) * ufl.inv(F) * v, res_v_strong) * ddomain
+            return ufl.dot(tau_supg * ufl.grad(self.var_v) * ufl.inv(F) * vel, res_v_strong) * ddomain
 
     def stab_pspg(self, var_p, res_v_strong, tau_pspg, ddomain, F=None):
         # NOTE: J=det(F) already included in res_v_strong
@@ -482,7 +485,10 @@ class variationalform_ale(variationalform):
 
     def stab_lsic(self, v, tau_lsic, rho, ddomain, w=None, F=None, phi=[None,None], phidot=None):
         # NOTE: J=det(F) already included in res_p_strong
-        return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
+        # return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
+        J = ufl.det(F)
+        rho_ = self.get_density(rho, chi=phi[1])
+        return tau_lsic * (1./J) * ufl.div(J*ufl.inv(F)*self.var_v) * rho_*ufl.div(J*ufl.inv(F)*v) * ddomain
 
     # components of element-level Reynolds number - not used so far... need to assemble a cell-based vector in order to evaluate these!
     def re_c(self, rho, v, ddomain, w=None, F=None, phi=[None,None], phidot=None):
@@ -515,8 +521,8 @@ class variationalform_ale(variationalform):
         else:
             return (J * ufl.dot(ufl.inv(F).T * self.n0, (v - w)))(fcts) * dboundary
 
-    # Korteweg force in multiphase flow
-    def korteweg_force(self, phi, mu, ddomain, F=None):
+    # capillary force in multiphase flow
+    def capillary_force(self, phi, mu, ddomain, F=None, return_type="work"):
         """ TeX:
         \int\limits_{\mathit{\Omega}_0} \widehat{J}\phi\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_{0}\mu \cdot \delta\boldsymbol{v} \,\mathrm{d}V
         """
@@ -524,7 +530,7 @@ class variationalform_ale(variationalform):
         return J * ufl.dot(phi * ufl.inv(F).T*ufl.grad(mu), self.var_v) * ddomain
 
     # Generalized form of Korteweg stress in multiphase flow
-    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None):
+    def korteweg_stress(self, phi, mu, psi, kappa, ddomain, F=None, return_type="work"):
         """ TeX:
         \int\limits_{\mathit{\Omega}_0} \widehat{J}\left(\kappa\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\otimes\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi + \left(\mu\phi - \psi -\frac{1}{2}\kappa\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\cdot\widehat{\boldsymbol{F}}^{-\mathrm{T}}\nabla_0\phi\right)\boldsymbol{I}\right)\widehat{\boldsymbol{F}}^{-\mathrm{T}} : \nabla_0\delta\boldsymbol{v}\,\mathrm{d}V
         """

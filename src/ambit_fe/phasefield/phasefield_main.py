@@ -343,6 +343,7 @@ class PhasefieldProblem(problem_base):
                 self.phi,
                 self.phidot_expr,
                 self.bmeasures,
+                v=self.fluidvar["v"],
                 F=self.alevar["Fale"],
                 bspec="wetting",
             )
@@ -351,6 +352,7 @@ class PhasefieldProblem(problem_base):
                 self.phi_old,
                 self.phidot_old,
                 self.bmeasures,
+                v=self.fluidvar["v_old"],
                 F=self.alevar["Fale_old"],
                 bspec="wetting",
             )
@@ -359,6 +361,7 @@ class PhasefieldProblem(problem_base):
                 self.phi_mid,
                 self.phidot_mid,
                 self.bmeasures,
+                v=self.fluidvar["v_mid"],
                 F=self.alevar["Fale_mid"],
                 bspec="wetting",
             )
@@ -403,13 +406,13 @@ class PhasefieldProblem(problem_base):
                 if self.have_neumann_wetting:
                     self.weakform_mu += -w_neumann_wetting
                 if self.have_robin_wetting:
-                    self.weakform_mu += -w_robin_wetting
+                    self.weakform_mu += w_robin_wetting
             else:
                 self.weakform_mu = self.timefac * self.potential + (1.-self.timefac) * self.potential_old
                 if self.have_neumann_wetting:
                     self.weakform_mu += -(self.timefac * w_neumann_wetting + (1.-self.timefac) * w_neumann_wetting_old)
                 if self.have_robin_wetting:
-                    self.weakform_mu += -(self.timefac * w_robin_wetting + (1.-self.timefac) * w_robin_wetting_old)
+                    self.weakform_mu += (self.timefac * w_robin_wetting + (1.-self.timefac) * w_robin_wetting_old)
         if self.ti.res_eval == "midp":
             # phase field residual
             self.weakform_phi = self.phase_field_mid
@@ -423,13 +426,13 @@ class PhasefieldProblem(problem_base):
                 if self.have_neumann_wetting:
                     self.weakform_mu += -w_neumann_wetting
                 if self.have_robin_wetting:
-                    self.weakform_mu += -w_robin_wetting
+                    self.weakform_mu += w_robin_wetting
             else:
                 self.weakform_mu = self.potential_mid
                 if self.have_neumann_wetting:
                     self.weakform_mu += -w_neumann_wetting_mid
                 if self.have_robin_wetting:
-                    self.weakform_mu += -w_robin_wetting_mid
+                    self.weakform_mu += w_robin_wetting_mid
         if self.ti.res_eval == "back":
             # phase field residual
             self.weakform_phi = self.phase_field
@@ -442,7 +445,7 @@ class PhasefieldProblem(problem_base):
             if self.have_neumann_wetting:
                 self.weakform_mu += -w_neumann_wetting
             if self.have_robin_wetting:
-                self.weakform_mu += -w_robin_wetting
+                self.weakform_mu += w_robin_wetting
 
     def set_variational_forms_jacobian(self):
         self.weakform_lin_phiphi = ufl.derivative(self.weakform_phi, self.phi, self.dphi)

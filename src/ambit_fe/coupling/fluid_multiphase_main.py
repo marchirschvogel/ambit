@@ -182,9 +182,9 @@ class FluidmechanicsMultiphaseProblem(problem_base):
                 self.capillary_force_old -= self.pbf.vf.korteweg_stress(self.pbp.phi_old, self.pbp.mu_old, self.pbp.ma[n].driv_force(self.pbp.phi_old, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
                 self.capillary_force_mid -= self.pbf.vf.korteweg_stress(self.pbp.phi_mid, self.pbp.mu_mid, self.pbp.ma[n].driv_force(self.pbp.phi_mid, returnquantity="doublewell"), kappa, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
             else:
-                self.capillary_force += self.pbf.vf.korteweg_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"])
-                self.capillary_force_old += self.pbf.vf.korteweg_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
-                self.capillary_force_mid += self.pbf.vf.korteweg_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
+                self.capillary_force += self.pbf.vf.capillary_force(self.pbp.phi, self.pbp.mu, self.pbf.dx(M), F=self.pbf.alevar["Fale"])
+                self.capillary_force_old += self.pbf.vf.capillary_force(self.pbp.phi_old, self.pbp.mu_old, self.pbf.dx(M), F=self.pbf.alevar["Fale_old"])
+                self.capillary_force_mid += self.pbf.vf.capillary_force(self.pbp.phi_mid, self.pbp.mu_mid, self.pbf.dx(M), F=self.pbf.alevar["Fale_mid"])
 
         # add to fluid momentum
         if self.pbf.ti.res_eval == "trap":

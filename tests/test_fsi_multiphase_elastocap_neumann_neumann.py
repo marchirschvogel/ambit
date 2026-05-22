@@ -101,7 +101,7 @@ def test_main():
     COUPLING_PARAMS_FSI = {
         "coupling_fluid_ale": {"interface": [locate_interf()]},
         "fsi_system": "neumann_neumann",
-        "wetting_condition_interface": {"coeff": 3.*(sig_sa-sig_sl)/4.}, # wetting Robin condition at interface
+        "wetting_condition_interface": {"c1": 3.*(sig_sa-sig_sl)/4.}, # wetting Robin condition at interface
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!

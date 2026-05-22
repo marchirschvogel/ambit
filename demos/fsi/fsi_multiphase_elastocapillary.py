@@ -27,12 +27,29 @@ def main():
     dim = "2D" # 2D, 3D - need to set it up for 3D appropriately (mesh...)
     num_refine = 4
 
+    y0 = 19.4
+    R0 = 178.4 # µm
+
     """
-    Refinement strip around elastocapillary contact region
+    Refinement region around phase interface
     """
-    class locate_refine_strip:
+    class locate_refine_region:
         def evaluate(self, x):
-            return np.logical_and(x[0] > 120., x[0] < 230.)
+            xx = x[0]
+            yy = x[1]
+            zz = x[2]
+
+            r3 = np.sqrt(xx * xx + zz * zz + (yy - y0) ** 2.)
+            rxz = np.sqrt(xx * xx + zz * zz)
+
+            wdth = 25.0
+
+            # in_upper_ring = np.logical_and(np.logical_and(yy >= 0.0, yy < R0/2.), np.abs(r3 - R0) <= wdth)
+            in_upper_ring = np.logical_and(yy >= 0.0, np.abs(r3 - R0) <= wdth)
+            in_lower_strip = np.logical_and(yy < 0.0, np.abs(rxz - R0) <= wdth)
+
+            return np.logical_or(in_upper_ring, in_lower_strip)
+
 
     IO_PARAMS = {
         "problem_type": "fsi_multiphase",
@@ -44,7 +61,7 @@ def main():
         "mesh_domain": {"type":"rectangle", "celltype":"triangle", "coords_a":[0.0, -50.0], "coords_b":[500.0, 500.0], "meshsize":[40,44]},
         # "mesh_domain": {"type":"box", "celltype":"tetrahedron", "coords_a":[0.0, -50.0, 0.0], "coords_b":[500.0, 500.0, 500.0], "meshsize":[40,44,40]},
         "mesh_encoding": "ASCII", # HDF5, ASCII
-        "refine_mesh": {"region": locate_refine_strip(), "steps": num_refine},  # refinement working only for triangles/tetrahedra
+        "refine_mesh": {"region": locate_refine_region(), "steps": num_refine},  # refinement working only for triangles/tetrahedra
         "results_to_write": [
             ["displacement"],
             ["velocity", "pressure", "density"],
@@ -54,16 +71,16 @@ def main():
         "write_initial_fields": True,
         "report_conservation_properties": True,
         # "write_submeshes": True,
-        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"_R"+str(num_refine)+"wet-3.75",
+        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"_R"+str(num_refine)+"wet0_eps10.0",
     }
 
-    eps = 1.0 # 1 µm (E. H. van Brummelen et al. 2021)
+    eps = 10.0 # 1 µm (E. H. van Brummelen et al. 2021)
 
     class expr1:
         def __init__(self):
             self.t = 0
-            self.R_0 = 178.4 # µm
-            self.x_c = np.asarray([0.0, 19.4, 0.0])
+            self.R_0 = R0
+            self.x_c = np.asarray([0.0, y0, 0.0])
 
         def evaluate(self, x):
             d = np.sqrt( (x[0]-self.x_c[0])**2.0 + (x[1]-self.x_c[1])**2.0 + (x[2]-self.x_c[2])**2.0 )
@@ -79,7 +96,7 @@ def main():
         rho2 = 1.26 #0.2408 # pg/(µm^3) = pg/(µm^3)
         eta1 = 1412. # 1 mPa s = pg/(µm µs)
         eta2 = 1412. # Glycerol - 1 mPa s = pg/(µm µs)
-        sig = 46. # surface energy density coefficient - mN/m = g/(s^2) = pg/(µs^2)
+        sig_la = 46. # surface energy density coefficient - mN/m = g/(s^2) = pg/(µs^2)
         rho_s = 1.0#12.6e-3 # solid density - 1 pg/(µm^3) = pg/(µm^3)
     elif case==2:
         dt = 0.01e3 # µs
@@ -87,17 +104,19 @@ def main():
         rho2 = 1.26 # 1 pg/(µm^3) = pg/(µm^3)
         eta1 = 100. # 1 mPa s = pg/(µm µs)
         eta2 = 1412. # Glycerol - 1 mPa s = pg/(µm µs)
-        sig = 46. # surface energy density coefficient - mN/m = g/(s^2) = pg/(µs^2)
+        sig_la = 46. # surface energy density coefficient - mN/m = g/(s^2) = pg/(µs^2)
         rho_s = 1.0 # solid density - 1 pg/(µm^3) = pg/(µm^3)
     else:
         raise ValueError("Unknown case.")
+
+    sig = 3.*sig_la/(2.*np.sqrt(2.))
 
     """
     Parameters for the global time control
     """
     CONTROL_PARAMS = {"maxtime": 10e3, # µs
                       "dt": dt,
-                      # "numstep_stop": 100,
+                      # "numstep_stop": 250,
                       "initial_fields": [expr1, None],
                       }
 
@@ -140,11 +159,11 @@ def main():
 
     sig_sl = 36.
     sig_sa = 31.
-    wet = 3.*(sig_sa-sig_sl)/4.
+    wet = 0.#3.*(sig_sa-sig_sl)/4.
     COUPLING_PARAMS_FSI = {
         "coupling_fluid_ale": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
-        "wetting_condition_interface": {"coeff": wet}, # wetting Robin condition at interface
+        "wetting_condition_interface": {"c1": wet}, # wetting Robin condition at interface
     }
 
     # Use full Korteweg stress in capillary force contribution - needed for correct inclusion of capillary traction forces at FSI interface!
@@ -195,7 +214,7 @@ def main():
                                 "id": locate_solid()}}
 
     alpha = (rho1-rho2)/(rho1+rho2)
-    sigtilde = sig #3.*sig/(2.*np.sqrt(2.))
+
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2, "zeta1": zeta, "zeta2": zeta},
                                 "inertia": {"rho1": rho1, "rho2": rho2},
@@ -209,8 +228,8 @@ def main():
                                                   "exponent": 1.0,
                                                   # "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
                                                   "M0": m,                 # Mobility [length^5/(pressure time)]
-                                                  "D": sigtilde/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
-                                                  "kappa": sigtilde*eps,   # Gradient energy coefficient [pressure/length]
+                                                  "D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
+                                                  "kappa": sig*eps,   # Gradient energy coefficient [pressure/length]
                                                   "alpha": None},         # Pressure factor in diffusive flux
                                                   "id": locate_fluid()}}
 

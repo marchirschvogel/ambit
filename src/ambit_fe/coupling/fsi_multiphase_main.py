@@ -247,22 +247,22 @@ class FSIMultiphaseProblem(problem_base):
     def set_variational_forms_residual_coupling(self):
         # wetting (or other) conditions imposed at interface
         if bool(self.pbfsi.wetting_interface):
-            wetting = self.pbp.vf.weakform_robin_wetting(self.pbp.phi, self.pbfsi.wetting_interface["coeff"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale"])
-            wetting_old = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_old, self.pbfsi.wetting_interface["coeff"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_old"])
-            wetting_mid = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_mid, self.pbfsi.wetting_interface["coeff"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_mid"])
+            wetting = self.pbp.vf.weakform_robin_wetting(self.pbp.phi, self.pbp.phidot, self.pbfsi.wetting_interface["c1"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale"])
+            wetting_old = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_old, self.pbp.phidot_old, self.pbfsi.wetting_interface["c1"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_old"])
+            wetting_mid = self.pbp.vf.weakform_robin_wetting(self.pbp.phi_mid, self.pbp.phidot_mid, self.pbfsi.wetting_interface["c1"], self.io.ds(self.io.interface_id_f), F=self.pbf.alevar["Fale_mid"])
 
             if self.pbp.ti.res_eval == "trap":
                 if not self.pbp.ti.potential_at_midpoint:
-                    self.pbp.weakform_mu += -wetting
+                    self.pbp.weakform_mu += wetting
                 else:
-                    self.pbp.weakform_mu += -(self.pbp.timefac * wetting + (1.-self.pbp.timefac) * wetting_old)
+                    self.pbp.weakform_mu += (self.pbp.timefac * wetting + (1.-self.pbp.timefac) * wetting_old)
             if self.pbp.ti.res_eval == "midp":
                 if not self.pbp.ti.potential_at_midpoint:
-                    self.pbp.weakform_mu += -wetting
+                    self.pbp.weakform_mu += wetting
                 else:
-                    self.pbp.weakform_mu += -wetting_mid
+                    self.pbp.weakform_mu += wetting_mid
             if self.pbp.ti.res_eval == "back":
-                self.pbp.weakform_mu += -wetting
+                self.pbp.weakform_mu += wetting
 
     def set_variational_forms_jacobian_coupling(self):
         pass

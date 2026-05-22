@@ -43,17 +43,17 @@ class variationalform(variationalform_base):
         """
         return ( ufl.inner(mu, self.var_mu) - ufl.inner(driv_force, self.var_mu) - kappa*ufl.inner(ufl.grad(phi), ufl.grad(self.var_mu)) ) * ddomain
 
-    def weakform_neumann_wetting(self, coeff, dboundary, F=None):
-        return coeff * self.var_mu * dboundary
+    def weakform_neumann_wetting(self, c1, dboundary, F=None):
+        return c1 * self.var_mu * dboundary
 
-    def weakform_robin_wetting(self, phi, coeff, dboundary, exp=2.0, phi0=1.0, F=None):
-        return (coeff * (phi**exp - phi0) * self.var_mu) * dboundary
+    def weakform_robin_wetting(self, phi, phidot, c1, dboundary, v=None, F=None):
+        return (c1 * (1. - phi**2.) * self.var_mu) * dboundary
 
-    def weakform_neumann_flux(self, coeff, dboundary, F=None):
-        return coeff * self.var_phi * dboundary
+    def weakform_neumann_flux(self, c1, dboundary, F=None):
+        return c1 * self.var_phi * dboundary
 
-    def weakform_robin_flux(self, phi, coeff, phi0, dboundary, F=None):
-        return (coeff * (phi - phi0) * self.var_phi) * dboundary
+    def weakform_robin_flux(self, phi, c1, phi0, dboundary, F=None):
+        return (c1 * (phi - phi0) * self.var_phi) * dboundary
 
 
 # gradients of a scalar field transform according to:
@@ -81,22 +81,22 @@ class variationalform_ale(variationalform):
         """
         return ( J*ufl.inner(mu, self.var_mu) - J*ufl.inner(driv_force, self.var_mu) - J*kappa*ufl.inner(ufl.inv(F)*ufl.inv(F).T*ufl.grad(phi), ufl.grad(self.var_mu)) ) * ddomain
 
-    def weakform_neumann_wetting(self, coeff, dboundary, F=None):
+    def weakform_neumann_wetting(self, c1, dboundary, F=None):
         J = ufl.det(F)
         ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
-        return coeff * self.var_mu * ja*dboundary
+        return c1 * self.var_mu * ja*dboundary
 
-    def weakform_robin_wetting(self, phi, coeff, dboundary, exp=2.0, phi0=1.0, F=None):
+    def weakform_robin_wetting(self, phi, phidot, c1, dboundary, v=None, F=None):
         J = ufl.det(F)
         ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
-        return (coeff * (phi**exp - phi0) * self.var_mu) * ja*dboundary
+        return (c1 * (1. - phi**2.) * self.var_mu) * ja*dboundary
 
-    def weakform_neumann_flux(self, coeff, dboundary, F=None):
+    def weakform_neumann_flux(self, c1, dboundary, F=None):
         J = ufl.det(F)
         ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
-        return coeff * self.var_phi * ja*dboundary
+        return c1 * self.var_phi * ja*dboundary
 
-    def weakform_robin_flux(self, phi, coeff, phi0, dboundary, F=None):
+    def weakform_robin_flux(self, phi, c1, phi0, dboundary, F=None):
         J = ufl.det(F)
         ja = J * ufl.sqrt(ufl.dot(self.n0, (ufl.inv(F) * ufl.inv(F).T) * self.n0))
-        return (coeff * (phi - phi0) * self.var_phi) * ja*dboundary
+        return (c1 * (phi - phi0) * self.var_phi) * ja*dboundary
