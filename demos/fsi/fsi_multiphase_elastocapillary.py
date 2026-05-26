@@ -24,7 +24,7 @@ def main():
 
     case = 1
 
-    dim = "2D" # 2D, 3D - need to set it up for 3D appropriately (mesh...)
+    dim = "2D" # 2D, 3D
     num_refine = 4
 
     y0 = 19.4
@@ -50,6 +50,12 @@ def main():
 
             return np.logical_or(in_upper_ring, in_lower_strip)
 
+    if dim=="2D":
+        mesh_ = {"type": "rectangle", "celltype": "triangle", "coords_a": [0.0, -50.0], "coords_b": [500.0, 500.0], "meshsize": [40,44]}
+    elif dim=="3D":
+        mesh_ = {"type": "box", "celltype": "tetrahedron", "coords_a": [0.0, -50.0, 0.0], "coords_b": [500.0, 500.0, 500.0], "meshsize": [40,44,40]}
+    else:
+        raise ValueError("Unknown dim. Choose '2D' or '3D'.")
 
     IO_PARAMS = {
         "problem_type": "fsi_multiphase",
@@ -58,8 +64,7 @@ def main():
         "indicate_results_by": "step",
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
-        "mesh_domain": {"type":"rectangle", "celltype":"triangle", "coords_a":[0.0, -50.0], "coords_b":[500.0, 500.0], "meshsize":[40,44]},
-        # "mesh_domain": {"type":"box", "celltype":"tetrahedron", "coords_a":[0.0, -50.0, 0.0], "coords_b":[500.0, 500.0, 500.0], "meshsize":[40,44,40]},
+        "mesh_domain": mesh_,
         "mesh_encoding": "ASCII", # HDF5, ASCII
         "refine_mesh": {"region": locate_refine_region(), "steps": num_refine},  # refinement working only for triangles/tetrahedra
         "results_to_write": [
@@ -71,7 +76,7 @@ def main():
         "write_initial_fields": True,
         "report_conservation_properties": True,
         # "write_submeshes": True,
-        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"_R"+str(num_refine)+"wet0_eps10.0",
+        "simname": "fsi_multiphase_elastocapillary"+str(case)+"_"+dim+"_R"+str(num_refine),
     }
 
     eps = 10.0 # 1 µm (E. H. van Brummelen et al. 2021)
@@ -125,8 +130,9 @@ def main():
         "direct_solver": "mumps",   # superlu_dist, mumps
         "tol_res": 1e-6,
         "tol_inc": 1e-4,
-        # "divergence_continue": "PTC",
+        # "divergence_continue": "ptc",
         # "k_ptc_initial": 1.0,
+        # "ptc_field": 1, # on fluid
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "trapezoidal"}
@@ -159,7 +165,7 @@ def main():
 
     sig_sl = 36.
     sig_sa = 31.
-    wet = 0.#3.*(sig_sa-sig_sl)/4.
+    wet = 3.*(sig_sa-sig_sl)/4.
     COUPLING_PARAMS_FSI = {
         "coupling_fluid_ale": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet

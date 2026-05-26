@@ -43,9 +43,6 @@ def test_main():
         "tol_lin_rel": 1.0e-9,
         "lin_norm_type": "preconditioned",
         "print_liniter_every": 50,
-        "divergence_continue": None,
-        "ptc": False,
-        "k_ptc_initial": 0.1,
     }
 
     TIME_PARAMS_SOLID = {"timint": "ost", "theta_ost": 0.5}

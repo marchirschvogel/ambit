@@ -45,7 +45,6 @@ def test_main():
         "solve_type": "direct",
         "tol_res": 1.0e-8,
         "tol_inc": 1.0e-8,
-        "ptc": False,
     }
 
     TIME_PARAMS_SOLID = {

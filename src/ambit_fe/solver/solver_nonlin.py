@@ -169,12 +169,17 @@ class solver_nonlinear:
 
     def set_solver_params(self, solver_params):
         self.maxiter = solver_params.get("maxiter", 25)
+        # BEGIN: PTC settings
         self.divcont = solver_params.get("divergence_continue", None)
-        self.PTC = solver_params.get("ptc", False)
-        self.k_PTC_initial = solver_params.get("k_ptc_initial", 0.1)
-        self.PTC_randadapt_range = solver_params.get("ptc_randadapt_range", [0.85, 1.35])
-        self.maxresval = solver_params.get("catch_max_res_value", 1e16)
-        self.maxincval = solver_params.get("catch_max_inc_value", 1e16)
+        self.ptc = solver_params.get("ptc", False)
+        self.k_ptc_initial = solver_params.get("k_ptc_initial", 0.1)
+        self.ptc_randadapt_range = solver_params.get("ptc_randadapt_range", [0.85, 1.35])
+        self.ptc_maxresval = solver_params.get("catch_max_res_value", 1e16)
+        self.ptc_maxincval = solver_params.get("catch_max_inc_value", 1e16)
+        self.ptc_max_adapt = solver_params.get("ptc_max_adapt", 10)
+        self.ptc_field = solver_params.get("ptc_field", 0)
+        self.ptc_maxiter = solver_params.get("ptc_maxiter", 100)
+        # END
         self.direct_solver = solver_params.get("direct_solver", "mumps")
         self.iterative_solver = solver_params.get("iterative_solver", "gmres")
         self.ignore_unconverged = solver_params.get("ignore_unconverged", False)
@@ -699,8 +704,8 @@ class solver_nonlinear:
         # Newton iteration index
         it = 0
         # for PTC
-        k_PTC = self.k_PTC_initial
-        counter_adapt, max_adapt = 0, 10
+        k_ptc = self.k_ptc_initial
+        counter_adapt, max_adapt = 0, self.ptc_max_adapt
         self.ni, self.li = 0, 0  # nonlinear and linear iteration counters
 
         for npr in range(self.nprob):
@@ -735,7 +740,7 @@ class solver_nonlinear:
                     self.indlen = self.indlen_[1]
 
                 # assemble Jacobian
-                self.jacobian_problem_actions(t, npr, k_PTC)
+                self.jacobian_problem_actions(t, npr, k_ptc)
 
                 te = time.time() - tes
 
@@ -869,7 +874,7 @@ class solver_nonlinear:
                     self.pb[npr].rom.reconstruct_solution_increment(self.del_x_sol[npr], self.del_x[npr])
 
                 # norm from last step for potential PTC adaption - prior to res update
-                res_norm_main_last = self.resnorms[npr]["res1"]
+                res_norm_main_last = self.resnorms[npr]["res"+str(self.ptc_field+1)]
 
                 # update variables
                 for n in range(self.nfields[npr]):
@@ -921,20 +926,20 @@ class solver_nonlinear:
                     )
                 )
 
-                # for PTC - scale k_PTC with ratio of current to previous residual norm
-                if self.PTC:
-                    k_PTC *= self.resnorms[npr]["res1"] / res_norm_main_last
+                # for PTC - scale k_ptc with ratio of current to previous residual norm
+                if self.ptc:
+                    k_ptc *= self.resnorms[npr]["res"+str(self.ptc_field+1)] / res_norm_main_last
 
                 # adaptive PTC (for 3D block K_00 only!)
-                if self.divcont == "PTC":
-                    self.maxiter = 100  # should be enough...
+                if self.divcont == "ptc":
+                    self.maxiter = self.ptc_maxiter
                     # collect errors
                     err.append(
                         self.solutils.catch_solver_errors(
                             resnorm=max(self.resnorms[npr].values()),
                             incnorm=max(self.incnorms[npr].values()),
-                            maxresval=self.maxresval,
-                            maxincval=self.maxincval,
+                            maxresval=self.ptc_maxresval,
+                            maxincval=self.ptc_maxincval,
                             linconv=linconv,
                         )
                     )
@@ -943,8 +948,8 @@ class solver_nonlinear:
                         self.solutils.catch_solver_errors(
                             resnorm=max(self.resnorms[npr].values()),
                             incnorm=max(self.incnorms[npr].values()),
-                            maxresval=self.maxresval,
-                            maxincval=self.maxincval,
+                            maxresval=self.ptc_maxresval,
+                            maxincval=self.ptc_maxincval,
                             linconv=linconv,
                             report=False,
                         )
@@ -955,19 +960,19 @@ class solver_nonlinear:
             self.ni_all += 1
 
             # now check if errors occurred
-            if any(err) and self.divcont == "PTC":
-                self.PTC = True
+            if any(err) and self.divcont == "ptc":
+                self.ptc = True
                 # reset Newton step
-                it, k_PTC = 1, self.k_PTC_initial
+                it, k_ptc = 1, self.k_ptc_initial
 
-                # try a new (random) PTC parameter if even the solve with k_PTC_initial fails
+                # try a new (random) PTC parameter if even the solve with k_ptc_initial fails
                 if counter_adapt > 0:
-                    k_PTC *= np.random.uniform(
-                        self.PTC_randadapt_range[0],
-                        self.PTC_randadapt_range[1],
+                    k_ptc *= np.random.uniform(
+                        self.ptc_randadapt_range[0],
+                        self.ptc_randadapt_range[1],
                     )
 
-                utilities.print_status("Reset Newton and perform PTC adaption. PTC factor: %.4f" % (k_PTC), self.comm)
+                utilities.print_status("Reset Newton and perform PTC adaption. PTC factor: %.4f" % (k_ptc), self.comm)
 
                 counter_adapt += 1
 
@@ -988,8 +993,8 @@ class solver_nonlinear:
             # check if all problems have converged
             if all(converged):
                 # reset to normal Newton if PTC was used in a divcont action
-                if self.divcont == "PTC":
-                    self.PTC = False
+                if self.divcont == "ptc":
+                    self.ptc = False
                     counter_adapt = 0
                 self.ni = it - 1
                 break
@@ -1039,7 +1044,7 @@ class solver_nonlinear:
             self.r_list_sol[npr][n].assemble()
             self.resnorms[npr]["res" + str(n + 1)] = self.r_list_sol[npr][n].norm()
 
-    def jacobian_problem_actions(self, t, npr, k_PTC):
+    def jacobian_problem_actions(self, t, npr, k_ptc):
         tes = time.time()
 
         # compute Jacobian
@@ -1063,9 +1068,9 @@ class solver_nonlinear:
         if bool(self.pb[npr].pbase.residual_scale):
             self.pb[npr].scale_jacobian_list(self.K_list_sol[npr])
 
-        if self.PTC:
-            # computes K_00 + k_PTC * I
-            self.K_list_sol[npr][0][0].shift(k_PTC)
+        if self.ptc:
+            # computes K + k_ptc * I
+            self.K_list_sol[npr][self.ptc_field][self.ptc_field].shift(k_ptc)
 
     def reset_step(self, vec, vec_start, ghosted):
         vec.axpby(1.0, 0.0, vec_start)
@@ -1210,7 +1215,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         # dicts for residual and increment norms
         self.resnorms, self.incnorms = {}, {}
 
-        self.PTC = False  # don't think we'll ever need PTC for the 0D ODE problem...
+        self.ptc = False  # don't think we'll ever need PTC for the 0D ODE problem...
         self.solvetype = "direct"  # only a direct solver is available for ODE problems
 
         self.solutils = sol_utils(self)

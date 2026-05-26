@@ -1854,7 +1854,7 @@ class SolidmechanicsSolver(solver_base):
         utilities.print_prestress("start", self.pb.pbase.comm)
 
         if self.pb.prestress_ptc:
-            self.solnln.PTC = True
+            self.solnln.ptc = True
 
         for N in range(1, self.pb.prestress_numstep + 1):
             wts = time.time()
@@ -1907,7 +1907,7 @@ class SolidmechanicsSolver(solver_base):
 
         # reset PTC flag to what it was
         if self.pb.prestress_ptc:
-            self.solnln.PTC = self.solver_params.get("ptc", False)
+            self.solnln.ptc = self.solver_params.get("ptc", False)
 
         # now build main (non-prestress) forms
         self.pb.set_problem_residual_jacobian_forms()

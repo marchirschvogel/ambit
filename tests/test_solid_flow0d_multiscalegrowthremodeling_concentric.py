@@ -41,7 +41,7 @@ def test_main():
         "solve_type": "direct",
         "tol_res": [1.0e-8, 1.0e-6],
         "tol_inc": [1.0e-8, 1.0e-6],
-        "divergence_continue": "PTC",
+        "divergence_continue": "ptc",
         "k_ptc_initial": 10.0,
         "print_local_iter": False,
         "tol_res_local": 1.0e-10,

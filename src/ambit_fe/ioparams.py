@@ -89,6 +89,8 @@ def check_params_solver(params):
         "print_liniter_every",
         "print_local_iter",
         "ptc",
+        "ptc_field",
+        "ptc_maxiter",
         "ptc_randadapt_range",
         "res_lin_monitor",
         "rebuild_prec_every_it",

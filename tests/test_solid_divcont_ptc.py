@@ -29,7 +29,7 @@ def test_main():
 
     SOLVER_PARAMS = {
         "solve_type": "direct",
-        "divergence_continue": "PTC",
+        "divergence_continue": "ptc",
         "k_ptc_initial": 10.0,
         "tol_res": 1.0e-8,
         "tol_inc": 1.0e-8,

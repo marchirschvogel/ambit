@@ -61,8 +61,6 @@ def test_main():
         "tol_res": 1.0e-7,
         "tol_inc": 1.0e-7,
         "subsolver_params": {"tol_res": 1.0e-6, "tol_inc": 1.0e-6},
-        "k_ptc_initial": 0.1,
-        "catch_max_res_value": 1e12,
     }
 
     TIME_PARAMS = {"timint": "ost", "theta_ost": 1.0}
