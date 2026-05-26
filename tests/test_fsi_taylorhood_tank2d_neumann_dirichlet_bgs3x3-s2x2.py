@@ -168,7 +168,10 @@ def test_main():
         readtol=1e-4,
     )
 
-    success = ambit_fe.resultcheck.success_check([check1, check2], problem.mp.comm)
+    # total number of nonlinear iterations
+    check3 = (problem.ms.ni==39)
+
+    success = ambit_fe.resultcheck.success_check([check1, check2, check3], problem.mp.comm)
 
     if not success:
         raise RuntimeError("Test failed!")

@@ -221,7 +221,11 @@ def test_main():
     s_corr[20] = 8.6927116265983313E+03
 
     check1 = ambit_fe.resultcheck.results_check_vec_sq(problem.mp.pb0.s, s_corr, problem.mp.comm, tol=tol)
-    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
+
+    # total number of nonlinear iterations
+    check2 = (problem.ms.ni==8)
+
+    success = ambit_fe.resultcheck.success_check([check1,check2], problem.mp.comm)
 
     if not success:
         raise RuntimeError("Test failed!")

@@ -55,7 +55,7 @@ class problem_base:
 
         self.t_init = 0.0
         if self.restart_step > 0: # needs to be done here already, since problems initialize with t_init...
-            # NOTE: We do not want to compute initial time with "self.restart_step * self.dt",
+            # NOTE: We do not want to compute the initial time with "self.restart_step * self.dt",
             # since user might request restart with a different time step size!
             # Hence we read the initial (restart) time from file.
             self.t_init = self.read_step_time(self.restart_step)[1]
@@ -351,7 +351,6 @@ class solver_base:
             )
 
         utilities.print_status("-" * 63, self.pb.comm)
-        self.reset_counters()
 
     def update_counters(self, wt, t):
         self.wt += wt

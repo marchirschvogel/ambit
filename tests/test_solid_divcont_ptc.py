@@ -98,7 +98,10 @@ def test_main():
         tol=tol,
         nm="u",
     )
-    success = ambit_fe.resultcheck.success_check([check1], problem.mp.comm)
+    # total number of nonlinear iterations
+    check2 = (problem.ms.ni==8)
+
+    success = ambit_fe.resultcheck.success_check([check1,check2], problem.mp.comm)
 
     if not success:
         raise RuntimeError("Test failed!")

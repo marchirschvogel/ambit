@@ -90,6 +90,7 @@ def check_params_solver(params):
         "print_local_iter",
         "ptc",
         "ptc_field",
+        "ptc_max_adapt",
         "ptc_maxiter",
         "ptc_randadapt_range",
         "res_lin_monitor",

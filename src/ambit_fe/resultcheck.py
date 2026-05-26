@@ -38,14 +38,12 @@ def results_check_node(u, check_node, u_corr, V, comm, tol=1.0e-6, nm="vec", rea
         dtype=PETSc.IntType,
     )
 
-    readtolerance = int(-np.log10(readtol))
-
     # in parallel, dof indices can be ordered differently, so we need to check the position of the node in the
     # re-ordered local co array and then grep out the corresponding dof index from the index map
     dof_indices, dof_indices_gathered = {}, []
     for i in range(len(check_node)):
-        ind = np.where((np.round(check_node[i], readtolerance) == np.round(co, readtolerance)).all(axis=1))[0] # TODO: Needs to be improved!!!
-
+        diff = np.absolute(co - check_node[i])
+        ind = np.where((diff <= readtol).all(axis=1))[0]
         if len(ind):
             dof_indices[i] = im[ind[0]]
 

@@ -131,3 +131,5 @@ class SolidmechanicsFlow0DPeriodicRefSolver:
             )
 
         # 0D variables s and s_old are already correctly set from the previous run (end values) and should serve as new initial conditions
+        # reset counters
+        self.solver.reset_counters()
