@@ -188,7 +188,7 @@ class solver_nonlinear:
 
         self.precond_fields = [[]] * self.nprob
         for npr in range(self.nprob):
-            if isinstance(precond_fields, list):
+            if isinstance(precond_fields[npr], list):
                 self.precond_fields[npr] = precond_fields[npr]
             else:
                 self.precond_fields[npr] = precond_fields
@@ -419,20 +419,18 @@ class solver_nonlinear:
                         self.ksp[npr].getPC().setUp()
                         ksp_fields = self.ksp[npr].getPC().getFieldSplitSubKSP()
 
-                        precond_fields = [item for sublist in list(self.precond_fields[npr].values()) for item in sublist]
-
-                        assert nsets == len(precond_fields)  # sanity check
+                        assert nsets == len(self.precond_fields[npr])  # sanity check
 
                         # set field-specific preconditioners
                         for n in range(nsets):
-                            if precond_fields[n]["prec"] == "amg":
-                                solvetype = precond_fields[n].get("solve", "preonly")
+                            if self.precond_fields[npr][n]["prec"] == "amg":
+                                solvetype = self.precond_fields[npr][n].get("solve", "preonly")
                                 ksp_fields[n].setType(solvetype)
-                                amgtype = precond_fields[n].get("amgtype", "hypre")
+                                amgtype = self.precond_fields[npr][n].get("amgtype", "hypre")
                                 ksp_fields[n].getPC().setType(amgtype)
                                 if amgtype == "hypre":
                                     ksp_fields[n].getPC().setHYPREType("boomeramg")
-                            elif precond_fields[n]["prec"] == "direct":
+                            elif self.precond_fields[npr][n]["prec"] == "direct":
                                 ksp_fields[n].setType("preonly")
                                 ksp_fields[n].getPC().setType("lu")
                                 ksp_fields[n].getPC().setFactorSolverType("mumps")
@@ -477,61 +475,6 @@ class solver_nonlinear:
                     elif self.block_precond[npr] == "s3x3full":
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
                         bj = preconditioner.schur3x3full(
-                            self.iset[npr],
-                            self.precond_fields[npr],
-                            self.pb[npr].io,
-                            self.solver_params,
-                            self.comm,
-                        )
-                        self.ksp[npr].getPC().setPythonContext(bj)
-
-                    elif self.block_precond[npr] == "BGS_1_s3x3":
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.BGS_1_schur3x3(
-                            self.iset[npr],
-                            self.precond_fields[npr],
-                            self.pb[npr].io,
-                            self.solver_params,
-                            self.comm,
-                        )
-                        self.ksp[npr].getPC().setPythonContext(bj)
-
-                    elif self.block_precond[npr] == "BGS_1_s3x3full":
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.BGS_1_schur3x3full(
-                            self.iset[npr],
-                            self.precond_fields[npr],
-                            self.pb[npr].io,
-                            self.solver_params,
-                            self.comm,
-                        )
-                        self.ksp[npr].getPC().setPythonContext(bj)
-
-                    elif self.block_precond[npr] == "BGS_1_1_s2x2":
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.BGS_1_1_schur2x2(
-                            self.iset[npr],
-                            self.precond_fields[npr],
-                            self.pb[npr].io,
-                            self.solver_params,
-                            self.comm,
-                        )
-                        self.ksp[npr].getPC().setPythonContext(bj)
-
-                    elif self.block_precond[npr] == "BGS_1_1_s3x3":
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.BGS_1_1_schur3x3(
-                            self.iset[npr],
-                            self.precond_fields[npr],
-                            self.pb[npr].io,
-                            self.solver_params,
-                            self.comm,
-                        )
-                        self.ksp[npr].getPC().setPythonContext(bj)
-
-                    elif self.block_precond[npr] == "BGS_s2x2_bgs2x2":
-                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.BGS_schur2x2_bgs2x2(
                             self.iset[npr],
                             self.precond_fields[npr],
                             self.pb[npr].io,
@@ -610,17 +553,29 @@ class solver_nonlinear:
                             for key in opts.getAll():
                                 opts.delValue(key)  # clear options - opts.clear() doesn't seem to work?!
 
+                    # general outer BGS that can have inner block or single precs - for arbitrary n x n systems!
+                    elif self.block_precond[npr] == "BGS_outer":
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner.BGS_outer(
+                            self.iset[npr],
+                            self.precond_fields[npr],
+                            self.pb[npr].io,
+                            self.solver_params,
+                            self.comm,
+                        )
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
                     else:
                         raise ValueError("Unknown block_precond option!")
 
                 else:
-                    if self.precond_fields[npr]["prec"] == "amg":
+                    if self.precond_fields[npr][0]["prec"] == "amg":
                         self.ksp[npr].getPC().setType("hypre")
                         self.ksp[npr].getPC().setHYPREType("boomeramg")
 
                         # set additional PETSc options for single-field preconditioner
-                        if "petsc_options" in self.precond_fields[npr].keys():
-                            opt_dict = self.precond_fields[npr]["petsc_options"]
+                        if "petsc_options" in self.precond_fields[npr][0].keys():
+                            opt_dict = self.precond_fields[npr][0]["petsc_options"]
                             opts = PETSc.Options()
                             for o in opt_dict:
                                 opts.setValue(o, opt_dict[o])

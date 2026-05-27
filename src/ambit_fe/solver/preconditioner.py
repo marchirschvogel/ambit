@@ -24,18 +24,20 @@ class block_precond:
     def __init__(self, iset, precond_fields, io, solparams, comm=None):
         self.iset = iset
 
-        if isinstance(precond_fields, dict):
-            precond_fields = [item for sublist in list(precond_fields.values()) for item in sublist]
-        elif isinstance(precond_fields, list):
-            pass
-        else:
-            raise RuntimeError("Unknown type!")
-
         num_precs = len(precond_fields)
+
+        if num_precs > 1:
+            self.is_blockprec = True
+        else:
+            self.is_blockprec = False
+
         self.precond_fields = precond_fields
 
         self.nfields = num_precs
-        assert len(self.iset) == self.nfields
+        # print(len(self.iset))
+        # print(self.nfields)
+        # exit()
+        # assert len(self.iset) == self.nfields
         self.comm = comm
         # acess to problem IO object
         self.io = io
@@ -113,6 +115,9 @@ class block_precond:
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
+
+    def apply(self, pc, x, y): # single field prec apply (=solve) - overloaded by block precs
+        self.ksp_fields[0].solve(x, y)
 
     def view(self, pc, vw):
         pass
@@ -972,420 +977,151 @@ class jacobi2x2(block_precond):
         y.assemble()
 
 
-
-# BGS with inner schur3x3 (tailored towards monolithic FrSI, where the 4th block is the ALE problem)
-# influence ALE on fluid is much more relevant than vice versa: in BGS, solve ALE first and then do 3x3 solve for fluid
-# --> NO upward solve that accounts for fluid on ALE influence
-class BGS_1_schur3x3full(block_precond):
+# outer forward Block Gauss-Seidel that can have inner block precs (like Schur complement precs)
+class BGS_outer(block_precond):
     def __init__(self, iset, precond_fields, io, solparams, comm=None):
         super().__init__(iset, precond_fields, io, solparams, comm=comm)
 
-        # create index set encompassing 0-1-2 blocks
-        self.iset_012 = self.iset[0].expand(self.iset[1])
-        self.iset_012 = self.iset_012.expand(self.iset[2])
-        self.iset_012.sort()
+        self.num_precs = len(self.precond_fields)
 
-        # single-field preconditioner
-        self.sing1 = block_precond(self.iset[3:4], precond_fields["1"], io, solparams, comm=comm)
-        # Schur 3x3 preconditioner
-        self.s3x3 = schur3x3full(self.iset[0:3], precond_fields["s3x3"], io, solparams, comm=comm)
+        self.inner_precs = [[]] * self.num_precs
+        self.bi = [[]] * self.num_precs
+
+        # index set blocks seen by outer BGS
+        self.iset_block = [[]] * self.num_precs
+
+        for i, pr in enumerate(self.precond_fields):
+            self.bi[i] = pr["block_index_0"]
+            if isinstance(pr["prec"], str):
+                self.inner_precs[i] = block_precond(self.iset[self.bi[i]:self.bi[i]+1], [pr], io, solparams, comm=comm)
+                self.iset_block[i] = self.iset[self.bi[i]]
+            elif isinstance(pr["prec"], dict):
+                if list(pr["prec"].keys())[0]=="s2x2":
+                    self.inner_precs[i] = schur2x2(self.iset[self.bi[i]:self.bi[i]+2], pr["prec"]["s2x2"], io, solparams, comm=comm)
+                    # create index set encompassing Schur blocks - seen by outer BGS
+                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
+                    self.iset_block[i].sort()
+                elif list(pr["prec"].keys())[0]=="s3x3":
+                    self.inner_precs[i] = schur3x3(self.iset[self.bi[i]:self.bi[i]+3], pr["prec"]["s3x3"], io, solparams, comm=comm)
+                    # create index set encompassing Schur blocks - seen by outer BGS
+                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
+                    self.iset_block[i] = self.iset_block[i].expand(self.iset[self.bi[i]+2])
+                    self.iset_block[i].sort()
+                elif list(pr["prec"].keys())[0]=="bgs2x2":
+                    self.inner_precs[i] = bgs2x2(self.iset[self.bi[i]:self.bi[i]+2], pr["prec"]["bgs2x2"], io, solparams, comm=comm)
+                    # create index set encompassing inner BGS blocks - seen by outer BGS
+                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
+                    self.iset_block[i].sort()
+                else:
+                    raise ValueError("Unknown inner block preconditioner.")
+            else:
+                raise ValueError("Unknown instance of 'prec'. Has to be str or list!")
 
     def create(self, pc):
         # get reference to preconditioner matrix object
         _, self.P = pc.getOperators()
         operator_mats = self.init_mat_vec()
         # set field precs for individual single and block preconditioners
-        self.sing1.create_fieldprec(operator_mats[3:4])
-        self.s3x3.create_fieldprec(operator_mats[0:3])
+        for i in range(self.num_precs):
+            # self.inner_precs[i].create_fieldprec(operator_mats[self.bi[i]:self.bi[i]+self.bs[i]])
+            self.inner_precs[i].create_fieldprec(operator_mats[i])
 
     def check_field_size(self):
-        assert self.nfields == 4
+        pass
 
     def init_mat_vec(self):
-        self.s3x3.P = self.P
+        self.operator_mats = [[]] * self.num_precs
 
-        opmats_s = self.s3x3.init_mat_vec()
+        for i in range(self.num_precs):
+            if self.inner_precs[i].is_blockprec:
+                self.inner_precs[i].P = self.P
+                self.operator_mats[i] = self.inner_precs[i].init_mat_vec()
+            else:
+                self.operator_mats[i] = [self.P.createSubMatrix(self.iset_block[i], self.iset_block[i])]
+                # do we need this???
+                self.operator_mats[i][0].setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
-        self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
+        self.tridiag_mat_outer_bgs = [[None] * self.num_precs for _ in range(self.num_precs)]
+        for i in range(self.num_precs):
+            for j in range(self.num_precs):
+                if i>=j: # forward BGS - create lower tridiagonal additional blocks
+                    self.tridiag_mat_outer_bgs[i][j] = self.P.createSubMatrix(self.iset_block[i], self.iset_block[j])
 
-        # get additional offdiagonal blocks
-        self.H = self.P.createSubMatrix(self.iset_012, self.iset[3])
+        self.x, self.y, self.z = [[]] * self.num_precs, [[]] * self.num_precs, [[]] * self.num_precs
+        for i in range(self.num_precs):
+            self.x[i] = self.tridiag_mat_outer_bgs[i][i].createVecLeft()
+            self.y[i] = self.tridiag_mat_outer_bgs[i][i].createVecLeft()
+            self.z[i] = self.tridiag_mat_outer_bgs[i][i].createVecLeft()
 
-        self.x4 = self.G.createVecLeft()
-        self.y4 = self.G.createVecLeft()
-        self.z4 = self.G.createVecLeft()
+        self.Oy = []
+        for i in range(self.num_precs):
+            for j in range(self.num_precs):
+                if i>j:
+                    self.Oy.append(self.tridiag_mat_outer_bgs[i][j].createVecLeft())
 
-        self.x123 = self.H.createVecLeft()
-        self.y123 = self.H.createVecLeft()
-        self.z123 = self.H.createVecLeft()
+        self.zf = [[]] * self.num_precs
+        for i in range(self.num_precs):
+            if self.inner_precs[i].is_blockprec:
+                self.zf[i] = self.P.createVecLeft()
 
-        self.Hy = self.H.createVecLeft()
-
-        self.xtmp = self.P.createVecLeft()
-
-        # do we need this???
-        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-
-        return [opmats_s[0], opmats_s[1], opmats_s[2], self.G]
-
-    def setUp(self, pc):
-        self.s3x3.setUp(pc)
-
-        self.P.createSubMatrix(self.iset[3], self.iset[3], submat=self.G)
-        self.P.createSubMatrix(self.iset_012, self.iset[3], submat=self.H)
-
-        # operator values have changed - do we need to re-set it?
-        self.sing1.ksp_fields[0].setOperators(self.G)
-
-    # computes y = P^{-1} x
-    def apply(self, pc, x, y):
-        # get subvectors
-        x.getSubVector(self.iset[3], subvec=self.x4)
-        x.getSubVector(self.iset_012, subvec=self.x123)
-
-        # 1) solve G * y_4 = x_4
-        self.sing1.ksp_fields[0].solve(self.x4, self.y4)
-
-        self.H.mult(self.y4, self.Hy)
-
-        # compute z123 = x123 - self.Hy4
-        self.z123.axpby(1.0, 0.0, self.x123)
-        self.z123.axpy(-1.0, self.Hy)
-
-        # 2) Schur solve F * y_123 = z_123
-        self.xtmp.setValues(self.iset_012, self.z123.array)
-        self.xtmp.assemble()
-        self.s3x3.apply(pc, self.xtmp, y)
-
-        # restore/clean up
-        x.restoreSubVector(self.iset_012, subvec=self.x123)
-        x.restoreSubVector(self.iset[3], subvec=self.x4)
-
-        # set into y vector
-        y.setValues(self.iset[3], self.y4.array)
-
-        y.assemble()
-
-
-# SIMPLE version of above: last A-solve replaced by diag(A)^{-1} update
-class BGS_1_schur3x3(BGS_1_schur3x3full):
-    def __init__(self, iset, precond_fields, io, solparams, comm=None):
-        super().__init__(iset, precond_fields, io, solparams, comm=comm)
-
-        # create index set encompassing 0-1-2 blocks
-        self.iset_012 = self.iset[0].expand(self.iset[1])
-        self.iset_012 = self.iset_012.expand(self.iset[2])
-        self.iset_012.sort()
-
-        # single-field preconditioner
-        self.sing1 = block_precond(self.iset[3:4], precond_fields["1"], io, solparams, comm=comm)
-        # Schur 3x3 preconditioner
-        self.s3x3 = schur3x3(self.iset[0:3], precond_fields["s3x3"], io, solparams, comm=comm)
-
-
-class BGS_1_1_schur2x2(block_precond):
-    def __init__(self, iset, precond_fields, io, solparams, comm=None):
-        super().__init__(iset, precond_fields, io, solparams, comm=comm)
-
-        # create index set encompassing 1-2 blocks
-        self.iset_12 = self.iset[1].expand(self.iset[2])
-        self.iset_12.sort()
-
-        # single-field preconditioners
-        self.sing1 = block_precond(self.iset[0:1], precond_fields["1"], io, solparams, comm=comm)
-        self.sing2 = block_precond(self.iset[3:4], precond_fields["2"], io, solparams, comm=comm)
-        # Schur 2x2 preconditioner
-        self.s2x2 = schur2x2(self.iset[1:3], precond_fields["s2x2"], io, solparams, comm=comm)
-
-    def create(self, pc):
-        # get reference to preconditioner matrix object
-        _, self.P = pc.getOperators()
-        operator_mats = self.init_mat_vec()
-        # set field precs for individual single and block preconditioners
-        self.sing1.create_fieldprec(operator_mats[0:1])
-        self.sing2.create_fieldprec(operator_mats[3:4])
-        self.s2x2.create_fieldprec(operator_mats[1:3])
-
-    def check_field_size(self):
-        assert self.nfields == 4
-
-    def init_mat_vec(self):
-        self.s2x2.P = self.P
-
-        opmats_s = self.s2x2.init_mat_vec()
-
-        self.K = self.P.createSubMatrix(self.iset[0], self.iset[0])
-        self.G = self.P.createSubMatrix(self.iset[3], self.iset[3])
-
-        # get additional offdiagonal blocks
-        self.H = self.P.createSubMatrix(self.iset_12, self.iset[0])
-        self.J = self.P.createSubMatrix(self.iset_12, self.iset[3])
-
-        self.x1 = self.K.createVecLeft()
-        self.y1 = self.K.createVecLeft()
-        self.z1 = self.K.createVecLeft()
-
-        self.x4 = self.G.createVecLeft()
-        self.y4 = self.G.createVecLeft()
-        self.z4 = self.G.createVecLeft()
-
-        self.x23 = self.H.createVecLeft()
-        self.y23 = self.H.createVecLeft()
-        self.z23 = self.H.createVecLeft()
-
-        self.Hy = self.H.createVecLeft()
-        self.Jy = self.J.createVecLeft()
-
-        self.xtmp = self.P.createVecLeft()
-
-        # do we need this???
-        self.K.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-
-        return [self.K, opmats_s[0], opmats_s[1], self.G]
+        return self.operator_mats
 
     def setUp(self, pc):
-        self.s2x2.setUp(pc)
+        for i in range(self.num_precs):
+            if self.inner_precs[i].is_blockprec:
+                self.inner_precs[i].setUp(pc)
 
-        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.K)
-        self.P.createSubMatrix(self.iset[3], self.iset[3], submat=self.G)
-        self.P.createSubMatrix(self.iset_12, self.iset[0], submat=self.H)
-        self.P.createSubMatrix(self.iset_12, self.iset[3], submat=self.J)
+        # single-prec operator mats
+        for i in range(self.num_precs):
+            if not self.inner_precs[i].is_blockprec:
+                self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
+
+        for i in range(self.num_precs):
+            for j in range(self.num_precs):
+                if i>j: # forward BGS - create lower tridiagonal additional blocks
+                    self.P.createSubMatrix(self.iset_block[i], self.iset_block[j], submat=self.tridiag_mat_outer_bgs[i][j])
 
         # operator values have changed - do we need to re-set them?
-        self.sing1.ksp_fields[0].setOperators(self.K)
-        self.sing2.ksp_fields[0].setOperators(self.G)
+        for i in range(self.num_precs):
+            if not self.inner_precs[i].is_blockprec:
+                self.inner_precs[i].ksp_fields[0].setOperators(self.operator_mats[i][0])
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
         # get subvectors
-        x.getSubVector(self.iset[0], subvec=self.x1)
-        x.getSubVector(self.iset[3], subvec=self.x4)
-        x.getSubVector(self.iset_12, subvec=self.x23)
+        for i in range(self.num_precs):
+            x.getSubVector(self.iset_block[i], subvec=self.x[i])
 
-        # 1) solve K * y_1 = x_1
-        self.sing1.ksp_fields[0].solve(self.x1, self.y1)
+        off=0
+        for i in range(self.num_precs):
+            self.z[i].axpby(1.0, 0.0, self.x[i])
+            for k in range(i):
+                self.tridiag_mat_outer_bgs[i][k].mult(self.y[k], self.Oy[k+off])
+                self.z[i].axpy(-1.0, self.Oy[k+off])
 
-        # 2) solve G * y_4 = x_4
-        self.sing2.ksp_fields[0].solve(self.x4, self.y4)
+            if self.inner_precs[i].is_blockprec:
+                self.zf[i].setValues(self.iset_block[i], self.z[i].array)
+                self.zf[i].assemble()
+                z_, y_ = self.zf[i], y
+            else:
+                z_, y_ = self.z[i], self.y[i]
 
-        self.H.mult(self.y1, self.Hy)
-        self.J.mult(self.y4, self.Jy)
+            # solve
+            self.inner_precs[i].apply(pc, z_, y_)
 
-        # compute z23 = x23 - self.Hy - self.Jy
-        self.z23.axpby(1.0, 0.0, self.x23)
-        self.z23.axpy(-1.0, self.Hy)
-        self.z23.axpy(-1.0, self.Jy)
+            # need to get y vector from block solve
+            if self.inner_precs[i].is_blockprec:
+                y.getSubVector(self.iset_block[i], subvec=self.y[i])
 
-        # 3) Schur solve F * y_23 = z_23
-        self.xtmp.setValues(self.iset_12, self.z23.array)
-        self.xtmp.assemble()
-        self.s2x2.apply(pc, self.xtmp, y)
+            if i>0: off+=1
 
         # restore/clean up
-        x.restoreSubVector(self.iset[0], subvec=self.x1)
-        x.restoreSubVector(self.iset_12, subvec=self.x23)
-        x.restoreSubVector(self.iset[3], subvec=self.x4)
+        for i in range(self.num_precs):
+            x.restoreSubVector(self.iset_block[i], subvec=self.x[i])
 
         # set into y vector
-        y.setValues(self.iset[0], self.y1.array)
-        y.setValues(self.iset[3], self.y4.array)
+        for i in range(self.num_precs):
+            if not self.inner_precs[i].is_blockprec: # block sub-precs do their own setValues
+                y.setValues(self.iset_block[i], self.y[i].array)
 
-        y.assemble()
-
-
-class BGS_1_1_schur3x3(block_precond):
-    def __init__(self, iset, precond_fields, io, solparams, comm=None):
-        super().__init__(iset, precond_fields, io, solparams, comm=comm)
-
-        # create index set encompassing 1-2-3 blocks
-        self.iset_123 = self.iset[1].expand(self.iset[2])
-        self.iset_123 = self.iset_123.expand(self.iset[3])
-        self.iset_123.sort()
-
-        # single-field preconditioners
-        self.sing1 = block_precond(self.iset[0:1], precond_fields["1"], io, solparams, comm=comm)
-        self.sing2 = block_precond(self.iset[4:5], precond_fields["2"], io, solparams, comm=comm)
-        # Schur 3x3 preconditioner
-        self.s3x3 = schur3x3(self.iset[1:4], precond_fields["s3x3"], io, solparams, comm=comm)
-
-    def create(self, pc):
-        # get reference to preconditioner matrix object
-        _, self.P = pc.getOperators()
-        operator_mats = self.init_mat_vec()
-        # set field precs for individual single and block preconditioners
-        self.sing1.create_fieldprec(operator_mats[0:1])
-        self.sing2.create_fieldprec(operator_mats[4:5])
-        self.s3x3.create_fieldprec(operator_mats[1:4])
-
-    def check_field_size(self):
-        assert self.nfields == 5
-
-    def init_mat_vec(self):
-        self.s3x3.P = self.P
-
-        opmats_s = self.s3x3.init_mat_vec()
-
-        self.K = self.P.createSubMatrix(self.iset[0], self.iset[0])
-        self.G = self.P.createSubMatrix(self.iset[4], self.iset[4])
-
-        # get additional offdiagonal blocks
-        self.H = self.P.createSubMatrix(self.iset_123, self.iset[0])
-        self.J = self.P.createSubMatrix(self.iset_123, self.iset[4])
-
-        self.x1 = self.K.createVecLeft()
-        self.y1 = self.K.createVecLeft()
-        self.z1 = self.K.createVecLeft()
-
-        self.x5 = self.G.createVecLeft()
-        self.y5 = self.G.createVecLeft()
-        self.z5 = self.G.createVecLeft()
-
-        self.x234 = self.H.createVecLeft()
-        self.y234 = self.H.createVecLeft()
-        self.z234 = self.H.createVecLeft()
-
-        self.Hy = self.H.createVecLeft()
-        self.Jy = self.J.createVecLeft()
-
-        self.xtmp = self.P.createVecLeft()
-
-        # do we need this???
-        self.K.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-        self.G.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
-
-        return [self.K, opmats_s[0], opmats_s[1], opmats_s[2], self.G]
-
-    def setUp(self, pc):
-        self.s3x3.setUp(pc)
-
-        self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.K)
-        self.P.createSubMatrix(self.iset[4], self.iset[4], submat=self.G)
-        self.P.createSubMatrix(self.iset_123, self.iset[0], submat=self.H)
-        self.P.createSubMatrix(self.iset_123, self.iset[4], submat=self.J)
-
-        # operator values have changed - do we need to re-set them?
-        self.sing1.ksp_fields[0].setOperators(self.K)
-        self.sing2.ksp_fields[0].setOperators(self.G)
-
-    # computes y = P^{-1} x
-    def apply(self, pc, x, y):
-        # get subvectors
-        x.getSubVector(self.iset[0], subvec=self.x1)
-        x.getSubVector(self.iset[4], subvec=self.x5)
-        x.getSubVector(self.iset_123, subvec=self.x234)
-
-        # 1) solve K * y_1 = x_1
-        self.sing1.ksp_fields[0].solve(self.x1, self.y1)
-
-        # 2) solve G * y_5 = x_5
-        self.sing2.ksp_fields[0].solve(self.x5, self.y5)
-
-        self.H.mult(self.y1, self.Hy)
-        self.J.mult(self.y5, self.Jy)
-
-        # compute z234 = x234 - self.Hy - self.Jy
-        self.z234.axpby(1.0, 0.0, self.x234)
-        self.z234.axpy(-1.0, self.Hy)
-        self.z234.axpy(-1.0, self.Jy)
-
-        # 3) Schur solve F * y_234 = z_234
-        self.xtmp.setValues(self.iset_123, self.z234.array)
-        self.xtmp.assemble()
-        self.s3x3.apply(pc, self.xtmp, y)
-
-        # restore/clean up
-        x.restoreSubVector(self.iset[0], subvec=self.x1)
-        x.restoreSubVector(self.iset_123, subvec=self.x234)
-        x.restoreSubVector(self.iset[4], subvec=self.x5)
-
-        # set into y vector - 1,2,3 already set by s3x3
-        y.setValues(self.iset[0], self.y1.array)
-        y.setValues(self.iset[4], self.y5.array)
-
-        y.assemble()
-
-
-
-class BGS_schur2x2_bgs2x2(block_precond):
-    def __init__(self, iset, precond_fields, io, solparams, comm=None):
-        super().__init__(iset, precond_fields, io, solparams, comm=comm)
-
-        # create index set encompassing 0-1 and 2-3 blocks
-        self.iset_01 = self.iset[0].expand(self.iset[1])
-        self.iset_01.sort()
-        self.iset_23 = self.iset[2].expand(self.iset[3])
-        self.iset_23.sort()
-
-        self.s2x2 = schur2x2(self.iset[0:2], precond_fields["s2x2"], io, solparams, comm=comm)
-        self.bgs2x2 = bgs2x2(self.iset[2:4], precond_fields["bgs2x2"], io, solparams, comm=comm)
-
-    def create(self, pc):
-        # get reference to preconditioner matrix object
-        _, self.P = pc.getOperators()
-        operator_mats = self.init_mat_vec()
-        # set field precs for individual block precs
-        self.s2x2.create_fieldprec(operator_mats[0:2])
-        self.bgs2x2.create_fieldprec(operator_mats[2:4])
-
-    def check_field_size(self):
-        assert self.nfields == 4
-
-    def init_mat_vec(self):
-        self.s2x2.P = self.P
-        self.bgs2x2.P = self.P
-
-        opmats_s = self.s2x2.init_mat_vec()
-        opmats_b = self.bgs2x2.init_mat_vec()
-
-        # get additional offdiagonal block
-        self.H = self.P.createSubMatrix(self.iset_23, self.iset_01)
-        #self.Ht = self.P.createSubMatrix(self.iset_01, self.iset_23)  # only for symmetric BGS...
-
-        self.x01 = self.H.createVecRight()
-        self.y01 = self.H.createVecRight()
-        self.z01 = self.H.createVecRight()
-
-        self.x23 = self.H.createVecLeft()
-        self.z23 = self.H.createVecLeft()
-
-        self.Hy = self.H.createVecLeft()
-
-        self.xtmp = self.P.createVecLeft()
-
-        return [opmats_s[0], opmats_s[1], opmats_b[0], opmats_b[1]]
-
-    def setUp(self, pc):
-        self.s2x2.setUp(pc)
-        self.bgs2x2.setUp(pc)
-
-        self.P.createSubMatrix(self.iset_23, self.iset_01, submat=self.H)
-        # self.P.createSubMatrix(self.iset_01, self.iset_23, submat=self.Ht)  # only for symmetric BGS...
-
-    # computes y = P^{-1} x
-    def apply(self, pc, x, y):
-        # get subvectors
-        x.getSubVector(self.iset_01, subvec=self.x01)
-        x.getSubVector(self.iset_23, subvec=self.x23)
-
-        self.s2x2.apply(pc, x, y)
-        y.getSubVector(self.iset_01, subvec=self.y01)
-
-        self.H.mult(self.y01, self.Hy)
-
-        # compute z23 = x23 - self.Hy
-        self.z23.axpby(1.0, 0.0, self.x23)
-        self.z23.axpy(-1.0, self.Hy)
-
-        self.xtmp.setValues(self.iset_23, self.z23.array)
-        self.xtmp.assemble()
-        self.bgs2x2.apply(pc, self.xtmp, y)
-
-        # restore/clean up
-        x.restoreSubVector(self.iset_01, subvec=self.x01)
-        x.restoreSubVector(self.iset_23, subvec=self.x23)
-
-        y.restoreSubVector(self.iset_01, subvec=self.y01)
-
-        # no more need to set into y vector
         y.assemble()

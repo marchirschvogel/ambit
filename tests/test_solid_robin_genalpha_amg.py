@@ -49,10 +49,7 @@ def test_main():
             "ksp_gmres_restart": 100,
         },
         "precond_fields": [
-            {
-                "prec": "amg",
-                "petsc_options": {"pc_hypre_boomeramg_strong_threshold": 0.7},
-            }
+            {"prec": "amg", "petsc_options": {"pc_hypre_boomeramg_strong_threshold": 0.7}}
         ],
         "tol_lin_rel": 1.0e-5,
         "tol_lin_abs": 1.0e-9,

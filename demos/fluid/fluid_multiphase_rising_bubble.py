@@ -76,11 +76,10 @@ def main():
         "direct_solver": "mumps",
         # BEGIN: Settings for iterative solver - TODO: Currently, this preconditioner (outer BGS btw. fluid and CH, Schur/SIMPLE on fluid, BGS on CH) works OK for case 1, but not at all for case 2.
         "iterative_solver": "fgmres",
-        "block_precond": "BGS_s2x2_bgs2x2",
-        "precond_fields": {
-            "s2x2": [{"prec": "direct"},{"prec": "direct"}],  # fluid-v,p
-            "bgs2x2": [{"prec": "direct"},{"prec": "direct"}],  # CH-phi,mu
-        },
+        "block_precond": "BGS_outer",
+        "precond_fields": [{"prec": {"s2x2": [{"prec": "direct"},{"prec": "direct"}]}, "block_index_0": 0},  # fluid-v,p
+                           {"prec": {"bgs2x2": [{"prec": "direct"},{"prec": "direct"}]}, "block_index_0": 2}  # CH-phi,mu
+                           ],
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",
         "print_liniter_every": 50,
