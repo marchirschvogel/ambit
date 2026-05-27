@@ -55,15 +55,12 @@ def test_main():
         "solve_type": "iterative",
         "solve_type_prestr": "iterative",
         "iterative_solver": "gmres",
-        "block_precond": "BGS_1_s3x3",  # can as well use bgs-s3x3full version - interestingly, the SIMPLE version yields fewer linear iterations!
-        "precond_fields": {
-            "1": [{"prec": "amg"}],  # ale-d
-            "s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}],  # fluid-v,p,red.v
-        },
+        "block_precond": "BGS_outer",
+        "precond_fields": [{"prec": "amg", "block_index_0": 3},  # ale-d
+                           {"prec": {"s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}]}, "block_index_0": 0}  # fluid-v,p,LM+red.v
+                           ],
         "block_precond_prestr": "s3x3",
-        "precond_fields_prestr": {
-            "s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}],  # fluid-v,p,red.v
-        },
+        "precond_fields_prestr": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}],  # fluid-v,p,red.v
         "indexset_options": {"rom_to_new": True},
         "print_liniter_every": 10,
         "lin_norm_type": "unpreconditioned",
