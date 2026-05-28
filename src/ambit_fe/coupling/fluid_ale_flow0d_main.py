@@ -329,7 +329,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
 
         self.K_sd.assemble()
 
-    def get_solver_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
@@ -337,12 +337,10 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
             vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
             vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
 
-        offset_v = (
-            vvec_or0
-            + self.pbf.p.x.petsc_vec.getOwnershipRange()[0]
-            + self.pbf0.LM.getOwnershipRange()[0]
-            + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
-        )
+        if blocked:
+            offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbf0.LM.getOwnershipRange()[0]
+        else:
+            offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbf0.LM.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         if isoptions["rom_to_new"]:
@@ -360,7 +358,10 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbf0.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
-        offset_d = offset_s + self.pbf0.LM.getLocalSize()
+        if blocked:
+            offset_d = self.pba.d.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_d = offset_s + self.pbf0.LM.getLocalSize()
         iset_d = PETSc.IS().createStride(
             self.pba.d.x.petsc_vec.getLocalSize(),
             first=offset_d,

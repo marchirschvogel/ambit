@@ -802,7 +802,7 @@ class FluidmechanicsFlow0DProblem(problem_base):
                 else:
                     raise RuntimeError("You should not be here!")
 
-    def get_solver_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.condense_0d:
             return self.pbf.get_solver_index_sets(isoptions=isoptions)
 

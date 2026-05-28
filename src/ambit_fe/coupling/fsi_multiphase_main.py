@@ -394,7 +394,7 @@ class FSIMultiphaseProblem(problem_base):
         self.K_list[5 + ofc + ofs][5 + ofc + ofs] = self.pbfsi.K_list[3 + ofc + ofs][3 + ofc + ofs]  # w.r.t. ALE displacement
         self.K_list[5 + ofc + ofs][1 + ofs] = self.pbfsi.K_list[3 + ofc + ofs][1 + ofs]              # w.r.t. fluid velocity
 
-    def get_solver_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
         # iterative solvers here are only implemented for neumann_dirichlet system!
         assert(self.pbfsi.fsi_system == "neumann_dirichlet")
 
@@ -405,7 +405,10 @@ class FSIMultiphaseProblem(problem_base):
             uvec_or0 = self.pbs.u.x.petsc_vec.getOwnershipRange()[0]
             uvec_ls = self.pbs.u.x.petsc_vec.getLocalSize()
 
-        offset_u = uvec_or0 + self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
+        if blocked:
+            offset_u = uvec_or0
+        else:
+            offset_u = uvec_or0 + self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
         if self.pbs.incompressible_2field:
             offset_u += self.pbs.p.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
@@ -419,13 +422,16 @@ class FSIMultiphaseProblem(problem_base):
                 comm=self.comm,
             )
 
-        if self.pbs.incompressible_2field:
-            offset_v = offset_ps + self.pbs.p.x.petsc_vec.getLocalSize()
+        if blocked:
+            offset_v = self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0]
         else:
-            offset_v = offset_u + uvec_ls
+            if self.pbs.incompressible_2field:
+                offset_v = offset_ps + self.pbs.p.x.petsc_vec.getLocalSize()
+            else:
+                offset_v = offset_u + uvec_ls
 
         iset_v = PETSc.IS().createStride(
-            self.pba.d.x.petsc_vec.getLocalSize(),
+            self.pbf.v.x.petsc_vec.getLocalSize(),
             first=offset_v,
             step=1,
             comm=self.comm
@@ -439,7 +445,10 @@ class FSIMultiphaseProblem(problem_base):
             comm=self.comm,
         )
 
-        offset_phi = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+        if blocked:
+            offset_phi = self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_phi = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
         iset_phi = PETSc.IS().createStride(
             self.pbp.phi.x.petsc_vec.getLocalSize(),
             first=offset_phi,
@@ -454,7 +463,10 @@ class FSIMultiphaseProblem(problem_base):
             comm=self.comm,
         )
 
-        offset_d = offset_mu + self.pbp.mu.x.petsc_vec.getLocalSize()
+        if blocked:
+            offset_d = self.pba.d.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_d = offset_mu + self.pbp.mu.x.petsc_vec.getLocalSize()
         iset_d = PETSc.IS().createStride(
             self.pba.d.x.petsc_vec.getLocalSize(),
             first=offset_d,

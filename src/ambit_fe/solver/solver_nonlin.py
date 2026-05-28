@@ -14,7 +14,7 @@ from dolfinx import fem
 
 from .projection import project
 from .solver_utils import sol_utils
-from . import preconditioner
+from . import preconditioner, preconditioner_outer
 from .. import ioparams
 from .. import utilities
 
@@ -240,7 +240,7 @@ class solver_nonlinear:
         else:
             self.merge_prec_mat = False
 
-        self.iset = [[]] * self.nprob
+        self.iset, self.iset_blocked = [[]] * self.nprob, [[]] * self.nprob
 
         self.print_local_iter = solver_params.get("print_local_iter", False)
         self.rebuild_prec_every_it = solver_params.get("rebuild_prec_every_it", 1)
@@ -363,6 +363,7 @@ class solver_nonlinear:
                 # block iterative method
                 if self.nfields[npr] > 1:
                     self.iset[npr] = self.pb[npr].get_solver_index_sets(isoptions=self.iset_options)
+                    self.iset_blocked[npr] = self.pb[npr].get_solver_index_sets(isoptions=self.iset_options, blocked=True)
 
                     if self.block_precond[npr] == "fieldsplit":
                         # see e.g. https://petsc.org/main/manual/ksp/#sec-block-matrices
@@ -556,8 +557,22 @@ class solver_nonlinear:
                     # general outer BGS that can have inner block or single precs - for arbitrary n x n systems!
                     elif self.block_precond[npr] == "BGS_outer":
                         self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
-                        bj = preconditioner.BGS_outer(
+                        bj = preconditioner_outer.BGS_outer(
                             self.iset[npr],
+                            self.iset_blocked[npr],
+                            self.precond_fields[npr],
+                            self.pb[npr].io,
+                            self.solver_params,
+                            self.comm,
+                        )
+                        self.ksp[npr].getPC().setPythonContext(bj)
+
+                    # general outer Schur2x2 that can have inner block or single precs
+                    elif self.block_precond[npr] == "Schur2x2_outer":
+                        self.ksp[npr].getPC().setType(PETSc.PC.Type.PYTHON)
+                        bj = preconditioner_outer.Schur2x2_outer(
+                            self.iset[npr],
+                            self.iset_blocked[npr],
                             self.precond_fields[npr],
                             self.pb[npr].io,
                             self.solver_params,

@@ -280,6 +280,9 @@ if category == "fluid_multiphase" or category == "fluid" or category == "all":
     errs["test_fluid_multiphase_bdf2_rising_bubble 2 restart"] = subprocess.call(
         ["mpiexec", "-n", "2", "python3", "test_fluid_multiphase_bdf2_rising_bubble.py", str(4)]
     )
+    errs["test_fluid_multiphase_bdf2_rising_bubble_prec 4"] = subprocess.call(
+        ["mpiexec", "-n", "4", "python3", "test_fluid_multiphase_bdf2_rising_bubble_prec.py"]
+    )
 if category == "fluid_ale_multiphase" or category == "fluid_multiphase" or category == "fluid" or category == "all":
     errs["test_fluid_ale_multiphase_sloshing 3"] = subprocess.call(
         ["mpiexec", "-n", "3", "python3", "test_fluid_ale_multiphase_sloshing.py"]

@@ -823,7 +823,7 @@ class FluidmechanicsConstraintProblem(problem_base):
 
             self.K_lm.assemble()
 
-    def get_solver_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]

@@ -296,7 +296,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         fem.petsc.assemble_matrix(self.K_mud, self.jac_mud, [])
         self.K_mud.assemble()
 
-    def get_solver_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
@@ -304,17 +304,11 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
             vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
             vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
 
-        offset_v = (
-            vvec_or0
-            + self.pbf.p.x.petsc_vec.getOwnershipRange()[0]
-            + self.pbfc.LM.getOwnershipRange()[0]
-            + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
-        )
+        if blocked:
+            offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
-
-        if isoptions["rom_to_new"]:
-            iset_r = PETSc.IS().createGeneral(self.rom.im_rom_r, comm=self.comm)
-            iset_v = iset_v.difference(iset_r)  # subtract
 
         offset_p = offset_v + vvec_ls
         iset_p = PETSc.IS().createStride(
@@ -324,10 +318,29 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
             comm=self.comm,
         )
 
-        offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
-        iset_s = PETSc.IS().createStride(self.pbfc.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
+        if blocked:
+            offset_phi = self.pbp.phi.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_phi = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+        iset_phi = PETSc.IS().createStride(
+            self.pbp.phi.x.petsc_vec.getLocalSize(),
+            first=offset_phi,
+            step=1,
+            comm=self.comm,
+        )
 
-        offset_d = offset_s + self.pbfc.LM.getLocalSize()
+        offset_mu = offset_phi + self.pbp.phi.x.petsc_vec.getLocalSize()
+        iset_mu = PETSc.IS().createStride(
+            self.pbp.mu.x.petsc_vec.getLocalSize(),
+            first=offset_mu,
+            step=1,
+            comm=self.comm,
+        )
+
+        if blocked:
+            offset_d = self.pba.d.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_d = offset_mu + self.pbp.mu.x.petsc_vec.getLocalSize()
         iset_d = PETSc.IS().createStride(
             self.pba.d.x.petsc_vec.getLocalSize(),
             first=offset_d,
@@ -335,30 +348,10 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
             comm=self.comm,
         )
 
-        if isoptions["rom_to_new"]:
-            iset_s = iset_s.expand(iset_r)  # add to 0D block
-            iset_s.sort()  # should be sorted, otherwise PETSc may struggle to extract block
-
-        if isoptions["ale_to_v"]:
-            iset_v = iset_v.expand(iset_d)  # add ALE to velocity block
-
-        if isoptions["lms_to_p"]:
-            iset_p = iset_p.expand(
-                iset_s
-            )  # add to pressure block - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
-            ilist = [iset_v, iset_p, iset_d]
-        elif isoptions["lms_to_v"]:
-            iset_v = iset_v.expand(
-                iset_s
-            )  # add to velocity block (could be bad...) - attention: will merge ROM to this block too in case of 'rom_to_new' is True!
-            ilist = [iset_v, iset_p, iset_d]
-        else:
-            ilist = [iset_v, iset_p, iset_s, iset_d]
-
-        if isoptions["ale_to_v"]:
-            ilist.pop(-1)
+        ilist = [iset_v, iset_p, iset_phi, iset_mu, iset_d]
 
         return ilist
+
 
     ### now the base routines for this problem
 

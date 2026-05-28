@@ -25,7 +25,7 @@ def main():
     case = 1
 
     dim = "2D" # 2D, 3D
-    num_refine = 4
+    num_refine = 0
 
     y0 = 19.4
     R0 = 178.4 # µm
@@ -126,8 +126,20 @@ def main():
                       }
 
     SOLVER_PARAMS = {
-        "solve_type": "direct",
+        "solve_type": "iterative",  # direct, iterative
         "direct_solver": "mumps",   # superlu_dist, mumps
+        # BEGIN: Settings for iterative solver
+        "iterative_solver": "fgmres",
+        "block_precond": "BGS_outer",
+        "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 0}, # solid-u,ps
+                           {"prec": "amg", "block_index_0": 6},  # ale-d
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 2}, # fluid-v,p
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 4}  # CH-phi,mu
+                           ],
+        "tol_lin_rel": 1e-7,
+        "lin_norm_type": "unpreconditioned",
+        "print_liniter_every": 50,
+        # END: Settings for iterative solver
         "tol_res": 1e-6,
         "tol_inc": 1e-4,
         # "divergence_continue": "ptc",

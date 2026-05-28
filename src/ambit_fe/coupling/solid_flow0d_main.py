@@ -799,7 +799,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
             self.K_list[1][1] = self.pbs.K_list[1][1]  # should be only non-zero if we have stress-mediated growth...
 
 
-    def get_solver_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = self.rom.V.getLocalSize()[1]

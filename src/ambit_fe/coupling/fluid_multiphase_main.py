@@ -338,7 +338,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.K_phip.assemble()
 
 
-    def get_solver_index_sets(self, isoptions={}):
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             vvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             vvec_ls = self.rom.V.getLocalSize()[1]
@@ -346,7 +346,10 @@ class FluidmechanicsMultiphaseProblem(problem_base):
             vvec_or0 = self.pbf.v.x.petsc_vec.getOwnershipRange()[0]
             vvec_ls = self.pbf.v.x.petsc_vec.getLocalSize()
 
-        offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
+        if blocked:
+            offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
 
         offset_p = offset_v + vvec_ls
@@ -357,7 +360,10 @@ class FluidmechanicsMultiphaseProblem(problem_base):
             comm=self.comm,
         )
 
-        offset_phi = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+        if blocked:
+            offset_phi = self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
+        else:
+            offset_phi = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
         iset_phi = PETSc.IS().createStride(
             self.pbp.phi.x.petsc_vec.getLocalSize(),
             first=offset_phi,
