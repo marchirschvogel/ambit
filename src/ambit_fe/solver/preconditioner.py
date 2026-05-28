@@ -1113,7 +1113,7 @@ class BGS_outer(block_precond):
             if self.inner_precs[i].is_blockprec:
                 y.getSubVector(self.iset_block[i], subvec=self.y[i])
 
-            if i>0: off+=1
+            off+=i
 
         # restore/clean up
         for i in range(self.num_precs):
