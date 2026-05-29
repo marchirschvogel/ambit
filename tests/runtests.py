@@ -235,6 +235,15 @@ if category == "fluid" or category == "all":
             "test_fluid_nonc_p1p1_stabf_cylinder_s2x2.py",
         ]
     )
+    errs["test_fluid_nonc_p1p1_stabf_cylinder_s2x2action 4"] = subprocess.call(
+        [
+            "mpiexec",
+            "-n",
+            "4",
+            "python3",
+            "test_fluid_nonc_p1p1_stabf_cylinder_s2x2action.py",
+        ]
+    )
 
     errs["test_fluid_constraint_nonc_p1p1_stabr_cylinder 3"] = subprocess.call(
         [

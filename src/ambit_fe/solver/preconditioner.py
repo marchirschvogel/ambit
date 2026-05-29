@@ -70,10 +70,11 @@ class block_precond:
         self.check_field_size()
         nf = len(operator_mats)
 
-        self.ksp_fields, self.ksp_py_solver = [], [None] * nf
+        self.ksp_fields, self.schur_action = [], [False] * nf
         # create field ksps
         for n in range(nf):
             self.ksp_fields.append(PETSc.KSP().create(self.comm))
+            self.schur_action[n] = self.precond_fields[n].get("schur_action", False)
         # set the options
         for n in range(nf):
             if self.precond_fields[n]["prec"] == "amg":
@@ -104,13 +105,15 @@ class block_precond:
                 self.ksp_fields[n].setType("preonly")
                 self.ksp_fields[n].getPC().setType("lu")
                 self.ksp_fields[n].getPC().setFactorSolverType("mumps")
+                assert(not self.schur_action[n]) # need AMG here... not for preonly!
             else:
                 raise ValueError(
                     "Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner."
                 )
 
             # set operators and setup field prec
-            self.ksp_fields[n].setOperators(operator_mats[n])
+            if not self.schur_action[n]:
+                self.ksp_fields[n].setOperators(operator_mats[n])
             # self.ksp_fields[n].getPC().setUp() # seems to break the solver when a direct prec is used! Needed???!
 
         te = time.time() - ts
@@ -131,6 +134,25 @@ class block_precond:
 
 # Schur complement preconditioner (using a modified diag(A)^{-1} instead of A^{-1} in the Schur complement)
 class schur2x2full(block_precond):
+    def create_fieldprec(self, operator_mats):
+        super().create_fieldprec(operator_mats)
+        # Schur complement action
+        if self.schur_action[1]:
+            self.S_ctx = Schur2x2Action(
+                self.B,
+                self.Bt,
+                self.C,
+                self.ksp_fields[0],
+            )
+            # create shell object
+            self.Sshell = PETSc.Mat().createPython(
+                self.C.getSizes(),
+                comm=self.comm,
+            )
+            self.Sshell.setPythonContext(self.S_ctx)
+            self.Sshell.setUp()
+            self.ksp_fields[1].setOperators(self.Sshell, self.Smod)
+
     def check_field_size(self):
         assert self.nfields == 2
 
@@ -213,7 +235,15 @@ class schur2x2full(block_precond):
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
-        self.ksp_fields[1].setOperators(self.Smod)
+        if self.schur_action[1]:
+            self.ksp_fields[1].setOperators(self.Sshell, self.Smod)
+            # update shell context
+            self.S_ctx.B = self.B
+            self.S_ctx.Bt = self.Bt
+            self.S_ctx.C = self.C
+            self.S_ctx.ksp_A = self.ksp_fields[0]
+        else:
+            self.ksp_fields[1].setOperators(self.Smod)
 
         te = time.time() - ts
         if self.io.print_enhanced_info:
@@ -975,3 +1005,26 @@ class jacobi2x2(block_precond):
         y.setValues(self.iset[1], self.y2.array)
 
         y.assemble()
+
+class Schur2x2Action:
+    def __init__(self, B, Bt, C, pc_A):
+        self.B = B
+        self.Bt = Bt
+        self.C = C
+        self.pc_A = pc_A
+
+        self.tmp_A_rhs = Bt.createVecLeft()
+        self.tmp_A_sol = Bt.createVecLeft()
+        self.tmp_S = B.createVecLeft()
+
+    def mult(self, S, x, y):
+        # compute y = C * x
+        self.C.mult(x, y)
+
+        # compute Bt * x
+        self.Bt.mult(x, self.tmp_A_rhs)
+
+        self.pc_A.solve(self.tmp_A_rhs, self.tmp_A_sol)
+
+        self.B.mult(self.tmp_A_sol, self.tmp_S)
+        y.axpy(-1.0, self.tmp_S)

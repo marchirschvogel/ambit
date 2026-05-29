@@ -5,7 +5,7 @@ steady incompressible Navier-Stokes flow in a cylinder with axial Neumann and tw
 - stabilized P1P1 elements for velocity and pressure
 - Backward-Euler time stepping scheme
 - 2 material domains in fluid (w/ same parameters though)
-- Schur2x2 block preconditioner
+- Schur2x2 block preconditioner, with iterative Schur complement action
 """
 
 import ambit_fe
@@ -35,7 +35,7 @@ def test_main():
         "solve_type": "iterative",
         "iterative_solver": "fgmres",
         "block_precond": "s2x2full",
-        "precond_fields": [{"prec": "amg"},{"prec": "amg"}],  # v, p
+        "precond_fields": [{"prec": "amg"},{"prec": "amg", "solve": "gmres", "maxiter": 3, "schur_action": True}],  # v, p
         "tol_lin_rel": 1.0e-5,
         "tol_lin_abs": 1.0e-30,
         "res_lin_monitor": "rel",

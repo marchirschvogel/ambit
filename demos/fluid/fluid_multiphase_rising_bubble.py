@@ -72,13 +72,13 @@ def main():
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS = {
-        "solve_type": "iterative",   # direct, iterative
+        "solve_type": "direct",   # direct, iterative
         "direct_solver": "mumps",
-        # BEGIN: Settings for iterative solver - TODO: Currently, this preconditioner (outer BGS btw. fluid and CH, Schur/SIMPLE on fluid, Schur/SIMPLE on CH) works OK for case 1, but not at all for case 2.
+        # BEGIN: Settings for iterative solver - TODO: Currently, this preconditioner (outer BGS btw. fluid and CH, Schur/SIMPLE on fluid, Schur/SIMPLE on CH) works OK for case 1, but not for case 2.
         "iterative_solver": "fgmres",
-        "block_precond": "BGS_outer",
-        "precond_fields": [{"prec": {"s2x2": [{"prec": "direct"},{"prec": "direct"}]}, "block_index_0": 0},  # fluid-v,p
-                           {"prec": {"s2x2": [{"prec": "direct"},{"prec": "direct"}]}, "block_index_0": 2},  # CH-phi,mu
+        "block_precond": "BGS_outer",  # Schur2x2_outer, BGS_outer
+        "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg", "solve": "gmres", "maxiter": 10, "schur_action": True}]}, "block_index_0": 0}, # fluid-v,p
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 2}  # CH-phi,mu
                            ],
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",

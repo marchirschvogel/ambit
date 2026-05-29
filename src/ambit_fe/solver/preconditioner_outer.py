@@ -75,11 +75,11 @@ class block_precond_outer:
                     self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
                     self.iset_block[i].sort()
                 # allow an outer Schur in an (then even more outer ;-)) outer BGS - TODO, not yet operational!
-                elif list(pr["prec"].keys())[0]=="Schur2x2_outer":
-                    self.inner_precs[i] = Schur2x2_outer(self.iset_blocked[self.bi[i]:self.bi[i]+2], pr["prec"]["Schur2x2_outer"], io, solparams, comm=comm)
-                    # create index set encompassing Schur blocks - seen by outer BGS
-                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
-                    self.iset_block[i].sort()
+                # elif list(pr["prec"].keys())[0]=="Schur2x2_outer":
+                #     self.inner_precs[i] = Schur2x2_outer(self.iset_blocked[self.bi[i]:self.bi[i]+2], pr["prec"]["Schur2x2_outer"], io, solparams, comm=comm)
+                #     # create index set encompassing Schur blocks - seen by outer BGS
+                #     self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
+                #     self.iset_block[i].sort()
                 else:
                     raise ValueError("Unknown inner block preconditioner.")
             else:
@@ -93,6 +93,42 @@ class block_precond_outer:
         for i in range(self.num_precs):
             self.inner_precs[i].create_fieldprec(operator_mats[i])
 
+    def mat_mat_mult_nested_2x2(self, A, B, result=None):
+        # if result is None:
+        #     result = [[None for _ in range(2)] for _ in range(2)]
+        #     initial = True
+        # else:
+        #     initial = False
+        for i in range(2):
+            for j in range(2):
+                Yij = None
+                for k in range(2):
+                    if isinstance(A, list):
+                        Aik = A[i][k]
+                    else:
+                        Aik = A.getNestSubMatrix(i,k)
+                    if isinstance(B, list):
+                        Bkj = B[k][j]
+                    else:
+                        Bkj = B.getNestSubMatrix(k,j)
+
+                    if not bool(Aik) or not bool(Bkj):
+                        continue
+
+                    AB = Aik.matMult(Bkj)
+
+                    if Yij is None:
+                        Yij = AB
+                    else:
+                        Yij.axpy(1.0, AB, structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
+                        AB.destroy()
+
+                if Yij is not None:
+                    Yij.assemble()
+
+                result[i][j] = Yij
+
+        # return result
 
 # outer forward Block Gauss-Seidel that can have inner block precs (like Schur complement precs)
 class BGS_outer(block_precond_outer):
@@ -187,19 +223,26 @@ class Schur2x2_outer(block_precond_outer):
         self.operator_mats = [[]] * 2
         self.block_operators = [[]] * 2
 
-        self.A_ = self.P.createSubMatrix(self.iset_block[0], self.iset_block[0])
-        self.Bt_ = self.P.createSubMatrix(self.iset_block[0], self.iset_block[1])
-        self.B_ = self.P.createSubMatrix(self.iset_block[1], self.iset_block[0])
-        self.C_ = self.P.createSubMatrix(self.iset_block[1], self.iset_block[1])
+        self.A = self.P.createSubMatrix(self.iset_block[0], self.iset_block[0])
+        self.Bt = self.P.createSubMatrix(self.iset_block[0], self.iset_block[1])
+        self.B = self.P.createSubMatrix(self.iset_block[1], self.iset_block[0])
+        self.C = self.P.createSubMatrix(self.iset_block[1], self.iset_block[1])
 
-        # mats are nested - we need to convert
-        self.A = self.A_.convert("aij")
-        self.Bt = self.Bt_.convert("aij")
-        self.B = self.B_.convert("aij")
-        self.C = self.C_.convert("aij")
+        if self.A.getType()=="nest":
+            I_00 = PETSc.Mat().createAIJ(self.A.getNestSubMatrix(0,0).getSizes(), bsize=None, nnz=(1, 1), csr=None, comm=self.comm)
+            I_00.setUp()
+            I_00.assemble()
+            I_11 = PETSc.Mat().createAIJ(self.A.getNestSubMatrix(1,1).getSizes(), bsize=None, nnz=(1, 1), csr=None, comm=self.comm)
+            I_11.setUp()
+            I_11.assemble()
+            self.Adinv = PETSc.Mat().createNest(
+                [[I_00, None],
+                [None, I_11]],
+                comm=self.comm,
+            )
+        else:
+            self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1, 1), csr=None, comm=self.comm)
 
-        # the matrix to later insert the diagonal
-        self.Adinv = PETSc.Mat().createAIJ(self.A.getSizes(), bsize=None, nnz=(1, 1), csr=None, comm=self.comm)
         self.Adinv.setUp()
         self.Adinv.assemble()
         # set 1's to get correct allocation pattern
@@ -209,15 +252,25 @@ class Schur2x2_outer(block_precond_outer):
 
         self.Smod = self.C.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
 
-        self.Adinv_Bt = self.Adinv.matMult(self.Bt)
-        self.B_Adinv_Bt = self.B.matMult(self.Adinv_Bt)
+        if self.Bt.getType()=="nest":
+            self.Adinv_Bt_ = [[None for j in range(2)] for i in range(2)]
+            self.mat_mat_mult_nested_2x2(self.Adinv, self.Bt, result=self.Adinv_Bt_)
+        else:
+            self.Adinv_Bt = self.Adinv.matMult(self.Bt)
+
+        if self.B.getType()=="nest":
+            self.B_Adinv_Bt_ = [[None] * 2 for _ in range(2)]
+            self.mat_mat_mult_nested_2x2(self.B, self.Adinv_Bt_, result=self.B_Adinv_Bt_)
+            self.B_Adinv_Bt = PETSc.Mat().createNest(self.B_Adinv_Bt_, isrows=None, iscols=None, comm=self.comm)
+        else:
+            self.B_Adinv_Bt = self.B.matMult(self.Adinv_Bt)
 
         # need to set Smod here to get the data structures right
         self.Smod.axpy(-1.0, self.B_Adinv_Bt)
 
-        self.x = [self.A.createVecLeft(), self.Smod.createVecLeft()]
-        self.y = [self.A.createVecLeft(), self.Smod.createVecLeft()]
-        self.z = [self.A.createVecLeft(), self.Smod.createVecLeft()]
+        self.x = [self.A.createVecLeft(), self.C.createVecLeft()]
+        self.y = [self.A.createVecLeft(), self.C.createVecLeft()]
+        self.z = [self.A.createVecLeft(), self.C.createVecLeft()]
 
         self.By = self.B.createVecLeft()
         self.Bty = self.Bt.createVecLeft()
@@ -227,11 +280,11 @@ class Schur2x2_outer(block_precond_outer):
         self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         self.block_operators[0] = self.A
-        self.block_operators[1] = self.Smod
+        self.block_operators[1] = self.C#self.Smod
 
         for i in range(2):
             if self.inner_precs[i].is_blockprec:
-                self.block_operators[i] = self.P.createSubMatrix(self.iset_block[i], self.iset_block[i])
+                #self.block_operators[i] = self.P.createSubMatrix(self.iset_block[i], self.iset_block[i]) #### should goooo
                 self.inner_precs[i].P = self.block_operators[i]
                 self.operator_mats[i] = self.inner_precs[i].init_mat_vec()
             else:
@@ -241,20 +294,54 @@ class Schur2x2_outer(block_precond_outer):
 
         return self.operator_mats
 
+
     def setUp(self, pc):
         for i in range(2):
             if self.inner_precs[i].is_blockprec:
                 self.inner_precs[i].setUp(pc)
 
+        self.P.createSubMatrix(self.iset_block[0], self.iset_block[0], submat=self.A)
+        self.P.createSubMatrix(self.iset_block[0], self.iset_block[1], submat=self.Bt)
+        self.P.createSubMatrix(self.iset_block[1], self.iset_block[0], submat=self.B)
+        self.P.createSubMatrix(self.iset_block[1], self.iset_block[1], submat=self.C)
+
+        self.A.getDiagonal(result=self.adinv_vec)
+        self.adinv_vec.reciprocal()
+
+        # form diag(A)^{-1}
+        self.Adinv.setDiagonal(self.adinv_vec, addv=PETSc.InsertMode.INSERT)
+
+        # --- modified Schur complement Smod = C - B diag(A)^{-1} Bt
+        # compute self.Smod = self.C - B_Adinv_Bt
+        self.C.copy(result=self.Smod)
+
+        if self.Bt.getType()=="nest":
+            self.Adinv_Bt_ = [[None for j in range(2)] for i in range(2)]
+            self.mat_mat_mult_nested_2x2(self.Adinv, self.Bt, result=self.Adinv_Bt_)
+        else:
+            self.Adinv.matMult(self.Bt, result=self.Adinv_Bt)  # diag(A)^{-1} Bt
+
+        if self.B.getType()=="nest":
+            self.B_Adinv_Bt_ = [[None] * 2 for _ in range(2)]
+            self.mat_mat_mult_nested_2x2(self.B, self.Adinv_Bt_, result=self.B_Adinv_Bt_)
+            self.B_Adinv_Bt = PETSc.Mat().createNest(self.B_Adinv_Bt_, isrows=None, iscols=None, comm=self.comm)
+        else:
+            self.B.matMult(self.Adinv_Bt, result=self.B_Adinv_Bt)  # B diag(A)^{-1} Bt
+
+        self.Smod.axpy(-1.0, self.B_Adinv_Bt)
+
         # single-prec operator mats
         for i in range(2):
             if not self.inner_precs[i].is_blockprec:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
-            else:
-                self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])
+            # else:
+            #     self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])  #### should goooo
+
+        self.block_operators[0] = self.A
+        self.block_operators[1] = self.C#self.Smod
 
         # operator values have changed - do we need to re-set them?
-        for i in range(self.num_precs):
+        for i in range(2):
             if not self.inner_precs[i].is_blockprec:
                 self.inner_precs[i].ksp_fields[0].setOperators(self.operator_mats[i][0])
 
@@ -268,12 +355,10 @@ class Schur2x2_outer(block_precond_outer):
         self.inner_precs[0].apply(pc, self.x[0], self.y[0])
 
         self.B.mult(self.y[0], self.By)
-
-        # compute z2 = x2 - self.By
         self.z[1].axpby(1.0, 0.0, self.x[1])
         self.z[1].axpy(-1.0, self.By)
 
-        # solve
+        # solve - Schur
         self.inner_precs[1].apply(pc, self.z[1], self.y[1])
 
         self.Bt.mult(self.y[1], self.Bty)

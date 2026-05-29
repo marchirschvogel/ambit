@@ -25,7 +25,7 @@ def main():
     case = 1
 
     dim = "2D" # 2D, 3D
-    num_refine = 0
+    num_refine = 4
 
     y0 = 19.4
     R0 = 178.4 # µm
