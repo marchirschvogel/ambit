@@ -167,16 +167,16 @@ class BGS_outer(block_precond_outer):
         return self.operator_mats
 
     def setUp(self, pc):
-        for i in range(self.num_precs):
-            if self.inner_precs[i].is_blockprec:
-                self.inner_precs[i].setUp(pc)
-
-        # single-prec operator mats
+        # single-prec operator mats, or block preconditioner operators
         for i in range(self.num_precs):
             if not self.inner_precs[i].is_blockprec:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
             else:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])
+
+        for i in range(self.num_precs):
+            if self.inner_precs[i].is_blockprec:
+                self.inner_precs[i].setUp(pc)  # also sets operators - after block_operators have been created!
 
         for i in range(self.num_precs):
             for j in range(self.num_precs):
@@ -298,7 +298,7 @@ class Schur2x2_outer(block_precond_outer):
     def setUp(self, pc):
         for i in range(2):
             if self.inner_precs[i].is_blockprec:
-                self.inner_precs[i].setUp(pc)
+                self.inner_precs[i].setUp(pc) # TODO: Correct here?
 
         self.P.createSubMatrix(self.iset_block[0], self.iset_block[0], submat=self.A)
         self.P.createSubMatrix(self.iset_block[0], self.iset_block[1], submat=self.Bt)
@@ -330,7 +330,7 @@ class Schur2x2_outer(block_precond_outer):
 
         self.Smod.axpy(-1.0, self.B_Adinv_Bt)
 
-        # single-prec operator mats
+        # single-prec operator mats, or block preconditioner operators
         for i in range(2):
             if not self.inner_precs[i].is_blockprec:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
