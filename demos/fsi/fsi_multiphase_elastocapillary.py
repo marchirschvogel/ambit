@@ -131,10 +131,15 @@ def main():
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
         "block_precond": "BGS_outer",
-        "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [0]}, # solid-u,ps
+        # "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [0,1]}, # solid-u,ps
+        #                    {"prec": "amg", "blocks": [6]},  # ale-d
+        #                    {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}, # fluid-v,p
+        #                    {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [4,5]}  # CH-phi,mu
+        #                    ],
+        "precond_fields": [{"prec": "direct", "blocks": [0,1]}, # solid-u,ps
                            {"prec": "amg", "blocks": [6]},  # ale-d
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2]}, # fluid-v,p
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [4]}  # CH-phi,mu
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}, # fluid-v,p
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [4,5]}  # CH-phi,mu
                            ],
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",

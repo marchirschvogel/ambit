@@ -203,6 +203,10 @@ class schur2x2full(block_precond):
         self.P.createSubMatrix(self.iset[0], self.iset[1], submat=self.Bt)
         self.P.createSubMatrix(self.iset[1], self.iset[0], submat=self.B)
         self.P.createSubMatrix(self.iset[1], self.iset[1], submat=self.C)
+        self.A.assemble()
+        self.Bt.assemble()
+        self.B.assemble()
+        self.C.assemble()
 
         if self.schur_block_scaling[1]["type"] == "diag":
             self.A.getDiagonal(result=self.adinv_vec)
@@ -388,6 +392,15 @@ class schur3x3full(block_precond):
         self.P.createSubMatrix(self.iset[2], self.iset[0], submat=self.D)
         self.P.createSubMatrix(self.iset[2], self.iset[1], submat=self.E)
         self.P.createSubMatrix(self.iset[2], self.iset[2], submat=self.R)
+        self.A.assemble()
+        self.Bt.assemble()
+        self.Dt.assemble()
+        self.B.assemble()
+        self.C.assemble()
+        self.Et.assemble()
+        self.D.assemble()
+        self.E.assemble()
+        self.R.assemble()
 
         if self.schur_block_scaling[1]["type"] == "diag":
             self.A.getDiagonal(result=self.adinv_vec)
@@ -663,6 +676,9 @@ class bgs2x2(block_precond):
         self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[1], self.iset[0], submat=self.B)
         self.P.createSubMatrix(self.iset[1], self.iset[1], submat=self.C)
+        self.A.assemble()
+        self.B.assemble()
+        self.C.assemble()
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
@@ -723,6 +739,7 @@ class bgssym2x2(bgs2x2):
         super().setUp(pc)
 
         self.P.createSubMatrix(self.iset[0], self.iset[1], submat=self.Bt)
+        self.Bt.assemble()
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
@@ -807,6 +824,12 @@ class bgs3x3(block_precond):
         self.P.createSubMatrix(self.iset[2], self.iset[0], submat=self.D)
         self.P.createSubMatrix(self.iset[2], self.iset[1], submat=self.E)
         self.P.createSubMatrix(self.iset[2], self.iset[2], submat=self.R)
+        self.A.assemble()
+        self.B.assemble()
+        self.C.assemble()
+        self.D.assemble()
+        self.E.assemble()
+        self.R.assemble()
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
@@ -886,6 +909,9 @@ class bgssym3x3(bgs3x3):
         self.P.createSubMatrix(self.iset[0], self.iset[1], submat=self.Bt)
         self.P.createSubMatrix(self.iset[0], self.iset[2], submat=self.Dt)
         self.P.createSubMatrix(self.iset[1], self.iset[2], submat=self.Et)
+        self.Bt.assemble()
+        self.Dt.assemble()
+        self.Et.assemble()
 
     # computes y = P^{-1} x
     def apply(self, pc, x, y):
@@ -971,6 +997,8 @@ class jacobi2x2(block_precond):
 
         self.P.createSubMatrix(self.iset[0], self.iset[0], submat=self.A)
         self.P.createSubMatrix(self.iset[1], self.iset[1], submat=self.C)
+        self.A.assemble()
+        self.C.assemble()
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)

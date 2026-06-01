@@ -14,7 +14,7 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     # cases (1,2) from ten Eikelder et al. (2024), Brunk and ten Eikelder (2026)
-    case = 2
+    case = 1
 
     IO_PARAMS = {
         # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations

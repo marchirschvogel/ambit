@@ -46,8 +46,8 @@ class block_precond_outer:
             if isinstance(pr["prec"], str):
                 self.iset_block[i] = self.iset[self.bi[i][0]]
                 if len(self.bi[i])>1:
-                    for k in self.bi[i]:
-                        self.iset_block[i] = self.iset_block[i].expand(self.iset[k])
+                    for k in range(1,len(self.bi[i])):
+                        self.iset_block[i] = self.iset_block[i].expand(self.iset[self.bi[i][k]])
                     self.iset_block[i].sort()
                 self.inner_precs[i] = preconditioner.block_precond([self.iset_block[i]], [pr], io, solparams, comm=comm)
             elif isinstance(pr["prec"], dict):
@@ -186,8 +186,10 @@ class BGS_outer(block_precond_outer):
         for i in range(self.num_precs):
             if not self.inner_precs[i].is_blockprec:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
+                self.operator_mats[i][0].assemble()
             else:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])
+                self.block_operators[i].assemble()
 
         for i in range(self.num_precs):
             if self.inner_precs[i].is_blockprec:
@@ -197,6 +199,7 @@ class BGS_outer(block_precond_outer):
             for j in range(self.num_precs):
                 if i>j: # forward BGS - create lower tridiagonal additional blocks
                     self.P.createSubMatrix(self.iset_block[i], self.iset_block[j], submat=self.tridiag_mat_outer_bgs[i][j])
+                    self.tridiag_mat_outer_bgs[i][j].assemble()
 
         # operator values have changed - do we need to re-set them?
         for i in range(self.num_precs):
@@ -315,6 +318,10 @@ class Schur2x2_outer(block_precond_outer):
         self.P.createSubMatrix(self.iset_block[0], self.iset_block[1], submat=self.Bt)
         self.P.createSubMatrix(self.iset_block[1], self.iset_block[0], submat=self.B)
         self.P.createSubMatrix(self.iset_block[1], self.iset_block[1], submat=self.C)
+        self.A.assemble()
+        self.Bt.assemble()
+        self.B.assemble()
+        self.C.assemble()
 
         self.A.getDiagonal(result=self.adinv_vec)
         self.adinv_vec.reciprocal()
@@ -345,8 +352,10 @@ class Schur2x2_outer(block_precond_outer):
         for i in range(2):
             if not self.inner_precs[i].is_blockprec:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
+                self.operator_mats[i][0].assemble()
             # else:
             #     self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])  #### should goooo
+            #     self.block_operators[i].assemble()
 
         self.block_operators[0] = self.A
         self.block_operators[1] = self.Smod
