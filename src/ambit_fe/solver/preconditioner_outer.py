@@ -42,44 +42,59 @@ class block_precond_outer:
         self.iset_block = [[]] * self.num_precs
 
         for i, pr in enumerate(self.precond_fields):
-            self.bi[i] = pr["block_index_0"]
+            self.bi[i] = pr["blocks"]
             if isinstance(pr["prec"], str):
-                self.inner_precs[i] = preconditioner.block_precond(self.iset[self.bi[i]:self.bi[i]+1], [pr], io, solparams, comm=comm)
-                self.iset_block[i] = self.iset[self.bi[i]]
+                self.iset_block[i] = self.iset[self.bi[i][0]]
+                if len(self.bi[i])>1:
+                    for k in self.bi[i]:
+                        self.iset_block[i] = self.iset_block[i].expand(self.iset[k])
+                    self.iset_block[i].sort()
+                self.inner_precs[i] = preconditioner.block_precond([self.iset_block[i]], [pr], io, solparams, comm=comm)
             elif isinstance(pr["prec"], dict):
                 if list(pr["prec"].keys())[0]=="s2x2":
-                    self.inner_precs[i] = preconditioner.schur2x2(self.iset_blocked[self.bi[i]:self.bi[i]+2], pr["prec"]["s2x2"], io, solparams, comm=comm)
+                    assert(len(self.bi[i])==2)
+                    blocklist = [self.iset_blocked[self.bi[i][0]], self.iset_blocked[self.bi[i][1]]]
+                    self.inner_precs[i] = preconditioner.schur2x2(blocklist, pr["prec"]["s2x2"], io, solparams, comm=comm)
                     # create index set encompassing Schur blocks - seen by outer BGS
-                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
+                    self.iset_block[i] = self.iset[self.bi[i][0]].expand(self.iset[self.bi[i][1]])
                     self.iset_block[i].sort()
                 elif list(pr["prec"].keys())[0]=="s2x2full":
-                    self.inner_precs[i] = preconditioner.schur2x2full(self.iset_blocked[self.bi[i]:self.bi[i]+2], pr["prec"]["s2x2full"], io, solparams, comm=comm)
+                    assert(len(self.bi[i])==2)
+                    blocklist = [self.iset_blocked[self.bi[i][0]], self.iset_blocked[self.bi[i][1]]]
+                    self.inner_precs[i] = preconditioner.schur2x2full(blocklist, pr["prec"]["s2x2full"], io, solparams, comm=comm)
                     # create index set encompassing Schur blocks - seen by outer BGS
-                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
+                    self.iset_block[i] = self.iset[self.bi[i][0]].expand(self.iset[self.bi[i][1]])
                     self.iset_block[i].sort()
                 elif list(pr["prec"].keys())[0]=="s3x3":
-                    self.inner_precs[i] = preconditioner.schur3x3(self.iset_blocked[self.bi[i]:self.bi[i]+3], pr["prec"]["s3x3"], io, solparams, comm=comm)
+                    assert(len(self.bi[i])==3)
+                    blocklist = [self.iset_blocked[self.bi[i][0]], self.iset_blocked[self.bi[i][1]], self.iset_blocked[self.bi[i][2]]]
+                    self.inner_precs[i] = preconditioner.schur3x3(blocklist, pr["prec"]["s3x3"], io, solparams, comm=comm)
                     # create index set encompassing Schur blocks - seen by outer BGS
-                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
-                    self.iset_block[i] = self.iset_block[i].expand(self.iset[self.bi[i]+2])
+                    self.iset_block[i] = self.iset[self.bi[i][0]].expand(self.iset[self.bi[i][1]])
+                    self.iset_block[i] = self.iset_block[i].expand(self.iset[self.bi[i][2]])
                     self.iset_block[i].sort()
                 elif list(pr["prec"].keys())[0]=="s3x3full":
-                    self.inner_precs[i] = preconditioner.schur3x3full(self.iset_blocked[self.bi[i]:self.bi[i]+3], pr["prec"]["s3x3full"], io, solparams, comm=comm)
+                    assert(len(self.bi[i])==3)
+                    blocklist = [self.iset_blocked[self.bi[i][0]], self.iset_blocked[self.bi[i][1]], self.iset_blocked[self.bi[i][2]]]
+                    self.inner_precs[i] = preconditioner.schur3x3full(blocklist, pr["prec"]["s3x3full"], io, solparams, comm=comm)
                     # create index set encompassing Schur blocks - seen by outer BGS
-                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
-                    self.iset_block[i] = self.iset_block[i].expand(self.iset[self.bi[i]+2])
+                    self.iset_block[i] = self.iset[self.bi[i][0]].expand(self.iset[self.bi[i][1]])
+                    self.iset_block[i] = self.iset_block[i].expand(self.iset[self.bi[i][2]])
                     self.iset_block[i].sort()
                 elif list(pr["prec"].keys())[0]=="bgs2x2":
-                    self.inner_precs[i] = preconditioner.bgs2x2(self.iset_blocked[self.bi[i]:self.bi[i]+2], pr["prec"]["bgs2x2"], io, solparams, comm=comm)
+                    assert(len(self.bi[i])==2)
+                    blocklist = [self.iset_blocked[self.bi[i][0]], self.iset_blocked[self.bi[i][1]]]
+                    self.inner_precs[i] = preconditioner.bgs2x2(blocklist, pr["prec"]["bgs2x2"], io, solparams, comm=comm)
                     # create index set encompassing inner BGS blocks - seen by outer BGS
-                    self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
+                    self.iset_block[i] = self.iset[self.bi[i][0]].expand(self.iset[self.bi[i][1]])
                     self.iset_block[i].sort()
-                # allow an outer Schur in an (then even more outer ;-)) outer BGS - TODO, not yet operational!
-                # elif list(pr["prec"].keys())[0]=="Schur2x2_outer":
-                #     self.inner_precs[i] = Schur2x2_outer(self.iset_blocked[self.bi[i]:self.bi[i]+2], pr["prec"]["Schur2x2_outer"], io, solparams, comm=comm)
-                #     # create index set encompassing Schur blocks - seen by outer BGS
-                #     self.iset_block[i] = self.iset[self.bi[i]].expand(self.iset[self.bi[i]+1])
-                #     self.iset_block[i].sort()
+                elif list(pr["prec"].keys())[0]=="bgssym2x2":
+                    assert(len(self.bi[i])==2)
+                    blocklist = [self.iset_blocked[self.bi[i][0]], self.iset_blocked[self.bi[i][1]]]
+                    self.inner_precs[i] = preconditioner.bgssym2x2(blocklist, pr["prec"]["bgssym2x2"], io, solparams, comm=comm)
+                    # create index set encompassing inner BGS blocks - seen by outer BGS
+                    self.iset_block[i] = self.iset[self.bi[i][0]].expand(self.iset[self.bi[i][1]])
+                    self.iset_block[i].sort()
                 else:
                     raise ValueError("Unknown inner block preconditioner.")
             else:
@@ -280,7 +295,7 @@ class Schur2x2_outer(block_precond_outer):
         self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
         self.block_operators[0] = self.A
-        self.block_operators[1] = self.C#self.Smod
+        self.block_operators[1] = self.Smod
 
         for i in range(2):
             if self.inner_precs[i].is_blockprec:
@@ -296,10 +311,6 @@ class Schur2x2_outer(block_precond_outer):
 
 
     def setUp(self, pc):
-        for i in range(2):
-            if self.inner_precs[i].is_blockprec:
-                self.inner_precs[i].setUp(pc) # TODO: Correct here?
-
         self.P.createSubMatrix(self.iset_block[0], self.iset_block[0], submat=self.A)
         self.P.createSubMatrix(self.iset_block[0], self.iset_block[1], submat=self.Bt)
         self.P.createSubMatrix(self.iset_block[1], self.iset_block[0], submat=self.B)
@@ -338,7 +349,11 @@ class Schur2x2_outer(block_precond_outer):
             #     self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])  #### should goooo
 
         self.block_operators[0] = self.A
-        self.block_operators[1] = self.C#self.Smod
+        self.block_operators[1] = self.Smod
+
+        for i in range(2):
+            if self.inner_precs[i].is_blockprec:
+                self.inner_precs[i].setUp(pc)
 
         # operator values have changed - do we need to re-set them?
         for i in range(2):

@@ -94,9 +94,9 @@ def main():
         # BEGIN Iterative solver settings
         "iterative_solver": "fgmres",
         "block_precond": "BGS_outer",
-        "precond_fields": [{"prec": "amg", "block_index_0": 0},  # solid-u
-                           {"prec": "amg", "block_index_0": 3},  # ale-d
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 1}  # fluid-v,p
+        "precond_fields": [{"prec": "amg", "blocks": [0]},  # solid-u
+                           {"prec": "amg", "blocks": [3]},  # ale-d
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [1,2]}  # fluid-v,p
                            ],
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",

@@ -48,8 +48,8 @@ def test_main():
         "solve_type": "iterative",
         "iterative_solver": "gmres",
         "block_precond": "BGS_outer",
-        "precond_fields": [{"prec": "amg", "block_index_0": 3},  # ale-d
-                           {"prec": {"s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}]}, "block_index_0": 0}  # fluid-v,p,LM+red.v
+        "precond_fields": [{"prec": "amg", "blocks": [3]},  # ale-d
+                           {"prec": {"s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}]}, "blocks": [0,1,2]}  # fluid-v,p,LM+red.v
                            ],
         "tol_lin_rel": 1.0e-5,
         "tol_lin_abs": 1.0e-30,

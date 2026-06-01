@@ -34,23 +34,22 @@ class block_precond:
         self.precond_fields = precond_fields
 
         self.nfields = num_precs
-        # print(len(self.iset))
-        # print(self.nfields)
-        # exit()
-        # assert len(self.iset) == self.nfields
+
+        assert len(self.iset) == self.nfields
         self.comm = comm
         # acess to problem IO object
         self.io = io
         # parameters
         self.solparams = solparams
 
-        # type of scaling for approximation of Schur complement
-        schur_block_scaling = self.solparams.get("schur_block_scaling", [{"type": "diag", "val": 1.0}] * 2)
-
-        if isinstance(schur_block_scaling, list):
-            self.schur_block_scaling = schur_block_scaling
-        else:
-            self.schur_block_scaling = [schur_block_scaling] * 2
+        self.ksp_fields, self.schur_action, self.schur_block_scaling = [], [False] * self.nfields, [None] * self.nfields
+        # create field ksps
+        for n in range(self.nfields):
+            self.ksp_fields.append(PETSc.KSP().create(self.comm))
+            # only for Schur complement preconditioners
+            if n>0: # Schur blocks are 1 (or 1+2), not 0
+                self.schur_action[n] = self.precond_fields[n].get("schur_action", False)
+                self.schur_block_scaling[n] = self.precond_fields[n].get("schur_block_scaling", {"type": "diag", "val": 1.0})
 
     def check_field_size(self):
         assert self.nfields == 1
@@ -70,11 +69,6 @@ class block_precond:
         self.check_field_size()
         nf = len(operator_mats)
 
-        self.ksp_fields, self.schur_action = [], [False] * nf
-        # create field ksps
-        for n in range(nf):
-            self.ksp_fields.append(PETSc.KSP().create(self.comm))
-            self.schur_action[n] = self.precond_fields[n].get("schur_action", False)
         # set the options
         for n in range(nf):
             if self.precond_fields[n]["prec"] == "amg":
@@ -101,11 +95,13 @@ class block_precond:
                         opts.delValue(key)  # clear options - opts.clear() doesn't seem to work?!
                 # print to view some settings...
                 # print(self.ksp_fields[n].getPC().view())
+                if solvetype=="preonly":
+                    assert(not self.schur_action[n]) # need an iterative solver here... not for preonly!
             elif self.precond_fields[n]["prec"] == "direct":
                 self.ksp_fields[n].setType("preonly")
                 self.ksp_fields[n].getPC().setType("lu")
                 self.ksp_fields[n].getPC().setFactorSolverType("mumps")
-                assert(not self.schur_action[n]) # need AMG here... not for preonly!
+                assert(not self.schur_action[n]) # need an iterative solver here... not for preonly!
             else:
                 raise ValueError(
                     "Currently, only either 'amg' or 'direct' are supported as field-specific preconditioner."
@@ -169,11 +165,11 @@ class schur2x2full(block_precond):
         # set 1's to get correct allocation pattern
         self.Adinv.shift(1.0)
 
-        if self.schur_block_scaling[0]["type"] == "diag":
+        if self.schur_block_scaling[1]["type"] == "diag":
             self.adinv_vec = self.A.getDiagonal()
-        elif self.schur_block_scaling[0]["type"] == "rowsum":
+        elif self.schur_block_scaling[1]["type"] == "rowsum":
             self.adinv_vec = self.A.getRowSum()
-        elif self.schur_block_scaling[0]["type"] == "none":
+        elif self.schur_block_scaling[1]["type"] == "none":
             self.adinv_vec = self.A.createVecLeft()
             self.adinv_vec.set(1.0)
         else:
@@ -208,19 +204,19 @@ class schur2x2full(block_precond):
         self.P.createSubMatrix(self.iset[1], self.iset[0], submat=self.B)
         self.P.createSubMatrix(self.iset[1], self.iset[1], submat=self.C)
 
-        if self.schur_block_scaling[0]["type"] == "diag":
+        if self.schur_block_scaling[1]["type"] == "diag":
             self.A.getDiagonal(result=self.adinv_vec)
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling[0]["type"] == "rowsum":
+        elif self.schur_block_scaling[1]["type"] == "rowsum":
             self.A.getRowSum(result=self.adinv_vec)
             self.adinv_vec.abs()
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling[0]["type"] == "none":
+        elif self.schur_block_scaling[1]["type"] == "none":
             self.adinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
 
-        self.adinv_vec.scale(self.schur_block_scaling[0]["val"])
+        self.adinv_vec.scale(self.schur_block_scaling[1]["val"])
 
         # form diag(A)^{-1}
         self.Adinv.setDiagonal(self.adinv_vec, addv=PETSc.InsertMode.INSERT)
@@ -310,11 +306,11 @@ class schur3x3full(block_precond):
         # set 1's to get correct allocation pattern
         self.Adinv.shift(1.0)
 
-        if self.schur_block_scaling[0]["type"] == "diag":
+        if self.schur_block_scaling[1]["type"] == "diag":
             self.adinv_vec = self.A.getDiagonal()
-        elif self.schur_block_scaling[0]["type"] == "rowsum":
+        elif self.schur_block_scaling[1]["type"] == "rowsum":
             self.adinv_vec = self.A.getRowSum()
-        elif self.schur_block_scaling[0]["type"] == "none":
+        elif self.schur_block_scaling[1]["type"] == "none":
             self.adinv_vec = self.A.createVecLeft()
             self.adinv_vec.set(1.0)
         else:
@@ -322,11 +318,11 @@ class schur3x3full(block_precond):
 
         self.Smod = self.C.copy(structure=PETSc.Mat.Structure.DIFFERENT_NONZERO_PATTERN)
 
-        if self.schur_block_scaling[1]["type"] == "diag":
+        if self.schur_block_scaling[2]["type"] == "diag":
             self.smoddinv_vec = self.Smod.getDiagonal()
-        elif self.schur_block_scaling[1]["type"] == "rowsum":
+        elif self.schur_block_scaling[2]["type"] == "rowsum":
             self.smoddinv_vec = self.Smod.getRowSum()
-        elif self.schur_block_scaling[1]["type"] == "none":
+        elif self.schur_block_scaling[2]["type"] == "none":
             self.smoddinv_vec = self.Smod.createVecLeft()
             self.smoddinv_vec.set(1.0)
         else:
@@ -393,19 +389,19 @@ class schur3x3full(block_precond):
         self.P.createSubMatrix(self.iset[2], self.iset[1], submat=self.E)
         self.P.createSubMatrix(self.iset[2], self.iset[2], submat=self.R)
 
-        if self.schur_block_scaling[0]["type"] == "diag":
+        if self.schur_block_scaling[1]["type"] == "diag":
             self.A.getDiagonal(result=self.adinv_vec)
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling[0]["type"] == "rowsum":
+        elif self.schur_block_scaling[1]["type"] == "rowsum":
             self.A.getRowSum(result=self.adinv_vec)
             self.adinv_vec.abs()
             self.adinv_vec.reciprocal()
-        elif self.schur_block_scaling[0]["type"] == "none":
+        elif self.schur_block_scaling[1]["type"] == "none":
             self.adinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
 
-        self.adinv_vec.scale(self.schur_block_scaling[0]["val"])
+        self.adinv_vec.scale(self.schur_block_scaling[1]["val"])
 
         # form diag(A)^{-1}
         self.Adinv.setDiagonal(self.adinv_vec, addv=PETSc.InsertMode.INSERT)
@@ -435,19 +431,19 @@ class schur3x3full(block_precond):
 
         # --- Wmod = R - D diag(A)^{-1} Dt - Umod diag(Smod)^{-1} Tmod
 
-        if self.schur_block_scaling[1]["type"] == "diag":
+        if self.schur_block_scaling[2]["type"] == "diag":
             self.Smod.getDiagonal(result=self.smoddinv_vec)
             self.smoddinv_vec.reciprocal()
-        elif self.schur_block_scaling[1]["type"] == "rowsum":
+        elif self.schur_block_scaling[2]["type"] == "rowsum":
             self.Smod.getRowSum(result=self.smoddinv_vec)
             self.smoddinv_vec.abs()
             self.smoddinv_vec.reciprocal()
-        elif self.schur_block_scaling[1]["type"] == "none":
+        elif self.schur_block_scaling[2]["type"] == "none":
             self.smoddinv_vec.set(1.0)
         else:
             raise ValueError("Unknown schur_block_scaling option!")
 
-        self.smoddinv_vec.scale(self.schur_block_scaling[1]["val"])
+        self.smoddinv_vec.scale(self.schur_block_scaling[2]["val"])
 
         # form diag(Smod)^{-1}
         self.Smoddinv.setDiagonal(self.smoddinv_vec, addv=PETSc.InsertMode.INSERT)

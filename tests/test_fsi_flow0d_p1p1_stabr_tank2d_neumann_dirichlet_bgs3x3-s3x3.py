@@ -44,9 +44,9 @@ def test_main():
         "solve_type": "iterative",
         "iterative_solver": "gmres",
         "block_precond": "BGS_outer",
-        "precond_fields": [{"prec": "amg", "block_index_0": 0},  # solid-u
-                           {"prec": "amg", "block_index_0": 4},  # ale-d
-                           {"prec": {"s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}]}, "block_index_0": 1}  # fluid-v,p
+        "precond_fields": [{"prec": "amg", "blocks": [0]},  # solid-u
+                           {"prec": "amg", "blocks": [4]},  # ale-d
+                           {"prec": {"s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "direct"}]}, "blocks": [1,2,3]}  # fluid-v,p
                            ],
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",

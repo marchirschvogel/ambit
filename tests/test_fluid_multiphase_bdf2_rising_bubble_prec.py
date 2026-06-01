@@ -66,8 +66,8 @@ def test_main():
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
         "block_precond": "BGS_outer",  # BGS_outer, Schur2x2_outer
-        "precond_fields": [{"prec": {"s2x2": [{"prec": "direct"},{"prec": "amg", "solve": "gmres", "maxiter": 5, "tolrel": 1e-8, "schur_action": True}]}, "block_index_0": 0}, # fluid-v,p
-                           {"prec": {"s2x2": [{"prec": "direct"},{"prec": "amg", "solve": "gmres", "maxiter": 5, "tolrel": 1e-8, "schur_action": False}]}, "block_index_0": 2}  # CH-phi,mu - TODO: Schur action seems to worsen things here! Why?!
+        "precond_fields": [{"prec": {"s2x2": [{"prec": "direct"},{"prec": "amg", "solve": "gmres", "maxiter": 5, "tolrel": 1e-8, "schur_action": True}]}, "blocks": [0,1]}, # fluid-v,p
+                           {"prec": {"s2x2": [{"prec": "direct"},{"prec": "amg", "solve": "gmres", "maxiter": 5, "tolrel": 1e-8, "schur_action": False}]}, "blocks": [2,3]}  # CH-phi,mu - TODO: Schur action seems to worsen things here! Why?!
                            ],
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",

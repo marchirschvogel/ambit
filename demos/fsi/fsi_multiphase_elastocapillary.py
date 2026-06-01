@@ -126,15 +126,15 @@ def main():
                       }
 
     SOLVER_PARAMS = {
-        "solve_type": "iterative",  # direct, iterative
+        "solve_type": "direct",  # direct, iterative
         "direct_solver": "mumps",   # superlu_dist, mumps
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
         "block_precond": "BGS_outer",
-        "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 0}, # solid-u,ps
-                           {"prec": "amg", "block_index_0": 6},  # ale-d
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 2}, # fluid-v,p
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "block_index_0": 4}  # CH-phi,mu
+        "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [0]}, # solid-u,ps
+                           {"prec": "amg", "blocks": [6]},  # ale-d
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2]}, # fluid-v,p
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [4]}  # CH-phi,mu
                            ],
         "tol_lin_rel": 1e-7,
         "lin_norm_type": "unpreconditioned",
