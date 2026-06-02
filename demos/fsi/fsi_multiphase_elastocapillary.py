@@ -42,7 +42,7 @@ def main():
             r3 = np.sqrt(xx * xx + zz * zz + (yy - y0) ** 2.)
             rxz = np.sqrt(xx * xx + zz * zz)
 
-            wdth = 25.0
+            wdth = 35.0#25.0
 
             # in_upper_ring = np.logical_and(np.logical_and(yy >= 0.0, yy < R0/2.), np.abs(r3 - R0) <= wdth)
             in_upper_ring = np.logical_and(yy >= 0.0, np.abs(r3 - R0) <= wdth)
@@ -53,7 +53,7 @@ def main():
     if dim=="2D":
         mesh_ = {"type": "rectangle", "celltype": "triangle", "coords_a": [0.0, -50.0], "coords_b": [500.0, 500.0], "meshsize": [40,44]}
     elif dim=="3D":
-        mesh_ = {"type": "box", "celltype": "tetrahedron", "coords_a": [0.0, -50.0, 0.0], "coords_b": [500.0, 500.0, 500.0], "meshsize": [40,44,40]}
+        mesh_ = {"type": "box", "celltype": "tetrahedron", "coords_a": [0.0, -50.0, 0.0], "coords_b": [500.0, 500.0, 500.0], "meshsize": [10,11,10]}
     else:
         raise ValueError("Unknown dim. Choose '2D' or '3D'.")
 
@@ -121,7 +121,7 @@ def main():
     """
     CONTROL_PARAMS = {"maxtime": 10e3, # µs
                       "dt": dt,
-                      # "numstep_stop": 250,
+                      "numstep_stop": 250,
                       "initial_fields": [expr1, None],
                       }
 
@@ -130,20 +130,33 @@ def main():
         "direct_solver": "mumps",   # superlu_dist, mumps
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
+        "petsc_options_ksp": {"ksp_gmres_modifiedgramschmidt": True, "ksp_gmres_restart": 1000},
         "block_precond": "BGS_outer",
-        # "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [0,1]}, # solid-u,ps
+        # "precond_fields": [{"prec": "direct", "blocks": [0,1]}, # solid-u,ps
         #                    {"prec": "amg", "blocks": [6]},  # ale-d
         #                    {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}, # fluid-v,p
         #                    {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [4,5]}  # CH-phi,mu
         #                    ],
-        "precond_fields": [{"prec": "direct", "blocks": [0,1]}, # solid-u,ps
-                           {"prec": "amg", "blocks": [6]},  # ale-d
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}, # fluid-v,p
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [4,5]}  # CH-phi,mu
+        # "precond_fields": [{"prec": "direct", "blocks": [0,1]},  # solid-u,ps
+        #                    {"prec": "direct", "blocks": [6]},  # ale-d
+        #                    {"prec": "direct", "blocks": [4,5]},  # CH-phi,mu
+        #                    {"prec": "direct", "blocks": [2,3]},  # fluid-v,p
+        #                    ],
+        # "precond_fields": [{"prec": "direct", "blocks": [0]},  # solid-u
+        #                    {"prec": "direct", "blocks": [5]},  # ale-d
+        #                    {"prec": "direct", "blocks": [3,4]},  # CH-phi,mu
+        #                    {"prec": "direct", "blocks": [1,2]},  # fluid-v,p
+        #                    ],
+        "precond_fields": [{"prec": "amg", "blocks": [0]}, # solid-u
+                           {"prec": "amg", "blocks": [5]},  # ale-d
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [3,4]},  # CH-phi,mu
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [1,2]},  # fluid-v,p
                            ],
-        "tol_lin_rel": 1e-7,
+        "tol_lin_rel": 1e-5,
+        "tol_lin_abs": 1e-8,
         "lin_norm_type": "unpreconditioned",
         "print_liniter_every": 50,
+        "max_liniter": 500,
         # END: Settings for iterative solver
         "tol_res": 1e-6,
         "tol_inc": 1e-4,
@@ -157,13 +170,13 @@ def main():
     TIME_PARAMS_PF    = {"timint": "bdf2"}
 
     E = 3.0 # 1 kPa = pg/(µm µs^2)
-    # nu = 0.499 # not used - in case of full incompressibility
+    nu = 0.499 # not used - in case of full incompressibility
 
     FEM_PARAMS_SOLID = {
         "order_disp": 2,
         "order_pres": 1,
         "quad_degree": 5,
-        "incompressibility": "full",
+        "incompressibility": "no",
         # "bulkmod": E/(3.*(1.-2.*nu)),
     }
 
@@ -232,7 +245,7 @@ def main():
     zeta = 0.0
 
     MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": E/3.},
-                                # "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
+                                "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
                                 "inertia": {"rho0": rho_s},
                                 "id": locate_solid()}}
 

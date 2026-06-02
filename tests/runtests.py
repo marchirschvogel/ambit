@@ -289,8 +289,8 @@ if category == "fluid_multiphase" or category == "fluid" or category == "all":
     errs["test_fluid_multiphase_bdf2_rising_bubble 2 restart"] = subprocess.call(
         ["mpiexec", "-n", "2", "python3", "test_fluid_multiphase_bdf2_rising_bubble.py", str(4)]
     )
-    errs["test_fluid_multiphase_bdf2_rising_bubble_prec 4"] = subprocess.call(
-        ["mpiexec", "-n", "4", "python3", "test_fluid_multiphase_bdf2_rising_bubble_prec.py"]
+    errs["test_fluid_multiphase_bdf2_rising_bubble_bgs2x2outer 4"] = subprocess.call(
+        ["mpiexec", "-n", "4", "python3", "test_fluid_multiphase_bdf2_rising_bubble_bgs2x2outer.py"]
     )
 if category == "fluid_ale_multiphase" or category == "fluid_multiphase" or category == "fluid" or category == "all":
     errs["test_fluid_ale_multiphase_sloshing 3"] = subprocess.call(
@@ -343,8 +343,8 @@ if category == "fsi" or category == "all":
     errs["test_fsi_p1p1_stabr_tank2d_neumann_dirichlet 3"] = subprocess.call(
         ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_dirichlet.py"]
     )
-    errs["test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3-s2x2 4"] = subprocess.call(
-        ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3-s2x2.py"]
+    errs["test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3outer-s2x2 4"] = subprocess.call(
+        ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3outer-s2x2.py"]
     )
 
 if category == "fsi" or category == "fsi_multiphase" or category == "all":
@@ -371,13 +371,13 @@ if category == "fsi_flow0d" or category == "all":
             "test_fsi_flow0d_p1p1_stabr_artseg_neumann_neumann.py",
         ]
     )
-    errs["test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3-s3x3 2"] = subprocess.call(
+    errs["test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3outer-s3x3 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3-s3x3.py",
+            "test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3outer-s3x3.py",
         ]
     )
 
@@ -736,13 +736,13 @@ if category == "frsi" or category == "all":
         ]
     )
 
-    errs["test_frsi_artseg_prefile_bgs-s3x3 3"] = subprocess.call(
+    errs["test_frsi_artseg_prefile_bgs2x2outer-s3x3 3"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "3",
             "python3",
-            "test_frsi_artseg_prefile_bgs-s3x3.py",
+            "test_frsi_artseg_prefile_bgs2x2outer-s3x3.py",
         ]
     )
 

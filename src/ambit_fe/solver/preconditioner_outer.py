@@ -43,6 +43,7 @@ class block_precond_outer:
 
         for i, pr in enumerate(self.precond_fields):
             self.bi[i] = pr["blocks"]
+            # single-field sub-precs
             if isinstance(pr["prec"], str):
                 self.iset_block[i] = self.iset[self.bi[i][0]]
                 if len(self.bi[i])>1:
@@ -50,6 +51,7 @@ class block_precond_outer:
                         self.iset_block[i] = self.iset_block[i].expand(self.iset[self.bi[i][k]])
                     self.iset_block[i].sort()
                 self.inner_precs[i] = preconditioner.block_precond([self.iset_block[i]], [pr], io, solparams, comm=comm)
+            # block sub-precs
             elif isinstance(pr["prec"], dict):
                 if list(pr["prec"].keys())[0]=="s2x2":
                     assert(len(self.bi[i])==2)

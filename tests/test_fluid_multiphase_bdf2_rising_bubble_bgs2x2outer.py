@@ -3,7 +3,7 @@
 """
 Two-phase flow rising bubble in gravitational flield
 BDF2 time-integration scheme for both fluid and phasefield
-BGS(S2x2-S2x2) preconditioner
+BGS2x2outer(S2x2-S2x2) preconditioner
 """
 
 import ambit_fe
@@ -66,12 +66,13 @@ def test_main():
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
         "block_precond": "BGS_outer",  # BGS_outer, Schur2x2_outer
-        "precond_fields": [{"prec": {"s2x2": [{"prec": "direct"},{"prec": "amg", "solve": "gmres", "maxiter": 5, "tolrel": 1e-8, "schur_action": True}]}, "blocks": [0,1]}, # fluid-v,p
-                           {"prec": {"s2x2": [{"prec": "direct"},{"prec": "amg", "solve": "gmres", "maxiter": 5, "tolrel": 1e-8, "schur_action": False}]}, "blocks": [2,3]}  # CH-phi,mu - TODO: Schur action seems to worsen things here! Why?!
-                           ],
-        "tol_lin_rel": 1e-7,
+        "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]},   # CH-phi,mu
+                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [0,1]}],  # fluid-v,p
+        "tol_lin_rel": 1e-5,
+        "tol_lin_abs": 1e-8,
         "lin_norm_type": "unpreconditioned",
         "print_liniter_every": 50,
+        "max_liniter": 500,
         # END: Settings for iterative solver
         "maxiter":25,
         "tol_res": [1e-6, 1e-6, 1e-6, 1e-6],

@@ -14,7 +14,7 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     # cases (1,2) from ten Eikelder et al. (2024), Brunk and ten Eikelder (2026)
-    case = 1
+    case = 2
 
     IO_PARAMS = {
         # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations
@@ -72,15 +72,23 @@ def main():
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS = {
-        "solve_type": "direct",   # direct, iterative
+        "solve_type": "iterative",   # direct, iterative
         "direct_solver": "mumps",
-        # BEGIN: Settings for iterative solver - TODO: Currently, this preconditioner (outer BGS btw. fluid and CH, Schur/SIMPLE on fluid, Schur/SIMPLE on CH) works OK for case 1, but not for case 2.
+        # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
+        "petsc_options_ksp": {"ksp_gmres_modifiedgramschmidt": True, "ksp_gmres_restart": 1000},
         "block_precond": "BGS_outer",  # Schur2x2_outer, BGS_outer
-        "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg", "solve": "gmres", "maxiter": 30, "schur_action": True}]}, "blocks": [0,1]}, # fluid-v,p
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}  # CH-phi,mu
+        # "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg", "solve": "gmres", "maxiter": 30, "schur_action": True}]}, "blocks": [0,1]}, # fluid-v,p
+        #                    {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}  # CH-phi,mu
+        #                    ],
+
+        # Here, first do CH, then fluid
+        "precond_fields": [{"prec": "direct", "blocks": [2,3]},  # CH-phi,mu
+                           {"prec": "direct", "blocks": [0,1]},  # fluid-v,p
                            ],
-        "tol_lin_rel": 1e-7,
+
+        "tol_lin_rel": 1e-5,
+        "tol_lin_abs": 1e-8,
         "lin_norm_type": "unpreconditioned",
         "print_liniter_every": 50,
         "max_liniter": 500,
