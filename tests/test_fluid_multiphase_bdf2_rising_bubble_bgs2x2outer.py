@@ -3,7 +3,8 @@
 """
 Two-phase flow rising bubble in gravitational flield
 BDF2 time-integration scheme for both fluid and phasefield
-BGS2x2outer(S2x2-S2x2) preconditioner
+Outer BGS2x2 preconditioner
+reduced_mass formulation - needs noticeably fewer linear iterations!
 """
 
 import ambit_fe
@@ -26,7 +27,7 @@ def test_main():
 
     IO_PARAMS = {
         "problem_type": "fluid_multiphase",
-        "write_results_every": 5,
+        "write_results_every": 1,
         "write_restart_every": 4,
         "indicate_results_by": "time",
         "restart_step": restart_step,
@@ -49,7 +50,8 @@ def test_main():
 
         def evaluate(self, x):
             d = np.sqrt( (x[0]-self.x_c[0])**2.0 + (x[1]-self.x_c[1])**2.0 + (x[2]-self.x_c[2])**2.0 )
-            val = 0.5*(1.0 + np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps)))
+            # val = 0.5*(1.0 + np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps)))  # phi in [0,1]
+            val = np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps))  # phi in [-1,1]
             return (
                 np.full(x.shape[1], val),
             )
@@ -62,7 +64,6 @@ def test_main():
 
     SOLVER_PARAMS = {
         "solve_type": "iterative",
-        "direct_solver": "mumps",
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
         "block_precond": "BGS_outer",  # BGS_outer, Schur2x2_outer
@@ -91,14 +92,15 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative"}
+                        "fluid_formulation": "conservative",
+                        "mass_formulation": "reduced_mass"}  # conservative_mass, reduced_mass
 
-    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [0.0, 1.0]}
+    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [-1.0, 1.0]}
 
     COUPLING_PARAMS_MULTIPHASE = {"capillary_force_from_korteweg_stress": False,
                                   "clip_phi_range": True,
                                   "smooth_clip": "cubic",
-                                  "epsilon_clip": 1e-16}  # essentially the same as if "smooth_clip" were None...
+                                  "epsilon_clip": 1e-2}
 
     # fluid1 is surrounding, fluid2 is bubble
     rho1 = 1000.0
@@ -106,7 +108,8 @@ def test_main():
     eta1 = 10.0
     eta2 = 1.0
     sig = 24.5
-    M0 = 1e-3
+
+    sigtilde = 3.*sig/(2.*np.sqrt(2.))
 
     class locate_all:
         def evaluate(self, x):
@@ -116,8 +119,9 @@ def test_main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}, "id": locate_all(),
                                 "bodyforce": {"dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps,
-                                                  "kappa": sig*eps,
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": 0.1*eps**2.0,
+                                                  "D": sigtilde/(4.*eps),
+                                                  "kappa": sigtilde*eps,
                                                   "mobility": "degenerate"}, "id": locate_all()}}
 
     class locate_top_bottom:
@@ -173,10 +177,10 @@ def test_main():
 
     # correct results
     v_corr[0] = 0.0  # x
-    v_corr[1] = 1.5724610618361199E-02 # y
+    v_corr[1] = 9.9519133273923161E-03 # y
 
-    phi_corr[0] = 9.9986152237601944E-01
-    mu_corr[0] = 1.3305871374527716E+00
+    phi_corr[0] = 9.9970156984140424E-01
+    mu_corr[0] = 2.3157873711947285E+00
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

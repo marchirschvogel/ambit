@@ -18,12 +18,11 @@ class variationalform(variationalform_base):
         trlfnc2=None,
         n0=None,
         x_ref=None,
-        formulation=None,
         ro0=None,
     ):
         self.var_phi = tstfnc1
         self.var_mu = tstfnc2
-        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, formulation=formulation, ro0=ro0)
+        variationalform_base.__init__(self, tstfnc1=tstfnc1, tstfnc2=tstfnc2, trlfnc1=trlfnc1, trlfnc2=trlfnc2, n0=n0, x_ref=x_ref, ro0=ro0)
 
     def cahnhilliard_phase(self, phidot, phi, mu, Jflux, ddomain, v=None, w=None, F=None):
         # advection term if coupled to fluid flow

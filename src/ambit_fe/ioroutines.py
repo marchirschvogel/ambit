@@ -574,17 +574,18 @@ class IO_solid(IO):
                 for res in pb.results_to_write:
                     if res == "displacement":
                         if self.output_midpoint:
-                            u_proj = project(
-                                pb.us_mid,
-                                pb.V_u,
-                                pb.dx,
-                                domids=pb.domain_ids,
-                                nm="Displacement",
-                                comm=self.comm,
-                                entity_maps=self.entity_maps,
-                            )
+                            # u_proj = project(
+                            #     pb.us_mid,
+                            #     pb.V_u,
+                            #     pb.dx,
+                            #     domids=pb.domain_ids,
+                            #     nm="Displacement",
+                            #     comm=self.comm,
+                            #     entity_maps=self.entity_maps,
+                            # )
                             u_out = fem.Function(pb.V_out_vector, name=u_proj.name)
-                            u_out.interpolate(u_proj)
+                            # u_out.interpolate(u_proj)
+                            u_out.interpolate(fem.Expression(pb.us_mid, pb.V_out_vector.element.interpolation_points))
                         else:
                             u_out = fem.Function(pb.V_out_vector, name=pb.u.name)
                             u_out.interpolate(pb.u)
@@ -594,35 +595,37 @@ class IO_solid(IO):
                             vel = pb.vel_mid
                         else:
                             vel = pb.vel
-                        self.v_proj = project(
-                            vel,
-                            pb.V_u,
-                            pb.dx,
-                            domids=pb.domain_ids,
-                            nm="Velocity",
-                            comm=self.comm,
-                            entity_maps=self.entity_maps,
-                        )  # class variable for testing
-                        v_out = fem.Function(pb.V_out_vector, name=self.v_proj.name)
-                        v_out.interpolate(self.v_proj)
-                        pb.resultsfiles[res].write_function(v_out, indicator)
+                        # self.v_proj = project(
+                        #     vel,
+                        #     pb.V_u,
+                        #     pb.dx,
+                        #     domids=pb.domain_ids,
+                        #     nm="Velocity",
+                        #     comm=self.comm,
+                        #     entity_maps=self.entity_maps,
+                        # )  # class variable for testing
+                        self.v_out = fem.Function(pb.V_out_vector, name="Velocity")  # class variable for testing
+                        # v_out.interpolate(self.v_proj)
+                        self.v_out.interpolate(fem.Expression(vel, pb.V_out_vector.element.interpolation_points))
+                        pb.resultsfiles[res].write_function(self.v_out, indicator)
                     elif res == "acceleration":  # passed in acc is not a function but form, so we have to project
                         if self.output_midpoint:
                             acc = pb.acc_mid
                         else:
                             acc = pb.acc
-                        self.a_proj = project(
-                            acc,
-                            pb.V_u,
-                            pb.dx,
-                            domids=pb.domain_ids,
-                            nm="Acceleration",
-                            comm=self.comm,
-                            entity_maps=self.entity_maps,
-                        )  # class variable for testing
-                        a_out = fem.Function(pb.V_out_vector, name=self.a_proj.name)
-                        a_out.interpolate(self.a_proj)
-                        pb.resultsfiles[res].write_function(a_out, indicator)
+                        # self.a_proj = project(
+                        #     acc,
+                        #     pb.V_u,
+                        #     pb.dx,
+                        #     domids=pb.domain_ids,
+                        #     nm="Acceleration",
+                        #     comm=self.comm,
+                        #     entity_maps=self.entity_maps,
+                        # )  # class variable for testing
+                        self.a_out = fem.Function(pb.V_out_vector, name="Acceleration")  # class variable for testing
+                        # self.a_out.interpolate(self.a_proj)
+                        self.a_out.interpolate(fem.Expression(acc, pb.V_out_vector.element.interpolation_points))
+                        pb.resultsfiles[res].write_function(self.a_out, indicator)
                     elif res == "pressure":
                         if self.output_midpoint:
                             p_proj = project(
@@ -1505,18 +1508,44 @@ class IO_fluid(IO):
                         densfuncs = []
                         for n in range(pb.num_domains):
                             densfuncs.append(pb.vf.get_density(pb.rho[n], chi=chi))
-                        dens_proj = project(
-                            densfuncs,
-                            pb.V_scalar,
-                            pb.dx,
-                            domids=pb.domain_ids,
-                            nm="Density",
-                            comm=self.comm,
-                            entity_maps=self.entity_maps,
-                        )
-                        dens_out = fem.Function(pb.V_out_scalar, name=dens_proj.name)
-                        dens_out.interpolate(dens_proj)
+                        # dens_proj = project(
+                        #     densfuncs,
+                        #     pb.V_scalar,
+                        #     pb.dx,
+                        #     domids=pb.domain_ids,
+                        #     nm="Density",
+                        #     comm=self.comm,
+                        #     entity_maps=self.entity_maps,
+                        # )
+                        dens_out = fem.Function(pb.V_out_scalar, name="Density")
+                        # dens_out.interpolate(dens_proj)
+                        dens_out.interpolate(fem.Expression(sum(densfuncs), pb.V_out_scalar.element.interpolation_points))
                         pb.resultsfiles[res].write_function(dens_out, indicator)
+                    elif res == "chi":  # normalized phase field variable for coefficient evaluation - mainly for testing purposes...
+                        if self.output_midpoint:
+                            chi = pb.phasevar["chi_mid"]
+                        else:
+                            chi = pb.phasevar["chi"]
+                        # chi_proj = project(
+                        #     chi,
+                        #     pb.V_scalar,
+                        #     pb.dx,
+                        #     domids=pb.domain_ids,
+                        #     nm="Chi",
+                        #     comm=self.comm,
+                        #     entity_maps=self.entity_maps,
+                        # )
+                        chi_out = fem.Function(pb.V_out_scalar, name="Chi")
+                        # chi_out.interpolate(chi_proj)
+                        chi_out.interpolate(fem.Expression(chi, pb.V_out_scalar.element.interpolation_points))
+                        pb.resultsfiles[res].write_function(chi_out, indicator)
+                    elif res == "alpha":
+                        afuncs = []
+                        for n in range(pb.num_domains):
+                            afuncs.append(pb.alpha[n])
+                        a_out = fem.Function(pb.V_out_scalar, name="Alpha")
+                        a_out.interpolate(fem.Expression(sum(afuncs), pb.V_out_scalar.element.interpolation_points))
+                        pb.resultsfiles[res].write_function(a_out, indicator)
                     elif res == "internalpower_membrane":
                         pwfuncs = []
                         for n in range(len(pb.bintpower)):
@@ -1963,7 +1992,7 @@ class IO_phasefield(IO):
                     if res == "phase":
                         if self.output_midpoint:
                             phi_proj = project(
-                                pb.phi,
+                                pb.phi_mid,
                                 pb.V_phi,
                                 pb.dx,
                                 domids=pb.domain_ids,
@@ -1980,7 +2009,7 @@ class IO_phasefield(IO):
                     elif res == "potential":
                         if self.output_midpoint:
                             mu_proj = project(
-                                pb.mu,
+                                pb.mu_mid,
                                 pb.V_mu,
                                 pb.dx,
                                 domids=pb.domain_ids,

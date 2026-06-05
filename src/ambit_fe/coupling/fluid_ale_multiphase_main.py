@@ -167,6 +167,12 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
     def set_variational_forms_residual(self):
         # fluid, ALE, fluid-ALE coupling
         self.pbfa.set_variational_forms_residual()
+        # need to set these here - after fluid has done its job and phasefield is about to come...
+        self.pbp.fluidvar["alpha"], self.pbp.fluidvar["alpha_old"], self.pbp.fluidvar["alpha_mid"] = [None], [None], [None]
+        for n, M in enumerate(self.pbf.domain_ids):
+            self.pbp.fluidvar["alpha"][n] = self.pbf.alpha[n]
+            self.pbp.fluidvar["alpha_old"][n] = self.pbf.alpha_old[n]
+            self.pbp.fluidvar["alpha_mid"][n] = self.pbf.alpha_mid[n]
         # phasefield
         self.pbp.set_variational_forms_residual()
         # fluid-phasefield coupling

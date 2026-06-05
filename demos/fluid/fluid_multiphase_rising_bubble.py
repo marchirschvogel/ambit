@@ -14,7 +14,7 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     # cases (1,2) from ten Eikelder et al. (2024), Brunk and ten Eikelder (2026)
-    case = 2
+    case = 1
 
     IO_PARAMS = {
         # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations
@@ -26,7 +26,7 @@ def main():
         # where to write the output to
         "output_path": basepath + "/tmp/",
         # mesh command that uses dolfinx internal mesh creation of simple domains (here a rectangular 2D grid)
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[128,256]}, # 32,64   64,128   128,256
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[32,64]}, # 32,64   64,128   128,256
         # which results to write
         "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"],"counters"],
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
@@ -54,7 +54,6 @@ def main():
 
         def evaluate(self, x):
             d = np.sqrt( (x[0]-self.x_c[0])**2.0 + (x[1]-self.x_c[1])**2.0 + (x[2]-self.x_c[2])**2.0 )
-            # val = 0.5*(1.0 + np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps)))  # phi in [0,1]
             val = np.tanh((self.R_0 - d)/(np.sqrt(2.0)*eps))  # phi in [-1,1]
             return (
                 np.full(x.shape[1], val),
@@ -72,7 +71,7 @@ def main():
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS = {
-        "solve_type": "iterative",   # direct, iterative
+        "solve_type": "direct",   # direct, iterative
         "direct_solver": "mumps",
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
@@ -82,7 +81,7 @@ def main():
         #                    {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}  # CH-phi,mu
         #                    ],
 
-        # Here, first do CH, then fluid
+        # Here, first do CH, then fluid - use direct precs to test BGS
         "precond_fields": [{"prec": "direct", "blocks": [2,3]},  # CH-phi,mu
                            {"prec": "direct", "blocks": [0,1]},  # fluid-v,p
                            ],
@@ -93,9 +92,9 @@ def main():
         "print_liniter_every": 50,
         "max_liniter": 500,
         # END: Settings for iterative solver
-        "maxiter": 10,
+        # "maxiter": 10,
         "tol_res": [1e-5, 1e-5, 1e-5, 1e-5],
-        "tol_inc": [1e-3, 1e-3, 1e-3, 1e-3],
+        "tol_inc": [1e-3, 1e-1, 1e-3, 1e-3],
     }
 
     """
@@ -122,7 +121,9 @@ def main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 9,
-                        "fluid_formulation": "conservative"}
+                        "fluid_formulation": "conservative",
+                        "mass_formulation": "conservative_mass",  # conservative_mass, reduced_mass
+                       }
 
     """
     Finite element parameters for phase field model (Cahn-Hilliard equations): here linear finite elements for both phase (phi) and potential (mu)
@@ -155,7 +156,6 @@ def main():
         raise ValueError("Unknown case.")
     zeta = 0.0
 
-    alpha = (rho1-rho2)/(rho1+rho2) # TODO: Negative in ten Eikelder et al. (2024), Brunk and ten Eikelder (2026), but then not working!
     sigtilde = 3.*sig/(2.*np.sqrt(2.))
 
     class locate_all:
@@ -178,8 +178,7 @@ def main():
                                                   "exponent": 1.0,
                                                   "M0": 0.1*eps**2.0,   # Mobility [m^5/(Pa s)]
                                                   "D": sigtilde/(4.*eps),         # Bulk free-energy parameter [Pa/m^3]
-                                                  "kappa": sigtilde*eps,     # Gradient energy coefficient [Pa/m]
-                                                  "alpha": alpha},   # Pressure factor in diffusive flux
+                                                  "kappa": sigtilde*eps},     # Gradient energy coefficient [Pa/m]
                                                   "id": locate_all()}}
 
     """

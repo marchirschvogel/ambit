@@ -91,8 +91,10 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
         self.pbf.phasevar["phi"] = self.pbp.phi
         self.pbf.phasevar["phi_old"] = self.pbp.phi_old
+        self.pbf.phasevar["phi_mid"] = self.pbp.phi_mid
         self.pbf.phasevar["phidot"] = self.pbp.phidot_expr
         self.pbf.phasevar["phidot_old"] = self.pbp.phidot_old
+        self.pbf.phasevar["phidot_mid"] = self.pbp.phidot_mid
         self.pbf.phasevar["phi_range"] = self.pbp.phi_range
         self.pbf.phasevar["clip_phi_range"] = self.clip_phi_range
         self.pbf.phasevar["epsilon_clip"] = self.epsilon_clip
@@ -163,6 +165,12 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
     def set_variational_forms_residual(self):
         self.pbf.set_variational_forms_residual()
+        # need to set these here - after fluid has done its job and phasefield is about to come...
+        self.pbp.fluidvar["alpha"], self.pbp.fluidvar["alpha_old"], self.pbp.fluidvar["alpha_mid"] = [None], [None], [None]
+        for n, M in enumerate(self.pbf.domain_ids):
+            self.pbp.fluidvar["alpha"][n] = self.pbf.alpha[n]
+            self.pbp.fluidvar["alpha_old"][n] = self.pbf.alpha_old[n]
+            self.pbp.fluidvar["alpha_mid"][n] = self.pbf.alpha_mid[n]
         self.pbp.set_variational_forms_residual()
         self.set_variational_forms_residual_coupling()
 
@@ -194,6 +202,30 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         if self.pbf.ti.res_eval == "back":
             self.pbf.weakform_v += self.capillary_force
 
+        if self.pbf.mass_formulation=="reduced_mass":
+            self.deltaW_p_ch, self.deltaW_p_ch_old, self.deltaW_p_ch_mid = [], [], []
+
+            for n, M in enumerate(self.pbf.domain_ids):
+                if self.pbf.num_dupl == 1:
+                    j = 0
+                else:
+                    j = n
+                self.deltaW_p_ch.append(self.pbf.vf.deltaW_int_pres_reduced_ch(self.pbf.alpha[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu, self.pbp.phi, p=self.pbf.p_[j], F=self.pbf.alevar["Fale"], alpha=self.pbf.alpha[n]), self.pbf.var_p_[j], self.pbf.dx_p[j](M), F=self.pbf.alevar["Fale"]))
+                self.deltaW_p_ch_old.append(self.pbf.vf.deltaW_int_pres_reduced_ch(self.pbf.alpha_old[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_old, self.pbp.phi_old, p=self.pbf.p_old_[j], F=self.pbf.alevar["Fale_old"], alpha=self.pbf.alpha_old[n]), self.pbf.var_p_[j], self.pbf.dx_p[j](M), F=self.pbf.alevar["Fale_old"]))
+                self.deltaW_p_ch_mid.append(self.pbf.vf.deltaW_int_pres_reduced_ch(self.pbf.alpha_mid[n], self.pbp.ma[n].diffusive_flux(self.pbp.mu_mid, self.pbp.phi_mid, p=self.pbf.pf_mid_[j], F=self.pbf.alevar["Fale_mid"], alpha=self.pbf.alpha_mid[n]), self.pbf.var_p_[j], self.pbf.dx_p[j](M), F=self.pbf.alevar["Fale_mid"]))
+
+            # add to pressure forms
+            for n, M in enumerate(self.pbf.domain_ids):
+                if not self.pbf.ti.continuity_at_midpoint:
+                    self.pbf.weakform_p[n] -= self.deltaW_p_ch[n]
+                else:
+                    if self.pbf.ti.res_eval == "trap":
+                        self.pbf.weakform_p[n] -= (self.pbf.timefac * self.deltaW_p_ch[n] + (1.0 - self.pbf.timefac) * self.deltaW_p_ch_old[n])
+                    if self.pbf.ti.res_eval == "midp":
+                        self.pbf.weakform_p[n] -= self.deltaW_p_ch_mid[n]
+                    if self.pbf.ti.res_eval == "back":
+                        self.pbf.weakform_p[n] -= self.deltaW_p_ch[n]
+
     def set_variational_forms_jacobian_coupling(self):
         # derivative of fluid momentum w.r.t. phase field
         self.weakform_lin_vphi = ufl.derivative(self.pbf.weakform_v, self.pbp.phi, self.pbp.dphi)
@@ -203,6 +235,10 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.weakform_lin_pphi = []
         for n in range(self.pbf.num_domains):
             self.weakform_lin_pphi.append(ufl.derivative(self.pbf.weakform_p[n], self.pbp.phi, self.pbp.dphi))
+        # derivative of fluid continuity w.r.t. potential - non-zero in reduced-mass formulation
+        self.weakform_lin_pmu = []
+        for n in range(self.pbf.num_domains):
+            self.weakform_lin_pmu.append(ufl.derivative(self.pbf.weakform_p[n], self.pbp.mu, self.pbp.dmu))
         # derivative of phase field w.r.t. fluid velocity
         self.weakform_lin_phiv = ufl.derivative(self.pbp.weakform_phi, self.pbf.v, self.pbf.dv)
         # derivative of phase field w.r.t. fluid pressure (present in some formulations...)
@@ -230,15 +266,18 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
         if not bool(self.pbf.io.duplicate_mesh_domains):
             self.weakform_lin_pphi = sum(self.weakform_lin_pphi)
+            self.weakform_lin_pmu = sum(self.weakform_lin_pmu)
             self.weakform_lin_phip = sum(self.weakform_lin_phip)
 
         self.jac_pphi = fem.form(self.weakform_lin_pphi, entity_maps=self.io.entity_maps)
+        self.jac_pmu = fem.form(self.weakform_lin_pmu, entity_maps=self.io.entity_maps)
         self.jac_phip = fem.form(self.weakform_lin_phip, entity_maps=self.io.entity_maps)
         if self.pbf.num_dupl > 1:
             self.jac_phip_ = [self.jac_phip]
-            self.jac_pphi_ = []
+            self.jac_pphi_, self.jac_pmu_ = [], []
             for j in range(self.pbf.num_dupl):
                 self.jac_pphi_.append([self.jac_pphi[j]])
+                self.jac_pmu_.append([self.jac_pmu[j]])
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -260,11 +299,14 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.K_phiv.assemble()
         if self.pbf.num_dupl > 1:
             self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi_, self.pbf.dbcs_pres)
+            self.K_pmu = fem.petsc.assemble_matrix(self.jac_pmu_, self.pbf.dbcs_pres)
             self.K_phip = fem.petsc.assemble_matrix(self.jac_phip_, self.pbp.dbcs)
         else:
             self.K_pphi = fem.petsc.assemble_matrix(self.jac_pphi, self.pbf.dbcs_pres)
+            self.K_pmu = fem.petsc.assemble_matrix(self.jac_pmu, self.pbf.dbcs_pres)
             self.K_phip = fem.petsc.assemble_matrix(self.jac_phip, self.pbp.dbcs)
         self.K_pphi.assemble()
+        self.K_pmu.assemble()
         self.K_phip.assemble()
 
         te = time.time() - ts
@@ -297,6 +339,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.K_list[1][0] = self.pbf.K_list[1][0]  # w.r.t. velocity
         self.K_list[1][1] = self.pbf.K_list[1][1]  # w.r.t. pressure
         self.K_list[1][2] = self.K_pphi            # w.r.t. phase
+        self.K_list[1][3] = self.K_pmu             # w.r.t. potential
 
         # phase field
         self.K_list[2][0] = self.K_phiv            # w.r.t. velocity
@@ -323,6 +366,11 @@ class FluidmechanicsMultiphaseProblem(problem_base):
         self.K_pphi.zeroEntries()
         fem.petsc.assemble_matrix(self.K_pphi, self.jac_pphi, self.pbf.dbcs_pres)
         self.K_pphi.assemble()
+
+        # derivative of fluid continuity w.r.t. potential
+        self.K_pmu.zeroEntries()
+        fem.petsc.assemble_matrix(self.K_pmu, self.jac_pmu, self.pbf.dbcs_pres)
+        self.K_pmu.assemble()
 
         # derivative of phase field w.r.t. fluid velocity
         self.K_phiv.zeroEntries()

@@ -31,7 +31,7 @@ class materiallaw_flux:
         self.a = a
         self.b = b
 
-    def mat_cahnhilliard_flux(self, params, p=None, F=None):
+    def mat_cahnhilliard_flux(self, params, p=None, F=None, alpha=None):
         mobility = params.get("mobility", "constant")
         M0 = params["M0"]
         if mobility=="constant":
@@ -44,9 +44,8 @@ class materiallaw_flux:
         else:
             raise ValueError("Unknown mobility type! Choose 'constant' or 'degenerate'.")
 
-        # fluid pressure proportional term (if alpha given)
-        alpha = params.get("alpha", None)
-        if alpha is not None:
+        # fluid pressure proportional term (needed for consistency of mass-averged velocity formulation!)
+        if p is not None:
             ap = alpha * p
         else:
             ap = ufl.as_ufl(0)

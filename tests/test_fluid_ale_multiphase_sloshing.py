@@ -51,7 +51,8 @@ def test_main():
 
             d = x[1]
 
-            val = 0.5*(1.0 + np.tanh((self.h_0 - d)/(np.sqrt(2.0)*eps)))
+            # val = 0.5*(1.0 + np.tanh((self.h_0 - d)/(np.sqrt(2.0)*eps)))  # phi in [0,1]
+            val = np.tanh((self.h_0 - d)/(np.sqrt(2.0)*eps))  # phi in [-1,1]
             return (
                 np.full(x.shape[1], val),
             )
@@ -81,13 +82,13 @@ def test_main():
                       "eval_nonlin_terms": "midpoint", # midpoint, trapezoidal
                       "potential_at_midpoint": True}
 
-
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative"}
+                        "fluid_formulation": "conservative",
+                        "mass_formulation": "conservative_mass"}  # conservative_mass, reduced_mass
 
-    FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5}
+    FEM_PARAMS_PF = {"order_phi": 2, "order_mu": 2, "quad_degree": 5, "phi_range": [-1.0, 1.0]}
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
@@ -116,7 +117,9 @@ def test_main():
     eta1 = 0.1
     eta2 = 0.001
     sig = 100.0
-    M0 = 1e-3
+    m = 1e-4
+
+    sigtilde = 3.*sig/(2.*np.sqrt(2.))
 
     class locate_all:
         def evaluate(self, x):
@@ -126,7 +129,10 @@ def test_main():
                                 "inertia": {"rho1": rho1, "rho2": rho2}, "id": locate_all(),
                                 "bodyforce": {"dir": [0.0, -1.0, 0.0], "val": 0.98, "scale_density": True}}}
 
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"M0": M0, "D": sig/eps, "kappa": sig*eps}, "id": locate_all()}}
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
+                                                  "M0": m*eps**2.0,
+                                                  "D": sigtilde/(4.*eps),
+                                                  "kappa": sigtilde*eps}, "id": locate_all()}}
 
     MATERIALS_ALE = {"MAT1": {"linelast": {"Emod": 10.0, "nu": 0.3}, "id": locate_all()}}
 
@@ -180,13 +186,13 @@ def test_main():
     phi_corr, mu_corr = np.zeros(len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 1.3422876769067809E+00  # x
-    v_corr[1] = 7.7342515736798442E-04  # y
+    v_corr[0] = 1.3283696714290996E+00  # x
+    v_corr[1] = -7.0861356569952116E-04  # y
 
-    p_corr[0] = 1.8156696641083278E+07
+    p_corr[0] = -4.4453693376104993E+03
 
-    phi_corr[0] = 3.9113503367268654E-01
-    mu_corr[0] = -1.4614520536619657E-01
+    phi_corr[0] = -2.1751476100226361E-01
+    mu_corr[0] = 1.1267590276986035E+00
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,
@@ -198,16 +204,16 @@ def test_main():
         nm="v",
         readtol=1e-4,
     )
-    # check2 = ambit_fe.resultcheck.results_check_node(
-    #     problem.mp.pbf.p,
-    #     check_node,
-    #     p_corr,
-    #     problem.mp.pbf.V_p,
-    #     problem.mp.comm,
-    #     tol=tol,
-    #     nm="p",
-    #     readtol=1e-4,
-    # )
+    check2 = ambit_fe.resultcheck.results_check_node(
+        problem.mp.pbf.p,
+        check_node,
+        p_corr,
+        problem.mp.pbf.V_p,
+        problem.mp.comm,
+        tol=tol,
+        nm="p",
+        readtol=1e-4,
+    )
     check3 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbp.phi,
         check_node,
@@ -229,7 +235,7 @@ def test_main():
         readtol=1e-4,
     )
 
-    success = ambit_fe.resultcheck.success_check([check1, check3, check4], problem.mp.comm)
+    success = ambit_fe.resultcheck.success_check([check1, check2, check3, check4], problem.mp.comm)
 
     if not success:
         raise RuntimeError("Test failed!")

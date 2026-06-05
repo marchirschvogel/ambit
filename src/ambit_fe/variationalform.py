@@ -23,7 +23,6 @@ class variationalform_base:
         trlfnc2=None,
         n0=None,
         x_ref=None,
-        formulation=None,
         ro0=None,
     ):
         self.tstfnc1 = tstfnc1
@@ -33,8 +32,6 @@ class variationalform_base:
 
         self.n0 = n0  # reference normal field
         self.x_ref = x_ref  # reference coordinates
-
-        self.formulation = formulation  # fluid formulation (conservative or non-conservative)
 
         self.ro0 = ro0  # cell circumradius (for weak DBC on linear problem, e.g. ALE)
 

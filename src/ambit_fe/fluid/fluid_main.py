@@ -98,6 +98,7 @@ class FluidmechanicsProblem(problem_base):
                 self.rho[n].append(self.constitutive_models["MAT" + str(n + 1)]["inertia"]["rho2"])
 
         self.fluid_formulation = fem_params.get("fluid_formulation", "nonconservative")
+        self.mass_formulation = fem_params.get("mass_formulation", "conservative_mass")
         self.fluid_governing_type = time_params.get("fluid_governing_type", "navierstokes_transient")
         self.stabilization = fem_params.get("stabilization", None)
 
@@ -412,7 +413,7 @@ class FluidmechanicsProblem(problem_base):
                 tstfnc1=self.var_v,
                 tstfnc2=self.var_p_,
                 n0=self.io.n0,
-                formulation=self.fluid_formulation,
+                formulation=[self.fluid_formulation,self.mass_formulation],
             )
 
         else:
@@ -421,7 +422,7 @@ class FluidmechanicsProblem(problem_base):
                 tstfnc1=self.var_v,
                 tstfnc2=self.var_p_,
                 n0=self.io.n0,
-                formulation=self.fluid_formulation,
+                formulation=[self.fluid_formulation,self.mass_formulation],
             )
 
         # read in fiber data - for reduced solid (FrSI)
@@ -523,7 +524,7 @@ class FluidmechanicsProblem(problem_base):
             # mid-point representation of phase field and its time derivative
             self.phasevar["phi_mid"] = self.timefac * self.phasevar["phi"] + (1.0 - self.timefac) * self.phasevar["phi_old"]
             self.phasevar["phidot_mid"] = self.timefac * self.phasevar["phidot"] + (1.0 - self.timefac) * self.phasevar["phidot_old"]
-            # make variable for calculating density time derivative
+            # make variable for calculating density time derivative - done in phase field upon generation
             self.phasevar["phi_mid"] = ufl.variable(self.phasevar["phi_mid"])
             # normalized phase variable
             if self.phasevar["clip_phi_range"]:
@@ -537,7 +538,18 @@ class FluidmechanicsProblem(problem_base):
             self.phasevar["chiU"] = (self.phasevar["phi"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
             self.phasevar["chiU_old"] = (self.phasevar["phi_old"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
             self.phasevar["chiU_mid"] = (self.phasevar["phi_mid"] - self.phasevar["phi_range"][0])/(self.phasevar["phi_range"][1]-self.phasevar["phi_range"][0])
-
+            # set alpha parameter - for consistent mass-averaged CH-NS
+            self.alpha, self.alpha_old, self.alpha_mid = [None]*self.num_domains, [None]*self.num_domains, [None]*self.num_domains
+            for n, M in enumerate(self.domain_ids):
+                rho = self.vf.get_density(self.rho[n], chi=self.phasevar["chiU"])
+                rho_old = self.vf.get_density(self.rho[n], chi=self.phasevar["chiU_old"])
+                rho_mid = self.vf.get_density(self.rho[n], chi=self.phasevar["chiU_mid"])
+                self.alpha[n] = self.vf.get_alpha_chns(rho, self.phasevar["phi"])
+                self.alpha_old[n] = self.vf.get_alpha_chns(rho_old, self.phasevar["phi_old"])
+                self.alpha_mid[n] = self.vf.get_alpha_chns(rho_mid, self.phasevar["phi_mid"])
+                # self.alpha[n] = self.vf.get_alpha_chns_(self.rho[n])
+                # self.alpha_old[n] = self.vf.get_alpha_chns_(self.rho[n])
+                # self.alpha_mid[n] = self.vf.get_alpha_chns_(self.rho[n])
         else:
             self.phasevar["phi"] = None
             self.phasevar["phi_old"] = None
@@ -701,36 +713,36 @@ class FluidmechanicsProblem(problem_base):
             self.deltaW_p.append(
                 self.vf.deltaW_int_pres(
                     self.v,
-                    self.rho[n],
                     self.var_p_[j],
                     self.dx_p[j](M),
+                    rho=self.rho[n],
                     w=self.alevar["w"],
                     F=self.alevar["Fale"],
-                    phi=[self.phasevar["phi"],self.phasevar["chiU"]],
+                    phi=[self.phasevar["phi"],self.phasevar["chiU"]],  # somehow need unclipped chi for consistency of CH-NS...
                     phidot=self.phasevar["phidot"],
                 )
             )
             self.deltaW_p_old.append(
                 self.vf.deltaW_int_pres(
                     self.v_old,
-                    self.rho[n],
                     self.var_p_[j],
                     self.dx_p[j](M),
+                    rho=self.rho[n],
                     w=self.alevar["w_old"],
                     F=self.alevar["Fale_old"],
-                    phi=[self.phasevar["phi_old"],self.phasevar["chiU_old"]],
+                    phi=[self.phasevar["phi_old"],self.phasevar["chiU_old"]],  # somehow need unclipped chi for consistency of CH-NS...
                     phidot=self.phasevar["phidot_old"],
                 )
             )
             self.deltaW_p_mid.append(
                 self.vf.deltaW_int_pres(
                     self.vel_mid,
-                    self.rho[n],
                     self.var_p_[j],
                     self.dx_p[j](M),
+                    rho=self.rho[n],
                     w=self.alevar["w_mid"],
                     F=self.alevar["Fale_mid"],
-                    phi=[self.phasevar["phi_mid"],self.phasevar["chiU_mid"]],
+                    phi=[self.phasevar["phi_mid"],self.phasevar["chiU_mid"]],  # somehow need unclipped chi for consistency of CH-NS...
                     phidot=self.phasevar["phidot_mid"],
                 )
             )
@@ -1222,12 +1234,12 @@ class FluidmechanicsProblem(problem_base):
                 self.deltaW_p_prestr.append(
                     self.vf.deltaW_int_pres(
                         self.v,
-                        self.rho[n],
                         self.var_p_[j],
                         self.dx(M),
+                        rho=self.rho[n],
                         w=self.alevar["w"],
                         F=self.alevar["Fale"],
-                        phi=[self.phasevar["phi"],self.phasevar["chi"]],
+                        phi=[self.phasevar["phi"],self.phasevar["chiU"]],
                         phidot=self.phasevar["phidot"],
                     )
                 )
@@ -1741,22 +1753,28 @@ class FluidmechanicsProblem(problem_base):
                         self.var_p_[j],
                         residual_v_strong,
                         tau_pspg,
+                        self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale"],
+                        phi=[self.phasevar["phi"],self.phasevar["chi"]],
                     )
                     self.deltaW_p_old[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_old,
                         tau_pspg,
+                        self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_old"],
+                        phi=[self.phasevar["phi_old"],self.phasevar["chi_old"]],
                     )
                     self.deltaW_p_mid[n] += self.vf.stab_pspg(
                         self.var_p_[j],
                         residual_v_strong_mid,
                         tau_pspg,
+                        self.rho[n],
                         self.dx_p[j](M),
                         F=self.alevar["Fale_mid"],
+                        phi=[self.phasevar["phi_mid"],self.phasevar["chi_mid"]],
                     )
 
                     # now take care of stabilization for the prestress problem (only FrSI)
@@ -1869,8 +1887,10 @@ class FluidmechanicsProblem(problem_base):
                             self.var_p_[j],
                             residual_v_strong_prestr,
                             tau_pspg,
+                            self.rho[n],
                             self.dx(M),
                             F=self.alevar["Fale"],
+                            phi=[self.phasevar["phi"],self.phasevar["chi"]],
                         )
                         # SUPG term only for kinetic prestress...
                         if (
@@ -2588,44 +2608,56 @@ class FluidmechanicsProblem(problem_base):
                 )
             )
         else:
-            assert(eps > 0.0 and eps < 0.5 * (b - a))
-            m = 1.0 / (b - a)
-            # Cubic/quintic Hermite shape:
-            # h(0)=0, h'(0)=0, h(1)=1, h'(1)=1
-            def h(t):
-                if smooth_clip=="cubic":
-                    return 2.0*t**2 - t**3
-                elif smooth_clip=="quintic":
-                    return 3.0*t**5 - 8.0*t**4 + 6.0*t**3
-                else:
-                    raise ValueError("Unknown smooth method. Choose 'cubic' or 'quintic'!")
+            if smooth_clip=="cubic" or smooth_clip=="quintic":
+                assert(eps > 0.0 and eps < 0.5 * (b - a))
+                m = 1.0 / (b - a)
+                # Cubic/quintic Hermite shape:
+                # h(0)=0, h'(0)=0, h(1)=1, h'(1)=1
+                def h(t):
+                    if smooth_clip=="cubic":
+                        return 2.0*t**2 - t**3
+                    elif smooth_clip=="quintic":
+                        return 3.0*t**5 - 8.0*t**4 + 6.0*t**3
+                    else:
+                        raise ValueError("Unknown smooth method. Choose 'cubic' or 'quintic'!")
 
-            # lower smoothing on [a, a+eps]
-            t_low = (phi - a) / eps
-            chi_low = m * eps * h(t_low)
+                # lower smoothing on [a, a+eps]
+                t_low = (phi - a) / eps
+                chi_low = m * eps * h(t_low)
 
-            # upper smoothing on [b-eps, b]
-            t_up = (b - phi) / eps
-            chi_up = 1.0 - m * eps * h(t_up)
+                # upper smoothing on [b-eps, b]
+                t_up = (b - phi) / eps
+                chi_up = 1.0 - m * eps * h(t_up)
 
-            return ufl.conditional(
-                ufl.lt(phi, a),
-                0.0,
-                ufl.conditional(
-                    ufl.lt(phi, a + eps),
-                    chi_low,
+                return ufl.conditional(
+                    ufl.lt(phi, a),
+                    0.0,
                     ufl.conditional(
-                        ufl.lt(phi, b - eps),
-                        chi,
+                        ufl.lt(phi, a + eps),
+                        chi_low,
                         ufl.conditional(
-                            ufl.lt(phi, b),
-                            chi_up,
-                            1.0
+                            ufl.lt(phi, b - eps),
+                            chi,
+                            ufl.conditional(
+                                ufl.lt(phi, b),
+                                chi_up,
+                                1.0
+                            )
                         )
                     )
                 )
-            )
-
+            elif smooth_clip=="cos":
+                return ufl.conditional(
+                    ufl.lt(phi, a),
+                    0.0,
+                    ufl.conditional(
+                        ufl.gt(phi, b),
+                        1.0,
+                        0.5*(1.0 - ufl.cos(np.pi*(phi-a)/(b-a)))
+                    )
+                )
+            else:
+                raise ValueError("Unknown smooth method. Choose 'cos', 'cubic', or 'quintic'!")
 
 
     ### now the base routines for this problem

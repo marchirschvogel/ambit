@@ -121,7 +121,7 @@ def main():
     """
     CONTROL_PARAMS = {"maxtime": 10e3, # µs
                       "dt": dt,
-                      "numstep_stop": 250,
+                      # "numstep_stop": 250,
                       "initial_fields": [expr1, None],
                       }
 
@@ -187,7 +187,7 @@ def main():
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
-    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
+    FEM_PARAMS_PF = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [-1.0, 1.0]}
 
     class locate_interf:
         def evaluate(self, x):
@@ -249,9 +249,6 @@ def main():
                                 "inertia": {"rho0": rho_s},
                                 "id": locate_solid()}}
 
-    alpha = (rho1-rho2)/(rho1+rho2)
-
-
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2, "zeta1": zeta, "zeta2": zeta},
                                 "inertia": {"rho1": rho1, "rho2": rho2},
                                 "id": locate_fluid()}}
@@ -265,8 +262,7 @@ def main():
                                                   # "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
                                                   "M0": m,                 # Mobility [length^5/(pressure time)]
                                                   "D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
-                                                  "kappa": sig*eps,   # Gradient energy coefficient [pressure/length]
-                                                  "alpha": None},         # Pressure factor in diffusive flux
+                                                  "kappa": sig*eps}   # Gradient energy coefficient [pressure/length]
                                                   "id": locate_fluid()}}
 
     class locate_corner:

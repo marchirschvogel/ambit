@@ -51,7 +51,7 @@ def test_main():
 
     TIME_PARAMS = {"timint": "ost", "theta_ost": 0.5}
 
-    FEM_PARAMS = {"order_phi": 1, "order_mu": 1, "quad_degree": 5}
+    FEM_PARAMS = {"order_phi": 1, "order_mu": 1, "quad_degree": 5, "phi_range": [0.0, 1.0]}
 
     class locate_all:
         def evaluate(self, x):

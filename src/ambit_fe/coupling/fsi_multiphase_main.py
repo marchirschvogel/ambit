@@ -114,7 +114,7 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfp = self.pbfap.pbfp
 
         # in order to get correct contributions of the capillary stress on the (FSI) boundary, we should use this option...
-        assert(self.pbfp.capillary_force_from_korteweg_stress)
+        #assert(self.pbfp.capillary_force_from_korteweg_stress)
 
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self
@@ -223,6 +223,12 @@ class FSIMultiphaseProblem(problem_base):
     def set_variational_forms_residual(self):
         # FSI - fluid, solid, ALE, + FSI coup
         self.pbfsi.set_variational_forms_residual()
+        # need to set these here - after fluid has done its job and phasefield is about to come...
+        self.pbp.fluidvar["alpha"], self.pbp.fluidvar["alpha_old"], self.pbp.fluidvar["alpha_mid"] = [None], [None], [None]
+        for n, M in enumerate(self.pbf.domain_ids):
+            self.pbp.fluidvar["alpha"][n] = self.pbf.alpha[n]
+            self.pbp.fluidvar["alpha_old"][n] = self.pbf.alpha_old[n]
+            self.pbp.fluidvar["alpha_mid"][n] = self.pbf.alpha_mid[n]
         # phasefield
         self.pbp.set_variational_forms_residual()
         # fluid-phasefield
@@ -370,6 +376,7 @@ class FSIMultiphaseProblem(problem_base):
         self.K_list[2 + ofs][1 + ofs] = self.pbfsi.K_list[2 + ofs][1 + ofs]              # w.r.t. fluid velcocity
         self.K_list[2 + ofs][2 + ofs] = self.pbfsi.K_list[2 + ofs][2 + ofs]              # w.r.t. fluid pressure
         self.K_list[2 + ofs][3 + ofs] = self.pbfp.K_pphi                                 # w.r.t. phase
+        self.K_list[2 + ofs][4 + ofs] = self.pbfp.K_pmu                                  # w.r.t. potential
         self.K_list[2 + ofs][5 + ofc + ofs] = self.pbfsi.K_list[2 + ofs][3 + ofc + ofs]  # w.r.t. ALE displacement
 
         # phase field

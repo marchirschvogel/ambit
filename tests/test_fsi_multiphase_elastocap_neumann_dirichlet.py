@@ -2,7 +2,6 @@
 
 """
 Multiphase FSI elaso-capillary simulation of a sessile droplet on a soft solid substrate - cf. example in demos folder for more detailed description
-TODO: Restart of Neumann-Dirichlet FSI not yet working!
 """
 
 import ambit_fe
@@ -87,7 +86,8 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative"}
+                        "fluid_formulation": "conservative",
+                        "mass_formulation": "reduced_mass"}  # conservative_mass, reduced_mass
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
@@ -148,8 +148,6 @@ def test_main():
 
     zeta = 0.0
 
-    alpha = (rho1-rho2)/(rho1+rho2)
-
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta1": eta1, "eta2": eta2, "zeta1": zeta, "zeta2": zeta},
                                 "inertia": {"rho1": rho1, "rho2": rho2},
                                 "id": locate_fluid()}}
@@ -160,10 +158,9 @@ def test_main():
     MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate",
                                                   "epsilon": 0.0,
                                                   "exponent": 1.0,
-                                                  "M0": m*eps**2.0, # Mobility [length^5/(pressure time)]
+                                                  "M0": m*eps**2.0,  # Mobility [length^5/(pressure time)]
                                                   "D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
-                                                  "kappa": sig*eps,   # Gradient energy coefficient [pressure/length]
-                                                  "alpha": alpha},    # Pressure factor in diffusive flux
+                                                  "kappa": sig*eps},  # Gradient energy coefficient [pressure/length]
                                                   "id": locate_fluid()}}
 
     class locate_all:
@@ -221,11 +218,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = 5.0624368117306081E-03  # x
-    u_corr[1] = 2.4882564101985184E-02  # y
+    u_corr[0] = 3.8704379123198056E-03  # x
+    u_corr[1] = 2.5909036872848536E-02  # y
 
-    v_corr[0] = 1.2541892712594409E-03  # x
-    v_corr[1] = 6.1319838156856741E-03  # y
+    v_corr[0] = 1.1050534485701699E-03  # x
+    v_corr[1] = 6.3062722001537355E-03  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,
