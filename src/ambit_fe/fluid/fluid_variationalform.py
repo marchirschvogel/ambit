@@ -248,9 +248,6 @@ class variationalform(variationalform_base):
             return tau_lsic * ufl.div(self.var_v) * rho_ * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
-        #
-        # return tau_lsic * ufl.div(self.var_v) * rho_ * ufl.div(v) * ddomain
-        # return tau_lsic * ufl.div(self.var_v) * ufl.div(v) * ddomain
 
     # components of element-level Reynolds number - cf. Tezduyar and Osawa (2000) - not used so far... need to assemble a cell-based vector in order to evaluate these!
     def re_c(self, rho, v, ddomain, w=None, F=None, phi=[None,None], phidot=None):

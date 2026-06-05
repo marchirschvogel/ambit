@@ -91,10 +91,8 @@ class FluidmechanicsMultiphaseProblem(problem_base):
 
         self.pbf.phasevar["phi"] = self.pbp.phi
         self.pbf.phasevar["phi_old"] = self.pbp.phi_old
-        self.pbf.phasevar["phi_mid"] = self.pbp.phi_mid
         self.pbf.phasevar["phidot"] = self.pbp.phidot_expr
         self.pbf.phasevar["phidot_old"] = self.pbp.phidot_old
-        self.pbf.phasevar["phidot_mid"] = self.pbp.phidot_mid
         self.pbf.phasevar["phi_range"] = self.pbp.phi_range
         self.pbf.phasevar["clip_phi_range"] = self.clip_phi_range
         self.pbf.phasevar["epsilon_clip"] = self.epsilon_clip
