@@ -249,12 +249,14 @@ def check_params_time_flow0d(params):
             raise RuntimeError("Unknown parameter found in flow0d time params: " + k)
 
 
-def check_params_coupling_fluid_ale(params):
+def check_params_coupling_fsi_fluid_ale(params):
     valid_params = [
         "coupling_ale_fluid",
         "coupling_fluid_ale",
+        "coupling_fsi",
         "coupling_strategy",
-        "fsi_governing_type",
+        "fsi_interface_motion",
+        "fsi_kinematic_coupling",
         "fsi_system",
         "wetting_condition_interface",
     ]

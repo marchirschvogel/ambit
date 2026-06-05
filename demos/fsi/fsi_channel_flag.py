@@ -166,8 +166,9 @@ def main():
     FSI coupling parameters
     """
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": {"interface": [1]},
-        "fsi_governing_type": "solid_governed",  # solid_governed, fluid_governed
+        "coupling_fsi": {"interface": [1]},
+        "fsi_interface_motion": "fluid_governed",  # fluid_governed, solid_governed
+        "fsi_kinematic_coupling": "displacement",  # displacement, velocity
         "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
     }
 

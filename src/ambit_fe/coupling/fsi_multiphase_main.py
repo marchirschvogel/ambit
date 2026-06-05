@@ -114,7 +114,7 @@ class FSIMultiphaseProblem(problem_base):
         self.pbfp = self.pbfap.pbfp
 
         # in order to get correct contributions of the capillary stress on the (FSI) boundary, we should use this option...
-        #assert(self.pbfp.capillary_force_from_korteweg_stress)
+        assert(self.pbfp.capillary_force_from_korteweg_stress)
 
         self.pbrom = self.pbs  # ROM problem can only be solid
         self.pbrom_host = self

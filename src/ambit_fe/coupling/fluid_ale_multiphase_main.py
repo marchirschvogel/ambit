@@ -52,7 +52,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         # pointer to communicator
         self.comm = self.pbase.comm
 
-        ioparams.check_params_coupling_fluid_ale(coupling_params[0])
+        ioparams.check_params_coupling_fsi_fluid_ale(coupling_params[0])
 
         self.problem_physics = "fluid_ale_multiphase"
 

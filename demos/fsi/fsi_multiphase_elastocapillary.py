@@ -197,7 +197,7 @@ def main():
     sig_sa = 31.
     wet = 3.*(sig_sa-sig_sl)/4.
     COUPLING_PARAMS_FSI = {
-        "coupling_fluid_ale": {"interface": [locate_interf()]},
+        "coupling_fsi": {"interface": [locate_interf()]},
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
         "wetting_condition_interface": {"c1": wet}, # wetting Robin condition at interface
     }
@@ -262,7 +262,7 @@ def main():
                                                   # "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
                                                   "M0": m,                 # Mobility [length^5/(pressure time)]
                                                   "D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
-                                                  "kappa": sig*eps}   # Gradient energy coefficient [pressure/length]
+                                                  "kappa": sig*eps},  # Gradient energy coefficient [pressure/length]
                                                   "id": locate_fluid()}}
 
     class locate_corner:

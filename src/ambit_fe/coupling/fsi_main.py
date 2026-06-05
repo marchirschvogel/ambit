@@ -178,9 +178,11 @@ class FSIProblem(problem_base):
         )
 
     def set_coupling_parameters(self):
-        self.fsi_governing_type = self.coupling_params.get("fsi_governing_type", "solid_governed")
-        self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann") # neumann_neumann, neumann_dirichlet
-        self.wetting_interface = self.coupling_params.get("wetting_condition_interface", {}) # only for multiphase FSI
+        self.coupling_fsi = self.coupling_params.get("coupling_fsi", {})
+        self.fsi_interface_motion = self.coupling_params.get("fsi_interface_motion", "fluid_governed")  # fluid_governed, solid_governed
+        self.fsi_kinematic_coupling = self.coupling_params.get("fsi_kinematic_coupling", "displacement")  # displacement, velocity
+        self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann")  # neumann_neumann, neumann_dirichlet
+        self.wetting_interface = self.coupling_params.get("wetting_condition_interface", {})  # only for multiphase FSI
 
     def get_problem_var_list(self):
         if self.fsi_system == "neumann_neumann":
@@ -255,6 +257,37 @@ class FSIProblem(problem_base):
         # fluid displacement, but defined on solid domain
         self.ufs = fem.Function(self.pbs.V_u)
 
+        # fluid-governed interface motion - fluid sets DBCs on ALE
+        if self.fsi_interface_motion=="fluid_governed":
+            if all(isinstance(x, int) for x in self.coupling_fsi["interface"]):
+                ids_fluid_ale = self.coupling_fsi["interface"]
+                nodes_fluid_ale = fem.locate_dofs_topological(
+                    self.pba.V_d,
+                    self.pbf.mesh.topology.dim - 1,
+                    self.pbf.mt_b.indices[np.isin(self.pbf.mt_b.values, ids_fluid_ale)],
+                )
+            else: # can only be locator function otherwise...
+                nodes_fluid_ale_ = []
+                for lc in self.coupling_fsi["interface"]:
+                    nodes_fluid_ale_.append(fem.locate_dofs_geometrical(self.pba.V_d, lc.evaluate))
+                nodes_fluid_ale = np.concatenate(nodes_fluid_ale_).ravel()
+            dbcs_coup_fluid_ale = [fem.dirichletbc(self.pbfa.ufa, nodes_fluid_ale)]
+            # get surface dofs for dr_ALE/dv matrix entry
+            self.pbfa.fdofs_fluid_ale = meshutils.get_index_set(self.pba.V_d, self.comm, nodes_loc=nodes_fluid_ale)
+            # now add the DBCs: pay attention to order... first d=uf, then the others... hence re-set!
+            # store DBCs without those from fluid
+            self.pba.dbcs_nofluid = []
+            for k in self.pba.dbcs:
+                self.pba.dbcs_nofluid.append(k)
+            self.pba.dbcs = []
+            self.pba.dbcs += dbcs_coup_fluid_ale
+            # Dirichlet boundary conditions
+            if "dirichlet" in self.pba.bc_dict.keys():
+                self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"], self.pba.dbcs)
+            self.pbfa.have_dbc_fluid_ale = True
+        else:
+            raise ValueError("Solid-governed interface motion not yet implemented!")
+
         # establish dof mappings from fluid to solid
         if self.fsi_system=="neumann_dirichlet":
             # get global correspondence array of solid and fluid interface nodes
@@ -300,20 +333,18 @@ class FSIProblem(problem_base):
             self.pbs.weakform_u += self.work_coupling_solid
             self.pbf.weakform_v += -self.power_coupling_fluid
 
-            if self.fsi_governing_type == "solid_governed":
+            if self.fsi_kinematic_coupling == "displacement":
                 self.weakform_l = ufl.dot(self.pbs.u, self.var_lm) * self.io.ds(self.io.interface_id_s) - ufl.dot(
                     self.pbf.ufluid, self.var_lm
                 ) * self.io.ds(self.io.interface_id_f)
-            elif self.fsi_governing_type == "fluid_governed":
+            elif self.fsi_kinematic_coupling == "velocity":
                 self.weakform_l = ufl.dot(self.pbf.v, self.var_lm) * self.io.ds(self.io.interface_id_f) - ufl.dot(
                     self.pbs.vel, self.var_lm
                 ) * self.io.ds(self.io.interface_id_s)
             else:
-                raise ValueError("Unknown FSI governing type.")
-
+                raise ValueError("Unknown FSI kinematic coupling. Choose 'displacement' or 'velocity'.")
 
         elif self.fsi_system == "neumann_dirichlet":
-
             self.dbcs_coup_fluid_solid = []
 
             if all(isinstance(x, int) for x in self.io.surf_interf):

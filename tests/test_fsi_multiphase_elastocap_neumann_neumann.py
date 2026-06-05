@@ -100,7 +100,7 @@ def test_main():
     sig_sl = 36e-3
     sig_sa = 31e-3
     COUPLING_PARAMS_FSI = {
-        "coupling_fluid_ale": {"interface": [locate_interf()]},
+        "coupling_fsi": {"interface": [locate_interf()]},
         "fsi_system": "neumann_neumann",
         "wetting_condition_interface": {"c1": 3.*(sig_sa-sig_sl)/4.}, # wetting Robin condition at interface
     }

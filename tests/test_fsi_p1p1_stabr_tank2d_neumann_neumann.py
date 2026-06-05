@@ -32,7 +32,7 @@ def test_main():
             ["aledisplacement"],
         ],
         "write_submeshes":True,
-        "simname": "tank2d_p1p1_stabr_neumannneumann",
+        "simname": "fsi_p1p1_stabr_tank2d_neumann_neumann",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -70,8 +70,7 @@ def test_main():
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": {"interface": [3]},
-        "fsi_governing_type": "solid_governed", # solid_governed, fluid_governed
+        "coupling_fsi": {"interface": [3]},
         "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
     }
 

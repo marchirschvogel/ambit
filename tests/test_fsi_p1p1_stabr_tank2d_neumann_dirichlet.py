@@ -40,7 +40,7 @@ def test_main():
             ["aledisplacement"],
         ],
         "write_submeshes":True,
-        "simname": "tank2d_p1p1_stabr_neumanndirichlet",
+        "simname": "fsi_p1p1_stabr_tank2d_neumann_dirichlet",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -83,7 +83,7 @@ def test_main():
             return np.isclose(x[0], 0.0)
 
     COUPLING_PARAMS = {
-        "coupling_fluid_ale": {"interface": [locate_interf()]}, # here test interface given by locator, instead of using id 3...
+        "coupling_fsi": {"interface": [locate_interf()]}, # here test interface given by locator, instead of using id 3...
         "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
     }
 
