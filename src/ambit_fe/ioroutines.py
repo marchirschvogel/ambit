@@ -583,7 +583,7 @@ class IO_solid(IO):
                             #     comm=self.comm,
                             #     entity_maps=self.entity_maps,
                             # )
-                            u_out = fem.Function(pb.V_out_vector, name=u_proj.name)
+                            u_out = fem.Function(pb.V_out_vector, name="Displacement")
                             # u_out.interpolate(u_proj)
                             u_out.interpolate(fem.Expression(pb.us_mid, pb.V_out_vector.element.interpolation_points))
                         else:
