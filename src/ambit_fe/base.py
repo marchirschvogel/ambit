@@ -261,10 +261,10 @@ class solver_base:
 
     def print_final(self):
         utilities.print_status(
-            "Program complete. Time for computation: %.4f s (= %.2f min)\n"
+            "Simulation '%s' complete. Total run time: %.4f s\n"
             % (
+                self.pb.pbase.simname,
                 time.time() - self.starttime,
-                (time.time() - self.starttime) / 60.0,
             ),
             self.pb.comm,
         )
