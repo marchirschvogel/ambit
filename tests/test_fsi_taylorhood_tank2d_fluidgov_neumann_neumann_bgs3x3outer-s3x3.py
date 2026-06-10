@@ -2,8 +2,8 @@
 
 """
 FSI simulation of a 2D tank with flexible, forced lid
-Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier) - Taylor-Hood fluid, quadratic solid
-BGS3x3(S2x2) preconditioner
+Monolithic Neumann-Neumann formulation (with Lagrange multiplier) - Taylor-Hood fluid, quadratic solid
+BGS3x3(S3x3) preconditioner
 """
 
 import ambit_fe
@@ -46,14 +46,14 @@ def test_main():
         "iterative_solver": "gmres",
         "block_precond": "BGS_outer",
         "precond_fields": [{"prec": "amg", "blocks": [0]},  # solid-u
-                           {"prec": "amg", "blocks": [3]},  # ale-d
-                           {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [1,2]}  # fluid-v,p
+                           {"prec": "amg", "blocks": [4]},  # ale-d
+                           {"prec": {"s3x3": [{"prec": "amg"},{"prec": "amg"},{"prec": "amg"}]}, "blocks": [1,2,3]}  # fluid-v,p,lm
                            ],
-        "tol_lin_rel": 1e-7,
+        "tol_lin_rel": 1e-5,
         "lin_norm_type": "unpreconditioned",
         "print_liniter_every": 50,
-        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8],
-        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
@@ -74,7 +74,7 @@ def test_main():
 
     COUPLING_PARAMS = {
         "coupling_fsi": {"interface": [3]},
-        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
     }
 
     E = 500. # kPa
@@ -168,7 +168,7 @@ def test_main():
     )
 
     # total number of nonlinear iterations
-    check3 = (problem.ms.ni==39)
+    check3 = (problem.ms.ni==40)
 
     success = ambit_fe.resultcheck.success_check([check1, check2, check3], problem.mp.comm)
 

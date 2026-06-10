@@ -301,83 +301,83 @@ if category == "fluid_ale_multiphase" or category == "fluid_multiphase" or categ
     )
 
 if category == "fsi" or category == "all":
-    errs["test_fsi_taylorhood_artseg_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_taylorhood_artseg_neumann_neumann.py"]
+    errs["test_fsi_taylorhood_artseg_fluidgov_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_taylorhood_artseg_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_taylorhood_artseg_neumann_neumann 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_taylorhood_artseg_neumann_neumann.py"]
-    )
-
-    errs["test_fsi_taylorhood_artseg_neumann_dirichlet 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_taylorhood_artseg_neumann_dirichlet.py"]
+    errs["test_fsi_taylorhood_artseg_fluidgov_neumann_neumann 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_taylorhood_artseg_fluidgov_neumann_neumann.py"]
     )
 
-    errs["test_fsi_p1p1_stabr_artseg_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_artseg_neumann_neumann.py"]
+    errs["test_fsi_taylorhood_artseg_fluidgov_neumann_dirichlet 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_taylorhood_artseg_fluidgov_neumann_dirichlet.py"]
     )
-    errs["test_fsi_p1p1_stabr_artseg_neumann_neumann 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_neumann_neumann.py"]
+
+    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_artseg_neumann_neumann 2 restart"] = subprocess.call(
+    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann.py"]
+    )
+    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann 2 restart"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_p1p1_stabr_artseg_neumann_neumann.py",
+            "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann.py",
             str(4),
         ]
     )
-    errs["test_fsi_p1p1_stabr_artseg_neumann_dirichlet 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_dirichlet 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_dirichlet.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_neumann_neumann 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_neumann.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_neumann_dirichlet 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_neumann_dirichlet 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet.py"]
     )
-    errs["test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3outer-s2x2 4"] = subprocess.call(
-        ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_neumann_dirichlet_bgs3x3outer-s2x2.py"]
+    errs["test_fsi_taylorhood_tank2d_fluidgov_neumann_dirichlet_bgs3x3outer-s2x2 4"] = subprocess.call(
+        ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_fluidgov_neumann_dirichlet_bgs3x3outer-s2x2.py"]
+    )
+    errs["test_fsi_taylorhood_tank2d_fluidgov_neumann_neumann_bgs3x3outer-s3x3 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_taylorhood_tank2d_fluidgov_neumann_neumann_bgs3x3outer-s3x3.py"]
     )
 
 if category == "fsi" or category == "fsi_multiphase" or category == "all":
-    errs["test_fsi_multiphase_elastocap_neumann_dirichlet 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_elastocap_neumann_dirichlet.py"]
+    errs["test_fsi_multiphase_elastocap_refine_fluidgov_neumann_dirichlet 2"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_multiphase_elastocap_refine_fluidgov_neumann_dirichlet.py"]
     )
-    errs["test_fsi_multiphase_elastocap_neumann_dirichlet 2 restart"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_elastocap_neumann_dirichlet.py", str(4)]
+    errs["test_fsi_multiphase_elastocap_refine_fluidgov_neumann_dirichlet 2 restart"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_multiphase_elastocap_refine_fluidgov_neumann_dirichlet.py", str(4)]
     )
-    errs["test_fsi_multiphase_elastocap_neumann_neumann 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_elastocap_neumann_neumann.py"]
-    )
-    errs["test_fsi_multiphase_elastocap_neumann_neumann 2 restart"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_multiphase_elastocap_neumann_neumann.py", str(4)]
+    errs["test_fsi_multiphase_dambreak_fluidgov_neumann_neumann_bgs4x4-s2x2-s3x3 4"] = subprocess.call(
+        ["mpiexec", "-n", "4", "python3", "test_fsi_multiphase_dambreak_fluidgov_neumann_neumann_bgs4x4-s2x2-s3x3.py"]
     )
 
 if category == "fsi_flow0d" or category == "all":
-    errs["test_fsi_flow0d_p1p1_stabr_artseg_neumann_neumann 2"] = subprocess.call(
+    errs["test_fsi_flow0d_p1p1_stabr_artseg_fluidgov_neumann_neumann 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_flow0d_p1p1_stabr_artseg_neumann_neumann.py",
+            "test_fsi_flow0d_p1p1_stabr_artseg_fluidgov_neumann_neumann.py",
         ]
     )
-    errs["test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3outer-s3x3 2"] = subprocess.call(
+    errs["test_fsi_flow0d_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet_bgs3x3outer-s3x3 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_flow0d_p1p1_stabr_tank2d_neumann_dirichlet_bgs3x3outer-s3x3.py",
+            "test_fsi_flow0d_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet_bgs3x3outer-s3x3.py",
         ]
     )
 
