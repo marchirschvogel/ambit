@@ -350,9 +350,6 @@ class FSIFlow0DProblem(problem_base):
 
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
-        # iterative solvers here are only implemented for neumann_dirichlet system!
-        assert(self.pbfsi.fsi_system == "neumann_dirichlet")
-
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = self.rom.V.getLocalSize()[1]
@@ -366,7 +363,11 @@ class FSIFlow0DProblem(problem_base):
             offset_u = uvec_or0 + self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbf0.LM.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
         if self.pbs.incompressible_2field:
             offset_u += self.pbs.p.x.petsc_vec.getOwnershipRange()[0]
+        if not blocked:
+            if self.pbfsi.fsi_system == "neumann_neumann":
+                offset_u += self.pbfsi.lm.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
+        iset_u.setBlockSize(self.pbs.u.x.petsc_vec.getBlockSize())
 
         if self.pbs.incompressible_2field:
             offset_ps = offset_u + uvec_ls
@@ -376,9 +377,12 @@ class FSIFlow0DProblem(problem_base):
                 step=1,
                 comm=self.comm,
             )
+            iset_ps.setBlockSize(self.pbs.p.x.petsc_vec.getBlockSize())
 
         if blocked:
             offset_v = self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbf0.LM.getOwnershipRange()[0]
+            if self.pbfsi.fsi_system == "neumann_neumann":
+                offset_v += self.pbfsi.lm.x.petsc_vec.getOwnershipRange()[0]
         else:
             if self.pbs.incompressible_2field:
                 offset_v = offset_ps + self.pbs.p.x.petsc_vec.getLocalSize()
@@ -390,6 +394,7 @@ class FSIFlow0DProblem(problem_base):
             first=offset_v,
             step=1,
             comm=self.comm)
+        iset_v.setBlockSize(self.pbf.v.x.petsc_vec.getBlockSize())
 
         offset_p = offset_v + self.pbf.v.x.petsc_vec.getLocalSize()
         iset_p = PETSc.IS().createStride(
@@ -397,9 +402,24 @@ class FSIFlow0DProblem(problem_base):
             first=offset_p,
             step=1,
             comm=self.comm,
-       )
+        )
+        iset_p.setBlockSize(self.pbf.p.x.petsc_vec.getBlockSize())
 
-        offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            offset_l = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+            iset_l = PETSc.IS().createStride(
+                self.pbfsi.lm.x.petsc_vec.getLocalSize(),
+                first=offset_l,
+                step=1,
+                comm=self.comm,
+            )
+            iset_l.setBlockSize(self.pbfsi.lm.x.petsc_vec.getBlockSize())
+
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            offset_s = offset_l + self.pbfsi.lm.x.petsc_vec.getLocalSize()
+        else:
+            offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+
         iset_s = PETSc.IS().createStride(self.pbf0.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
 
         if blocked:
@@ -411,12 +431,19 @@ class FSIFlow0DProblem(problem_base):
             first=offset_d,
             step=1,
             comm=self.comm,
-       )
+        )
+        iset_d.setBlockSize(self.pba.d.x.petsc_vec.getBlockSize())
 
-        if self.pbs.incompressible_2field:
-            ilist = [iset_u, iset_ps, iset_v, iset_p, iset_s, iset_d]
-        else:
-            ilist = [iset_u, iset_v, iset_p, iset_s, iset_d]
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            if self.pbs.incompressible_2field:
+                ilist = [iset_u, iset_ps, iset_v, iset_p, iset_l, iset_s, iset_d]
+            else:
+                ilist = [iset_u, iset_v, iset_p, iset_l, iset_s, iset_d]
+        elif self.pbfsi.fsi_system == "neumann_dirichlet":
+            if self.pbs.incompressible_2field:
+                ilist = [iset_u, iset_ps, iset_v, iset_p, iset_s, iset_d]
+            else:
+                ilist = [iset_u, iset_v, iset_p, iset_s, iset_d]
 
         return ilist
 

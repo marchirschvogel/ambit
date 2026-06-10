@@ -837,6 +837,7 @@ class FluidmechanicsConstraintProblem(problem_base):
         if isoptions["rom_to_new"]:
             iset_r = PETSc.IS().createGeneral(self.rom.im_rom_r, comm=self.comm)
             iset_v = iset_v.difference(iset_r)  # subtract
+        iset_v.setBlockSize(self.pbf.v.x.petsc_vec.getBlockSize())
 
         offset_p = offset_v + vvec_ls
         iset_p = PETSc.IS().createStride(
@@ -845,6 +846,7 @@ class FluidmechanicsConstraintProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_p.setBlockSize(self.pbf.p.x.petsc_vec.getBlockSize())
 
         offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
         iset_s = PETSc.IS().createStride(self.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)

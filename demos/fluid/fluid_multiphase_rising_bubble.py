@@ -14,7 +14,7 @@ def main():
     basepath = str(Path(__file__).parent.absolute())
 
     # cases (1,2) from ten Eikelder et al. (2024), Brunk and ten Eikelder (2026)
-    case = 1
+    case = 2
 
     IO_PARAMS = {
         # problem type 'fluid_multiphase': Navier-Stokes Cahn-Hilliard equations
@@ -26,7 +26,7 @@ def main():
         # where to write the output to
         "output_path": basepath + "/tmp/",
         # mesh command that uses dolfinx internal mesh creation of simple domains (here a rectangular 2D grid)
-        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[32,64]}, # 32,64   64,128   128,256
+        "mesh_domain": {"type":"rectangle", "celltype":"quadrilateral", "coords_a":[0.0, 0.0], "coords_b":[1.0, 2.0], "meshsize":[128,256]}, # 32,64   64,128   128,256
         # which results to write
         "results_to_write": [["velocity", "pressure", "density"],["phase", "potential"],"counters"],
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5
@@ -38,7 +38,7 @@ def main():
     }
 
     # add elements in x direction to output name for distinction of results...
-    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0])
+    IO_PARAMS["simname"] += "_elx"+str(IO_PARAMS["mesh_domain"]["meshsize"][0]) + "_PREC"
 
     h = 1.0/IO_PARAMS["mesh_domain"]["meshsize"][0] # element edge length
     eps = 0.64*h # 1.28*h (ten Eikelder et al. (2024)), 0.64*h (Brunk and ten Eikelder (2026))
@@ -71,21 +71,25 @@ def main():
     Parameters for the linear and nonlinear solution schemes
     """
     SOLVER_PARAMS = {
-        "solve_type": "direct",   # direct, iterative
+        "solve_type": "iterative",   # direct, iterative
         "direct_solver": "mumps",
         # BEGIN: Settings for iterative solver
         "iterative_solver": "fgmres",
         "petsc_options_ksp": {"ksp_gmres_modifiedgramschmidt": True, "ksp_gmres_restart": 1000},
         "block_precond": "BGS_outer",  # Schur2x2_outer, BGS_outer
-        # "precond_fields": [{"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg", "solve": "gmres", "maxiter": 30, "schur_action": True}]}, "blocks": [0,1]}, # fluid-v,p
-        #                    {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [2,3]}  # CH-phi,mu
-        #                    ],
-
         # Here, first do CH, then fluid - use direct precs to test BGS
-        "precond_fields": [{"prec": "direct", "blocks": [2,3]},  # CH-phi,mu
-                           {"prec": "direct", "blocks": [0,1]},  # fluid-v,p
+        "precond_fields": [#### iterative
+                           # {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [3,2]},  # CH-mu,phi
+                           # {"prec": {"s2x2": [{"prec": "amg"},{"prec": "amg"}]}, "blocks": [0,1]},  # fluid-v,p
+                           #### direct solvers in Schur precs
+                           # {"prec": {"s2x2": [{"prec": "direct"},{"prec": "direct"}]}, "blocks": [3,2]},  # CH-mu,phi
+                           # {"prec": {"s2x2": [{"prec": "direct"},{"prec": "direct"}]}, "blocks": [0,1]},  # fluid-v,p
+                           #### direct outers
+                           # {"prec": "direct", "blocks": [3,2]},  # CH-mu,phi
+                           # {"prec": "direct", "blocks": [0,1]},  # fluid-v,p
+                           #### direct full (should converge in 1 GMRES it.!)
+                           {"prec": "direct", "blocks": [0,1,2,3]}
                            ],
-
         "tol_lin_rel": 1e-5,
         "tol_lin_abs": 1e-8,
         "lin_norm_type": "unpreconditioned",

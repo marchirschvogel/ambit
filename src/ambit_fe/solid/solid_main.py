@@ -1691,6 +1691,7 @@ class SolidmechanicsProblem(problem_base):
 
         offset_u = uvec_or0 + self.p.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.pbase.comm)
+        iset_u.setBlockSize(self.u.x.petsc_vec.getBlockSize())
 
         offset_p = offset_u + uvec_ls
         iset_p = PETSc.IS().createStride(
@@ -1699,6 +1700,7 @@ class SolidmechanicsProblem(problem_base):
             step=1,
             comm=self.pbase.comm,
         )
+        iset_p.setBlockSize(self.p.x.petsc_vec.getBlockSize())
 
         return [iset_u, iset_p]
 

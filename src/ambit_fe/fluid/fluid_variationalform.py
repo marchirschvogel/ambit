@@ -244,7 +244,8 @@ class variationalform(variationalform_base):
         if self.mass_formulation=="conservative_mass":
             return tau_lsic * ufl.div(self.var_v) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
         elif self.mass_formulation=="reduced_mass":
-            rho_ = self.get_density(rho, chi=phi[1])
+            # rho_ = self.get_density(rho, chi=phi[1])
+            rho_ = sum(rho) / len(rho)  # let's use the average here so far...
             return tau_lsic * ufl.div(self.var_v) * rho_ * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")
@@ -559,7 +560,8 @@ class variationalform_ale(variationalform):
         if self.mass_formulation=="conservative_mass":
             return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
         elif self.mass_formulation=="reduced_mass":
-            rho_ = self.get_density(rho, chi=phi[1])
+            # rho_ = self.get_density(rho, chi=phi[1])
+            rho_ = sum(rho) / len(rho)  # let's use the average here so far...
             return tau_lsic * ufl.inner(ufl.grad(self.var_v), ufl.inv(F).T) * rho_ * self.res_p_strong(v, rho, w=w, F=F, phi=phi, phidot=phidot) * ddomain
         else:
             raise ValueError("Unknown fluid mass formulation!")

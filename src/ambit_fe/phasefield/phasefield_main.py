@@ -557,6 +557,30 @@ class PhasefieldProblem(problem_base):
         self.K_list[1][1] = self.K_mumu    # w.r.t. potential
         self.K_list[1][0] = self.K_muphi   # w.r.t. phase
 
+    def get_solver_index_sets(self, isoptions={}, blocked=False):
+        offset_phi = self.phi.x.petsc_vec.getOwnershipRange()[0] + self.mu.x.petsc_vec.getOwnershipRange()[0]
+        iset_phi = PETSc.IS().createStride(
+            self.phi.x.petsc_vec.getLocalSize(),
+            first=offset_phi,
+            step=1,
+            comm=self.comm,
+        )
+        iset_phi.setBlockSize(self.phi.x.petsc_vec.getBlockSize())
+
+        offset_mu = offset_phi + self.phi.x.petsc_vec.getLocalSize()
+        iset_mu = PETSc.IS().createStride(
+            self.mu.x.petsc_vec.getLocalSize(),
+            first=offset_mu,
+            step=1,
+            comm=self.comm,
+        )
+        iset_mu.setBlockSize(self.mu.x.petsc_vec.getBlockSize())
+
+        ilist = [iset_phi, iset_mu]
+
+        return ilist
+
+
     ### now the base routines for this problem
 
     def read_restart(self, sname, N):

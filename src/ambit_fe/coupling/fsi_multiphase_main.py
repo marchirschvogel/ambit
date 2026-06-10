@@ -402,9 +402,6 @@ class FSIMultiphaseProblem(problem_base):
         self.K_list[5 + ofc + ofs][1 + ofs] = self.pbfsi.K_list[3 + ofc + ofs][1 + ofs]              # w.r.t. fluid velocity
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
-        # iterative solvers here are only implemented for neumann_dirichlet system!
-        assert(self.pbfsi.fsi_system == "neumann_dirichlet")
-
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
             uvec_or0 = self.rom.V.getOwnershipRangeColumn()[0]
             uvec_ls = self.rom.V.getLocalSize()[1]
@@ -418,7 +415,11 @@ class FSIMultiphaseProblem(problem_base):
             offset_u = uvec_or0 + self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0] + self.pba.d.x.petsc_vec.getOwnershipRange()[0]
         if self.pbs.incompressible_2field:
             offset_u += self.pbs.p.x.petsc_vec.getOwnershipRange()[0]
+        if not blocked:
+            if self.pbfsi.fsi_system == "neumann_neumann":
+                offset_u += self.pbfsi.lm.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
+        iset_u.setBlockSize(self.pbs.u.x.petsc_vec.getBlockSize())
 
         if self.pbs.incompressible_2field:
             offset_ps = offset_u + uvec_ls
@@ -428,9 +429,12 @@ class FSIMultiphaseProblem(problem_base):
                 step=1,
                 comm=self.comm,
             )
+            iset_ps.setBlockSize(self.pbs.p.x.petsc_vec.getBlockSize())
 
         if blocked:
             offset_v = self.pbf.v.x.petsc_vec.getOwnershipRange()[0] + self.pbf.p.x.petsc_vec.getOwnershipRange()[0]
+            if self.pbfsi.fsi_system == "neumann_neumann":
+                offset_v += self.pbfsi.lm.x.petsc_vec.getOwnershipRange()[0]
         else:
             if self.pbs.incompressible_2field:
                 offset_v = offset_ps + self.pbs.p.x.petsc_vec.getLocalSize()
@@ -443,6 +447,7 @@ class FSIMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm
         )
+        iset_v.setBlockSize(self.pbf.v.x.petsc_vec.getBlockSize())
 
         offset_p = offset_v + self.pbf.v.x.petsc_vec.getLocalSize()
         iset_p = PETSc.IS().createStride(
@@ -451,6 +456,7 @@ class FSIMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_p.setBlockSize(self.pbf.p.x.petsc_vec.getBlockSize())
 
         if blocked:
             offset_phi = self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
@@ -462,6 +468,7 @@ class FSIMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_phi.setBlockSize(self.pbp.phi.x.petsc_vec.getBlockSize())
         offset_mu = offset_phi + self.pbp.phi.x.petsc_vec.getLocalSize()
         iset_mu = PETSc.IS().createStride(
             self.pbp.mu.x.petsc_vec.getLocalSize(),
@@ -469,22 +476,47 @@ class FSIMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_mu.setBlockSize(self.pbp.mu.x.petsc_vec.getBlockSize())
+
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            if blocked:  # to v,p block!
+                offset_l = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
+            else:
+                offset_l = offset_mu + self.pbp.mu.x.petsc_vec.getLocalSize()
+            iset_l = PETSc.IS().createStride(
+                self.pbfsi.lm.x.petsc_vec.getLocalSize(),
+                first=offset_l,
+                step=1,
+                comm=self.comm,
+            )
+            iset_l.setBlockSize(self.pbfsi.lm.x.petsc_vec.getBlockSize())
 
         if blocked:
             offset_d = self.pba.d.x.petsc_vec.getOwnershipRange()[0]
         else:
-            offset_d = offset_mu + self.pbp.mu.x.petsc_vec.getLocalSize()
+            if self.pbfsi.fsi_system == "neumann_neumann":
+                offset_d = offset_l + self.pbfsi.lm.x.petsc_vec.getLocalSize()
+            else:
+                offset_d = offset_mu + self.pbp.mu.x.petsc_vec.getLocalSize()
+
         iset_d = PETSc.IS().createStride(
             self.pba.d.x.petsc_vec.getLocalSize(),
             first=offset_d,
             step=1,
             comm=self.comm,
         )
+        iset_d.setBlockSize(self.pba.d.x.petsc_vec.getBlockSize())
 
-        if self.pbs.incompressible_2field:
-            ilist = [iset_u, iset_ps, iset_v, iset_p, iset_phi, iset_mu, iset_d]
+        if self.pbfsi.fsi_system == "neumann_neumann":
+            if self.pbs.incompressible_2field:
+                ilist = [iset_u, iset_ps, iset_v, iset_p, iset_phi, iset_mu, iset_l, iset_d]
+            else:
+                ilist = [iset_u, iset_v, iset_p, iset_phi, iset_mu, iset_l, iset_d]
         else:
-            ilist = [iset_u, iset_v, iset_p, iset_phi, iset_mu, iset_d]
+            if self.pbs.incompressible_2field:
+                ilist = [iset_u, iset_ps, iset_v, iset_p, iset_phi, iset_mu, iset_d]
+            else:
+                ilist = [iset_u, iset_v, iset_p, iset_phi, iset_mu, iset_d]
 
         return ilist
 

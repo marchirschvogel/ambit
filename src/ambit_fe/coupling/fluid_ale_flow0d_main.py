@@ -346,6 +346,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
         if isoptions["rom_to_new"]:
             iset_r = PETSc.IS().createGeneral(self.rom.im_rom_r, comm=self.comm)
             iset_v = iset_v.difference(iset_r)  # subtract
+        iset_v.setBlockSize(self.pbf.v.x.petsc_vec.getBlockSize())
 
         offset_p = offset_v + vvec_ls
         iset_p = PETSc.IS().createStride(
@@ -354,6 +355,7 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_p.setBlockSize(self.pbf.p.x.petsc_vec.getBlockSize())
 
         offset_s = offset_p + self.pbf.p.x.petsc_vec.getLocalSize()
         iset_s = PETSc.IS().createStride(self.pbf0.LM.getLocalSize(), first=offset_s, step=1, comm=self.comm)
@@ -368,13 +370,11 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_d.setBlockSize(self.pba.d.x.petsc_vec.getBlockSize())
 
         if isoptions["rom_to_new"]:
             iset_s = iset_s.expand(iset_r)  # add to 0D block
             iset_s.sort()  # should be sorted, otherwise PETSc may struggle to extract block
-
-        if isoptions["ale_to_v"]:
-            iset_v = iset_v.expand(iset_d)  # add ALE to velocity block
 
         if isoptions["lms_to_p"]:
             iset_p = iset_p.expand(
@@ -388,9 +388,6 @@ class FluidmechanicsAleFlow0DProblem(problem_base):
             ilist = [iset_v, iset_p, iset_d]
         else:
             ilist = [iset_v, iset_p, iset_s, iset_d]
-
-        if isoptions["ale_to_v"]:
-            ilist.pop(-1)
 
         return ilist
 

@@ -227,13 +227,12 @@ class solver_nonlinear:
             raise ValueError("Unknown lin_norm_type option!")
 
         self.print_liniter_every = solver_params.get("print_liniter_every", 1)
-        self.iset_options = solver_params.get("indexset_options", {})
+        self.iset_options = solver_params.get("indexset_options", {"lms_to_p": False, "lms_to_v": False, "rom_to_new": False, "merge_prec_mat": False})
 
-        is_option_keys = ["lms_to_p", "lms_to_v", "rom_to_new", "ale_to_v"]
-        # revert to defaults if not set by the user
-        for k in is_option_keys:
-            if k not in self.iset_options.keys():
-                self.iset_options[k] = False
+        is_option_keys = ["lms_to_p", "lms_to_v", "rom_to_new", "merge_prec_mat"]
+        # check
+        for k in self.iset_options.keys():
+            assert(k in is_option_keys)
 
         if any(list(self.iset_options.values())):
             self.merge_prec_mat = True
@@ -900,7 +899,7 @@ class solver_nonlinear:
                 if self.ptc:
                     k_ptc *= self.resnorms[npr]["res"+str(self.ptc_field+1)] / res_norm_main_last
 
-                # adaptive PTC (for 3D block K_00 only!)
+                # adaptive PTC
                 if self.divcont == "ptc":
                     self.maxiter = self.ptc_maxiter
                     # collect errors

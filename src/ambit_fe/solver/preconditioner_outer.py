@@ -189,6 +189,7 @@ class BGS_outer(block_precond_outer):
             if not self.inner_precs[i].is_blockprec:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
                 self.operator_mats[i][0].assemble()
+                self.operator_mats[i][0].setBlockSize(self.iset_block[i].getBlockSize())  # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
             else:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])
                 self.block_operators[i].assemble()
@@ -355,6 +356,7 @@ class Schur2x2_outer(block_precond_outer):
             if not self.inner_precs[i].is_blockprec:
                 self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.operator_mats[i][0])
                 self.operator_mats[i][0].assemble()
+                self.operator_mats[i][0].setBlockSize(self.iset_block[i].getBlockSize())  # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
             # else:
             #     self.P.createSubMatrix(self.iset_block[i], self.iset_block[i], submat=self.block_operators[i])  #### should goooo
             #     self.block_operators[i].assemble()

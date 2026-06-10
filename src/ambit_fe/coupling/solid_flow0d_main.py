@@ -816,6 +816,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
         if self.pbs.incompressible_2field:
             offset_u += self.pbs.p.x.petsc_vec.getOwnershipRange()[0]
         iset_u = PETSc.IS().createStride(uvec_ls, first=offset_u, step=1, comm=self.comm)
+        iset_u.setBlockSize(self.pbs.u.x.petsc_vec.getBlockSize())
 
         if self.pbs.incompressible_2field:
             offset_p = offset_u + uvec_ls
@@ -825,6 +826,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 step=1,
                 comm=self.comm,
             )
+            iset_p.setBlockSize(self.pbs.p.x.petsc_vec.getBlockSize())
 
         if self.pbs.incompressible_2field:
             offset_s = offset_p + self.pbs.p.x.petsc_vec.getLocalSize()

@@ -315,6 +315,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
         else:
             offset_v = vvec_or0 + self.pbf.p.x.petsc_vec.getOwnershipRange()[0] + self.pbp.phi.x.petsc_vec.getOwnershipRange()[0] + self.pbp.mu.x.petsc_vec.getOwnershipRange()[0]
         iset_v = PETSc.IS().createStride(vvec_ls, first=offset_v, step=1, comm=self.comm)
+        iset_v.setBlockSize(self.pbf.v.x.petsc_vec.getBlockSize())
 
         offset_p = offset_v + vvec_ls
         iset_p = PETSc.IS().createStride(
@@ -323,6 +324,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_p.setBlockSize(self.pbf.p.x.petsc_vec.getBlockSize())
 
         if blocked:
             offset_phi = self.pbp.phi.x.petsc_vec.getOwnershipRange()[0]
@@ -334,6 +336,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_phi.setBlockSize(self.pbp.phi.x.petsc_vec.getBlockSize())
 
         offset_mu = offset_phi + self.pbp.phi.x.petsc_vec.getLocalSize()
         iset_mu = PETSc.IS().createStride(
@@ -342,6 +345,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_mu.setBlockSize(self.pbp.mu.x.petsc_vec.getBlockSize())
 
         if blocked:
             offset_d = self.pba.d.x.petsc_vec.getOwnershipRange()[0]
@@ -353,6 +357,7 @@ class FluidmechanicsAleMultiphaseProblem(problem_base):
             step=1,
             comm=self.comm,
         )
+        iset_d.setBlockSize(self.pba.d.x.petsc_vec.getBlockSize())
 
         ilist = [iset_v, iset_p, iset_phi, iset_mu, iset_d]
 

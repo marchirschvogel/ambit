@@ -176,14 +176,15 @@ def main():
         "order_disp": 2,
         "order_pres": 1,
         "quad_degree": 5,
-        "incompressibility": "no",
+        "incompressibility": "full",
         # "bulkmod": E/(3.*(1.-2.*nu)),
     }
 
     FEM_PARAMS_FLUID = {"order_vel": 2,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        "fluid_formulation": "conservative"}
+                        "fluid_formulation": "conservative",
+                        "mass_formulation": "conservative_mass"}  # conservative_mass, reduced_mass
 
     FEM_PARAMS_ALE = {"order_disp": 2, "quad_degree": 5}
 
@@ -245,7 +246,7 @@ def main():
     zeta = 0.0
 
     MATERIALS_SOLID = {"MAT1": {"neohooke_dev": {"mu": E/3.},
-                                "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
+                                # "ogden_vol": {"kappa": E/(3.*(1.-2.*nu))},
                                 "inertia": {"rho0": rho_s},
                                 "id": locate_solid()}}
 
@@ -255,12 +256,11 @@ def main():
 
     MATERIALS_ALE = {"MAT1": {"exponential": {"a_0": 1.0, "b_0": 10.0, "kappa": 1e2}, "id": locate_fluid()}}
 
-    m = 1e-5 # should be rather low if capillary stress is rather high
-    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "constant", # constant, degenerate
+    m = 1e-8 # should be rather low if capillary stress is rather high
+    MATERIALS_PF = {"MAT1": {"mat_cahnhilliard": {"mobility": "degenerate", # constant, degenerate
                                                   "epsilon": 0.0,
                                                   "exponent": 1.0,
-                                                  # "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
-                                                  "M0": m,                 # Mobility [length^5/(pressure time)]
+                                                  "M0": m*eps**2.0,      # Mobility [length^5/(pressure time)]
                                                   "D": sig/(4.*eps),  # Bulk free-energy parameter [pressure/length^3]
                                                   "kappa": sig*eps},  # Gradient energy coefficient [pressure/length]
                                                   "id": locate_fluid()}}

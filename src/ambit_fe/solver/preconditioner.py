@@ -194,6 +194,10 @@ class schur2x2full(block_precond):
         self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.Smod.setBlockSize(self.iset[1].getBlockSize())
+
         return [self.A, self.Smod]
 
     def setUp(self, pc):
@@ -232,6 +236,10 @@ class schur2x2full(block_precond):
         # compute self.Smod = self.C - B_Adinv_Bt
         self.C.copy(result=self.Smod)
         self.Smod.axpy(-1.0, self.B_Adinv_Bt)
+
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.Smod.setBlockSize(self.iset[1].getBlockSize())
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
@@ -378,6 +386,10 @@ class schur3x3full(block_precond):
         self.Smod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.Wmod.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.Smod.setBlockSize(self.iset[1].getBlockSize())
+
         return [self.A, self.Smod, self.Wmod]
 
     def setUp(self, pc):
@@ -471,6 +483,10 @@ class schur3x3full(block_precond):
         self.R.copy(result=self.Wmod)
         self.Wmod.axpy(-1.0, self.D_Adinv_Dt)
         self.Wmod.axpy(-1.0, self.Umod_Smoddinv_Tmod)
+
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.Smod.setBlockSize(self.iset[1].getBlockSize())
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
@@ -668,6 +684,10 @@ class bgs2x2(block_precond):
         self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.C.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.C.setBlockSize(self.iset[1].getBlockSize())
+
         return [self.A, self.C]
 
     def setUp(self, pc):
@@ -679,6 +699,10 @@ class bgs2x2(block_precond):
         self.A.assemble()
         self.B.assemble()
         self.C.assemble()
+
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.C.setBlockSize(self.iset[1].getBlockSize())
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
@@ -813,6 +837,11 @@ class bgs3x3(block_precond):
         self.C.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.R.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.C.setBlockSize(self.iset[1].getBlockSize())
+        self.R.setBlockSize(self.iset[2].getBlockSize())
+
         return [self.A, self.C, self.R]
 
     def setUp(self, pc):
@@ -830,6 +859,11 @@ class bgs3x3(block_precond):
         self.D.assemble()
         self.E.assemble()
         self.R.assemble()
+
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.C.setBlockSize(self.iset[1].getBlockSize())
+        self.R.setBlockSize(self.iset[2].getBlockSize())
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
@@ -990,6 +1024,10 @@ class jacobi2x2(block_precond):
         self.A.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
         self.C.setOption(PETSc.Mat.Option.NO_OFF_PROC_ZERO_ROWS, True)
 
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.C.setBlockSize(self.iset[1].getBlockSize())
+
         return [self.A, self.C]
 
     def setUp(self, pc):
@@ -999,6 +1037,10 @@ class jacobi2x2(block_precond):
         self.P.createSubMatrix(self.iset[1], self.iset[1], submat=self.C)
         self.A.assemble()
         self.C.assemble()
+
+        # needed for AMG precs - if submats are taken from merged prec mat, bs gets lost!
+        self.A.setBlockSize(self.iset[0].getBlockSize())
+        self.C.setBlockSize(self.iset[1].getBlockSize())
 
         # operator values have changed - do we need to re-set them?
         self.ksp_fields[0].setOperators(self.A)
