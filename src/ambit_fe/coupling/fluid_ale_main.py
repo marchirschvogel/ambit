@@ -55,7 +55,7 @@ class FluidmechanicsAleProblem(problem_base):
         ioparams.check_params_coupling_fsi_fluid_ale(coupling_params)
 
         self.problem_physics = "fluid_ale"
-        self.have_dbc_fluid_ale, self.have_dbc_ale_fluid, self.have_dbc_solid_ale = False, False, False
+        self.have_dbc_fluid_ale, self.have_dbc_ale_fluid = False, False
 
         # instantiate problem classes
         # fluid

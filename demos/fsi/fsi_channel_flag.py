@@ -168,7 +168,7 @@ def main():
     COUPLING_PARAMS = {
         "coupling_fsi": {"interface": [1]},
         "fsi_interface_motion": "fluid_governed",  # fluid_governed, solid_governed
-        "fsi_kinematic_coupling": "displacement",  # displacement, velocity
+        "fsi_kinematic_quantity": "displacement",  # displacement, velocity
         "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
     }
 

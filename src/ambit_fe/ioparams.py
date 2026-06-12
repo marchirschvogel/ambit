@@ -257,6 +257,7 @@ def check_params_coupling_fsi_fluid_ale(params):
         "coupling_strategy",
         "fsi_interface_motion",
         "fsi_kinematic_coupling",
+        "fsi_kinematic_quantity",
         "fsi_system",
         "wetting_condition_interface",
     ]

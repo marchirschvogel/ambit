@@ -180,7 +180,8 @@ class FSIProblem(problem_base):
     def set_coupling_parameters(self):
         self.coupling_fsi = self.coupling_params.get("coupling_fsi", {})
         self.fsi_interface_motion = self.coupling_params.get("fsi_interface_motion", "fluid_governed")  # fluid_governed, solid_governed
-        self.fsi_kinematic_coupling = self.coupling_params.get("fsi_kinematic_coupling", "displacement")  # displacement, velocity
+        self.fsi_kinematic_coupling = self.coupling_params.get("fsi_kinematic_coupling", "no_slip")  # no_slip, slip
+        self.fsi_kinematic_quantity = self.coupling_params.get("fsi_kinematic_quantity", "displacement")  # displacement, velocity
         self.fsi_system = self.coupling_params.get("fsi_system", "neumann_neumann")  # neumann_neumann, neumann_dirichlet
         self.wetting_interface = self.coupling_params.get("wetting_condition_interface", {})  # only for multiphase FSI
 
@@ -289,6 +290,8 @@ class FSIProblem(problem_base):
             self.pbfa.have_dbc_fluid_ale = True
         # solid-governed interface motion - solid sets DBCs on ALE
         elif self.fsi_interface_motion=="solid_governed":
+            # Neumann-Dirichlet scheme necessarily needs fluid to be the DBC donator!
+            assert(self.fsi_system!="neumann_dirichlet")
             if all(isinstance(x, int) for x in self.coupling_fsi["interface"]):
                 ids_solid_ale = self.coupling_fsi["interface"]
                 nodes_solid_ale = fem.locate_dofs_topological(
@@ -302,8 +305,6 @@ class FSIProblem(problem_base):
                     nodes_solid_ale_.append(fem.locate_dofs_geometrical(self.pba.V_d, lc.evaluate))
                 nodes_solid_ale = np.concatenate(nodes_solid_ale_).ravel()
             dbcs_coup_solid_ale = [fem.dirichletbc(self.pbfa.usa, nodes_solid_ale)]
-            # get surface dofs for dr_ALE/du matrix entry
-            self.pbfa.fdofs_solid_ale = meshutils.get_index_set(self.pba.V_d, self.comm, nodes_loc=nodes_solid_ale)
             # now add the DBCs: pay attention to order... first d=u, then the others... hence re-set!
             # store DBCs without those from solid
             self.pba.dbcs_nosolid = []
@@ -314,7 +315,6 @@ class FSIProblem(problem_base):
             # Dirichlet boundary conditions
             if "dirichlet" in self.pba.bc_dict.keys():
                 self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"], self.pba.dbcs)
-            self.pbfa.have_dbc_solid_ale = True
         else:
             raise ValueError("Unknown FSI interface motion! Choose 'fluid_governed' or 'solid_governed'.")
 
@@ -363,23 +363,22 @@ class FSIProblem(problem_base):
             self.pbs.weakform_u += self.work_coupling_solid
             self.pbf.weakform_v += -self.power_coupling_fluid
 
-            if self.fsi_kinematic_coupling == "displacement":
+            if self.fsi_kinematic_quantity == "displacement":
                 self.weakform_l = ufl.dot(self.pbs.u, self.var_lm) * self.io.ds(self.io.interface_id_s) - ufl.dot(
                     self.pbf.ufluid, self.var_lm
                 ) * self.io.ds(self.io.interface_id_f)
-            elif self.fsi_kinematic_coupling == "velocity":
+            elif self.fsi_kinematic_quantity == "velocity":
                 self.weakform_l = ufl.dot(self.pbf.v, self.var_lm) * self.io.ds(self.io.interface_id_f) - ufl.dot(
                     self.pbs.vel, self.var_lm
                 ) * self.io.ds(self.io.interface_id_s)
             else:
-                raise ValueError("Unknown FSI kinematic coupling. Choose 'displacement' or 'velocity'.")
+                raise ValueError("Unknown FSI kinematic quantity. Choose 'displacement' or 'velocity'.")
 
             if self.fsi_interface_motion=="solid_governed":
                 self.usf_subvec = self.pbs.u.x.petsc_vec.getSubVector(self.fdofs_solid_global_sub)
 
         elif self.fsi_system == "neumann_dirichlet":
             self.dbcs_coup_fluid_solid = []
-
             if all(isinstance(x, int) for x in self.io.surf_interf):
                 nodes_dbcs_fs = fem.locate_dofs_topological(self.pbs.V_u, self.pbs.mesh.topology.dim - 1, self.pbs.mt_b.indices[np.isin(self.pbs.mt_b.values, self.io.surf_interf)])
             else: # can only be locator function otherwise...
