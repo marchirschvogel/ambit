@@ -3,6 +3,7 @@
 """
 FSI simulation of a 2D tank with flexible, forced lid
 Monolithic Neumann-Neumann formulation (with Lagrange multiplier), solid governed - p1p1
+Slip condition at FSI interface
 """
 
 import ambit_fe
@@ -40,7 +41,7 @@ def test_main():
             ["aledisplacement"],
         ],
         "write_submeshes":True,
-        "simname": "fsi_p1p1_stabr_tank2d_neumann_neumann",
+        "simname": "fsi_p1p1_tank2d_solidgov_neumann_neumann_slip",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -81,6 +82,7 @@ def test_main():
         "coupling_fsi": {"interface": [3]},
         "fsi_system": "neumann_neumann",
         "fsi_interface_motion": "solid_governed",
+        "fsi_kinematic_coupling": "slip",
     }
 
     # for testing purposes, we locate the solid by this function (could use id 1 instead...)
@@ -178,10 +180,10 @@ def test_main():
     )
 
     # correct results
-    v_corr[0] = 5.1280504637431015E+01  # x
-    v_corr[1] = -2.5705948309009239E+00  # y
+    v_corr[0] = 5.0941587732273476E+01  # x
+    v_corr[1] = -2.5814443579294482E+00  # y
 
-    p_corr[0] = -1.4586457042526377E-03
+    p_corr[0] = -1.4644794493343433E-03
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

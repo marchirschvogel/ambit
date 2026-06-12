@@ -312,39 +312,42 @@ if category == "fsi" or category == "all":
         ["mpiexec", "-n", "2", "python3", "test_fsi_taylorhood_artseg_fluidgov_neumann_dirichlet.py"]
     )
 
-    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann.py"]
+    errs["test_fsi_p1p1_artseg_fluidgov_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_artseg_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann.py"]
+    errs["test_fsi_p1p1_artseg_fluidgov_neumann_neumann 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_artseg_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann 2 restart"] = subprocess.call(
+    errs["test_fsi_p1p1_artseg_fluidgov_neumann_neumann 2 restart"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_neumann.py",
+            "test_fsi_p1p1_artseg_fluidgov_neumann_neumann.py",
             str(4),
         ]
     )
-    errs["test_fsi_p1p1_stabr_artseg_fluidgov_neumann_dirichlet 2"] = subprocess.call(
-        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_stabr_artseg_fluidgov_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_artseg_fluidgov_neumann_dirichlet 2"] = subprocess.call(
+        ["mpiexec", "-n", "2", "python3", "test_fsi_p1p1_artseg_fluidgov_neumann_dirichlet.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann.py"]
+    errs["test_fsi_p1p1_tank2d_fluidgov_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_tank2d_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann.py"]
+    errs["test_fsi_p1p1_tank2d_fluidgov_neumann_neumann 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_tank2d_fluidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_solidgov_neumann_neumann 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_solidgov_neumann_neumann.py"]
+    errs["test_fsi_p1p1_tank2d_solidgov_neumann_neumann 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_tank2d_solidgov_neumann_neumann.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet 1"] = subprocess.call(
-        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_tank2d_solidgov_neumann_neumann_slip 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_tank2d_solidgov_neumann_neumann_slip.py"]
     )
-    errs["test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet 3"] = subprocess.call(
-        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_stabr_tank2d_fluidgov_neumann_dirichlet.py"]
+    errs["test_fsi_p1p1_tank2d_fluidgov_neumann_dirichlet 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_tank2d_fluidgov_neumann_dirichlet.py"]
+    )
+    errs["test_fsi_p1p1_tank2d_fluidgov_neumann_dirichlet 3"] = subprocess.call(
+        ["mpiexec", "-n", "3", "python3", "test_fsi_p1p1_tank2d_fluidgov_neumann_dirichlet.py"]
     )
     errs["test_fsi_taylorhood_tank2d_fluidgov_neumann_dirichlet_bgs3x3outer-s2x2 4"] = subprocess.call(
         ["mpiexec", "-n", "4", "python3", "test_fsi_taylorhood_tank2d_fluidgov_neumann_dirichlet_bgs3x3outer-s2x2.py"]

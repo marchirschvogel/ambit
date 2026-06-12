@@ -38,7 +38,7 @@ def test_main():
             ["fluiddisplacement", "velocity", "pressure"],
             ["aledisplacement", "alevelocity"],
         ],
-        "simname": "fsi_flow0d_p1p1_stabr_artseg",
+        "simname": "fsi_flow0d_p1p1_artseg",
     }
 
     CONTROL_PARAMS = {"maxtime": 3.0, "numstep": 150, "numstep_stop": 5}

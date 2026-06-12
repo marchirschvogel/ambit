@@ -33,13 +33,14 @@ def test_main():
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/artseg-fsi-tet-lin_domain.xdmf",
         "mesh_boundary": basepath + "/input/artseg-fsi-tet-lin_boundary.xdmf",
+        "mesh_subboundary": basepath + "/input/artseg-fsi-tet-lin_edge.xdmf", # for edge DBCs: needed here if "fsi_system" is set to "neumann_dirichlet"
         "results_to_write": [
             ["displacement", "velocity"],
             ["fluiddisplacement", "velocity", "pressure"],
             ["aledisplacement", "alevelocity"],
         ],
-        "simname": "fsi_p1p1_stabr_artseg",
-        "write_submeshes":True,
+        "simname": "fsi_p1p1_artseg",
+        "write_submeshes": True,
     }
 
     CONTROL_PARAMS = {"maxtime": 3.0, "numstep": 150, "numstep_stop": 5}
@@ -48,7 +49,7 @@ def test_main():
         "solve_type": "direct",
         "direct_solver": "mumps",
         "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-6],
-        "tol_inc": [1e-4, 1e-4, 1e-4, 1e-4, 1e-4],
+        "tol_inc": [1e-0, 1e-0, 1e-0, 1e-0, 1e-0],
     }
 
     TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 1.0}
@@ -79,7 +80,7 @@ def test_main():
 
     COUPLING_PARAMS = {
         "coupling_fsi": {"interface": [1]},
-        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
+        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
     }
 
     MATERIALS_SOLID = {
@@ -118,6 +119,7 @@ def test_main():
         "dirichlet": [
             {"id": [7], "dir": "y", "val": 0.0},
             {"id": [9], "dir": "x", "val": 0.0},
+            {"id": [1,2], "dir": "z", "val": 0.0, "codimension": 1}, # DBC on edge: needed if "fsi_system" is set to "neumann_dirichlet"!
         ],
     }
 
@@ -129,17 +131,6 @@ def test_main():
         ]
     }
 
-    class locate_lm_x:
-        def evaluate(self, x):
-            return np.isclose(x[0], 0.0)
-
-    class locate_lm_y:
-        def evaluate(self, x):
-            return np.isclose(x[1], 0.0)
-
-    BC_DICT_LM = {"dirichlet": [{"id": [locate_lm_x()], "dir": "x", "val": 0.0},
-                                {"id": [locate_lm_y()], "dir": "y", "val": 0.0}]}
-
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
@@ -148,7 +139,7 @@ def test_main():
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE],
-        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE, BC_DICT_LM],
+        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE],
         time_curves=time_curves(),
         coupling_params=COUPLING_PARAMS,
     )

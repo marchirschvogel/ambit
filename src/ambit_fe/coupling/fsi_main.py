@@ -124,14 +124,10 @@ class FSIProblem(problem_base):
 
         if self.fsi_system == "neumann_neumann":
             # Lagrange multiplier function space
-            self.V_lm = fem.functionspace(
-                self.io.msh_emap_lm[0],
-                (
-                    "Lagrange",
-                    self.pbs.order_disp,
-                    (self.io.msh_emap_lm[0].geometry.dim,),
-                ),
-            )
+            if self.fsi_kinematic_coupling=="no_slip":
+                self.V_lm = fem.functionspace(self.io.msh_emap_lm[0], ("Lagrange", self.pbs.order_disp, (self.io.msh_emap_lm[0].geometry.dim,)))
+            else:
+                self.V_lm = fem.functionspace(self.io.msh_emap_lm[0], ("Lagrange", self.pbs.order_disp))
 
             # Lagrange multiplier
             self.lm = fem.Function(self.V_lm)
@@ -262,6 +258,8 @@ class FSIProblem(problem_base):
 
         # fluid-governed interface motion - fluid sets DBCs on ALE
         if self.fsi_interface_motion=="fluid_governed":
+            # Need no-slip here - if fluid donates DBCs, we cannot have slip at the interface!
+            assert(self.fsi_kinematic_coupling=="no_slip")
             if all(isinstance(x, int) for x in self.coupling_fsi["interface"]):
                 ids_fluid_ale = self.coupling_fsi["interface"]
                 nodes_fluid_ale = fem.locate_dofs_topological(
@@ -351,28 +349,48 @@ class FSIProblem(problem_base):
             self.cols_fs = self.fdofs_fluid_global_sub.getIndices()
 
         if self.fsi_system == "neumann_neumann":
-            self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-            self.work_coupling_solid_old = ufl.dot(self.lm_old, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-            self.power_coupling_fluid = ufl.dot(self.lm, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
-            self.power_coupling_fluid_old = ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+            if self.fsi_kinematic_coupling=="no_slip":
+                self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+                self.work_coupling_solid_old = ufl.dot(self.lm_old, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+                self.power_coupling_fluid = ufl.dot(self.lm, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+                self.power_coupling_fluid_old = ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+            elif self.fsi_kinematic_coupling=="slip":
+                self.work_coupling_solid = self.lm * ufl.dot(self.pbs.io.n0, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+                self.work_coupling_solid_old = self.lm_old * ufl.dot(self.pbs.io.n0, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+                self.power_coupling_fluid = -self.lm * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)  # negative (n_solid = -n_fluid)
+                self.power_coupling_fluid_old = -self.lm_old * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)  # negative (n_solid = -n_fluid)
+            else:
+                raise ValueError("Unknown FSI kinematic coupling. Choose 'no_slip' or 'slip'.")
 
             # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
             # NOTE: We rather want the loads always at t_{n+1} to be consistent to the Neumann-Dirichlet scheme!
-            # self.pbs.weakform_u += self.pbs.timefac * self.work_coupling_solid + (1.0 - self.pbs.timefac) * self.work_coupling_solid_old
-            # self.pbf.weakform_v += -self.pbf.timefac * self.power_coupling_fluid - (1.0 - self.pbf.timefac) * self.power_coupling_fluid_old
             self.pbs.weakform_u += self.work_coupling_solid
             self.pbf.weakform_v += -self.power_coupling_fluid
 
-            if self.fsi_kinematic_quantity == "displacement":
-                self.weakform_l = ufl.dot(self.pbs.u, self.var_lm) * self.io.ds(self.io.interface_id_s) - ufl.dot(
-                    self.pbf.ufluid, self.var_lm
-                ) * self.io.ds(self.io.interface_id_f)
-            elif self.fsi_kinematic_quantity == "velocity":
-                self.weakform_l = ufl.dot(self.pbf.v, self.var_lm) * self.io.ds(self.io.interface_id_f) - ufl.dot(
-                    self.pbs.vel, self.var_lm
-                ) * self.io.ds(self.io.interface_id_s)
+            if self.fsi_kinematic_coupling=="no_slip":
+                if self.fsi_kinematic_quantity == "displacement":
+                    self.weakform_l = ufl.dot(self.pbs.u, self.var_lm) * self.io.ds(self.io.interface_id_s) - ufl.dot(
+                        self.pbf.ufluid, self.var_lm
+                    ) * self.io.ds(self.io.interface_id_f)
+                elif self.fsi_kinematic_quantity == "velocity":
+                    self.weakform_l = ufl.dot(self.pbf.v, self.var_lm) * self.io.ds(self.io.interface_id_f) - ufl.dot(
+                        self.pbs.vel, self.var_lm
+                    ) * self.io.ds(self.io.interface_id_s)
+                else:
+                    raise ValueError("Unknown FSI kinematic quantity. Choose 'displacement' or 'velocity'.")
+            elif self.fsi_kinematic_coupling=="slip":  # NOTE: n_solid = -n_fluid
+                if self.fsi_kinematic_quantity == "displacement":
+                    self.weakform_l = ufl.dot(self.pbs.u, self.pbs.io.n0) * self.var_lm * self.io.ds(self.io.interface_id_s) + ufl.dot(
+                        self.pbf.ufluid, self.pbf.io.n0
+                    ) * self.var_lm * self.io.ds(self.io.interface_id_f)
+                elif self.fsi_kinematic_quantity == "velocity":
+                    self.weakform_l = ufl.dot(self.pbf.v, self.pbf.io.n0) * self.var_lm * self.io.ds(self.io.interface_id_f) + ufl.dot(
+                        self.pbs.vel, self.pbs.io.n0
+                    ) * self.var_lm * self.io.ds(self.io.interface_id_s)
+                else:
+                    raise ValueError("Unknown FSI kinematic quantity. Choose 'displacement' or 'velocity'.")
             else:
-                raise ValueError("Unknown FSI kinematic quantity. Choose 'displacement' or 'velocity'.")
+                raise ValueError("Unknown FSI kinematic coupling. Choose 'no_slip' or 'slip'.")
 
             if self.fsi_interface_motion=="solid_governed":
                 self.usf_subvec = self.pbs.u.x.petsc_vec.getSubVector(self.fdofs_solid_global_sub)

@@ -2,7 +2,7 @@
 
 """
 FSI simulation of a 2D tank with flexible, forced lid
-Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier) - p1p1
+Monolithic Neumann-Neumann formulation (with Lagrange multiplier), solid governed - p1p1
 """
 
 import ambit_fe
@@ -27,7 +27,7 @@ def test_main():
     IO_PARAMS = {
         "problem_type": "fsi",
         "write_results_every": 1,
-        "write_restart_every": 2,
+        "write_restart_every": 8,
         "indicate_results_by": "step",
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
@@ -40,7 +40,7 @@ def test_main():
             ["aledisplacement"],
         ],
         "write_submeshes":True,
-        "simname": "fsi_p1p1_stabr_tank2d_neumann_dirichlet",
+        "simname": "fsi_p1p1_tank2d_solidgov_neumann_neumann",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -51,12 +51,12 @@ def test_main():
     SOLVER_PARAMS = {
         "solve_type": "direct",
         "direct_solver": "mumps",
-        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8],
-        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_res": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
+        "tol_inc": [1e-8, 1e-8, 1e-8, 1e-8, 1e-8],
     }
 
-    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
-    TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms":"midpoint"}
+    TIME_PARAMS_SOLID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
+    TIME_PARAMS_FLUID = {"timint": "genalpha", "rho_inf_genalpha": 0.8, "eval_nonlin_terms": "midpoint"}
 
     FEM_PARAMS_SOLID = {
         "order_disp": 1,
@@ -68,25 +68,23 @@ def test_main():
     FEM_PARAMS_FLUID = {"order_vel": 1,
                         "order_pres": 1,
                         "quad_degree": 5,
-                        'stabilization'  : {'scheme'         : 'supg_pspg',
-                                            'vscale'         : 1.0e1,
-                                            'dscales'        : [1.,1.,1.],
-                                            'symmetric'      : True,
-                                            'reduced_scheme' : True,
-                                            'vscale_vel_dep' : False}}
+                        "stabilization"  : {"scheme"         : "supg_pspg",
+                                            "vscale"         : 1.0e1,
+                                            "dscales"        : [1.,1.,1.],
+                                            "symmetric"      : True,
+                                            "reduced_scheme" : True,
+                                            "vscale_vel_dep" : False}}
 
     FEM_PARAMS_ALE = {"order_disp": 1, "quad_degree": 5}
 
-    # for testing purposes, we locate the interface by this function (could use id 3 instead...)
-    class locate_interf:
-        def evaluate(self, x):
-            return np.isclose(x[0], 0.0)
-
     COUPLING_PARAMS = {
-        "coupling_fsi": {"interface": [locate_interf()]}, # here test interface given by locator, instead of using id 3...
-        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
+        "coupling_fsi": {"interface": [3]},
+        "fsi_system": "neumann_neumann",
+        "fsi_interface_motion": "solid_governed",
+        "fsi_kinematic_coupling": "no_slip",
     }
 
+    # for testing purposes, we locate the solid by this function (could use id 1 instead...)
     class locate_solid:
         def evaluate(self, x):
             return (x[0] <= 0.0)
@@ -95,7 +93,7 @@ def test_main():
     nu = 0.3
     MATERIALS_SOLID = {"MAT1": {"neohooke_compressible": {"mu": E/(2.*(1.+nu)), "nu": nu},
                                 "inertia": {"rho0": 1.070e-6},
-                                "id": 1}}
+                                "id": locate_solid()}} # locator instead of id 1
 
     MATERIALS_FLUID = {"MAT1": {"newtonian": {"eta": 1.0e-6}, # kPas
                                 "inertia": {"rho": 1.0e-6}, # kg/mm^3
@@ -110,15 +108,35 @@ def test_main():
             pmax = 3.0 # kPa
             return -pmax * np.sin(2.*np.pi*t/Tp)
 
-    # NOTE: For the neumann_dirichlet case, if a solid/fluid dof of the FSI interface gets a DBC, the respective fluid/solid one needs the same, too!!!
 
-    BC_DICT_SOLID = {"neumann": [{"id": [1], "dir": "normal_cur", "curve": 1}],
+    # for testing purposes, we locate the left boundary by this function (could use id 1 instead...)
+    class locate_left:
+        def evaluate(self, x):
+            return np.isclose(x[0], -1.0)
+
+    BC_DICT_SOLID = {"neumann": [{"id": [locate_left()], "dir": "normal_cur", "curve": 1}],
         "dirichlet": [{"id": [2], "dir": "all", "val": 0.}],
         }
 
+    # for testing purposes, use these locators instead of mesh tags
+    class locate_top:
+        def evaluate(self, x):
+            return np.isclose(x[1], 10.0)
+    class locate_bottom:
+        def evaluate(self, x):
+            return np.isclose(x[1], 0.0)
+    class locate_right_outlet:
+        def evaluate(self, x):
+            return np.logical_and(np.isclose(x[0], 10.0), x[1] < 2.0)
+    class locate_right_wall:
+        def evaluate(self, x):
+            eps=1e-5
+            return np.logical_and(np.isclose(x[0], 10.0), x[1] >= 2.0-eps)
+
+
     BC_DICT_FLUID = {
-        "dirichlet": [{"id":[4], "dir": "all", "val": 0.}],
-        'stabilized_neumann' : [{'id' : [5], 'beta' : 0.2e-6, 'gamma' : 1.}]
+        "dirichlet": [{"id": [locate_top(),locate_bottom(),locate_right_wall()], "dir": "all", "val": 0.}],  # could use id 4 instead
+        "stabilized_neumann" : [{"id" : [locate_right_outlet()], "beta" : 0.2e-6, "gamma" : 1.}],  # could use id 5 instead
     }
 
     BC_DICT_ALE = {
@@ -127,6 +145,12 @@ def test_main():
         ]
     }
 
+    class locate_lm_zero:
+        def evaluate(self, x):
+            return np.logical_or(np.isclose(x[1], 0.0), np.isclose(x[1], 10.0))
+
+    BC_DICT_LM = {"dirichlet": [{"id": [locate_lm_zero()], "dir": "all", "val": 0.0}]}
+
     problem = ambit_fe.ambit_main.Ambit(
         IO_PARAMS,
         CONTROL_PARAMS,
@@ -134,7 +158,7 @@ def test_main():
         SOLVER_PARAMS,
         [FEM_PARAMS_SOLID, FEM_PARAMS_FLUID, FEM_PARAMS_ALE],
         [MATERIALS_SOLID, MATERIALS_FLUID, MATERIALS_ALE],
-        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE],
+        [BC_DICT_SOLID, BC_DICT_FLUID, BC_DICT_ALE, BC_DICT_LM],
         time_curves=time_curves(),
         coupling_params=COUPLING_PARAMS
     )
