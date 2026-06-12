@@ -256,6 +256,8 @@ class FSIProblem(problem_base):
     def set_variational_forms_residual_coupling(self):
         # fluid displacement, but defined on solid domain
         self.ufs = fem.Function(self.pbs.V_u)
+        # solid displacement, but defined on fluid domain - for solid-governed interface motion
+        self.usf = fem.Function(self.pbf.V_v)
 
         # fluid-governed interface motion - fluid sets DBCs on ALE
         if self.fsi_interface_motion=="fluid_governed":
@@ -285,11 +287,39 @@ class FSIProblem(problem_base):
             if "dirichlet" in self.pba.bc_dict.keys():
                 self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"], self.pba.dbcs)
             self.pbfa.have_dbc_fluid_ale = True
+        # solid-governed interface motion - solid sets DBCs on ALE
+        elif self.fsi_interface_motion=="solid_governed":
+            if all(isinstance(x, int) for x in self.coupling_fsi["interface"]):
+                ids_solid_ale = self.coupling_fsi["interface"]
+                nodes_solid_ale = fem.locate_dofs_topological(
+                    self.pba.V_d,
+                    self.pbf.mesh.topology.dim - 1,
+                    self.pbf.mt_b.indices[np.isin(self.pbf.mt_b.values, ids_solid_ale)],
+                )
+            else: # can only be locator function otherwise...
+                nodes_solid_ale_ = []
+                for lc in self.coupling_fsi["interface"]:
+                    nodes_solid_ale_.append(fem.locate_dofs_geometrical(self.pba.V_d, lc.evaluate))
+                nodes_solid_ale = np.concatenate(nodes_solid_ale_).ravel()
+            dbcs_coup_solid_ale = [fem.dirichletbc(self.pbfa.usa, nodes_solid_ale)]
+            # get surface dofs for dr_ALE/du matrix entry
+            self.pbfa.fdofs_solid_ale = meshutils.get_index_set(self.pba.V_d, self.comm, nodes_loc=nodes_solid_ale)
+            # now add the DBCs: pay attention to order... first d=u, then the others... hence re-set!
+            # store DBCs without those from solid
+            self.pba.dbcs_nosolid = []
+            for k in self.pba.dbcs:
+                self.pba.dbcs_nosolid.append(k)
+            self.pba.dbcs = []
+            self.pba.dbcs += dbcs_coup_solid_ale
+            # Dirichlet boundary conditions
+            if "dirichlet" in self.pba.bc_dict.keys():
+                self.pba.bc.dirichlet_bcs(self.pba.bc_dict["dirichlet"], self.pba.dbcs)
+            self.pbfa.have_dbc_solid_ale = True
         else:
-            raise ValueError("Solid-governed interface motion not yet implemented!")
+            raise ValueError("Unknown FSI interface motion! Choose 'fluid_governed' or 'solid_governed'.")
 
         # establish dof mappings from fluid to solid
-        if self.fsi_system=="neumann_dirichlet":
+        if self.fsi_system=="neumann_dirichlet" or self.fsi_interface_motion=="solid_governed":
             # get global correspondence array of solid and fluid interface nodes
             self.fluid_to_solid_mapping()
             # get vector block sizes
@@ -343,6 +373,9 @@ class FSIProblem(problem_base):
                 ) * self.io.ds(self.io.interface_id_s)
             else:
                 raise ValueError("Unknown FSI kinematic coupling. Choose 'displacement' or 'velocity'.")
+
+            if self.fsi_interface_motion=="solid_governed":
+                self.usf_subvec = self.pbs.u.x.petsc_vec.getSubVector(self.fdofs_solid_global_sub)
 
         elif self.fsi_system == "neumann_dirichlet":
             self.dbcs_coup_fluid_solid = []
@@ -485,17 +518,7 @@ class FSIProblem(problem_base):
                 self.K_ll.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, False)
             self.K_ll.assemble()
 
-        if self.fsi_system == "neumann_dirichlet":
-            # solid reaction forces
-            self.r_reac_sol = fem.petsc.assemble_vector(self.pbs.res_u)
-            with self.r_reac_sol.localForm() as r_local: r_local.set(0.0)
-            # reaction forces on fluid side
-            self.r_reac_on_fluid = fem.petsc.assemble_vector(self.pbf.res_v)
-            with self.r_reac_on_fluid.localForm() as r_local: r_local.set(0.0)
-
-            # get interface solid rhs vector
-            self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
-
+        if self.fsi_system == "neumann_dirichlet" or self.fsi_interface_motion=="solid_governed":
             # set up matrix that contains 1's at distinct row-column pairs
             self.Diag_sol = PETSc.Mat().createAIJ(
                 (self.pbs.K_uu.getSizes()[0],self.pbf.K_vv.getSizes()[0]),
@@ -506,11 +529,21 @@ class FSIProblem(problem_base):
             )
             self.Diag_sol.setUp()
 
-            rstart, rend = self.Diag_sol.getOwnershipRange()
             # now only set the 1's at surface dofs
             for i, j in zip(self.rows_fs, self.cols_fs):
                 self.Diag_sol.setValue(i, j, 1.0, addv=PETSc.InsertMode.INSERT)
             self.Diag_sol.assemble()
+
+        if self.fsi_system == "neumann_dirichlet":
+            # solid reaction forces
+            self.r_reac_sol = fem.petsc.assemble_vector(self.pbs.res_u)
+            with self.r_reac_sol.localForm() as r_local: r_local.set(0.0)
+            # reaction forces on fluid side
+            self.r_reac_on_fluid = fem.petsc.assemble_vector(self.pbf.res_v)
+            with self.r_reac_on_fluid.localForm() as r_local: r_local.set(0.0)
+
+            # get interface solid rhs vector
+            self.r_u_interface = self.r_reac_sol.getSubVector(self.fdofs_solid_global_sub)
 
             # create from solid matrix and only keep the necessary columns
             # need to assemble here to get correct sparsity pattern when doing the column product
@@ -539,6 +572,17 @@ class FSIProblem(problem_base):
                 addv=PETSc.InsertMode.INSERT,
             )
             self.Ifo.assemble()
+
+        if self.fsi_interface_motion=="solid_governed":
+            # copy Diag_sol for transpose ... avoid later matTransposeMult but form the transpose beforehand!
+            self.DiagT_sol = self.Diag_sol.copy()
+            self.DiagT_sol.transpose()
+
+            self.K_dd_work = fem.petsc.assemble_matrix(self.pba.jac_dd, self.pba.dbcs_nosolid)
+            self.K_dd_work.assemble()
+            self.K_du = self.K_dd_work.matMult(self.DiagT_sol)
+
+            self.K_du.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)  # needed so that zeroRows does not change it!
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -592,6 +636,9 @@ class FSIProblem(problem_base):
             self.r_l.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
             fem.set_bc(self.r_l, self.dbcs_lm, x0=self.lm.x.petsc_vec, alpha=-1.0)
 
+        if self.fsi_interface_motion=="solid_governed":
+            self.evaluate_residual_dbc_coupling_solid_ale()
+
     def assemble_stiffness(self, t, subsolver=None):
         if self.pbs.incompressible_2field:
             ofs = 1
@@ -644,7 +691,10 @@ class FSIProblem(problem_base):
 
         # ALE
         self.K_list[3 + ofc + ofs][3 + ofc + ofs] = self.pbfa.K_list[2][2]   # w.r.t. ALE displacement
-        self.K_list[3 + ofc + ofs][1 + ofs] = self.pbfa.K_list[2][0]  # w.r.t. fluid velocity
+        if self.fsi_interface_motion=="fluid_governed":
+            self.K_list[3 + ofc + ofs][1 + ofs] = self.pbfa.K_list[2][0]  # w.r.t. fluid velocity
+        if self.fsi_interface_motion=="solid_governed":
+            self.K_list[3 + ofc + ofs][0] = self.K_du  # w.r.t. solid displacement
 
     def assemble_stiffness_coupling(self, t, subsolver=None):
         if self.fsi_system == "neumann_neumann":
@@ -708,6 +758,21 @@ class FSIProblem(problem_base):
                 self.Diag_sol.transposeMatMult(self.K_up_work, result=self.K_vps)
                 self.K_vps.assemble()
 
+        if self.fsi_interface_motion=="solid_governed":
+            # do stiffness from Dirichlet conditions solid-to-ALE
+            self.K_dd_work.zeroEntries()
+            fem.petsc.assemble_matrix(self.K_dd_work, self.pba.jac_dd, self.pba.dbcs_nosolid)  # need DBCs w/o solid here
+            self.K_dd_work.assemble()
+            # multiply to get the relevant columns only
+            self.K_dd_work.matMult(self.DiagT_sol, result=self.K_du)
+
+            # zero rows where DBC is applied and set interface entries to -1
+            self.K_du.zeroRows(self.cols_fs, diag=0.0)
+
+            for i, j in zip(self.cols_fs, self.rows_fs):
+                self.K_du.setValue(i, j, -1.0, addv=PETSc.InsertMode.INSERT)
+            self.K_du.assemble()
+
     def evaluate_residual_dbc_coupling(self):
         # we need a vector representation of ufluid to apply in solid DBCs
         self.pbf.ti.update_varint(
@@ -750,6 +815,19 @@ class FSIProblem(problem_base):
 
         # add solid residual to fluid
         self.pbf.r_v.axpy(1.0, self.r_reac_on_fluid)
+
+    def evaluate_residual_dbc_coupling_solid_ale(self):
+        # overwrite interface dofs with u
+        self.pbs.u.x.petsc_vec.getSubVector(self.fdofs_solid_global_sub, subvec=self.usf_subvec)
+        self.usf.x.petsc_vec.setValues(self.fdofs_fluid_global_sub, self.usf_subvec.array)
+        self.pbs.u.x.petsc_vec.restoreSubVector(self.fdofs_solid_global_sub, subvec=self.usf_subvec)
+        self.usf.x.petsc_vec.assemble()
+
+        self.usf.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+        # now updated the ALE problem's usa vector
+        self.pbfa.usa.x.petsc_vec.axpby(1.0, 0.0, self.usf.x.petsc_vec)
+        self.pbfa.usa.x.petsc_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     def get_solver_index_sets(self, isoptions={}, blocked=False):
         if self.rom is not None:  # currently, ROM can only be on (subset of) first variable
@@ -926,7 +1004,6 @@ class FSIProblem(problem_base):
         dist, idx = tree.query(xf, distance_upper_bound=1e-6)
         if np.isinf(dist).any():
             raise RuntimeError("Unmatched fluid interface dofs")
-
         solid_of_fluid = gs[idx]
         fluid_glob = gf
 

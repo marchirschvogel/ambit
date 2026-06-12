@@ -2,7 +2,7 @@
 
 """
 FSI simulation of a 2D tank with flexible, forced lid
-Monolithic Neumann-Neumann formulation (with Lagrange multiplier), fluid governed - p1p1
+Monolithic Neumann-Neumann formulation (with Lagrange multiplier), solid governed - p1p1
 """
 
 import ambit_fe
@@ -18,10 +18,18 @@ import pytest
 def test_main():
     basepath = str(Path(__file__).parent.absolute())
 
+    # reads in restart step from the command line
+    try:
+        restart_step = int(sys.argv[1])
+    except:
+        restart_step = 0
+
     IO_PARAMS = {
         "problem_type": "fsi",
         "write_results_every": 1,
+        "write_restart_every": 8,
         "indicate_results_by": "step",
+        "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "mesh_domain": basepath + "/input/tank2d_domain.xdmf",
         "mesh_boundary": basepath + "/input/tank2d_boundary.xdmf",
@@ -32,7 +40,7 @@ def test_main():
             ["aledisplacement"],
         ],
         "write_submeshes":True,
-        "simname": "fsi_p1p1_stabr_tank2d_fluidgov_neumann_neumann",
+        "simname": "fsi_p1p1_stabr_tank2d_neumann_neumann",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0,
@@ -72,7 +80,7 @@ def test_main():
     COUPLING_PARAMS = {
         "coupling_fsi": {"interface": [3]},
         "fsi_system": "neumann_neumann",
-        "fsi_interface_motion": "fluid_governed",
+        "fsi_interface_motion": "solid_governed",
     }
 
     # for testing purposes, we locate the solid by this function (could use id 1 instead...)

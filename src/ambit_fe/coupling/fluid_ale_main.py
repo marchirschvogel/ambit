@@ -55,7 +55,7 @@ class FluidmechanicsAleProblem(problem_base):
         ioparams.check_params_coupling_fsi_fluid_ale(coupling_params)
 
         self.problem_physics = "fluid_ale"
-        self.have_dbc_fluid_ale, self.have_dbc_ale_fluid = False, False
+        self.have_dbc_fluid_ale, self.have_dbc_ale_fluid, self.have_dbc_solid_ale = False, False, False
 
         # instantiate problem classes
         # fluid
@@ -119,6 +119,8 @@ class FluidmechanicsAleProblem(problem_base):
 
         # fluid displacement, but defined within ALE function space
         self.ufa = fem.Function(self.pba.V_d)
+        # solid displacement, but defined within ALE function space
+        self.usa = fem.Function(self.pba.V_d)
         # ALE velocity, but defined within fluid function space
         self.wf = fem.Function(self.pbf.V_v)
 
