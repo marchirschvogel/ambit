@@ -385,8 +385,8 @@ class FluidmechanicsProblem(problem_base):
             comm=self.comm,
         )
 
-        # continuity should be at midpoint for consistent time-integration in multi-phase flow
-        if self.is_multiphase and self.ti.timint != "bdf2":
+        # continuity should be at midpoint for consistent time-integration in multi-phase flow, when conservative mass formulation is used...
+        if self.is_multiphase and self.ti.res_eval != "back" and self.mass_formulation == "conservative_mass":
             assert(self.ti.continuity_at_midpoint)
 
         # if shear + volumetric strain rate should be used in constitutive model - required for multiphase and/or compressible flows
@@ -2598,7 +2598,7 @@ class FluidmechanicsProblem(problem_base):
 
     def chi_clipped(self, phi, a, b, eps, smooth_clip=None):
         chi = (phi - a) / (b - a)
-
+        # hard transition with kinks - may cause problems in Newton!
         if smooth_clip is None:
             return ufl.conditional(
                 ufl.lt(phi, a),
@@ -2648,6 +2648,7 @@ class FluidmechanicsProblem(problem_base):
                         )
                     )
                 )
+            # optimally smooth at transitions, but steeper (and hence stiffer) in interface zone
             elif smooth_clip=="cos":
                 return ufl.conditional(
                     ufl.lt(phi, a),
@@ -2658,6 +2659,31 @@ class FluidmechanicsProblem(problem_base):
                         0.5*(1.0 - ufl.cos(np.pi*(phi-a)/(b-a)))
                     )
                 )
+            # smoothes outside of linear transition region - ATTENTION: Too large epsilons give too slow density transitions to desired values away from interface zone!
+            elif smooth_clip=="quad":
+                m = 1.0 / (b - a)
+
+                chi_lower_quad = m / (4.0 * eps) * (phi - (a - eps))**2
+                chi_upper_quad = 1.0 - m / (4.0 * eps) * ((b + eps) - phi)**2
+
+                return ufl.conditional(
+                    ufl.le(phi, a - eps),
+                    0.0,
+                    ufl.conditional(
+                        ufl.le(phi, a + eps),
+                        chi_lower_quad,
+                        ufl.conditional(
+                            ufl.le(phi, b - eps),
+                            chi,
+                            ufl.conditional(
+                                ufl.le(phi, b + eps),
+                                chi_upper_quad,
+                                1.0,
+                            ),
+                        ),
+                    ),
+                )
+
             else:
                 raise ValueError("Unknown smooth method. Choose 'cos', 'cubic', or 'quintic'!")
 

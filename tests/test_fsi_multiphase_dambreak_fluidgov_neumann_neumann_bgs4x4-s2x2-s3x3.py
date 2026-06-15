@@ -230,11 +230,11 @@ def test_main():
     )
 
     # correct results
-    u_corr[0] = 6.7877923147948976E-06  # x
-    u_corr[1] = -6.2843291478007618E-05  # y
+    u_corr[0] = 6.7821621543757800E-06  # x
+    u_corr[1] = -6.2847293228190552E-05  # y
 
-    v_corr[0] = 6.5574063709840369E-04  # x
-    v_corr[1] = -3.9248433337860503E-02  # y
+    v_corr[0] = 6.5011753141286453E-04  # x
+    v_corr[1] = -3.9252357028610879E-02  # y
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbs.u,

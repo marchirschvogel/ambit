@@ -325,9 +325,9 @@ class variationalform_ale(variationalform):
             else:
                 rhodot_ = ufl.as_ufl(0)
             """ TeX:
-            \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho((\boldsymbol{v}-\widehat{\boldsymbol{w}})\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
+            \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes(\boldsymbol{v}-\widehat{\boldsymbol{w}}))\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v - w, v)*ufl.inv(F).T), self.var_v) * ddomain
+            return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T), self.var_v) * ddomain
         else:
             raise ValueError("Unknown fluid formulation! Choose either 'nonconservative' or 'conservative'.")
 
@@ -364,9 +364,9 @@ class variationalform_ale(variationalform):
             else:
                 rhodot_ = ufl.as_ufl(0)
             """ TeX:
-            \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho((-\widehat{\boldsymbol{w}})\otimes\boldsymbol{v})\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
+            \int\limits_{\mathit{\Omega}_0}\left(\left.\frac{\partial(\widehat{J}\rho\boldsymbol{v})}{\partial t}\right|_{\boldsymbol{x}_0} + \nabla_0\cdot\left(\widehat{J}\rho(\boldsymbol{v}\otimes(-\widehat{\boldsymbol{w}}))\widehat{\boldsymbol{F}}^{-\mathrm{T}}\right)\right)\cdot\delta \boldsymbol{v}\,\mathrm{d}V
             """
-            return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(-w, v)*ufl.inv(F).T), self.var_v) * ddomain
+            return ufl.dot((J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T), self.var_v) * ddomain
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -440,7 +440,7 @@ class variationalform_ale(variationalform):
                 rhodot_ = ufl.diff(rho_,phi[0]) * phidot
             else:
                 rhodot_ = ufl.as_ufl(0)
-            return (J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v - w, v)*ufl.inv(F).T)
+            return (J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, v - w)*ufl.inv(F).T)
         else:
             raise ValueError("Unknown fluid formulation!")
 
@@ -467,7 +467,7 @@ class variationalform_ale(variationalform):
                 rhodot_ = ufl.diff(rho_,phi[0]) * phidot
             else:
                 rhodot_ = ufl.as_ufl(0)
-            return (J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(-w, v)*ufl.inv(F).T)
+            return (J*rhodot_ + rho_*Jdot)*v + J*rho_*a + ufl.div(J*rho_*ufl.outer(v, -w)*ufl.inv(F).T)
         else:
             raise ValueError("Unknown fluid formulation!")
 

@@ -186,13 +186,13 @@ def test_main():
     phi_corr, mu_corr = np.zeros(len(check_node)), np.zeros(len(check_node))
 
     # correct results
-    v_corr[0] = 1.3283696714290996E+00  # x
-    v_corr[1] = -7.0861356569952116E-04  # y
+    v_corr[0] = 1.3283885814488601E+00  # x
+    v_corr[1] = 8.3487189383979645E-05  # y
 
-    p_corr[0] = -4.4453693376104993E+03
+    p_corr[0] = -4.4403478275341013E+03
 
-    phi_corr[0] = -2.1751476100226361E-01
-    mu_corr[0] = 1.1267590276986035E+00
+    phi_corr[0] = -2.1743423291068723E-01
+    mu_corr[0] = 1.5964468799173575E+00
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,
