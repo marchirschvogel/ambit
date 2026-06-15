@@ -349,23 +349,23 @@ class FSIProblem(problem_base):
             self.cols_fs = self.fdofs_fluid_global_sub.getIndices()
 
         if self.fsi_system == "neumann_neumann":
-            if self.fsi_kinematic_coupling=="no_slip":
+            if self.fsi_kinematic_coupling=="no_slip":  # positive on solid, negative on fluid (actio = reactio)
                 self.work_coupling_solid = ufl.dot(self.lm, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
                 self.work_coupling_solid_old = ufl.dot(self.lm_old, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-                self.power_coupling_fluid = ufl.dot(self.lm, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
-                self.power_coupling_fluid_old = ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
-            elif self.fsi_kinematic_coupling=="slip":
+                self.power_coupling_fluid = -ufl.dot(self.lm, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+                self.power_coupling_fluid_old = -ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+            elif self.fsi_kinematic_coupling=="slip":  # all positive: actio = reactio, but n_solid = -n_fluid, so negative sign cancels...
                 self.work_coupling_solid = self.lm * ufl.dot(self.pbs.io.n0, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
                 self.work_coupling_solid_old = self.lm_old * ufl.dot(self.pbs.io.n0, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-                self.power_coupling_fluid = -self.lm * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)  # negative (n_solid = -n_fluid)
-                self.power_coupling_fluid_old = -self.lm_old * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)  # negative (n_solid = -n_fluid)
+                self.power_coupling_fluid = self.lm * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+                self.power_coupling_fluid_old = self.lm_old * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
             else:
                 raise ValueError("Unknown FSI kinematic coupling. Choose 'no_slip' or 'slip'.")
 
             # add to solid and fluid virtual work/power (no contribution to Jacobian, since lambda is a PK1 traction)
             # NOTE: We rather want the loads always at t_{n+1} to be consistent to the Neumann-Dirichlet scheme!
             self.pbs.weakform_u += self.work_coupling_solid
-            self.pbf.weakform_v += -self.power_coupling_fluid
+            self.pbf.weakform_v += self.power_coupling_fluid
 
             if self.fsi_kinematic_coupling=="no_slip":
                 if self.fsi_kinematic_quantity == "displacement":
@@ -470,10 +470,8 @@ class FSIProblem(problem_base):
             self.weakform_lin_lu = ufl.derivative(self.weakform_l, self.pbs.u, self.pbs.du)
             self.weakform_lin_lv = ufl.derivative(self.weakform_l, self.pbf.v, self.pbf.dv)
 
-            # self.weakform_lin_ul = self.pbs.timefac * ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
-            # self.weakform_lin_vl = -self.pbf.timefac * ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
             self.weakform_lin_ul = ufl.derivative(self.work_coupling_solid, self.lm, self.dlm)
-            self.weakform_lin_vl = -ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
+            self.weakform_lin_vl = ufl.derivative(self.power_coupling_fluid, self.lm, self.dlm)
 
             # for DBC application to LM, even if zero...
             self.weakform_lin_ll = ufl.derivative(self.weakform_l, self.lm, self.dlm)
@@ -1128,7 +1126,7 @@ class FSISolver(solver_base):
                     self.pb.pbs.deltaW_kin_old
                     + self.pb.pbs.deltaW_int_old
                     - self.pb.pbs.deltaW_ext_old
-                    + self.pb.work_coupling_solid_old # TODO: check sign!
+                    + self.pb.work_coupling_solid_old
                 )
 
             weakform_lin_aa_solid = ufl.derivative(
@@ -1169,7 +1167,7 @@ class FSISolver(solver_base):
                     self.pb.pbf.deltaW_kin_old
                     + self.pb.pbf.deltaW_int_old
                     - self.pb.pbf.deltaW_ext_old
-                    - self.pb.power_coupling_fluid_old # TODO: check sign!
+                    + self.pb.power_coupling_fluid_old
                 )
 
             weakform_lin_aa_fluid = ufl.derivative(
