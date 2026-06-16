@@ -971,7 +971,7 @@ class solver_nonlinear:
         else:
             if not self.ignore_unconverged:
                 self.pb[npr].destroy()
-                raise RuntimeError("Newton did not converge after %i iterations!" % (it))
+                raise RuntimeError("Newton did not converge after %i iterations! Simulation '%s' failed!" % (it, self.pb[npr].pbase.simname))
             else: # use with care...
                 if any(err):
                     self.pb[npr].destroy()
@@ -1126,7 +1126,7 @@ class solver_nonlinear:
                 break
 
         else:
-            raise RuntimeError("Local Newton did not converge after %i iterations!" % (it_local))
+            raise RuntimeError("Local Newton did not converge after %i iterations! Simulation '%s' failed!" % (it_local, self.pb[0].pbase.simname))
 
     def destroy(self):
         for npr in range(self.nprob):
