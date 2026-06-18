@@ -662,7 +662,7 @@ class solver_nonlinear:
                 localdata["fnc"][l],
             )
 
-    def newton(self, t, localdata={}):
+    def newton(self, t, N, localdata={}):
         # set start vectors
         for npr in range(self.nprob):
             for n in range(self.nfields[npr]):
@@ -971,7 +971,7 @@ class solver_nonlinear:
         else:
             if not self.ignore_unconverged:
                 self.pb[npr].destroy()
-                raise RuntimeError("Newton did not converge after %i iterations! Simulation '%s' failed!" % (it, self.pb[npr].pbase.simname))
+                raise RuntimeError("Newton did not converge after %i iterations! Simulation '%s' failed in time step %i." % (it, self.pb[npr].pbase.simname, N))
             else: # use with care...
                 if any(err):
                     self.pb[npr].destroy()
@@ -1212,7 +1212,7 @@ class solver_nonlinear_ode(solver_nonlinear):
         # solution increment
         self.del_s = self.pb.K.createVecLeft()
 
-    def newton(self, t, print_iter=True, sub=False):
+    def newton(self, t, N, print_iter=True, sub=False):
         # Newton iteration index
         it = 0
 
@@ -1306,7 +1306,7 @@ class solver_nonlinear_ode(solver_nonlinear):
     def solver_error(self, cp=None):
         if cp is not None:
             cp.destroy()
-        raise RuntimeError("Newton for ODE system did not converge!")
+        raise RuntimeError("Newton for ODE system did not converge! Simulation '%s' failed!" % (self.pb.pbase.simname))
 
     def destroy(self):
         self.del_s.destroy()

@@ -552,8 +552,8 @@ class FluidmechanicsMultiphaseSolver(solver_base):
         #     te = time.time() - ts
         #     utilities.print_status("t = %.4f s" % (te), self.pb.pbase.comm)
 
-    def solve_nonlinear_problem(self, t):
-        self.solnln.newton(t)
+    def solve_nonlinear_problem(self, t, N):
+        self.solnln.newton(t, N)
 
     def print_timestep_info(self, N, t, ni, li, wt):
         # print time step info to screen

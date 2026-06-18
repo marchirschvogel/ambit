@@ -2863,8 +2863,8 @@ class FluidmechanicsSolver(solver_base):
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
-    def solve_nonlinear_problem(self, t):
-        self.solnln.newton(t)
+    def solve_nonlinear_problem(self, t, N):
+        self.solnln.newton(t, N)
 
     def print_timestep_info(self, N, t, ni, li, wt):
         # print time step info to screen
@@ -2883,7 +2883,7 @@ class FluidmechanicsSolver(solver_base):
 
             self.pb.ti.set_time_funcs_pre(tprestr)
 
-            self.solnln.newton(tprestr)
+            self.solnln.newton(tprestr, N)
 
             # update uf_pre
             self.pb.ki.prestress_update(self.pb.prestress_dt, self.pb.v.x.petsc_vec)

@@ -181,7 +181,7 @@ class solver_base:
     def print_timestep_info(self):
         raise RuntimeError("Problem solver misses function implementation!")
 
-    def solve_nonlinear_problem(self, t):
+    def solve_nonlinear_problem(self, t, N):
         raise RuntimeError("Problem solver misses function implementation!")
 
     def solve_problem(self):
@@ -216,7 +216,7 @@ class solver_base:
             self.pb.evaluate_pre_solve(t, N, self.pb.pbase.dt)
 
             # solve the nonlinear problem
-            self.solve_nonlinear_problem(t)
+            self.solve_nonlinear_problem(t, N)
 
             # any post-solve evaluates
             self.pb.evaluate_post_solve(t, N)

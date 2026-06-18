@@ -604,7 +604,7 @@ class SolidmechanicsFlow0DProblem(problem_base):
                 # only have rank 0 solve the ODE, then broadcast solution
                 err = -1
                 if self.comm.rank == 0:
-                    err = subsolver.newton(t, print_iter=self.print_subiter, sub=True)
+                    err = subsolver.newton(t, None, print_iter=self.print_subiter, sub=True)
                 self.comm.Barrier()
                 # need to broadcast to all cores
                 err = self.comm.bcast(err, root=0)
@@ -696,12 +696,12 @@ class SolidmechanicsFlow0DProblem(problem_base):
 
             ls, le = self.K_lm.getOwnershipRange()
 
-            # finite differencing for LM siffness matrix
+            # finite differencing for LM siffness matrix - TODO: Move to analytical stiffness (adjoint-like)
             if subsolver is not None:
                 for i in range(ls, le):  # row-owning rank calls the ODE solver
                     for j in range(self.num_coupling_surf):
                         self.pb0.c[self.pb0.cardvasc0D.c_ids[j]] = LM_sq[j] + self.eps_fd  # perturbed LM
-                        subsolver.newton(t, print_iter=False, sub=True)
+                        subsolver.newton(t, None, print_iter=False, sub=True)
                         val = (
                             -(self.pb0.s[self.pb0.cardvasc0D.v_ids[i]] - self.pb0.s_tmp[self.pb0.cardvasc0D.v_ids[i]])
                             / self.eps_fd
@@ -1139,8 +1139,8 @@ class SolidmechanicsFlow0DSolver(solver_base):
             te = time.time() - ts
             utilities.print_status("t = %.4f s" % (te), self.pb.comm)
 
-    def solve_nonlinear_problem(self, t):
-        self.solnln.newton(t, localdata=self.pb.pbs.localdata)
+    def solve_nonlinear_problem(self, t, N):
+        self.solnln.newton(t, N, localdata=self.pb.pbs.localdata)
 
     def print_timestep_info(self, N, t, ni, li, wt):
         # print time step info to screen

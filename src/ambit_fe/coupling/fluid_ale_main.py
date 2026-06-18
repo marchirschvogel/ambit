@@ -679,8 +679,8 @@ class FluidmechanicsAleSolver(solver_base):
         else:
             raise ValueError("Unknown fluid-ALE coupling strategy! Choose either 'monolithic' or 'partitioned'.")
 
-    def solve_nonlinear_problem(self, t):
-        self.solnln.newton(t)
+    def solve_nonlinear_problem(self, t, N):
+        self.solnln.newton(t, N)
 
     def print_timestep_info(self, N, t, ni, li, wt):
         # print time step info to screen
