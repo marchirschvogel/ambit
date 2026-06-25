@@ -129,12 +129,13 @@ class solver_nonlinear:
                 self.offsetarr[npr].append(off)
 
         self.del_x, self.del_x_rom, self.x_start = [], [], []
-        self.del_x_sol = [[]] * self.nprob
+        self.del_x_sol, self.del_x_sol_prev = [[]] * self.nprob, []
 
         for npr in range(self.nprob):
             self.del_x.append([[]] * self.nfields[npr])
             self.x_start.append([[]] * self.nfields[npr])
             self.del_x_rom.append([[]] * self.nfields[npr])
+            self.del_x_sol_prev.append([[]] * self.nfields[npr])
 
         for npr in range(self.nprob):
             for n in range(self.nfields[npr]):
@@ -158,6 +159,9 @@ class solver_nonlinear:
                 self.del_x_sol[npr] = self.del_x_rom[npr]
             else:
                 self.del_x_sol[npr] = self.del_x[npr]
+            # for advanced detections of converge problems (e.g., zig-zagging, ...)
+            for n in range(self.nfields[npr]):
+                self.del_x_sol_prev[npr][n] = self.del_x_sol[npr][n].copy()
 
         self.initialize_petsc_solver()
 
@@ -168,11 +172,13 @@ class solver_nonlinear:
         self.cp = cp
 
     def set_solver_params(self, solver_params):
-        self.maxiter = solver_params.get("maxiter", 25)
+        self.maxiter_initial = solver_params.get("maxiter", 25)
+        self.maxiter = self.maxiter_initial
         # BEGIN: PTC settings
         self.divcont = solver_params.get("divergence_continue", None)
         self.ptc = solver_params.get("ptc", False)
         self.k_ptc_initial = solver_params.get("k_ptc_initial", 0.1)
+        self.k_ptc_min = solver_params.get("k_ptc_min", 0.0)
         self.ptc_randadapt_range = solver_params.get("ptc_randadapt_range", [0.85, 1.35])
         self.ptc_maxresval = solver_params.get("catch_max_res_value", 1e16)
         self.ptc_maxincval = solver_params.get("catch_max_inc_value", 1e16)
@@ -183,6 +189,7 @@ class solver_nonlinear:
         self.direct_solver = solver_params.get("direct_solver", "mumps")
         self.iterative_solver = solver_params.get("iterative_solver", "gmres")
         self.ignore_unconverged = solver_params.get("ignore_unconverged", False)
+        self.detect_zig_zagging = solver_params.get("detect_zig_zagging", False)  # not implemented!
 
         precond_fields = solver_params.get("precond_fields", [[]])
 
@@ -696,7 +703,7 @@ class solver_nonlinear:
 
         it += 1
 
-        while it < self.maxiter and counter_adapt < max_adapt:
+        while it < self.maxiter+1 and counter_adapt < max_adapt:
             converged, err, linconv = [], [], 1
 
             # problem loop (in case of partitioned solves)
@@ -897,7 +904,7 @@ class solver_nonlinear:
 
                 # for PTC - scale k_ptc with ratio of current to previous residual norm
                 if self.ptc:
-                    k_ptc *= self.resnorms[npr]["res"+str(self.ptc_field+1)] / res_norm_main_last
+                    k_ptc = max(self.k_ptc_min, k_ptc * self.resnorms[npr]["res"+str(self.ptc_field+1)] / res_norm_main_last)
 
                 # adaptive PTC
                 if self.divcont == "ptc":
@@ -971,7 +978,7 @@ class solver_nonlinear:
         else:
             if not self.ignore_unconverged:
                 self.pb[npr].destroy()
-                raise RuntimeError("Newton did not converge after %i iterations! Simulation '%s' failed in time step %i." % (it, self.pb[npr].pbase.simname, N))
+                raise RuntimeError("Newton did not converge after %i iterations! Simulation '%s' failed in time step %i." % (it-1, self.pb[npr].pbase.simname, N))
             else: # use with care...
                 if any(err):
                     self.pb[npr].destroy()
@@ -1239,7 +1246,7 @@ class solver_nonlinear_ode(solver_nonlinear):
 
         it += 1
 
-        while it < self.maxiter:
+        while it < self.maxiter+1:
             tes = time.time()
 
             # compute Jacobian
