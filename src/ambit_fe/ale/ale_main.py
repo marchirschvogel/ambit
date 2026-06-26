@@ -63,6 +63,8 @@ class AleProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_ale]
         self.num_domains = self.io.num_domains[self.io.m_id_ale]
         self.mesh = self.io.mesh_[self.io.m_id_ale]
+        # set mesh fields (normal, etc.)
+        self.mesh_fields = self.io.set_mesh_fields(self.mesh)
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_ale], self.io.mt_b_[self.io.m_id_ale], self.io.mt_sb_[self.io.m_id_ale]
         # global measures for weak BCs
@@ -192,7 +194,7 @@ class AleProblem(problem_base):
         )
 
         # initialize kinematics_constitutive class
-        self.ki = ale_kinematics_constitutive.kinematics(self.dim, elem_metrics={"jac_det": self.io.detj0})
+        self.ki = ale_kinematics_constitutive.kinematics(self.dim, elem_metrics={"jac_det": self.mesh_fields["detj0"]})
 
         # initialize material/constitutive classes (one per domain)
         self.ma = []
@@ -202,7 +204,7 @@ class AleProblem(problem_base):
             )
 
         # initialize ALE variational form class
-        self.vf = ale_variationalform.variationalform(tstfnc1=self.var_d, n0=self.io.n0, ro0=self.io.ro0)
+        self.vf = ale_variationalform.variationalform(tstfnc1=self.var_d, n0=self.mesh_fields["n0"], ro0=self.mesh_fields["ro0"])
 
         # set form for domain velocity
         self.wel = self.ti.set_wel(self.d, self.d_old, self.d_veryold, self.w_old)

@@ -85,7 +85,6 @@ class Ambit:
             io = ioroutines.IO_solid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_solid = 0
 
             io.mesh_ = [io.mesh]
@@ -115,7 +114,6 @@ class Ambit:
             io = ioroutines.IO_fluid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid = 0
 
             io.mesh_ = [io.mesh]
@@ -145,7 +143,6 @@ class Ambit:
             io = ioroutines.IO_ale(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_ale = 0
 
             io.mesh_ = [io.mesh]
@@ -175,7 +172,6 @@ class Ambit:
             io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid, io.m_id_ale = 0, 0
 
             io.mesh_ = [io.mesh, io.mesh]
@@ -209,7 +205,6 @@ class Ambit:
             io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid, io.m_id_ale = 0, 0
 
             io.mesh_ = [io.mesh, io.mesh]
@@ -245,7 +240,6 @@ class Ambit:
             io = ioroutines.IO_fluid_multiphase(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid, io.m_id_phase = 0, 0
 
             io.mesh_ = [io.mesh]
@@ -280,7 +274,6 @@ class Ambit:
             io = ioroutines.IO_fluid_ale_multiphase(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid, io.m_id_phase, io.m_id_ale = 0, 0, 0
 
             io.mesh_ = [io.mesh]
@@ -326,7 +319,6 @@ class Ambit:
             io = ioroutines.IO_solid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_solid = 0
 
             io.mesh_ = [io.mesh]
@@ -360,7 +352,6 @@ class Ambit:
             io = ioroutines.IO_solid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_solid = 0
 
             io.mesh_ = [io.mesh]
@@ -393,7 +384,6 @@ class Ambit:
             io = ioroutines.IO_fluid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid = 0
 
             io.mesh_ = [io.mesh]
@@ -428,7 +418,6 @@ class Ambit:
             io = ioroutines.IO_solid(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_solid = 0
 
             io.mesh_ = [io.mesh]
@@ -465,7 +454,6 @@ class Ambit:
             io.readin_mesh()
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
             io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params["coupling_fsi"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
             io.create_submeshes()
             io.m_id_solid, io.m_id_fluid, io.m_id_ale = 0, 1, 1
 
@@ -511,7 +499,6 @@ class Ambit:
             io.readin_mesh()
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
             io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params[0]["coupling_fsi"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
             io.create_submeshes()
             io.m_id_solid, io.m_id_fluid, io.m_id_ale = 0, 1, 1
 
@@ -559,7 +546,6 @@ class Ambit:
             io.readin_mesh()
             assert(fem_params[0]["quad_degree"]==fem_params[1]["quad_degree"])  # in FSI, these should be the same...
             io.create_integration_measures(io.mesh, io.domain_ids[0], io.domain_ids[1], coupling_params[0]["coupling_fsi"]["interface"], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)  # we want the fields on the master, entity maps will restrict
             io.create_submeshes()
             io.m_id_solid, io.m_id_fluid, io.m_id_phase, io.m_id_ale = 0, 1, 1, 1
 
@@ -608,7 +594,6 @@ class Ambit:
             io = ioroutines.IO_solid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_solid = 0
 
             io.mesh_ = [io.mesh]
@@ -639,7 +624,6 @@ class Ambit:
             io = ioroutines.IO_fluid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid = 0
 
             io.mesh_ = [io.mesh]
@@ -670,7 +654,6 @@ class Ambit:
             io = ioroutines.IO_fluid_ale(io_params, constitutive_params[0:1], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params[0]["quad_degree"], bcdict=boundary_conditions)
-            io.set_mesh_fields(io.mesh)
             io.m_id_fluid, io.m_id_ale = 0, 0
 
             io.mesh_ = [io.mesh]
@@ -704,7 +687,6 @@ class Ambit:
             io = ioroutines.IO_phasefield(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_phase = 0
 
             io.mesh_ = [io.mesh]
@@ -736,7 +718,6 @@ class Ambit:
             io = ioroutines.IO_solid(io_params, [constitutive_params], self.entity_maps, self.comm)
             io.readin_mesh()
             io.dx, io.bmeasures = io.create_integration_measures(io.mesh, [io.mt_d, io.mt_b, io.mt_sb], fem_params["quad_degree"], bcdict=[boundary_conditions])
-            io.set_mesh_fields(io.mesh)
             io.m_id_ep = 0
 
             io.mesh_ = [io.mesh]
