@@ -156,7 +156,7 @@ class FluidmechanicsMultiphaseProblem(problem_base):
             self.pbp.mu.x.petsc_vec,
         ], is_ghosted
 
-    # defines the monolithic coupling forms for fluid mechanics in ALE reference frame
+    # defines the monolithic coupling forms for fluid mechanics with multiple phases
     def set_variational_forms(self):
         self.set_variational_forms_residual()
         self.set_variational_forms_jacobian()
