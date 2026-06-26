@@ -263,11 +263,15 @@ class variationalform(variationalform_base):
 
     # flux
     # TeX: \int\limits_{\mathit{\Gamma}} \boldsymbol{n}\cdot\boldsymbol{v}\,\mathrm{d}A
-    def flux(self, v, dboundary, w=None, F=None, fcts=None):
-        if fcts is None:
-            return ufl.dot(self.n0, v) * dboundary
+    def flux(self, v, dboundary, w=None, F=None, fcts=None, n0sub=None):
+        if n0sub is None:
+            n0 = self.n0
         else:
-            return (ufl.dot(self.n0, v))(fcts) * dboundary
+            n0 = n0sub  # for flux on submesh, we need the submesh normal
+        if fcts is None:
+            return ufl.dot(n0, v) * dboundary
+        else:
+            return (ufl.dot(n0, v))(fcts) * dboundary
 
     # capillary force in multiphase flow
     def capillary_force(self, phi, mu, ddomain, F=None, return_type="work"):
@@ -590,12 +594,16 @@ class variationalform_ale(variationalform):
     # flux
     # TeX: \int\limits_{\mathit{\Gamma}} (\boldsymbol{v}-\widehat{\boldsymbol{w}})\cdot\boldsymbol{n}\,\mathrm{d}a =
     #      \int\limits_{\mathit{\Gamma}_0} (\boldsymbol{v}-\widehat{\boldsymbol{w}})\cdot J\boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_0\,\mathrm{d}A
-    def flux(self, v, dboundary, w=None, F=None, fcts=None):
+    def flux(self, v, dboundary, w=None, F=None, fcts=None, n0sub=None):
+        if n0sub is None:
+            n0 = self.n0
+        else:
+            n0 = n0sub  # for flux on submesh, we need the submesh normal
         J = ufl.det(F)
         if fcts is None:
-            return J * ufl.dot(ufl.inv(F).T * self.n0, (v - w)) * dboundary
+            return J * ufl.dot(ufl.inv(F).T * n0, (v - w)) * dboundary
         else:
-            return (J * ufl.dot(ufl.inv(F).T * self.n0, (v - w)))(fcts) * dboundary
+            return (J * ufl.dot(ufl.inv(F).T * n0, (v - w)))(fcts) * dboundary
 
     # capillary force in multiphase flow
     def capillary_force(self, phi, mu, ddomain, F=None, return_type="work"):

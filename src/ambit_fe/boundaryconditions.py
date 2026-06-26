@@ -889,7 +889,13 @@ class boundary_cond_fluid(boundary_cond):
                         metadata={"quadrature_degree": self.pb.quad_degree},
                     )
 
-                q += self.pb.vf.flux(v, db_, w=wel_, F=F, fcts=fcts)
+                # if we integrate on a subdomain ds, we need the normal there!
+                if on_subdomain:
+                    n0 = ufl.FacetNormal(self.pb.io.submshes_emap[dom_u][0])
+                else:
+                    n0 = self.pb.io.n0
+
+                q += self.pb.vf.flux(v, db_, w=wel_, F=F, fcts=fcts, n0sub=n0)
 
             if on_subdomain:
                 # entity map child to parent
@@ -907,16 +913,17 @@ class boundary_cond_fluid(boundary_cond):
             if "is_locator" in r.keys(): dind=2
             if "id_loc" in r.keys(): ID="id_loc"
 
-            spatial = r.get("spatial", False)
+            dom_u, dom_d = r["upstream_domain"], r["downstream_domain"]
 
             # area map for integration
-            if spatial and F is not None:
+            if F is not None:
+                n0u = ufl.FacetNormal(self.pb.io.submshes_emap[dom_u][0])
+                n0d = ufl.FacetNormal(self.pb.io.submshes_emap[dom_d][0])
                 J = ufl.det(F)
-                ja = J * ufl.sqrt(ufl.dot(self.pb.vf.n0, (ufl.inv(F) * ufl.inv(F).T) * self.pb.vf.n0))
+                jau = J * ufl.sqrt(ufl.dot(n0u, (ufl.inv(F) * ufl.inv(F).T) * n0u))
+                jad = J * ufl.sqrt(ufl.dot(n0d, (ufl.inv(F) * ufl.inv(F).T) * n0d))
             else:
-                ja = 1.0
-
-            dom_u, dom_d = r["upstream_domain"], r["downstream_domain"]
+                jau, jad = 1.0, 1.0
 
             a_u, a_d, pint_u, pint_d = (
                 ufl.as_ufl(0),
@@ -940,12 +947,12 @@ class boundary_cond_fluid(boundary_cond):
                 )
 
                 # area forms
-                a_u += ja * db_u_
-                a_d += ja * db_d_
+                a_u += jau * db_u_
+                a_d += jad * db_d_
 
                 # pressure forms
-                pint_u += pdict[dom_u] * ja * db_u_
-                pint_d += pdict[dom_d] * ja * db_d_
+                pint_u += pdict[dom_u] * jau * db_u_
+                pint_d += pdict[dom_d] * jad * db_d_
 
             # entity maps child to parent
             em_u = [self.pb.io.submshes_emap[dom_u][1]]
