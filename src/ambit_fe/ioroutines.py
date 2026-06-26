@@ -573,74 +573,33 @@ class IO_solid(IO):
                 # save solution to XDMF format
                 for res in pb.results_to_write:
                     if res == "displacement":
+                        u_out = fem.Function(pb.V_out_vector, name=pb.u.name)
                         if self.output_midpoint:
-                            # u_proj = project(
-                            #     pb.us_mid,
-                            #     pb.V_u,
-                            #     pb.dx,
-                            #     domids=pb.domain_ids,
-                            #     nm="Displacement",
-                            #     comm=self.comm,
-                            #     entity_maps=self.entity_maps,
-                            # )
-                            u_out = fem.Function(pb.V_out_vector, name="Displacement")
-                            # u_out.interpolate(u_proj)
                             u_out.interpolate(fem.Expression(pb.us_mid, pb.V_out_vector.element.interpolation_points))
                         else:
-                            u_out = fem.Function(pb.V_out_vector, name=pb.u.name)
                             u_out.interpolate(pb.u)
                         pb.resultsfiles[res].write_function(u_out, indicator)
-                    elif res == "velocity":  # passed in vel is not a function but form, so we have to project
+                    elif res == "velocity":
                         if self.output_midpoint:
                             vel = pb.vel_mid
                         else:
                             vel = pb.vel
-                        # self.v_proj = project(
-                        #     vel,
-                        #     pb.V_u,
-                        #     pb.dx,
-                        #     domids=pb.domain_ids,
-                        #     nm="Velocity",
-                        #     comm=self.comm,
-                        #     entity_maps=self.entity_maps,
-                        # )  # class variable for testing
                         self.v_out = fem.Function(pb.V_out_vector, name="Velocity")  # class variable for testing
-                        # v_out.interpolate(self.v_proj)
                         self.v_out.interpolate(fem.Expression(vel, pb.V_out_vector.element.interpolation_points))
                         pb.resultsfiles[res].write_function(self.v_out, indicator)
-                    elif res == "acceleration":  # passed in acc is not a function but form, so we have to project
+                    elif res == "acceleration":
                         if self.output_midpoint:
                             acc = pb.acc_mid
                         else:
                             acc = pb.acc
-                        # self.a_proj = project(
-                        #     acc,
-                        #     pb.V_u,
-                        #     pb.dx,
-                        #     domids=pb.domain_ids,
-                        #     nm="Acceleration",
-                        #     comm=self.comm,
-                        #     entity_maps=self.entity_maps,
-                        # )  # class variable for testing
                         self.a_out = fem.Function(pb.V_out_vector, name="Acceleration")  # class variable for testing
-                        # self.a_out.interpolate(self.a_proj)
                         self.a_out.interpolate(fem.Expression(acc, pb.V_out_vector.element.interpolation_points))
                         pb.resultsfiles[res].write_function(self.a_out, indicator)
                     elif res == "pressure":
+                        p_out = fem.Function(pb.V_out_scalar, name=pb.p.name)
                         if self.output_midpoint:
-                            p_proj = project(
-                                pb.ps_mid,
-                                pb.V_p,
-                                pb.dx,
-                                domids=pb.domain_ids,
-                                nm="Pressure",
-                                comm=self.comm,
-                                entity_maps=self.entity_maps,
-                            )
-                            p_out = fem.Function(pb.V_out_scalar, name=p_proj.name)
-                            p_out.interpolate(p_proj)
+                            p_out.interpolate(fem.Expression(pb.ps_mid, pb.V_out_scalar.element.interpolation_points))
                         else:
-                            p_out = fem.Function(pb.V_out_scalar, name=pb.p.name)
                             p_out.interpolate(pb.p)
                         pb.resultsfiles[res].write_function(p_out, indicator)
                     elif res == "cauchystress":
@@ -1519,24 +1478,17 @@ class IO_fluid(IO):
                         # )
                         dens_out = fem.Function(pb.V_out_scalar, name="Density")
                         # dens_out.interpolate(dens_proj)
-                        dens_out.interpolate(fem.Expression(sum(densfuncs), pb.V_out_scalar.element.interpolation_points))
+                        for n, M in enumerate(pb.domain_ids):
+                            cells_n = pb.dx.subdomain_data().find(M)  # TODO: Not working if V_out on submesh! These are parent cells!
+                            # dens_out.interpolate(fem.Expression(densfuncs[n], pb.V_out_scalar.element.interpolation_points), cells0=cells_n)
+                            dens_out.interpolate(fem.Expression(densfuncs[n], pb.V_out_scalar.element.interpolation_points))
                         pb.resultsfiles[res].write_function(dens_out, indicator)
                     elif res == "chi":  # normalized phase field variable for coefficient evaluation - mainly for testing purposes...
                         if self.output_midpoint:
                             chi = pb.phasevar["chi_mid"]
                         else:
                             chi = pb.phasevar["chi"]
-                        # chi_proj = project(
-                        #     chi,
-                        #     pb.V_scalar,
-                        #     pb.dx,
-                        #     domids=pb.domain_ids,
-                        #     nm="Chi",
-                        #     comm=self.comm,
-                        #     entity_maps=self.entity_maps,
-                        # )
                         chi_out = fem.Function(pb.V_out_scalar, name="Chi")
-                        # chi_out.interpolate(chi_proj)
                         chi_out.interpolate(fem.Expression(chi, pb.V_out_scalar.element.interpolation_points))
                         pb.resultsfiles[res].write_function(chi_out, indicator)
                     elif res == "alpha":
@@ -1544,7 +1496,10 @@ class IO_fluid(IO):
                         for n in range(pb.num_domains):
                             afuncs.append(pb.alpha[n])
                         a_out = fem.Function(pb.V_out_scalar, name="Alpha")
-                        a_out.interpolate(fem.Expression(sum(afuncs), pb.V_out_scalar.element.interpolation_points))
+                        for n, M in enumerate(pb.domain_ids):
+                            cells_n = pb.dx.subdomain_data().find(M)  # TODO: Not working if V_out on submesh! These are parent cells!
+                            # a_out.interpolate(fem.Expression(afuncs[n], pb.V_out_scalar.element.interpolation_points), cells0=cells_n)
+                            a_out.interpolate(fem.Expression(afuncs[n], pb.V_out_scalar.element.interpolation_points))
                         pb.resultsfiles[res].write_function(a_out, indicator)
                     elif res == "internalpower_membrane":
                         pwfuncs = []
