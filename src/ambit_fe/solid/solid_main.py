@@ -76,8 +76,6 @@ class SolidmechanicsProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_solid]
         self.num_domains = self.io.num_domains[self.io.m_id_solid]
         self.mesh = self.io.mesh_[self.io.m_id_solid]
-        # set mesh fields (normal, etc.)
-        self.mesh_fields = self.io.set_mesh_fields(self.mesh)
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_solid], self.io.mt_b_[self.io.m_id_solid], self.io.mt_sb_[self.io.m_id_solid]
         # global measures for weak BCs
@@ -620,7 +618,7 @@ class SolidmechanicsProblem(problem_base):
             tstfnc2=self.var_p,
             trlfnc1=self.du,
             trlfnc2=self.dp,
-            n0=self.mesh_fields["n0"],
+            n0=self.io.n0,
             x_ref=self.x_ref,
         )
 

@@ -78,8 +78,6 @@ class FluidmechanicsProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_fluid]
         self.num_domains = self.io.num_domains[self.io.m_id_fluid]
         self.mesh = self.io.mesh_[self.io.m_id_fluid]
-        # set mesh fields (normal, etc.)
-        self.mesh_fields = self.io.set_mesh_fields(self.mesh)
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_fluid], self.io.mt_b_[self.io.m_id_fluid], self.io.mt_sb_[self.io.m_id_fluid]
         # global measures for weak BCs
@@ -414,7 +412,7 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform(
                 tstfnc1=self.var_v,
                 tstfnc2=self.var_p_,
-                n0=self.mesh_fields["n0"],
+                n0=self.io.n0,
                 formulation=[self.fluid_formulation,self.mass_formulation],
             )
 
@@ -423,7 +421,7 @@ class FluidmechanicsProblem(problem_base):
             self.vf = fluid_variationalform.variationalform_ale(
                 tstfnc1=self.var_v,
                 tstfnc2=self.var_p_,
-                n0=self.mesh_fields["n0"],
+                n0=self.io.n0,
                 formulation=[self.fluid_formulation,self.mass_formulation],
             )
 
@@ -1393,7 +1391,7 @@ class FluidmechanicsProblem(problem_base):
                 vscale_max = vscale_amp * vscale
 
             h = (
-                self.mesh_fields["hd0"]
+                self.io.hd0
             )  # cell diameter (could also use max edge length self.io.emax0, but seems to yield similar/same results)
 
             symm = self.stabilization.get("symmetric", False)

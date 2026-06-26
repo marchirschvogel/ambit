@@ -70,8 +70,6 @@ class PhasefieldProblem(problem_base):
         self.domain_ids = self.io.domain_ids[self.io.m_id_phase]
         self.num_domains = self.io.num_domains[self.io.m_id_phase]
         self.mesh = self.io.mesh_[self.io.m_id_phase]
-        # set mesh fields (normal, etc.)
-        self.mesh_fields = self.io.set_mesh_fields(self.mesh)
         # mesh tags for DBCs
         self.mt_d, self.mt_b, self.mt_sb = self.io.mt_d_[self.io.m_id_phase], self.io.mt_b_[self.io.m_id_phase], self.io.mt_sb_[self.io.m_id_phase]
         # global measures for weak BCs
@@ -185,9 +183,9 @@ class PhasefieldProblem(problem_base):
 
         # initialize pahse field (Cahn-Hilliard) variational form class
         if not self.is_ale:
-            self.vf = phasefield_variationalform.variationalform(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.mesh_fields["n0"])
+            self.vf = phasefield_variationalform.variationalform(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.io.n0)
         else:
-            self.vf = phasefield_variationalform.variationalform_ale(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.mesh_fields["n0"])
+            self.vf = phasefield_variationalform.variationalform_ale(tstfnc1=self.var_phi, tstfnc2=self.var_mu, n0=self.io.n0)
 
         # set form for phidot
         self.phidot_expr = self.ti.set_phidot(self.phi, self.phi_old, self.phi_veryold, self.phidot_old)

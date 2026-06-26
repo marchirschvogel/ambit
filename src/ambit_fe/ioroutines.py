@@ -284,20 +284,17 @@ class IO:
 
     # some mesh data that we might wanna use in some problems...
     def set_mesh_fields(self, msh):
-        mesh_fields = {}
         # facet normal field
-        mesh_fields["n0"] = ufl.FacetNormal(msh)
+        self.n0 = ufl.FacetNormal(msh)
         # cell diameter
-        mesh_fields["hd0"] = ufl.CellDiameter(msh)
+        self.hd0 = ufl.CellDiameter(msh)
         # cell circumradius
-        mesh_fields["ro0"] = ufl.Circumradius(msh)
+        self.ro0 = ufl.Circumradius(msh)
         # min and max cell edge lengths
-        mesh_fields["emin0"] = ufl.MinCellEdgeLength(msh)
-        mesh_fields["emax0"] = ufl.MaxCellEdgeLength(msh)
+        self.emin0 = ufl.MinCellEdgeLength(msh)
+        self.emax0 = ufl.MaxCellEdgeLength(msh)
         # jacobian determinant
-        mesh_fields["detj0"] = ufl.JacobianDeterminant(msh)
-
-        return mesh_fields
+        self.detj0 = ufl.JacobianDeterminant(msh)
 
     def write_output_pre(self, pb, func, V_out, t, name):
         outfile = io.XDMFFile(

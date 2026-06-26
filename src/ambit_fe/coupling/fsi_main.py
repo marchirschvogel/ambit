@@ -355,10 +355,10 @@ class FSIProblem(problem_base):
                 self.power_coupling_fluid = -ufl.dot(self.lm, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
                 self.power_coupling_fluid_old = -ufl.dot(self.lm_old, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
             elif self.fsi_kinematic_coupling=="slip":  # all positive: actio = reactio, but n_solid = -n_fluid, so negative sign cancels...
-                self.work_coupling_solid = self.lm * ufl.dot(self.pbs.mesh_fields["n0"], self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-                self.work_coupling_solid_old = self.lm_old * ufl.dot(self.pbs.mesh_fields["n0"], self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
-                self.power_coupling_fluid = self.lm * ufl.dot(self.pbf.mesh_fields["n0"], self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
-                self.power_coupling_fluid_old = self.lm_old * ufl.dot(self.pbf.mesh_fields["n0"], self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+                self.work_coupling_solid = self.lm * ufl.dot(self.pbs.io.n0, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+                self.work_coupling_solid_old = self.lm_old * ufl.dot(self.pbs.io.n0, self.pbs.var_u) * self.io.ds(self.io.interface_id_s)
+                self.power_coupling_fluid = self.lm * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
+                self.power_coupling_fluid_old = self.lm_old * ufl.dot(self.pbf.io.n0, self.pbf.var_v) * self.io.ds(self.io.interface_id_f)
             else:
                 raise ValueError("Unknown FSI kinematic coupling. Choose 'no_slip' or 'slip'.")
 
@@ -380,12 +380,12 @@ class FSIProblem(problem_base):
                     raise ValueError("Unknown FSI kinematic quantity. Choose 'displacement' or 'velocity'.")
             elif self.fsi_kinematic_coupling=="slip":  # NOTE: n_solid = -n_fluid
                 if self.fsi_kinematic_quantity == "displacement":
-                    self.weakform_l = ufl.dot(self.pbs.u, self.pbs.mesh_fields["n0"]) * self.var_lm * self.io.ds(self.io.interface_id_s) + ufl.dot(
-                        self.pbf.ufluid, self.pbf.mesh_fields["n0"]
+                    self.weakform_l = ufl.dot(self.pbs.u, self.pbs.io.n0) * self.var_lm * self.io.ds(self.io.interface_id_s) + ufl.dot(
+                        self.pbf.ufluid, self.pbf.io.n0
                     ) * self.var_lm * self.io.ds(self.io.interface_id_f)
                 elif self.fsi_kinematic_quantity == "velocity":
-                    self.weakform_l = ufl.dot(self.pbf.v, self.pbf.mesh_fields["n0"]) * self.var_lm * self.io.ds(self.io.interface_id_f) + ufl.dot(
-                        self.pbs.vel, self.pbs.mesh_fields["n0"]
+                    self.weakform_l = ufl.dot(self.pbf.v, self.pbf.io.n0) * self.var_lm * self.io.ds(self.io.interface_id_f) + ufl.dot(
+                        self.pbs.vel, self.pbs.io.n0
                     ) * self.var_lm * self.io.ds(self.io.interface_id_s)
                 else:
                     raise ValueError("Unknown FSI kinematic quantity. Choose 'displacement' or 'velocity'.")
