@@ -233,6 +233,8 @@ class FluidmechanicsAleProblem(problem_base):
             if "dirichlet" in self.pbf.bc_dict.keys():
                 self.pbf.bc.dirichlet_bcs(self.pbf.bc_dict["dirichlet"], self.pbf.dbcs)
             self.have_dbc_ale_fluid = True
+        else:
+            self.pbf.dbcs_noale = self.pbf.dbcs
 
     def set_variational_forms_jacobian_coupling(self):
         # derivative of fluid momentum w.r.t. ALE displacement

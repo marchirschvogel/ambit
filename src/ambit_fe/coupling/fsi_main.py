@@ -442,7 +442,7 @@ class FSIProblem(problem_base):
                 self.fdofs_solid_global_sub = PETSc.IS().createGeneral(diff, comm=self.comm)
 
                 self.dbc_dofs_fluid_global = []
-                for k in range(len(self.pbf.dbcs)):
+                for k in range(len(self.pbf.dbcs_noale)):
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="all": sub=None
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="x": sub=0
                     if self.pbf.bc_dict["dirichlet"][k]["dir"]=="y": sub=1
