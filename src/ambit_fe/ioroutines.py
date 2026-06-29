@@ -1705,6 +1705,11 @@ class IO_fluid(IO):
                 cells_part,
             )[0:2]
 
+        for m, mp in enumerate(self.duplicate_mesh_domains):  # needed ?!
+            self.submshes_emap[m + 1][0].topology.create_connectivity(self.submshes_emap[m + 1][0].topology.dim, self.submshes_emap[m + 1][0].topology.dim)
+            self.submshes_emap[m + 1][0].topology.create_connectivity(self.submshes_emap[m + 1][0].topology.dim - 1, self.submshes_emap[m + 1][0].topology.dim)
+            self.submshes_emap[m + 1][0].topology.create_connectivity(self.submshes_emap[m + 1][0].topology.dim - 2, self.submshes_emap[m + 1][0].topology.dim)
+
         for m, mp in enumerate(self.duplicate_mesh_domains):
             self.entity_maps.append(self.submshes_emap[m + 1][1])
             # transfer meshtags to submesh
@@ -1722,6 +1727,13 @@ class IO_fluid(IO):
                 self.mesh,
                 "boundary",
             )
+
+        if self.write_submeshes:
+            for m, mp in enumerate(self.duplicate_mesh_domains):
+                tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_fluid"+str(m+1)+".xdmf", "w")
+                tmp.write_mesh(self.submshes_emap[m + 1][0])
+                if self.sub_mt_d[m + 1] is not None:
+                    tmp.write_meshtags(self.sub_mt_d[m + 1], self.submshes_emap[m + 1][0].geometry)
 
 
 class IO_ale(IO):
@@ -2471,7 +2483,6 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             subdomain_data=integration_entities,
             metadata={"quadrature_degree": qdeg},
         )
-        self.de = None
         self.dS = ufl.Measure(
             "dS",
             domain=msh,
@@ -2479,7 +2490,7 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             metadata={"quadrature_degree": qdeg},
         )
 
-        self.bmeasures = [self.ds, self.de, self.dS]
+        self.bmeasures = [self.ds, self.dS]
 
         if bool(self.duplicate_mesh_domains):
             self.create_fluid_duplicate_pressure_mesh()
