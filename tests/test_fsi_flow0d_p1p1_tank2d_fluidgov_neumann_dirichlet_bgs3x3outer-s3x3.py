@@ -3,6 +3,7 @@
 """
 FSI simulation of a 2D tank with flexible, forced lid - with reduced-dimensional 0D Windkessel model at outlet
 Monolithic Neumann-Dirichlet formulation (no Lagrange multiplier) - p1p1
+Iterative FGMRES solver with BGS(AMG-AMG-S3x3) preconditioner
 """
 
 import ambit_fe
@@ -42,7 +43,7 @@ def test_main():
 
     SOLVER_PARAMS = {
         "solve_type": "iterative",
-        "iterative_solver": "gmres",
+        "iterative_solver": "fgmres",
         "block_precond": "BGS_outer",
         "precond_fields": [{"prec": "amg", "blocks": [0]},  # solid-u
                            {"prec": "amg", "blocks": [4]},  # ale-d

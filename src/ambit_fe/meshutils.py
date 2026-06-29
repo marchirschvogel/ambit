@@ -160,7 +160,7 @@ def get_integration_entities(msh, entity_indices, codim, integration_entities):
             local_entity = c_to_e.links(cell).tolist().index(entity)
             integration_entities.extend([cell, local_entity])
 
-def get_integration_entities_internal(msh, entity_indices, entities_a, codim, integration_entities, ids):
+def get_integration_entities_internal(msh, entity_indices, entities_a, entities_b, codim, integration_entities, ids):
     dim = msh.topology.dim
 
     integration_entities_a = []
@@ -187,9 +187,11 @@ def get_integration_entities_internal(msh, entity_indices, entities_a, codim, in
             if cells[0] in entities_a:
                 integration_entities_a.extend((cells[0], local_entities[0]))
                 integration_entities_b.extend((cells[1], local_entities[1]))
-            else:
+            elif cells[0] in entities_b:
                 integration_entities_a.extend((cells[1], local_entities[1]))
                 integration_entities_b.extend((cells[0], local_entities[0]))
+            else:
+                raise RuntimeError("Cells neither in a nor in b!")
 
     # create a measure, passing the data we just created so we can integrate
     # over the correct entities

@@ -899,7 +899,7 @@ class FluidmechanicsProblem(problem_base):
         if "robin_valve" in self.bc_dict.keys():
             assert self.num_dupl > 1  # only makes sense if we have duplicate pressure domains
             self.have_robin_valve = True
-            self.beta_valve, self.beta_valve_old = [], []
+            self.beta_valve, self.beta_valve_old, self.beta_valve_mid = [], [], []
             w_robin_valve = self.bc.robin_valve_bcs(
                 self.bc_dict["robin_valve"],
                 self.v,
@@ -919,7 +919,7 @@ class FluidmechanicsProblem(problem_base):
             w_robin_valve_mid = self.bc.robin_valve_bcs(
                 self.bc_dict["robin_valve"],
                 self.vel_mid,
-                self.beta_valve,
+                self.beta_valve_mid,
                 [self.bmeasures[1]],
                 wel=self.alevar["w_mid"],
                 F=self.alevar["Fale_mid"],
@@ -2489,9 +2489,7 @@ class FluidmechanicsProblem(problem_base):
                 else:
                     self.beta_valve[m].interpolate(self.beta_valve_min_expr[m].evaluate)
 
-            elif (
-                self.bc_dict["robin_valve"][m]["type"] == "dp_smooth"
-            ):  # min, max values have to be spatially constant (no expression!) in this case...
+            elif self.bc_dict["robin_valve"][m]["type"] == "dp_smooth":  # min, max values have to be spatially constant (no expression!) in this case...
                 beta = expression.template()
                 dp_id = self.bc_dict["robin_valve"][m]["dp_monitor_id"]
                 epsilon = self.bc_dict["robin_valve"][m]["epsilon"]
@@ -2523,6 +2521,11 @@ class FluidmechanicsProblem(problem_base):
                 raise ValueError("Unknown Robin valve type!")
 
             self.beta_valve[m].x.scatter_forward()
+            # old and mid values the same here - since currently used only with old state!
+            self.beta_valve_old[m].x.array[:] = self.beta_valve[m].x.array
+            self.beta_valve_old[m].x.scatter_forward()
+            self.beta_valve_mid[m].x.array[:] = self.beta_valve[m].x.array
+            self.beta_valve_mid[m].x.scatter_forward()
 
     # valve law on "immersed" surface (an internal boundary) - implicit version
     def evaluate_robin_valve_implicit(self, dp_):

@@ -278,7 +278,9 @@ class IO:
                 bmeasures.append(ds_loc)
 
         if bool(self.duplicate_mesh_domains):
-            self.create_fluid_duplicate_pressure_mesh(self.mesh)
+            self.submshes_emap, self.sub_mt_d, self.sub_mt_b = {}, {}, {}
+            self.create_fluid_duplicate_pressure_mesh(self.mesh, [self.mt_d,self.mt_b], self.submshes_emap, self.sub_mt_d, self.sub_mt_b)
+            self.submshes_emap_aux, self.sub_mt_d_aux, self.sub_mt_b_aux = self.submshes_emap, self.sub_mt_d, self.sub_mt_b
 
         return dx, bmeasures
 
@@ -1679,61 +1681,52 @@ class IO_fluid(IO):
                         pb.resultsfiles[res].close()
 
     # for duplicate (fluid) pressure nodes at an internal boundary, we can split the domain into two subdomains for the pressure function space
-    def create_fluid_duplicate_pressure_mesh(self, msh):
-        (
-            self.submshes_emap,
-            self.sub_mt_d,
-            self.sub_mt_b,
-        ) = (
-            {},
-            {},
-            {},
-        )
+    def create_fluid_duplicate_pressure_mesh(self, msh, mtags, submshes_emap, sub_mt_d, sub_mt_b, aux=False):
         for m, mp in enumerate(self.duplicate_mesh_domains):
             cells_part_ = []
             if all(isinstance(x, int) for x in mp):
                 for id_ in mp:
-                    cells_part_.append(self.mt_d.indices[self.mt_d.values == id_])
+                    cells_part_.append(mtags[0].indices[mtags[0].values == id_])
             else: # can only be a locator function otherwise
                 for i, lc in enumerate(mp):
                     cells_part_.append(mesh.locate_entities(msh, msh.topology.dim, lc.evaluate))
             cells_part = np.concatenate(cells_part_).ravel()
 
-            self.submshes_emap[m + 1] = mesh.create_submesh(
+            submshes_emap[m + 1] = mesh.create_submesh(
                 msh,
                 msh.topology.dim,
                 cells_part,
             )[0:2]
 
         for m, mp in enumerate(self.duplicate_mesh_domains):  # needed ?!
-            self.submshes_emap[m + 1][0].topology.create_connectivity(self.submshes_emap[m + 1][0].topology.dim, self.submshes_emap[m + 1][0].topology.dim)
-            self.submshes_emap[m + 1][0].topology.create_connectivity(self.submshes_emap[m + 1][0].topology.dim - 1, self.submshes_emap[m + 1][0].topology.dim)
-            self.submshes_emap[m + 1][0].topology.create_connectivity(self.submshes_emap[m + 1][0].topology.dim - 2, self.submshes_emap[m + 1][0].topology.dim)
+            submshes_emap[m + 1][0].topology.create_connectivity(submshes_emap[m + 1][0].topology.dim, submshes_emap[m + 1][0].topology.dim)
+            submshes_emap[m + 1][0].topology.create_connectivity(submshes_emap[m + 1][0].topology.dim - 1, submshes_emap[m + 1][0].topology.dim)
+            submshes_emap[m + 1][0].topology.create_connectivity(submshes_emap[m + 1][0].topology.dim - 2, submshes_emap[m + 1][0].topology.dim)
 
         for m, mp in enumerate(self.duplicate_mesh_domains):
-            self.entity_maps.append(self.submshes_emap[m + 1][1])
+            if not aux: self.entity_maps.append(submshes_emap[m + 1][1])
             # transfer meshtags to submesh
-            self.sub_mt_d[m + 1] = meshutils.meshtags_parent_to_child(
-                self.mt_d,
-                self.submshes_emap[m + 1][0],
-                self.submshes_emap[m + 1][1],
+            sub_mt_d[m + 1] = meshutils.meshtags_parent_to_child(
+                mtags[0],
+                submshes_emap[m + 1][0],
+                submshes_emap[m + 1][1],
                 msh,
                 "domain",
             )
-            self.sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
-                self.mt_b,
-                self.submshes_emap[m + 1][0],
-                self.submshes_emap[m + 1][1],
+            sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
+                mtags[1],
+                submshes_emap[m + 1][0],
+                submshes_emap[m + 1][1],
                 msh,
                 "boundary",
             )
 
-        if self.write_submeshes:
+        if self.write_submeshes and not aux:
             for m, mp in enumerate(self.duplicate_mesh_domains):
                 tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_fluid"+str(m+1)+".xdmf", "w")
-                tmp.write_mesh(self.submshes_emap[m + 1][0])
-                if self.sub_mt_d[m + 1] is not None:
-                    tmp.write_meshtags(self.sub_mt_d[m + 1], self.submshes_emap[m + 1][0].geometry)
+                tmp.write_mesh(submshes_emap[m + 1][0])
+                if sub_mt_d[m + 1] is not None:
+                    tmp.write_meshtags(sub_mt_d[m + 1], submshes_emap[m + 1][0].geometry)
 
 
 class IO_ale(IO):
@@ -2351,6 +2344,11 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         self.entity_maps.append(self.msh_emap_fluid[1])
         self.entity_maps.append(self.msh_emap_lm[1])
 
+        # in FSI, we need addtional auxiliary entity maps from the fluid submesh to the pressure submeshes if we want to integrate on these
+        if bool(self.duplicate_mesh_domains):
+            self.submshes_emap_aux, self.sub_mt_d_aux, self.sub_mt_b_aux = {}, {}, {}
+            self.create_fluid_duplicate_pressure_mesh(self.msh_emap_fluid[0], [self.mt_d_fluid,self.mt_b_fluid], self.submshes_emap_aux, self.sub_mt_d_aux, self.sub_mt_b_aux, aux=True)
+
         if self.write_submeshes:
             tmp = io.XDMFFile(self.comm, self.output_path_pre+"/mesh_solid.xdmf", "w")
             tmp.write_mesh(self.msh_emap_solid[0])
@@ -2472,6 +2470,7 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             msh,
             self.facets_interface,
             self.cells_solid,
+            self.cells_fluid,
             msh.topology.dim - 1,
             integration_entities,
             [self.interface_id_s, self.interface_id_f],
@@ -2493,7 +2492,8 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         self.bmeasures = [self.ds, self.dS]
 
         if bool(self.duplicate_mesh_domains):
-            self.create_fluid_duplicate_pressure_mesh(msh)
+            self.submshes_emap, self.sub_mt_d, self.sub_mt_b = {}, {}, {}
+            self.create_fluid_duplicate_pressure_mesh(msh, [self.mt_d,self.mt_b], self.submshes_emap, self.sub_mt_d, self.sub_mt_b)
 
 
 class IO_fsi_multiphase(IO_fsi, IO_phasefield):

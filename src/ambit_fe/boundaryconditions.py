@@ -782,6 +782,7 @@ class boundary_cond_fluid(boundary_cond):
 
             direction = r.get("dir", "xyz_ref")
 
+            # coefficient function which is updated / set later
             beta_.append(fem.Function(self.Vdisc_scalar))
 
             if direction == "xyz_ref":  # reference xyz
@@ -876,8 +877,8 @@ class boundary_cond_fluid(boundary_cond):
                         )
                     else:
                         db_ = ufl.ds(
-                            domain=self.pb.io.submshes_emap[dom_u][0],
-                            subdomain_data=self.pb.io.sub_mt_b[dom_u],
+                            domain=self.pb.io.submshes_emap_aux[dom_u][0],
+                            subdomain_data=self.pb.io.sub_mt_b_aux[dom_u],
                             subdomain_id=r[ID][i],
                             metadata={"quadrature_degree": self.pb.quad_degree},
                         )
@@ -891,7 +892,7 @@ class boundary_cond_fluid(boundary_cond):
 
                 # if we integrate on a subdomain ds, we need the normal there!
                 if on_subdomain:
-                    n0 = ufl.FacetNormal(self.pb.io.submshes_emap[dom_u][0])
+                    n0 = ufl.FacetNormal(self.pb.io.submshes_emap_aux[dom_u][0])
                 else:
                     n0 = self.pb.io.n0
 
@@ -899,7 +900,7 @@ class boundary_cond_fluid(boundary_cond):
 
             if on_subdomain:
                 # entity map child to parent
-                em_u = [self.pb.io.submshes_emap[dom_u][1]]
+                em_u = [self.pb.io.submshes_emap_aux[dom_u][1]]
                 qdict_.append(fem.form(q, entity_maps=em_u))
             else:
                 qdict_.append(fem.form(q))
@@ -917,8 +918,8 @@ class boundary_cond_fluid(boundary_cond):
 
             # area map for integration
             if F is not None:
-                n0u = ufl.FacetNormal(self.pb.io.submshes_emap[dom_u][0])
-                n0d = ufl.FacetNormal(self.pb.io.submshes_emap[dom_d][0])
+                n0u = ufl.FacetNormal(self.pb.io.submshes_emap_aux[dom_u][0])
+                n0d = ufl.FacetNormal(self.pb.io.submshes_emap_aux[dom_d][0])
                 J = ufl.det(F)
                 jau = J * ufl.sqrt(ufl.dot(n0u, (ufl.inv(F) * ufl.inv(F).T) * n0u))
                 jad = J * ufl.sqrt(ufl.dot(n0d, (ufl.inv(F) * ufl.inv(F).T) * n0d))
@@ -933,6 +934,19 @@ class boundary_cond_fluid(boundary_cond):
             )
 
             for i in range(len(r[ID])):
+                db_aux_u_ = ufl.ds(
+                    domain=self.pb.io.submshes_emap_aux[dom_u][0],
+                    subdomain_data=self.pb.io.sub_mt_b_aux[dom_u],
+                    subdomain_id=r[ID][i],
+                    metadata={"quadrature_degree": self.pb.quad_degree},
+                )
+                db_aux_d_ = ufl.ds(
+                    domain=self.pb.io.submshes_emap_aux[dom_d][0],
+                    subdomain_data=self.pb.io.sub_mt_b_aux[dom_d],
+                    subdomain_id=r[ID][i],
+                    metadata={"quadrature_degree": self.pb.quad_degree},
+                )
+
                 db_u_ = ufl.ds(
                     domain=self.pb.io.submshes_emap[dom_u][0],
                     subdomain_data=self.pb.io.sub_mt_b[dom_u],
@@ -947,19 +961,27 @@ class boundary_cond_fluid(boundary_cond):
                 )
 
                 # area forms
-                a_u += jau * db_u_
-                a_d += jad * db_d_
+                a_u += jau * db_aux_u_
+                a_d += jad * db_aux_d_
 
-                # pressure forms
-                pint_u += pdict[dom_u] * jau * db_u_
-                pint_d += pdict[dom_d] * jad * db_d_
+                # pressure forms - NOTE: In case of FSI, pressure lives on the submesh Fp
+                # created from the parent full (fluid+solid) mesh (P)! We cannot incorporate
+                # another function (v,d) that lives on the submesh F together with one on Fp
+                # (we have the Fp->P, the F->P, and the Fp->F entity maps)
+                # pint_u += pdict[dom_u] * jau * db_aux_u_
+                # pint_d += pdict[dom_d] * jad * db_aux_d_
+                pint_u += pdict[dom_u] * db_u_
+                pint_d += pdict[dom_d] * db_d_
 
             # entity maps child to parent
+            em_aux_u = [self.pb.io.submshes_emap_aux[dom_u][1]]
+            em_aux_d = [self.pb.io.submshes_emap_aux[dom_d][1]]
+
+            a_u_.append(fem.form(a_u, entity_maps=em_aux_u))
+            a_d_.append(fem.form(a_d, entity_maps=em_aux_d))
+
             em_u = [self.pb.io.submshes_emap[dom_u][1]]
             em_d = [self.pb.io.submshes_emap[dom_d][1]]
-
-            a_u_.append(fem.form(a_u, entity_maps=em_u))
-            a_d_.append(fem.form(a_d, entity_maps=em_d))
 
             pint_u_.append(fem.form(pint_u, entity_maps=em_u))
             pint_d_.append(fem.form(pint_d, entity_maps=em_d))
