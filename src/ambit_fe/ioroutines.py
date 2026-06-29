@@ -278,7 +278,7 @@ class IO:
                 bmeasures.append(ds_loc)
 
         if bool(self.duplicate_mesh_domains):
-            self.create_fluid_duplicate_pressure_mesh()
+            self.create_fluid_duplicate_pressure_mesh(self.mesh)
 
         return dx, bmeasures
 
@@ -1679,7 +1679,7 @@ class IO_fluid(IO):
                         pb.resultsfiles[res].close()
 
     # for duplicate (fluid) pressure nodes at an internal boundary, we can split the domain into two subdomains for the pressure function space
-    def create_fluid_duplicate_pressure_mesh(self):
+    def create_fluid_duplicate_pressure_mesh(self, msh):
         (
             self.submshes_emap,
             self.sub_mt_d,
@@ -1696,12 +1696,12 @@ class IO_fluid(IO):
                     cells_part_.append(self.mt_d.indices[self.mt_d.values == id_])
             else: # can only be a locator function otherwise
                 for i, lc in enumerate(mp):
-                    cells_part_.append(mesh.locate_entities(self.mesh, self.mesh.topology.dim, lc.evaluate))
+                    cells_part_.append(mesh.locate_entities(msh, msh.topology.dim, lc.evaluate))
             cells_part = np.concatenate(cells_part_).ravel()
 
             self.submshes_emap[m + 1] = mesh.create_submesh(
-                self.mesh,
-                self.mesh.topology.dim,
+                msh,
+                msh.topology.dim,
                 cells_part,
             )[0:2]
 
@@ -1717,14 +1717,14 @@ class IO_fluid(IO):
                 self.mt_d,
                 self.submshes_emap[m + 1][0],
                 self.submshes_emap[m + 1][1],
-                self.mesh,
+                msh,
                 "domain",
             )
             self.sub_mt_b[m + 1] = meshutils.meshtags_parent_to_child(
                 self.mt_b,
                 self.submshes_emap[m + 1][0],
                 self.submshes_emap[m + 1][1],
-                self.mesh,
+                msh,
                 "boundary",
             )
 
@@ -2493,7 +2493,7 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
         self.bmeasures = [self.ds, self.dS]
 
         if bool(self.duplicate_mesh_domains):
-            self.create_fluid_duplicate_pressure_mesh()
+            self.create_fluid_duplicate_pressure_mesh(msh)
 
 
 class IO_fsi_multiphase(IO_fsi, IO_phasefield):
