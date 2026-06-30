@@ -30,7 +30,7 @@ def test_main():
         "mesh_boundary": basepath + "/input/pipe_fsi_boundary.xdmf",
         "mesh_encoding": "HDF5",
         "write_results_every": 1,
-        "write_restart_every": 9,
+        "write_restart_every": -1,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "results_to_write": [
@@ -38,7 +38,7 @@ def test_main():
             ["velocity", "pressure"],
             ["aledisplacement"],
         ],
-        "simname": "fsi_p1p1_pipe_valve_fluidgov_neumann_neumann",
+        "simname": "fsi_p1p1_pipe_valve_fluidgov_neumann_dirichlet",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10}
@@ -81,7 +81,7 @@ def test_main():
 
     COUPLING_PARAMS = {
         "coupling_fsi": {"interface": [4,5,6]},
-        "fsi_system": "neumann_neumann",  # neumann_neumann, neumann_dirichlet
+        "fsi_system": "neumann_dirichlet",  # neumann_neumann, neumann_dirichlet
     }
 
     E = 1e5 # kPa
@@ -113,7 +113,21 @@ def test_main():
 
     BC_DICT_SOLID = {"dirichlet": [{"id": [2,3], "dir": "all", "val": 0.}]}
 
+    class locate_fluid_ring_left_right:
+        def evaluate(self, x):
+            left_b = np.isclose(x[2], 0.0)
+            right_b = np.isclose(x[2], 100.0)
+
+            R0 = 15.0
+            rad = np.isclose(np.sqrt(x[0]**2.0 + x[1]**2.0), R0)
+
+            rad_l = np.logical_and(rad, left_b)
+            rad_r = np.logical_and(rad, right_b)
+
+            return np.logical_or(rad_l, rad_r)
+
     BC_DICT_FLUID = {
+        "dirichlet": [{"id": [locate_fluid_ring_left_right()], "dir": "all", "val": 0.}],
         "neumann": [
             {"id": [8], "dir": "normal_ref", "curve": 1},
             {"id": [9], "dir": "normal_ref", "curve": 2},
@@ -140,11 +154,11 @@ def test_main():
 
     class locate_left_right:
         def evaluate(self, x):
-            left_b = np.isclose(x[0], 0.0)
-            right_b = np.isclose(x[0], 100.0)
+            left_b = np.isclose(x[2], 0.0)
+            right_b = np.isclose(x[2], 100.0)
             return np.logical_or(left_b, right_b)
 
-    BC_DICT_LM = {"dirichlet": [{"id": [locate_left_right()], "dir": "all", "val": 0.0}]}
+    BC_DICT_LM = {"dirichlet": [{"id": [locate_left_right()], "dir": "all", "val": 0.0}]}  # only needed for neumann_neumann, and if both fluid and solid carry common DBCs!
 
     # problem setup
     problem = ambit_fe.ambit_main.Ambit(
