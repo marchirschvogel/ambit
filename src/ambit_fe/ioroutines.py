@@ -2482,10 +2482,13 @@ class IO_fsi(IO_solid, IO_fluid, IO_ale):
             subdomain_data=integration_entities,
             metadata={"quadrature_degree": qdeg},
         )
+
+        # NOTE: "internal" dS measure cannot be properly used with integration_entities,
+        # hence we use the mt_b data directly - TODO: If we have locators, we'd need to create mt_b first... :-/
         self.dS = ufl.Measure(
             "dS",
             domain=msh,
-            subdomain_data=integration_entities,
+            subdomain_data=self.mt_b,
             metadata={"quadrature_degree": qdeg},
         )
 
