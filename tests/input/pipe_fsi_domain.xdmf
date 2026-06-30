@@ -1,0 +1,15 @@
+<Xdmf Version="3.0">
+  <Domain>
+    <Grid Name="Grid">
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="1151 3" Format="HDF">pipe_fsi_domain.h5:/nodes</DataItem>
+      </Geometry>
+      <Topology NodesPerElement="4" NumberOfElements="4953" TopologyType="tetrahedron">
+        <DataItem DataType="Int" Dimensions="4953 4" Format="HDF">pipe_fsi_domain.h5:/cells</DataItem>
+      </Topology>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="id">
+        <DataItem DataType="Int" Dimensions="4953" Format="HDF">pipe_fsi_domain.h5:/id</DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

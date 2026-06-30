@@ -255,22 +255,13 @@ if category == "fluid" or category == "all":
         ]
     )
 
-    errs["test_fluid_nonc_p1p1_stabf_cylinder_valve 1"] = subprocess.call(
-        [
-            "mpiexec",
-            "-n",
-            "1",
-            "python3",
-            "test_fluid_nonc_p1p1_stabf_cylinder_valve.py",
-        ]
-    )
-    errs["test_fluid_nonc_p1p1_stabf_cylinder_valve 2"] = subprocess.call(
+    errs["test_fluid_nonc_p1p1_stabf_pipe_valve 2"] = subprocess.call(
         [
             "mpiexec",
             "-n",
             "2",
             "python3",
-            "test_fluid_nonc_p1p1_stabf_cylinder_valve.py",
+            "test_fluid_nonc_p1p1_stabf_pipe_valve.py",
         ]
     )
 
@@ -354,6 +345,9 @@ if category == "fsi" or category == "all":
     )
     errs["test_fsi_taylorhood_tank2d_fluidgov_neumann_neumann_bgs3x3outer-s3x3 2"] = subprocess.call(
         ["mpiexec", "-n", "2", "python3", "test_fsi_taylorhood_tank2d_fluidgov_neumann_neumann_bgs3x3outer-s3x3.py"]
+    )
+    errs["test_fsi_p1p1_pipe_valve_fluidgov_neumann_neumann 1"] = subprocess.call(
+        ["mpiexec", "-n", "1", "python3", "test_fsi_p1p1_pipe_valve_fluidgov_neumann_neumann.py"] # TODO: Fails in parallel!!!
     )
 
 if category == "fsi" or category == "fsi_multiphase" or category == "all":

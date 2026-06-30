@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
 """
-transient incompressible Navier-Stokes flow in a cylinder with axial Neumann and two outflows
+transient incompressible Navier-Stokes flow in a pipe with axial Neumann
 - stabilized P1P1 elements for velocity and pressure (full SUPF/PSPG scheme)
 - Backward-Euler time stepping scheme
 - 2 material domains in fluid (w/ same parameters though)
 - internal valve, requiring duplicate pressure nodes at that internal surface
-- works currently only with mixed dolfinx branch (USE_MIXED_DOLFINX_BRANCH)
 - checkpoint writing of domain-wise discontinuous pressure field
-- DBC read-in from file
 """
 
 import ambit_fe
@@ -32,14 +30,15 @@ def test_main():
     IO_PARAMS = {
         "problem_type": "fluid",
         "duplicate_mesh_domains": [[1], [2]],
-        "mesh_domain": basepath + "/input/cylinder_domain.xdmf",
-        "mesh_boundary": basepath + "/input/cylinder_boundary.xdmf",
+        "mesh_domain": basepath + "/input/pipe_fluid_domain.xdmf",
+        "mesh_boundary": basepath + "/input/pipe_fluid_boundary.xdmf",
+        "mesh_encoding": "HDF5",
         "write_results_every": 1,
         "write_restart_every": 9,
         "restart_step": restart_step,
         "output_path": basepath + "/tmp/",
         "results_to_write": ["velocity", "pressure"],
-        "simname": "fluid_nonc_p1p1_stabf_cylinder_valve",
+        "simname": "fluid_nonc_p1p1_stabf_pipe_valve",
     }
 
     CONTROL_PARAMS = {"maxtime": 1.0, "numstep": 10}
@@ -86,23 +85,23 @@ def test_main():
             return -pmax
 
     BC_DICT = {
-        "dirichlet": [{"id": [1], "dir": "all", "val": 0.0}],
+        "dirichlet": [{"id": [1,4,6], "dir": "all", "val": 0.0}],
         "neumann": [
-            {"id": [2], "dir": "normal_ref", "curve": 1},
-            {"id": [4], "dir": "normal_ref", "curve": 2},
+            {"id": [5], "dir": "normal_ref", "curve": 1},
+            {"id": [2], "dir": "normal_ref", "curve": 2},
         ],
         "robin_valve": [
             {
-                "id": [5],
+                "id": [3],
                 "type": "dp_smooth",
                 "beta_max": 1e3,
                 "beta_min": 1e-3,
                 "epsilon": 1e-6,
                 "dp_monitor_id": 0,
             }
-        ],  # 5 is internal surface (valve)
-        "dp_monitor": [{"id": [5], "upstream_domain": 2, "downstream_domain": 1}],
-        "flux_monitor": [{"id": [5], "on_subdomain": True, "internal": False, "domain": 2}],
+        ],  # 3 is internal surface (valve)
+        "dp_monitor": [{"id": [3], "upstream_domain": 2, "downstream_domain": 1}],
+        "flux_monitor": [{"id": [3], "on_subdomain": True, "internal": False, "domain": 2}],
     }
 
     # problem setup
@@ -124,14 +123,14 @@ def test_main():
     tol = 1.0e-6
 
     check_node = []
-    check_node.append(np.array([0.0170342, 2.99995, 13.4645]))
+    check_node.append(np.array([-0.0162752, 0.0, 50.0]))
 
     v_corr = np.zeros(3 * len(check_node))
 
     # correct results
-    v_corr[0] = 2.8679355190833773e00  # x
-    v_corr[1] = 1.1644703461381966e03  # y
-    v_corr[2] = -9.9701079153832620e02  # z
+    v_corr[0] = -5.7854767383221191E+00  # x
+    v_corr[1] = -9.4618563192940925E+01  # y
+    v_corr[2] = -5.1459961922212631E+02  # z
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.v,
