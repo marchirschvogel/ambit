@@ -325,7 +325,7 @@ class IO:
         f,
         datafile,
         tol=1e-6,
-        filetype='xdmf_h5'
+        filetype="xdmf_h5"
     ):
 
         ts = time.time()

@@ -185,9 +185,6 @@ def test_main():
     v_corr = np.zeros(3 * len(check_node))
 
     # correct results
-    # v_corr[0] = -1.2534905450573302E+00  # x
-    # v_corr[1] = -7.4354519227212847E+01  # y
-    # v_corr[2] = -7.8425469171115662E+02  # z
     v_corr[0] = 3.6449313320432437E+00  # x
     v_corr[1] = -8.0114714050309132E+01  # y
     v_corr[2] = -4.5999666099428185E+02  # z
