@@ -199,12 +199,11 @@ class cardiovascular0Dbase(ode):
                 ind_o = [1]  # q_vin_l
             if ch == "ra":  # allow 5 in-flows, 1 ouf-flow for now...
                 ind_i = [
-                    9 + num_infl[3],
-                    10 + num_infl[3],
-                    11 + num_infl[3],
-                    12 + num_infl[3],
-                    13 + num_infl[3],
-                    14 + num_infl[3],
+                    9,
+                    10,
+                    11,
+                    12,
+                    13,
                 ]  # q_ven,1_sys, ..., q_ven,5_sys
                 ind_o = [10 + num_infl[3]]  # q_vin_r
             if ch == "ao":  # allow 1 in-flow, 3 ouf-flows for now...
