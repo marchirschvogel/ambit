@@ -488,15 +488,18 @@ class FSIFlow0DProblem(problem_base):
 
     def write_output(self, N, t, msh=False):
         self.pbfsi.write_output(N, t)
+        self.pb0.write_output(N, t)
         self.pbf0.write_output_coupling(N, t)  # writes LMs of 3D-0D
 
     def update(self):
         # update time step - solid,fluid,ALE, fluid-flow0d coup
         self.pbfsi.update()
+        self.pb0.update()
         self.pbf0.update_coupling()
 
     def print_to_screen(self):
         self.pbfsi.print_to_screen()
+        self.pb0.print_to_screen()
         self.pbf0.print_to_screen_coupling()
 
     def induce_state_change(self):

@@ -171,10 +171,10 @@ def test_main():
     )
 
     # correct results
-    v_corr[0] = 4.1840069789344859E+01  # x
-    v_corr[1] = -6.6137556216574234E-01  # y
+    v_corr[0] = 7.0086495654705825E+00  # x
+    v_corr[1] = 1.8224933610950217E-01  # y
 
-    p_corr[0] = 8.4068663431048685E-02
+    p_corr[0] = 1.6038462344053758E-01
 
     check1 = ambit_fe.resultcheck.results_check_node(
         problem.mp.pbf.v,

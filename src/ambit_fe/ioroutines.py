@@ -324,6 +324,7 @@ class IO:
         self,
         f,
         datafile,
+        fieldname=None,
         tol=1e-6,
         filetype="xdmf_h5"
     ):
@@ -336,8 +337,7 @@ class IO:
 
         # default: when reading data from an .xdmf/.h5 file, we assume that we always have the nodal
         # coordinates that serve as basis for establishing the mapping
-        if filetype=='xdmf_h5':
-
+        if filetype=="xdmf_h5":
             import h5py
             import xml.etree.ElementTree as ET
             from scipy.spatial import cKDTree
@@ -345,9 +345,47 @@ class IO:
             xtree = ET.parse(datafile)
             xroot = xtree.getroot()
 
-            # typically, at third entry 0 we have the nodes, at 1 the cells, and at 2 the (first) field
-            name_geo = "".join(xroot[0][0][0][0].text.rsplit(":/", 1)[-1].split())
-            name_fld = "".join(xroot[0][0][2][0].text.rsplit(":/", 1)[-1].split())
+            def clean_hdf_text(text):
+                """
+                Convert e.g.
+                    fibers.h5:/Mesh/mesh/fiber
+                into
+                    ("fibers.h5", "Mesh/mesh/fiber")
+                """
+                text = "".join(text.split())  # remove whitespace/newlines
+                h5file, h5path = text.split(":/", 1)
+                return h5file, h5path
+
+            # Geometry
+            geo_dataitem = xroot.find(".//Geometry/DataItem")
+            geo_h5file, name_geo = clean_hdf_text(geo_dataitem.text)
+
+            # Topology / cells, if needed
+            topo_dataitem = xroot.find(".//Topology/DataItem")
+            topo_h5file, name_cells = clean_hdf_text(topo_dataitem.text)
+
+            # All fields/attributes
+            fields = {}
+
+            for attr in xroot.findall(".//Attribute"):
+                attr_name = attr.get("Name")          # "fiber", "sheet", ...
+                attr_type = attr.get("AttributeType") # "Vector" or "Scalar"
+                center = attr.get("Center")           # "Node", "Cell", ...
+
+                dataitem = attr.find("DataItem")
+                h5file, h5path = clean_hdf_text(dataitem.text)
+
+                fields[attr_name] = {
+                    "h5file": h5file,
+                    "h5path": h5path,
+                    "attribute_type": attr_type,
+                    "center": center,
+                }
+
+            if fieldname is None:  # read first field if not specified
+                name_fld = next(iter(fields.values()))["h5path"]
+            else:
+                name_fld = fields[fieldname]["h5path"]
 
             datafile_h5 = datafile.replace(".xdmf", ".h5")
 
@@ -376,11 +414,11 @@ class IO:
             _, mapping_indices = tree.query(nodes_reordered, distance_upper_bound=tol)
 
         # ATTENTION: This only works when your field to read is ordered according to the original mesh!
-        elif filetype=='plaintext' or filetype=='cheart':
+        elif filetype=="plaintext" or filetype=="cheart":
 
-            if filetype=='plaintext':
+            if filetype=="plaintext":
                 data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2)
-            if filetype=='cheart': # CHeart .D files: skip first row
+            if filetype=="cheart": # CHeart .D files: skip first row
                 data = np.loadtxt(datafile,usecols=(np.arange(0,bs)),ndmin=2,skiprows=1)
 
             # for discontinuous cell-wise functions, we need the original cell, otherwise the node index
@@ -477,43 +515,43 @@ class IO:
             ("Lagrange", self.order_fib_input, (V_fib.mesh.geometry.dim,)),
         )
 
-        si = 0
-        for s in fibarray:
-            # if isinstance(self.fiber_data[si], str):
-            #     dat = np.loadtxt(self.fiber_data[si])
+        # up to now, these are given... maybe have user specify...
+        fibernames = ["fiber", "sheet"]
+
+        for i, s in enumerate(fibarray):
+            # if isinstance(self.fiber_data[i], str):
+            #     dat = np.loadtxt(self.fiber_data[i])
             #     if len(dat) != V_fib_input.dofmap.index_map.size_global:
             #         raise RuntimeError(
             #             "Your order of fiber input data does not match the (assumed) order of the fiber function space, %i. Specify 'order_fib_input' in your IO section."
             #             % (self.order_fib_input)
             #         )
 
-            fib_func_input.append(fem.Function(V_fib_input, name="Fiber" + str(si + 1)))
+            fib_func_input.append(fem.Function(V_fib_input, name="Fiber" + str(i + 1)))
 
-            if isinstance(self.fiber_data[si], str):
-                self.readfunction(fib_func_input[si], self.fiber_data[si])
+            if isinstance(self.fiber_data[i], str):
+                self.readfunction(fib_func_input[i], self.fiber_data[i], fieldname=fibernames[i])
             else:  # assume a constant-in-space list or array
-                self.set_func_const_vec(fib_func_input[si], self.fiber_data[si])
+                self.set_func_const_vec(fib_func_input[i], self.fiber_data[i])
 
             # project to fiber function space
             if self.order_fib_input != order_disp:
                 fib_func.append(
                     project(
-                        fib_func_input[si],
+                        fib_func_input[i],
                         V_fib,
                         dx_,
                         domids=domids,
-                        nm="Fiber" + str(si + 1),
+                        nm="Fiber" + str(i + 1),
                         comm=self.comm,
                         entity_maps=self.entity_maps,
                     )
                 )
             else:
-                fib_func.append(fib_func_input[si])
+                fib_func.append(fib_func_input[i])
 
             # assert that field is actually always normalized!
-            fib_func[si] /= ufl.sqrt(ufl.dot(fib_func[si], fib_func[si]))
-
-            si += 1
+            fib_func[i] /= ufl.sqrt(ufl.dot(fib_func[i], fib_func[i]))
 
         return fib_func
 
