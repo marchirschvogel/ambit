@@ -468,23 +468,23 @@ class FSIFlow0DProblem(problem_base):
     def write_output_ini(self):
         # self.io.write_output(self, writemesh=True)
         self.pbfsi.write_output_ini()
-        #self.pbf0.write_output_ini()
+        #self.pb0.write_output_ini()
 
     def write_output_pre(self):
         self.pbfsi.write_output_pre()
-        #self.pbf0.write_output_pre()
+        #self.pb0.write_output_pre()
 
     def evaluate_pre_solve(self, t, N, dt):
         self.pbfsi.evaluate_pre_solve(t, N, dt)
-        self.pbf0.evaluate_pre_solve(t, N, dt)
+        self.pb0.evaluate_pre_solve(t, N, dt)
 
     def evaluate_post_solve(self, t, N):
         self.pbfsi.evaluate_post_solve(t, N)
-        self.pbf0.evaluate_post_solve(t, N)
+        self.pb0.evaluate_post_solve(t, N)
 
     def set_output_state(self, N):
         self.pbfsi.set_output_state(N)
-        self.pbf0.set_output_state(N)
+        self.pb0.set_output_state(N)
 
     def write_output(self, N, t, msh=False):
         self.pbfsi.write_output(N, t)
@@ -504,7 +504,7 @@ class FSIFlow0DProblem(problem_base):
 
     def induce_state_change(self):
         self.pbfsi.induce_state_change()
-        self.pbf0.induce_state_change()
+        self.pb0.induce_state_change()
 
     def write_restart(self, sname, N, force=False):
         self.pbfsi.write_restart(self, N, force=force)
