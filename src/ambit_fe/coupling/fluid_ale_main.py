@@ -6,8 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
-import copy
+import time, copy
 import numpy as np
 from dolfinx import fem, mesh
 import dolfinx.fem.petsc

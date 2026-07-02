@@ -67,6 +67,8 @@ class IO:
 
         self.output_midpoint = io_params.get("output_midpoint", False)
 
+        self.results_pre = ["fibers", "counters"]
+
         # entity map dict - for coupled multiphysics/multimesh problems
         self.entity_maps = entity_maps
 
@@ -572,8 +574,6 @@ class IO:
 
 class IO_solid(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        self.results_pre = ["fibers", "counters"]
-
         if self.indicate_results_by == "time":
             indicator = t
         elif self.indicate_results_by == "step":
@@ -1295,8 +1295,6 @@ class IO_solid(IO):
 
 class IO_fluid(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        self.results_pre = ["fibers", "counters"]
-
         if self.indicate_results_by == "time":
             indicator = t
         elif self.indicate_results_by == "step":
@@ -1769,8 +1767,6 @@ class IO_fluid(IO):
 
 class IO_ale(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        self.results_pre = ["counters"]
-
         if self.indicate_results_by == "time":
             indicator = t
         elif self.indicate_results_by == "step":
@@ -1947,8 +1943,6 @@ class IO_ale(IO):
 
 class IO_phasefield(IO):
     def write_output(self, pb, writemesh=False, N=1, t=0):
-        self.results_pre = ["counters"]
-
         if self.indicate_results_by == "time":
             indicator = t
         elif self.indicate_results_by == "step":

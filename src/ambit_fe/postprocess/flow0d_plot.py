@@ -137,6 +137,8 @@ def postprocess0D(
 ):
     fpath = Path(__file__).parent.absolute()
 
+    sname += "_flow0d"
+
     # return the groups we want to plot
     groups = []
 

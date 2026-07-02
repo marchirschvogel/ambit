@@ -442,6 +442,14 @@ class boundary_cond:
             if "is_locator" in n.keys(): dind=2
             if "id_loc" in n.keys(): ID="id_loc"
 
+            # in FSI, the interface where we may wanna do prior prestressing is formally considered "internal"
+            internal = n.get("internal", False)
+            if internal:
+                dind = 1
+                fcts = n.get("facet_side", "+")
+            else:
+                fcts = None
+
             if n["dir"] == "xyz_ref":  # reference xyz
                 func = fem.Function(self.V_field)
 
@@ -486,7 +494,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.pb.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.deltaW_ext_neumann_ref(func, ds_[dind](n[ID][i]), fcts=fcts)
 
             elif n["dir"] == "normal_ref":  # reference normal
                 func = fem.Function(self.Vdisc_scalar)
@@ -520,7 +528,7 @@ class boundary_cond:
                     raise RuntimeError("Need to have 'curve', 'val', or 'expression' specified!")
 
                 for i in range(len(n[ID])):
-                    w += self.pb.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]))
+                    w += self.pb.vf.deltaW_ext_neumann_normal_ref(func, ds_[dind](n[ID][i]), fcts=fcts)
 
             else:
                 raise NameError("Unknown dir option for Neumann prestress BC!")
@@ -619,7 +627,6 @@ class boundary_cond:
             if "id_loc" in m.keys(): ID="id_loc"
 
             internal = m.get("internal", False)
-
             if internal:
                 dind = 1
                 fcts = m.get("facet_side", "+")

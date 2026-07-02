@@ -37,31 +37,43 @@ class variationalform_base:
 
     # Neumann load on reference configuration (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} \hat{\boldsymbol{t}}_{0} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
-    def deltaW_ext_neumann_ref(self, func, dboundary):
-        return ufl.dot(func, self.tstfnc1) * dboundary
+    def deltaW_ext_neumann_ref(self, func, dboundary, fcts=None):
+        if fcts is None:
+            return ufl.dot(func, self.tstfnc1) * dboundary
+        else:
+            return (ufl.dot(func, self.tstfnc1))(fcts) * dboundary
 
     # Neumann load in reference normal (1st Piola-Kirchhoff traction)
     # TeX: \int\limits_{\Gamma_{0}} p\,\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_neumann_normal_ref(self, func, dboundary):
-        return func * ufl.dot(self.n0, self.tstfnc1) * dboundary
+    def deltaW_ext_neumann_normal_ref(self, func, dboundary, fcts=None):
+        if fcts is None:
+            return func * ufl.dot(self.n0, self.tstfnc1) * dboundary
+        else:
+            return (func * ufl.dot(self.n0, self.tstfnc1))(fcts) * dboundary
 
     # Neumann follower load on current configuration (Cauchy traction)
     # TeX: \int\limits_{\Gamma_0} J\boldsymbol{F}^{-\mathrm{T}}\,\hat{\boldsymbol{t}} \cdot \delta\boldsymbol{u} \,\mathrm{d}A
-    def deltaW_ext_neumann_cur(self, func, dboundary, F=None):
+    def deltaW_ext_neumann_cur(self, func, dboundary, F=None, fcts=None):
         if F is not None:
             J = ufl.det(F)
-            return J * ufl.dot(ufl.inv(F).T * func, self.tstfnc1) * dboundary
+            if fcts is None:
+                return J * ufl.dot(ufl.inv(F).T * func, self.tstfnc1) * dboundary
+            else:
+                return (J * ufl.dot(ufl.inv(F).T * func, self.tstfnc1))(fcts) * dboundary
         else:
-            return self.deltaW_ext_neumann_ref(func, dboundary)
+            return self.deltaW_ext_neumann_ref(func, dboundary, fcts=fcts)
 
     # Neumann follower load in current normal direction
     # TeX: \int\limits_{\Gamma_{0}} p\,J \boldsymbol{F}^{-\mathrm{T}}\boldsymbol{n}_{0}\cdot\delta\boldsymbol{u}\,\mathrm{d}A
-    def deltaW_ext_neumann_normal_cur(self, func, dboundary, F=None):
+    def deltaW_ext_neumann_normal_cur(self, func, dboundary, F=None, fcts=None):
         if F is not None:
             J = ufl.det(F)
-            return func * J * ufl.dot(ufl.inv(F).T * self.n0, self.tstfnc1) * dboundary
+            if fcts is None:
+                return func * J * ufl.dot(ufl.inv(F).T * self.n0, self.tstfnc1) * dboundary
+            else:
+                return (func * J * ufl.dot(ufl.inv(F).T * self.n0, self.tstfnc1))(fcts) * dboundary
         else:
-            return self.deltaW_ext_neumann_normal_ref(func, dboundary)
+            return self.deltaW_ext_neumann_normal_ref(func, dboundary, fcts=fcts)
 
     # body force external virtual work
     # TeX: \int\limits_{\Omega_{0}} \hat{\boldsymbol{b}}\cdot\delta\boldsymbol{u}\,\mathrm{d}V

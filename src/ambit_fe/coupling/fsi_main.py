@@ -6,7 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import time
+import time, copy
 import sys, math
 import numpy as np
 from dolfinx import fem, mesh, io
@@ -18,7 +18,7 @@ from ..solver import solver_nonlin
 from .. import utilities, meshutils
 from .. import boundaryconditions
 
-from ..solid.solid_main import SolidmechanicsProblem
+from ..solid.solid_main import SolidmechanicsProblem, SolidmechanicsSolverPrestr
 from .fluid_ale_main import FluidmechanicsAleProblem
 
 from ..base import problem_base, solver_base
@@ -482,9 +482,11 @@ class FSIProblem(problem_base):
         else:
             raise ValueError("Unknown value for 'fsi_system'. Choose 'neumann_neumann' or 'neumann_dirichlet'.")
 
-    def set_problem_residual_jacobian_forms(self):
+    def set_problem_residual_jacobian_forms(self, pre=False):
+        if pre:  # TODO: We need a work around to prevent that fluid DBCs act on the solid during prestress already... :-/
+            assert(self.fsi_system != "neumann_dirichlet")
         # solid + ALE-fluid
-        self.pbs.set_problem_residual_jacobian_forms()
+        self.pbs.set_problem_residual_jacobian_forms(pre=pre)
         self.pbfa.set_problem_residual_jacobian_forms()
         self.set_problem_residual_jacobian_forms_coupling()
 
@@ -1096,7 +1098,7 @@ class FSIProblem(problem_base):
 
 class FSISolver(solver_base):
     def initialize_nonlinear_solver(self):
-        self.pb.set_problem_residual_jacobian_forms()
+        self.pb.set_problem_residual_jacobian_forms(pre=self.pb.pbs.pre)
         self.pb.set_problem_vector_matrix_structures()
 
         self.evaluate_assemble_system_initial()
@@ -1104,7 +1106,30 @@ class FSISolver(solver_base):
         # initialize nonlinear solver class
         self.solnln = solver_nonlin.solver_nonlinear([self.pb], self.solver_params)
 
+        if self.pb.pbs.prestress_initial or self.pb.pbs.prestress_initial_only:
+            # initialize solid mechanics solver
+            solver_params_prestr = copy.deepcopy(self.solver_params)
+            # modify solver parameters in case user specified alternating ones for prestressing (should do, because it's a 2x2 problem maximum)
+            try:
+                solver_params_prestr["solve_type"] = self.solver_params["solve_type_prestr"]
+            except:
+                pass
+            try:
+                solver_params_prestr["block_precond"] = self.solver_params["block_precond_prestr"]
+            except:
+                pass
+            try:
+                solver_params_prestr["precond_fields"] = self.solver_params["precond_fields_prestr"]
+            except:
+                pass
+            self.solverprestr = SolidmechanicsSolverPrestr(self.pb.pbs, solver_params_prestr)
+
     def solve_initial_state(self):
+        # in case we want to prestress with MULF (Gee et al. 2010) prior to solving the FSI problem
+        if self.pb.pbs.pre:
+            # solve solid prestress problem
+            self.solverprestr.solve_initial_prestress()
+
         # consider consistent initial acceleration of solid
         if self.pb.pbs.timint != "static" and self.pb.pbase.restart_step == 0:
             ts = time.time()
