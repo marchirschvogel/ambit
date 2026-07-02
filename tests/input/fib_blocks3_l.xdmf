@@ -11,7 +11,7 @@
           fib_blocks3_l.h5:/cells
         </DataItem>
       </Topology>
-      <Attribute AttributeType="Vector" Center="Node" Name="fiber_l">
+      <Attribute AttributeType="Vector" Center="Node" Name="sheet">
         <DataItem DataType="Float" Dimensions="42 3" Format="HDF">
           fib_blocks3_l.h5:/fiber_l
         </DataItem>

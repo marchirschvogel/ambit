@@ -11,7 +11,7 @@
           fib_fiber_nodal.h5:/cells
         </DataItem>
       </Topology>
-      <Attribute AttributeType="Vector" Center="Node" Name="fibers">
+      <Attribute AttributeType="Vector" Center="Node" Name="fiber">
         <DataItem DataType="Float" Dimensions="2609 3" Format="HDF">
           fib_fiber_nodal.h5:/fibers
         </DataItem>
